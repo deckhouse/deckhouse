@@ -2363,10 +2363,10 @@ index 00000000000..325693a7754
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go
 new file mode 100644
-index 00000000000..7dffb1f304b
+index 00000000000..8be03c42f02
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification.go
-@@ -0,0 +1,105 @@
+@@ -0,0 +1,120 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2388,6 +2388,7 @@ index 00000000000..7dffb1f304b
 +import (
 +	"context"
 +	"fmt"
++	"strings"
 +
 +	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 +	"k8s.io/client-go/kubernetes"
@@ -2396,10 +2397,18 @@ index 00000000000..7dffb1f304b
 +
 +// ProjectLabel is the label Deckhouse's multitenancy-manager stamps on every
 +// namespace belonging to a Project (deckhouse.io/v1alpha2 Project CRD).
-+// Namespaces without this label are "system" namespaces for
-+// scope-classification purposes; namespaces carrying it belong to the
-+// project named by its value.
++// Namespaces carrying it belong to the project named by its value; the
++// "projects" and "project:<name>" scopes are resolved from it.
 +const ProjectLabel = "projects.deckhouse.io/project"
++
++// IsSystemNamespace reports whether name belongs to the "system" scope
++// classification. The system set is a fixed, name-based allowlist -- the
++// default namespace plus every d8-* and kube-* namespace -- deliberately
++// independent of ProjectLabel: a namespace outside both this allowlist and
++// every project matches neither the system nor the projects scope.
++func IsSystemNamespace(name string) bool {
++	return name == "default" || strings.HasPrefix(name, "d8-") || strings.HasPrefix(name, "kube-")
++}
 +
 +// ClassificationResolver resolves the "system" / "projects" / "project:<name>"
 +// scope kinds to a set of namespace names. It answers a question that is
@@ -2418,7 +2427,9 @@ index 00000000000..7dffb1f304b
 +
 +// LoopbackClassificationResolver resolves system/projects/project classification
 +// by listing Namespace objects directly through kube-apiserver's loopback
-+// client with a label selector on ProjectLabel. This deliberately bypasses
++// client -- with a label selector on ProjectLabel for the project scopes, and
++// with a client-side name filter (IsSystemNamespace) for the system scope,
++// since label selectors cannot express name prefixes. This deliberately bypasses
 +// permission-browser-apiserver: multitenancy-manager (the controller that
 +// owns ProjectLabel) has no dependency on userAuthz.enableMultiTenancy, so
 +// resolving system/project membership this way works regardless of whether
@@ -2447,8 +2458,9 @@ index 00000000000..7dffb1f304b
 +	var labelSelector string
 +	switch kind {
 +	case KindSystem:
-+		// "!key" -- namespace does not carry ProjectLabel at all.
-+		labelSelector = "!" + ProjectLabel
++		// No selector: system is the fixed name-based set (see
++		// IsSystemNamespace), so every namespace is listed and names are
++		// filtered client-side below.
 +	case KindProjects:
 +		// bare "key" -- namespace carries ProjectLabel with any value.
 +		labelSelector = ProjectLabel
@@ -2468,16 +2480,19 @@ index 00000000000..7dffb1f304b
 +
 +	names := make(map[string]struct{}, len(list.Items))
 +	for _, ns := range list.Items {
++		if kind == KindSystem && !IsSystemNamespace(ns.Name) {
++			continue
++		}
 +		names[ns.Name] = struct{}{}
 +	}
 +	return names, nil
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification_test.go
 new file mode 100644
-index 00000000000..47d82092629
+index 00000000000..856c3d4a72d
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/classification_test.go
-@@ -0,0 +1,122 @@
+@@ -0,0 +1,207 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2515,7 +2530,7 @@ index 00000000000..47d82092629
 +// fake server that itself re-parses the selector with labels.Parse, which
 +// would forgive some malformed-but-equivalent strings. This test instead
 +// asserts on the literal query parameter the real HTTP client sends, so a
-+// change to e.g. "!"+ProjectLabel accidentally becoming " !"+ProjectLabel
++// change to e.g. ProjectLabel accidentally becoming " "+ProjectLabel
 +// (a leading space, still often tolerated by labels.Parse) would be caught
 +// here even if it happened to still work end to end.
 +func TestLoopbackClassificationResolver_LabelSelectorPerKind(t *testing.T) {
@@ -2526,9 +2541,12 @@ index 00000000000..47d82092629
 +		wantLabelSelector string
 +	}{
 +		{
-+			name:              "system is the negated-existence selector",
++			// System is a name-based classification (IsSystemNamespace), so
++			// the LIST must be unfiltered: any label selector here would
++			// silently drop namespaces from the allowlist.
++			name:              "system sends no selector at all",
 +			kind:              scopefilter.KindSystem,
-+			wantLabelSelector: "!" + scopefilter.ProjectLabel,
++			wantLabelSelector: "",
 +		},
 +		{
 +			name:              "projects is the bare-existence selector",
@@ -2573,6 +2591,88 @@ index 00000000000..47d82092629
 +				t.Fatalf("labelSelector = %q, want %q", gotSelector, tt.wantLabelSelector)
 +			}
 +		})
++	}
++}
++
++// TestIsSystemNamespace pins the exact name-based allowlist of the system
++// scope: the default namespace plus the d8-* and kube-* prefixes -- dash
++// included, so near-misses like "d8x" or "kubernetes" must not match.
++func TestIsSystemNamespace(t *testing.T) {
++	cases := map[string]bool{
++		"default":         true,
++		"d8-system":       true,
++		"d8-monitoring":   true,
++		"kube-system":     true,
++		"kube-node-lease": true,
++		"d8-":             true, // degenerate but prefix-matching
++		"kube-":           true,
++
++		"d8":         false, // no dash
++		"d8x":        false,
++		"kube":       false,
++		"kubernetes": false,
++		"defaultx":   false,
++		"mydefault":  false,
++		"xd8-foo":    false, // prefix, not substring
++		"xkube-foo":  false,
++		"user-ns":    false,
++		"":           false,
++	}
++	for name, want := range cases {
++		if got := scopefilter.IsSystemNamespace(name); got != want {
++			t.Errorf("IsSystemNamespace(%q) = %v, want %v", name, got, want)
++		}
++	}
++}
++
++// TestLoopbackClassificationResolver_SystemIsNameAllowlist drives the real
++// resolver against a fake Namespace LIST and asserts KindSystem keeps exactly
++// the name-allowlisted namespaces -- independent of ProjectLabel: a labeled
++// d8-* namespace stays in (name wins), and an unlabeled namespace outside the
++// allowlist stays out (no "everything unlabeled" fallback).
++func TestLoopbackClassificationResolver_SystemIsNameAllowlist(t *testing.T) {
++	namespaces := []corev1.Namespace{
++		{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "d8-monitoring"}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "d8-labeled", Labels: map[string]string{scopefilter.ProjectLabel: "oddball"}}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "user-ns"}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "kubernetes"}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{scopefilter.ProjectLabel: "team-a"}}},
++	}
++
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Set("Content-Type", "application/json")
++		_ = json.NewEncoder(w).Encode(corev1.NamespaceList{
++			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "NamespaceList"},
++			Items:    namespaces,
++		})
++	}))
++	defer srv.Close()
++
++	resolver, err := scopefilter.NewLoopbackClassificationResolver(&restclient.Config{Host: srv.URL})
++	if err != nil {
++		t.Fatalf("NewLoopbackClassificationResolver: %v", err)
++	}
++
++	got, err := resolver.Resolve(context.Background(), scopefilter.KindSystem, "")
++	if err != nil {
++		t.Fatalf("Resolve: %v", err)
++	}
++
++	want := map[string]struct{}{
++		"default":       {},
++		"kube-system":   {},
++		"d8-monitoring": {},
++		"d8-labeled":    {},
++	}
++	if len(got) != len(want) {
++		t.Fatalf("system set = %v, want %v", got, want)
++	}
++	for name := range want {
++		if _, ok := got[name]; !ok {
++			t.Fatalf("system set = %v, want %v", got, want)
++		}
 +	}
 +}
 +
@@ -3435,10 +3535,10 @@ index 00000000000..874425f86ae
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/doc.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/doc.go
 new file mode 100644
-index 00000000000..3836105c1a8
+index 00000000000..f42829e4568
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/doc.go
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,46 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3461,6 +3561,12 @@ index 00000000000..3836105c1a8
 +// flat 403, without changing default `-A` semantics for anyone who does not
 +// ask for it.
 +//
++// Scope classification: "projects" and "project:<name>" resolve through the
++// ProjectLabel namespace label; "system" is the fixed name-based allowlist
++// implemented by IsSystemNamespace (default, d8-*, kube-*). The two sets are
++// independent -- a namespace outside both stays invisible to every scope but
++// "accessible".
++//
 +// The mechanism generalizes an existing, narrower patch that gave this
 +// behavior only to `namespaces` (see pkg/registry/core/namespace/storage,
 +// which now builds on this package with identity field "metadata.name" and
@@ -3476,7 +3582,7 @@ index 00000000000..3836105c1a8
 +// narrowed by the *actual* (resource, verb) of the request being served,
 +// never a plain "has access to something, somewhere" check. A looser floor
 +// lets a caller with e.g. `get secrets` rights in namespace N see unrelated
-+// resources in N via --scope=system/user/project, despite having no RBAC for
++// resources in N via any --scope kind, despite having no RBAC for
 +// them at all.
 +package scopefilter
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/fetcher.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/fetcher.go
@@ -3732,10 +3838,10 @@ index 00000000000..cf070f1812d
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go
 new file mode 100644
-index 00000000000..e1ca3127dcf
+index 00000000000..3bdffd44e6a
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go
-@@ -0,0 +1,491 @@
+@@ -0,0 +1,497 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3885,6 +3991,7 @@ index 00000000000..e1ca3127dcf
 +	}
 +	seed("ns-a", "pod-1")
 +	seed("ns-b", "pod-2")
++	seed("d8-ns-sys", "pod-sys")
 +
 +	return store, destroy
 +}
@@ -4048,23 +4155,23 @@ index 00000000000..e1ca3127dcf
 +// TestIntegration_AttackScenario_NarrowRBACMustNotLeakSystemNamespacePods is
 +// the mandatory "attack" test from the design doc, run through the REAL
 +// network path this time: a caller with RBAC for `get secrets` (not pods) in
-+// ns-a -- which the fake Namespace LIST classifies as "system" (no project
-+// label) -- must see nothing when requesting `pods --scope=system`, even
-+// though ns-a is also present in AccessibleNamespaces (some access, just not
-+// to pods).
++// d8-ns-sys -- which classifies as "system" by its name-allowlisted d8-*
++// prefix -- must see nothing when requesting `pods --scope=system`, even
++// though d8-ns-sys is also present in AccessibleNamespaces (some access, just
++// not to pods).
 +func TestIntegration_AttackScenario_NarrowRBACMustNotLeakSystemNamespacePods(t *testing.T) {
 +	store, destroy := newIntegrationStore(t)
 +	defer destroy()
 +
 +	srv := newFakeLoopbackServer(t,
 +		[]corev1.Namespace{
-+			namespaceWithProjectLabel("ns-a", ""), // system: no project label
++			namespaceWithProjectLabel("d8-ns-sys", ""), // system: name-allowlisted prefix
 +			namespaceWithProjectLabel("ns-b", "team-a"),
 +		},
-+		[]string{"ns-a"}, // AccessibleNamespaces: caller has SOME access to ns-a
++		[]string{"d8-ns-sys"}, // AccessibleNamespaces: caller has SOME access to d8-ns-sys
 +		[]bulkSARRule{
-+			// Caller can list secrets in ns-a, but NOT pods.
-+			{namespace: "ns-a", resource: "secrets", verb: "list", allowed: true},
++			// Caller can list secrets in d8-ns-sys, but NOT pods.
++			{namespace: "d8-ns-sys", resource: "secrets", verb: "list", allowed: true},
 +		},
 +	)
 +
@@ -4076,15 +4183,14 @@ index 00000000000..e1ca3127dcf
 +		t.Fatalf("List: %v", err)
 +	}
 +	if got := podNames(t, out); len(got) != 0 {
-+		t.Fatalf("attack scenario leaked pods: got %v, want none (floor for pods/list in ns-a was never granted)", got)
++		t.Fatalf("attack scenario leaked pods: got %v, want none (floor for pods/list in d8-ns-sys was never granted)", got)
 +	}
 +}
 +
-+// TestIntegration_ProjectScope_NoPodsListRightAlsoEmpty is the same caller as
-+// the attack scenario, but requesting --scope=project:<ns-a's project> --
-+// ns-a has no project label at all, so it can never match a project scope,
-+// and even if it did the same missing pods/list right would still zero it
-+// out.
++// TestIntegration_ProjectScope_NoPodsListRightAlsoEmpty is the same caller
++// shape as the attack scenario, but requesting --scope=project:team-a --
++// ns-a IS labeled into team-a, so classification matches; the missing
++// pods/list right must still zero the result out.
 +func TestIntegration_ProjectScope_NoPodsListRightAlsoEmpty(t *testing.T) {
 +	store, destroy := newIntegrationStore(t)
 +	defer destroy()
@@ -4154,18 +4260,24 @@ index 00000000000..e1ca3127dcf
 +
 +// TestIntegration_ControlScenario_GrantedPodsListRightSurfacesPods is the
 +// positive control for the attack scenario: same setup, but the caller DOES
-+// hold pods/list in ns-a -- their system-scoped pods must come back.
++// hold pods/list in d8-ns-sys -- their system-scoped pods must come back.
++// pod-1 lives in ns-a, which is unlabeled but NOT name-allowlisted, so it
++// must stay invisible to --scope=system even though the caller could have
++// been granted access to it: system is a fixed name set, not "everything
++// outside projects".
 +func TestIntegration_ControlScenario_GrantedPodsListRightSurfacesPods(t *testing.T) {
 +	store, destroy := newIntegrationStore(t)
 +	defer destroy()
 +
 +	srv := newFakeLoopbackServer(t,
 +		[]corev1.Namespace{
-+			namespaceWithProjectLabel("ns-a", ""),
++			namespaceWithProjectLabel("d8-ns-sys", ""),
++			namespaceWithProjectLabel("ns-a", ""), // unlabeled, NOT system: name outside the allowlist
 +			namespaceWithProjectLabel("ns-b", "team-a"),
 +		},
-+		[]string{"ns-a"},
++		[]string{"d8-ns-sys", "ns-a"},
 +		[]bulkSARRule{
++			{namespace: "d8-ns-sys", resource: "pods", verb: "list", allowed: true},
 +			{namespace: "ns-a", resource: "pods", verb: "list", allowed: true},
 +		},
 +	)
@@ -4177,8 +4289,8 @@ index 00000000000..e1ca3127dcf
 +	if err != nil {
 +		t.Fatalf("List: %v", err)
 +	}
-+	if got := podNames(t, out); len(got) != 1 || got[0] != "pod-1" {
-+		t.Fatalf("got %v, want [pod-1]", got)
++	if got := podNames(t, out); len(got) != 1 || got[0] != "pod-sys" {
++		t.Fatalf("got %v, want [pod-sys] (pod-1 is in ns-a: unlabeled but not name-allowlisted, so not system)", got)
 +	}
 +}
 +
@@ -5820,10 +5932,10 @@ index 00000000000..8a69da28403
 +}
 diff --git a/test/integration/scopefilter/scope_test.go b/test/integration/scopefilter/scope_test.go
 new file mode 100644
-index 00000000000..b84886535ee
+index 00000000000..922a05cdf60
 --- /dev/null
 +++ b/test/integration/scopefilter/scope_test.go
-@@ -0,0 +1,359 @@
+@@ -0,0 +1,385 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -5906,11 +6018,29 @@ index 00000000000..b84886535ee
 +	crdListKind = "WidgetList"
 +)
 +
-+// fixture namespaces: one system (no project label), two project ones.
++// fixture namespaces: two system ones (matching the fixed d8-*/kube-* name
++// allowlist), one "orphan" (unlabeled AND outside the allowlist -- matches
++// neither the system nor the projects scope), and two project ones. The
++// pre-existing default namespace completes the system allowlist and receives
++// probes alongside these (see probeNamespaces).
 +var fixtureNamespaces = map[string]map[string]string{
-+	"scope-int-system": nil,
++	"d8-scope-int":     nil,
++	"kube-scope-int":   nil,
++	"scope-int-orphan": nil,
 +	"scope-int-alpha":  {projectLabel: "alpha"},
 +	"scope-int-beta":   {projectLabel: "beta"},
++}
++
++// probeNamespaces is every namespace that holds a probe object: the created
++// fixtures plus the pre-existing default namespace (part of the system name
++// allowlist; only its probe is created, never the namespace itself).
++var probeNamespaces = []string{
++	"d8-scope-int",
++	"kube-scope-int",
++	"scope-int-orphan",
++	"scope-int-alpha",
++	"scope-int-beta",
++	"default",
 +}
 +
 +func TestScopeFilter(t *testing.T) {
@@ -5939,13 +6069,16 @@ index 00000000000..b84886535ee
 +	deniedCfg.Impersonate = restclient.ImpersonationConfig{UserName: "scope-denied-user"}
 +	deniedJSON := clientset.NewForConfigOrDie(deniedCfg)
 +
-+	// Fixtures: labeled namespaces, each with one probe ConfigMap.
++	// Fixtures: labeled namespaces, then one probe ConfigMap in every probe
++	// namespace (including the pre-existing default, which is never created).
 +	for ns, labels := range fixtureNamespaces {
 +		if _, err := admin.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
 +			ObjectMeta: metav1.ObjectMeta{Name: ns, Labels: labels},
 +		}, metav1.CreateOptions{}); err != nil {
 +			t.Fatalf("create namespace %s: %v", ns, err)
 +		}
++	}
++	for _, ns := range probeNamespaces {
 +		if _, err := admin.CoreV1().ConfigMaps(ns).Create(ctx, &corev1.ConfigMap{
 +			ObjectMeta: metav1.ObjectMeta{Name: probeName},
 +		}, metav1.CreateOptions{}); err != nil {
@@ -6058,18 +6191,23 @@ index 00000000000..b84886535ee
 +		if err != nil {
 +			t.Fatalf("unscoped list: %v", err)
 +		}
-+		requireNamespaces(t, got, "scope-int-system", "scope-int-alpha", "scope-int-beta")
++		requireNamespaces(t, got, probeNamespaces...)
 +	})
 +
-+	t.Run("SystemScopeExcludesProjectNamespaces", func(t *testing.T) {
++	t.Run("SystemScopeIsTheNameAllowlistOnly", func(t *testing.T) {
++		// System is the fixed name allowlist (default, d8-*, kube-*):
++		// scope-int-orphan is unlabeled but NOT allowlisted, so it must not
++		// appear -- system is not "everything outside projects".
 +		got, err := scopedProbeNamespaces("/api/v1/configmaps", map[string]string{scopeHeader: "system"})
 +		if err != nil {
 +			t.Fatalf("scope=system list: %v", err)
 +		}
-+		requireNamespaces(t, got, "scope-int-system")
++		requireNamespaces(t, got, "d8-scope-int", "kube-scope-int", "default")
 +	})
 +
 +	t.Run("ProjectsScopeIsExactlyProjectNamespaces", func(t *testing.T) {
++		// scope-int-orphan is absent here too: an unlabeled namespace outside
++		// the system allowlist matches neither scope.
 +		got, err := scopedProbeNamespaces("/api/v1/configmaps", map[string]string{scopeHeader: "projects"})
 +		if err != nil {
 +			t.Fatalf("scope=projects list: %v", err)
@@ -6141,7 +6279,7 @@ index 00000000000..b84886535ee
 +
 +		dyn := dynamic.NewForConfigOrDie(server.ClientConfig)
 +		gvr := schema.GroupVersionResource{Group: crdGroup, Version: crdVersion, Resource: crdPlural}
-+		for ns := range fixtureNamespaces {
++		for _, ns := range probeNamespaces {
 +			cr := &unstructured.Unstructured{Object: map[string]interface{}{
 +				"apiVersion": crdGroup + "/" + crdVersion,
 +				"kind":       crdKind,
@@ -6162,7 +6300,7 @@ index 00000000000..b84886535ee
 +		if err != nil {
 +			t.Fatalf("CR scope=system list: %v", err)
 +		}
-+		requireNamespaces(t, got, "scope-int-system")
++		requireNamespaces(t, got, "d8-scope-int", "kube-scope-int", "default")
 +
 +		// Fail-closed applies to CRDs identically.
 +		_, err = deniedJSON.Discovery().RESTClient().Get().

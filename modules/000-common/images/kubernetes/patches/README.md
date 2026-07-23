@@ -67,10 +67,12 @@ The same mechanism generalized to arbitrary namespaced resources, gated by two
 request headers (`X-Deckhouse-Scope`, `X-Deckhouse-Project`) rather than being
 unconditional: absent header, absent bypass, byte-for-byte vanilla behavior.
 `scope=accessible` reproduces the namespaces mechanism's RBAC-floor
-semantics for any resource; `scope=system|projects|project:<name>` additionally
+semantics for any resource; `scope=projects|project:<name>` additionally
 classify by the `projects.deckhouse.io/project` namespace label
-(multitenancy-manager's Project CRD), resolved via a direct loopback
-`Namespace LIST` rather than a new permission-browser endpoint.
+(multitenancy-manager's Project CRD), and `scope=system` by a fixed name-based
+allowlist (`default`, `d8-*`, `kube-*`) independent of that label -- both
+resolved via a direct loopback `Namespace LIST` rather than a new
+permission-browser endpoint.
 
 Coverage is wired centrally in `pkg/controlplane/apiserver`'s `InstallAPIs`,
 which walks every built-in API group's storage map and attaches the filter to
