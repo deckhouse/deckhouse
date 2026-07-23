@@ -37,4 +37,17 @@ spec:
         description: |
           The L2 speaker must join the host network namespace to advertise service IPs
           via ARP/NDP on the node interfaces and to participate in memberlist gossip.
+    hostPorts:
+      - port: 4225
+        protocol: TCP
+        metadata:
+          description: MetalLB memberlist TCP gossip port used by l2lb-speaker.
+      - port: 4225
+        protocol: UDP
+        metadata:
+          description: MetalLB memberlist UDP gossip port used by l2lb-speaker.
+      - port: 4226
+        protocol: TCP
+        metadata:
+          description: HTTPS metrics endpoint exposed through kube-rbac-proxy.
 {{- end }}
