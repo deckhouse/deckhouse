@@ -2,70 +2,148 @@
 <div class="feedback-container">
     <div class="feedback-container__separantor"></div>
     <div class="feedback-container__choice">
-            <p class="feedback-container__choice--descr">{{ site.data.i18n.feedback.useful[page.lang] }}</p>
+        <p class="feedback-container__choice--descr">{{ site.data.i18n.feedback.useful[page.lang] }}</p>
         <div class="feedback-container__choice--icon">
             <button class="icon icon__like">
-                <svg width="19" height="18" viewBox="0 0 19 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M5 8V16C5 16.2652 4.89464 16.5196 4.70711 16.7071C4.51957 16.8946 4.26522 17 4 17H2C1.73478 17 1.48043 16.8946 1.29289 16.7071C1.10536 16.5196 1 16.2652 1 16V9C1 8.73478 1.10536 8.48043 1.29289 8.29289C1.48043 8.10536 1.73478 8 2 8H5ZM5 8C6.06087 8 7.07828 7.57857 7.82843 6.82843C8.57857 6.07828 9 5.06087 9 4V3C9 2.46957 9.21071 1.96086 9.58579 1.58579C9.96086 1.21071 10.4696 1 11 1C11.5304 1 12.0391 1.21071 12.4142 1.58579C12.7893 1.96086 13 2.46957 13 3V8H16C16.5304 8 17.0391 8.21071 17.4142 8.58579C17.7893 8.96086 18 9.46957 18 10L17 15C16.8562 15.6135 16.5834 16.1402 16.2227 16.501C15.8619 16.8617 15.4328 17.0368 15 17H8C7.20435 17 6.44129 16.6839 5.87868 16.1213C5.31607 15.5587 5 14.7956 5 14" stroke="#222A5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <g clip-path="url(#clip0_15981_472)">
+                        <path d="M7 11V19C7 19.2652 6.89464 19.5196 6.70711 19.7071C6.51957 19.8946 6.26522 20 6 20H4C3.73478 20 3.48043 19.8946 3.29289 19.7071C3.10536 19.5196 3 19.2652 3 19V12C3 11.7348 3.10536 11.4804 3.29289 11.2929C3.48043 11.1054 3.73478 11 4 11H7ZM7 11C8.06087 11 9.07828 10.5786 9.82843 9.82843C10.5786 9.07828 11 8.06087 11 7V6C11 5.46957 11.2107 4.96086 11.5858 4.58579C11.9609 4.21071 12.4696 4 13 4C13.5304 4 14.0391 4.21071 14.4142 4.58579C14.7893 4.96086 15 5.46957 15 6V11H18C18.5304 11 19.0391 11.2107 19.4142 11.5858C19.7893 11.9609 20 12.4696 20 13L19 18C18.8562 18.6135 18.5834 19.1402 18.2227 19.501C17.8619 19.8617 17.4328 20.0368 17 20H10C9.20435 20 8.44129 19.6839 7.87868 19.1213C7.31607 18.5587 7 17.7956 7 17" stroke="#222A5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>
+                    <defs>
+                        <clipPath id="clip0_15981_472">
+                            <rect width="24" height="24" fill="white"/>
+                        </clipPath>
+                    </defs>
                 </svg>
+                <p>{{ site.data.i18n.feedback.yes[page.lang] }}</p>
             </button>
             <button class="icon icon__dislike">
-                <svg width="19" height="18" viewBox="0 0 19 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M5 8V16C5 16.2652 4.89464 16.5196 4.70711 16.7071C4.51957 16.8946 4.26522 17 4 17H2C1.73478 17 1.48043 16.8946 1.29289 16.7071C1.10536 16.5196 1 16.2652 1 16V9C1 8.73478 1.10536 8.48043 1.29289 8.29289C1.48043 8.10536 1.73478 8 2 8H5ZM5 8C6.06087 8 7.07828 7.57857 7.82843 6.82843C8.57857 6.07828 9 5.06087 9 4V3C9 2.46957 9.21071 1.96086 9.58579 1.58579C9.96086 1.21071 10.4696 1 11 1C11.5304 1 12.0391 1.21071 12.4142 1.58579C12.7893 1.96086 13 2.46957 13 3V8H16C16.5304 8 17.0391 8.21071 17.4142 8.58579C17.7893 8.96086 18 9.46957 18 10L17 15C16.8562 15.6135 16.5834 16.1402 16.2227 16.501C15.8619 16.8617 15.4328 17.0368 15 17H8C7.20435 17 6.44129 16.6839 5.87868 16.1213C5.31607 15.5587 5 14.7956 5 14" stroke="#222A5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <g clip-path="url(#clip0_15981_477)">
+                        <path d="M7 14.0001V6.00005C7 5.73484 6.89464 5.48048 6.70711 5.29295C6.51957 5.10541 6.26522 5.00005 6 5.00005H4C3.73478 5.00005 3.48043 5.10541 3.29289 5.29295C3.10536 5.48048 3 5.73484 3 6.00005V13.0001C3 13.2653 3.10536 13.5196 3.29289 13.7072C3.48043 13.8947 3.73478 14.0001 4 14.0001H7ZM7 14.0001C8.06087 14.0001 9.07828 14.4215 9.82843 15.1716C10.5786 15.9218 11 16.9392 11 18.0001V19.0001C11 19.5305 11.2107 20.0392 11.5858 20.4143C11.9609 20.7893 12.4696 21.0001 13 21.0001C13.5304 21.0001 14.0391 20.7893 14.4142 20.4143C14.7893 20.0392 15 19.5305 15 19.0001V14.0001H18C18.5304 14.0001 19.0391 13.7893 19.4142 13.4143C19.7893 13.0392 20 12.5305 20 12.0001L19 7.00005C18.8562 6.38658 18.5834 5.85981 18.2227 5.49909C17.8619 5.13837 17.4328 4.96323 17 5.00005H10C9.20435 5.00005 8.44129 5.31613 7.87868 5.87873C7.31607 6.44134 7 7.20441 7 8.00005" stroke="#222A5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>
+                    <defs>
+                        <clipPath id="clip0_15981_477">
+                            <rect width="24" height="24" fill="white"/>
+                        </clipPath>
+                    </defs>
                 </svg>
+                <p>{{ site.data.i18n.feedback.no[page.lang] }}</p>
             </button>
         </div>
     </div>
 
-    <div class="window__feedback window__feedback--access">
-        <a href="" class="modal-window__close-btn">✕</a>
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.8604 31.6275L29.7673 43.1624L50.6045 22.6973" stroke="#B0DA8F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="32" cy="32" r="30" stroke="#E7F4DD" stroke-width="4"/>
-        </svg>
-            <p class="window__feedback--title">{{ site.data.i18n.feedback.thanks[page.lang] }}</p>
-    </div>
-
-    <div class="window__feedback window__feedback--later">
-        <a href="" class="modal-window__close-btn">✕</a>
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="32" cy="32" r="30" stroke="#F4CFAD" stroke-width="4"/>
-            <g clip-path="url(#clip0_12295_30187)">
-            <path d="M32 48.333V48.3563" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M32 39.0003V15.667" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            </g>
-            <defs>
-            <clipPath id="clip0_12295_30187">
-            <rect width="56" height="56" fill="white" transform="translate(4 4)"/>
-            </clipPath>
-            </defs>
-        </svg>
-            <p class="window__feedback--title">{{ site.data.i18n.feedback.response_processed[page.lang] }}</p>
-    </div>
-
-    <div class="window__feedback window__feedback--error">
-        <a href="" class="modal-window__close-btn">✕</a>
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="32" cy="32" r="30" stroke="#F4CFAD" stroke-width="4"/>
-            <g clip-path="url(#clip0_12295_30187)">
-            <path d="M32 48.333V48.3563" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M32 39.0003V15.667" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            </g>
-            <defs>
-            <clipPath id="clip0_12295_30187">
-            <rect width="56" height="56" fill="white" transform="translate(4 4)"/>
-            </clipPath>
-            </defs>
-        </svg>
-        <div class="window__feedback--container">
-                <h3 class="window__feedback--title">{{ site.data.i18n.feedback.error_happened[page.lang] }}</h3>
-                <p class="window__feedback--descr">{{ site.data.i18n.feedback.try_later[page.lang] }}</p>
+    <div class="feedback__block feedback__block--access">
+        <div class="feedback__block--container">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clip-path="url(#clip0_15096_12129)">
+                    <g clip-path="url(#clip1_15096_12129)">
+                        <path d="M2 12C2 13.3132 2.25866 14.6136 2.7612 15.8268C3.26375 17.0401 4.00035 18.1425 4.92893 19.0711C5.85752 19.9997 6.95991 20.7363 8.17317 21.2388C9.38642 21.7413 10.6868 22 12 22C13.3132 22 14.6136 21.7413 15.8268 21.2388C17.0401 20.7363 18.1425 19.9997 19.0711 19.0711C19.9997 18.1425 20.7363 17.0401 21.2388 15.8268C21.7413 14.6136 22 13.3132 22 12C22 10.6868 21.7413 9.38642 21.2388 8.17317C20.7363 6.95991 19.9997 5.85752 19.0711 4.92893C18.1425 4.00035 17.0401 3.26375 15.8268 2.7612C14.6136 2.25866 13.3132 2 12 2C10.6868 2 9.38642 2.25866 8.17317 2.7612C6.95991 3.26375 5.85752 4.00035 4.92893 4.92893C4.00035 5.85752 3.26375 6.95991 2.7612 8.17317C2.25866 9.38642 2 10.6868 2 12Z" stroke="#45D2B0" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 12L11 15L17 9" stroke="#45D2B0" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>
+                </g>
+                <defs>
+                    <clipPath id="clip0_15096_12129">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                    <clipPath id="clip1_15096_12129">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                </defs>
+            </svg>
+            <p class="feedback__block--title">{{ site.data.i18n.feedback.thanks[page.lang] }}</p>
+        </div>
+        <div class="feedback__block--form-textfield">
+            <input class="more-detailed" type="text" name="detailed" placeholder="{{ site.data.i18n.feedback.thanks.share_the_details[page.lang] }}" aria-label="{{ site.data.i18n.feedback.thanks.share_the_details[page.lang] }}" >
+            <button class="button button_alt button-request" type="submit">{{ site.data.i18n.feedback.send[page.lang] }}</button>
         </div>
     </div>
 
-    <div class="window__feedback window__feedback--form">
-        <a href="" class="modal-window__close-btn">✕</a>
-            <h3 class="window__feedback--title">{{ site.data.i18n.feedback.tell_us_what_you_didnt_like[page.lang] }}</h3>
+    <div class="feedback__block feedback__block--answer feedback__block--access-answer">
+        <div class="feedback__block--container">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clip-path="url(#clip0_15096_12129)">
+                    <g clip-path="url(#clip1_15096_12129)">
+                        <path d="M2 12C2 13.3132 2.25866 14.6136 2.7612 15.8268C3.26375 17.0401 4.00035 18.1425 4.92893 19.0711C5.85752 19.9997 6.95991 20.7363 8.17317 21.2388C9.38642 21.7413 10.6868 22 12 22C13.3132 22 14.6136 21.7413 15.8268 21.2388C17.0401 20.7363 18.1425 19.9997 19.0711 19.0711C19.9997 18.1425 20.7363 17.0401 21.2388 15.8268C21.7413 14.6136 22 13.3132 22 12C22 10.6868 21.7413 9.38642 21.2388 8.17317C20.7363 6.95991 19.9997 5.85752 19.0711 4.92893C18.1425 4.00035 17.0401 3.26375 15.8268 2.7612C14.6136 2.25866 13.3132 2 12 2C10.6868 2 9.38642 2.25866 8.17317 2.7612C6.95991 3.26375 5.85752 4.00035 4.92893 4.92893C4.00035 5.85752 3.26375 6.95991 2.7612 8.17317C2.25866 9.38642 2 10.6868 2 12Z" stroke="#45D2B0" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 12L11 15L17 9" stroke="#45D2B0" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>
+                </g>
+                <defs>
+                    <clipPath id="clip0_15096_12129">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                    <clipPath id="clip1_15096_12129">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                </defs>
+            </svg>
+            <p class="feedback__block--title">{{ site.data.i18n.feedback.thanks.answer[page.lang] }}</p>
+        </div>
+        <p class="feedback__block--title-descr">{{ site.data.i18n.feedback.thanks.answer_descr[page.lang] }}</p>
+    </div>
+
+    <div class="feedback__block feedback__block--later">
+        <div class="feedback__block--container">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clip-path="url(#clip0_16067_215)">
+                    <path d="M2 12C2 13.3132 2.25866 14.6136 2.7612 15.8268C3.26375 17.0401 4.00035 18.1425 4.92893 19.0711C5.85752 19.9997 6.95991 20.7363 8.17317 21.2388C9.38642 21.7413 10.6868 22 12 22C13.3132 22 14.6136 21.7413 15.8268 21.2388C17.0401 20.7363 18.1425 19.9997 19.0711 19.0711C19.9997 18.1425 20.7363 17.0401 21.2388 15.8268C21.7413 14.6136 22 13.3132 22 12C22 10.6868 21.7413 9.38642 21.2388 8.17317C20.7363 6.95991 19.9997 5.85752 19.0711 4.92893C18.1425 4.00035 17.0401 3.26375 15.8268 2.7612C14.6136 2.25866 13.3132 2 12 2C10.6868 2 9.38642 2.25866 8.17317 2.7612C6.95991 3.26375 5.85752 4.00035 4.92893 4.92893C4.00035 5.85752 3.26375 6.95991 2.7612 8.17317C2.25866 9.38642 2 10.6868 2 12Z" stroke="#FFBF60" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8 12L11 15L17 9" stroke="#FFBF60" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                </g>
+                <defs>
+                    <clipPath id="clip0_16067_215">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                </defs>
+            </svg>
+            <!-- <p class="feedback__block--title">{{ site.data.i18n.feedback.response_processed[page.lang] }}</p> -->
+            <p class="feedback__block--title">{{ site.data.i18n.feedback.response_processed[page.lang] }}</p>
+        </div>
+        <div class="feedback__block--form-textfield">
+            <input class="more-detailed" type="text" name="detailed" placeholder="{{ site.data.i18n.feedback.thanks.share_the_details[page.lang] }}" aria-label="{{ site.data.i18n.feedback.thanks.share_the_details[page.lang] }}" >
+            <button class="button button_alt button-request" type="submit">{{ site.data.i18n.feedback.send[page.lang] }}</button>
+        </div>
+    </div>
+
+    <div class="feedback__block feedback__block--error">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="30" stroke="#F4CFAD" stroke-width="4"/>
+            <g clip-path="url(#clip0_12295_30187)">
+            <path d="M32 48.333V48.3563" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M32 39.0003V15.667" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <defs>
+            <clipPath id="clip0_12295_30187">
+            <rect width="56" height="56" fill="white" transform="translate(4 4)"/>
+            </clipPath>
+            </defs>
+        </svg>
+        <div class="feedback__block--container">
+                <h3 class="feedback__block--title">{{ site.data.i18n.feedback.error_happened[page.lang] }}</h3>
+                <p class="feedback__block--descr">{{ site.data.i18n.feedback.try_later[page.lang] }}</p>
+        </div>
+    </div>
+
+    <div class="feedback__block feedback__block--form">
+        <div class="feedback__block--container">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clip-path="url(#clip0_14766_18891)">
+                    <g clip-path="url(#clip1_14766_18891)">
+                        <path d="M2 12C2 13.3132 2.25866 14.6136 2.7612 15.8268C3.26375 17.0401 4.00035 18.1425 4.92893 19.0711C5.85752 19.9997 6.95991 20.7363 8.17317 21.2388C9.38642 21.7413 10.6868 22 12 22C13.3132 22 14.6136 21.7413 15.8268 21.2388C17.0401 20.7363 18.1425 19.9997 19.0711 19.0711C19.9997 18.1425 20.7363 17.0401 21.2388 15.8268C21.7413 14.6136 22 13.3132 22 12C22 10.6868 21.7413 9.38642 21.2388 8.17317C20.7363 6.95991 19.9997 5.85752 19.0711 4.92893C18.1425 4.00035 17.0401 3.26375 15.8268 2.7612C14.6136 2.25866 13.3132 2 12 2C10.6868 2 9.38642 2.25866 8.17317 2.7612C6.95991 3.26375 5.85752 4.00035 4.92893 4.92893C4.00035 5.85752 3.26375 6.95991 2.7612 8.17317C2.25866 9.38642 2 10.6868 2 12Z" stroke="#408BFF" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 12L11 15L17 9" stroke="#408BFF" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>
+                </g>
+                <defs>
+                    <clipPath id="clip0_14766_18891">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                    <clipPath id="clip1_14766_18891">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                </defs>
+            </svg>
+            <h3 class="feedback__block--title">{{ site.data.i18n.feedback.tell_us_what_you_didnt_like[page.lang] }}</h3>
+        </div>
+        <div class="feedback__block--form-textfield">
             <div class="checkboxes">
                 <input class="checkbox" type="checkbox" id="fbFew" value="few">
                 <label for="fbFew">{{ site.data.i18n.feedback.not_useful[page.lang] }}</label>
@@ -78,10 +156,66 @@
                 <input class="checkbox" type="checkbox" id="fbOther" value="other">
                 <label for="fbOther">{{ site.data.i18n.feedback.other[page.lang] }}</label>
             </div>
-            <div class="window__feedback--form-textfield">
-                <input class="more-detailed" type="text" name="detailed" placeholder="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" aria-label="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" >
-            </div>
+            <input class="more-detailed" type="text" name="detailed" placeholder="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" aria-label="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" >
             <button class="button button_alt button-request" type="submit">{{ site.data.i18n.feedback.send[page.lang] }}</button>
+        </div>
+    </div>
+
+    <div class="feedback__block feedback__block--answer feedback__block--form-answer">
+        <div class="feedback__block--container">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clip-path="url(#clip0_14766_18891)">
+                    <g clip-path="url(#clip1_14766_18891)">
+                        <path d="M2 12C2 13.3132 2.25866 14.6136 2.7612 15.8268C3.26375 17.0401 4.00035 18.1425 4.92893 19.0711C5.85752 19.9997 6.95991 20.7363 8.17317 21.2388C9.38642 21.7413 10.6868 22 12 22C13.3132 22 14.6136 21.7413 15.8268 21.2388C17.0401 20.7363 18.1425 19.9997 19.0711 19.0711C19.9997 18.1425 20.7363 17.0401 21.2388 15.8268C21.7413 14.6136 22 13.3132 22 12C22 10.6868 21.7413 9.38642 21.2388 8.17317C20.7363 6.95991 19.9997 5.85752 19.0711 4.92893C18.1425 4.00035 17.0401 3.26375 15.8268 2.7612C14.6136 2.25866 13.3132 2 12 2C10.6868 2 9.38642 2.25866 8.17317 2.7612C6.95991 3.26375 5.85752 4.00035 4.92893 4.92893C4.00035 5.85752 3.26375 6.95991 2.7612 8.17317C2.25866 9.38642 2 10.6868 2 12Z" stroke="#408BFF" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 12L11 15L17 9" stroke="#408BFF" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                    </g>
+                </g>
+                <defs>
+                    <clipPath id="clip0_14766_18891">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                    <clipPath id="clip1_14766_18891">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                </defs>
+            </svg>
+            <p class="feedback__block--title">>{{ site.data.i18n.feedback.thanks.answer_descr[page.lang] }}</p>
+        </div>
+        <p class="feedback__block--title-descr">{{ site.data.i18n.feedback.thanks.answer_descr[page.lang] }}</p>
+    </div>
+
+    <div class="feedback__block feedback__block--form--later">
+        <div class="feedback__block--container">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clip-path="url(#clip0_16067_215)">
+                    <path d="M2 12C2 13.3132 2.25866 14.6136 2.7612 15.8268C3.26375 17.0401 4.00035 18.1425 4.92893 19.0711C5.85752 19.9997 6.95991 20.7363 8.17317 21.2388C9.38642 21.7413 10.6868 22 12 22C13.3132 22 14.6136 21.7413 15.8268 21.2388C17.0401 20.7363 18.1425 19.9997 19.0711 19.0711C19.9997 18.1425 20.7363 17.0401 21.2388 15.8268C21.7413 14.6136 22 13.3132 22 12C22 10.6868 21.7413 9.38642 21.2388 8.17317C20.7363 6.95991 19.9997 5.85752 19.0711 4.92893C18.1425 4.00035 17.0401 3.26375 15.8268 2.7612C14.6136 2.25866 13.3132 2 12 2C10.6868 2 9.38642 2.25866 8.17317 2.7612C6.95991 3.26375 5.85752 4.00035 4.92893 4.92893C4.00035 5.85752 3.26375 6.95991 2.7612 8.17317C2.25866 9.38642 2 10.6868 2 12Z" stroke="#FFBF60" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8 12L11 15L17 9" stroke="#FFBF60" stroke-width="2.88" stroke-linecap="round" stroke-linejoin="round"/>
+                </g>
+                <defs>
+                    <clipPath id="clip0_16067_215">
+                        <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                </defs>
+            </svg>
+            <!-- <p class="feedback__block--title">{{ site.data.i18n.feedback.response_processed[page.lang] }}</p> -->
+            <p class="feedback__block--title">{{ site.data.i18n.feedback.response_processed[page.lang] }}</p>
+        </div>
+        <div class="feedback__block--form-textfield">
+            <div class="checkboxes">
+                <input class="checkbox" type="checkbox" id="fbFew" value="few">
+                <label for="fbFew">{{ site.data.i18n.feedback.not_useful[page.lang] }}</label>
+                <input class="checkbox" type="checkbox" id="fbMistakes" value="mistakes">
+                <label for="fbMistakes">{{ site.data.i18n.feedback.there_are_errors[page.lang] }}</label>
+                <input class="checkbox" type="checkbox" id="fbUnclear" value="unclear">
+                <label for="fbUnclear">{{ site.data.i18n.feedback.written_incomprehensibly[page.lang] }}</label>
+                <input class="checkbox" type="checkbox" id="fbOutdated" value="outdated">
+                <label for="fbOutdated">{{ site.data.i18n.feedback.outdated_information[page.lang] }}</label>
+                <input class="checkbox" type="checkbox" id="fbOther" value="other">
+                <label for="fbOther">{{ site.data.i18n.feedback.other[page.lang] }}</label>
+            </div>
+            <input class="more-detailed" type="text" name="detailed" placeholder="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" aria-label="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" >
+            <button class="button button_alt button-request" type="submit">{{ site.data.i18n.feedback.send[page.lang] }}</button>
+        </div>
     </div>
 </div>
 <!--/noindex-->

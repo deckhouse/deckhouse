@@ -1,27 +1,16 @@
 document.addEventListener('DOMContentLoaded', function () {
     const likeIcon = document.querySelector('.icon__like');
     const dislikeIcon = document.querySelector('.icon__dislike');
-    const allModal = document.querySelectorAll('.window__feedback');
-    const accessModal = document.querySelector('.window__feedback--access');
-    const laterModal = document.querySelector('.window__feedback--later');
-    const errorModal = document.querySelector('.window__feedback--error');
-    const formModal = document.querySelector('.window__feedback--form');
+    const allModal = document.querySelectorAll('.feedback__block');
+    const accessModal = document.querySelector('.feedback__block--access');
+    const laterModal = document.querySelector('.feedback__block--later');
+    const errorModal = document.querySelector('.feedback__block--error');
+    const formModal = document.querySelector('.feedback__block--form');
     const moreDetailed = formModal ? formModal.querySelector('.button') : null;
-    const closeBtn = document.querySelectorAll('.modal-window__close-btn');
     const detailedInput = document.querySelector('.more-detailed');
     const tocSidebar = document.querySelector('.layout-sidebar__sidebar_right');
     const currentUrl = window.location.href;
     const cookieName = 'userFeedback';
-
-    allModal.forEach(modal => {
-        if (modal) {
-            if (tocSidebar) {
-                modal.style.right = '-300px';
-            } else {
-                modal.style.right = '5px';
-            }
-        }
-    })
 
     let accessModalTimeout;
     let laterModalTimeout;
@@ -259,16 +248,6 @@ document.addEventListener('DOMContentLoaded', function () {
             await sendFeedback(false, reasons, comment)
         })
     }
-
-    closeBtn.forEach(btn => {
-        btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            if (accessModal) accessModal.style.display = 'none';
-            if (formModal) formModal.style.display = 'none';
-            if (errorModal) errorModal.style.display = 'none';
-            if (laterModal) laterModal.style.display = 'none';
-        })
-    })
 
     window.addEventListener('beforeunload', function () {
         this.clearTimeout(accessModalTimeout);
