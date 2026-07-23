@@ -39,7 +39,6 @@ metadata:
   name: ingress-nginx
 spec:
   enabled: true
-  version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -68,9 +67,9 @@ metadata:
   name: prometheus
 spec:
   enabled: true
+  version: 2
   settings:
     longtermRetentionDays: 0
-  version: 2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -78,6 +77,7 @@ metadata:
   name: global
 spec:
   enabled: true
+  version: 2
   settings:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
@@ -85,7 +85,6 @@ spec:
       placement:
         customTolerationKeys:
           - node
-  version: 2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
