@@ -16,6 +16,7 @@ the corresponding keys into the matching nodes of the already generated
 - [Marker reference](#marker-reference)
 - [Automatic example generation](#automatic-example-generation)
 - [CLI reference](#cli-reference)
+- [Output layout](#output-layout)
 - [How it works](#how-it-works)
 - [Warnings and gotchas](#warnings-and-gotchas)
 
@@ -52,7 +53,7 @@ exception of `x-kubernetes-sensitive-data`, which the apiserver acts on.
 | Field | Source marker | Purpose |
 | --- | --- | --- |
 | `x-doc-examples` | `deckhouse:documentation:examples` | Sample values shown in the docs for a field, and the assembled "example resource" block. A list; the marker may be repeated. Object examples keep their **authored key order**. |
-| `x-doc-example` / `x-doc-description` / `x-doc-name` | `deckhouse:documentation:examples-name` / `…:examples-description` (each paired with an `examples` marker) | When an example is given a name and/or a description, every `x-doc-examples` entry becomes a `{x-doc-example, x-doc-description, x-doc-name}` object instead of a bare value. |
+| `x-example` / `x-description` / `x-name` | `deckhouse:documentation:examples-name` / `…:examples-description` (each paired with an `examples` marker) | When an example is given a name and/or a description, every `x-doc-examples` entry becomes a `{x-example, x-description, x-name}` object instead of a bare value. |
 | `x-doc-default` | `deckhouse:documentation:default` | The **documented** default value, shown in the docs when the real default is computed at runtime and cannot be expressed as a `kubebuilder:default`. |
 | `x-doc-deprecated` | `deckhouse:documentation:deprecated` | Marks a field as deprecated in the docs (renders a deprecation badge). |
 | `x-kubernetes-sensitive-data` | `deckhouse:sensitive-data` | **Behavioral**, not documentation. Tells the apiserver's `CRDSensitiveData` feature to encrypt the value in etcd, filter it by RBAC and mask it in audit logs. |
@@ -211,12 +212,12 @@ type ModuleConfig struct { ... }
 
 Attach a short **name** and/or a longer **description** to the example
 introduced by the *preceding* `examples` marker. They render as
-`x-doc-name` and `x-doc-description`.
+`x-name` and `x-description`.
 
 The rule is **all-or-nothing per field**: as soon as *any* example in a field
 carries a name or a description, every entry of that field's `x-doc-examples`
 switches from a bare value to a wrapper object
-`{x-doc-example, x-doc-description, x-doc-name}` (an entry missing
+`{x-example, x-description, x-name}` (an entry missing
 an attribute simply omits that key). When *no* example has either, the list stays
 a plain list of values — so examples written before this feature are untouched.
 
@@ -238,27 +239,27 @@ registry:
   type: object
   # ...properties (sorted)...
   x-doc-examples:
-    - x-doc-example:
+    - x-example:
         repo: registry.example.io/modules
         dockerCfg: <base64>
-      x-doc-description: Anonymous, read-only access.
-      x-doc-name: Public registry
-    - x-doc-example:
+      x-description: Anonymous, read-only access.
+      x-name: Public registry
+    - x-example:
         repo: registry.internal/modules
         dockerCfg: <base64>
-      x-doc-name: Private registry
+      x-name: Private registry
 ```
 
 The second entry has a name but no description, so it omits
-`x-doc-description` — yet it is still wrapped, because the field as a
+`x-description` — yet it is still wrapped, because the field as a
 whole opted into the wrapper form.
 
 **Rules**
 
 - A `examples-name` / `examples-description` attaches to the **most recent**
   `examples` marker above it.
-- Key order in the wrapper is always `x-doc-example`, then
-  `x-doc-description`, then `x-doc-name`.
+- Key order in the wrapper is always `x-example`, then
+  `x-description`, then `x-name`.
 - A name or description with no preceding `examples` marker is ignored with a
   warning; a second name/description for the same example overrides the first
   (also warned).
@@ -291,8 +292,8 @@ registry:
 ```
 
 This also holds inside the wrapper form: the outer keys follow the fixed
-`x-doc-example` → `x-doc-description` → `x-doc-name` order, and the
-object under `x-doc-example` keeps its own authored order.
+`x-example` → `x-description` → `x-name` order, and the
+object under `x-example` keeps its own authored order.
 
 ### `default` — documented default
 
@@ -443,7 +444,7 @@ never overwritten by generation.
 ## CLI reference
 
 ```
-crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [examples]
+crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] [reindent]
 ```
 
 | Argument | Meaning |
@@ -453,6 +454,7 @@ crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [examples]
 | `output:crd:artifacts:config=` | Alias for `crds=`, so the same controller-gen-style argument can be reused. |
 | `dir=` | Optional working directory used to resolve the package patterns. Defaults to the current directory. |
 | `auto-examples`, `--auto-examples`, `auto-examples=<bool>` | Enable [automatic example generation](#automatic-example-generation) (**off by default**). Explicit `examples` markers are applied regardless. |
+| `reindent`, `--reindent`, `reindent=<bool>` | Encode the output with **indented** block sequences (the `goyaml.v3` layout) instead of the default flush `sigs.k8s.io/yaml` layout (**off by default**). Key ordering is unaffected. See [Output layout](#output-layout). |
 | `-h`, `--help`, `help` | Print usage. |
 
 Example:
@@ -478,6 +480,7 @@ changed, err := crdenricher.Run(crdenricher.Options{
 	CRDDir:           "bin/crd/bases",
 	Dir:              ".",  // optional
 	GenerateExamples: true, // optional; off by default, mirrors the `auto-examples` flag
+	Reindent:         true, // optional; off by default, mirrors the `reindent` flag
 })
 ```
 
@@ -485,6 +488,37 @@ changed, err := crdenricher.Run(crdenricher.Options{
 schema nodes that don't exist, unresolvable `raw:` paths, sensitive-data on the
 root) are collected as warnings — construct an `Enricher` directly if you want to
 inspect `Enricher.Warnings()`.
+
+## Output layout
+
+The two YAML libraries lay out block sequences differently, and the enricher lets
+you pick which one it emits.
+
+- **Default (flush).** The enricher writes with the same layout as
+  `sigs.k8s.io/yaml` — block sequence items are flush with their parent key.
+  Documents that carry an authored (ordered) example are re-encoded with
+  `goyaml.v2`, which uses that same flush layout, so a file that gains an example
+  stays byte-identical to controller-gen output everywhere except the enriched
+  nodes. This is what keeps regeneration diffs minimal.
+
+  ```yaml
+  versions:
+  - name: v1alpha1        # dash flush with `versions`
+  ```
+
+- **`reindent` (indented).** With the `reindent` flag (or `Options.Reindent`) the
+  whole document is encoded with `goyaml.v3` at `SetIndent(2)`, which indents each
+  block sequence item under its parent key. Key ordering is identical to the
+  default — only the indentation changes.
+
+  ```yaml
+  versions:
+    - name: v1alpha1      # dash indented under `versions`
+  ```
+
+Either way, authored example objects keep their field order (see
+[Warnings and gotchas](#warnings-and-gotchas)); the flag only controls sequence
+indentation.
 
 ## How it works
 

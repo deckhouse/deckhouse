@@ -32,6 +32,13 @@ const testFixturePaths = "./testdata/api/v1alpha1"
 // enriched file bytes. Each fixture backs exactly one root type, so a test runs
 // the enricher against exactly one feature.
 func runFixture(t *testing.T, crdFile string, generateExamples bool) []byte {
+	return runFixtureOpts(t, crdFile, Options{GenerateExamples: generateExamples})
+}
+
+// runFixtureOpts is runFixture with full control over the enrichment Options.
+// The caller must not set Paths or CRDDir — the driver points them at the
+// fixture package and the temp copy it makes.
+func runFixtureOpts(t *testing.T, crdFile string, opts Options) []byte {
 	t.Helper()
 
 	crdDir := t.TempDir()
@@ -44,11 +51,9 @@ func runFixture(t *testing.T, crdFile string, generateExamples bool) []byte {
 		t.Fatalf("write fixture copy: %v", err)
 	}
 
-	if _, err := Run(Options{
-		Paths:            []string{testFixturePaths},
-		CRDDir:           crdDir,
-		GenerateExamples: generateExamples,
-	}); err != nil {
+	opts.Paths = []string{testFixturePaths}
+	opts.CRDDir = crdDir
+	if _, err := Run(opts); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 

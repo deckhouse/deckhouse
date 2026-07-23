@@ -44,6 +44,13 @@ type Options struct {
 	// crd:exampleScope=tree, the per-node examples) are only produced when this
 	// flag is set.
 	GenerateExamples bool
+	// Reindent switches the output encoder to the goyaml.v3 layout, which indents
+	// every block sequence under its parent key (SetIndent(2)). It is off by
+	// default: the enricher then keeps the sigs.k8s.io/yaml layout (block
+	// sequences flush with their parent key), leaving files byte-identical to
+	// controller-gen output except at the enriched nodes. Key ordering (authored
+	// order for examples, sorted elsewhere) is the same either way.
+	Reindent bool
 }
 
 // Enricher applies custom x-doc-* schema fields to controller-gen output based
@@ -81,6 +88,10 @@ type Enricher struct {
 	// order-preserving marshaller so the authored field order survives; files
 	// without ordered examples keep the default sigs.k8s.io/yaml encoding.
 	orderedExamples bool
+
+	// reindent mirrors Options.Reindent. When set, every document is encoded with
+	// the goyaml.v3 indented layout instead of the flush sigs.k8s.io/yaml one.
+	reindent bool
 }
 
 // Run loads the API packages, then walks and enriches every CRD file in the
@@ -102,6 +113,7 @@ func Run(opts Options) ([]string, error) {
 		pkgByPath:               pkgByPath,
 		rootsByVersion:          make(map[string]map[string]*types.Named),
 		generateExamplesEnabled: opts.GenerateExamples,
+		reindent:                opts.Reindent,
 	}
 	for _, info := range pkgByPath {
 		for kind, named := range info.roots {
@@ -184,9 +196,14 @@ func (e *Enricher) enrichFile(path string) (bool, error) {
 	// Documents that carry authored (ordered) examples are encoded with the
 	// order-preserving marshaller so the example fields keep their authored
 	// order; everything else keeps the default sigs.k8s.io/yaml encoding, which
-	// leaves files without markers byte for byte identical.
+	// leaves files without markers byte for byte identical. The reindent flag
+	// overrides both and encodes every document with the goyaml.v3 indented
+	// layout (it also preserves ordered examples).
 	marshal := yaml.Marshal
-	if e.orderedExamples {
+	switch {
+	case e.reindent:
+		marshal = marshalIndented
+	case e.orderedExamples:
 		marshal = marshalOrdered
 	}
 	out, err := marshal(crd)
@@ -727,11 +744,11 @@ type exampleEntry struct {
 // buildExamples renders the collected entries into the x-doc-examples list. If
 // no entry carries a name or a description the list stays a plain list of
 // values, exactly as before. As soon as any entry has a name or a description,
-// every entry switches to the wrapper form {x-doc-example, x-doc-description,
-// x-doc-name} (an entry missing either attribute omits its key), so the array
-// stays homogeneous for consumers. Wrapping (and any ordered example value)
-// forces the order-preserving encoder so the example keeps its place ahead of
-// its attributes.
+// every entry switches to the wrapper form {x-example, x-description, x-name}
+// (an entry missing either attribute omits its key), so the array stays
+// homogeneous for consumers. Wrapping (and any ordered example value) forces the
+// order-preserving encoder so the example keeps its place ahead of its
+// attributes.
 func (e *Enricher) buildExamples(entries []exampleEntry) []any {
 	wrap := false
 	for _, entry := range entries {

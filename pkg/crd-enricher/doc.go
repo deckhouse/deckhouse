@@ -55,8 +55,8 @@
 //   - examples-name / examples-description — attach a short name and/or a
 //     description to the example introduced by the preceding examples marker. As
 //     soon as any example has a name or a description, every entry of
-//     x-doc-examples switches to the wrapper form {x-doc-example,
-//     x-doc-description, x-doc-name} (an entry missing either
+//     x-doc-examples switches to the wrapper form {x-example,
+//     x-description, x-name} (an entry missing either
 //     attribute omits its key); when no example has one the list stays a plain
 //     list of values. For example
 //
@@ -67,10 +67,10 @@
 //     renders as
 //
 //	x-doc-examples:
-//	  - x-doc-example:
+//	  - x-example:
 //	      field: value
-//	    x-doc-description: A longer note
-//	    x-doc-name: My example
+//	    x-description: A longer note
+//	    x-name: My example
 //
 //   - deprecated — a value-less flag rendered as x-doc-deprecated: true (any
 //     value-less simple entity becomes a boolean x-doc-<entity>);
@@ -131,4 +131,13 @@
 // The "paths" argument selects the Go packages that hold the API structs (the
 // source of the markers) and "crds" points at the directory with the CRD YAML
 // files produced by controller-gen, which are enriched in place.
+//
+// # Output layout
+//
+// By default the enricher writes block sequences flush with their parent key,
+// matching sigs.k8s.io/yaml, so files without enriched nodes round-trip
+// byte-for-byte; documents with authored (ordered) examples use goyaml.v2, which
+// shares that layout. The "reindent" flag (Options.Reindent) switches to the
+// goyaml.v3 layout, which indents every block sequence item under its parent key
+// (SetIndent(2)). Only the indentation changes — key ordering is identical.
 package crdenricher

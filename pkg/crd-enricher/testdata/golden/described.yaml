@@ -27,20 +27,20 @@ spec:
               mixed:
                 type: string
                 x-doc-examples:
-                - x-doc-example: 5m
-                - x-doc-example: 1h
-                  x-doc-description: one hour
+                - x-example: 5m
+                - x-example: 1h
+                  x-description: one hour
               settings:
                 additionalProperties:
                   type: string
                 type: object
                 x-doc-examples:
-                - x-doc-example:
+                - x-example:
                     field: value
-                  x-doc-description: my super example
-                - x-doc-example:
+                  x-description: my super example
+                - x-example:
                     field: value2
-                  x-doc-description: my super example two
+                  x-description: my super example two
             type: object
         type: object
     served: true

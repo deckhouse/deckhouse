@@ -79,6 +79,18 @@ func run(args []string) error {
 			}
 			opts.GenerateExamples = value
 
+		// Indented output is opt-in. Accept the value-less flag forms (reindent /
+		// --reindent) and an explicit boolean (reindent=true).
+		case arg == "reindent", arg == "--reindent":
+			opts.Reindent = true
+
+		case strings.HasPrefix(arg, "reindent="):
+			value, err := parseBool(trimQuotes(strings.TrimPrefix(arg, "reindent=")))
+			if err != nil {
+				return err
+			}
+			opts.Reindent = value
+
 		default:
 			return fmt.Errorf("unknown argument %q", arg)
 		}
@@ -121,7 +133,7 @@ func usage() {
 	fmt.Print(`crd-enricher enriches controller-gen CRDs with custom x-doc-* schema fields.
 
 Usage:
-  crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples]
+  crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] [reindent]
 
 Arguments:
   paths=        Comma separated Go package patterns with the API structs (repeatable).
@@ -132,6 +144,9 @@ Arguments:
                 from defaults, enums and explicit examples markers.
                 Off by default; explicit examples markers are always applied.
                 Accepts auto-examples, --auto-examples or auto-examples=<bool>.
+  reindent      Encode the output with indented block sequences (the goyaml.v3
+                layout) instead of the flush sigs.k8s.io/yaml layout. Off by
+                default. Accepts reindent, --reindent or reindent=<bool>.
 
 Example:
   crd-enricher paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." crds=bin/crd/bases auto-examples

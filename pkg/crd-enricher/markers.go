@@ -66,9 +66,9 @@ const examplesMarker = "examples"
 // becomes
 //
 //	x-doc-examples:
-//	  - x-doc-example:
+//	  - x-example:
 //	      field: value
-//	    x-doc-description: My example
+//	    x-description: My example
 //
 // As long as no example carries a name or a description the list stays a plain
 // list of values, so existing examples are unaffected. As soon as any example
@@ -79,16 +79,18 @@ const examplesDescriptionMarker = "examples-description"
 
 // examplesNameMarker attaches a short name to the example introduced by the
 // preceding examplesMarker, exactly like examplesDescriptionMarker. It renders
-// as x-doc-name inside the wrapper and, like a description, switches the whole
+// as x-name inside the wrapper and, like a description, switches the whole
 // x-doc-examples list to the wrapper form.
 const examplesNameMarker = "examples-name"
 
 // docExampleKey, docNameKey and docDescriptionKey are the schema fields that a
-// wrapped example renders to inside an x-doc-examples entry.
+// wrapped example renders to inside an x-doc-examples entry. Unlike the list key
+// itself they are not under the x-doc- namespace: an entry reads
+// {x-example, x-description, x-name}.
 const (
-	docExampleKey     = docKeyPrefix + "example"
-	docNameKey        = docKeyPrefix + "name"
-	docDescriptionKey = docKeyPrefix + "description"
+	docExampleKey     = "x-example"
+	docNameKey        = "x-name"
+	docDescriptionKey = "x-description"
 )
 
 // rawMarkerPrefix is the entity that injects an arbitrary standard schema field

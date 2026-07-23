@@ -168,7 +168,7 @@ func TestApplyMarkersExamplesDescription(t *testing.T) {
 	schema := map[string]any{"type": "object"}
 
 	// Each examples marker is followed by its description; the pairs must render
-	// as {x-doc-description, x-doc-example} wrappers in the authored order.
+	// as {x-description, x-example} wrappers in the authored order.
 	e.applyMarkers(schema, []marker{
 		{name: "examples", rawValue: "{field: value}", hasValue: true, enricher: true},
 		{name: "examples-description", rawValue: "my super example", hasValue: true, enricher: true},
@@ -185,12 +185,12 @@ func TestApplyMarkersExamplesDescription(t *testing.T) {
 	// a sorted map renders identically, so the output is unchanged.
 	want := []any{
 		orderedMap{
-			{key: "x-doc-example", val: map[string]any{"field": "value"}},
-			{key: "x-doc-description", val: "my super example"},
+			{key: "x-example", val: map[string]any{"field": "value"}},
+			{key: "x-description", val: "my super example"},
 		},
 		orderedMap{
-			{key: "x-doc-example", val: map[string]any{"field": "value2"}},
-			{key: "x-doc-description", val: "my super example two"},
+			{key: "x-example", val: map[string]any{"field": "value2"}},
+			{key: "x-description", val: "my super example two"},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
@@ -203,7 +203,7 @@ func TestApplyMarkersExamplesName(t *testing.T) {
 	schema := map[string]any{"type": "object"}
 
 	// A name alone (no description) switches to the wrapper form; the wrapper
-	// carries x-doc-name and x-doc-example, and omits x-doc-description.
+	// carries x-name and x-example, and omits x-description.
 	e.applyMarkers(schema, []marker{
 		{name: "examples", rawValue: "{field: value}", hasValue: true, enricher: true},
 		{name: "examples-name", rawValue: "My example", hasValue: true, enricher: true},
@@ -215,8 +215,8 @@ func TestApplyMarkersExamplesName(t *testing.T) {
 
 	want := []any{
 		orderedMap{
-			{key: "x-doc-example", val: map[string]any{"field": "value"}},
-			{key: "x-doc-name", val: "My example"},
+			{key: "x-example", val: map[string]any{"field": "value"}},
+			{key: "x-name", val: "My example"},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
@@ -228,8 +228,8 @@ func TestApplyMarkersExamplesNameAndDescription(t *testing.T) {
 	e := &Enricher{}
 	schema := map[string]any{"type": "string"}
 
-	// Name and description together render as {x-doc-example,
-	// x-doc-description, x-doc-name} in that order.
+	// Name and description together render as {x-example,
+	// x-description, x-name} in that order.
 	e.applyMarkers(schema, []marker{
 		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
 		{name: "examples-name", rawValue: "five minutes", hasValue: true, enricher: true},
@@ -238,9 +238,9 @@ func TestApplyMarkersExamplesNameAndDescription(t *testing.T) {
 
 	want := []any{
 		orderedMap{
-			{key: "x-doc-example", val: "5m"},
-			{key: "x-doc-description", val: "a short interval"},
-			{key: "x-doc-name", val: "five minutes"},
+			{key: "x-example", val: "5m"},
+			{key: "x-description", val: "a short interval"},
+			{key: "x-name", val: "five minutes"},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
@@ -253,7 +253,7 @@ func TestApplyMarkersExamplesDescriptionMixed(t *testing.T) {
 	schema := map[string]any{"type": "string"}
 
 	// Once any example has a description, every entry switches to the wrapper
-	// form; the one without a description omits the x-doc-description key.
+	// form; the one without a description omits the x-description key.
 	e.applyMarkers(schema, []marker{
 		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
 		{name: "examples", rawValue: "1h", hasValue: true, enricher: true},
@@ -262,11 +262,11 @@ func TestApplyMarkersExamplesDescriptionMixed(t *testing.T) {
 
 	want := []any{
 		orderedMap{
-			{key: "x-doc-example", val: "5m"},
+			{key: "x-example", val: "5m"},
 		},
 		orderedMap{
-			{key: "x-doc-example", val: "1h"},
-			{key: "x-doc-description", val: "one hour"},
+			{key: "x-example", val: "1h"},
+			{key: "x-description", val: "one hour"},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {

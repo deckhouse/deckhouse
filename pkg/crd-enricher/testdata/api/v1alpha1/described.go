@@ -15,7 +15,7 @@
 package v1alpha1
 
 // Described exercises examples-description: when any example carries a
-// description the whole list switches to the {x-doc-description, x-doc-example}
+// description the whole list switches to the {x-description, x-example}
 // wrapper form.
 //
 // +kubebuilder:object:root=true
@@ -33,7 +33,7 @@ type DescribedSpec struct {
 	Settings map[string]string `json:"settings"`
 
 	// Mixed: only the second example is described, so both switch to the wrapper
-	// form and the first one omits x-doc-description.
+	// form and the first one omits x-description.
 	//
 	// +crd-enricher:deckhouse:documentation:examples=5m
 	// +crd-enricher:deckhouse:documentation:examples=1h
