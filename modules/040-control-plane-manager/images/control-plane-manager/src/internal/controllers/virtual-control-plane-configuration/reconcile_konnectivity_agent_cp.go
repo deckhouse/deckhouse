@@ -50,8 +50,6 @@ func (r *reconciler) reconcileKonnectivityCPAgentSecret(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	pkiSecret *corev1.Secret,
 ) (reconcile.Result, error) {
-	ns := vcpNamespace(vcp)
-
 	if err := r.ensureKonnectivityCPAgentSecretBootstrap(ctx, vcp, pkiSecret.Data["ca.crt"]); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -66,7 +64,7 @@ func (r *reconciler) reconcileKonnectivityCPAgentSecret(
 	}
 
 	target := r.konnectivityCPAgentSecret(vcp, pkiSecret.Data["ca.crt"], token, exp)
-	current, err := r.getSecret(ctx, ns, konnectivityAgentCPSecretName)
+	current, err := r.getSecret(ctx, vcp.Namespace, konnectivityAgentCPSecretName)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -85,9 +83,7 @@ func (r *reconciler) ensureKonnectivityCPAgentSecretBootstrap(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	caPEM []byte,
 ) error {
-	ns := vcpNamespace(vcp)
-
-	current, err := r.getSecret(ctx, ns, konnectivityAgentCPSecretName)
+	current, err := r.getSecret(ctx, vcp.Namespace, konnectivityAgentCPSecretName)
 	if apierrors.IsNotFound(err) {
 		target := r.konnectivityCPAgentSecret(
 			vcp,
@@ -156,9 +152,7 @@ func (r *reconciler) ensureKonnectivityCPAgentToken(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 ) (string, string, error) {
-	ns := vcpNamespace(vcp)
-
-	if current, err := r.getSecret(ctx, ns, konnectivityAgentCPSecretName); err == nil {
+	if current, err := r.getSecret(ctx, vcp.Namespace, konnectivityAgentCPSecretName); err == nil {
 		token := string(current.Data["token"])
 		if token != "" && token != konnectivityAgentCPPlaceholderToken {
 			if expRaw := current.Annotations[konnectivityAgentCPTokenExpiresAt]; expRaw != "" {
@@ -200,7 +194,6 @@ func (r *reconciler) konnectivityCPAgentSecret(
 	caPEM []byte,
 	token, exp string,
 ) *corev1.Secret {
-	ns := vcpNamespace(vcp)
 	annotations := map[string]string{}
 	if exp != "" {
 		annotations[konnectivityAgentCPTokenExpiresAt] = exp
@@ -209,7 +202,7 @@ func (r *reconciler) konnectivityCPAgentSecret(
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        konnectivityAgentCPSecretName,
-			Namespace:   ns,
+			Namespace:   vcp.Namespace,
 			Annotations: annotations,
 			Labels: map[string]string{
 				constants.HeritageLabelKey:                 constants.HeritageLabelValue,

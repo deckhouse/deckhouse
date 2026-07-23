@@ -43,7 +43,6 @@ const (
 	VirtualConfigurationController            = "virtual-control-plane-configuration-controller"
 	VirtualControlPlaneNodeController         = "virtual-control-plane-node-controller"
 	VirtualControlPlaneApproverControllerName = "virtual_control_plane_approver_controller"
-	VirtualControlPlaneNamespacePrefix        = "vcp-"
 	VirtualControlPlaneConfigSecretName       = "d8-virtual-control-plane-config"
 	VirtualRenderedConfigSecretName           = "d8-vcp-config-virtual"
 	VirtualPKISecretName                      = "d8-pki-virtual"
@@ -58,8 +57,8 @@ const (
 	// DefaultTenantPodSubnetCIDR must stay in sync with cluster-pool-ipv4-cidr in cilium-vcp.yaml.tpl.
 	DefaultTenantPodSubnetCIDR = "10.244.0.0/16"
 	// DefaultTenantClusterDNS is the 10th address of DefaultTenantServiceSubnetCIDR.
-	DefaultTenantClusterDNS = "10.96.0.10"
-	VirtualExposeDomainSuffix                 = "vcp.local"
+	DefaultTenantClusterDNS   = "10.96.0.10"
+	VirtualExposeDomainSuffix = "vcp.local"
 
 	RegistryPackagesProxyPort          int32 = 4219
 	RegistryPackagesProxyBootstrapPort int32 = 4282

@@ -133,8 +133,6 @@ func buildManifestReplacer(
 	apiAdvertiseAddress string,
 	clusterUUID string,
 ) *strings.Replacer {
-	namespace := vcpNamespace(vcp)
-
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
 		"${VCP_CLUSTER_UUID}", clusterUUID,
@@ -147,7 +145,7 @@ func buildManifestReplacer(
 		"${IMAGE_CILIUM}", fixed.Cilium,
 		"${IMAGE_CILIUM_OPERATOR}", fixed.CiliumOperator,
 		"${VCP_NAME}", vcp.Name,
-		"${NAMESPACE}", namespace,
+		"${NAMESPACE}", vcp.Namespace,
 		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
 		"${CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
 		"${SERVICE_SUBNET_CIDR}", constants.DefaultTenantServiceSubnetCIDR,

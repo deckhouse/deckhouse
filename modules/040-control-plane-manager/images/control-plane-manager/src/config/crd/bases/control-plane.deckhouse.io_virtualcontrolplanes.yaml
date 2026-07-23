@@ -14,7 +14,7 @@ spec:
     shortNames:
     - vcp
     singular: virtualcontrolplane
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - description: Desired Kubernetes version

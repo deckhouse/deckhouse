@@ -32,14 +32,15 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: handle_virtual_co
 		Version:  "v1alpha1",
 		Resource: "virtualcontrolplanes",
 	}
-	f.RegisterCRD(virtualControlPlaneResource.Group, virtualControlPlaneResource.Version, "VirtualControlPlane", false)
+	f.RegisterCRD(virtualControlPlaneResource.Group, virtualControlPlaneResource.Version, "VirtualControlPlane", true)
 
 	const virtualControlPlane = `
 ---
 apiVersion: control-plane.deckhouse.io/v1alpha1
 kind: VirtualControlPlane
 metadata:
-  name: tenant-a
+  name: main
+  namespace: tenant-a
 spec:
   kubernetesVersion: "1.31"
 `

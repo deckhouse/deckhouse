@@ -360,7 +360,7 @@ func (r *reconciler) reconcileParentRegistrySecret(ctx context.Context, vcp *con
 		return fmt.Errorf("get parent registry secret: %w", err)
 	}
 
-	target := buildTargetRegistrySecret(parent, constants.VirtualControlPlaneNamespacePrefix+vcp.Name)
+	target := buildTargetRegistrySecret(parent, vcp.Namespace)
 
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
@@ -394,7 +394,7 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 		return fmt.Errorf("get parent deckhouse image: %w", err)
 	}
 
-	target, err := buildTargetDeckhouseDeployment(vcp, image, albVIP)
+	target, err := buildTargetDeckhouseDeployment(vcp.Namespace, image, albVIP)
 	if err != nil {
 		return err
 	}
@@ -421,12 +421,10 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 }
 
 func buildTargetDeckhouseDeployment(
-	vcp *controlplanev1alpha1.VirtualControlPlane,
+	namespace string,
 	image string,
 	albVIP string,
 ) (*appsv1.Deployment, error) {
-	namespace := vcpNamespace(vcp)
-
 	rendered := strings.NewReplacer(
 		"${NAMESPACE}", namespace,
 		"${IMAGE_DECKHOUSE}", image,

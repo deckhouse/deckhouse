@@ -100,18 +100,17 @@ func (r *reconciler) reconcileJoinScript(
 	)
 	rendered := replacer.Replace(string(tpl))
 
-	ns := vcpNamespace(vcp)
 	target := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.VirtualJoinScriptSecretName,
-			Namespace: ns,
+			Namespace: vcp.Namespace,
 			Labels:    map[string]string{constants.HeritageLabelKey: constants.HeritageLabelValue},
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{"join.sh": []byte(rendered)},
 	}
 
-	current, err := r.getSecret(ctx, ns, target.Name)
+	current, err := r.getSecret(ctx, vcp.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
 		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
 			return reconcile.Result{}, err

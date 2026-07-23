@@ -445,7 +445,7 @@ func (r *reconciler) reconcileBashibleTLSSecret(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	pkiSecret *corev1.Secret,
 ) (*corev1.Secret, reconcile.Result, error) {
-	target := buildTargetBashibleTLSSecret(vcp)
+	target := buildTargetBashibleTLSSecret(vcp.Namespace)
 
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
@@ -468,9 +468,7 @@ func (r *reconciler) reconcileBashibleTLSSecret(
 	return current, reconcile.Result{}, nil
 }
 
-func buildTargetBashibleTLSSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
-	namespace := vcpNamespace(vcp)
-
+func buildTargetBashibleTLSSecret(namespace string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bashibleTLSSecretName,
@@ -514,8 +512,6 @@ func buildBashibleTLSSecretData(pkiSecret *corev1.Secret) (map[string][]byte, er
 var bashibleVersionMap string
 
 func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (reconcile.Result, error) {
-	namespace := vcpNamespace(vcp)
-
 	bashibleImagesDigestsJSON, err := r.getImagesDigestsJSON(ctx)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("get images digests JSON: %w", err)
@@ -524,7 +520,7 @@ func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *c
 	target := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bashibleFilesConfigMapName,
-			Namespace: namespace,
+			Namespace: vcp.Namespace,
 		},
 		Data: map[string]string{
 			"version_map.yml":     bashibleVersionMap,
@@ -532,7 +528,7 @@ func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *c
 		},
 	}
 
-	current, err := r.getConfigMap(ctx, namespace, bashibleFilesConfigMapName)
+	current, err := r.getConfigMap(ctx, vcp.Namespace, bashibleFilesConfigMapName)
 	if apierrors.IsNotFound(err) {
 		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
 			return reconcile.Result{}, err
@@ -570,7 +566,7 @@ func (r *reconciler) reconcileBashibleService(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 ) (*corev1.Service, reconcile.Result, error) {
-	target := buildTargetBashibleService(vcp)
+	target := buildTargetBashibleService(vcp.Namespace)
 
 	current, err := r.getService(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
@@ -600,9 +596,7 @@ func (r *reconciler) reconcileBashibleService(
 	return current, reconcile.Result{}, nil
 }
 
-func buildTargetBashibleService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
-	namespace := vcpNamespace(vcp)
-
+func buildTargetBashibleService(namespace string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bashibleServiceName,
@@ -662,7 +656,7 @@ func (r *reconciler) reconcileBashibleDeployment(
 		return reconcile.Result{}, fmt.Errorf("get bashible apiserver image: %w", err)
 	}
 
-	target, err := buildTargetBashibleDeployment(vcp, image)
+	target, err := buildTargetBashibleDeployment(vcp.Namespace, image)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -699,9 +693,7 @@ func (r *reconciler) getBashibleApiserverImage(ctx context.Context) (string, err
 //go:embed bashible-apiserver/manifests/deployment.yaml
 var bashibleDeploymentYAML string
 
-func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane, image string) (*appsv1.Deployment, error) {
-	namespace := vcpNamespace(vcp)
-
+func buildTargetBashibleDeployment(namespace string, image string) (*appsv1.Deployment, error) {
 	rendered := strings.NewReplacer(
 		"${NAMESPACE}", namespace,
 		"${IMAGE_BASHIBLE_APISERVER}", image,
