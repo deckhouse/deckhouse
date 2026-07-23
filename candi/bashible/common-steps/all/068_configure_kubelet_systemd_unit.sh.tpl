@@ -20,6 +20,15 @@ rm -f /var/lib/kubelet/kubeadm-flags.env
 # Read previously discovered IP
 discovered_node_ip="$(bb-d8-node-ip)"
 
+{{- $cloudProvider := .cloudProvider | default (dict) }}
+{{- $cloudProviderType := dig "type" "" $cloudProvider }}
+{{- if not $cloudProviderType }}
+  {{- $cloudProviderType = .cloudProviderType | default "" }}
+{{- end }}
+{{- if not $cloudProviderType }}
+  {{- $cloudProviderType = .provider | default "" }}
+{{- end }}
+
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 cri_socket_path="/run/containerd/containerd.sock"
 {{- end }}
@@ -88,7 +97,7 @@ ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
 {{- if or (eq .nodeGroup.nodeType "Static") (eq .runType "ClusterBootstrap") -}}
 $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip} \\")
 {{- end }}
-{{- if and (not (eq .nodeGroup.nodeType "Static")) (not (or (eq (.cloudProviderType | default "") "metal3") (eq (.provider | default "") "metal3"))) }}
+{{- if and (not (eq .nodeGroup.nodeType "Static")) (not (eq $cloudProviderType "metal3")) }}
     --cloud-provider=external \\
 {{- end }}
     --pod-manifest-path=/etc/kubernetes/manifests \\
