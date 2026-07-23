@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
@@ -37,7 +38,7 @@ const (
 )
 
 func (r *reconciler) reconcilePostgres(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, configSecret *corev1.Secret) (reconcile.Result, error) {
-	target, err := buildTargetPostgres(configSecret, vcp)
+	target, err := buildTargetPostgres(configSecret, vcp.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -45,6 +46,9 @@ func (r *reconciler) reconcilePostgres(ctx context.Context, vcp *controlplanev1a
 	current := postgres()
 	err = r.client.Get(ctx, client.ObjectKeyFromObject(target), current)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 		if err := r.client.Create(ctx, target); err != nil {
 			return reconcile.Result{}, fmt.Errorf("create Postgres: %w", err)
 		}
@@ -68,7 +72,7 @@ func postgres() *unstructured.Unstructured {
 	return obj
 }
 
-func buildTargetPostgres(configSecret *corev1.Secret, vcp *controlplanev1alpha1.VirtualControlPlane) (*unstructured.Unstructured, error) {
+func buildTargetPostgres(configSecret *corev1.Secret, namespace string) (*unstructured.Unstructured, error) {
 	raw, ok := configSecret.Data[datastoreManifestKey]
 	if !ok {
 		return nil, fmt.Errorf("config Secret missing %q", datastoreManifestKey)
@@ -78,7 +82,7 @@ func buildTargetPostgres(configSecret *corev1.Secret, vcp *controlplanev1alpha1.
 	if err := yaml.Unmarshal(raw, obj); err != nil {
 		return nil, fmt.Errorf("decode datastore manifest: %w", err)
 	}
-	obj.SetNamespace(vcpNamespace(vcp))
+	obj.SetNamespace(namespace)
 
 	return obj, nil
 }
