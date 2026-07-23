@@ -19,6 +19,7 @@ package capi
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,23 +33,48 @@ const (
 	providerTemplateSecretNamespace = "kube-system"
 	engineMCMTemplates              = "mcm"
 	engineCAPITemplates             = "capi"
+
+	// providerTemplateCacheTTL bounds how long a provider template Secret is served from the
+	// in-process cache before it is re-read. Templates change only when the cloud-provider
+	// module republishes them (rare, operator-initiated); otherwise the same Secret is read
+	// twice per NodeGroup reconcile. Caching removes those per-NodeGroup API reads during a
+	// reconcile burst while keeping staleness well under resyncInterval.
+	providerTemplateCacheTTL = 1 * time.Minute
 )
+
+type providerTemplateEntry struct {
+	data      map[string][]byte
+	expiresAt time.Time
+}
 
 // readProviderTemplate returns a single template file (by its basename key, e.g.
 // "machine-class.yaml" or "machine-template.yaml") from the cloud-provider template
-// Secret d8-cloud-provider-<type>-<engine>.
+// Secret d8-cloud-provider-<type>-<engine>. The Secret is cached in-process for
+// providerTemplateCacheTTL so a burst of NodeGroup reconciles does not re-read it per NodeGroup.
 func (r *MachineDeploymentReconciler) readProviderTemplate(ctx context.Context, cloudType, engine, key string) ([]byte, error) {
 	if cloudType == "" {
 		return nil, fmt.Errorf("cloud type not set")
 	}
 	name := fmt.Sprintf("d8-cloud-provider-%s-%s", cloudType, engine)
+
+	if v, ok := r.providerTemplateCache.Load(name); ok {
+		if e := v.(providerTemplateEntry); time.Now().Before(e.expiresAt) {
+			return templateFromData(e.data, name, key)
+		}
+	}
+
 	secret := &corev1.Secret{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{Namespace: providerTemplateSecretNamespace, Name: name}, secret); err != nil {
 		return nil, fmt.Errorf("get provider template secret %s: %w", name, err)
 	}
-	data, ok := secret.Data[key]
+	r.providerTemplateCache.Store(name, providerTemplateEntry{data: secret.Data, expiresAt: time.Now().Add(providerTemplateCacheTTL)})
+	return templateFromData(secret.Data, name, key)
+}
+
+func templateFromData(data map[string][]byte, name, key string) ([]byte, error) {
+	value, ok := data[key]
 	if !ok {
 		return nil, fmt.Errorf("template %q not found in secret %s/%s", key, providerTemplateSecretNamespace, name)
 	}
-	return data, nil
+	return value, nil
 }

@@ -86,7 +86,7 @@ spec:
         - --webhook-port=4290
         - --max-concurrent-reconciles=10
         - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
-        - -v=4
+        - -v=2
         livenessProbe:
           httpGet:
             path: /healthz
