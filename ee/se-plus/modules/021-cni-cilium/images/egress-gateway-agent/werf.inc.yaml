@@ -23,7 +23,6 @@ shell:
   install:
   - cd /src
 ---
----
 image: {{ .ModuleName }}/glibc-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
@@ -31,6 +30,9 @@ shell:
   beforeInstall:
   - pm install libatomic@15.2 libc@2.43 ncurses -d /out
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ index $.Images "builder/golang" }}
+final: false
 import:
 - from: {{ .ModuleName }}/glibc-artifact
   add: /out/lib64/libm.so.6
