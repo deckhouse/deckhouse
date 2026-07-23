@@ -12,3 +12,5 @@ imageSpec:
   config:
     entrypoint: ["/admission-controller"]
     cmd: ["--v=4", "--stderrthreshold=info"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" .ModuleName .ImageName)) }}
