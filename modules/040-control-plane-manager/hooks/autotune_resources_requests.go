@@ -53,17 +53,22 @@ const (
 	autotuneMetricGroup = "D8ControlPlaneResourcesAutotuneInsufficientCapacity"
 
 	// Anti-flap calibration — Go constants, not config-values.
-	// lookbackWindow (7d) is baked into PodMetric PromQL in
+	// DEBUG timings (restore before production — see PR/commit notes):
+	//   lookbackWindow: 7m (PodMetric PromQL)  ← prod 7d
+	//   cron:           */5 * * * *            ← prod "0 3 * * *"
+	//   raiseCooldown:  5 * time.Minute        ← prod 24 * time.Hour
+	//   lowerCooldown:  15 * time.Minute       ← prod 72 * time.Hour
+	// lookbackWindow is baked into PodMetric PromQL in
 	// templates/podmetrics-autotune.yaml and must stay in sync.
 	raiseThreshold      = 0.20 // +20%
 	lowerThreshold      = 0.30 // −30%
-	raiseCooldown       = 24 * time.Hour
-	lowerCooldown       = 72 * time.Hour
+	raiseCooldown       = 5 * time.Minute
+	lowerCooldown       = 15 * time.Minute
 	autotuneMinMilliCPU = int64(10)
 	autotuneMinMemory   = int64(15 * 1024 * 1024) // 15 MiB
 )
 
-// fetchComponentUsage reads 7d-average usage for a control-plane component from
+// fetchComponentUsage reads lookback-average usage for a control-plane component from
 // the custom.metrics.k8s.io API (served by prometheus-metrics-adapter via PodMetric CRs).
 // Returns (value, ok, err); ok=false means no usable datapoint (cold start / missing series).
 // Overridable in unit tests.
@@ -182,7 +187,7 @@ func autotuneStateBinding(onSync bool) go_hook.KubernetesConfig {
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: autotuneQueue,
 	Schedule: []go_hook.ScheduleConfig{
-		{Name: autotuneScheduleName, Crontab: "0 3 * * *"},
+		{Name: autotuneScheduleName, Crontab: "*/5 * * * *"}, // DEBUG: prod "0 3 * * *"
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		autotuneNodesBinding(false),

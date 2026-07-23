@@ -1,11 +1,12 @@
 {{- if (.Values.global.enabledModules | has "prometheus-metrics-adapter") }}
 {{- /*
-  PodMetrics expose 7d-average CPU/memory usage of control-plane static pods
+  PodMetrics expose lookback-average CPU/memory usage of control-plane static pods
   via custom.metrics.k8s.io. The autotune hook reads them (max across masters)
   instead of querying Prometheus directly.
 
-  lookback window = 7d — must stay in sync with lookbackWindow in
-  hooks/autotune_resources_requests.go.
+  DEBUG: lookback window = 7m (prod 7d). Must stay in sync with
+  hooks/autotune_resources_requests.go comments.
+  DEBUG PromQL: rate[1m] / subquery step 1m (prod rate[5m] / step 5m).
 */}}
 {{- $components := list
   (dict "container" "kube-apiserver")
@@ -26,8 +27,8 @@ spec:
     sum(
       avg_over_time(
         rate(
-          container_cpu_usage_seconds_total{<<.LabelMatchers>>,container="{{ $c.container }}"}[5m]
-        )[7d:5m]
+          container_cpu_usage_seconds_total{<<.LabelMatchers>>,container="{{ $c.container }}"}[1m]
+        )[7m:1m]
       )
     ) by (<<.GroupBy>>)
 ---
@@ -41,7 +42,7 @@ spec:
   query: |
     sum(
       avg_over_time(
-        container_memory_working_set_bytes{<<.LabelMatchers>>,container="{{ $c.container }}"}[7d]
+        container_memory_working_set_bytes{<<.LabelMatchers>>,container="{{ $c.container }}"}[7m]
       )
     ) by (<<.GroupBy>>)
 {{- end }}

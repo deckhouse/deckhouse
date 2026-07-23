@@ -105,7 +105,7 @@
 
 
   - alert: D8ControlPlaneResourcesAutotuneInsufficientCapacity
-    for: 30m
+    for: 1m # DEBUG: prod 30m
     expr: max by (resource) (d8_control_plane_manager_resources_autotune_insufficient_capacity) > 0
     labels:
       d8_component: control-plane-manager
