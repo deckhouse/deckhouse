@@ -36,7 +36,7 @@ func TestGetPKI(t *testing.T) {
 		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
 
-		err := createInitSecret(ctx, kubeClient, false)
+		err := createInitSecret(ctx, kubeClient)
 		require.NoError(t, err)
 
 		pki, err := GetPKI(ctx, kubeClient)

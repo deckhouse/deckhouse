@@ -107,8 +107,8 @@ func (state *State) clearConditions() {
 func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 	// Process PKI
 	state.PKI.CA = &pki.CertModel{
-		Cert: inputs.InitSecret.CA.Cert,
-		Key:  inputs.InitSecret.CA.Key,
+		Cert: inputs.InitSecret.Config.CA.Cert,
+		Key:  inputs.InitSecret.Config.CA.Key,
 	}
 
 	pkiResult, err := state.PKI.Process(log)
@@ -117,14 +117,14 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 	}
 
 	// Process Users
-	ro := inputs.InitSecret.ROUser
+	ro := inputs.InitSecret.Config.ROUser
 	state.Users.RO = &users.User{
 		UserName:       ro.Name,
 		HashedPassword: ro.PasswordHash,
 		Password:       ro.Password,
 	}
 
-	rw := inputs.InitSecret.RWUser
+	rw := inputs.InitSecret.Config.RWUser
 	state.Users.RW = &users.User{
 		UserName:       rw.Name,
 		HashedPassword: rw.PasswordHash,
