@@ -39,6 +39,6 @@ Remove CRD check of `BroadcastJob` and `ImagePullJob`. We don't need them for Da
 
 Addopts multi-namespace cache instead of using sharedindexinformer for getting necessary listers, as controller-runtime since v0.15.0+ doesn't provide sharedindexinformers for namespaced caches anymore, breaking openkruise logic https://github.com/openkruise/kruise/issues/1764.
 
-### 008-go-mod-01.patch
+### 008-go-mod.patch
 
 Fix vulnerabilities in components.
