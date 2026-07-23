@@ -1,0 +1,164 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-e5d5b4bf60ab357b345e3dafa971ef72d4f11c15379269c12e2376f62e4d93e4",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25679"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net/url: некорректный разбор литералов IPv6-хостов. docs-builder не разбирает недоверенные URL с помощью url.Parse: сервис обрабатывает только внутренний контент документации, формируемый в процессе сборки, поэтому уязвимый код не задействован. Обновление до Go 1.25.8 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27145"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "crypto/x509: отказ в обслуживании при обработке большого числа DNS SAN-записей в VerifyHostname. docs-builder не выполняет проверку недоверенных сертификатов: он отдаёт документацию по HTTP за ingress с терминацией TLS, поэтому уязвимый путь x509.Verify недостижим. Обновление до Go 1.25.11 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32280"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "crypto/x509, crypto/tls: отказ в обслуживании при построении цепочки сертификатов с большим числом промежуточных сертификатов в VerifyOptions.Intermediates. docs-builder не проверяет недоверенные цепочки сертификатов, поэтому уязвимый код не задействован. Обновление до Go 1.25.9 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32281"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "crypto/x509: неэффективная проверка цепочек сертификатов с большим числом policy mappings приводит к отказу в обслуживании. docs-builder не выполняет проверку доверенных цепочек сертификатов через VerifyOptions.Roots, поэтому уязвимый код не задействован. Обновление до Go 1.25.9 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32283"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "crypto/tls: отказ в обслуживании из-за нескольких сообщений key update в одной записи TLS 1.3. docs-builder не терминирует недоверенные TLS-соединения — терминация TLS выполняется на ingress, а сам сервис отдаёт документацию по HTTP, поэтому уязвимый код не задействован. Обновление до Go 1.25.9 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33811"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net: отказ в обслуживании через длинный CNAME-ответ в LookupCNAME при использовании cgo-резолвера DNS. docs-builder собирается статически без cgo и не вызывает LookupCNAME, поэтому уязвимый путь с двойным освобождением памяти недостижим. Обновление до Go 1.25.10 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net/http/internal/http2: отказ в обслуживании (бесконечный цикл CONTINUATION-фреймов) при получении SETTINGS_MAX_FRAME_SIZE со значением 0. Уязвимость проявляется в HTTP/2-транспорте клиента при подключении к недоверенным серверам; docs-builder не выступает HTTP/2-клиентом недоверенных серверов, поэтому уязвимый код не задействован. Обновление до Go 1.25.10 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39820"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net/mail: отказ в обслуживании через специально сформированный ввод в ParseAddress, ParseAddressList и ParseDate. docs-builder не разбирает электронную почту и не использует пакет net/mail, поэтому уязвимый код не задействован. Обновление до Go 1.25.10 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39822"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "os: обход каталогов через переход по символьным ссылкам в os.Root на Unix-системах, когда путь заканчивается на \"/\". docs-builder работает с доверенным контентом документации, формируемым при сборке, и не открывает через os.Root пути, контролируемые злоумышленником, поэтому уязвимый код не задействован. Обновление до Go 1.25.12 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39836"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "net: паника функций Dial и LookupPort на Windows при передаче ввода, содержащего NUL (0). Уязвимость затрагивает только Windows; docs-builder собирается и работает на Linux (образ на базе distroless), поэтому уязвимый код не выполняется. Обновление до Go 1.25.10 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42504"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.7"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "mime: отказ в обслуживании при декодировании специально сформированного MIME-заголовка с множеством некорректных encoded-words. docs-builder не декодирует недоверенные MIME-заголовки, поэтому уязвимый код не задействован. Обновление до Go 1.25.11 невозможно, так как сборка выполняется на Go 1.25.7.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    }
+  ],
+  "timestamp": "2026-07-23T00:00:00Z",
+  "last_updated": "2026-07-23T00:00:00Z"
+}
