@@ -2,7 +2,16 @@
 
 ## 000-go-mod.patch
 
-Fixes CVE
+Bumps a set of Go module dependencies in `go.mod`/`go.sum` above the versions
+shipped by upstream Cilium v1.17.17 to remediate known CVEs, e.g.:
+
+- `github.com/go-jose/go-jose/v4` -> `v4.1.4`
+- `github.com/envoyproxy/go-control-plane/envoy` -> `v1.37.0`
+- `go.mongodb.org/mongo-driver` -> `v1.17.7`
+
+Regenerate by cloning `cilium v1.17.17`, applying this patch, bumping the
+required module(s), then running `go mod tidy && go mod vendor && go mod verify`
+(with `GOTOOLCHAIN=go1.25.11`) and diffing `go.mod`/`go.sum`.
 
 ## 001-request-ip.patch
 
