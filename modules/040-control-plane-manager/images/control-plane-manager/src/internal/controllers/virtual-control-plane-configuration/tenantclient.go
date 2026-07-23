@@ -45,8 +45,10 @@ type tenantClientSet struct {
 	client         client.Client
 }
 
-func (r *reconciler) tenantKubeconfigRaw(ctx context.Context, namespace string) ([]byte, error) {
-	sec, err := r.getSecret(ctx, namespace, constants.VirtualAdminKubeconfigSecretName)
+func (r *reconciler) tenantKubeconfigRaw(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) ([]byte, error) {
+	ns := vcp.Namespace
+	name := constants.VirtualResourceName(constants.VirtualAdminKubeconfigSecretName, vcp.Name)
+	sec, err := r.getSecret(ctx, ns, name)
 	if err != nil {
 		return nil, fmt.Errorf("get admin kubeconfig secret: %w", err)
 	}
@@ -64,7 +66,7 @@ func (r *reconciler) tenantKubeconfigRaw(ctx context.Context, namespace string) 
 // Building client.New triggers discovery against the tenant API server, so cached
 // entries are reused until the admin kubeconfig content changes (e.g. cert rotation).
 func (r *reconciler) tenantClients(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (kubernetes.Interface, client.Client, error) {
-	raw, err := r.tenantKubeconfigRaw(ctx, vcp.Namespace)
+	raw, err := r.tenantKubeconfigRaw(ctx, vcp)
 	if err != nil {
 		return nil, nil, err
 	}

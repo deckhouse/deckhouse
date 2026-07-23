@@ -34,6 +34,7 @@ type NodeRef struct {
 	Name      string
 	Type      string // control-plane.deckhouse.io/type label value
 	UID       types.UID
+	VCPName   string // control-plane.deckhouse.io/virtual-control-plane label (virtual only)
 }
 
 func NewOperation(node NodeRef, c controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName, intended controlplanev1alpha1.Checksums) *controlplanev1alpha1.ControlPlaneOperation {
@@ -53,15 +54,19 @@ func NewApprovedOperation(node NodeRef, c controlplanev1alpha1.OperationComponen
 }
 
 func baseOperation(node NodeRef, component controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName) *controlplanev1alpha1.ControlPlaneOperation {
+	labels := map[string]string{
+		constants.ControlPlaneNodeNameLabelKey:  node.Name,
+		constants.ControlPlaneComponentLabelKey: component.LabelValue(),
+		constants.ControlPlaneTypeLabelKey:      node.Type,
+		constants.HeritageLabelKey:              constants.HeritageLabelValue,
+	}
+	if node.VCPName != "" {
+		labels[constants.VirtualControlPlaneScopeLabelKey] = node.VCPName
+	}
 	return &controlplanev1alpha1.ControlPlaneOperation{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: node.Namespace,
-			Labels: map[string]string{
-				constants.ControlPlaneNodeNameLabelKey:  node.Name,
-				constants.ControlPlaneComponentLabelKey: component.LabelValue(),
-				constants.ControlPlaneTypeLabelKey:      node.Type,
-				constants.HeritageLabelKey:              constants.HeritageLabelValue,
-			},
+			Labels:    labels,
 		},
 		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
 			NodeName:  node.Name,

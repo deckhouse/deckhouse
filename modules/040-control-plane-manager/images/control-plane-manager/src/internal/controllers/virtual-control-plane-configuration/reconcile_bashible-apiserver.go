@@ -43,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	certutil "k8s.io/client-go/util/cert"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -158,7 +157,7 @@ func (r *reconciler) reconcileBashibleKubeconfigSecret(
 		vcp,
 		apiserverService,
 		pkiSecret,
-		bashibleKubeconfigSecretName,
+		constants.VirtualResourceName(bashibleKubeconfigSecretName, vcp.Name),
 		[]kubeconfig.File{kubeconfig.BashibleApiserver},
 		apiServerHTTPSURL(apiserverService.Spec.ClusterIP),
 	)
@@ -445,7 +444,10 @@ func (r *reconciler) reconcileBashibleTLSSecret(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	pkiSecret *corev1.Secret,
 ) (*corev1.Secret, reconcile.Result, error) {
-	target := buildTargetBashibleTLSSecret(vcp.Namespace)
+	target := buildTargetBashibleTLSSecret(vcp)
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return nil, reconcile.Result{}, err
+	}
 
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
@@ -455,24 +457,33 @@ func (r *reconciler) reconcileBashibleTLSSecret(
 		}
 		target.Data = data
 
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return nil, reconcile.Result{}, err
-		}
-
 		return target, reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
 		return nil, reconcile.Result{}, fmt.Errorf("get bashible-apiserver TLS Secret: %w", err)
 	}
 
-	return current, reconcile.Result{}, nil
+	if !ownerReferencesDiffer(current, target) &&
+		equality.Semantic.DeepEqual(current.Labels, target.Labels) {
+		return current, reconcile.Result{}, nil
+	}
+
+	base := current.DeepCopy()
+	current.Labels = target.Labels
+	syncOwnerReferences(current, target)
+
+	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
 }
 
-func buildTargetBashibleTLSSecret(namespace string) *corev1.Secret {
+func buildTargetBashibleTLSSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      bashibleTLSSecretName,
-			Namespace: namespace,
+			Name:      constants.VirtualResourceName(bashibleTLSSecretName, vcp.Name),
+			Namespace: vcp.Namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
+			},
 		},
 		Type: corev1.SecretTypeOpaque,
 	}
@@ -519,20 +530,24 @@ func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *c
 
 	target := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      bashibleFilesConfigMapName,
+			Name:      constants.VirtualResourceName(bashibleFilesConfigMapName, vcp.Name),
 			Namespace: vcp.Namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
+			},
 		},
 		Data: map[string]string{
 			"version_map.yml":     bashibleVersionMap,
 			"images_digests.json": bashibleImagesDigestsJSON,
 		},
 	}
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return reconcile.Result{}, err
+	}
 
-	current, err := r.getConfigMap(ctx, vcp.Namespace, bashibleFilesConfigMapName)
+	current, err := r.getConfigMap(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
 		return reconcile.Result{}, r.createConfigMap(ctx, target)
 	}
 
@@ -540,12 +555,16 @@ func (r *reconciler) reconcileBashibleFilesConfigMap(ctx context.Context, vcp *c
 		return reconcile.Result{}, err
 	}
 
-	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+	if equality.Semantic.DeepEqual(current.Data, target.Data) &&
+		equality.Semantic.DeepEqual(current.Labels, target.Labels) &&
+		!ownerReferencesDiffer(current, target) {
 		return reconcile.Result{}, nil
 	}
 
 	base := current.DeepCopy()
 	current.Data = target.Data
+	current.Labels = target.Labels
+	syncOwnerReferences(current, target)
 	return reconcile.Result{}, r.patchConfigMap(ctx, base, current)
 }
 
@@ -566,13 +585,13 @@ func (r *reconciler) reconcileBashibleService(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 ) (*corev1.Service, reconcile.Result, error) {
-	target := buildTargetBashibleService(vcp.Namespace)
+	target := buildTargetBashibleService(vcp)
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return nil, reconcile.Result{}, err
+	}
 
 	current, err := r.getService(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return nil, reconcile.Result{}, err
-		}
 		if err := r.createService(ctx, target); err != nil {
 			return nil, reconcile.Result{}, fmt.Errorf("create bashible Service: %w", err)
 		}
@@ -596,20 +615,22 @@ func (r *reconciler) reconcileBashibleService(
 	return current, reconcile.Result{}, nil
 }
 
-func buildTargetBashibleService(namespace string) *corev1.Service {
+func buildTargetBashibleService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      bashibleServiceName,
-			Namespace: namespace,
+			Name:      constants.VirtualResourceName(bashibleServiceName, vcp.Name),
+			Namespace: vcp.Namespace,
 			Labels: map[string]string{
-				"app":                      bashibleAppLabel,
-				constants.HeritageLabelKey: constants.HeritageLabelValue,
+				"app":                                      bashibleAppLabel,
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{
-				"app": bashibleAppLabel,
+				"app":                                      bashibleAppLabel,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 			Ports: []corev1.ServicePort{
 				{
@@ -632,7 +653,8 @@ func isBashibleServiceInSync(current, target *corev1.Service) bool {
 
 	return current.Spec.Type == target.Spec.Type &&
 		equality.Semantic.DeepEqual(current.Spec.Selector, target.Spec.Selector) &&
-		equality.Semantic.DeepEqual(current.Spec.Ports, target.Spec.Ports)
+		equality.Semantic.DeepEqual(current.Spec.Ports, target.Spec.Ports) &&
+		equality.Semantic.DeepEqual(current.OwnerReferences, target.OwnerReferences)
 }
 
 func applyBashibleServiceTarget(current, target *corev1.Service) {
@@ -645,6 +667,7 @@ func applyBashibleServiceTarget(current, target *corev1.Service) {
 	current.Spec.Type = target.Spec.Type
 	current.Spec.Selector = target.Spec.Selector
 	current.Spec.Ports = target.Spec.Ports
+	current.OwnerReferences = target.OwnerReferences
 }
 
 func (r *reconciler) reconcileBashibleDeployment(
@@ -656,16 +679,16 @@ func (r *reconciler) reconcileBashibleDeployment(
 		return reconcile.Result{}, fmt.Errorf("get bashible apiserver image: %w", err)
 	}
 
-	target, err := buildTargetBashibleDeployment(vcp.Namespace, image)
+	target, err := buildTargetBashibleDeployment(vcp, image)
 	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	current, err := r.getDeployment(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
 		return reconcile.Result{}, r.createDeployment(ctx, target)
 	}
 	if err != nil {
@@ -693,15 +716,60 @@ func (r *reconciler) getBashibleApiserverImage(ctx context.Context) (string, err
 //go:embed bashible-apiserver/manifests/deployment.yaml
 var bashibleDeploymentYAML string
 
-func buildTargetBashibleDeployment(namespace string, image string) (*appsv1.Deployment, error) {
+func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane, image string) (*appsv1.Deployment, error) {
 	rendered := strings.NewReplacer(
-		"${NAMESPACE}", namespace,
+		"${NAMESPACE}", vcp.Namespace,
 		"${IMAGE_BASHIBLE_APISERVER}", image,
 	).Replace(bashibleDeploymentYAML)
 
 	deployment := &appsv1.Deployment{}
 	if err := yaml.Unmarshal([]byte(rendered), deployment); err != nil {
 		return nil, fmt.Errorf("unmarshal bashible Deployment: %w", err)
+	}
+
+	tlsSecret := constants.VirtualResourceName(bashibleTLSSecretName, vcp.Name)
+	filesCM := constants.VirtualResourceName(bashibleFilesConfigMapName, vcp.Name)
+	kubeconfigSecret := constants.VirtualResourceName(bashibleKubeconfigSecretName, vcp.Name)
+	registrySecret := constants.VirtualResourceName(bashibleRegistrySecretName, vcp.Name)
+
+	deployment.Name = constants.VirtualResourceName(bashibleDeploymentName, vcp.Name)
+	if deployment.Labels == nil {
+		deployment.Labels = map[string]string{}
+	}
+	deployment.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+
+	if deployment.Spec.Selector == nil {
+		deployment.Spec.Selector = &metav1.LabelSelector{}
+	}
+	if deployment.Spec.Selector.MatchLabels == nil {
+		deployment.Spec.Selector.MatchLabels = map[string]string{}
+	}
+	deployment.Spec.Selector.MatchLabels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+
+	if deployment.Spec.Template.Labels == nil {
+		deployment.Spec.Template.Labels = map[string]string{}
+	}
+	deployment.Spec.Template.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+
+	for i := range deployment.Spec.Template.Spec.ImagePullSecrets {
+		if deployment.Spec.Template.Spec.ImagePullSecrets[i].Name == bashibleRegistrySecretName {
+			deployment.Spec.Template.Spec.ImagePullSecrets[i].Name = registrySecret
+		}
+	}
+
+	for i := range deployment.Spec.Template.Spec.Volumes {
+		vol := &deployment.Spec.Template.Spec.Volumes[i]
+		if vol.Secret != nil {
+			switch vol.Secret.SecretName {
+			case bashibleTLSSecretName:
+				vol.Secret.SecretName = tlsSecret
+			case bashibleKubeconfigSecretName:
+				vol.Secret.SecretName = kubeconfigSecret
+			}
+		}
+		if vol.ConfigMap != nil && vol.ConfigMap.Name == bashibleFilesConfigMapName {
+			vol.ConfigMap.Name = filesCM
+		}
 	}
 
 	return deployment, nil
@@ -715,7 +783,8 @@ func isBashibleDeploymentInSync(current, target *appsv1.Deployment) bool {
 	}
 	return equality.Semantic.DeepEqual(current.Spec.Replicas, target.Spec.Replicas) &&
 		equality.Semantic.DeepEqual(current.Spec.Selector, target.Spec.Selector) &&
-		equality.Semantic.DeepDerivative(target.Spec.Template, current.Spec.Template)
+		equality.Semantic.DeepDerivative(target.Spec.Template, current.Spec.Template) &&
+		equality.Semantic.DeepEqual(current.OwnerReferences, target.OwnerReferences)
 }
 
 func applyBashibleDeploymentTarget(current, target *appsv1.Deployment) {
@@ -726,6 +795,7 @@ func applyBashibleDeploymentTarget(current, target *appsv1.Deployment) {
 	current.Spec.Replicas = target.Spec.Replicas
 	current.Spec.Selector = target.Spec.Selector
 	current.Spec.Template = target.Spec.Template
+	current.OwnerReferences = target.OwnerReferences
 }
 
 func (r *reconciler) reconcileBashibleAPIService(

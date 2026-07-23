@@ -5,6 +5,7 @@ metadata:
   namespace: ${NAMESPACE}
   labels:
     app: kube-apiserver
+    control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
     control-plane.deckhouse.io/vcp: ${VCP_NAME}
     control-plane.deckhouse.io/cpn: ${CPN_NAME}
 spec:
@@ -13,11 +14,13 @@ spec:
   selector:
     matchLabels:
       app: kube-apiserver
+      control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
       control-plane.deckhouse.io/cpn: ${CPN_NAME}
   template:
     metadata:
       labels:
         app: kube-apiserver
+        control-plane.deckhouse.io/virtual-control-plane: ${VCP_NAME}
         control-plane.deckhouse.io/vcp: ${VCP_NAME}
         control-plane.deckhouse.io/cpn: ${CPN_NAME}
     spec:
@@ -90,9 +93,9 @@ spec:
       - name: kine
         image: ${IMAGE_KINE}
         env:
-        - {name: PGHOST, valueFrom: {secretKeyRef: {name: d8-datastore-creds-virtual, key: host}}}
-        - {name: PGUSER, valueFrom: {secretKeyRef: {name: d8-datastore-creds-virtual, key: username}}}
-        - {name: PGPASSWORD, valueFrom: {secretKeyRef: {name: d8-datastore-creds-virtual, key: password}}}
+        - {name: PGHOST, valueFrom: {secretKeyRef: {name: ${DATASTORE_CREDS_SECRET_NAME}, key: host}}}
+        - {name: PGUSER, valueFrom: {secretKeyRef: {name: ${DATASTORE_CREDS_SECRET_NAME}, key: username}}}
+        - {name: PGPASSWORD, valueFrom: {secretKeyRef: {name: ${DATASTORE_CREDS_SECRET_NAME}, key: password}}}
         command:
         - kine
         - --endpoint=postgres://$(PGUSER)@$(PGHOST):5432/kine?sslmode=require
@@ -182,16 +185,16 @@ spec:
       volumes:
       - name: pki
         secret:
-          secretName: d8-pki-virtual
+          secretName: ${PKI_SECRET_NAME}
       - name: konnectivity-uds
         emptyDir: {}
       - name: konnectivity-egress
         configMap:
-          name: konnectivity-egress
+          name: ${KONNECTIVITY_EGRESS_CM_NAME}
       - name: konnectivity-kubeconfig
         secret:
-          secretName: d8-admin-kubeconfig-virtual
+          secretName: ${ADMIN_KUBECONFIG_SECRET_NAME}
       - name: konnectivity-agent-cp
         secret:
-          secretName: konnectivity-agent-cp
+          secretName: ${KONNECTIVITY_AGENT_CP_SECRET_NAME}
           optional: true
