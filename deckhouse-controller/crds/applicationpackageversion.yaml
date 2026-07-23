@@ -471,14 +471,17 @@ spec:
             type: object
         type: object
         x-doc-examples:
-        - apiVersion: deckhouse.io/v1alpha1
-          kind: ApplicationPackageVersion
-          metadata:
-            name: example
-          spec:
-            packageName: console
-            packageRepositoryName: deckhouse
-            packageVersion: v1.0.0
+        - x-doc-example:
+            apiVersion: deckhouse.io/v1alpha1
+            kind: ApplicationPackageVersion
+            metadata:
+              name: example
+            spec:
+              packageName: console
+              packageRepositoryName: deckhouse
+              packageVersion: v1.0.0
+          x-doc-description: my super app
+          x-doc-name: app
     served: true
     storage: true
     subresources:

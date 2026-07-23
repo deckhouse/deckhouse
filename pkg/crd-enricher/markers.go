@@ -66,9 +66,9 @@ const examplesMarker = "examples"
 // becomes
 //
 //	x-doc-examples:
-//	  - x-doc-description: My example
-//	    x-doc-example:
+//	  - x-doc-example:
 //	      field: value
+//	    x-doc-description: My example
 //
 // As long as no example carries a name or a description the list stays a plain
 // list of values, so existing examples are unaffected. As soon as any example

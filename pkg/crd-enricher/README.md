@@ -52,7 +52,7 @@ exception of `x-kubernetes-sensitive-data`, which the apiserver acts on.
 | Field | Source marker | Purpose |
 | --- | --- | --- |
 | `x-doc-examples` | `deckhouse:documentation:examples` | Sample values shown in the docs for a field, and the assembled "example resource" block. A list; the marker may be repeated. Object examples keep their **authored key order**. |
-| `x-doc-name` / `x-doc-description` / `x-doc-example` | `deckhouse:documentation:examples-name` / `…:examples-description` (each paired with an `examples` marker) | When an example is given a name and/or a description, every `x-doc-examples` entry becomes a `{x-doc-name, x-doc-description, x-doc-example}` object instead of a bare value. |
+| `x-doc-example` / `x-doc-description` / `x-doc-name` | `deckhouse:documentation:examples-name` / `…:examples-description` (each paired with an `examples` marker) | When an example is given a name and/or a description, every `x-doc-examples` entry becomes a `{x-doc-example, x-doc-description, x-doc-name}` object instead of a bare value. |
 | `x-doc-default` | `deckhouse:documentation:default` | The **documented** default value, shown in the docs when the real default is computed at runtime and cannot be expressed as a `kubebuilder:default`. |
 | `x-doc-deprecated` | `deckhouse:documentation:deprecated` | Marks a field as deprecated in the docs (renders a deprecation badge). |
 | `x-kubernetes-sensitive-data` | `deckhouse:sensitive-data` | **Behavioral**, not documentation. Tells the apiserver's `CRDSensitiveData` feature to encrypt the value in etcd, filter it by RBAC and mask it in audit logs. |
@@ -210,15 +210,15 @@ type ModuleConfig struct { ... }
 ### `examples-name` / `examples-description` — label an example
 
 Attach a short **name** and/or a longer **description** to the example
-introduced by the *preceding* `examples` marker. They render as `x-doc-name` and
-`x-doc-description`.
+introduced by the *preceding* `examples` marker. They render as
+`x-doc-name` and `x-doc-description`.
 
 The rule is **all-or-nothing per field**: as soon as *any* example in a field
 carries a name or a description, every entry of that field's `x-doc-examples`
 switches from a bare value to a wrapper object
-`{x-doc-name, x-doc-description, x-doc-example}` (an entry missing an attribute
-simply omits that key). When *no* example has either, the list stays a plain list
-of values — so examples written before this feature are untouched.
+`{x-doc-example, x-doc-description, x-doc-name}` (an entry missing
+an attribute simply omits that key). When *no* example has either, the list stays
+a plain list of values — so examples written before this feature are untouched.
 
 ```go
 type ModuleSourceSpec struct {
@@ -238,26 +238,27 @@ registry:
   type: object
   # ...properties (sorted)...
   x-doc-examples:
-    - x-doc-name: Public registry
-      x-doc-description: Anonymous, read-only access.
-      x-doc-example:
+    - x-doc-example:
         repo: registry.example.io/modules
         dockerCfg: <base64>
-    - x-doc-name: Private registry
-      x-doc-example:
+      x-doc-description: Anonymous, read-only access.
+      x-doc-name: Public registry
+    - x-doc-example:
         repo: registry.internal/modules
         dockerCfg: <base64>
+      x-doc-name: Private registry
 ```
 
-The second entry has a name but no description, so it omits `x-doc-description` —
-yet it is still wrapped, because the field as a whole opted into the wrapper form.
+The second entry has a name but no description, so it omits
+`x-doc-description` — yet it is still wrapped, because the field as a
+whole opted into the wrapper form.
 
 **Rules**
 
 - A `examples-name` / `examples-description` attaches to the **most recent**
   `examples` marker above it.
-- Key order in the wrapper is always `x-doc-name`, then `x-doc-description`, then
-  `x-doc-example`.
+- Key order in the wrapper is always `x-doc-example`, then
+  `x-doc-description`, then `x-doc-name`.
 - A name or description with no preceding `examples` marker is ignored with a
   warning; a second name/description for the same example overrides the first
   (also warned).
@@ -290,8 +291,8 @@ registry:
 ```
 
 This also holds inside the wrapper form: the outer keys follow the fixed
-`x-doc-name` → `x-doc-description` → `x-doc-example` order, and the object under
-`x-doc-example` keeps its own authored order.
+`x-doc-example` → `x-doc-description` → `x-doc-name` order, and the
+object under `x-doc-example` keeps its own authored order.
 
 ### `default` — documented default
 

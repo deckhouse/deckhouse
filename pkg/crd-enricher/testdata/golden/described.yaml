@@ -12,36 +12,36 @@ spec:
     singular: described
   scope: Cluster
   versions:
-    - name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          properties:
-            apiVersion:
-              type: string
-            kind:
-              type: string
-            metadata:
-              type: object
-            spec:
-              properties:
-                mixed:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              mixed:
+                type: string
+                x-doc-examples:
+                - x-doc-example: 5m
+                - x-doc-example: 1h
+                  x-doc-description: one hour
+              settings:
+                additionalProperties:
                   type: string
-                  x-doc-examples:
-                    - x-doc-example: 5m
-                    - x-doc-description: one hour
-                      x-doc-example: 1h
-                settings:
-                  additionalProperties:
-                    type: string
-                  type: object
-                  x-doc-examples:
-                    - x-doc-description: my super example
-                      x-doc-example:
-                        field: value
-                    - x-doc-description: my super example two
-                      x-doc-example:
-                        field: value2
-              type: object
-          type: object
-      served: true
-      storage: true
+                type: object
+                x-doc-examples:
+                - x-doc-example:
+                    field: value
+                  x-doc-description: my super example
+                - x-doc-example:
+                    field: value2
+                  x-doc-description: my super example two
+            type: object
+        type: object
+    served: true
+    storage: true

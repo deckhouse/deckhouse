@@ -55,9 +55,10 @@
 //   - examples-name / examples-description — attach a short name and/or a
 //     description to the example introduced by the preceding examples marker. As
 //     soon as any example has a name or a description, every entry of
-//     x-doc-examples switches to the wrapper form {x-doc-name, x-doc-description,
-//     x-doc-example} (an entry missing either attribute omits its key); when no
-//     example has one the list stays a plain list of values. For example
+//     x-doc-examples switches to the wrapper form {x-doc-example,
+//     x-doc-description, x-doc-name} (an entry missing either
+//     attribute omits its key); when no example has one the list stays a plain
+//     list of values. For example
 //
 //	// +crd-enricher:deckhouse:documentation:examples={field: value}
 //	// +crd-enricher:deckhouse:documentation:examples-name=My example
@@ -66,10 +67,10 @@
 //     renders as
 //
 //	x-doc-examples:
-//	  - x-doc-name: My example
-//	    x-doc-description: A longer note
-//	    x-doc-example:
+//	  - x-doc-example:
 //	      field: value
+//	    x-doc-description: A longer note
+//	    x-doc-name: My example
 //
 //   - deprecated — a value-less flag rendered as x-doc-deprecated: true (any
 //     value-less simple entity becomes a boolean x-doc-<entity>);

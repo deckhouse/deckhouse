@@ -185,12 +185,12 @@ func TestApplyMarkersExamplesDescription(t *testing.T) {
 	// a sorted map renders identically, so the output is unchanged.
 	want := []any{
 		orderedMap{
-			{key: "x-doc-description", val: "my super example"},
 			{key: "x-doc-example", val: map[string]any{"field": "value"}},
+			{key: "x-doc-description", val: "my super example"},
 		},
 		orderedMap{
-			{key: "x-doc-description", val: "my super example two"},
 			{key: "x-doc-example", val: map[string]any{"field": "value2"}},
+			{key: "x-doc-description", val: "my super example two"},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
@@ -215,8 +215,8 @@ func TestApplyMarkersExamplesName(t *testing.T) {
 
 	want := []any{
 		orderedMap{
-			{key: "x-doc-name", val: "My example"},
 			{key: "x-doc-example", val: map[string]any{"field": "value"}},
+			{key: "x-doc-name", val: "My example"},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
@@ -228,8 +228,8 @@ func TestApplyMarkersExamplesNameAndDescription(t *testing.T) {
 	e := &Enricher{}
 	schema := map[string]any{"type": "string"}
 
-	// Name and description together render as {x-doc-name, x-doc-description,
-	// x-doc-example} in that order.
+	// Name and description together render as {x-doc-example,
+	// x-doc-description, x-doc-name} in that order.
 	e.applyMarkers(schema, []marker{
 		{name: "examples", rawValue: "5m", hasValue: true, enricher: true},
 		{name: "examples-name", rawValue: "five minutes", hasValue: true, enricher: true},
@@ -238,9 +238,9 @@ func TestApplyMarkersExamplesNameAndDescription(t *testing.T) {
 
 	want := []any{
 		orderedMap{
-			{key: "x-doc-name", val: "five minutes"},
-			{key: "x-doc-description", val: "a short interval"},
 			{key: "x-doc-example", val: "5m"},
+			{key: "x-doc-description", val: "a short interval"},
+			{key: "x-doc-name", val: "five minutes"},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
@@ -265,8 +265,8 @@ func TestApplyMarkersExamplesDescriptionMixed(t *testing.T) {
 			{key: "x-doc-example", val: "5m"},
 		},
 		orderedMap{
-			{key: "x-doc-description", val: "one hour"},
 			{key: "x-doc-example", val: "1h"},
+			{key: "x-doc-description", val: "one hour"},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {

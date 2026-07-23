@@ -12,37 +12,37 @@ spec:
     singular: ordered
   scope: Cluster
   versions:
-    - name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          properties:
-            apiVersion:
-              type: string
-            kind:
-              type: string
-            metadata:
-              type: object
-            spec:
-              properties:
-                ports:
-                  additionalProperties:
-                    type: integer
-                  type: object
-                  x-doc-examples:
-                    - zebra: 1
-                      apple: 2
-                      mango: 3
-                registry:
-                  properties:
-                    dockerCfg:
-                      type: string
-                    repo:
-                      type: string
-                  type: object
-                  x-doc-examples:
-                    - repo: registry.example.io/x
-                      dockerCfg: <credentials>
-              type: object
-          type: object
-      served: true
-      storage: true
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              ports:
+                additionalProperties:
+                  type: integer
+                type: object
+                x-doc-examples:
+                - zebra: 1
+                  apple: 2
+                  mango: 3
+              registry:
+                properties:
+                  dockerCfg:
+                    type: string
+                  repo:
+                    type: string
+                type: object
+                x-doc-examples:
+                - repo: registry.example.io/x
+                  dockerCfg: <credentials>
+            type: object
+        type: object
+    served: true
+    storage: true

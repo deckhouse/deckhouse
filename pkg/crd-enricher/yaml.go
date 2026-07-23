@@ -15,11 +15,11 @@
 package crdenricher
 
 import (
-	"bytes"
 	"fmt"
 	"sort"
 
 	"sigs.k8s.io/yaml"
+	goyaml2 "sigs.k8s.io/yaml/goyaml.v2"
 	goyaml "sigs.k8s.io/yaml/goyaml.v3"
 )
 
@@ -182,87 +182,49 @@ func plainIfSorted(v any) (any, bool) {
 // only nodes that escape the alphabetical order sigs.k8s.io/yaml would impose
 // are the authored examples. It is used only for documents that actually carry
 // ordered examples; everything else keeps the sigs.k8s.io/yaml encoding.
+//
+// It marshals with goyaml.v2 — the same encoder sigs.k8s.io/yaml serialises
+// through — so block sequences stay flush with their parent key. This is what
+// keeps a document that gains an ordered example byte-identical to the default
+// encoding everywhere except the ordered nodes themselves; goyaml.v3 (used only
+// to decode marker values) indents sequences and would reindent the whole file.
 func marshalOrdered(v any) ([]byte, error) {
-	node, err := toNode(v)
+	out, err := goyaml2.Marshal(toV2(v))
 	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	enc := goyaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(node); err != nil {
 		return nil, fmt.Errorf("encode yaml: %w", err)
 	}
-	if err := enc.Close(); err != nil {
-		return nil, fmt.Errorf("encode yaml: %w", err)
-	}
-	return buf.Bytes(), nil
+	return out, nil
 }
 
-// toNode builds a YAML node tree from the enricher's value model. orderedMaps
-// keep their authored order; plain maps are emitted with sorted keys to match
-// the sigs.k8s.io/yaml output for every non-example node; sequences and scalars
-// are encoded as usual.
-func toNode(v any) (*goyaml.Node, error) {
+// toV2 converts the enricher value model into the types the goyaml.v2 encoder
+// renders in sigs.k8s.io/yaml's style: orderedMaps become MapSlice so their
+// authored key order is preserved, plain maps stay maps so goyaml.v2 emits their
+// keys sorted (matching the default encoder), and sequences and scalars pass
+// through unchanged.
+func toV2(v any) any {
 	switch t := v.(type) {
 	case orderedMap:
-		node := &goyaml.Node{Kind: goyaml.MappingNode}
+		out := make(goyaml2.MapSlice, 0, len(t))
 		for _, entry := range t {
-			key, err := scalarNode(entry.key)
-			if err != nil {
-				return nil, err
-			}
-			val, err := toNode(entry.val)
-			if err != nil {
-				return nil, err
-			}
-			node.Content = append(node.Content, key, val)
+			out = append(out, goyaml2.MapItem{Key: entry.key, Value: toV2(entry.val)})
 		}
-		return node, nil
+		return out
 
 	case map[string]any:
-		node := &goyaml.Node{Kind: goyaml.MappingNode}
-		keys := make([]string, 0, len(t))
-		for k := range t {
-			keys = append(keys, k)
+		out := make(map[string]any, len(t))
+		for k, val := range t {
+			out[k] = toV2(val)
 		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			key, err := scalarNode(k)
-			if err != nil {
-				return nil, err
-			}
-			val, err := toNode(t[k])
-			if err != nil {
-				return nil, err
-			}
-			node.Content = append(node.Content, key, val)
-		}
-		return node, nil
+		return out
 
 	case []any:
-		node := &goyaml.Node{Kind: goyaml.SequenceNode}
-		for _, item := range t {
-			child, err := toNode(item)
-			if err != nil {
-				return nil, err
-			}
-			node.Content = append(node.Content, child)
+		out := make([]any, len(t))
+		for i, item := range t {
+			out[i] = toV2(item)
 		}
-		return node, nil
+		return out
 
 	default:
-		return scalarNode(v)
+		return v
 	}
-}
-
-// scalarNode encodes a single scalar (or nil) into a YAML node, letting the
-// encoder choose the tag and quoting the same way a top-level Marshal would.
-func scalarNode(v any) (*goyaml.Node, error) {
-	node := &goyaml.Node{}
-	if err := node.Encode(v); err != nil {
-		return nil, fmt.Errorf("encode scalar %v: %w", v, err)
-	}
-	return node, nil
 }

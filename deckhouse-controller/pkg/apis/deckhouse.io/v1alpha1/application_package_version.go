@@ -74,6 +74,8 @@ var _ runtime.Object = (*ApplicationPackageVersion)(nil)
 // +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)"
 
 // +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: ApplicationPackageVersion, metadata: {name: example}, spec: {packageName: console, packageRepositoryName: deckhouse, packageVersion: v1.0.0}}
+// +crd-enricher:deckhouse:documentation:examples-description=my super app
+// +crd-enricher:deckhouse:documentation:examples-name=app
 // ApplicationPackageVersion represents a version of an application package.
 type ApplicationPackageVersion struct {
 	metav1.TypeMeta `json:",inline"`

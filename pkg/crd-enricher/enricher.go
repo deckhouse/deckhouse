@@ -727,11 +727,11 @@ type exampleEntry struct {
 // buildExamples renders the collected entries into the x-doc-examples list. If
 // no entry carries a name or a description the list stays a plain list of
 // values, exactly as before. As soon as any entry has a name or a description,
-// every entry switches to the wrapper form {x-doc-name, x-doc-description,
-// x-doc-example} (an entry missing either attribute omits its key), so the array
+// every entry switches to the wrapper form {x-doc-example, x-doc-description,
+// x-doc-name} (an entry missing either attribute omits its key), so the array
 // stays homogeneous for consumers. Wrapping (and any ordered example value)
-// forces the order-preserving encoder so the attributes stay ahead of the
-// example.
+// forces the order-preserving encoder so the example keeps its place ahead of
+// its attributes.
 func (e *Enricher) buildExamples(entries []exampleEntry) []any {
 	wrap := false
 	for _, entry := range entries {
@@ -753,13 +753,13 @@ func (e *Enricher) buildExamples(entries []exampleEntry) []any {
 
 		e.orderedExamples = true
 		wrapper := make(orderedMap, 0, 3)
-		if entry.hasName {
-			wrapper = append(wrapper, orderedEntry{key: docNameKey, val: entry.name})
-		}
+		wrapper = append(wrapper, orderedEntry{key: docExampleKey, val: entry.value})
 		if entry.hasDescription {
 			wrapper = append(wrapper, orderedEntry{key: docDescriptionKey, val: entry.description})
 		}
-		wrapper = append(wrapper, orderedEntry{key: docExampleKey, val: entry.value})
+		if entry.hasName {
+			wrapper = append(wrapper, orderedEntry{key: docNameKey, val: entry.name})
+		}
 		out = append(out, wrapper)
 	}
 	return out

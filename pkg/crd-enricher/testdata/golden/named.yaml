@@ -12,45 +12,45 @@ spec:
     singular: named
   scope: Cluster
   versions:
-    - name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          properties:
-            apiVersion:
-              type: string
-            kind:
-              type: string
-            metadata:
-              type: object
-            spec:
-              properties:
-                full:
-                  additionalProperties:
-                    type: string
-                  type: object
-                  x-doc-examples:
-                    - x-doc-name: First
-                      x-doc-description: the first example
-                      x-doc-example:
-                        field: a
-                    - x-doc-name: Second
-                      x-doc-description: the second example
-                      x-doc-example:
-                        field: b
-                nameOnly:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              full:
+                additionalProperties:
                   type: string
-                  x-doc-examples:
-                    - x-doc-name: one hour
-                      x-doc-example: 1h
-                    - x-doc-name: one day
-                      x-doc-example: 1d
-                trigger:
-                  type: string
-                  x-doc-examples:
-                    - x-doc-name: the x
-                      x-doc-example: x
-                    - x-doc-example: "y"
-              type: object
-          type: object
-      served: true
-      storage: true
+                type: object
+                x-doc-examples:
+                - x-doc-example:
+                    field: a
+                  x-doc-description: the first example
+                  x-doc-name: First
+                - x-doc-example:
+                    field: b
+                  x-doc-description: the second example
+                  x-doc-name: Second
+              nameOnly:
+                type: string
+                x-doc-examples:
+                - x-doc-example: 1h
+                  x-doc-name: one hour
+                - x-doc-example: 1d
+                  x-doc-name: one day
+              trigger:
+                type: string
+                x-doc-examples:
+                - x-doc-example: x
+                  x-doc-name: the x
+                - x-doc-example: "y"
+            type: object
+        type: object
+    served: true
+    storage: true
