@@ -1,6 +1,13 @@
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/Dockerfile
 # and https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/download-grpc-health-probe.sh
 ---
+image: {{ .ModuleName }}/glibc-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+shell:
+  beforeInstall:
+  - pm install libatomic@15.2 libc@2.43 ncurses -d /out
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
