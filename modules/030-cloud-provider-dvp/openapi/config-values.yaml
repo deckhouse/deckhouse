@@ -15,19 +15,37 @@ description: |-
 properties:
   ccm:
     additionalProperties: false
+    description: |-
+      Cloud Controller Manager (CCM) subsystem settings.
+
+      Manages cloud resources via the cloud-controller-manager (for example, nodes and load balancers).
     properties:
       disabled:
         default: false
+        description: |-
+          Disables the Cloud Controller Manager.
+
+          When set to `true`, the CCM Deployment is not created.
         type: boolean
     type: object
   nodes:
     additionalProperties: false
+    description: |-
+      Nodes subsystem settings.
+
+      Controls node provisioning via the Cluster API Provider DVP (capdvp).
     properties:
       disabled:
         default: false
+        description: |-
+          Disables the nodes subsystem.
+
+          When set to `true`, the Cluster API Provider DVP (capdvp) controller is not deployed.
+          > Disabling the nodes subsystem also prevents the Cloud Controller Manager from being deployed.
         type: boolean
       parameters:
         additionalProperties: false
+        description: Parameters of the nodes subsystem.
         properties:
           ipAddresses:
             additionalProperties:
@@ -83,6 +101,8 @@ properties:
     type: object
   provider:
     additionalProperties: false
+    description: Settings for connecting to the parent Deckhouse Virtualization Platform
+      (DVP).
     properties:
       parameters:
         additionalProperties: false
@@ -113,14 +133,25 @@ properties:
     type: object
   storage:
     additionalProperties: false
+    description: |-
+      Storage subsystem settings.
+
+      Controls CSI components and StorageClasses created in the cluster.
     properties:
       disabled:
         default: false
+        description: |-
+          Disables the storage subsystem.
+
+          When set to `true`, CSI components and StorageClasses are not deployed.
         type: boolean
       parameters:
         additionalProperties: false
+        description: Parameters of the storage subsystem.
         properties:
           excludedStorageClasses:
+            description: A list of StorageClass names (or regex expressions for names)
+              to exclude from creation in the cluster.
             items:
               type: string
             type: array

@@ -19,14 +19,14 @@ conversions:
   - if .storage.parameters == null then .storage.parameters = {} end
 description:
   ru: |
-    Переход на новую схему ModuleConfig для cloud-provider-dvp.
-    Структура `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` заменена на `provider.parameters` / `nodes.parameters`.
-    Поле `kubeconfigDataBase64` больше нет в ModuleConfig (хранится в Secret типа cloud-provider.deckhouse.io/credentials).
-    Поле `nodes.parameters.layout` подставляется как "Standard" — заполните корректным значением вручную при необходимости.
-    Поле `nodes.parameters.sshPublicKey` получает placeholder значение — обязательно замените его реальным публичным ключом SSH.
+    * Перенесите `provider.namespace` в `provider.parameters.namespace`.
+    * Перенесите `zones` в `nodes.parameters.zones`.
+    * Удалите `provider.kubeconfigDataBase64`. Kubeconfig хранится в Secret типа `cloud-provider.deckhouse.io/credentials`.
+    * Задайте `nodes.parameters.layout` (по умолчанию — `Standard`).
+    * Замените placeholder в `nodes.parameters.sshPublicKey` на реальный публичный SSH-ключ.
   en: |
-    Migration to the new ModuleConfig schema for cloud-provider-dvp.
-    Fields `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` are replaced with `provider.parameters` / `nodes.parameters`.
-    `kubeconfigDataBase64` no longer lives in ModuleConfig (moved to a cloud-provider.deckhouse.io/credentials Secret).
-    `nodes.parameters.layout` gets a default value of "Standard" — update it manually if needed.
-    `nodes.parameters.sshPublicKey` gets a placeholder value — replace it with a real SSH public key.
+    * Move `provider.namespace` to `provider.parameters.namespace`.
+    * Move `zones` to `nodes.parameters.zones`.
+    * Delete `provider.kubeconfigDataBase64`. The kubeconfig is stored in a Secret of type `cloud-provider.deckhouse.io/credentials`.
+    * Set `nodes.parameters.layout` (defaults to `Standard`).
+    * Replace the placeholder in `nodes.parameters.sshPublicKey` with a real SSH public key.
