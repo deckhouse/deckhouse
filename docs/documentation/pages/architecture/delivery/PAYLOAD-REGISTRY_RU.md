@@ -58,7 +58,7 @@ description: Архитектура модуля payload-registry в Deckhouse K
     * при удалении Secret убирает ссылку на него из ресурса ServiceAccount;
     * при удалении ServiceAccount удаляет связанные с ним ресурсы Secret.
 
-1. **Registry** (Deployment) — основной компонент, реализующий управление хранилищем образов на основе [Docker Distribution](https://github.com/deckhouse/3p-distribution).
+1. **Registry** (Deployment) — основной компонент, реализующий управление хранилищем образов на основе [Distribution](https://github.com/distribution/distribution) и адаптированный для работы в DKP. Distribution — это Open Source-проект, который является основой для хранения и распределения контейнерных образов и другого контента с использованием спецификации [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec).
 
    В качестве бэкенда хранения registry поддерживает:
     * файловую систему;
@@ -70,19 +70,29 @@ description: Архитектура модуля payload-registry в Deckhouse K
    Состоит из следующих контейнеров:
 
     * **registry** — основной контейнер;
-    * **auth** — сайдкар-контейнер с сервисом аутентификации и авторизации доступа к реестру образов.
+    * **auth** — сайдкар-контейнер, реализующий функционал аутентификации и авторизации при обращении к хранилищу образов. Является [Open Source-проектом](https://github.com/cesanta/docker_auth).
+
+      Принцип работы:
+
+      1. Запрос к сервису аутентификации. Когда клиент пытается получить доступ к хранилищу образов, registry возвращает HTTP-ответ 401 Unauthorized с заголовком WWW-Authenticate, указывающим, как пройти аутентификацию.
+
+      1. Получение токена. Клиент отправляет запрос к сервису аутентификации auth по адресу `payload-registry.${PUBLIC_DOMAIN}/auth`, используя значения service и scope из заголовка WWW-Authenticate. Сервис auth возвращает непрозрачный Bearer-токен, который представляет авторизованный доступ клиента.
+
+      1. Использование токена. Получив токен, клиент повторно отправляет исходный запрос к registry, включив токен в заголовок Authorization.
+
+      1. Проверка доступа. Registry валидирует токен и содержащиеся в нём claims, после чего начинает сессию загрузки образов.
 
 1. **Registry-gc-&lt;uid&gt;** (Job) — компонент, состоящий из одного контейнера **gc**, выполняет удаление нетегированных образов.
 
-   Задача запускается по расписанию хуком модуля, который выполняет следующие действия в указанном порядке:
+   Задача запускается по расписанию хуком модуля, который выполняет следующие действия:
 
-    * проверяет настройки и расписание, определяет требуется ли сейчас запускать компонент. Расписание задаётся в параметре модуля [`.settings.gc.schedule`](/modules/payload-registry/stable/configuration.html#parameters-gc-schedule);
+   1. проверяет настройки и расписание, определяет требуется ли сейчас запускать компонент. Расписание задаётся в параметре модуля [`.settings.gc.schedule`](/modules/payload-registry/stable/configuration.html#parameters-gc-schedule);
 
-    * переводит registry в режим только для чтения. Хук перезапускает Deployment `registry` с параметром `internal.gc.run.readOnly=True` и дожидается готовности пода;
+   1. переводит registry в режим только для чтения. Хук перезапускает Deployment `registry` с параметром `internal.gc.run.readOnly=True` и дожидается готовности пода;
 
-    * создаёт Job с командой `registry garbage-collect /config/distribution_config.yaml --delete-untagged` и дожидается завершения работы задачи;
+   1. создаёт Job с командой `registry garbage-collect /config/distribution_config.yaml --delete-untagged` и дожидается завершения работы задачи;
 
-    * переводит registry в режим read-write (RW), аналогично изменяя шаблон Deployment.
+   1. переводит registry в режим read-write (RW), аналогично изменяя шаблон Deployment.
 
 ## Взаимодействия модуля
 
