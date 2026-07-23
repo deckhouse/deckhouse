@@ -36,6 +36,12 @@ data:
         transport:
           uds:
             udsName: /etc/kubernetes/konnectivity-server/konnectivity-server.socket
+    - name: controlplane
+      connection:
+        proxyProtocol: GRPC
+        transport:
+          uds:
+            udsName: /etc/kubernetes/konnectivity-server/konnectivity-server.socket
 ---
 # Backend Service for the konnectivity-server kube-apiserver sidecar.
 apiVersion: v1
