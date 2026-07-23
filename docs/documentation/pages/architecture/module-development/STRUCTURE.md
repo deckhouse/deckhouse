@@ -641,6 +641,8 @@ accessibility:
         - Managed   
 ```
 
+{% endraw %}
+
 Parameter description:
 
 - `accessibility`: *Object.* Root block for configuring module accessibility.
@@ -662,6 +664,8 @@ Parameter description:
     {% endalert %}
 - Sections containing edition names. Define module behavior in specified editions.
   Possible values: `be`, `ce`, `ee`, `se`, `se-plus`.
+
+{% raw %}
 
 #### Module accessibility logic
 
