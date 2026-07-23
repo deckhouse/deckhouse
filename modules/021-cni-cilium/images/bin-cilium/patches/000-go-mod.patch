@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 76739573..4cd8e573 100644
+index 76739573..89b738bb 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -36,7 +36,7 @@ require (
@@ -68,7 +68,13 @@ index 76739573..4cd8e573 100644
  	github.com/go-logr/stdr v1.2.2 // indirect
  	github.com/go-openapi/analysis v0.23.0 // indirect
  	github.com/go-openapi/jsonpointer v0.21.0 // indirect
-@@ -251,20 +251,20 @@ require (
+@@ -246,25 +246,25 @@ require (
+ 	github.com/tidwall/pretty v1.2.0 // indirect
+ 	github.com/x448/float16 v0.8.4 // indirect
+ 	github.com/xlab/treeprint v1.2.0 // indirect
+-	go.mongodb.org/mongo-driver v1.14.0 // indirect
++	go.mongodb.org/mongo-driver v1.17.7 // indirect
+ 	go.opencensus.io v0.24.0 // indirect
  	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
  	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 // indirect
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.22.0 // indirect
@@ -94,7 +100,7 @@ index 76739573..4cd8e573 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 diff --git a/go.sum b/go.sum
-index 2b5021d6..7c9dec7d 100644
+index 2b5021d6..4901b123 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -141,8 +141,8 @@ github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4/go.mod h1:6pvJx4me5XP
@@ -157,6 +163,17 @@ index 2b5021d6..7c9dec7d 100644
  github.com/spf13/cast v1.7.0 h1:ntdiHjuueXFgm5nzDRdOS4yfT43P5Fnud6DH50rz/7w=
  github.com/spf13/cast v1.7.0/go.mod h1:ancEpBxwJDODSW/UG4rDrAqiKolqNNh2DX3mk86cAdo=
  github.com/spf13/cobra v1.8.1 h1:e5/vxKd/rZsfSJMUX1agtjeTDf+qv1/JdBF8gg5k9ZM=
+@@ -597,8 +597,8 @@ go.etcd.io/etcd/client/pkg/v3 v3.5.17 h1:XxnDXAWq2pnxqx76ljWwiQ9jylbpC4rvkAeRVOU
+ go.etcd.io/etcd/client/pkg/v3 v3.5.17/go.mod h1:4DqK1TKacp/86nJk4FLQqo6Mn2vvQFBmruW3pP14H/w=
+ go.etcd.io/etcd/client/v3 v3.5.17 h1:o48sINNeWz5+pjy/Z0+HKpj/xSnBkuVhVvXkjEXbqZY=
+ go.etcd.io/etcd/client/v3 v3.5.17/go.mod h1:j2d4eXTHWkT2ClBgnnEPm/Wuu7jsqku41v9DZ3OtjQo=
+-go.mongodb.org/mongo-driver v1.14.0 h1:P98w8egYRjYe3XDjxhYJagTokP/H6HzlsnojRgZRd80=
+-go.mongodb.org/mongo-driver v1.14.0/go.mod h1:Vzb0Mk/pa7e6cWw85R4F/endUC3u0U9jGcNU603k65c=
++go.mongodb.org/mongo-driver v1.17.7 h1:a9w+U3Vt67eYzcfq3k/OAv284/uUUkL0uP75VE5rCOU=
++go.mongodb.org/mongo-driver v1.17.7/go.mod h1:Hy04i7O2kC4RS06ZrhPRqj/u4DTYkFDAAccj+rVKqgQ=
+ go.opencensus.io v0.24.0 h1:y73uSU6J157QMP2kn2r30vwW1A2W2WFwSCGnAVxeaD0=
+ go.opencensus.io v0.24.0/go.mod h1:vNK8G9p7aAivkbmorf4v+7Hgx+Zs0yY+0fOtgBfjQKo=
+ go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 @@ -607,25 +607,25 @@ go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.5
  go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.53.0/go.mod h1:azvtTADFQJA8mX80jIH/akaE7h+dbm/sVuaHqN13w74=
  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 h1:4K4tsIXefpVJtvA/8srF4V4y0akAoPHkIslgAkjixJA=
