@@ -946,10 +946,12 @@ You can check the current status of versions in the release channels at [release
   d8 mirror pull \
   --license='<LICENSE_KEY>' \
   --no-platform --no-security-db \
-  --include-module stronghold \
-  --include-module secrets-store-integration \
+  --include-module "stronghold" \
+  --include-module "secrets-store-integration" \
   /home/user/d8-bundle
   ```
+
+  Put values in `--include-module` in quotation marks to avoid input or output redirection.
 
   Example command to download `stronghold` module with semver `^` constraint from version 1.2.0:
 
@@ -957,7 +959,7 @@ You can check the current status of versions in the release channels at [release
   d8 mirror pull \
   --license='<LICENSE_KEY>' \
   --no-platform --no-security-db \
-  --include-module stronghold@1.2.0 \
+  --include-module "stronghold@1.2.0" \
   /home/user/d8-bundle
   ```
 
@@ -967,7 +969,17 @@ You can check the current status of versions in the release channels at [release
   d8 mirror pull \
   --license='<LICENSE_KEY>' \
   --no-platform --no-security-db \
-  --include-module secrets-store-integration@~1.1.0 \
+  --include-module "secrets-store-integration@~1.1.0" \
+  /home/user/d8-bundle
+  ```
+
+  Example command to download the `console` module with semver `>=` constraint from version 1.43.2:
+
+  ```shell
+  d8 mirror pull \
+  --license='<LICENSE_KEY>' \
+  --no-platform --no-security-db \
+  --include-module "console@>=1.43.2" \
   /home/user/d8-bundle
   ```
 
@@ -977,7 +989,7 @@ You can check the current status of versions in the release channels at [release
   d8 mirror pull \
   --license='<LICENSE_KEY>' \
   --no-platform --no-security-db \
-  --include-module stronghold@=v1.2.5 \
+  --include-module "stronghold@=v1.2.5" \
   /home/user/d8-bundle
   ```
 
@@ -987,14 +999,19 @@ You can check the current status of versions in the release channels at [release
 - `--no-platform`: Skip downloading the Deckhouse Kubernetes Platform image package (`platform.tar`).
 - `--no-modules`: Skip downloading module packages (`module-*.tar`).
 - `--no-security-db`: Skip downloading the vulnerability scanner database package (`security.tar`).
+- `--include-platform` = `CONSTRAINT`: Download Deckhouse Kubernetes Platform releases by a semver constraint. Cannot be used together with `--since-version` and `--deckhouse-tag`. Put the constraint value in quotation marks, for example: `--include-platform ">=1.64 <=1.68"`, `--include-platform "~1.65.0"`, `--include-platform "^1.65.0"`, `--include-platform "=v1.65.3"`, or `--include-platform "=v1.65.3+stable"`.
 - `--include-module` / `-i` = `name[@Major.Minor]`: Download only a specific set of modules using a whitelist (and, if needed, their minimum versions). Use multiple times to add more modules to the whitelist. These flags are ignored if used with `--no-modules`.
 
-  The following syntax options are supported for specifying module versions:
+  The following syntax options are supported for specifying module versions. When using these values in a command, put the `--include-module` value in quotation marks:
   - `module-name@1.3.0`: Pulls versions with semver ^ constraint (^1.3.0), including v1.3.0, v1.3.3, v1.4.1.
   - `module-name@~1.3.0`: Pulls versions with semver ~ constraint (>=1.3.0 <1.4.0), including only v1.3.0, v1.3.3.
+  - `module-name@>=1.3.0`: Pulls versions with semver `>=` constraint, including the explicitly specified version and newer versions matching the constraint.
+  - `module-name@>=1.3.0 <=1.4.0`: Pulls versions in the range, honoring both the lower and upper boundaries.
   - `module-name@=v1.3.0`: Pulls exact tag match v1.3.0, publishing to all release channels.
+  - `module-name@=v1.3.0+stable`: Pulls exact tag match v1.3.0, publishing to the stable release channel.
   - `module-name@=bobV1`: Pulls exact tag match "bobV1", publishing to all release channels.
 - `--exclude-module` / `-e` = `name`: Skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
+- `--include-package` = `name[@version]`: Download only a specific set of packages using a whitelist. Versions and semver constraints use the same syntax as `--include-module`; put constraint values in quotation marks.
 - `--modules-path-suffix`: Change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (for example, the full path to the module repo will be `registry.deckhouse.io/deckhouse/EDITION/modules`).
 - `--since-version=X.Y`: Download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid release channel. Cannot be used with `--deckhouse-tag`.
 - `--deckhouse-tag`: Download only the specific DKP version (regardless of release channels). Cannot be used with `--since-version`.
