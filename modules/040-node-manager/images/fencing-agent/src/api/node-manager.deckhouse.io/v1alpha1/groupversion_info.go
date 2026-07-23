@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains the Go types and scheme registration for the
-// node-manager.deckhouse.io/v1alpha1 FencingNodeState resource used by
-// fencing-agent. The object:generate marker drives DeepCopy generation
-// (make generate); the CRD manifest itself is hand-written under the module
-// crds/ directory, not generated from these types.
+// Package v1alpha1 holds the fencing-agent API types.
+//
+// FencingFailedNodeState is a cluster CRD (hand-written manifest under crds/).
+// FencingAgentNodeView, FencingAgentPeer and FencingAgentEvent are served
+// read-only by the agent over its unix socket and must not be installed as
+// cluster CRDs.
 // +kubebuilder:object:generate=true
+// +groupName=node-manager.deckhouse.io
 package v1alpha1
 
 import (

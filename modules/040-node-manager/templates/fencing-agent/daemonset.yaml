@@ -81,7 +81,7 @@ spec:
             - name: WATCHDOG_TIMEOUT
               value: "{{ ((($ng.fencing).watchdog).timeout) | default 60 }}s"
             - name: PROFILE_REF_NAME
-              value: {{ dig "fencing" "profile" "medium" $ng | toString | lower | quote }}
+              value: {{ dig "fencing" "profile" "Medium" $ng | toString | quote }}
             - name: API_SOCKET_PATH
               value: /var/run/fencing-agent/fencing-agent.sock
             - name: NODE_NAME

@@ -1,0 +1,110 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: fencingfailednodestates.node-manager.deckhouse.io
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Сигнальный объект, описывающий активный инцидент fencing для одного узла.
+
+            Имя ресурса совпадает с именем узла, а сам объект содержит ровно одну owner reference на этот узел, поэтому удаляется сборщиком мусора вместе с узлом. У здорового узла объекта `FencingFailedNodeState` нет вовсе: объект существует только при наличии активной проблемы.
+
+            Объект создаётся агентом fencing и читается контроллером fencing, который принимает решение об эвакуации узла. Не предназначен для создания или редактирования вручную.
+          properties:
+            spec:
+              description: |
+                Неизменяемое описание узла, для которого зафиксирован инцидент. Задаётся один раз при создании и не может быть изменено.
+              properties:
+                nodeGroup:
+                  description: |
+                    Имя NodeGroup, которой принадлежит узел.
+                profileRef:
+                  description: |
+                    Ссылка на профиль SLA, действовавший в момент фиксации инцидента. Профиль определяет тайминги обнаружения, эвакуации, fallback и watchdog.
+                  properties:
+                    name:
+                      description: |
+                        Имя профиля SLA.
+            status:
+              description: |
+                Наблюдаемое состояние инцидента. Разные части заполняются разными писателями: designated writer отвечает за `failed`, сам проблемный узел — за `fallback`, контроллер fencing — за `phase` и `conditions`.
+              properties:
+                phase:
+                  description: |
+                    Текущее состояние машины состояний fencing для узла.
+
+                    Значение `Healthy` на практике недостижимо: у здорового узла объекта `FencingFailedNodeState` не существует, поэтому признаком здоровья является отсутствие объекта.
+                observedGeneration:
+                  description: |
+                    Поколение ресурса, для которого был рассчитан статус.
+
+                    Оставлено для совместимости с общими соглашениями API. Так как `spec` неизменяем, поколение не меняется после создания, поэтому поле нельзя использовать для проверки актуальности статуса.
+                failed:
+                  description: |
+                    Свидетельство отказа, записанное designated writer — единственным агентом, отвечающим за фиксацию отказа этого узла. Запись выполняется только при наличии у агента локального кворума.
+                  properties:
+                    detectedAt:
+                      description: |
+                        Время обнаружения отказа. От этого момента отсчитывается задержка эвакуации, заданная профилем.
+                    detectedBy:
+                      description: |
+                        Имя узла, зафиксировавшего отказ.
+                    reason:
+                      description: |
+                        Причина, по которой узел считается отказавшим.
+                    memberlistIncarnation:
+                      description: |
+                        Номер incarnation отказавшего узла в memberlist-представлении писателя.
+                    memberlistViewID:
+                      description: |
+                        Идентификатор memberlist-представления, на основании которого принято решение.
+                    aliveCount:
+                      description: |
+                        Количество узлов, которые писатель считал живыми. Значение 0 допустимо и означает, что не осталось ни одного доступного узла.
+                    quorumSize:
+                      description: |
+                        Размер кворума, использованный писателем при принятии решения.
+                fallback:
+                  description: |
+                    Свидетельство работоспособности, записываемое самим проблемным узлом, пока он потерял кворум, но сохраняет доступ к API Kubernetes.
+
+                    Свежее значение `lastHeartbeatAt` всегда важнее секции `failed`: пока heartbeat не старше значения fallback TTL из профиля, эвакуация запрещена.
+                  properties:
+                    active:
+                      description: |
+                        Находится ли узел в режиме fallback.
+                    lastHeartbeatAt:
+                      description: |
+                        Время последнего heartbeat, записанного узлом.
+                    quorumLostAt:
+                      description: |
+                        Время потери кворума узлом.
+                    heartbeatIntervalSeconds:
+                      description: |
+                        Интервал, с которым узел записывает heartbeat.
+                conditions:
+                  description: |
+                    Условия, описывающие инцидент. Поддерживаются контроллером fencing.
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип условия.
+                      status:
+                        description: |
+                          Статус условия.
+                      observedGeneration:
+                        description: |
+                          Поколение ресурса, для которого было установлено условие.
+                      lastTransitionTime:
+                        description: |
+                          Время последнего изменения статуса условия.
+                      reason:
+                        description: |
+                          Машиночитаемая причина последнего изменения.
+                      message:
+                        description: |
+                          Описание последнего изменения в свободной форме.
