@@ -24,7 +24,7 @@ spec:
   version: 1
   settings:
     bundle: Minimal
-    logLevel: Info
+    logLevel: Debug
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
