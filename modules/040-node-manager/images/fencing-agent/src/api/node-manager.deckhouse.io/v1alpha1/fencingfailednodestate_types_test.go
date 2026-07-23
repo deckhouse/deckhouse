@@ -30,14 +30,14 @@ import (
 func TestStatusSectionsAreIsolated(t *testing.T) {
 	tests := []struct {
 		name    string
-		status  FencingNodeStateStatus
+		status  FencingFailedNodeStateStatus
 		present string
 		absent  string
 	}{
 		{
 			name: "failed writer does not serialize fallback",
-			status: FencingNodeStateStatus{
-				Failed: &FencingNodeStateFailed{
+			status: FencingFailedNodeStateStatus{
+				Failed: &FencingFailedNodeStateFailed{
 					DetectedAt: metav1.NewTime(time.Unix(0, 0).UTC()),
 					DetectedBy: "worker-1",
 					Reason:     FailedReasonMemberlistDead,
@@ -50,10 +50,9 @@ func TestStatusSectionsAreIsolated(t *testing.T) {
 		},
 		{
 			name: "fallback writer does not serialize failed",
-			status: FencingNodeStateStatus{
-				Fallback: &FencingNodeStateFallback{
+			status: FencingFailedNodeStateStatus{
+				Fallback: &FencingFailedNodeStateFallback{
 					Active:                   true,
-					APIReachable:             true,
 					HeartbeatIntervalSeconds: 1,
 				},
 			},
@@ -83,15 +82,15 @@ func TestStatusSectionsAreIsolated(t *testing.T) {
 
 // TestZeroValuedFieldsSurvive checks zero-valued fields stay on the wire.
 func TestZeroValuedFieldsSurvive(t *testing.T) {
-	raw, err := json.Marshal(FencingNodeStateStatus{
-		Failed:   &FencingNodeStateFailed{AliveCount: 0, QuorumSize: 3},
-		Fallback: &FencingNodeStateFallback{Active: false, APIReachable: false},
+	raw, err := json.Marshal(FencingFailedNodeStateStatus{
+		Failed:   &FencingFailedNodeStateFailed{AliveCount: 0, QuorumSize: 3},
+		Fallback: &FencingFailedNodeStateFallback{Active: false},
 	})
 	if err != nil {
 		t.Fatalf("marshal status: %v", err)
 	}
 
-	for _, want := range []string{`"aliveCount":0`, `"active":false`, `"apiReachable":false`} {
+	for _, want := range []string{`"aliveCount":0`, `"active":false`} {
 		if !strings.Contains(string(raw), want) {
 			t.Errorf("expected %s in %s", want, raw)
 		}
@@ -106,8 +105,8 @@ func TestSchemeRegistersEveryKind(t *testing.T) {
 	}
 
 	objects := map[string]runtime.Object{
-		"FencingNodeState":         &FencingNodeState{},
-		"FencingNodeStateList":     &FencingNodeStateList{},
+		"FencingFailedNodeState":         &FencingFailedNodeState{},
+		"FencingFailedNodeStateList":     &FencingFailedNodeStateList{},
 		"FencingAgentNodeView":     &FencingAgentNodeView{},
 		"FencingAgentNodeViewList": &FencingAgentNodeViewList{},
 		"FencingAgentPeer":         &FencingAgentPeer{},
@@ -136,14 +135,14 @@ func TestSchemeRegistersEveryKind(t *testing.T) {
 
 // TestDeepCopyIsIndependent checks DeepCopy does not alias the pointer sections.
 func TestDeepCopyIsIndependent(t *testing.T) {
-	original := &FencingNodeState{
-		Spec: FencingNodeStateSpec{
+	original := &FencingFailedNodeState{
+		Spec: FencingFailedNodeStateSpec{
 			NodeGroup:  "worker",
 			ProfileRef: ProfileRef{Name: ProfileCritical},
 		},
-		Status: FencingNodeStateStatus{
-			Failed:   &FencingNodeStateFailed{DetectedBy: "worker-1", AliveCount: 3},
-			Fallback: &FencingNodeStateFallback{Active: true, HeartbeatIntervalSeconds: 1},
+		Status: FencingFailedNodeStateStatus{
+			Failed:   &FencingFailedNodeStateFailed{DetectedBy: "worker-1", AliveCount: 3},
+			Fallback: &FencingFailedNodeStateFallback{Active: true, HeartbeatIntervalSeconds: 1},
 			Conditions: []metav1.Condition{
 				{Type: "Ready", Status: metav1.ConditionTrue, Reason: "Ready"},
 			},

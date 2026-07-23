@@ -51,10 +51,10 @@ type FencingAgentFallbackView struct {
 	LastHeartbeatAt *metav1.Time `json:"lastHeartbeatAt"`
 }
 
-// FencingAgentClusterStateRef points at the FencingNodeState for this Node.
+// FencingAgentClusterStateRef points at the FencingFailedNodeState for this Node.
 type FencingAgentClusterStateRef struct {
-	Name  string                `json:"name"`
-	Phase FencingNodeStatePhase `json:"phase"`
+	Name  string                      `json:"name"`
+	Phase FencingFailedNodeStatePhase `json:"phase"`
 }
 
 // FencingAgentNodeViewStatus is the agent's local view; sections are values, not pointers.

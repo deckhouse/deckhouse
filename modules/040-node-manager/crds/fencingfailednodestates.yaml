@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: fencingnodestates.node-manager.deckhouse.io
+  name: fencingfailednodestates.node-manager.deckhouse.io
   labels:
     heritage: deckhouse
     module: node-manager
@@ -9,11 +9,11 @@ spec:
   group: node-manager.deckhouse.io
   scope: Cluster
   names:
-    plural: fencingnodestates
-    singular: fencingnodestate
-    kind: FencingNodeState
+    plural: fencingfailednodestates
+    singular: fencingfailednodestate
+    kind: FencingFailedNodeState
     shortNames:
-      - fns
+      - ffns
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -46,7 +46,7 @@ spec:
           description: |
             Signal object describing an active fencing incident for a single node.
 
-            The resource name matches the node name, and the object carries exactly one owner reference to that node, so it is garbage collected when the node is removed. A healthy node has no `FencingNodeState` at all: the object exists only while there is an active problem.
+            The resource name matches the node name, and the object carries exactly one owner reference to that node, so it is garbage collected when the node is removed. A healthy node has no `FencingFailedNodeState` at all: the object exists only while there is an active problem.
 
             The object is created by a fencing agent and read by the fencing controller, which decides whether the node must be evacuated. It is not intended to be created or edited manually.
           required:
@@ -99,7 +99,7 @@ spec:
                   description: |
                     Current state of the fencing state machine for the node.
 
-                    `Healthy` is unreachable in practice: a healthy node has no `FencingNodeState`, so absence of the object is the healthy signal.
+                    `Healthy` is unreachable in practice: a healthy node has no `FencingFailedNodeState`, so absence of the object is the healthy signal.
                   enum:
                     - Healthy
                     - Suspected
@@ -172,7 +172,6 @@ spec:
                     A fresh `lastHeartbeatAt` always outweighs the `failed` section: while the heartbeat is newer than the fallback TTL of the profile, evacuation is not allowed.
                   required:
                     - active
-                    - apiReachable
                     - heartbeatIntervalSeconds
                   properties:
                     active:
@@ -189,10 +188,6 @@ spec:
                       format: date-time
                       description: |
                         Time the node lost quorum.
-                    apiReachable:
-                      type: boolean
-                      description: |
-                        Whether the node could reach the Kubernetes API when the heartbeat was written.
                     heartbeatIntervalSeconds:
                       type: integer
                       format: int32

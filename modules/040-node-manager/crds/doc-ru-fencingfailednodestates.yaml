@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: fencingnodestates.node-manager.deckhouse.io
+  name: fencingfailednodestates.node-manager.deckhouse.io
 spec:
   versions:
     - name: v1alpha1
@@ -10,7 +10,7 @@ spec:
           description: |
             Сигнальный объект, описывающий активный инцидент fencing для одного узла.
 
-            Имя ресурса совпадает с именем узла, а сам объект содержит ровно одну owner reference на этот узел, поэтому удаляется сборщиком мусора вместе с узлом. У здорового узла объекта `FencingNodeState` нет вовсе: объект существует только при наличии активной проблемы.
+            Имя ресурса совпадает с именем узла, а сам объект содержит ровно одну owner reference на этот узел, поэтому удаляется сборщиком мусора вместе с узлом. У здорового узла объекта `FencingFailedNodeState` нет вовсе: объект существует только при наличии активной проблемы.
 
             Объект создаётся агентом fencing и читается контроллером fencing, который принимает решение об эвакуации узла. Не предназначен для создания или редактирования вручную.
           properties:
@@ -36,7 +36,7 @@ spec:
                   description: |
                     Текущее состояние машины состояний fencing для узла.
 
-                    Значение `Healthy` на практике недостижимо: у здорового узла объекта `FencingNodeState` не существует, поэтому признаком здоровья является отсутствие объекта.
+                    Значение `Healthy` на практике недостижимо: у здорового узла объекта `FencingFailedNodeState` не существует, поэтому признаком здоровья является отсутствие объекта.
                 observedGeneration:
                   description: |
                     Поколение ресурса, для которого был рассчитан статус.
@@ -82,9 +82,6 @@ spec:
                     quorumLostAt:
                       description: |
                         Время потери кворума узлом.
-                    apiReachable:
-                      description: |
-                        Был ли доступен API Kubernetes в момент записи heartbeat.
                     heartbeatIntervalSeconds:
                       description: |
                         Интервал, с которым узел записывает heartbeat.

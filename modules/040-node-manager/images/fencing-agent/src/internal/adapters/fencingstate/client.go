@@ -26,7 +26,7 @@ import (
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
-// NewClient returns a cacheless typed client for FencingNodeState objects.
+// NewClient returns a cacheless typed client for FencingFailedNodeState objects.
 func NewClient(cfg *rest.Config) (client.Client, error) {
 	scheme := runtime.NewScheme()
 	if err := v1alpha1.AddToScheme(scheme); err != nil {

@@ -16,7 +16,7 @@ limitations under the License.
 
 // Package v1alpha1 holds the fencing-agent API types.
 //
-// FencingNodeState is a cluster CRD (hand-written manifest under crds/).
+// FencingFailedNodeState is a cluster CRD (hand-written manifest under crds/).
 // FencingAgentNodeView, FencingAgentPeer and FencingAgentEvent are served
 // read-only by the agent over its unix socket and must not be installed as
 // cluster CRDs.
