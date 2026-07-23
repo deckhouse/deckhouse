@@ -50,6 +50,10 @@ const (
 	clusterConfigurationSecretKey       = "cluster-configuration.yaml"
 
 	globalModuleConfigName = "global"
+	// prefixSeededAnnotation marks that the one-time cloud.prefix -> global
+	// ModuleConfig migration has already run, so the field is never re-asserted
+	// afterwards (letting the operator remove it, e.g. before a downgrade).
+	prefixSeededAnnotation = "node-manager.deckhouse.io/cluster-prefix-seeded"
 	// globalModuleConfigVersion is the current config-version of the global
 	// module settings (see global-hooks/openapi/config-values.yaml).
 	globalModuleConfigVersion = 2
@@ -68,6 +72,15 @@ func newModuleConfig() *unstructured.Unstructured {
 	mc := &unstructured.Unstructured{}
 	mc.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"})
 	return mc
+}
+
+func setSeededAnnotation(mc *unstructured.Unstructured) {
+	annotations := mc.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations[prefixSeededAnnotation] = "true"
+	mc.SetAnnotations(annotations)
 }
 
 func init() {
@@ -112,22 +125,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 	getErr := r.apiReader.Get(ctx, types.NamespacedName{Name: globalModuleConfigName}, mc)
 	switch {
 	case getErr == nil:
-		if existing, _, _ := unstructured.NestedString(mc.Object, "spec", "settings", "prefix"); existing != "" {
-			// Already migrated.
+		// The migration is one-time. Once the seeded annotation is present the
+		// controller never re-asserts the field, so the operator can remove
+		// spec.settings.prefix (e.g. before a downgrade) without it reappearing.
+		if mc.GetAnnotations()[prefixSeededAnnotation] == "true" {
 			return ctrl.Result{RequeueAfter: checkInterval}, nil
 		}
+
 		patched := mc.DeepCopy()
-		if err := unstructured.SetNestedField(patched.Object, cloudPrefix, "spec", "settings", "prefix"); err != nil {
-			return ctrl.Result{}, fmt.Errorf("set spec.settings.prefix: %w", err)
+		setSeededAnnotation(patched)
+		if existing, _, _ := unstructured.NestedString(mc.Object, "spec", "settings", "prefix"); existing == "" {
+			if err := unstructured.SetNestedField(patched.Object, cloudPrefix, "spec", "settings", "prefix"); err != nil {
+				return ctrl.Result{}, fmt.Errorf("set spec.settings.prefix: %w", err)
+			}
+			logger.Info("seeded global ModuleConfig prefix from the deprecated ClusterConfiguration.cloud.prefix", "prefix", cloudPrefix)
+		} else {
+			// A prefix is already set (by the operator or a previous run): adopt it
+			// as migrated without overwriting, so future removals are not reverted.
+			logger.Info("marking existing global ModuleConfig prefix as migrated", "prefix", existing)
 		}
 		if err := r.Client.Patch(ctx, patched, client.MergeFrom(mc)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("patch global ModuleConfig prefix: %w", err)
 		}
-		logger.Info("seeded global ModuleConfig prefix from the deprecated ClusterConfiguration.cloud.prefix", "prefix", cloudPrefix)
 
 	case errors.IsNotFound(getErr):
 		created := newModuleConfig()
 		created.SetName(globalModuleConfigName)
+		setSeededAnnotation(created)
 		if err := unstructured.SetNestedField(created.Object, int64(globalModuleConfigVersion), "spec", "version"); err != nil {
 			return ctrl.Result{}, fmt.Errorf("set spec.version: %w", err)
 		}

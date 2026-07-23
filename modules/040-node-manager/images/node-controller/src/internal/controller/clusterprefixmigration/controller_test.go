@@ -92,6 +92,39 @@ func runReconcile(t *testing.T, objs ...client.Object) client.Client {
 	return cl
 }
 
+func TestSeed_RemovalStaysRemovedAfterSeed(t *testing.T) {
+	// cloud.prefix is still present, global MC exists without a prefix.
+	cl := fake.NewClientBuilder().WithScheme(testScheme(t)).
+		WithObjects(clusterConfigSecret("lysov-test"), globalMC("")).Build()
+	r := &Reconciler{Base: register.Base{Client: cl}, apiReader: cl}
+
+	// First reconcile seeds the prefix and marks the MC as migrated.
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{}); err != nil {
+		t.Fatalf("first reconcile: %v", err)
+	}
+	if p, _ := mcPrefix(t, cl); p != "lysov-test" {
+		t.Fatalf("after seed prefix = %q, want lysov-test", p)
+	}
+
+	// Operator removes the prefix (e.g. preparing a downgrade).
+	mc := newModuleConfig()
+	if err := cl.Get(context.Background(), types.NamespacedName{Name: globalModuleConfigName}, mc); err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	unstructured.RemoveNestedField(mc.Object, "spec", "settings", "prefix")
+	if err := cl.Update(context.Background(), mc); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	// Reconcile again — the seeded annotation must prevent re-adding the field.
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{}); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+	if p, exists := mcPrefix(t, cl); exists && p != "" {
+		t.Fatalf("prefix reappeared after removal: %q (must stay removed once migrated)", p)
+	}
+}
+
 func TestSeed_PatchesExistingGlobalMC(t *testing.T) {
 	cl := runReconcile(t, clusterConfigSecret("lysov-test"), globalMC(""))
 	got, exists := mcPrefix(t, cl)
