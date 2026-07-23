@@ -93,14 +93,6 @@ metadata:
 spec:
   enabled: true
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: istio
-spec:
-  version: 3
-  enabled: true
----
 apiVersion: v1
 kind: Secret
 metadata:
