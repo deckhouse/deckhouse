@@ -37,6 +37,19 @@ properties:
 
       If not defined, the value is determined automatically as `true` for clusters with more than one master node. Otherwise, it is determined as`false`.
     x-examples: [ true, false ]
+  prefix:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+    description: |
+      A prefix of the objects to be created in the cloud.
+
+      Is used, for example, to distinguish objects created for different clusters, to configure routing, etc.
+
+      This is the new home for the prefix that was previously set in `ClusterConfiguration.cloud.prefix`. If not set, the value from `ClusterConfiguration.cloud.prefix` is used.
+
+      > **Warning.** This value names existing cloud infrastructure (security groups, route tables, resource groups, instances, etc.). It must match the prefix the cluster was bootstrapped with — setting a different value will break cloud integration. It is not intended to be changed in a running cluster.
+    x-examples:
+      - "kube"
   modules:
     description: |
       Common parameters of Deckhouse modules.

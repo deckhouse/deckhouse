@@ -69,7 +69,11 @@ apiVersions:
             - "DVP"
           prefix:
             type: string
+            x-doc-deprecated: true
             description: |
+              **Deprecated.** Use `prefix` in the `global` ModuleConfig instead.
+              This field is still used by the installer (dhctl) to name cloud infrastructure at bootstrap and must remain set for cloud clusters; the ModuleConfig value is the source for in-cluster consumers and must match it.
+
               A prefix of the objects to be created in the cloud.
 
               Is used, for example, to distinguish objects created for different clusters, to configure routing, etc.

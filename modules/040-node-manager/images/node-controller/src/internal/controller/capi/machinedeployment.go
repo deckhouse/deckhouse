@@ -541,6 +541,15 @@ type mdClusterConfiguration struct {
 }
 
 func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (string, error) {
+	// The global ModuleConfig (spec.settings.prefix) is the new home for the
+	// cluster prefix and takes precedence. Fall back to the deprecated
+	// ClusterConfiguration.cloud.prefix during the migration.
+	if prefix, err := r.readGlobalModuleConfigPrefix(ctx); err != nil {
+		return "", err
+	} else if prefix != "" {
+		return prefix, nil
+	}
+
 	secret := &corev1.Secret{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
 		Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace,
@@ -566,6 +575,24 @@ func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (s
 		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
 	return cfg.Cloud.Prefix, nil
+}
+
+// readGlobalModuleConfigPrefix returns spec.settings.prefix from the global
+// ModuleConfig, or an empty string when the ModuleConfig or the field is absent.
+func (r *MachineDeploymentReconciler) readGlobalModuleConfigPrefix(ctx context.Context) (string, error) {
+	mc := &unstructured.Unstructured{}
+	mc.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"})
+	if err := r.APIReader.Get(ctx, types.NamespacedName{Name: "global"}, mc); err != nil {
+		if errors.IsNotFound(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("get global ModuleConfig: %w", err)
+	}
+	prefix, _, err := unstructured.NestedString(mc.Object, "spec", "settings", "prefix")
+	if err != nil {
+		return "", fmt.Errorf("read spec.settings.prefix from global ModuleConfig: %w", err)
+	}
+	return prefix, nil
 }
 
 func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, cloudConfig *cloudProviderConfig, ngName string) (string, error) {

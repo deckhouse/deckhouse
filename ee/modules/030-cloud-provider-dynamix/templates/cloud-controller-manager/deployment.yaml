@@ -41,7 +41,7 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
       name: dynamix-credentials
       key: insecure
 - name: DYNAMIX_RESOURCE_GROUP_NAME
-  value: "{{ .Values.global.clusterConfiguration.cloud.prefix }}-rg"
+  value: "{{ (.Values.global.prefix | default .Values.global.clusterConfiguration.cloud.prefix) }}-rg"
 {{- end -}}
 
 {{- $ccmConfig := dict -}}
