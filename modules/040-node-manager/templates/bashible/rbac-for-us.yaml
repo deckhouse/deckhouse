@@ -100,6 +100,27 @@ rules:
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:bashible:nodetopology-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+  - apiGroups:
+      - deckhouse.io
+    resources:
+      - nodetopologies
+    verbs:
+      - get
+  - apiGroups:
+      - deckhouse.io
+    resources:
+      - nodetopologies/status
+    verbs:
+      - get
+      - patch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: node-manager:bashible-mcm-bootstrapped-masters
@@ -234,6 +255,24 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: d8:node-manager:bashible:node-bootstrapped-nodes
+subjects:
+  - kind: Group
+    name: system:bootstrappers:d8-node-manager
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible:nodetopology-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible:nodetopology-bootstrapped-nodes
 subjects:
   - kind: Group
     name: system:bootstrappers:d8-node-manager

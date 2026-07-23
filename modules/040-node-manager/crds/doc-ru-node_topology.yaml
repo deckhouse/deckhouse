@@ -1,0 +1,75 @@
+spec:
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Описывает topology-настройки, ожидаемые и фактически применённые на отдельном узле.
+
+            Ресурс предназначен для отображения состояния применения настроек topology manager из NodeGroup на конкретном узле.
+          properties:
+            status:
+              description: |
+                Текущее состояние topology-настроек узла.
+              properties:
+                nodeName:
+                  description: |
+                    Имя Kubernetes-узла.
+                nodeGroup:
+                  description: |
+                    Имя NodeGroup, к которой относится узел.
+                desired:
+                  description: |
+                    Настройки, ожидаемые согласно конфигурации NodeGroup.
+                  properties:
+                    topologyManager:
+                      description: |
+                        Ожидаемые настройки topology manager.
+                      properties:
+                        enabled:
+                          description: |
+                            Определяет, включён ли topology manager в ожидаемом состоянии.
+                        policy:
+                          description: |
+                            Ожидаемая policy topology manager.
+                        scope:
+                          description: |
+                            Ожидаемый scope topology manager.
+                effective:
+                  description: |
+                    Настройки, фактически применённые на узле.
+                  properties:
+                    topologyManager:
+                      description: |
+                        Фактически применённые настройки topology manager.
+                      properties:
+                        enabled:
+                          description: |
+                            Определяет, включён ли topology manager в фактически применённом состоянии.
+                        policy:
+                          description: |
+                            Фактически применённая policy topology manager.
+                        scope:
+                          description: |
+                            Фактически применённый scope topology manager.
+                conditions:
+                  description: |
+                    Список conditions, отражающих состояние синхронизации ожидаемых и фактически применённых topology-настроек.
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип condition.
+                      status:
+                        description: |
+                          Статус condition.
+                      reason:
+                        description: |
+                          Краткая причина текущего состояния condition.
+                      message:
+                        description: |
+                          Подробное описание текущего состояния condition.
+                      lastTransitionTime:
+                        description: |
+                          Время последнего изменения состояния condition.

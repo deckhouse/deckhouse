@@ -26,6 +26,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/instance"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodetemplate"
+	_ "github.com/deckhouse/node-controller/internal/controller/nodetopology"
 	_ "github.com/deckhouse/node-controller/internal/controller/staticproviderid"
 	_ "github.com/deckhouse/node-controller/internal/controller/updateapproval"
 )
