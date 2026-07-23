@@ -300,6 +300,12 @@ properties:
     description: |
       Количество ресурсов CPU и памяти, выделяемых компонентам control plane на каждом master-узле.
 
+      Если измерение (`cpu` / `memory`) **не** задано (и нет legacy-fallback
+      `global.modules.resourcesRequests.controlPlane`), Deckhouse раз в сутки автоматически
+      подстраивает per-component requests по среднему потреблению за 7 дней через
+      prometheus-metrics-adapter. Задание значения для измерения отключает автотюн этого
+      измерения у всех четырёх компонентов и применяет фиксированный %-сплит общего бюджета.
+
       Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например Google Kubernetes Engine или Azure Kubernetes Service.
       Подробнее об единицах измерения ресурсов — в [документации Kubernetes](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
     properties:
