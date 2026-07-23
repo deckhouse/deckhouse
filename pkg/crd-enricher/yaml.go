@@ -136,6 +136,47 @@ func containsOrdered(v any) bool {
 	return false
 }
 
+// plainIfSorted collapses a decoded example value into the plain
+// map[string]any / []any model when every mapping it contains is already in
+// ascending key order. Such an example renders identically under the default
+// sigs.k8s.io/yaml encoder (which sorts map keys), so preserving the authored
+// order is a no-op — collapsing it keeps the document on the default encoder
+// and leaves every other node byte for byte unchanged, avoiding a whole-file
+// reindent. When any mapping is authored out of order the key order carries
+// meaning, so the value is left untouched (ok=false) and the order-preserving
+// encoder handles it as before.
+func plainIfSorted(v any) (any, bool) {
+	switch t := v.(type) {
+	case orderedMap:
+		out := make(map[string]any, len(t))
+		keys := make([]string, 0, len(t))
+		for _, entry := range t {
+			child, ok := plainIfSorted(entry.val)
+			if !ok {
+				return nil, false
+			}
+			out[entry.key] = child
+			keys = append(keys, entry.key)
+		}
+		if !sort.StringsAreSorted(keys) {
+			return nil, false
+		}
+		return out, true
+	case []any:
+		out := make([]any, len(t))
+		for i, item := range t {
+			child, ok := plainIfSorted(item)
+			if !ok {
+				return nil, false
+			}
+			out[i] = child
+		}
+		return out, true
+	default:
+		return v, true
+	}
+}
+
 // marshalOrdered encodes a CRD document while preserving the key order of every
 // orderedMap and sorting the keys of every plain map[string]any, so that the
 // only nodes that escape the alphabetical order sigs.k8s.io/yaml would impose

@@ -12,33 +12,33 @@ spec:
     singular: bare
   scope: Cluster
   versions:
-    - name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          properties:
-            apiVersion:
-              type: string
-            kind:
-              type: string
-            metadata:
-              type: object
-            spec:
-              properties:
-                channel:
-                  type: string
-                  x-doc-examples:
-                    - stable
-                config:
-                  properties:
-                    image:
-                      type: string
-                    tag:
-                      type: string
-                  type: object
-                  x-doc-examples:
-                    - image: nginx
-                      tag: latest
-              type: object
-          type: object
-      served: true
-      storage: true
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              channel:
+                type: string
+                x-doc-examples:
+                - stable
+              config:
+                properties:
+                  image:
+                    type: string
+                  tag:
+                    type: string
+                type: object
+                x-doc-examples:
+                - image: nginx
+                  tag: latest
+            type: object
+        type: object
+    served: true
+    storage: true

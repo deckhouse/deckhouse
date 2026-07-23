@@ -595,6 +595,15 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 				e.warnings = append(e.warnings, err.Error())
 				continue
 			}
+			// An example authored in ascending key order renders identically
+			// under the default encoder, so collapse it to the plain (sorted)
+			// model. This keeps the whole document on the default sigs.k8s.io/yaml
+			// encoding instead of switching to the order-preserving one, which
+			// would reindent every sequence in the file. Examples that
+			// deliberately reorder keys stay ordered and keep their authored order.
+			if plain, ok := plainIfSorted(value); ok {
+				value = plain
+			}
 			if list, ok := value.([]any); ok {
 				for _, item := range list {
 					examples = append(examples, exampleEntry{value: item})

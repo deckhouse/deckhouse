@@ -660,12 +660,31 @@ controller-gen-generate: controller-gen
 
 .PHONY: manifests
 manifests: controller-gen enrich-crds ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	@$(MAKE) copy-crds
+
+## Copy the enriched CRDs from bin/crd/bases into deckhouse-controller/crds.
+## Kept as a standalone target so both manifests and manifests-local reuse it
+## after their (released vs local) enrich step, with no risk of the file list
+## drifting between them.
+.PHONY: copy-crds
+copy-crds:
 	@echo "Copying CRDs to deckhouse-controller/crds..."
 	@cp bin/crd/bases/deckhouse.io_applications.yaml deckhouse-controller/crds/application.yaml
 	@cp bin/crd/bases/deckhouse.io_packagerepositoryoperations.yaml deckhouse-controller/crds/packagerepositoryoperation.yaml
 	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
+
+## Same as manifests, but enriches with the crd-enricher built from THIS branch's
+## source (via enrich-crds-local) instead of the released $(CRD_ENRICHER_VERSION),
+## then copies the result into deckhouse-controller/crds. Pass
+## CRD_ENRICHER_FLAGS=auto-examples to turn on automatic example generation.
+##
+##   make manifests-local
+##   make manifests-local CRD_ENRICHER_FLAGS=auto-examples
+.PHONY: manifests-local
+manifests-local: controller-gen enrich-crds-local ## Generate CRDs with the local (branch) crd-enricher and copy them into deckhouse-controller/crds.
+	@$(MAKE) copy-crds
 
 .PHONY: generate-crds
 generate-crds: controller-gen

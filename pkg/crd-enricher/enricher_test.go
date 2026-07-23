@@ -180,14 +180,17 @@ func TestApplyMarkersExamplesDescription(t *testing.T) {
 		t.Error("orderedExamples flag not set for described examples")
 	}
 
+	// The example objects have a single (trivially sorted) key, so they collapse
+	// to the plain map model; the wrapper still forces the ordered encoder, and
+	// a sorted map renders identically, so the output is unchanged.
 	want := []any{
 		orderedMap{
 			{key: "x-doc-description", val: "my super example"},
-			{key: "x-doc-example", val: orderedMap{{key: "field", val: "value"}}},
+			{key: "x-doc-example", val: map[string]any{"field": "value"}},
 		},
 		orderedMap{
 			{key: "x-doc-description", val: "my super example two"},
-			{key: "x-doc-example", val: orderedMap{{key: "field", val: "value2"}}},
+			{key: "x-doc-example", val: map[string]any{"field": "value2"}},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
@@ -213,7 +216,7 @@ func TestApplyMarkersExamplesName(t *testing.T) {
 	want := []any{
 		orderedMap{
 			{key: "x-doc-name", val: "My example"},
-			{key: "x-doc-example", val: orderedMap{{key: "field", val: "value"}}},
+			{key: "x-doc-example", val: map[string]any{"field": "value"}},
 		},
 	}
 	if got := schema["x-doc-examples"]; !reflect.DeepEqual(got, want) {
