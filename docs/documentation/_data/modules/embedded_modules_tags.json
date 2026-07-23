@@ -148,10 +148,6 @@
     "bare metal",
     "ssdlc"
   ],
-  "monitoring-applications": [
-    "observability",
-    "ssdlc"
-  ],
   "monitoring-deckhouse": [
     "observability",
     "ssdlc"
