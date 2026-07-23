@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
@@ -48,6 +49,9 @@ func (r *reconciler) reconcilePostgres(ctx context.Context, vcp *controlplanev1a
 	current := postgres()
 	err = r.client.Get(ctx, client.ObjectKeyFromObject(target), current)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
 		if err := r.client.Create(ctx, target); err != nil {
 			return reconcile.Result{}, fmt.Errorf("create Postgres: %w", err)
 		}

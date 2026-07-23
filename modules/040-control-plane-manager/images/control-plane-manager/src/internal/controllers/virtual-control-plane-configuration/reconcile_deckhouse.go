@@ -406,7 +406,7 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 		return fmt.Errorf("get parent deckhouse image: %w", err)
 	}
 
-	target, err := buildTargetDeckhouseDeployment(vcp, image, albVIP)
+	target, err := buildTargetDeckhouseDeployment(vcp.Namespace, image, albVIP)
 	if err != nil {
 		return err
 	}
@@ -437,7 +437,7 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 }
 
 func buildTargetDeckhouseDeployment(
-	vcp *controlplanev1alpha1.VirtualControlPlane,
+	namespace string,
 	image string,
 	albVIP string,
 ) (*appsv1.Deployment, error) {
