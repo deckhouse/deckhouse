@@ -1368,24 +1368,21 @@ apiserver:
 		})
 	})
 
-	// The decision (target ClusterRole + whether to render supplement) is made by the
-	// reconcile_kubeadm_cluster_admins_binding hook and published into Helm values. The template
-	// reads .Values.controlPlaneManager.internal.{kubeadmClusterAdminsTargetRoleName,kubeadmClusterAdminsSupplementEnabled}
-	// verbatim, so these tests drive the template directly via those internal values.
+	// The main kubeadm:cluster-admins binding is owned entirely by the reconcile_kubeadm_cluster_admins_binding
+	// hook and is NOT rendered by this template (it left the template in v1.77). The template only renders the
+	// additive supplement, gated by .Values.controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled.
 	Context("kubeadm ClusterRoleBinding for admin.conf", func() {
-		Context("hook decision: target=cluster-admin, supplement=false (user-authz off)", func() {
+		Context("hook decision: supplement=false (user-authz off)", func() {
 			BeforeEach(func() {
-				// schema defaults: target=cluster-admin, supplementEnabled=false; render with no overrides.
+				// schema defaults: supplementEnabled=false; render with no overrides.
 				f.HelmRender()
 			})
 
-			It("should bind kubeadm:cluster-admins to cluster-admin and not render the supplement", func() {
+			It("should render neither the hook-owned main binding nor the supplement", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				// The main binding is hook-owned; the template must never render it.
 				crb := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
-				Expect(crb.Exists()).To(BeTrue())
-				Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-admin"))
-				// keep policy must always be present so a future hook-only migration cannot let Helm prune it.
-				Expect(crb.Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
+				Expect(crb.Exists()).To(BeFalse())
 
 				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
 				Expect(sup.Exists()).To(BeFalse())
@@ -1394,40 +1391,17 @@ apiserver:
 			})
 		})
 
-		Context("hook decision: target=cluster-admin, supplement=true (user-authz on, but at least one of bootstrap/CR-presence gates is false)", func() {
+		Context("hook decision: supplement=true (user-authz on)", func() {
 			BeforeEach(func() {
-				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName", "cluster-admin")
 				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled", true)
 				f.HelmRender()
 			})
 
-			It("should keep cluster-admin on main binding but render the supplement (purely additive on the same group)", func() {
+			It("should render the supplement (purely additive on the same group) but never the hook-owned main binding", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				// The main binding is hook-owned; the template must not render it regardless of the hook's target decision.
 				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
-				Expect(main.Exists()).To(BeTrue())
-				Expect(main.Field("roleRef.name").String()).To(Equal("cluster-admin"))
-
-				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
-				Expect(sup.Exists()).To(BeTrue())
-				Expect(sup.Field("roleRef.name").String()).To(Equal("d8:control-plane-manager:admin-kubeconfig-supplement"))
-
-				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
-				Expect(supCR.Exists()).To(BeTrue())
-			})
-		})
-
-		Context("hook decision: target=user-authz:cluster-admin, supplement=true (all three gates satisfied)", func() {
-			BeforeEach(func() {
-				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName", "user-authz:cluster-admin")
-				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled", true)
-				f.HelmRender()
-			})
-
-			It("should bind kubeadm:cluster-admins to user-authz:cluster-admin and add the supplement binding", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
-				Expect(main.Exists()).To(BeTrue())
-				Expect(main.Field("roleRef.name").String()).To(Equal("user-authz:cluster-admin"))
+				Expect(main.Exists()).To(BeFalse())
 
 				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
 				Expect(sup.Exists()).To(BeTrue())
