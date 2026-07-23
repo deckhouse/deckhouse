@@ -64,40 +64,64 @@ func TestEffectiveClusterPrefix(t *testing.T) {
 	}
 }
 
-func TestMaterializeCloudPrefix(t *testing.T) {
-	t.Run("cloud cluster, prefix from global MC, injected into cloud", func(t *testing.T) {
+func TestClusterConfigForInfrastructure(t *testing.T) {
+	cloudPrefixOf := func(cc map[string]json.RawMessage) (string, bool) {
+		raw, ok := cc["cloud"]
+		if !ok {
+			return "", false
+		}
+		var cloud map[string]any
+		if err := json.Unmarshal(raw, &cloud); err != nil {
+			return "", false
+		}
+		p, ok := cloud["prefix"].(string)
+		return p, ok
+	}
+
+	t.Run("injects prefix into tfvars but leaves the persisted ClusterConfig untouched", func(t *testing.T) {
 		m := &MetaConfig{
 			ClusterType:   CloudClusterType,
 			ClusterPrefix: "lysov-test",
 			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"Yandex"}`)},
 		}
-		require.NoError(t, m.materializeCloudPrefix())
-		var cloud map[string]any
-		require.NoError(t, json.Unmarshal(m.ClusterConfig["cloud"], &cloud))
-		require.Equal(t, "lysov-test", cloud["prefix"])
-		require.Equal(t, "Yandex", cloud["provider"], "existing cloud fields must be preserved")
+
+		infra := m.clusterConfigForInfrastructure()
+
+		// tfvars copy has the prefix (and preserves other cloud fields)...
+		p, ok := cloudPrefixOf(infra)
+		require.True(t, ok)
+		require.Equal(t, "lysov-test", p)
+		var infraCloud map[string]any
+		require.NoError(t, json.Unmarshal(infra["cloud"], &infraCloud))
+		require.Equal(t, "Yandex", infraCloud["provider"])
+
+		// ...while the original (→ d8-cluster-configuration secret) has NO prefix.
+		_, ok = cloudPrefixOf(m.ClusterConfig)
+		require.False(t, ok, "m.ClusterConfig must not be mutated (secret stays clean)")
 	})
 
-	t.Run("global MC prefix overrides existing cloud.prefix", func(t *testing.T) {
+	t.Run("global MC prefix overrides an existing cloud.prefix in tfvars only", func(t *testing.T) {
 		m := &MetaConfig{
 			ClusterType:   CloudClusterType,
 			ClusterPrefix: "from-mc",
 			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"AWS","prefix":"old"}`)},
 		}
-		require.NoError(t, m.materializeCloudPrefix())
-		var cloud map[string]any
-		require.NoError(t, json.Unmarshal(m.ClusterConfig["cloud"], &cloud))
-		require.Equal(t, "from-mc", cloud["prefix"])
+		infra := m.clusterConfigForInfrastructure()
+		p, _ := cloudPrefixOf(infra)
+		require.Equal(t, "from-mc", p)
+		// original preserved verbatim
+		orig, _ := cloudPrefixOf(m.ClusterConfig)
+		require.Equal(t, "old", orig)
 	})
 
-	t.Run("static cluster is a no-op", func(t *testing.T) {
+	t.Run("static cluster returns config unchanged", func(t *testing.T) {
 		m := &MetaConfig{
 			ClusterType:   StaticClusterType,
 			ClusterPrefix: "x",
 			ClusterConfig: map[string]json.RawMessage{},
 		}
-		require.NoError(t, m.materializeCloudPrefix())
-		_, ok := m.ClusterConfig["cloud"]
+		infra := m.clusterConfigForInfrastructure()
+		_, ok := infra["cloud"]
 		require.False(t, ok)
 	})
 }

@@ -157,9 +157,6 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 		return nil, err
 	}
 	m.ClusterPrefix = m.effectiveClusterPrefix(cloudSpec.Prefix)
-	if err := m.materializeCloudPrefix(); err != nil {
-		return nil, err
-	}
 
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
@@ -600,6 +597,10 @@ func (m *MetaConfig) MarshalConfig() []byte {
 	// Operation is not part of the terraform input contract — strip it
 	// before the tfvars JSON reaches OpenTofu/Terraform.
 	newM.Operation = ""
+	// Materialize cloud.prefix from the resolved cluster prefix for the Terraform
+	// layouts (which read var.clusterConfiguration.cloud.prefix). This affects the
+	// tfvars only — m.ClusterConfig / the d8-cluster-configuration secret stay clean.
+	newM.ClusterConfig = m.clusterConfigForInfrastructure()
 
 	wrap := cfg{MetaConfig: newM}
 	if cv := m.CloudProviderVars; cv != nil {
@@ -756,7 +757,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 // level.
 func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
 	result := map[string]any{
-		"clusterConfiguration":         m.ClusterConfig,
+		"clusterConfiguration":         m.clusterConfigForInfrastructure(),
 		"providerClusterConfiguration": m.ProviderClusterConfig,
 		"nodeIndex":                    nodeIndex,
 		"cloudConfig":                  cloudConfig,
@@ -1027,35 +1028,51 @@ func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) string {
 	return cloudPrefix
 }
 
-// materializeCloudPrefix writes the resolved cluster prefix back into the cloud
-// section of the ClusterConfiguration. Terraform layouts and other legacy
-// consumers read var.clusterConfiguration.cloud.prefix directly and cannot read
-// the global ModuleConfig, so when the prefix is provided via the global
-// ModuleConfig (and omitted from ClusterConfiguration.cloud), dhctl fills it in
-// here to keep those consumers working during the migration.
-func (m *MetaConfig) materializeCloudPrefix() error {
+// clusterConfigForInfrastructure returns the ClusterConfiguration to feed to the
+// infrastructure utility (Terraform/OpenTofu), with cloud.prefix materialized
+// from the resolved cluster prefix. The Terraform layouts read
+// var.clusterConfiguration.cloud.prefix directly and cannot read the global
+// ModuleConfig, so when the prefix is set only via the global ModuleConfig
+// (and omitted from ClusterConfiguration.cloud) dhctl fills it in for them.
+//
+// It never mutates m.ClusterConfig: that object is persisted verbatim into the
+// d8-cluster-configuration secret, so a prefix set only in the global
+// ModuleConfig must not leak back into the ClusterConfiguration there. The
+// original map is returned unchanged when nothing needs to be added.
+func (m *MetaConfig) clusterConfigForInfrastructure() map[string]json.RawMessage {
 	if m.ClusterType != CloudClusterType || m.ClusterPrefix == "" {
-		return nil
+		return m.ClusterConfig
 	}
 	rawCloud, ok := m.ClusterConfig["cloud"]
 	if !ok {
-		return nil
+		return m.ClusterConfig
 	}
 	cloud := map[string]json.RawMessage{}
 	if err := json.Unmarshal(rawCloud, &cloud); err != nil {
-		return fmt.Errorf("unmarshal cloud config: %w", err)
+		return m.ClusterConfig
+	}
+	if existing, ok := cloud["prefix"]; ok {
+		var p string
+		if json.Unmarshal(existing, &p) == nil && p == m.ClusterPrefix {
+			return m.ClusterConfig // already materialized, no copy needed
+		}
 	}
 	prefixJSON, err := json.Marshal(m.ClusterPrefix)
 	if err != nil {
-		return fmt.Errorf("marshal cluster prefix: %w", err)
+		return m.ClusterConfig
 	}
 	cloud["prefix"] = prefixJSON
 	newCloud, err := json.Marshal(cloud)
 	if err != nil {
-		return fmt.Errorf("marshal cloud config: %w", err)
+		return m.ClusterConfig
 	}
-	m.ClusterConfig["cloud"] = newCloud
-	return nil
+	// Shallow-copy the top-level map so m.ClusterConfig (→ the secret) is untouched.
+	out := make(map[string]json.RawMessage, len(m.ClusterConfig))
+	for k, v := range m.ClusterConfig {
+		out[k] = v
+	}
+	out["cloud"] = newCloud
+	return out
 }
 
 func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
