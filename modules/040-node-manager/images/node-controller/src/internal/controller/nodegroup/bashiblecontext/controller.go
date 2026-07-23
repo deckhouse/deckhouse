@@ -46,6 +46,10 @@ type Controller struct {
 	register.Base
 	apiReader client.Reader
 	clientset kubernetes.Interface
+	// lastAssemble implements the debounce. Every event maps to the single fixed "assemble"
+	// request key, and the workqueue never hands one key to two workers at once, so the
+	// field is only ever touched sequentially — no synchronization needed.
+	lastAssemble time.Time
 }
 
 func (c *Controller) Setup(mgr ctrl.Manager) error {
@@ -96,8 +100,19 @@ func inNamespaces(namespaces ...string) predicate.Predicate {
 	})
 }
 
+// assembleDebounce coalesces context assemblies: every write of the output Secret makes
+// bashible-apiserver re-render every bashible step for every NodeGroup (an expensive full
+// rebuild), so a burst of NodeGroup changes must collapse into one assembly per window
+// instead of one per event.
+const assembleDebounce = 3 * time.Second
+
 func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
+	if since := time.Since(c.lastAssemble); since < assembleDebounce {
+		return ctrl.Result{RequeueAfter: assembleDebounce - since}, nil
+	}
+	c.lastAssemble = time.Now()
 
 	if err := c.ensureCertificate(ctx, logger); err != nil {
 		logger.Error(err, "failed to ensure kubernetes-api-proxy discovery certificate")
