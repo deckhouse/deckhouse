@@ -74,7 +74,7 @@ The integration automatically injects the following CI variables into the pipeli
 - `FE_SCANS_CODESCORING_PROJECT` (when "Project name" is set)
 - `FE_SCANS_CODESCORING_SCAN_STAGE`
 
-For a server with a self-signed certificate, the CA is set **manually** as a **File**-type CI variable `FE_SCANS_CODESCORING_CA_CERT` ("Settings" → "CI/CD" → "Variables"). The `codescoring_scan` job exports it to `SSL_CERT_FILE`, which both `curl` and the Johnny agent trust. This is the only variable you set by hand; the rest of the `FE_SCANS_CODESCORING_*` variables are injected by the integration.
+For a server with a self-signed certificate, the CA is set **manually** as a **File**-type CI variable `CODESCORING_SSL_FILE` ("Settings" → "CI/CD" → "Variables"). The `codescoring_scan` job exports it to `SSL_CERT_FILE`, which both `curl` and the Johnny agent trust. This is the only variable you set by hand; the rest of the `FE_SCANS_CODESCORING_*` variables are injected by the integration.
 
 ## Running the scan
 
@@ -99,7 +99,7 @@ To configure automatic scanning, do the following:
 
 After that, every pipeline automatically gains a **`codescoring_scan`** job (stage `fe-security-scanner`) that:
 
-- Downloads the console agent Johnny from the CodeScoring server (by token; for a self-signed server, using the CA from the `FE_SCANS_CODESCORING_CA_CERT` variable).
+- Downloads the console agent Johnny from the CodeScoring server (by token; for a self-signed server, using the CA from the `CODESCORING_SSL_FILE` variable).
 - Scans the working directory and submits native GitLab reports.
 
 A manual `include` and manual `CODESCORING_*` variables are not required. The integration and the policy provide everything required.
