@@ -260,7 +260,7 @@ func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, md
 
 func (r *MachineDeploymentReconciler) readCloudProviderTree(ctx context.Context) (map[string]interface{}, error) {
 	secret := &corev1.Secret{}
-	if err := r.APIReader.Get(ctx, types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
 	}, secret); err != nil {
 		if client.IgnoreNotFound(err) == nil {
@@ -298,7 +298,7 @@ func (r *MachineDeploymentReconciler) readNodeGroupRawSpec(ctx context.Context, 
 
 func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string, error) {
 	secret := &corev1.Secret{}
-	if err := r.APIReader.Get(ctx, types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace,
 	}, secret); err != nil {
 		if client.IgnoreNotFound(err) == nil {

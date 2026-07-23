@@ -74,11 +74,13 @@ func CacheOptions() (cache.Options, client.Options) {
 					MachineNamespace: {
 						LabelSelector: machineNSSecretSelector,
 					},
-					"kube-system": {
-						FieldSelector: fields.SelectorFromSet(fields.Set{
-							"metadata.name": "d8-node-manager-cloud-provider",
-						}),
-					},
+					// Unfiltered on purpose: the NodeGroup webhook and the derived-status
+					// service read d8-cluster-configuration (and the provider configs) on
+					// every NodeGroup write, and a name FieldSelector can list only one
+					// secret — the rest became live GETs on the apiserver hot path (and the
+					// webhook's cached reads silently missed). All kube-system secrets are
+					// ~140KiB total, so caching them all is cheaper than one live GET.
+					"kube-system": {},
 				},
 			},
 			&corev1.Pod{}: {

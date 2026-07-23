@@ -336,7 +336,7 @@ type cloudProviderConfig struct {
 
 func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Context) (*cloudProviderConfig, error) {
 	secret := &corev1.Secret{}
-	if err := r.APIReader.Get(ctx, types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
 	}, secret); err != nil {
 		if client.IgnoreNotFound(err) == nil {
@@ -362,7 +362,7 @@ func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Contex
 
 func (r *MachineDeploymentReconciler) readClusterUUID(ctx context.Context) (string, error) {
 	cm := &corev1.ConfigMap{}
-	if err := r.APIReader.Get(ctx, types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name: clusterUUIDConfigMapName, Namespace: clusterUUIDConfigMapNS,
 	}, cm); err != nil {
 		return "", fmt.Errorf("get cluster-uuid configmap: %w", err)
@@ -378,7 +378,7 @@ type mdClusterConfiguration struct {
 
 func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (string, error) {
 	secret := &corev1.Secret{}
-	if err := r.APIReader.Get(ctx, types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace,
 	}, secret); err != nil {
 		if client.IgnoreNotFound(err) == nil {

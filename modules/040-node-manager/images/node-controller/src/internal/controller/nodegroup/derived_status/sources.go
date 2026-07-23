@@ -85,11 +85,10 @@ type clusterConfiguration struct {
 }
 
 func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
-	// Deliberately an uncached read: the cache scopes kube-system Secrets to the
-	// cloud-provider secret only, and a second Secret ByObject entry is impossible (see the
-	// GVK-collision note in common.CacheOptions).
+	// Served from the kube-system Secret informer (watch-fresh); a live GET here used to
+	// cost hundreds of ms on every derived-status pass during a NodeGroup burst.
 	secret := &corev1.Secret{}
-	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
+	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
 		return nil, ""
 	}
 	data := make(map[string]string, len(secret.Data))
