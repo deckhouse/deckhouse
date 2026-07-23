@@ -1420,6 +1420,8 @@ alerts:
         Type: `{{$labels.type}}` (`{{$labels.code}}`)
         Namespace: `{{$labels.namespace}}`
         Resource: `{{$labels.resource}}`
+
+        Check analyzer metrics or run `istioctl analyze -A --revision {{$labels.revision}}` in the debug container.
       summary: |
         Istio configuration analysis detected a warning-level issue.
       severity: "4"
