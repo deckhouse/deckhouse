@@ -88,7 +88,7 @@ ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
 {{- if or (eq .nodeGroup.nodeType "Static") (eq .runType "ClusterBootstrap") -}}
 $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip} \\")
 {{- end }}
-{{- if not (eq .nodeGroup.nodeType "Static") }}
+{{- if and (not (eq .nodeGroup.nodeType "Static")) (not (eq (.provider | default "") "metal3")) }}
     --cloud-provider=external \\
 {{- end }}
     --pod-manifest-path=/etc/kubernetes/manifests \\

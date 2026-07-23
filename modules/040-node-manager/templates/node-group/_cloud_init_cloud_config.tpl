@@ -65,6 +65,22 @@ write_files:
     fi
 
     mkdir -p /var/lib/bashible
+    configdrive_dir=""
+    cleanup() {
+      if [ -n "$configdrive_dir" ]; then
+        umount "$configdrive_dir" >/dev/null 2>&1 || true
+        rmdir "$configdrive_dir" >/dev/null 2>&1 || true
+      fi
+    }
+    trap cleanup EXIT
+
+    if [ -e /dev/disk/by-label/config-2 ]; then
+      configdrive_dir="$(mktemp -d)"
+      if mount -o ro /dev/disk/by-label/config-2 "$configdrive_dir" >/dev/null 2>&1; then
+        export METAL3_CONFIGDRIVE_METADATA="$configdrive_dir/openstack/latest/meta_data.json"
+      fi
+    fi
+
     python3 - <<'PY'
     import json
     import os
@@ -95,6 +111,16 @@ write_files:
         value = data.get(key, {})
         if isinstance(value, dict):
             meta.update(value.get("meta_data") or {})
+
+    configdrive_metadata = os.environ.get("METAL3_CONFIGDRIVE_METADATA")
+    if configdrive_metadata:
+        try:
+            with open(configdrive_metadata, encoding="utf-8") as f:
+                meta.update(json.load(f))
+        except FileNotFoundError:
+            pass
+        except json.JSONDecodeError as e:
+            print(f"Cannot parse {configdrive_metadata}: {e}", file=os.sys.stderr)
 
     machine_name = meta.get("name") or meta.get("local-hostname") or meta.get("local_hostname")
     bmh_name = meta.get("metal3-name")

@@ -119,7 +119,12 @@ func generateKubeconfigSecret(input *go_hook.HookInput, dc dependency.Container,
 		return errors.Wrap(err, "failed to issue certificate")
 	}
 
-	config, err := kubeconfig.New(params.cluster, resolveCAPIKubeconfigEndpoint(restConfig.Host, getClusterMasterAddresses(input)), restConfig.CAData, []byte(cert.Key), []byte(cert.Certificate))
+	endpoint := restConfig.Host
+	if input.Values.Get("nodeManager.internal.cloudProvider.type").String() == "metal3" {
+		endpoint = resolveMetal3CAPIKubeconfigEndpoint(endpoint, getClusterMasterAddresses(input))
+	}
+
+	config, err := kubeconfig.New(params.cluster, endpoint, restConfig.CAData, []byte(cert.Key), []byte(cert.Certificate))
 	if err != nil {
 		return errors.Wrap(err, "failed to generate a kubeconfig")
 	}
@@ -150,7 +155,7 @@ func getClusterMasterAddresses(input *go_hook.HookInput) []string {
 	return addresses
 }
 
-func resolveCAPIKubeconfigEndpoint(endpoint string, clusterMasterAddresses []string) string {
+func resolveMetal3CAPIKubeconfigEndpoint(endpoint string, clusterMasterAddresses []string) string {
 	if !isLoopbackEndpoint(endpoint) {
 		return endpoint
 	}

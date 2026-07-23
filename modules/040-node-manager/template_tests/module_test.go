@@ -2552,6 +2552,7 @@ internal:
 				Expect(bootstrapUserData).To(ContainSubstring("/var/lib/bashible/machine-name"))
 				Expect(bootstrapUserData).To(ContainSubstring("/var/lib/bashible/node-spec-provider-id"))
 				Expect(bootstrapUserData).To(ContainSubstring("metal3://{bmh_namespace}/{bmh_name}/{machine_name}"))
+				Expect(bootstrapUserData).NotTo(ContainSubstring("--cloud-provider=external"))
 
 				nodeControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-controller")
 				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))

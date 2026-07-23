@@ -25,7 +25,7 @@ import (
 var _ = Describe("Generate CAPI kubeconfig", func() {
 	DescribeTable("resolves controller-reachable API endpoint",
 		func(endpoint string, clusterMasterAddresses []string, expected string) {
-			Expect(resolveCAPIKubeconfigEndpoint(endpoint, clusterMasterAddresses)).To(Equal(expected))
+			Expect(resolveMetal3CAPIKubeconfigEndpoint(endpoint, clusterMasterAddresses)).To(Equal(expected))
 		},
 		Entry("keeps non-loopback endpoint", "https://10.0.0.50:6443", []string{"10.0.0.1:6443"}, "https://10.0.0.50:6443"),
 		Entry("replaces localhost endpoint", "https://localhost:6445", []string{"10.0.0.1:6443"}, "https://10.0.0.1:6443"),
