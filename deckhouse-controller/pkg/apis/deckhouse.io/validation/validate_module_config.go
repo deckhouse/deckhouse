@@ -203,7 +203,7 @@ func moduleConfigValidationHandler(
 				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
-						return rejectResult(reason)
+						return rejectResult(confirmationDisableWarning(reason))
 					}
 				}
 			}
@@ -305,7 +305,7 @@ func confirmationDisableWarning(reason string) string {
 	if !strings.HasSuffix(reason, ".") {
 		reason += "."
 	}
-	return reason + disableReasonSuffix
+	return reason + " " + disableReasonSuffix
 }
 
 func allowResult(warnMsgs []string) (*kwhvalidating.ValidatorResult, error) {
