@@ -66,13 +66,14 @@ func run(args []string) error {
 		case strings.HasPrefix(arg, "dir="):
 			opts.Dir = trimQuotes(strings.TrimPrefix(arg, "dir="))
 
-		// Example generation is opt-in. Accept both the value-less flag forms
-		// (examples / --examples) and an explicit boolean (examples=true).
-		case arg == "examples", arg == "--examples":
+		// Automatic example generation is opt-in. Accept both the value-less
+		// flag forms (auto-examples / --auto-examples) and an explicit boolean
+		// (auto-examples=true).
+		case arg == "auto-examples", arg == "--auto-examples":
 			opts.GenerateExamples = true
 
-		case strings.HasPrefix(arg, "examples="):
-			value, err := parseBool(trimQuotes(strings.TrimPrefix(arg, "examples=")))
+		case strings.HasPrefix(arg, "auto-examples="):
+			value, err := parseBool(trimQuotes(strings.TrimPrefix(arg, "auto-examples=")))
 			if err != nil {
 				return err
 			}
@@ -120,18 +121,19 @@ func usage() {
 	fmt.Print(`crd-enricher enriches controller-gen CRDs with custom x-doc-* schema fields.
 
 Usage:
-  crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [examples]
+  crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples]
 
 Arguments:
-  paths=    Comma separated Go package patterns with the API structs (repeatable).
-  crds=     Directory with the CRD YAML files produced by controller-gen.
-            The controller-gen alias output:crd:artifacts:config=<dir> is accepted too.
-  dir=      Optional working directory used to resolve the package patterns.
-  examples  Opt in to the automatic synthesis of composite x-doc-examples.
-            Off by default; explicit examples markers are always applied.
-            Accepts examples, --examples or examples=<bool>.
+  paths=        Comma separated Go package patterns with the API structs (repeatable).
+  crds=         Directory with the CRD YAML files produced by controller-gen.
+                The controller-gen alias output:crd:artifacts:config=<dir> is accepted too.
+  dir=          Optional working directory used to resolve the package patterns.
+  auto-examples Opt in to the automatic synthesis of composite x-doc-examples
+                from defaults, enums and explicit examples markers.
+                Off by default; explicit examples markers are always applied.
+                Accepts auto-examples, --auto-examples or auto-examples=<bool>.
 
 Example:
-  crd-enricher paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." crds=bin/crd/bases examples
+  crd-enricher paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." crds=bin/crd/bases auto-examples
 `)
 }

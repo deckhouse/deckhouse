@@ -410,8 +410,8 @@ annotation and switches the file to the curated style (no leading `---`).
 ## Automatic example generation
 
 > **Opt-in.** This is **off by default**. Without it, the enricher only applies
-> the `x-doc-examples` you write explicitly. Enable it with the `examples` flag
-> on the CLI, or `GenerateExamples: true` in the library API. Explicit `examples`
+> the `x-doc-examples` you write explicitly. Enable it with the `auto-examples`
+> flag on the CLI, or `GenerateExamples: true` in the library API. Explicit `examples`
 > markers are always applied either way — the flag only controls the *synthesized*
 > examples described below.
 
@@ -451,7 +451,7 @@ crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [examples]
 | `crds=` | Directory of CRD YAML files produced by controller-gen, enriched in place. |
 | `output:crd:artifacts:config=` | Alias for `crds=`, so the same controller-gen-style argument can be reused. |
 | `dir=` | Optional working directory used to resolve the package patterns. Defaults to the current directory. |
-| `examples`, `--examples`, `examples=<bool>` | Enable [automatic example generation](#automatic-example-generation) (**off by default**). Explicit `examples` markers are applied regardless. |
+| `auto-examples`, `--auto-examples`, `auto-examples=<bool>` | Enable [automatic example generation](#automatic-example-generation) (**off by default**). Explicit `examples` markers are applied regardless. |
 | `-h`, `--help`, `help` | Print usage. |
 
 Example:
@@ -476,7 +476,7 @@ changed, err := crdenricher.Run(crdenricher.Options{
 	Paths:            []string{"./pkg/apis/..."},
 	CRDDir:           "bin/crd/bases",
 	Dir:              ".",  // optional
-	GenerateExamples: true, // optional; off by default, mirrors the `examples` flag
+	GenerateExamples: true, // optional; off by default, mirrors the `auto-examples` flag
 })
 ```
 
@@ -500,7 +500,7 @@ inspect `Enricher.Warnings()`.
    fields to schema properties.
 4. **Apply** the markers to the matching schema nodes, apply CRD-level settings
    once from the root type, then — only when example generation is enabled (the
-   `examples` flag) — **generate** examples bottom-up. Files that carry authored
+   `auto-examples` flag) — **generate** examples bottom-up. Files that carry authored
    (named/described or object) examples are re-encoded with an order-preserving
    YAML encoder so the example key order survives.
 5. **Write** the result back only if it changed, preserving the leading `---`
@@ -522,7 +522,7 @@ inspect `Enricher.Warnings()`.
 - **Values are YAML, not strings.** `examples=1` yields the integer `1`;
   `examples="1"` yields the string `"1"`; `stripFormat=[int32]` yields a list.
   Quote when you need a string.
-- **Example generation is opt-in.** Without the `examples` flag only the
+- **Example generation is opt-in.** Without the `auto-examples` flag only the
   `x-doc-examples` you write explicitly are emitted; the synthesized root/tree
   examples are not.
 - **`examples-name`/`examples-description` follow their `examples` marker.** They

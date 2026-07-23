@@ -99,9 +99,9 @@
 //
 // Beyond the explicit examples markers, the enricher can synthesize
 // x-doc-examples from the bottom up. This synthesis is opt-in and off by
-// default: it runs only when the caller passes the "examples" flag (Options.
-// GenerateExamples). Explicit examples markers are always applied regardless of
-// the flag.
+// default: it runs only when the caller passes the "auto-examples" flag
+// (Options.GenerateExamples). Explicit examples markers are always applied
+// regardless of the flag.
 //
 // When enabled, every scalar leaf yields one representative value: its first
 // explicit example if present, otherwise a hard-coded fallback chosen from the

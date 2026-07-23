@@ -603,6 +603,8 @@ $(LOCALBIN):
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 DECKHOUSE_CLI ?= $(LOCALBIN)/d8
 CRD_ENRICHER ?= $(LOCALBIN)/crd-enricher
+CRD_ENRICHER_LOCAL ?= $(LOCALBIN)/crd-enricher-local
+CRD_ENRICHER_SRC ?= $(CURDIR)/pkg/crd-enricher
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
 INFORMER_GEN ?= $(LOCALBIN)/informer-gen
@@ -682,6 +684,32 @@ enrich-crds: generate-crds crd-enricher ## Add custom x-doc-* fields to the gene
 		crds=$(CURDIR)/bin/crd/bases \
 		dir=$(CURDIR)
 
+## Generate and enrich CRDs with the crd-enricher built from THIS branch's source
+## (pkg/crd-enricher) instead of the released $(CRD_ENRICHER_VERSION), so local
+## changes are exercised. Pass CRD_ENRICHER_FLAGS=auto-examples to turn on
+## automatic example generation.
+##
+##   make enrich-crds-local
+##   make enrich-crds-local CRD_ENRICHER_FLAGS=auto-examples
+.PHONY: enrich-crds-local
+enrich-crds-local: generate-crds crd-enricher-local ## Enrich CRDs with the local (branch) crd-enricher build.
+	@echo "Enriching CRDs with the local crd-enricher$(if $(CRD_ENRICHER_FLAGS), (flags: $(CRD_ENRICHER_FLAGS)),)..."
+	@$(CRD_ENRICHER_LOCAL) \
+		paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." \
+		crds=$(CURDIR)/bin/crd/bases \
+		dir=$(CURDIR) \
+		$(CRD_ENRICHER_FLAGS)
+
+## Run the crd-enricher module's unit and golden tests. Pass
+## CRD_ENRICHER_TEST_FLAGS=-golden to regenerate the golden snapshots.
+##
+##   make test-crd-enricher
+##   make test-crd-enricher CRD_ENRICHER_TEST_FLAGS=-golden
+.PHONY: test-crd-enricher
+test-crd-enricher: ## Run crd-enricher unit/golden tests (CRD_ENRICHER_TEST_FLAGS=-golden regenerates goldens).
+	@echo "Running crd-enricher tests..."
+	@cd $(CRD_ENRICHER_SRC) && go test ./... $(CRD_ENRICHER_TEST_FLAGS)
+
 ## Generate clientset
 .PHONY: client-gen-generate
 client-gen-generate: client-gen
@@ -743,6 +771,14 @@ deckhouse-cli:
 crd-enricher: $(CRD_ENRICHER) ## Download crd-enricher locally if necessary.
 $(CRD_ENRICHER): $(LOCALBIN)
 	$(call go-install-tool,$(CRD_ENRICHER),github.com/deckhouse/deckhouse/pkg/crd-enricher/cmd/crd-enricher,$(CRD_ENRICHER_VERSION))
+
+## Build crd-enricher from the local source in this branch (pkg/crd-enricher) so
+## that unreleased changes are used. Rebuilt on every invocation. crd-enricher is
+## a separate Go module, so the build runs from within its directory.
+.PHONY: crd-enricher-local
+crd-enricher-local: $(LOCALBIN) ## Build crd-enricher from local branch source into $(LOCALBIN)/crd-enricher-local.
+	@echo "Building crd-enricher from local source ($(CRD_ENRICHER_SRC))..."
+	@cd $(CRD_ENRICHER_SRC) && go build -o $(CRD_ENRICHER_LOCAL) ./cmd/crd-enricher
 
 ## Download client-gen locally if necessary.
 .PHONY: client-gen
