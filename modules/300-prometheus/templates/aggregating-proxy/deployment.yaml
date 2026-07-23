@@ -23,7 +23,11 @@ spec:
     kind: Deployment
     name: aggregating-proxy
   updatePolicy:
+{{- if semverCompare ">= 1.33" (.Values.global.discovery.kubernetesVersion | default "0.0.0") }}
     updateMode: "InPlaceOrRecreate"
+{{- else }}
+    updateMode: "Auto"
+{{- end }}
   resourcePolicy:
     containerPolicies:
       - containerName: mimir
