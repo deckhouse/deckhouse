@@ -506,9 +506,8 @@ properties:
     description: |
       The amount of CPU and memory resources allocated to control-plane components on each master node.
 
-      When a measurement (`cpu` / `memory`) is **not** set here (and there is no legacy
-      `global.modules.resourcesRequests.controlPlane` fallback), Deckhouse automatically tunes
-      per-component requests once a day from 7-day average usage via prometheus-metrics-adapter.
+      When a measurement (`cpu` / `memory`) is **not** set here, Deckhouse automatically tunes
+      per-component requests once a day from 7-day average usage.
       Setting a value for a measurement disables autotune for that measurement on all four
       control-plane components and applies the fixed percentage split of this combined budget.
 
