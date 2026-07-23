@@ -75,7 +75,6 @@ import:
   add: /src
   to: /src
   before: install
----
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
