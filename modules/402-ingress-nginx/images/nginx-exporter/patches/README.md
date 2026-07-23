@@ -1,5 +1,5 @@
 ## Patches
 
-### 001-go-mod-01.patch
+### 001-go-mod.patch
 
 Updates go mod.
