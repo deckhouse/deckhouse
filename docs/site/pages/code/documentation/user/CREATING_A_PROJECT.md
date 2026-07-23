@@ -9,7 +9,7 @@ permalink: en/code/documentation/user/project.html
 
 1. Choose one of the available creation methods:
    - **Create blank project** — creates a new repository from scratch.
-   - **Import project** — imports an existing project from another system.
+   - **Import project** — imports an existing project from another system. With the **Repository by URL** method, you can select the **Mirror repository** checkbox to keep the new project synchronized with the source repository through [pull mirroring](/products/code/documentation/user/pull-mirroring.html).
    - **Create from template** — creates a new project based on a predefined template.
 
 1. In the form that opens, specify the project parameters:
