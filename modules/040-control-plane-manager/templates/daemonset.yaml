@@ -50,6 +50,8 @@ memory: 10Mi
   {{- $_ := set $tpl_context.settings "resourcesRequests" (dict
     "milliCPU" .milliCpuControlPlane
     "memoryBytes" .memoryControlPlane
+    "maxMilliCPU" (.maxMilliCpuControlPlane | default 0)
+    "maxMemoryBytes" (.maxMemoryControlPlane | default 0)
   ) }}
 {{- end }}
 
