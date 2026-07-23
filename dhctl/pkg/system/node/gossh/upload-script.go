@@ -109,7 +109,7 @@ func (u *SSHUploadScript) Execute(ctx context.Context) ([]byte, error) {
 
 	remotePath := genssh.ExecuteRemoteScriptPath(u, scriptName, false)
 	log.DebugF("Uploading script %s to %s\n", u.ScriptPath, remotePath)
-	err := NewSSHFile(u.sshClient.sshClient).Upload(ctx, u.ScriptPath, remotePath)
+	err := u.sshClient.File().Upload(ctx, u.ScriptPath, remotePath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
@@ -193,7 +193,7 @@ func (u *SSHUploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDi
 	)
 
 	// upload to node's deckhouse tmp directory
-	err = NewSSHFile(u.sshClient.sshClient).Upload(ctx, bundleLocalFilepath, app.DeckhouseNodeTmpPath)
+	err = u.sshClient.File().Upload(ctx, bundleLocalFilepath, app.DeckhouseNodeTmpPath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}

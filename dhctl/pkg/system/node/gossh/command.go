@@ -88,6 +88,10 @@ type SSHCommand struct {
 }
 
 func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
+	return newSSHCommand(client, name, false, arg...)
+}
+
+func newSSHCommand(client *Client, name string, allowStopped bool, arg ...string) *SSHCommand {
 	args := make([]string, len(arg))
 	copy(args, arg)
 	cmd := name + " "
@@ -102,10 +106,15 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 	var session *ssh.Session
 	var err error
 
-	err = retry.NewSilentLoop("Establish new session", 10, 5*time.Second).Run(func() error {
-		session, err = client.sshClient.NewSession()
+	err = retry.NewSilentLoop("Establish new session", 10, 5*time.Second).BreakIf(func(err error) bool {
+		return errors.Is(err, errSSHClientNeverStarted) || errors.Is(err, errSSHClientStopped)
+	}).Run(func() error {
+		session, err = client.newSession(allowStopped)
 		return err
 	})
+	if err != nil {
+		log.DebugF("Cannot establish ssh session: %v\n", err)
+	}
 	client.RegisterSession(session)
 
 	return &SSHCommand{

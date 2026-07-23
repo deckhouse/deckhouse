@@ -31,6 +31,8 @@ import (
 
 const SSHAgentPath = "ssh-agent"
 
+var RegisterCleanupOnShutdown = true
+
 type SSHAgent struct {
 	*process.Executor
 
@@ -105,9 +107,11 @@ func (a *SSHAgent) Start() error {
 
 	// save auth sock in session to access it from other cmds and frontends
 	a.AgentSettings.AuthSock = a.AuthSock
-	tomb.RegisterOnShutdown("Delete SSH agent temporary directory", func() {
-		_ = os.RemoveAll(filepath.Dir(a.AuthSock))
-	})
+	if RegisterCleanupOnShutdown {
+		tomb.RegisterOnShutdown("Delete SSH agent temporary directory", func() {
+			_ = os.RemoveAll(filepath.Dir(a.AuthSock))
+		})
+	}
 	return nil
 }
 

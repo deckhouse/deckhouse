@@ -17,11 +17,14 @@ package gossh
 import (
 	"context"
 	"fmt"
+	"io"
+	"net"
 	"os"
 	"os/exec"
 	"testing"
 	"time"
 
+	ssh "github.com/deckhouse/lib-gossh"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -402,6 +405,11 @@ func TestClientStart(t *testing.T) {
 					require.Error(t, err)
 					require.Contains(t, err.Error(), c.err)
 				}
+				if c.title == "With bastion, key auth, wrong target host" {
+					require.False(t, sshClient.Live())
+					require.Nil(t, sshClient.BastionClient)
+					require.Nil(t, sshClient.stopChan)
+				}
 				sshClient.Stop()
 			})
 		}
@@ -543,6 +551,47 @@ func TestClientWithDebug(t *testing.T) {
 }
 
 func TestDialContext(t *testing.T) {
+	t.Run("closes tcp connection on ssh handshake error", func(t *testing.T) {
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		defer listener.Close()
+
+		accepted := make(chan net.Conn, 1)
+		serverDone := make(chan error, 1)
+		go func() {
+			conn, acceptErr := listener.Accept()
+			if acceptErr != nil {
+				serverDone <- acceptErr
+				return
+			}
+			accepted <- conn
+			_, copyErr := io.Copy(io.Discard, conn)
+			_ = conn.Close()
+			serverDone <- copyErr
+		}()
+
+		_, err = DialTimeout(context.Background(), "tcp", listener.Addr().String(), &ssh.ClientConfig{
+			User:            "user",
+			Auth:            []ssh.AuthMethod{ssh.Password("password")},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			Timeout:         50 * time.Millisecond,
+		})
+		require.Error(t, err)
+
+		select {
+		case <-accepted:
+		case <-time.After(time.Second):
+			t.Fatal("server did not accept TCP connection")
+		}
+
+		select {
+		case err = <-serverDone:
+			require.NoError(t, err)
+		case <-time.After(time.Second):
+			t.Fatal("server connection was not closed after handshake error")
+		}
+	})
+
 	t.Run("client start with small context test", func(t *testing.T) {
 		settings := session.NewSession(session.Input{
 			AvailableHosts: []session.Host{{Host: "1.2.3.4", Name: "1.2.3.4"}},
@@ -563,6 +612,131 @@ func TestDialContext(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "deadline exceeded")
 	})
+}
+
+func TestClientCloseConnections(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer serverConn.Close()
+
+	netConn := net.Conn(clientConn)
+	sshClient := NewClient(context.Background(), session.NewSession(session.Input{}), nil)
+	sshClient.NetConn = &netConn
+
+	sshClient.closeConnections()
+
+	require.Nil(t, sshClient.NetConn)
+
+	_, err := serverConn.Write([]byte("test"))
+	require.Error(t, err)
+}
+
+func TestNewSSHCommandWithoutConnectedClient(t *testing.T) {
+	sshClient := NewClient(context.Background(), session.NewSession(session.Input{}), nil)
+
+	var cmd *SSHCommand
+	require.NotPanics(t, func() {
+		cmd = NewSSHCommand(sshClient, "echo", "test")
+	})
+	require.ErrorContains(t, cmd.Run(context.Background()), "ssh session not started")
+}
+
+func TestNewSSHCommandWithStoppedClient(t *testing.T) {
+	sshClient := NewClient(context.Background(), session.NewSession(session.Input{}), nil)
+	sshClient.started = true
+	sshClient.stopped = true
+
+	var cmd *SSHCommand
+	require.NotPanics(t, func() {
+		cmd = NewSSHCommand(sshClient, "echo", "test")
+	})
+	require.ErrorContains(t, cmd.Run(context.Background()), "ssh session not started")
+}
+
+func TestNewSSHCommandWithStoppingLiveClient(t *testing.T) {
+	sshClient := NewClient(context.Background(), session.NewSession(session.Input{}), nil)
+	sshClient.started = true
+	sshClient.live = true
+	sshClient.stopped = true
+
+	var cmd *SSHCommand
+	require.NotPanics(t, func() {
+		cmd = NewSSHCommand(sshClient, "echo", "test")
+	})
+	require.ErrorContains(t, cmd.Run(context.Background()), "ssh session not started")
+}
+
+func TestClientStopDuringStartPreventsPublishingConnection(t *testing.T) {
+	sshClient := NewClient(context.Background(), session.NewSession(session.Input{}), nil)
+
+	stopGen, err := sshClient.prepareStart(false, 0)
+	require.NoError(t, err)
+
+	sshClient.Stop()
+
+	err = sshClient.setConnectionState(stopGen, nil, nil, nil, nil, true)
+	require.ErrorContains(t, err, "ssh client start interrupted by stop")
+	require.False(t, sshClient.Live())
+	require.Nil(t, sshClient.stopChan)
+}
+
+func TestClientStopDuringAutoRestartPreventsReconnect(t *testing.T) {
+	sshClient := NewClient(context.Background(), session.NewSession(session.Input{}), nil)
+	stopCh := make(chan struct{})
+	sshClient.started = true
+	sshClient.stopChan = stopCh
+
+	stopGen := sshClient.stopGen
+	_, ok := sshClient.claimAutoRestart(stopCh, stopGen)
+	require.True(t, ok)
+
+	sshClient.Stop()
+
+	err := sshClient.start(true, stopGen)
+	require.ErrorContains(t, err, "ssh client automatic restart was stopped")
+	require.False(t, sshClient.Live())
+	require.Nil(t, sshClient.stopChan)
+}
+
+func TestClientManualStartInvalidatesPreviousStart(t *testing.T) {
+	sshClient := NewClient(context.Background(), session.NewSession(session.Input{}), nil)
+
+	firstStopGen, err := sshClient.prepareStart(false, 0)
+	require.NoError(t, err)
+
+	secondStopGen, err := sshClient.prepareStart(false, 0)
+	require.NoError(t, err)
+	require.NotEqual(t, firstStopGen, secondStopGen)
+
+	err = sshClient.setConnectionState(firstStopGen, nil, nil, nil, nil, true)
+	require.ErrorContains(t, err, "ssh client start interrupted by stop")
+	require.False(t, sshClient.Live())
+	require.Nil(t, sshClient.stopChan)
+}
+
+func TestClientManualStartInvalidatesAutoRestart(t *testing.T) {
+	sshClient := NewClient(context.Background(), session.NewSession(session.Input{}), nil)
+	stopCh := make(chan struct{})
+	sshClient.started = true
+	sshClient.stopChan = stopCh
+	oldStopGen := sshClient.stopGen
+
+	_, err := sshClient.prepareStart(false, 0)
+	require.NoError(t, err)
+
+	_, ok := sshClient.claimAutoRestart(stopCh, oldStopGen)
+	require.False(t, ok)
+}
+
+func TestClientResetForStartClosesPublishedConnection(t *testing.T) {
+	sshClient := NewClient(context.Background(), session.NewSession(session.Input{}), nil)
+	sshClient.live = true
+	sshClient.started = true
+	sshClient.stopChan = make(chan struct{})
+
+	sshClient.resetForStart()
+
+	require.False(t, sshClient.Live())
+	require.Nil(t, sshClient.stopChan)
 }
 
 func TestClientLoop(t *testing.T) {
