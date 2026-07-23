@@ -32,7 +32,7 @@ type SudoAllowedCheck struct {
 const SudoAllowedCheckName preflight.CheckName = "sudo-allowed"
 
 func (SudoAllowedCheck) Description() string {
-	return "sudo is allowed for user"
+	return "sudo is installed and allowed for user"
 }
 
 func (SudoAllowedCheck) Phase() preflight.Phase {
@@ -43,22 +43,43 @@ func (SudoAllowedCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.DefaultRetryPolicy
 }
 
-func (c SudoAllowedCheck) Run(ctx context.Context) error {
-	cmd := c.NodeInterface.Command("echo")
+// checkSudo checks that sudo is installed and that the SSH user
+// is allowed to execute commands through sudo.
+func checkSudo(ctx context.Context, nodeInterface libcon.Interface) error {
+	checkInstalledCmd := nodeInterface.Command("command -v sudo >/dev/null 2>&1")
+	if err := checkInstalledCmd.Run(ctx); err != nil {
+		return errors.New(`required command "sudo" is not installed; install sudo or use root user for bootstrap`)
+	}
+
+	cmd := nodeInterface.Command("true")
 	cmd.Sudo(ctx)
 
 	if err := cmd.Run(ctx); err != nil {
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && exitErr.ExitCode() != 255 {
-			return errors.New("Provided SSH user is not allowed to sudo, please check that your password is correct and that this user is in the sudoers file.")
+			return errors.New(
+				"provided SSH user is not allowed to sudo; check that the password is correct and that the user is in the sudoers file",
+			)
 		}
-		return fmt.Errorf("Unexpected error when checking sudoers permissions for SSH user: %v", err)
+
+		return fmt.Errorf(
+			"unexpected error when checking sudo permissions for SSH user: %w\nstderr: %s",
+			err,
+			string(cmd.StderrBytes()),
+		)
 	}
 
 	return nil
 }
 
+func (c SudoAllowedCheck) Run(ctx context.Context) error {
+	return checkSudo(ctx, c.NodeInterface)
+}
+
 func SudoAllowed(nodeInterface libcon.Interface) preflight.Check {
-	check := SudoAllowedCheck{NodeInterface: nodeInterface}
+	check := SudoAllowedCheck{
+		NodeInterface: nodeInterface,
+	}
+
 	return preflight.Check{
 		Name:        SudoAllowedCheckName,
 		Description: check.Description(),

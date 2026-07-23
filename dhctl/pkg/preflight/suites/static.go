@@ -45,6 +45,7 @@ func NewStaticSuite(deps StaticDeps, ctx context.Context) (preflight.Suite, erro
 		checks.SingleSSHHost(deps.SSHProviderInitializer),
 		checks.BastionAvailability(deps.SSHProviderInitializer),
 		checks.SSHCredential(deps.SSHProviderInitializer),
+		checks.SudoAllowed(nodeInterface),
 		checks.SSHTunnel(deps.SSHProviderInitializer, deps.GlobalOpts),
 		checks.StaticInstancesSSHAccess(deps.MetaConfig, deps.SSHProviderInitializer),
 		checks.DeckhouseUser(nodeInterface, deps.GlobalOpts),
@@ -53,7 +54,6 @@ func NewStaticSuite(deps StaticDeps, ctx context.Context) (preflight.Suite, erro
 		checks.RegistryProxy(deps.MetaConfig, deps.SSHProviderInitializer, deps.LegacyMode),
 		checks.Ports(deps.SSHProviderInitializer, deps.GlobalOpts),
 		checks.LocalhostDomain(nodeInterface, deps.GlobalOpts),
-		checks.SudoAllowed(nodeInterface),
 		checks.TimeDrift(nodeInterface),
 	), err
 }

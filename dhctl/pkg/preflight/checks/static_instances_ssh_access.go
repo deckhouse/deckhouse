@@ -273,22 +273,27 @@ func checkSSHAccess(ctx context.Context, sshProviderInitializer *providerinitial
 	}
 	defer client.Stop()
 
-	if cred.User != "root" {
-		cmd := client.Command("command -v sudo >/dev/null 2>&1")
+	if cred.User == "root" {
+		cmd := client.Command("true")
 		if err := cmd.Run(ctx); err != nil {
-			return fmt.Errorf("required command \"sudo\" is not installed on host %s for user %q. Install sudo or use root user for bootstrap", address, cred.User)
+			return fmt.Errorf(
+				"SSH command check failed on host %s for user %q: %w\nstderr: %s",
+				address,
+				cred.User,
+				err,
+				string(cmd.StderrBytes()),
+			)
 		}
+		return nil
 	}
 
-	cmd := client.Command("true")
-	checkName := "SSH command check"
-	if cred.User != "root" {
-		cmd.Sudo(ctx)
-		checkName = "Sudo check"
-	}
-
-	if err := cmd.Run(ctx); err != nil {
-		return fmt.Errorf("%s failed: %w\nstderr: %s", checkName, err, string(cmd.StderrBytes()))
+	if err := checkSudo(ctx, client); err != nil {
+		return fmt.Errorf(
+			"sudo check failed on host %s for user %q: %w",
+			address,
+			cred.User,
+			err,
+		)
 	}
 	return nil
 }
