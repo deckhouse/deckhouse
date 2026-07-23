@@ -1,15 +1,7 @@
 diff --git a/go.mod b/go.mod
-index 7673957347..f67a27d904 100644
+index 76739573..4cd8e573 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,6 +1,6 @@
- module github.com/cilium/cilium
- 
--go 1.25.0
-+go 1.25
- 
- require (
- 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6
 @@ -36,7 +36,7 @@ require (
  	github.com/docker/docker v27.4.0+incompatible
  	github.com/docker/libnetwork v0.8.0-dev.2.0.20210525090646-64b7a4574d14
@@ -102,7 +94,7 @@ index 7673957347..f67a27d904 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 diff --git a/go.sum b/go.sum
-index 2b5021d6a4..7c9dec7db3 100644
+index 2b5021d6..7c9dec7d 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -141,8 +141,8 @@ github.com/cncf/udpa/go v0.0.0-20210930031921-04548b0d99d4/go.mod h1:6pvJx4me5XP
