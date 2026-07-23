@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-d2a6e388d354698e1b1acd4d3508b57408c2bf9da5d566c75729a133feba1b4b",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -45,6 +45,34 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость связана с поведением kubelet при работе с GitRepo volume, cluster-autoscaler не запускает kubelet и не инициирует монтирование gitRepo, библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в провайдере.",
       "timestamp": "2025-10-16T07:13:22.026446Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47911"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/net/html: квадратичная сложность html.Parse на специально сформированном HTML. cluster-autoscaler не разбирает и не рендерит HTML — пакет golang.org/x/net/html не входит в путь исполнения компонента.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47913"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в SSH-клиенте golang.org/x/crypto/ssh/agent: клиент паникует при получении неожиданного ответа SSH_AGENT_SUCCESS. cluster-autoscaler не использует SSH и не работает с ssh-агентом — библиотека golang.org/x/crypto присутствует лишь как транзитивная зависимость, уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
     },
     {
       "vulnerability": {
@@ -104,6 +132,20 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2025-58190"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/net/html: бесконечный цикл разбора в html.Parse на определённом вводе. cluster-autoscaler не разбирает и не рендерит HTML — уязвимый код golang.org/x/net/html не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2026-24051"
       },
       "products": [
@@ -121,6 +163,48 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/net/html: разбор произвольного HTML может потреблять чрезмерное время CPU. cluster-autoscaler не разбирает и не рендерит HTML — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: разбор произвольного HTML с последующим Render может давать неожиданное дерево HTML. cluster-autoscaler не разбирает и не рендерит HTML и не отдаёт контент в браузер — пакет golang.org/x/net/html не входит в путь исполнения компонента.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: обход санитизации при разборе и повторном рендеринге HTML. cluster-autoscaler не работает с HTML и не имеет веб-интерфейса — уязвимый код golang.org/x/net/html не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2026-33186"
       },
       "products": [
@@ -135,6 +219,174 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость DoS в HTTP/2-транспорте golang.org/x/net: при получении SETTINGS-фрейма со значением SETTINGS_MAX_FRAME_SIZE=0 транспорт входит в бесконечный цикл записи CONTINUATION-фреймов. Хотя HTTP/2-клиент используется (client-go и API облачных провайдеров), вредоносный SETTINGS-фрейм может прийти только от сервера, к которому подключается cluster-autoscaler, — а это доверенный in-cluster kube-apiserver и доверенные API облачных провайдеров из конфигурации Deckhouse. Сетевой атакующий не может внедрить такой фрейм, поэтому уязвимый код не контролируется злоумышленником.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/idna: функции ToASCII/ToUnicode некорректно принимают Punycode-метки, декодируемые в ASCII-only имя, что может привести к повышению привилегий в программах, выполняющих проверки прав по имени хоста. cluster-autoscaler не выполняет авторизацию или проверки привилегий по именам хостов и подключается только к доверенным endpoints (kube-apiserver и API облачных провайдеров) — уязвимый путь idna не задействован.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/sys/windows: функция NewNTUnicodeString не проверяет переполнение длины строки и возвращает усечённую строку. cluster-autoscaler собирается с GOOS=linux; файлы golang.org/x/sys/windows исключены ограничениями сборки (//go:build windows) и не компилируются в linux-бинарник — уязвимый код в артефакте отсутствует.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39827"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: аутентифицированный SSH-клиент, многократно открывающий отклоняемые сервером каналы, вызывал неограниченный рост памяти на сервере. cluster-autoscaler не запускает SSH-сервер и не использует golang.org/x/crypto/ssh — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в SSH-сервере golang.org/x/crypto/ssh: при возврате PartialSuccessError с ненулевыми Permissions ограничения (например force-command) молча отбрасывались. cluster-autoscaler не запускает SSH-сервер и не использует golang.org/x/crypto/ssh — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в парсере публичных ключей golang.org/x/crypto/ssh: отсутствие ограничения размера параметров RSA/DSA приводит к длительному потреблению CPU при проверке подписи. cluster-autoscaler не выполняет аутентификацию по SSH и не разбирает SSH-ключи — уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: незапрошенные ответы на global request заполняют внутренний буфер и блокируют read-loop соединения, вызывая утечку горутин. cluster-autoscaler не устанавливает SSH-соединений — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh: метод Verify для аппаратных ключей FIDO/U2F (sk-ecdsa, sk-ssh-ed25519) не проверял флаг User Presence. cluster-autoscaler не использует SSH и аппаратные ключи безопасности — уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent: constraint-расширения (restrict-destination-v00@openssh.com) не сериализовались при добавлении ключа в удалённый агент, из-за чего ограничения назначения молча снимались. cluster-autoscaler не использует ssh-агент — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39833"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent: in-memory keyring молча принимал, но не применял ограничение ConfirmBeforeUse, подписывая без запроса подтверждения. cluster-autoscaler не использует ssh-агент — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39834"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: целочисленное переполнение при записи более 4 ГБ за один вызов Write в SSH-канал приводило к бесконечному циклу отправки пустых пакетов. cluster-autoscaler не использует SSH-каналы — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: CertChecker без заданных IsUserAuthority/IsHostAuthority паникует при предъявлении клиентом сертификата. cluster-autoscaler не запускает SSH-сервер и не использует CertChecker — уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2026-39883"
       },
       "products": [
@@ -146,8 +398,148 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 связана с подменой PATH при вызове команды kenv на платформах BSD и Solaris в OpenTelemetry-Go. Образ cluster-autoscaler в Deckhouse собирается и выполняется под Linux; kenv относится к BSD/Solaris и в этом окружении не задействуется, эксплуатация в рамках поддерживаемого сценария невозможна.",
       "timestamp": "2026-04-16T15:47:22.345010Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41579"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в runc при инициализации rootfs контейнера: вредоносный образ с symlink на /dev может привести к удалению файлов ptmx или созданию symlink на хосте. cluster-autoscaler не запускает контейнеры через runc и управляет только масштабированием узлов Kubernetes через API; библиотека github.com/opencontainers/runc присутствует как транзитивная зависимость — уязвимый код не исполняется.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: разбор произвольного HTML с последующим Render может давать неожиданное дерево HTML. cluster-autoscaler не разбирает и не рендерит HTML — уязвимый код не входит в путь исполнения компонента.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: обход санитизации при разборе и повторном рендеринге HTML. cluster-autoscaler не работает с HTML и не имеет веб-интерфейса — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/knownhosts: отозванный SignatureKey центра сертификации не проверялся на отзыв. cluster-autoscaler не использует SSH и не работает с known_hosts — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость обхода авторизации в golang.org/x/crypto/ssh: при использовании callback-ов, отличных от public key, пропускалась проверка source-address. cluster-autoscaler не запускает SSH-сервер — уязвимый код не вызывается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh: некорректное приведение bytes→int вызывает панику на стороне сервера в декодере пакетов AES-GCM. cluster-autoscaler не запускает SSH-сервер — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46598"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/crypto/ssh/agent: приведение некорректных wire-байтов к ed25519.PrivateKey вызывает панику при использовании ключа. cluster-autoscaler не использует ssh-агент — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/dns/dnsmessage: разбор некорректной SVCB- или HTTPS-записи ресурса может вызвать панику из-за переполнения буфера сообщения. cluster-autoscaler не использует golang.org/x/net/dns/dnsmessage: разрешение имён выполняется штатным резолвером Go/ОС, DNS-сообщения компонент не разбирает — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость DoS в golang.org/x/text: norm.Iter может войти в бесконечный цикл при обработке ввода с некорректными байтами UTF-8. В cluster-autoscaler пакет golang.org/x/text/unicode/norm задействуется лишь косвенно через golang.org/x/net/idna при нормализации имени хоста во время исходящего TLS-подключения — а это доверенный kube-apiserver и доверенные API облачных провайдеров с валидными ASCII-именами. Недоверенные данные через нормализацию не проходят, поэтому уязвимый код не контролируется злоумышленником.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Информационная рекомендация: пакет golang.org/x/crypto/openpgp небезопасен по своей архитектуре, не поддерживается и не должен использоваться. cluster-autoscaler не импортирует golang.org/x/crypto/openpgp: при статической компоновке (CGO_ENABLED=0) невключённые пакеты в бинарник не попадают — уязвимый код в артефакте отсутствует.",
+      "timestamp": "2026-07-23T10:30:00.000000Z"
     }
   ],
   "timestamp": "2026-03-10T11:10:46Z",
-  "last_updated": "2026-04-16T15:47:22Z"
+  "last_updated": "2026-07-23T10:30:00Z"
 }
