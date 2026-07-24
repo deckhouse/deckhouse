@@ -49,6 +49,13 @@ spec:
         app: alliance-healthcheck
         sidecar.istio.io/inject: "true"
         istio.io/rev: default
+      annotations:
+        traffic.sidecar.istio.io/includeOutboundIPRanges: ""
+        proxy.istio.io/config: |-
+          proxyMetadata:
+            ISTIO_META_HTTP_PROXY_PORT: "15007"
+            ISTIO_META_DNS_CAPTURE: "false"
+            ISTIO_META_DNS_AUTO_ALLOCATE: "false"
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -69,6 +76,8 @@ spec:
           value: {{ .Values.global.discovery.clusterUUID }}
         - name: CLUSTER_DOMAIN
           value: {{ $.Values.global.discovery.clusterDomain | quote }}
+        - name: ISTIO_HTTP_PROXY_PORT
+          value: "15007"
   {{- if .Values.istio.federation.enabled }}
         - name: FEDERATION_ENABLED
           value: "true"

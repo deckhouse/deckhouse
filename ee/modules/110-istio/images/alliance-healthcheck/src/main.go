@@ -30,6 +30,7 @@ func main() {
 	clusterDomain := os.Getenv("CLUSTER_DOMAIN")
 	federationEnabled := os.Getenv("FEDERATION_ENABLED") == "true"
 	multiclusterEnabled := os.Getenv("MULTICLUSTER_ENABLED") == "true"
+	httpProxyPort := os.Getenv("ISTIO_HTTP_PROXY_PORT")
 
 	if clusterDomain == "" {
 		clusterDomain = "cluster.local"
@@ -53,6 +54,7 @@ func main() {
 		ClusterDomain:       clusterDomain,
 		FederationEnabled:   federationEnabled,
 		MulticlusterEnabled: multiclusterEnabled,
+		HTTPProxyPort:       httpProxyPort,
 		CheckInterval:       60 * time.Second,
 		RequestTimeout:      5 * time.Second,
 	})

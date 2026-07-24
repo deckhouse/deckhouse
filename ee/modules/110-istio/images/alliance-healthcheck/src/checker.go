@@ -10,7 +10,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -52,6 +54,7 @@ type CheckerConfig struct {
 	MulticlusterEnabled bool
 	CheckInterval       time.Duration
 	RequestTimeout      time.Duration
+	HTTPProxyPort       string
 }
 
 type Checker struct {
@@ -62,6 +65,16 @@ type Checker struct {
 }
 
 func NewChecker(dynClient dynamic.Interface, reg prometheus.Registerer, cfg CheckerConfig) *Checker {
+	cfg.HTTPProxyPort = strings.TrimSpace(cfg.HTTPProxyPort)
+	if cfg.HTTPProxyPort != "" {
+		port, err := strconv.Atoi(cfg.HTTPProxyPort)
+		if err != nil || port < 1 || port > 65535 {
+			logger.Printf("Invalid ISTIO_HTTP_PROXY_PORT %q, explicit proxy disabled", cfg.HTTPProxyPort)
+			cfg.HTTPProxyPort = ""
+		} else {
+			cfg.HTTPProxyPort = strconv.Itoa(port)
+		}
+	}
 	metric := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "d8_istio_alliance_dataplane_health_check",
@@ -236,6 +249,11 @@ func (c *Checker) curlHealthzWithBody(ctx context.Context, url string) (bool, st
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return false, "", fmt.Sprintf("request build failed: %v", err)
+	}
+	if c.config.HTTPProxyPort != "" {
+		authority := req.URL.Hostname()
+		req.URL.Host = net.JoinHostPort("127.0.0.1", c.config.HTTPProxyPort)
+		req.Host = authority
 	}
 	req.Header.Set("User-Agent", allianceHealthcheckUserAgent)
 	req.Header.Set("X-alliance-healthcheck-from", c.config.ClusterUUID)
