@@ -52,36 +52,30 @@
 //   - examples — collected into a list and rendered as x-doc-examples (the
 //     marker may be repeated, and a value that is itself a YAML list is
 //     flattened into it);
+//
 //   - examples-name / examples-description — attach a short name and/or a
 //     description to the example introduced by the preceding examples marker. As
 //     soon as any example has a name or a description, every entry of
 //     x-doc-examples switches to the wrapper form {x-description, x-name,
 //     x-example} (an entry missing either attribute omits its key); when no
-//     example has one the list stays a plain list of values. For example
-//
-//	// +crd-enricher:deckhouse:documentation:examples={field: value}
-//	// +crd-enricher:deckhouse:documentation:examples-name=My example
-//	// +crd-enricher:deckhouse:documentation:examples-description=A longer note
-//
-//     renders as
-//
-//	x-doc-examples:
-//	  - x-description: A longer note
-//	    x-name: My example
-//	    x-example:
-//	      field: value
+//     example has one the list stays a plain list of values. The wrapper form
+//     is shown in the example after this list.
 //
 //   - deprecated — a value-less flag rendered as x-doc-deprecated: true (any
 //     value-less simple entity becomes a boolean x-doc-<entity>);
+//
 //   - default — rendered as x-doc-default set to the parsed YAML value (any
 //     valued simple entity becomes x-doc-<entity>);
+//
 //   - raw:<key> — injects an arbitrary standard schema field named <key>
 //     directly (a dotted <key> walks into nested schema nodes);
+//
 //   - sensitive-data — a schema-level flag rendered as
 //     x-kubernetes-sensitive-data: true. It marks a field (or an object/array
 //     subtree) as sensitive so the apiserver's CRDSensitiveData feature
 //     encrypts the resource in etcd, filters the field by RBAC and masks it in
 //     audit logs. It must not be placed on the root type;
+//
 //   - crd:<key> — a type-level entity configuring CRD-level settings
 //     (preserveUnknownFields, the minimal style, schema format stripping) and
 //     the curated deckhouse style. Each setting is its own "crd:<key>=<value>"
@@ -90,6 +84,21 @@
 //     labels and annotations are not set here; they are emitted natively by
 //     controller-gen from the +kubebuilder:metadata:labels and
 //     +kubebuilder:metadata:annotations markers.
+//
+// A named or described example renders as a wrapper object. For example, the
+// markers
+//
+//	// +crd-enricher:deckhouse:documentation:examples={field: value}
+//	// +crd-enricher:deckhouse:documentation:examples-name=My example
+//	// +crd-enricher:deckhouse:documentation:examples-description=A longer note
+//
+// render on the field's schema node as
+//
+//	x-doc-examples:
+//	  - x-description: A longer note
+//	    x-name: My example
+//	    x-example:
+//	      field: value
 //
 // Markers may be attached both to struct fields and to the struct types
 // themselves. Type-level markers are applied to the schema node of the type
