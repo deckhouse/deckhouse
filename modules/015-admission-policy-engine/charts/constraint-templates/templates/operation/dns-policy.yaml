@@ -39,5 +39,5 @@ spec:
               }
 
               get_message(name) := message if {
-                message := sprintf("Workload <%v> with hostNetwork must have 'ClusterFirstWithHostNet' dnsPolicy", [name])
+                message := sprintf("Pod <%v> with hostNetwork must have 'ClusterFirstWithHostNet' dnsPolicy", [name])
               }

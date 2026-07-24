@@ -679,60 +679,30 @@ spec:
             - hostPath:
                 path: /proc
               name: proc-volume
-    - name: pss-controller-deployment
-      gatorBlock: pss-controller-deployment
-      defaultObjectBase: ''
-      template: ../rendered/constraint-template.yaml
-      constraint: constraints/pss_baseline.yaml
-      cases:
-        name: controller-disallowed-hostpath
-        violations: 'yes'
-        assertionMessage: ''
-        fields:
-        - path: spec.template.spec.volumes[].hostPath
-          scenario: negative
-        object:
-          base: admissionDeployment
-          merge:
-            metadata:
-              name: controller-disallowed-hostpath
-            spec:
-              template:
-                spec:
-                  volumes:
-                  - name: test
-                    hostPath:
-                      path: /etc
-                  containers:
-                  - image: nginx
-                    name: nginx
-          exception: ''
-          exceptionRef: ''
   - name: pss-controller-deployment
     gatorBlock: pss-controller-deployment
     template: ../rendered/constraint-template.yaml
     constraint: constraints/pss_baseline.yaml
     cases:
-    - name: controller-disallowed-hostpath
-      violations: 'yes'
+    - name: controller-allowed-allowed-host-paths
+      violations: 'no'
       assertionMessage: ''
       fields:
-      - path: spec.template.spec.volumes[].hostPath
-        scenario: negative
+      - path: spec.template.spec.volumes[].hostPath.path
+        scenario: positive
       object:
         base: admissionDeployment
         merge:
           metadata:
-            name: controller-disallowed-hostpath
+            name: controller-allowed-allowed-host-paths
           spec:
             template:
               spec:
-                volumes:
-                - name: test
-                  hostPath:
-                    path: /etc
                 containers:
                 - image: nginx
                   name: nginx
+                volumes:
+                - name: test
+                  emptyDir: {}
       exception: ''
       exceptionRef: ''

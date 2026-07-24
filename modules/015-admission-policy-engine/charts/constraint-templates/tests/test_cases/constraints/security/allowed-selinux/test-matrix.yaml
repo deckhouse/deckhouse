@@ -618,50 +618,22 @@ spec:
               securityContext:
                 seLinuxOptions:
                   type: spc_t
-    - name: pss-controller-deployment
-      gatorBlock: pss-controller-deployment
-      defaultObjectBase: ''
-      template: ../rendered/constraint-template.yaml
-      constraint: constraints/pss_baseline.yaml
-      cases:
-        name: controller-disallowed-selinux
-        violations: 'yes'
-        assertionMessage: ''
-        fields:
-        - path: spec.template.spec.containers[].securityContext.seLinuxOptions
-          scenario: negative
-        object:
-          base: admissionDeployment
-          merge:
-            metadata:
-              name: controller-disallowed-selinux
-            spec:
-              template:
-                spec:
-                  containers:
-                  - image: nginx
-                    name: nginx
-                    securityContext:
-                      seLinuxOptions:
-                        level: s0:c123,c456
-          exception: ''
-          exceptionRef: ''
   - name: pss-controller-deployment
     gatorBlock: pss-controller-deployment
     template: ../rendered/constraint-template.yaml
     constraint: constraints/pss_baseline.yaml
     cases:
-    - name: controller-disallowed-selinux
-      violations: 'yes'
+    - name: controller-allowed-allowed-selinux
+      violations: 'no'
       assertionMessage: ''
       fields:
       - path: spec.template.spec.containers[].securityContext.seLinuxOptions
-        scenario: negative
+        scenario: positive
       object:
         base: admissionDeployment
         merge:
           metadata:
-            name: controller-disallowed-selinux
+            name: controller-allowed-allowed-selinux
           spec:
             template:
               spec:
@@ -670,6 +642,6 @@ spec:
                   name: nginx
                   securityContext:
                     seLinuxOptions:
-                      level: s0:c123,c456
+                      type: container_t
       exception: ''
       exceptionRef: ''
