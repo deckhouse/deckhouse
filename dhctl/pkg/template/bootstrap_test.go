@@ -37,7 +37,7 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	templateController := NewTemplateController("")
 	defer templateController.Close()
 
-	err = PrepareBootstrap(t.Context(), templateController, "127.0.0.1", metaConfig, &options.GlobalOptions{CandiDir: options.DefaultCandiDir})
+	err = PrepareBootstrap(t.Context(), templateController, "127.0.0.1", metaConfig, &options.GlobalOptions{CandiDir: options.DefaultCandiDir}, nil)
 	require.NoError(t, err)
 
 	renderedBootstrap, err := os.ReadFile(filepath.Join(templateController.TmpDir, "bootstrap", "01-bootstrap-prerequisites.sh"))

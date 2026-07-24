@@ -65,7 +65,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			return err
 		}
 
-		templateData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, "$MY_IP")
+		templateData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, "$MY_IP", nil)
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		l.Info(fmt.Sprintf("Bundle Dir: %q", templateController.TmpDir))
 
-		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, &opts.Global)
+		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, &opts.Global, nil)
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {

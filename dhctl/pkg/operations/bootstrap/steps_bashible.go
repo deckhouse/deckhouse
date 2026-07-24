@@ -36,6 +36,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	configregistry "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
@@ -57,6 +58,7 @@ type BashiblePipelineParams struct {
 	IsDebug                bool
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	GlobalOpts             *options.GlobalOptions
+	BootstrapState         *State
 }
 
 func (p *BashiblePipelineParams) Validate() error {
@@ -107,10 +109,38 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	templateController := template.NewTemplateController("")
 	bashible := dhbashible.NewRunner(nodeInterface, logger)
 
+	// The registry CA/user PKI is otherwise regenerated fresh on every call,
+	// which would make bashible bundle steps that embed it (e.g.
+	// 073_init_registry_secrets.sh) differ across bootstrap attempts of the
+	// same cluster. Persist it in dhctl's own state so resumed attempts push
+	// the SAME credentials a partially-bootstrapped node may already have.
+	pkiProvider := configregistry.PKIProvider(func() (configregistry.PKI, error) {
+		if params.BootstrapState != nil {
+			if pki, ok, err := params.BootstrapState.RegistryPKI(ctx); err != nil {
+				return configregistry.PKI{}, err
+			} else if ok {
+				return pki, nil
+			}
+		}
+
+		pki, err := configregistry.GeneratePKI()
+		if err != nil {
+			return configregistry.PKI{}, err
+		}
+
+		if params.BootstrapState != nil {
+			if err := params.BootstrapState.SaveRegistryPKI(ctx, pki); err != nil {
+				logger.WarnContext(ctx, fmt.Sprintf("failed to save registry PKI: %v", err))
+			}
+		}
+
+		return pki, nil
+	})
+
 	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing bootstrap", func(ctx context.Context) error {
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Rendered templates directory %s", templateController.TmpDir))
 
-		if err := template.PrepareBootstrap(ctx, templateController, nodeIP, cfg, globalOpts); err != nil {
+		if err := template.PrepareBootstrap(ctx, templateController, nodeIP, cfg, globalOpts, pkiProvider); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
@@ -161,7 +191,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	defer registryPackagesProxyCleanup()
 	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseRegistryPackagesProxy)
 
-	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, globalOpts); err != nil {
+	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, globalOpts, pkiProvider); err != nil {
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
@@ -206,10 +236,33 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseModulesPreparation)
 
+	if params.BootstrapState != nil {
+		savedStepsStatus, err := params.BootstrapState.BashibleStepsStatus(ctx)
+		if err != nil {
+			logger.WarnContext(ctx, fmt.Sprintf("failed to load saved bashible bundle steps status: %v", err))
+		} else if len(savedStepsStatus) > 0 {
+			if err := dhbashible.VerifyStepsStatus(templateController.TmpDir, savedStepsStatus); err != nil {
+				return err
+			}
+
+			if err := bashible.PushStepsStatus(ctx, savedStepsStatus); err != nil {
+				logger.WarnContext(ctx, fmt.Sprintf("failed to push saved bashible bundle steps status: %v", err))
+			}
+		}
+	}
+
 	if err := bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
 		CommanderMode: params.CommanderMode,
 		GlobalOpts:    params.GlobalOpts,
+		OnStepsStatus: func(ctx context.Context, statuses map[string]string) {
+			if params.BootstrapState == nil {
+				return
+			}
+			if err := params.BootstrapState.SaveBashibleStepsStatus(ctx, statuses); err != nil {
+				logger.WarnContext(ctx, fmt.Sprintf("failed to save bashible bundle steps status: %v", err))
+			}
+		},
 	}); err != nil {
 		return err
 	}
@@ -305,9 +358,10 @@ func PrepareBashibleBundle(
 	metaConfig *config.MetaConfig,
 	controller *template.Controller,
 	globalOpts *options.GlobalOptions,
+	pkiProvider configregistry.PKIProvider,
 ) error {
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Prepare Bashible", func(ctx context.Context) error {
-		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, globalOpts)
+		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, globalOpts, pkiProvider)
 	})
 }
 
