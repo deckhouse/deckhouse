@@ -1,0 +1,36 @@
+diff --git a/go.mod b/go.mod
+index 7eb8db7..4e1dc54 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,6 +1,6 @@
+ module github.com/containernetworking/plugins
+ 
+-go 1.23.0
++go 1.25.0
+ 
+ require (
+ 	github.com/Microsoft/hcsshim v0.12.9
+@@ -20,7 +20,7 @@ require (
+ 	github.com/safchain/ethtool v0.5.10
+ 	github.com/vishvananda/netlink v1.3.1-0.20250303224720-0e7078ed04c8
+ 	github.com/vishvananda/netns v0.0.5
+-	golang.org/x/sys v0.32.0
++	golang.org/x/sys v0.44.0
+ 	sigs.k8s.io/knftables v0.0.18
+ )
+ 
+diff --git a/go.sum b/go.sum
+index a3af477..6265a8a 100644
+--- a/go.sum
++++ b/go.sum
+@@ -174,8 +174,8 @@ golang.org/x/sys v0.2.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.10.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.16.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+ golang.org/x/sys v0.29.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+-golang.org/x/sys v0.32.0 h1:s77OFDvIQeibCmezSnk/q6iAfkdiQaJi4VzroCFrN20=
+-golang.org/x/sys v0.32.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
++golang.org/x/sys v0.44.0 h1:ildZl3J4uzeKP07r2F++Op7E9B29JRUy+a27EibtBTQ=
++golang.org/x/sys v0.44.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
+ golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
+ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
