@@ -43,8 +43,9 @@ tests:
     TEST_TIMEOUT: 15m
     TESTS_TIMEOUT: 15m
     CGO_ENABLED: "1"
-    GIT_CLONE_PATH: /deckhouse
   script:
+    - ls /deckhouse #debug
+    - pwd #debug
     - |
       set -euo pipefail
       git config --global --add safe.directory "${CI_PROJECT_DIR}" # возможно убрать?
