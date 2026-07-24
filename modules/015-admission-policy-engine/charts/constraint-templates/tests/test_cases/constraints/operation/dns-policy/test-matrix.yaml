@@ -18,6 +18,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
     - name: d8dnspolicy
@@ -101,3 +113,30 @@ spec:
               spec:
                 hostNetwork: false
                 dnsPolicy: ClusterFirst
+    - name: op-controller-deployment
+      gatorBlock: op-controller-deployment
+      defaultObjectBase: ""
+      template: ../../templates/operation/dns-policy.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        name: controller-disallowed-dns-policy
+        violations: "yes"
+        assertionMessage: ''
+        fields:
+        - path: spec.template.spec.dnsPolicy
+          scenario: negative
+        object:
+          base: admissionDeployment
+          merge:
+            metadata:
+              name: controller-disallowed-dns-policy
+            spec:
+              template:
+                spec:
+                  hostNetwork: true
+                  dnsPolicy: Default
+                  containers:
+                  - name: nginx
+                    image: nginx
+          exception: ""
+          exceptionRef: ""

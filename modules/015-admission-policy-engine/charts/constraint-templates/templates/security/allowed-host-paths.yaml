@@ -53,12 +53,13 @@ spec:
               import data.lib.check_path.check_hostpath_allowed
               import data.lib.common.has_field
               import data.lib.common.input_containers
+              import data.lib.common.pod_spec
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_from_labels
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
-                volume := input.review.object.spec.volumes[_]
+                volume := pod_spec.volumes[_]
                 has_field(volume, "hostPath")
                 allowed_paths := get_allowed_paths(input)
                 labels := object.get(input.review.object.metadata, "labels", {})
@@ -91,7 +92,7 @@ spec:
               }
 
               input_hostpath_volumes contains v if {
-                v := input.review.object.spec.volumes[_]
+                v := pod_spec.volumes[_]
                 has_field(v, "hostPath")
               }
 

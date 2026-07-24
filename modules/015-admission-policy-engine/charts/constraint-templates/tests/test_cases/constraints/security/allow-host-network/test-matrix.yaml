@@ -19,6 +19,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+                - image: nginx
+                  name: nginx
     securityPolicyException:
       document:
         apiVersion: deckhouse.io/v1alpha1
@@ -1379,3 +1391,77 @@ spec:
                         hostPort: 5000
                         protocol: TCP
                 hostNetwork: true
+    - name: pss-baseline-controller-deployment
+      gatorBlock: pss-baseline-controller-deployment
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: controller-allowed-no-hostnetwork
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.hostNetwork
+              scenario: absent
+            - path: spec.template.spec.initContainers[].ports[].hostPort
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-allowed-no-hostnetwork
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        ports:
+                          - containerPort: 80
+        - name: controller-disallowed-hostnetwork-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.hostNetwork
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-hostnetwork-true
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        ports:
+                          - containerPort: 80
+                    hostNetwork: true
+        - name: controller-disallowed-hostport
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.containers[].ports[].hostPort
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-hostport
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        ports:
+                          - containerPort: 80
+                            hostPort: 8080
+                            protocol: TCP

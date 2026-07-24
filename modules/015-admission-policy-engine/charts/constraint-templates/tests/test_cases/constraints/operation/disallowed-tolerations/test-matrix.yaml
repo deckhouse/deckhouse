@@ -19,6 +19,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
     - name: d8disallowedtolerations
@@ -113,3 +125,33 @@ spec:
                 containers:
                   - name: c
                     image: nginx
+    - name: op-controller-deployment
+      gatorBlock: op-controller-deployment
+      defaultObjectBase: ""
+      template: ../../templates/operation/disallowed-tolerations.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        name: controller-disallowed-toleration
+        violations: "yes"
+        assertionMessage: ''
+        fields:
+        - path: spec.template.spec.tolerations
+          scenario: negative
+        object:
+          base: admissionDeployment
+          merge:
+            metadata:
+              name: controller-disallowed-toleration
+            spec:
+              template:
+                spec:
+                  tolerations:
+                  - key: key1
+                    operator: Equal
+                    value: value1
+                    effect: NoSchedule
+                  containers:
+                  - name: nginx
+                    image: nginx
+          exception: ""
+          exceptionRef: ""

@@ -19,6 +19,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
     securityPolicyException:
       document:
         apiVersion: deckhouse.io/v1alpha1
@@ -587,3 +599,31 @@ spec:
                     securityContext:
                       appArmorProfile:
                         type: Unconfined
+    - name: pss-controller-deployment
+      gatorBlock: pss-controller-deployment
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        name: controller-allowed-apparmor
+        violations: "no"
+        assertionMessage: ''
+        fields:
+        - path: spec.template.spec.containers[].securityContext.appArmorProfile
+          scenario: positive
+        object:
+          base: admissionDeployment
+          merge:
+            metadata:
+              name: controller-allowed-apparmor
+            spec:
+              template:
+                spec:
+                  containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      appArmorProfile:
+                        type: RuntimeDefault
+          exception: ""
+          exceptionRef: ""

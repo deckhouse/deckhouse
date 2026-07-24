@@ -85,6 +85,8 @@ spec:
 
               import data.lib.check_set.check_value_in_set_with_wildcards
               import data.lib.message.violation_message
+              import data.lib.common.input_containers
+              import data.lib.common.pod_spec
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_for_container
               import data.lib.expand_synonyms.expand
@@ -106,15 +108,19 @@ spec:
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 not input_wildcard_allowed_profiles
-                container := review_containers[_]
+                container := input_containers[_]
                 sources := [
                   {"type": "container_field", "path": ["securityContext", "seccompProfile", "type"]},
-                  {"type": "pod_field", "path": ["spec", "securityContext", "seccompProfile", "type"]},
+                  {"type": "pod_field", "path": ["securityContext", "seccompProfile", "type"]},
                   {"type": "annotation", "key": sprintf("%v%v", [container_annotation_key_prefix, container.name])},
                   {"type": "annotation", "key": pod_annotation_key}
                 ]
-                profile_raw := resolve_from_sources(input.review.object, container, sources)
-                profile := normalize_seccomp_profile(profile_raw, container, input.review.object)
+                normalized_obj := {
+                  "metadata": object.get(input.review.object, "metadata", {}),
+                  "spec": pod_spec,
+                }
+                profile_raw := resolve_from_sources(normalized_obj, container, sources)
+                profile := normalize_seccomp_profile(profile_raw, container, normalized_obj)
                 allowed_base := expand(input.parameters.allowedProfiles, naming_translation)
                 allowed := allowed_with_localhost_files(
                   normalize_empty_undefined_values(allowed_base),
@@ -138,29 +144,6 @@ spec:
                 input.parameters.allowedProfiles[_] == "*"
               }
 
-              review_containers contains c if {
-                c := input.review.object.spec.containers[_]
-              }
-
-              review_containers contains c if {
-                c := input.review.object.spec.initContainers[_]
-              }
-
-              review_containers contains c if {
-                c := input.review.object.spec.ephemeralContainers[_]
-              }
-
-              review_containers contains c if {
-                c := input.review.object.spec.template.spec.containers[_]
-              }
-
-              review_containers contains c if {
-                c := input.review.object.spec.template.spec.initContainers[_]
-              }
-
-              review_containers contains c if {
-                c := input.review.object.spec.template.spec.ephemeralContainers[_]
-              }
 
               allowed_with_localhost_files(allowed, files) := out if {
                 allows_localhost(allowed)
@@ -200,10 +183,6 @@ spec:
                 out := sprintf("localhost/%v", [lp])
               } else := out if {
                 lp := object.get(obj, ["spec", "securityContext", "seccompProfile", "localhostProfile"], null)
-                lp != null
-                out := sprintf("localhost/%v", [lp])
-              } else := out if {
-                lp := object.get(obj, ["spec", "template", "spec", "securityContext", "seccompProfile", "localhostProfile"], null)
                 lp != null
                 out := sprintf("localhost/%v", [lp])
               } else := "localhost" if {
