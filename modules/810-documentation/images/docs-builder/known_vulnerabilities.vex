@@ -1,0 +1,52 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-b07671b2ed781b1883b091774c4a44cdfc7d71b92f8cad70b8f0b162bb01dedd",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27145"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.26.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к квадратичной сложности проверки имени хоста в crypto/x509 при обработке сертификатов с большим количеством DNS SAN-записей ((*x509.Certificate).VerifyHostname, CVE-2026-27145, CWE-606). docs-builder собирает и отдаёт документацию модулей Deckhouse и не выполняет проверку недоверенных X.509-сертификатов с контролируемым злоумышленником списком DNS SAN; исполняемый путь уязвимого кода в данном компоненте недостижим.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39822"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.26.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к следованию по символьным ссылкам в os.Root на Unix-системах, когда последний компонент пути является симлинком и путь оканчивается на '/', что позволяет выйти за пределы Root (directory traversal, CVE-2026-39822, CWE-61). docs-builder обрабатывает только доверенные исходники документации модулей Deckhouse и не открывает через os.Root пути или симлинки, контролируемые злоумышленником; исполняемый путь уязвимого кода в данном компоненте недостижим.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42504"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.26.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к чрезмерному потреблению CPU при декодировании специально сформированного MIME-заголовка с множеством некорректных encoded-words в пакете mime (DoS, CVE-2026-42504, CWE-407). docs-builder собирает и отдаёт документацию модулей Deckhouse и не декодирует MIME-заголовки, контролируемые злоумышленником; исполняемый путь уязвимого кода в данном компоненте недостижим.",
+      "timestamp": "2026-07-23T00:00:00Z"
+    }
+  ],
+  "timestamp": "2026-07-23T00:00:00Z",
+  "last_updated": "2026-07-23T00:00:00Z"
+}

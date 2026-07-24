@@ -21,6 +21,7 @@ addressPools
 admin
 AEAD
 AES
+Afero
 Affero
 aggregator
 aggregators
@@ -557,6 +558,7 @@ frontends
 fs
 FSID
 fstype
+Fsync
 fulfil
 FullAccess
 fullchain
@@ -597,6 +599,7 @@ GlobalTag
 globalVersion
 Gluu
 Golang
+Goldmark
 GOST
 govc
 GPG
