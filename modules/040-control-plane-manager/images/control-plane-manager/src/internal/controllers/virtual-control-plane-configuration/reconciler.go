@@ -633,12 +633,6 @@ func (r *reconciler) reconcileControlPlaneNodes(
 		return reconcile.Result{}, err
 	}
 
-	for _, target := range targets {
-		if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
 	targetNames := make(map[string]struct{}, len(targets))
 	for _, target := range targets {
 		targetNames[target.Name] = struct{}{}
