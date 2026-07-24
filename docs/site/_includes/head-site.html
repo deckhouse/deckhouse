@@ -101,6 +101,13 @@
 
 <script type="module" src="/assets/js/pdf-slider.js?v={{ assetHash }}"></script>
 
+{%- if page.allowPDFDownload %}
+<script type="text/javascript" src="/assets/js/pdfmake.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/vfs_fonts.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/html-to-pdfmake.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/pdf-export.js?v={{ assetHash }}"></script>
+{%- endif %}
+
 <script type="text/javascript" src="/assets/js/popup-form.js?v={{ assetHash }}"></script>
 
 <script type="text/javascript" src="/assets/js/customscripts.js?v={{ assetHash }}"></script>
