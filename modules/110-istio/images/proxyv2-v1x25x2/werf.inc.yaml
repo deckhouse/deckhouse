@@ -14,7 +14,7 @@
 #      and https://github.com/istio/istio/blob/1.25.2/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: 2307202601
+fromCacheVersion: 2407202601
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -277,3 +277,4 @@ shell:
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
   - cd /src/proxy/
 ---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
