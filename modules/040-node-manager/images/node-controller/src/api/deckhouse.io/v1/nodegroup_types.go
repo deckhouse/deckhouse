@@ -33,6 +33,17 @@ const (
 	NodeTypeStatic         NodeType = "Static"
 )
 
+// SystemType selects how the node is managed: the classic mutable node configured
+// by bashible, or an olcedar node — a type 1 hypervisor reconciled by the
+// on-node agent (nodelet) from a NodeConfig object.
+// +kubebuilder:validation:Enum=Mutable;Immutable
+type SystemType string
+
+const (
+	SystemTypeMutable   SystemType = "Mutable"
+	SystemTypeImmutable SystemType = "Immutable"
+)
+
 // CRIType defines the container runtime type
 // +kubebuilder:validation:Enum=Docker;Containerd;ContainerdV2;NotManaged
 type CRIType string
@@ -68,6 +79,12 @@ type NodeGroupSpec struct {
 	// NodeType specifies the type of nodes in this group
 	// +kubebuilder:validation:Required
 	NodeType NodeType `json:"nodeType"`
+
+	// SystemType selects how the node is managed. An Immutable node runs
+	// olcedar, a type 1 hypervisor, and is reconciled from a NodeConfig object
+	// instead of by bashible; the field cannot be changed after creation.
+	// +optional
+	SystemType SystemType `json:"systemType,omitempty"`
 
 	// CRI specifies container runtime settings
 	// +optional
