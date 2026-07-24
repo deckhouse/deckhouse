@@ -1358,6 +1358,10 @@ entries:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
               url: /architecture/kubernetes-and-scheduling/vpa.html
+            - title:
+                en: Descheduler module
+                ru: Модуль descheduler
+              url: /architecture/kubernetes-and-scheduling/descheduler.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
