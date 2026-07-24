@@ -1,0 +1,21 @@
+common:
+  fixes:
+    - summary: Fix curl in debug-container by shipping a static binary
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21522
+deckhouse:
+  fixes:
+    - summary: atomically install modules and re-download incomplete versions
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21459
+    - summary: show the allow-disabling annotation hint when disabling a confirmation-required module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21519
+    - summary: Fix CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21542
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Fix maintenance state tracking — module no longer gets stuck in Unmanaged after removing maintenance.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21427
+docs:
+  fixes:
+    - summary: Corrected the link from direct to relative in the alert about the module requirements.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21358
