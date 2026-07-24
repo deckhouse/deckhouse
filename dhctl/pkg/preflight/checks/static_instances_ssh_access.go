@@ -47,26 +47,26 @@ type staticInstance struct {
 	CredName string
 }
 
-type StaticInstancesSSHCredentialsCheck struct {
+type StaticInstancesSSHAccessCheck struct {
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 	MetaConfig             *config.MetaConfig
 }
 
-const StaticInstancesSSHCredentialsCheckName preflight.CheckName = "static-instances-ssh-credentials"
+const StaticInstancesSSHAccessCheckName preflight.CheckName = "static-instances-ssh-access"
 
-func (StaticInstancesSSHCredentialsCheck) Description() string {
-	return "SSHCredentials for StaticInstances are correct."
+func (StaticInstancesSSHAccessCheck) Description() string {
+	return "SSH access to StaticInstances is configured correctly."
 }
 
-func (StaticInstancesSSHCredentialsCheck) Phase() preflight.Phase {
+func (StaticInstancesSSHAccessCheck) Phase() preflight.Phase {
 	return preflight.PhasePostInfra
 }
 
-func (StaticInstancesSSHCredentialsCheck) RetryPolicy() preflight.RetryPolicy {
+func (StaticInstancesSSHAccessCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.DefaultRetryPolicy
 }
 
-func (c StaticInstancesSSHCredentialsCheck) Run(ctx context.Context) error {
+func (c StaticInstancesSSHAccessCheck) Run(ctx context.Context) error {
 	docs := input.YAMLSplitRegexp.Split(c.MetaConfig.ResourcesYAML, -1)
 	instances, creds, err := parseResources(docs)
 	if err != nil {
@@ -79,8 +79,8 @@ func (c StaticInstancesSSHCredentialsCheck) Run(ctx context.Context) error {
 			return fmt.Errorf("Instance %s: SSHCredentials %s not found", inst.Name, inst.CredName)
 		}
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Checking StaticInstance %s (%s)", inst.Name, inst.Address))
-		if err := testSSHConnection(ctx, c.SSHProviderInitializer, inst.Address, cred); err != nil {
-			return fmt.Errorf("Cannot connect to %s (%s:%d): %w", inst.Name, inst.Address, cred.SSHPort, err)
+		if err := checkSSHAccess(ctx, c.SSHProviderInitializer, inst.Address, cred); err != nil {
+			return fmt.Errorf("SSH access check failed for %s (%s:%d): %w", inst.Name, inst.Address, cred.SSHPort, err)
 		}
 	}
 	return nil
@@ -198,7 +198,7 @@ func parseSSHCredentials(sc *v1alpha2.SSHCredentials) (*v1alpha2.SSHCredentialsS
 	}, nil
 }
 
-func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinitializer.SSHProviderInitializer, address string, cred *v1alpha2.SSHCredentialsSpec) error {
+func checkSSHAccess(ctx context.Context, sshProviderInitializer *providerinitializer.SSHProviderInitializer, address string, cred *v1alpha2.SSHCredentialsSpec) error {
 	nodeInterface, err := helper.GetNodeInterface(ctx, sshProviderInitializer, sshProviderInitializer.GetSettings())
 	if err != nil {
 		return err
@@ -273,22 +273,38 @@ func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinit
 	}
 	defer client.Stop()
 
-	cmd := client.Command("true")
-	cmd.Sudo(ctx)
+	if cred.User == "root" {
+		cmd := client.Command("true")
+		if err := cmd.Run(ctx); err != nil {
+			return fmt.Errorf(
+				"SSH command check failed on host %s for user %q: %w\nstderr: %s",
+				address,
+				cred.User,
+				err,
+				string(cmd.StderrBytes()),
+			)
+		}
+		return nil
+	}
 
-	if err := cmd.Run(ctx); err != nil {
-		return fmt.Errorf("Sudo check failed: %w\nstderr: %s", err, string(cmd.StderrBytes()))
+	if err := checkSudo(ctx, client); err != nil {
+		return fmt.Errorf(
+			"sudo check failed on host %s for user %q: %w",
+			address,
+			cred.User,
+			err,
+		)
 	}
 	return nil
 }
 
-func StaticInstancesSSHCredentials(metaConfig *config.MetaConfig, sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
-	check := StaticInstancesSSHCredentialsCheck{
+func StaticInstancesSSHAccess(metaConfig *config.MetaConfig, sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
+	check := StaticInstancesSSHAccessCheck{
 		SSHProviderInitializer: sshProviderInitializer,
 		MetaConfig:             metaConfig,
 	}
 	return preflight.Check{
-		Name:        StaticInstancesSSHCredentialsCheckName,
+		Name:        StaticInstancesSSHAccessCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
