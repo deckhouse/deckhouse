@@ -636,9 +636,49 @@ The same as the [alert shortcode](#user-content-alert-details), but used in temp
 
 ## PDF generation
 
-The documentation can be exported to PDF. Two guides are generated: an administrator's guide and a user's guide, each in English and Russian.
+Documentation PDFs are produced in two independent ways:
 
-### Output files
+- a user can export the current documentation page in the browser;
+- maintainers can generate complete administrator and user guides with `make docs-generate-pdf`.
+
+### Exporting a page in the browser
+
+Browser PDF export is currently enabled only for pages in `pages/guides`. The default configuration sets `allowPDFDownload: true` for these pages, which displays a localized **Download page as PDF** button.
+
+The export can be enabled explicitly on another page by adding the following front matter:
+
+```yaml
+allowPDFDownload: true
+```
+
+Set `allowPDFDownload: false` on a guide page to disable the button.
+
+The button is rendered by `_includes/pdf-download-button.html` in the `guide`, `page`, and `sidebar-guides` layouts. When the setting is disabled, the button and the PDF export script are not added to the page.
+
+The export runs entirely in the browser:
+
+1. `assets/js/pdf-export.js` clones the `.post-content` element and removes interactive controls that must not appear in the PDF.
+1. Relative links are converted to absolute URLs. Images are converted to embedded PNG data URLs because pdfmake cannot load page images while creating the document.
+1. `html-to-pdfmake.min.js` converts the HTML into a pdfmake document definition.
+1. `pdfmake.min.js` downloads the result using a file name derived from the page title.
+
+The generated document contains a title page, the source URL, the generation time, a running header, and page numbers. The export also applies print-specific formatting:
+
+- alerts and blockquotes use colored callout boxes;
+- expanded `details` content uses a gray callout box, and its summary is rendered as text rather than a link;
+- code blocks, inline code, headings, nested lists, tables, and images are normalized for pdfmake;
+- colored square status emoji are rendered as vector shapes;
+- headings are kept with the content that follows them when possible.
+
+pdfmake and html-to-pdfmake are loaded only after the first click. The DejaVu Sans files under `assets/fonts/dejavu/` are also loaded on demand and registered as the default PDF font. DejaVu Sans provides Cyrillic, box-drawing characters, and common symbols used in command output. The four font files provide regular, bold, oblique, and bold-oblique styles.
+
+The asset version from `head-site.html` is appended to lazy-loaded scripts and fonts for cache invalidation. If a library or font fails to load, the button is enabled again so the user can retry the export.
+
+### Generating complete guides
+
+The batch generator creates an administrator's guide and a user's guide, each in English and Russian.
+
+#### Output files
 
 | File | Content |
 |------|---------|
@@ -647,24 +687,24 @@ The documentation can be exported to PDF. Two guides are generated: an administr
 | `pdf/deckhouse-user-guide_en.pdf` | User's guide, English |
 | `pdf/deckhouse-user-guide_ru.pdf` | User's guide, Russian |
 
-### How it works
+#### How it works
 
 1. **Build werf images** — `generate-pdf.sh` builds three werf images from `docs/documentation`:
    - `website-docs/web/static` — rendered Jekyll documentation site (HTML/CSS/assets);
    - `website-docs/modules-embedded/static-artifact` — built-in module documentation;
    - `website-docs/pdf-builder` — wkhtmltopdf + Python scripts for PDF rendering.
 
-2. **Export content** — static HTML is exported from the built images into a temporary directory via `docker create` + `docker cp`.
+1. **Export content** — static HTML is exported from the built images into a temporary directory via `docker create` + `docker cp`.
 
-3. **Generate PDF** — `docker run` executes `get_pdf_page.py` inside the `pdf-builder` image. The script reads `main.yml` from the current repository (not baked into the image) to build the document structure, then renders HTML chunks with wkhtmltopdf.
+1. **Generate PDF** — `docker run` executes `get_pdf_page.py` inside the `pdf-builder` image. The script reads `main.yml` from the current repository (not baked into the image) to build the document structure, then renders HTML chunks with wkhtmltopdf.
 
-4. **Upload to S3** (CI only) — the generated PDFs are uploaded to `s3://<bucket>/deckhouse-web-<env>/<version>/docs-dkp/<lang>/pdf/`.
+1. **Upload to S3** (CI only) — the generated PDFs are uploaded to `s3://<bucket>/deckhouse-web-<env>/<version>/docs-dkp/<lang>/pdf/`.
 
-### `main.yml` sidebar file
+#### `main.yml` sidebar file
 
 `docs/documentation/_data/sidebars/main.yml` defines the document structure (table of contents). It is mounted into the `pdf-builder` container at runtime (`-v .../main.yml:/app/main.yml:ro`) so that each branch uses its own version of the file without rebuilding the image.
 
-### Generating PDFs locally
+#### Generating PDFs locally
 
 Run from the repository root:
 
@@ -688,7 +728,7 @@ make docs-generate-pdf DOC_VERSION=1.67
 
 Local builds use a local Docker registry at `localhost:4999/docs` (started automatically by `make up`).
 
-### werf image definition
+#### werf image definition
 
 The `pdf-builder` image is defined in `docs/documentation/werf-pdf-builder.inc.yaml`. It is based on `debian-trixie-slim` and includes:
 
@@ -698,7 +738,7 @@ The `pdf-builder` image is defined in `docs/documentation/werf-pdf-builder.inc.y
 
 The image contains `get_pdf_page.py`, `toc_style.css`, and `toc_template.xsl` from `tools/docs/pdf/`. The `main.yml` sidebar file is **not** included in the image — it is mounted at runtime.
 
-### CI workflows
+#### CI workflows
 
 | Workflow | Trigger | Behavior on failure |
 |----------|---------|---------------------|
