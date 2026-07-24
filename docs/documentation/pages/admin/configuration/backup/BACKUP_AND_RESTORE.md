@@ -339,6 +339,78 @@ To restore objects from exported YAML files, follow these steps:
 
 After completing these steps, the selected objects will be recreated in the cluster based on the definitions in the YAML files.
 
+### Restoring control-plane component manifests from a CPM backup
+
+Before applying any change to a control-plane component (`etcd`, `kube-apiserver`, `kube-controller-manager`, or `kube-scheduler`), the `control-plane-manager` (CPM) module automatically backs up the files it is about to overwrite on that node. Backups are stored per component and per operation in:
+
+```text
+/etc/kubernetes/deckhouse/backup/<Component>/<operation-name>/
+```
+
+CPM keeps the 7 most recent operations per component; older ones are removed automatically. The contents of a backup directory depend on the component — for example, a `kube-apiserver` operation backs up its static Pod manifest, TLS certificates, and `admin.conf`:
+
+```text
+/etc/kubernetes/deckhouse/backup/KubeAPIServer/kubeapiserver-ef53e5-n2snk/
+├── manifests/kube-apiserver.yaml
+├── pki/apiserver.crt
+├── pki/apiserver.key
+└── admin.conf
+```
+
+A unified diff of the change CPM made is kept alongside, under `/etc/kubernetes/deckhouse/diffs/<Component>/<operation-name>/` (also limited to the 7 most recent operations):
+
+```text
+/etc/kubernetes/deckhouse/diffs/KubeAPIServer/kubeapiserver-ef53e5-n2snk/
+├── manifests/kube-apiserver.yaml.diff
+└── extra-files/...
+```
+
+Use these backups to revert a control-plane component to its previous state — for example, after a change applied by CPM (such as one triggered by editing a `ModuleConfig`) broke the component.
+
+To restore a control-plane component file from a CPM backup:
+
+1. On the affected master node, list the available backups for the component, sorted by time, and pick the operation to restore from:
+
+   ```shell
+   ls -lt /etc/kubernetes/deckhouse/backup/<COMPONENT>/
+   ```
+
+   Optionally, review what changed in that operation by inspecting the corresponding diff:
+
+   ```shell
+   cat /etc/kubernetes/deckhouse/diffs/<COMPONENT>/<OPERATION_NAME>/manifests/*.diff
+   ```
+
+1. Enable maintenance mode on the node's `ControlPlaneNode` resource. This stops CPM from starting new operations on the node while you restore files manually (an operation already in progress is not affected):
+
+   ```shell
+   d8 k label cpn <NODE_NAME> control-plane-manager.deckhouse.io/maintenance=""
+   ```
+
+1. Copy the required file(s) from the backup directory back to their original location. For example, to restore the `kube-apiserver` manifest:
+
+   ```shell
+   cp /etc/kubernetes/deckhouse/backup/KubeAPIServer/<OPERATION_NAME>/manifests/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
+   ```
+
+   Restoring a static Pod manifest is enough to trigger kubelet to restart the Pod — no manual restart is required. PKI and kubeconfig files (`admin.conf`, certificates, etc.) are restored the same way, preserving their original relative path under `/etc/kubernetes`.
+
+1. Make sure the component came back up healthy:
+
+   ```shell
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager --field-selector spec.nodeName=<NODE_NAME>
+   ```
+
+1. Disable maintenance mode:
+
+   ```shell
+   d8 k label cpn <NODE_NAME> control-plane-manager.deckhouse.io/maintenance-
+   ```
+
+{% alert level="warning" %}
+Restoring files from a backup only reverts their on-disk state. If the change you're reverting is still requested by the current cluster configuration (e.g., a `ModuleConfig`), CPM will detect the drift and create a new operation to reapply it as soon as maintenance mode is disabled. Fix the underlying configuration first if you don't want the change reapplied.
+{% endalert %}
+
 ## Restoring objects after changing the master node IP address
 
 {% alert level="warning" %}
