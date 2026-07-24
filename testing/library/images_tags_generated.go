@@ -644,8 +644,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"webhook": "imageHash-userAuthz-webhook",
 	},
 	"verticalPodAutoscaler": map[string]interface{}{
-		"admissionController": "imageHash-verticalPodAutoscaler-admissionController",
-		"recommender":         "imageHash-verticalPodAutoscaler-recommender",
-		"updater":             "imageHash-verticalPodAutoscaler-updater",
+		"admissionController":            "imageHash-verticalPodAutoscaler-admissionController",
+		"admissionControllerVexArtifact": "imageHash-verticalPodAutoscaler-admissionControllerVexArtifact",
+		"recommender":                    "imageHash-verticalPodAutoscaler-recommender",
+		"recommenderVexArtifact":         "imageHash-verticalPodAutoscaler-recommenderVexArtifact",
+		"updater":                        "imageHash-verticalPodAutoscaler-updater",
+		"updaterVexArtifact":             "imageHash-verticalPodAutoscaler-updaterVexArtifact",
 	},
 }
