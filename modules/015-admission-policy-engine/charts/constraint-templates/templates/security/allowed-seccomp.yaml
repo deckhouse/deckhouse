@@ -111,7 +111,7 @@ spec:
                 container := input_containers[_]
                 sources := [
                   {"type": "container_field", "path": ["securityContext", "seccompProfile", "type"]},
-                  {"type": "pod_field", "path": ["securityContext", "seccompProfile", "type"]},
+                  {"type": "pod_field", "path": ["spec", "securityContext", "seccompProfile", "type"]},
                   {"type": "annotation", "key": sprintf("%v%v", [container_annotation_key_prefix, container.name])},
                   {"type": "annotation", "key": pod_annotation_key}
                 ]

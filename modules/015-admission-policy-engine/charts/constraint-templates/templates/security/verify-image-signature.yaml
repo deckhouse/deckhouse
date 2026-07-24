@@ -42,46 +42,46 @@ spec:
 
               import data.lib.common.input_containers
 
-        # Get data from Ratify in production, or mocked data in test mode.
+              # Get data from Ratify in production, or mocked data in test mode.
               remote_data := response if {
-          images := [img | img = retrieve_images[_]]
-          filtered_images := [image |
-            image := images[_];
-            regex.match(input.parameters.references[_], image)
-          ]
-          response := get_data(filtered_images)
-        }
+                images := [img | img = retrieve_images[_]]
+                filtered_images := [image |
+                  image := images[_]
+                  regex.match(input.parameters.references[_], image)
+                ]
+                response := get_data(filtered_images)
+              }
 
               get_data(filtered_images) := response if {
-          is_test_mode
-          response := external_data_from_inventory("ratify-provider", filtered_images)
-        }
+                is_test_mode
+                response := external_data_from_inventory("ratify-provider", filtered_images)
+              }
 
               get_data(filtered_images) := response if {
-          not is_test_mode
-          response := external_data({"provider": "ratify-provider", "keys": filtered_images})
-        }
+                not is_test_mode
+                response := external_data({"provider": "ratify-provider", "keys": filtered_images})
+              }
 
               external_data_from_inventory(provider, keys) := response if {
-          namespace := object.get(input.review.object.metadata, "namespace", "default")
-          ns_inventory := object.get(object.get(data.inventory, "namespace", {}), namespace, {})
-          api_inventory := object.get(ns_inventory, "deckhouse.io/v1alpha1", {})
-          kinds_inventory := object.get(api_inventory, "ExternalDataInventory", {})
-          external_inventory := object.get(kinds_inventory, "default", {})
-          providers := object.get(object.get(external_inventory, "spec", {}), "providers", {})
-          provider_data := object.get(providers, provider, {})
+                namespace := object.get(input.review.object.metadata, "namespace", "default")
+                ns_inventory := object.get(object.get(data.inventory, "namespace", {}), namespace, {})
+                api_inventory := object.get(ns_inventory, "deckhouse.io/v1alpha1", {})
+                kinds_inventory := object.get(api_inventory, "ExternalDataInventory", {})
+                external_inventory := object.get(kinds_inventory, "default", {})
+                providers := object.get(object.get(external_inventory, "spec", {}), "providers", {})
+                provider_data := object.get(providers, provider, {})
 
-          responses_map := object.get(provider_data, "responses", {})
-          responses := [[k, object.get(responses_map, k, {})] |
-            k := keys[_]
-          ]
+                responses_map := object.get(provider_data, "responses", {})
+                responses := [[k, object.get(responses_map, k, {})] |
+                  k := keys[_]
+                ]
 
-          response := {
-            "errors": object.get(provider_data, "errors", []),
-            "system_error": object.get(provider_data, "system_error", ""),
-            "responses": responses,
-          }
-        }
+                response := {
+                  "errors": object.get(provider_data, "errors", []),
+                  "system_error": object.get(provider_data, "system_error", ""),
+                  "responses": responses,
+                }
+              }
 
               is_test_mode if {
                 object.get(input.parameters, "isTest", false)
@@ -93,26 +93,26 @@ spec:
                 img != ""
               }
 
-        # Base Gatekeeper violation
+              # Base Gatekeeper violation
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
-                general_violation contains {"result": msg}
+                msg := general_violation[_].result
               }
 
-        # Check if there are any system errors
+              # Check if there are any system errors
               general_violation contains {"result": result} if {
                 err := remote_data.system_error
                 err != ""
                 result := sprintf("System error calling external data provider: %s", [err])
               }
 
-        # Check if there are errors for any of the images
+              # Check if there are errors for any of the images
               general_violation contains {"result": result} if {
                 count(remote_data.errors) > 0
                 result := sprintf("Error validating one or more images: %s", remote_data.errors)
               }
 
-        # Check if the success criteria is true
+              # Check if the success criteria is true
               general_violation contains {"result": result} if {
                 subject_validation := remote_data.responses[_]
                 subject_validation[1].isSuccess == false

@@ -7,7 +7,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
@@ -17,8 +17,8 @@ spec:
           namespace: testns
         spec:
           containers:
-            - image: nginx
-              name: nginx
+          - image: nginx
+            name: nginx
     admissionDeployment:
       document:
         apiVersion: apps/v1
@@ -33,125 +33,119 @@ spec:
                 name: nginx
   namedExceptions: {}
   blocks:
-    - name: d8disallowedtolerations
-      gatorBlock: d8disallowedtolerations
-      defaultObjectBase: ""
-      template: ../../templates/operation/disallowed-tolerations.yaml
-      constraint: constraints/policy_1.yaml
-      cases:
-        - name: allowed-no-tolerations
-          violations: "no"
-          assertionMessage: ""
-          fields:
-            - path: spec.tolerations[]
-              scenario: absent
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: allowed
-                namespace: default
+  - name: d8disallowedtolerations
+    gatorBlock: d8disallowedtolerations
+    defaultObjectBase: ''
+    template: ../../templates/operation/disallowed-tolerations.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: allowed-no-tolerations
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.tolerations[]
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed
+            namespace: default
+          spec:
+            containers:
+            - name: c
+              image: nginx
+    - name: disallowed-toleration-key
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.tolerations[]
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed
+            namespace: default
+          spec:
+            tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+            containers:
+            - name: c
+              image: nginx
+    - name: disallowed-toleration-equal
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.tolerations[]
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-equal
+            namespace: default
+          spec:
+            tolerations:
+            - key: dedicated
+              operator: Equal
+              value: gpu
+            containers:
+            - name: c
+              image: nginx
+    - name: disallowed-toleration-noexecute-exists
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.tolerations[]
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-noexecute-exists
+            namespace: default
+          spec:
+            tolerations:
+            - operator: Exists
+              effect: NoExecute
+            containers:
+            - name: c
+              image: nginx
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: controller-allowed-disallowed-tolerations
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.tolerations
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-disallowed-tolerations
+          spec:
+            template:
               spec:
                 containers:
-                  - name: c
-                    image: nginx
-        - name: disallowed-toleration-key
-          violations: "yes"
-          assertionMessage: ""
-          fields:
-            - path: spec.tolerations[]
-              scenario: negative
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: disallowed
-                namespace: default
-              spec:
-                tolerations:
-                  - key: node-role.kubernetes.io/control-plane
-                    operator: Exists
-                containers:
-                  - name: c
-                    image: nginx
-        - name: disallowed-toleration-equal
-          violations: "yes"
-          assertionMessage: ""
-          fields:
-            - path: spec.tolerations[]
-              scenario: negative
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: disallowed-equal
-                namespace: default
-              spec:
-                tolerations:
-                  - key: dedicated
-                    operator: Equal
-                    value: gpu
-                containers:
-                  - name: c
-                    image: nginx
-        - name: disallowed-toleration-noexecute-exists
-          violations: "yes"
-          assertionMessage: ""
-          fields:
-            - path: spec.tolerations[]
-              scenario: negative
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: disallowed-noexecute-exists
-                namespace: default
-              spec:
-                tolerations:
-                  - operator: Exists
-                    effect: NoExecute
-                containers:
-                  - name: c
-                    image: nginx
-    - name: op-controller-deployment
-      gatorBlock: op-controller-deployment
-      defaultObjectBase: ""
-      template: ../../templates/operation/disallowed-tolerations.yaml
-      constraint: constraints/policy_1.yaml
-      cases:
-        name: controller-disallowed-toleration
-        violations: "yes"
-        assertionMessage: ''
-        fields:
-        - path: spec.template.spec.tolerations
-          scenario: negative
-        object:
-          base: admissionDeployment
-          merge:
-            metadata:
-              name: controller-disallowed-toleration
-            spec:
-              template:
-                spec:
-                  tolerations:
-                  - key: key1
-                    operator: Equal
-                    value: value1
-                    effect: NoSchedule
-                  containers:
-                  - name: nginx
-                    image: nginx
-          exception: ""
-          exceptionRef: ""
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
