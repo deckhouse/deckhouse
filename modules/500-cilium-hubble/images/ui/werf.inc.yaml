@@ -1,10 +1,10 @@
 {{- $hubbleUIVersion := include "get_oss_version_by_id" (list "cilium-hubble-ui" $ )  -}}
-{{- $hubbleUIFrontendAssetsVersion := "0.13.2-auth" -}}
+{{- $hubbleUIFrontendAssetsVersion := "0.13.5-auth" -}}
 ---
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/install/kubernetes/cilium/values.yaml#L1698
 # and on https://github.com/cilium/cilium/blob/v1.17.4/install/kubernetes/cilium/values.yaml#L1732
-# and on https://github.com/cilium/hubble-ui/blob/v0.13.2/Dockerfile
-# and on https://github.com/cilium/hubble-ui/blob/v0.13.2/backend/Dockerfile
+# and on https://github.com/cilium/hubble-ui/blob/v0.13.5/Dockerfile
+# and on https://github.com/cilium/hubble-ui/blob/v0.13.5/backend/Dockerfile
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -35,7 +35,7 @@ shell:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

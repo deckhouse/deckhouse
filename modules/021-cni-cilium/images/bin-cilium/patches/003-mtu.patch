@@ -1,9 +1,9 @@
 diff --git a/cilium-health/launch/endpoint.go b/cilium-health/launch/endpoint.go
-index de7f89f68c..55c05656ee 100644
+index ac5a9ca8..a6fd4dde 100644
 --- a/cilium-health/launch/endpoint.go
 +++ b/cilium-health/launch/endpoint.go
 @@ -273,7 +273,7 @@ func LaunchAsEndpoint(baseCtx context.Context,
-
+ 
  	switch option.Config.DatapathMode {
  	case datapathOption.DatapathModeVeth:
 -		_, epLink, err := connector.SetupVethWithNames(healthName, epIfaceName, mtuConfig.GetDeviceMTU(),
@@ -11,43 +11,38 @@ index de7f89f68c..55c05656ee 100644
  			bigTCPConfig.GetGROIPv6MaxSize(), bigTCPConfig.GetGSOIPv6MaxSize(),
  			bigTCPConfig.GetGROIPv4MaxSize(), bigTCPConfig.GetGSOIPv4MaxSize(),
  			info, sysctl)
+diff --git a/pkg/mtu/endpoint_updater.go b/pkg/mtu/endpoint_updater.go
+index a3809d25..0ecad633 100644
+--- a/pkg/mtu/endpoint_updater.go
++++ b/pkg/mtu/endpoint_updater.go
+@@ -199,7 +199,7 @@ func (emu *endpointUpdater) updateHostNSDevices(rx statedb.ReadTxn, routeMtus []
+ 			continue
+ 		}
+ 
+-		if err := netlink.LinkSetMTU(link, defaultRouteMTU.DeviceMTU); err != nil {
++		if err := netlink.LinkSetMTU(link, defaultRouteMTU.RouteMTU); err != nil {
+ 			// Ignore any errors. It is possible that the device has been removed between the time
+ 			// we got the link and now.
+ 			continue
+@@ -300,7 +300,7 @@ func defaultRouteHook(routeMTUs []RouteMTU) error {
+ 			continue
+ 		}
+ 
+-		netlink.LinkSetMTU(link, defaultRouteMTU.DeviceMTU)
++		netlink.LinkSetMTU(link, defaultRouteMTU.RouteMTU)
+ 
+ 		routes, err := safenetlink.RouteList(link, netlink.FAMILY_ALL)
+ 		if err != nil {
 diff --git a/plugins/cilium-cni/cmd/cmd.go b/plugins/cilium-cni/cmd/cmd.go
-index 4b22b204a5..451db580fd 100644
+index 93fda46a..2dc6cb95 100644
 --- a/plugins/cilium-cni/cmd/cmd.go
 +++ b/plugins/cilium-cni/cmd/cmd.go
-@@ -590,7 +590,7 @@ func (cmd *Cmd) Add(args *skel.CmdArgs) (err error) {
+@@ -591,7 +591,7 @@ func (cmd *Cmd) Add(args *skel.CmdArgs) (err error) {
  		switch conf.DatapathMode {
  		case datapathOption.DatapathModeVeth:
  			cniID := ep.ContainerID + ":" + ep.ContainerInterfaceName
 -			veth, peer, tmpIfName, err := connector.SetupVeth(cniID, int(conf.DeviceMTU),
 +			veth, peer, tmpIfName, err := connector.SetupVeth(cniID, int(conf.RouteMTU),
  				int(conf.GROMaxSize), int(conf.GSOMaxSize),
- 				int(conf.GROIPV4MaxSize), int(conf.GSOIPV4MaxSize), ep, sysctl)
+ 				int(conf.GROIPv4MaxSize), int(conf.GSOIPv4MaxSize), ep, sysctl)
  			if err != nil {
-diff --git a/pkg/mtu/endpoint_updater.go b/pkg/mtu/endpoint_updater.go
-index 6ade3c8888..3defa82a96 100644
---- a/pkg/mtu/endpoint_updater.go
-+++ b/pkg/mtu/endpoint_updater.go
-@@ -205,11 +205,11 @@ func (emu *endpointUpdater) updateHostNSDevices(rx statedb.ReadTxn, routeMtus []
- 			continue
- 		}
-
--		if err := netlink.LinkSetMTU(link, defaultRouteMTU.DeviceMTU); err != nil {
-+		if err := netlink.LinkSetMTU(link, defaultRouteMTU.RouteMTU); err != nil {
- 			emu.logger.Error("Error setting MTU for link",
- 				"link", link.Attrs().Name,
- 				"index", link.Attrs().Index,
--				"mtu", defaultRouteMTU.DeviceMTU,
-+				"mtu", defaultRouteMTU.RouteMTU,
- 				logfields.Error, err,
- 			)
- 			errs = append(errs, err)
-@@ -298,7 +298,7 @@ func defaultRouteHook(routeMTUs []RouteMTU) error {
- 			continue
- 		}
-
--		netlink.LinkSetMTU(link, defaultRouteMTU.DeviceMTU)
-+		netlink.LinkSetMTU(link, defaultRouteMTU.RouteMTU)
-
- 		routes, err := safenetlink.RouteList(link, netlink.FAMILY_ALL)
- 		if err != nil {
