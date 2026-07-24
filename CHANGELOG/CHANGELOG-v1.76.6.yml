@@ -1,0 +1,38 @@
+cloud-provider-vsphere:
+  fixes:
+    - summary: >-
+        fix missing default StorageClass annotation when a DatastoreCluster entry sorts before all Datastore
+        entries
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21457
+common:
+  fixes:
+    - summary: Fix curl in debug-container by shipping a static binary
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21523
+deckhouse:
+  fixes:
+    - summary: atomically install modules and re-download incomplete versions
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21466
+    - summary: Restore admin access to list moduleconfigs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21531
+    - summary: Fix hugo CVE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21547
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Fix maintenance state tracking — module no longer gets stuck in Unmanaged after removing maintenance.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21428
+docs:
+  fixes:
+    - summary: >-
+        Added a note about the termination of support for Ubuntu 20.04 and replace the link to the Docker
+        container registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21472
+documentation:
+  fixes:
+    - summary: Bump Hugo version to 0.163.3
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21540
+metallb:
+  fixes:
+    - summary: Bump Go dependencies in the metallb and l2lb images to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21549
+      impact: The metallb components (controller, speaker, l2lb) will restart after the update.
