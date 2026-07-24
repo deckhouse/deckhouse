@@ -3,7 +3,7 @@ module cloud-provider-dvp-validation-webhook
 go 1.25.8
 
 require (
-	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/cloud-provider 9ba19d822bb3
 	github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.36.1

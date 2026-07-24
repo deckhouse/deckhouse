@@ -3,7 +3,7 @@ module dhctl-provider-dvp
 go 1.25.8
 
 require (
-	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/cloud-provider 9ba19d822bb3
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg v0.0.0-00010101000000-000000000000
 )
