@@ -19,6 +19,18 @@ spec:
           containers:
           - image: nginx
             name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
     securityPolicyException:
       document:
         apiVersion: deckhouse.io/v1alpha1
@@ -388,3 +400,29 @@ spec:
               name: sidecar
               securityContext:
                 procMount: Default
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: controller-allowed-allowed-proc-mount
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.procMount
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-allowed-proc-mount
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    procMount: Default
+      exception: ''
+      exceptionRef: ''

@@ -16,84 +16,128 @@ spec:
           namespace: testns
         spec:
           containers:
-            - image: nginx
-              name: nginx
+          - image: nginx
+            name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
-    - name: operation-policy
-      gatorBlock: operation-policy
-      defaultObjectBase: ""
-      template: ../../templates/operation/required-probes.yaml
-      constraint: constraints/policy_1.yaml
-      cases:
-        - name: example-allowed
-          violations: "no"
-          assertionMessage: ""
-          fields: []
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: allowed
-                namespace: default
+  - name: operation-policy
+    gatorBlock: operation-policy
+    defaultObjectBase: ''
+    template: ../../templates/operation/required-probes.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: example-allowed
+      violations: 'no'
+      assertionMessage: ''
+      fields: []
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed
+            namespace: default
+          spec:
+            containers:
+            - name: foo
+              image: my.repo/app:latest
+              readinessProbe:
+                tcpSocket:
+                  port: 8080
+                initialDelaySeconds: 5
+                periodSeconds: 10
+              livenessProbe:
+                tcpSocket:
+                  port: 8080
+                initialDelaySeconds: 15
+                periodSeconds: 20
+    - name: example-disallowed
+      violations: 'yes'
+      assertionMessage: ''
+      fields: []
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed
+            namespace: default
+          spec:
+            containers:
+            - name: foo
+              image: gcr.io/app:latest
+              livenessProbe:
+                tcpSocket:
+                  port: 8080
+                initialDelaySeconds: 15
+                periodSeconds: 20
+    - name: example-disallowed-2
+      violations: 'yes'
+      assertionMessage: ''
+      fields: []
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed
+            namespace: default
+          spec:
+            containers:
+            - name: foo
+              image: gcr.io/app:latest
+              readinessProbe:
+                tcpSocket:
+                  port: 8080
+                initialDelaySeconds: 5
+                periodSeconds: 10
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: controller-allowed-required-probes
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].readinessProbe
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-required-probes
+          spec:
+            template:
               spec:
                 containers:
-                  - name: foo
-                    image: my.repo/app:latest
-                    readinessProbe:
-                      tcpSocket:
-                        port: 8080
-                      initialDelaySeconds: 5
-                      periodSeconds: 10
-                    livenessProbe:
-                      tcpSocket:
-                        port: 8080
-                      initialDelaySeconds: 15
-                      periodSeconds: 20
-        - name: example-disallowed
-          violations: "yes"
-          assertionMessage: ""
-          fields: []
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: disallowed
-                namespace: default
-              spec:
-                containers:
-                  - name: foo
-                    image: gcr.io/app:latest
-                    livenessProbe:
-                      tcpSocket:
-                        port: 8080
-                      initialDelaySeconds: 15
-                      periodSeconds: 20
-        - name: example-disallowed-2
-          violations: "yes"
-          assertionMessage: ""
-          fields: []
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: disallowed
-                namespace: default
-              spec:
-                containers:
-                  - name: foo
-                    image: gcr.io/app:latest
-                    readinessProbe:
-                      tcpSocket:
-                        port: 8080
-                      initialDelaySeconds: 5
-                      periodSeconds: 10
+                - image: nginx
+                  name: nginx
+                  readinessProbe:
+                    httpGet:
+                      path: /
+                      port: 80
+                  livenessProbe:
+                    httpGet:
+                      path: /
+                      port: 80
+      exception: ''
+      exceptionRef: ''

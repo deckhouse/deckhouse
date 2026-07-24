@@ -18,76 +18,89 @@ spec:
         kind: D8ContainerDuplicates
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          container := input_containers_envs[_]
-          cdata := container.envs[_]
-          count(cdata) > 1
-          msg := sprintf("Container <%v> in pod <%v> has duplicated env variable names: '%v'", [container.name, input.review.object.metadata.name, cdata[0]])
-        }
+              import data.lib.common.pod_spec
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          cdata := input_containers[_]
-          count(cdata) > 1
-          msg := sprintf("Pod <%v> has duplicated container names: '%v'", [input.review.object.metadata.name, cdata[0]])
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                container := input_containers_envs[_]
+                cdata := container.envs[_]
+                count(cdata) > 1
+                msg := sprintf("Container <%v> in pod <%v> has duplicated env variable names: '%v'", [container.name, input.review.object.metadata.name, cdata[0]])
+              }
 
-        container_names := {name: list |
-          some i
-          name := input.review.object.spec.containers[i].name
-          list := [obj |
-            some j
-            input.review.object.spec.containers[j].name == name
-            obj := name
-          ]
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                cdata := input_containers[_]
+                count(cdata) > 1
+                msg := sprintf("Pod <%v> has duplicated container names: '%v'", [input.review.object.metadata.name, cdata[0]])
+              }
 
-        init_container_names := {name: list |
-          some i
-          name := input.review.object.spec.initContainers[i].name
-          list := [obj |
-            some j
-            input.review.object.spec.initContainers[j].name == name
-            obj := name
-          ]
-        }
+              container_names := {name: list |
+                some i
+                containers := object.get(pod_spec, "containers", [])
+                name := containers[i].name
+                list := [obj |
+                  some j
+                  containers[j].name == name
+                  obj := name
+                ]
+              }
 
-        container_envs := [container |
-          some i
-          container_name := input.review.object.spec.containers[i].name
-          envs := {name: list |
-            name := input.review.object.spec.containers[i].env[_].name
-            list := [obj |
-              input.review.object.spec.containers[i].env[_].name == name
-              obj := name
-            ]
-          }
-          container := {"name":container_name, "envs": envs}
-        ]
+              init_container_names := {name: list |
+                some i
+                init_containers := object.get(pod_spec, "initContainers", [])
+                name := init_containers[i].name
+                list := [obj |
+                  some j
+                  init_containers[j].name == name
+                  obj := name
+                ]
+              }
 
-        init_container_envs := [container |
-          some i
-          container_name := input.review.object.spec.initContainers[i].name
-          envs := {name: list |
-            name := input.review.object.spec.initContainers[i].env[_].name
-            list := [obj |
-              input.review.object.spec.initContainers[i].env[_].name == name
-              obj := name
-            ]
-          }
-          container := {"name":container_name, "envs": envs}
-        ]
+              container_envs := [container |
+                some i
+                containers := object.get(pod_spec, "containers", [])
+                container_name := containers[i].name
+                envs := {name: list |
+                  name := containers[i].env[_].name
+                  list := [obj |
+                    containers[i].env[_].name == name
+                    obj := name
+                  ]
+                }
+                container := {"name": container_name, "envs": envs}
+              ]
 
-        input_containers[c] {
-          c := container_names[_]
-        }
+              init_container_envs := [container |
+                some i
+                init_containers := object.get(pod_spec, "initContainers", [])
+                container_name := init_containers[i].name
+                envs := {name: list |
+                  name := init_containers[i].env[_].name
+                  list := [obj |
+                    init_containers[i].env[_].name == name
+                    obj := name
+                  ]
+                }
+                container := {"name": container_name, "envs": envs}
+              ]
 
-        input_containers[c] {
-          c := init_container_names[_]
-        }
+              input_containers contains c if {
+                c := container_names[_]
+              }
 
-        input_containers_envs := array.concat(container_envs, init_container_envs)
+              input_containers contains c if {
+                c := init_container_names[_]
+              }
+
+              input_containers_envs := array.concat(container_envs, init_container_envs)

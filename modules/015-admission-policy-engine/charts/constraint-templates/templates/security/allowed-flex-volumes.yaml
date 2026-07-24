@@ -57,6 +57,7 @@ spec:
 
               import data.lib.check_set.check_value_in_set_with_wildcards
               import data.lib.common.has_field
+              import data.lib.common.pod_spec
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
@@ -68,6 +69,6 @@ spec:
               }
 
               input_flexvolumes contains v if {
-                v := input.review.object.spec.volumes[_]
+                v := pod_spec.volumes[_]
                 has_field(v, "flexVolume")
               }

@@ -25,16 +25,25 @@ spec:
                 type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          priorityClass := input.review.object.spec.priorityClassName
-          not contains(input.parameters.priorityClassNames, priorityClass)
-          msg := sprintf("Pod <%v> has invalid priority class: %v, allowed: %v", [input.review.object.metadata.name, priorityClass, input.parameters.priorityClassNames])
-        }
+              import data.lib.common.pod_spec
 
-        contains(list, elem) {
-          list[_] = elem
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                priority_class := object.get(pod_spec, "priorityClassName", "")
+                not list_contains(input.parameters.priorityClassNames, priority_class)
+                msg := sprintf("Pod <%v> has invalid priority class: %v, allowed: %v", [input.review.object.metadata.name, priority_class, input.parameters.priorityClassNames])
+              }
+
+              list_contains(list, elem) if {
+                list[_] == elem
+              }

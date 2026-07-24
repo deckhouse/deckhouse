@@ -16,57 +16,94 @@ spec:
           namespace: testns
         spec:
           containers:
-            - image: nginx
-              name: nginx
+          - image: nginx
+            name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
-    - name: d8priorityclass
-      gatorBlock: d8priorityclass
-      defaultObjectBase: ""
-      template: ../../templates/operation/priority-class.yaml
-      constraint: constraints/policy_1.yaml
-      cases:
-        - name: example-allowed
-          violations: "no"
-          assertionMessage: ""
-          fields:
-            - path: spec.priorityClassName
-              scenario: positive
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: ""
-            merge:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: allowed
-                namespace: default
+  - name: d8priorityclass
+    gatorBlock: d8priorityclass
+    defaultObjectBase: ''
+    template: ../../templates/operation/priority-class.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: example-allowed
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.priorityClassName
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: ''
+        merge:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: allowed
+            namespace: default
+          spec:
+            priorityClassName: foo
+            containers:
+            - name: nginx
+              image: nginx
+    - name: example-disallowed
+      violations: 'yes'
+      assertionMessage: 'Pod <disallowed> has invalid priority class: bar'
+      fields:
+      - path: spec.priorityClassName
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: ''
+        merge:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: disallowed
+            namespace: default
+          spec:
+            priorityClassName: bar
+            containers:
+            - name: nginx
+              image: nginx
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: controller-allowed-priority-class
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.priorityClassName
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-priority-class
+          spec:
+            template:
               spec:
+                containers:
+                - image: nginx
+                  name: nginx
                 priorityClassName: foo
-                containers:
-                  - name: nginx
-                    image: nginx
-        - name: example-disallowed
-          violations: "yes"
-          assertionMessage: 'Pod <disallowed> has invalid priority class: bar'
-          fields:
-            - path: spec.priorityClassName
-              scenario: negative
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: ""
-            merge:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: disallowed
-                namespace: default
-              spec:
-                priorityClassName: bar
-                containers:
-                  - name: nginx
-                    image: nginx
+      exception: ''
+      exceptionRef: ''

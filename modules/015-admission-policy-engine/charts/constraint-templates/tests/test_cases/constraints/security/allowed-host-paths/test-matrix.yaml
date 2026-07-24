@@ -19,6 +19,18 @@ spec:
           containers:
           - image: nginx
             name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
     securityPolicyException:
       document:
         apiVersion: deckhouse.io/v1alpha1
@@ -667,3 +679,30 @@ spec:
             - hostPath:
                 path: /proc
               name: proc-volume
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: controller-allowed-allowed-host-paths
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.volumes[].hostPath.path
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-allowed-host-paths
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                volumes:
+                - name: test
+                  emptyDir: {}
+      exception: ''
+      exceptionRef: ''

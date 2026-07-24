@@ -19,6 +19,18 @@ spec:
           containers:
           - image: nginx
             name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
     securityPolicyException:
       document:
         apiVersion: deckhouse.io/v1alpha1
@@ -606,3 +618,30 @@ spec:
               securityContext:
                 seLinuxOptions:
                   type: spc_t
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: controller-allowed-allowed-selinux
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.seLinuxOptions
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-allowed-selinux
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    seLinuxOptions:
+                      type: container_t
+      exception: ''
+      exceptionRef: ''
