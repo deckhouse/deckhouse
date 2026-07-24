@@ -28,9 +28,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
+
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 )
 
 // clusterInputs is everything outside the NodeGroup that a rendered NodeConfig
@@ -51,6 +54,12 @@ type clusterInputs struct {
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
 	RegistryPackagesProxyToken string
+	// NodeExtensionRequests are the operator's requests to merge extra system
+	// extensions onto the nodes they select.
+	NodeExtensionRequests []deckhousev1alpha1.NodeExtensionRequest
+	// KernelVersion fills the reserved ${KERNEL_VERSION} placeholder in a
+	// request's image template.
+	KernelVersion string
 }
 
 // sourceReader reads cluster state. It falls back to the cached client when no
@@ -98,7 +107,29 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	}
 	in.RegistryPackagesProxyToken = token
 
+	in.KernelVersion = defaultKernelVersion
+
+	ners, err := s.readNodeExtensionRequests(ctx)
+	if err != nil {
+		return in, err
+	}
+	in.NodeExtensionRequests = ners
+
 	return in, nil
+}
+
+// readNodeExtensionRequests lists the extension requests. They are additive, so
+// an absent CRD or an empty list is tolerated: the node simply gets the base
+// system extensions.
+func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhousev1alpha1.NodeExtensionRequest, error) {
+	list := &deckhousev1alpha1.NodeExtensionRequestList{}
+	if err := s.reader().List(ctx, list); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("list node extension requests: %w", err)
+	}
+	return list.Items, nil
 }
 
 // readClusterCA returns the cluster CA, base64-encoded the way the NodeConfig

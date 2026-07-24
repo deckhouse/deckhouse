@@ -31,13 +31,18 @@ import (
 // state into the desired state of one node. The node-local agent reconciles
 // towards this spec and reports back through the object's status.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
+	extraExtensions, extraModules := nodeExtensions(in.NodeExtensionRequests, node, ng.Name, in.SysextDigests, in.KernelVersion)
+
+	kernel := renderKernel()
+	kernel.Modules = mergeModules(kernel.Modules, extraModules)
+
 	spec := internalv1alpha1.NodeSpec{
 		NodeName:                            node.Name,
 		OSImage:                             defaultOSImage,
 		APIServerEndpoints:                  in.APIServerEndpoints,
-		Extensions:                          renderExtensions(in.SysextDigests),
+		Extensions:                          mergeExtensions(renderExtensions(in.SysextDigests), extraExtensions),
 		Storage:                             renderStorage(),
-		Kernel:                              renderKernel(),
+		Kernel:                              kernel,
 		Network:                             renderNetwork(node),
 		Kubelet:                             renderKubelet(ng, node, in),
 		ContainerRuntime:                    renderContainerRuntime(ng),

@@ -38,6 +38,7 @@ const (
 
 	NodeConfigCRDFile                  NodeManagerCRDFile = "nodeconfig.yaml"
 	NodeOperationCRDFile               NodeManagerCRDFile = "nodeoperation.yaml"
+	NodeExtensionRequestCRDFile        NodeManagerCRDFile = "nodeextensionrequest.yaml"
 	NodeBootstrapConfigCRDFile         NodeManagerCRDFile = "nodebootstrapconfig.yaml"
 	NodeBootstrapConfigTemplateCRDFile NodeManagerCRDFile = "nodebootstrapconfigtemplate.yaml"
 )
@@ -127,6 +128,10 @@ func WithNodeConfigCRDFile() crdOpt {
 
 func WithNodeOperationCRDFile() crdOpt {
 	return WithNodeManager(NodeOperationCRDFile)
+}
+
+func WithNodeExtensionRequestCRDFile() crdOpt {
+	return WithNodeManager(NodeExtensionRequestCRDFile)
 }
 
 func WithNodeBootstrapConfigCRDFile() crdOpt {

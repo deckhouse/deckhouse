@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
@@ -74,6 +75,10 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// A node reporting the spec it was given frees its rollout slot, which is
 	// what lets the next node of the group be updated.
 	w.Watches(&internalv1alpha1.NodeConfig{}, allMapper)
+	// A NodeExtensionRequest change alters which extensions a node merges, so it
+	// re-renders every node — the broad mapper is enough until per-request
+	// selection is tracked.
+	w.Watches(&deckhousev1alpha1.NodeExtensionRequest{}, allMapper)
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

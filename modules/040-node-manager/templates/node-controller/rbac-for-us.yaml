@@ -374,6 +374,30 @@ rules:
   - get
   - patch
   - update
+# NodeExtensionRequests - the operator's requests to merge extra system
+# extensions onto matching nodes. node-controller reads them to render the
+# per-node extension set and reports the resolved image and matched groups back
+# through their status.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeextensionrequests
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeextensionrequests/status
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
 - apiGroups:
   - internal.deckhouse.io
   resources:

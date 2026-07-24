@@ -77,6 +77,7 @@ var _ = BeforeSuite(func() {
 			testenv.WithNodeGroupCRDFile(),
 			testenv.WithNodeConfigCRDFile(),
 			testenv.WithNodeOperationCRDFile(),
+			testenv.WithNodeExtensionRequestCRDFile(),
 		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())
