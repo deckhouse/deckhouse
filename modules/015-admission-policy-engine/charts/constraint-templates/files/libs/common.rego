@@ -5,24 +5,88 @@
 # =============================================================================
 package lib.common
 
+# Supported kinds for pod-spec extraction.
+workload_kind(kind) if {
+  kind == "Pod"
+}
+
+workload_kind(kind) if {
+  kind == "Deployment"
+}
+
+workload_kind(kind) if {
+  kind == "StatefulSet"
+}
+
+workload_kind(kind) if {
+  kind == "DaemonSet"
+}
+
+workload_kind(kind) if {
+  kind == "ReplicaSet"
+}
+
+workload_kind(kind) if {
+  kind == "ReplicationController"
+}
+
+workload_kind(kind) if {
+  kind == "Job"
+}
+
+workload_kind(kind) if {
+  kind == "CronJob"
+}
+
+# Normalize PodSpec location across pod-creating workloads.
+# - Pod: spec
+# - Deployment/StatefulSet/DaemonSet/ReplicaSet/ReplicationController/Job: spec.template.spec
+# - CronJob: spec.jobTemplate.spec.template.spec
+pod_spec := out if {
+  obj := object.get(input.review, "object", {})
+  kind := object.get(obj, "kind", "")
+  workload_kind(kind)
+  out := pod_spec_for_kind(obj, kind)
+}
+
+pod_spec := {} if {
+  obj := object.get(input.review, "object", {})
+  kind := object.get(obj, "kind", "")
+  not workload_kind(kind)
+}
+
+pod_spec_for_kind(obj, "Pod") := out if {
+  out := object.get(obj, "spec", {})
+}
+
+pod_spec_for_kind(obj, "CronJob") := out if {
+  out := object.get(obj, ["spec", "jobTemplate", "spec", "template", "spec"], {})
+}
+
+pod_spec_for_kind(obj, kind) := out if {
+  kind != "Pod"
+  kind != "CronJob"
+  out := object.get(obj, ["spec", "template", "spec"], {})
+}
+
 # Backwards-compatible container iterator (uses input.review)
 input_containers contains c if {
-  c := input.review.object.spec.containers[_]
+  c := pod_spec.containers[_]
 }
 
 input_containers contains c if {
-  c := input.review.object.spec.initContainers[_]
+  c := pod_spec.initContainers[_]
 }
 
 input_containers contains c if {
-  c := input.review.object.spec.ephemeralContainers[_]
+  c := pod_spec.ephemeralContainers[_]
 }
 
-# Parameterized container iterator (uses passed object)
-input_containers_from(obj) := containers if {
-  base := object.get(obj, ["spec", "containers"], [])
-  init := object.get(obj, ["spec", "initContainers"], [])
-  eph := object.get(obj, ["spec", "ephemeralContainers"], [])
+# Parameterized container iterator (expects a pod spec)
+input_containers_from(spec) := containers if {
+  base := object.get(spec, "containers", [])
+  init := object.get(spec, "initContainers", [])
+  eph := object.get(spec, "ephemeralContainers", [])
   containers := array.concat(array.concat(base, init), eph)
 }
 

@@ -19,6 +19,18 @@ spec:
           containers:
             - image: nginx:latest
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
     - name: security-policy
@@ -109,3 +121,29 @@ spec:
                     image: nginx:latest
                     name: nginx
                     stdin: true
+    - name: pss-controller-deployment
+      gatorBlock: pss-controller-deployment
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        name: controller-disallowed-interactive-exec
+        violations: "yes"
+        assertionMessage: ''
+        fields:
+        - path: spec.template.spec.containers[].stdin
+          scenario: negative
+        object:
+          base: admissionDeployment
+          merge:
+            metadata:
+              name: controller-disallowed-interactive-exec
+            spec:
+              template:
+                spec:
+                  containers:
+                  - image: nginx
+                    name: nginx
+                    stdin: true
+          exception: ""
+          exceptionRef: ""

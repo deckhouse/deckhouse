@@ -18,6 +18,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
     - name: operation-policy
@@ -97,3 +109,28 @@ spec:
                         port: 8080
                       initialDelaySeconds: 5
                       periodSeconds: 10
+    - name: op-controller-deployment
+      gatorBlock: op-controller-deployment
+      defaultObjectBase: ""
+      template: ../../templates/operation/required-probes.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        name: controller-disallowed-missing-probes
+        violations: "yes"
+        assertionMessage: ''
+        fields:
+        - path: spec.template.spec.containers[].livenessProbe
+          scenario: negative
+        object:
+          base: admissionDeployment
+          merge:
+            metadata:
+              name: controller-disallowed-missing-probes
+            spec:
+              template:
+                spec:
+                  containers:
+                  - name: nginx
+                    image: nginx
+          exception: ""
+          exceptionRef: ""

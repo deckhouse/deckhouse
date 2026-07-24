@@ -71,6 +71,7 @@ spec:
               import data.lib.check_range.check_ports_with_protocol_in_ranges
               import data.lib.message.violation_message
               import data.lib.common.input_containers
+              import data.lib.common.pod_spec
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.path_value_resolved
               import data.lib.exception.resolve_spe_from_labels
@@ -83,8 +84,8 @@ spec:
                 namespace := object.get(obj.metadata, "namespace", "")
                 spe := resolve_spe_from_labels(labels, namespace)
                 bool_result := host_network_result(obj, allow_host_network, spe)
-                host_network := object.get(obj.spec, "hostNetwork", false)
-                ports := collect_ports(obj, host_network)
+                host_network := object.get(pod_spec, "hostNetwork", false)
+                ports := collect_ports(host_network)
                 spe_ports_path := ["spec", "network", "hostPorts"]
                 spe_ports_applied := path_value_resolved(spe, spe_ports_path)
                 spe_ports := allowed_values_or_empty(spe, spe_ports_path)
@@ -97,7 +98,7 @@ spec:
               host_network_result(obj, allow_host_network, spe) := result if {
                 spe_path := ["spec", "network", "hostNetwork", "allowedValue"]
                 path_value_resolved(spe, spe_path)
-                actual := object.get(obj.spec, "hostNetwork", false)
+                actual := object.get(pod_spec, "hostNetwork", false)
                 spe_allowed := object.get(spe, spe_path, false)
                 actual == spe_allowed
                 result := {"allowed": true, "msg": "", "detail": {}}
@@ -106,7 +107,7 @@ spec:
               host_network_result(obj, allow_host_network, spe) := result if {
                 spe_path := ["spec", "network", "hostNetwork", "allowedValue"]
                 path_value_resolved(spe, spe_path)
-                actual := object.get(obj.spec, "hostNetwork", false)
+                actual := object.get(pod_spec, "hostNetwork", false)
                 spe_allowed := object.get(spe, spe_path, false)
                 actual != spe_allowed
                 result := {
@@ -128,14 +129,25 @@ spec:
 
               host_network_result(obj, false, spe) := result if {
                 not path_value_resolved(spe, ["spec", "network", "hostNetwork", "allowedValue"])
-                result := check_pod_bool(
-                  obj,
-                  ["spec", "hostNetwork"],
-                  "hostNetwork",
-                  false,
-                  false,
-                  ["spec", "network", "hostNetwork", "allowedValue"]
-                )
+                actual := object.get(pod_spec, "hostNetwork", false)
+                actual == false
+                result := {"allowed": true, "msg": "", "detail": {}}
+              }
+
+              host_network_result(_, false, spe) := result if {
+                not path_value_resolved(spe, ["spec", "network", "hostNetwork", "allowedValue"])
+                actual := object.get(pod_spec, "hostNetwork", false)
+                actual != false
+                result := {
+                  "allowed": false,
+                  "msg": "",
+                  "detail": {
+                    "field": "hostNetwork",
+                    "actual": actual,
+                    "policy_allowed": false,
+                    "spe_applied": false,
+                  },
+                }
               }
 
               failed_result(bool_result, _) := bool_result if {
@@ -147,7 +159,7 @@ spec:
                 not range_result.allowed
               }
 
-              collect_ports(_, host_network) := ports if {
+              collect_ports(host_network) := ports if {
                 host_ports := [
                   {"port": p.hostPort, "protocol": object.get(p, "protocol", "TCP")} |
                   p := input_containers[_].ports[_]
@@ -162,7 +174,7 @@ spec:
                 ports := array.concat(host_ports, container_ports)
               }
 
-              collect_ports(_, host_network) := ports if {
+              collect_ports(host_network) := ports if {
                 host_ports := [
                   {"port": p.hostPort, "protocol": object.get(p, "protocol", "TCP")} |
                   p := input_containers[_].ports[_]
