@@ -71,6 +71,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     labelSelector:
       matchExpressions:
         - key: security.deckhouse.io/skip-pss-check
@@ -132,6 +138,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     labelSelector:
       matchExpressions:
         - key: security.deckhouse.io/skip-pss-check

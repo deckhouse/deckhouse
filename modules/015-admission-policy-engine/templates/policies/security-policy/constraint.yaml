@@ -94,6 +94,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
@@ -113,6 +119,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
@@ -132,6 +144,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -154,6 +172,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -179,6 +203,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
@@ -198,6 +228,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
@@ -239,6 +275,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -261,6 +303,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -283,6 +331,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+      - apiGroups: [""]
+        kinds: [ReplicationController]
+      - apiGroups: [batch]
+        kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -305,6 +359,12 @@ spec:
     kinds:
     - apiGroups: [""]
       kinds: ["Pod"]
+    - apiGroups: [apps]
+      kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+    - apiGroups: [""]
+      kinds: [ReplicationController]
+    - apiGroups: [batch]
+      kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -333,6 +393,12 @@ spec:
     kinds:
     - apiGroups: [""]
       kinds: ["Pod"]
+    - apiGroups: [apps]
+      kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+    - apiGroups: [""]
+      kinds: [ReplicationController]
+    - apiGroups: [batch]
+      kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -357,6 +423,12 @@ spec:
     kinds:
     - apiGroups: [""]
       kinds: ["Pod"]
+    - apiGroups: [apps]
+      kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+    - apiGroups: [""]
+      kinds: [ReplicationController]
+    - apiGroups: [batch]
+      kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -381,6 +453,12 @@ spec:
     kinds:
     - apiGroups: [""]
       kinds: ["Pod"]
+    - apiGroups: [apps]
+      kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+    - apiGroups: [""]
+      kinds: [ReplicationController]
+    - apiGroups: [batch]
+      kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -417,6 +495,12 @@ spec:
     kinds:
     - apiGroups: [""]
       kinds: ["Pod"]
+    - apiGroups: [apps]
+      kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+    - apiGroups: [""]
+      kinds: [ReplicationController]
+    - apiGroups: [batch]
+      kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -439,6 +523,12 @@ spec:
     kinds:
     - apiGroups: [""]
       kinds: ["Pod"]
+    - apiGroups: [apps]
+      kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+    - apiGroups: [""]
+      kinds: [ReplicationController]
+    - apiGroups: [batch]
+      kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -467,6 +557,12 @@ spec:
     kinds:
     - apiGroups: [""]
       kinds: ["Pod"]
+    - apiGroups: [apps]
+      kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+    - apiGroups: [""]
+      kinds: [ReplicationController]
+    - apiGroups: [batch]
+      kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -495,6 +591,12 @@ spec:
     kinds:
     - apiGroups: [""]
       kinds: ["Pod"]
+    - apiGroups: [apps]
+      kinds: [Deployment, StatefulSet, DaemonSet, ReplicaSet]
+    - apiGroups: [""]
+      kinds: [ReplicationController]
+    - apiGroups: [batch]
+      kinds: [Job, CronJob]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
