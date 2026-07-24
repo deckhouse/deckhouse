@@ -167,7 +167,7 @@ data:
   # on specific or all nodes, use CiliumNodeConfig (see docs/EXAMPLES.md).
   # Enabled with cilium-hubble; otherwise off (override via CiliumNodeConfig).
   {{- if not (has "cilium-hubble" .Values.global.enabledModules) }}
-bpf-events-trace-enabled: "false"
+  bpf-events-trace-enabled: "false"
   {{- end }}
 
   # Local hubble sever section
