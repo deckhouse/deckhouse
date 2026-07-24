@@ -29,7 +29,7 @@ import (
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -119,7 +119,15 @@ func WaitForNodeControllerDeploymentDeletion(ctx context.Context, kubeCl *client
 
 func DeleteClusters(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Clusters", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
-		clusters, err := kubeCl.Dynamic().Resource(capi.ClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
+		capiGVRs, err := capi.Resolve(kubeCl.Discovery())
+		if err != nil {
+			if isCAPIClusterUnsupportedErr(err) {
+				return nil
+			}
+			return err
+		}
+
+		clusters, err := kubeCl.Dynamic().Resource(capiGVRs.ClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			if isCAPIClusterUnsupportedErr(err) {
 				return nil
@@ -128,7 +136,7 @@ func DeleteClusters(ctx context.Context, kubeCl *client.KubernetesClient) error 
 		}
 
 		for _, cluster := range clusters.Items {
-			err := kubeCl.Dynamic().Resource(capi.ClusterGVR).Namespace(cluster.GetNamespace()).Delete(ctx, cluster.GetName(), metav1.DeleteOptions{})
+			err := kubeCl.Dynamic().Resource(capiGVRs.ClusterGVR).Namespace(cluster.GetNamespace()).Delete(ctx, cluster.GetName(), metav1.DeleteOptions{})
 			if err != nil && !errors.IsNotFound(err) {
 				return err
 			}
@@ -328,7 +336,16 @@ func WaitForDeckhouseDeploymentDeletion(ctx context.Context, kubeCl *client.Kube
 
 func WaitForClustersDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Wait for Clusters deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
-		resources, err := kubeCl.Dynamic().Resource(capi.ClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
+		capiGVRs, err := capi.Resolve(kubeCl.Discovery())
+		if err != nil {
+			if isCAPIClusterUnsupportedErr(err) {
+				dhlog.FromContext(ctx).InfoContext(ctx, "All Clusters are deleted from the cluster")
+				return nil
+			}
+			return err
+		}
+
+		resources, err := kubeCl.Dynamic().Resource(capiGVRs.ClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			if isCAPIClusterUnsupportedErr(err) {
 				dhlog.FromContext(ctx).InfoContext(ctx, "All Clusters are deleted from the cluster")
@@ -565,7 +582,7 @@ func DeleteMachinesIfResourcesExist(ctx context.Context, kubeCl *client.Kubernet
 			return checkCAPIMachinesAPI(kubeCl)
 		})
 	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't get resources in group=cluster.x-k8s.io, version=v1beta1: %v", err))
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't get resources in group=cluster.x-k8s.io, version=v1beta2: %v", err))
 		if input.NewConfirmation().
 			WithMessage("Machines weren't deleted from the cluster. Do you want to continue?").
 			WithYesByDefault().
@@ -584,12 +601,18 @@ func DeleteMachinesIfResourcesExist(ctx context.Context, kubeCl *client.Kubernet
 }
 
 func checkCAPIMachinesAPI(kubeCl *client.KubernetesClient) error {
-	return checkMachinesAPI(kubeCl, capi.GV)
+	_, err := capi.Resolve(kubeCl.Discovery())
+	return err
 }
 
 func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete CAPI MachineDeployments", 45, 5*time.Second).RunContext(ctx, func() error {
-		allMachines, err := kubeCl.Dynamic().Resource(capi.MachineGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+		capiGVRs, err := capi.Resolve(kubeCl.Discovery())
+		if err != nil {
+			return fmt.Errorf("resolve CAPI version: %v", err)
+		}
+
+		allMachines, err := kubeCl.Dynamic().Resource(capiGVRs.MachineGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machines: %v", err)
 		}
@@ -598,11 +621,11 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Patch nodeDrainTimeout for machine %s", machine.GetName()))
 			m := machine
 			// we delete cluster anyway and we can force delete machine (without drain)
-			if err = unstructured.SetNestedField(m.Object, "10s", "spec", "nodeDrainTimeout"); err != nil {
+			if err = capiGVRs.SetForceDeleteDrainTimeout(m.Object); err != nil {
 				return err
 			}
 
-			_, err = kubeCl.Dynamic().Resource(capi.MachineGVR).Namespace(machine.GetNamespace()).Update(ctx, &m, metav1.UpdateOptions{})
+			_, err = kubeCl.Dynamic().Resource(capiGVRs.MachineGVR).Namespace(machine.GetNamespace()).Update(ctx, &m, metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
 			}
@@ -610,7 +633,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Machine %s patched", machine.GetName()))
 		}
 
-		allMachineDeployments, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+		allMachineDeployments, err := kubeCl.Dynamic().Resource(capiGVRs.MachineDeploymentGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machinedeployments: %v", err)
 		}
@@ -622,7 +645,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 				dhlog.FromContext(ctx).InfoContext(ctx, "Machine deployment 'master' was skipped. It will be deleted later.")
 				continue
 			}
-			err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+			err := kubeCl.Dynamic().Resource(capiGVRs.MachineDeploymentGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("Delete CAPI machinedeployments %s: %v", name, err)
 			}
@@ -634,7 +657,12 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 
 func WaitForCAPIMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Wait for CAPI Machines deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
-		resources, err := kubeCl.Dynamic().Resource(capi.MachineGVR).List(ctx, metav1.ListOptions{})
+		capiGVRs, err := capi.Resolve(kubeCl.Discovery())
+		if err != nil {
+			return err
+		}
+
+		resources, err := kubeCl.Dynamic().Resource(capiGVRs.MachineGVR).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
 		}

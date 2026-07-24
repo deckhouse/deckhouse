@@ -1447,7 +1447,7 @@ alerts:
            max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
            ```
 
-        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
+        1. Use the [automatic Istio data plane upgrade](https://deckhouse.io/modules/istio/examples.html#auto-upgrading-istio-data-plane).
       summary: |
         There are pods with data plane version different from the control plane version.
       severity: "8"
@@ -2611,25 +2611,6 @@ alerts:
       description: ""
       summary: |
         Okmeter agent is not Ready.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8OldPrometheusTargetFormat
-      sourceFile: ee/fe/modules/340-monitoring-applications/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-applications
-      module: monitoring-applications
-      edition: fe
-      description: |-
-        Deckhouse has detected that services with the `prometheus-target` label are being used to collect metrics in the cluster.
-
-        The label format has been changed. To resolve the issue, replace the `prometheus-target` label with `prometheus.deckhouse.io/target`.
-
-        To list all services labeled with `prometheus-target`, run the following command:
-
-        ```bash
-        d8 k get service --all-namespaces --show-labels | grep prometheus-target
-        ```
-      summary: |
-        Services with the prometheus-target label are being used for metric collection.
       severity: "6"
       markupFormat: markdown
     - name: D8ProblematicFeatureGateInUse
@@ -4492,11 +4473,11 @@ modules-having-alerts:
     - cni-cilium
     - control-plane-manager
     - deckhouse
+    - descheduler
     - documentation
     - istio
     - kube-dns
     - metallb
-    - monitoring-applications
     - multitenancy-manager
     - node-local-dns
     - node-manager

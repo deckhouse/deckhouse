@@ -67,6 +67,12 @@ type GlobalOptions struct {
 
 	// EnsureCandiAvailable: the install tree is missing and must be downloaded.
 	EnsureCandiAvailable bool
+
+	// KubeInCluster mirrors KubeOptions.InCluster: dhctl runs inside the target
+	// cluster (auto-converger, exporter), so the in-cluster registry mirror is
+	// reachable. When false (manual dhctl over SSH, commander) the upstream
+	// registry from registry-config is used instead.
+	KubeInCluster bool
 }
 
 func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {

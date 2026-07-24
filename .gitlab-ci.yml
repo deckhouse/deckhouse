@@ -1,0 +1,21 @@
+stages:
+  - .pre
+  - validate
+  - build
+  - test
+  - deploy
+  - .post
+
+include:
+- .gitlab/**.yml
+
+default:
+  tags:
+    - k8s-intteam-cloud-d8-ssdlc-runner
+
+test: # stub job, because gitlab does not create a pipeline if it only contains a job from a hidden stage
+  stage: build
+  except:
+  - .rules:on_release_branch
+  script:
+  - exit 0

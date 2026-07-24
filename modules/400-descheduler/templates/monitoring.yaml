@@ -1,0 +1,4 @@
+{{- if len .Values.descheduler.internal.deschedulers }}
+  {{- include "helm_lib_prometheus_rules" (list . "d8-descheduler") }}
+{{- end }}
+{{- include "helm_lib_grafana_dashboard_definitions" . }}

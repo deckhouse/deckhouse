@@ -425,17 +425,15 @@ delete,deletecollection:
     - apps/replicasets
     - cert-manager.io/certificaterequests
     - extensions/replicasets
-read:
-    - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
 read-write:
     - deckhouse.io/authorizationrules
+    - deckhouse.io/moduleconfigs
 write:
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
     - deckhouse.io/deckhousereleases
-    - deckhouse.io/moduleconfigs
     - deckhouse.io/moduledocumentations
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases
@@ -465,7 +463,6 @@ read:
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
-    - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
     - install.istio.io/istiooperators
     - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
     - multitenancy.deckhouse.io/grantableclusterresourcereferences
@@ -477,6 +474,7 @@ read:
     - sailoperator.io/istios
     - sailoperator.io/ztunnels
 read-write:
+    - deckhouse.io/moduleconfigs
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - multitenancy.deckhouse.io/clusterresourcegrantpolicies
@@ -492,7 +490,6 @@ write:
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
-    - deckhouse.io/moduleconfigs
     - deckhouse.io/moduledocumentations
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases

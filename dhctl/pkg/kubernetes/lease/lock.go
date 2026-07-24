@@ -37,7 +37,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-const lockUserInfoAnnotKey = "dhctl.deckhouse.io/lock-user-info"
+const (
+	acquireErrorPrefix   = "Can't acquire lease lock."
+	lockUserInfoAnnotKey = "dhctl.deckhouse.io/lock-user-info"
+)
 
 type LeaseLockConfig struct {
 	Name      string
@@ -58,6 +61,15 @@ func (c *LeaseLockConfig) RenewRetries() int {
 	d := int64(c.LeaseDurationSeconds) - c.RenewEverySeconds
 	retries := math.Ceil(float64(d) / c.RetryWaitDuration.Seconds())
 	return int(retries)
+}
+
+// AcquireRetries returns the number of attempts required to wait for
+// one configured lease lifetime and make one additional acquisition attempt.
+func (c *LeaseLockConfig) AcquireRetries() int {
+	retries := math.Ceil(
+		float64(c.LeaseDurationSeconds) / c.RetryWaitDuration.Seconds(),
+	)
+	return int(retries) + 1
 }
 
 type LockUserInfo struct {
@@ -205,34 +217,40 @@ func (l *LeaseLock) startAutoRenew(ctx context.Context) {
 func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1.Lease, error) {
 	var lease *coordinationv1.Lease
 
-	prefix := "Can't acquire lease lock."
-	cannotRenew := func(err error) bool {
-		return strings.HasPrefix(err.Error(), prefix)
-	}
-
 	kubeClient, err := l.getter.KubeClientCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get kube client: %w", err)
 	}
 
-	acquireRetries := l.config.RenewRetries()
-	err = retry.NewSilentLoop("acquire lease", acquireRetries, l.config.RetryWaitDuration).BreakIf(cannotRenew).RunContext(ctx, func() error {
+	acquireRetries := l.config.AcquireRetries()
+
+	err = retry.NewSilentLoop(
+		"acquire lease",
+		acquireRetries,
+		l.config.RetryWaitDuration,
+	).RunContext(ctx, func() error {
 		var err error
-		lease, err = l.createLease(ctx)
+
+		lease, err = l.createLease(ctx, kubeClient)
 		if err == nil {
 			return nil
 		}
 
-		if errors.IsAlreadyExists(err) {
-			lease, err = kubeClient.CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
-			if err != nil {
-				return fmt.Errorf("%s Can't get current lease: %v", prefix, err)
-			}
+		if !errors.IsAlreadyExists(err) {
+			return err
+		}
 
-			lease, err = l.tryRenew(ctx, lease, force)
-			if err != nil {
-				return fmt.Errorf("%s \n%v", prefix, err)
-			}
+		lease, err = kubeClient.
+			CoordinationV1().
+			Leases(l.config.Namespace).
+			Get(ctx, l.config.Name, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("%s Can't get current lease: %v", acquireErrorPrefix, err)
+		}
+
+		lease, err = l.acquireExistingLease(ctx, kubeClient, lease, force)
+		if err != nil {
+			return fmt.Errorf("%s\n%v", acquireErrorPrefix, err)
 		}
 
 		return nil
@@ -241,7 +259,10 @@ func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1
 	return lease, err
 }
 
-func (l *LeaseLock) createLease(ctx context.Context) (*coordinationv1.Lease, error) {
+func (l *LeaseLock) createLease(
+	ctx context.Context,
+	kubeClient *client.KubernetesClient,
+) (*coordinationv1.Lease, error) {
 	userInfo := NewLockUserInfo(l.config.AdditionalUserInfo)
 	userInfoStr, err := json.Marshal(userInfo)
 	if err != nil {
@@ -263,12 +284,35 @@ func (l *LeaseLock) createLease(ctx context.Context) (*coordinationv1.Lease, err
 		},
 	}
 
-	kubeClient, err := l.getter.KubeClientCtx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get kube client: %w", err)
+	return kubeClient.
+		CoordinationV1().
+		Leases(l.config.Namespace).
+		Create(ctx, lease, metav1.CreateOptions{})
+}
+
+func (l *LeaseLock) acquireExistingLease(
+	ctx context.Context,
+	kubeClient *client.KubernetesClient,
+	lease *coordinationv1.Lease,
+	force bool,
+) (*coordinationv1.Lease, error) {
+	if lease == nil {
+		return nil, fmt.Errorf("lease is nil")
 	}
 
-	return kubeClient.CoordinationV1().Leases(l.config.Namespace).Create(ctx, lease, metav1.CreateOptions{})
+	if lease.Spec.HolderIdentity == nil {
+		return nil, fmt.Errorf("lease holder identity is nil")
+	}
+
+	if *lease.Spec.HolderIdentity == l.config.Identity {
+		return l.tryRenew(ctx, lease, force)
+	}
+
+	if l.isStillLocked(lease) {
+		return nil, getCurrentLockerError(lease)
+	}
+
+	return l.takeOverLease(ctx, kubeClient, lease)
 }
 
 func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, force bool) (*coordinationv1.Lease, error) {
@@ -328,14 +372,16 @@ func (l *LeaseLock) isStillLocked(lease *coordinationv1.Lease) bool {
 		return false
 	}
 
-	renewTimeMicro := lease.Spec.RenewTime
-	if renewTimeMicro == nil {
+	if lease.Spec.RenewTime == nil {
 		return true
 	}
 
-	leaseDuration := time.Duration(l.config.LeaseDurationSeconds) * time.Second
-	renewTime := renewTimeMicro.Time
-	endLeaseTime := renewTime.Add(leaseDuration)
+	if lease.Spec.LeaseDurationSeconds == nil {
+		return true
+	}
+
+	leaseDuration := time.Duration(*lease.Spec.LeaseDurationSeconds) * time.Second
+	endLeaseTime := lease.Spec.RenewTime.Time.Add(leaseDuration)
 
 	return time.Now().Before(endLeaseTime)
 }
@@ -361,16 +407,29 @@ func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {
 	}
 	userInfo := zeroUserInfo
 	if lease != nil {
-		holder = *lease.Spec.HolderIdentity
-		acquireTime = lease.Spec.AcquireTime.Time
-		lastRenew = lease.Spec.RenewTime.Time
-		leaseDurationSec = *lease.Spec.LeaseDurationSeconds
+		if lease.Spec.HolderIdentity != nil {
+			holder = *lease.Spec.HolderIdentity
+		}
 
-		infoJSON, ok := lease.Annotations[lockUserInfoAnnotKey]
-		if ok && infoJSON != "" {
-			err := json.Unmarshal([]byte(infoJSON), &userInfo)
-			if err != nil {
-				userInfo = zeroUserInfo
+		if lease.Spec.AcquireTime != nil {
+			acquireTime = lease.Spec.AcquireTime.Time
+		}
+
+		if lease.Spec.RenewTime != nil {
+			lastRenew = lease.Spec.RenewTime.Time
+		}
+
+		if lease.Spec.LeaseDurationSeconds != nil {
+			leaseDurationSec = *lease.Spec.LeaseDurationSeconds
+		}
+
+		if lease.Annotations != nil {
+			infoJSON, ok := lease.Annotations[lockUserInfoAnnotKey]
+			if ok && infoJSON != "" {
+				err := json.Unmarshal([]byte(infoJSON), &userInfo)
+				if err != nil {
+					userInfo = zeroUserInfo
+				}
 			}
 		}
 	}
@@ -418,4 +477,34 @@ func RemoveLease(ctx context.Context, kubeCl *client.KubernetesClient, config *L
 	})
 
 	return err
+}
+
+func (l *LeaseLock) takeOverLease(
+	ctx context.Context,
+	kubeClient *client.KubernetesClient,
+	lease *coordinationv1.Lease,
+) (*coordinationv1.Lease, error) {
+	userInfo := NewLockUserInfo(l.config.AdditionalUserInfo)
+	userInfoJSON, err := json.Marshal(userInfo)
+	if err != nil {
+		userInfoJSON = nil
+	}
+
+	currentTime := now()
+
+	lease.Spec.HolderIdentity = &l.config.Identity
+	lease.Spec.AcquireTime = currentTime
+	lease.Spec.RenewTime = currentTime
+	lease.Spec.LeaseDurationSeconds = &l.config.LeaseDurationSeconds
+
+	if lease.Annotations == nil {
+		lease.Annotations = make(map[string]string)
+	}
+
+	lease.Annotations[lockUserInfoAnnotKey] = string(userInfoJSON)
+
+	return kubeClient.
+		CoordinationV1().
+		Leases(l.config.Namespace).
+		Update(ctx, lease, metav1.UpdateOptions{})
 }

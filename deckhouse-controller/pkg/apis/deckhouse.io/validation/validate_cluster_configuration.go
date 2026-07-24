@@ -422,7 +422,7 @@ func validateClusterConfiguration(ctx context.Context, clusterConfiguration []by
 	_, err := config.ParseConfigFromData(
 		ctx,
 		string(clusterConfiguration),
-		config.DummyPreparatorProvider(),
+		config.DummyValidatorProvider(),
 		nil,
 		config.ValidateOptionOmitDocInError(true),
 		config.ValidateOptionStrictUnmarshal(true),

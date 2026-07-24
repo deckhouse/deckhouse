@@ -437,14 +437,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/fe/modules/340-monitoring-applications/hooks
-  to: /deckhouse/modules/340-monitoring-applications/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/fe/modules/500-basic-auth/hooks
   to: /deckhouse/modules/500-basic-auth/hooks
   excludePaths:

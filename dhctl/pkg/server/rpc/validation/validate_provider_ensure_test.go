@@ -27,127 +27,54 @@ import (
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 )
 
-const dvpSchemaYAML = `kind: DVPClusterConfiguration
+// yandexTestSchema is a self-contained YandexClusterConfiguration schema written
+// into a throwaway candi dir, so the test does not depend on the image's real
+// candi being present (it is not, on a developer machine). Its required set is
+// what an incomplete config below violates.
+const yandexTestSchema = `kind: YandexClusterConfiguration
 apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, layout]
+    required: [apiVersion, kind, layout, masterNodeGroup]
     properties:
-      apiVersion:
-        type: string
-      kind:
-        type: string
-      layout:
-        type: string
+      apiVersion: {type: string}
+      kind: {type: string}
+      layout: {type: string}
+      masterNodeGroup: {type: object}
 `
 
-// writeUnpackedDVPBundle lays out what an unpacked provider bundle looks like
-// on disk: schemas plus the validator binary marker that makes
-// providerCandiPresent treat the bundle as already delivered.
-func writeUnpackedDVPBundle(t *testing.T, dir string) {
-	t.Helper()
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "openapi"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "openapi", "cluster_configuration.yaml"), []byte(dvpSchemaYAML), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "validator"), []byte("#!/bin/sh\n"), 0o755))
-}
+func TestValidateProviderSpecificClusterConfig_InTreeProviderIsValidated(t *testing.T) {
+	// An in-tree provider (schema present in candi) is validated here, not
+	// skipped: an incomplete config surfaces schema errors via Err. Counterpart
+	// to the external skip below — proves the skip is specific to bundle-only
+	// providers, not a blanket bypass.
+	candiDir := t.TempDir()
+	schemaDir := filepath.Join(candiDir, "cloud-providers", "yandex", "openapi")
+	require.NoError(t, os.MkdirAll(schemaDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(schemaDir, "cluster_configuration.yaml"), []byte(yandexTestSchema), 0o644))
 
-func TestValidateProviderSpecificClusterConfig_ExternalProviderSchemaFromBundle(t *testing.T) {
-	downloadDir := t.TempDir()
-	bundleDir := filepath.Join(downloadDir, "dvp")
-	writeUnpackedDVPBundle(t, bundleDir)
+	globalOptions := &options.GlobalOptions{CandiDir: candiDir, ModulesDir: t.TempDir(), DownloadDir: t.TempDir()}
+	s := New(config.NewSchemaStore(globalOptions, candiDir), globalOptions)
 
-	globalOptions := &options.GlobalOptions{
-		CandiDir:    t.TempDir(),
-		ModulesDir:  t.TempDir(),
-		DownloadDir: downloadDir,
-	}
-
-	schemaStore := config.NewSchemaStore(nil)
-	require.NoError(t, schemaStore.LoadProviderDir("dvp", "sha256:test-bundle", bundleDir))
-
-	s := New(schemaStore, globalOptions)
-
-	// Commander sends only the provider-specific section here; the provider
-	// name arrives via ClusterConfig.
-	providerSection := `
-apiVersion: deckhouse.io/v1
-kind: DVPClusterConfiguration
-layout: Standard
-`
 	resp, err := s.ValidateProviderSpecificClusterConfig(context.Background(), &pb.ValidateProviderSpecificClusterConfigRequest{
-		Config:         providerSection,
-		ClusterConfig:  `{"clusterType":"Cloud","cloud":{"provider":"DVP"}}`,
-		RegistryConfig: registryMCDoc,
-		Opts:           &pb.ValidateOptions{CommanderMode: true},
+		Config:        "apiVersion: deckhouse.io/v1\nkind: YandexClusterConfiguration\nlayout: Standard\n",
+		ClusterConfig: `{"clusterType":"Cloud","cloud":{"provider":"Yandex"}}`,
+		Opts:          &pb.ValidateOptions{CommanderMode: true},
 	})
 	require.NoError(t, err)
-	require.Empty(t, resp.Err, "DVP config must validate once the bundle schemas are loaded")
+	require.NotEmpty(t, resp.Err, "in-tree provider must be validated, not skipped")
+	require.Contains(t, resp.Err, "masterNodeGroup")
 }
 
-func TestValidateProviderSpecificClusterConfig_InvalidDVPDocFails(t *testing.T) {
-	downloadDir := t.TempDir()
-	bundleDir := filepath.Join(downloadDir, "dvp")
-	writeUnpackedDVPBundle(t, bundleDir)
-
-	globalOptions := &options.GlobalOptions{
-		CandiDir:    t.TempDir(),
-		ModulesDir:  t.TempDir(),
-		DownloadDir: downloadDir,
-	}
-
-	schemaStore := config.NewSchemaStore(nil)
-	require.NoError(t, schemaStore.LoadProviderDir("dvp", "sha256:test-bundle", bundleDir))
-
-	s := New(schemaStore, globalOptions)
-
-	providerSection := `
-apiVersion: deckhouse.io/v1
-kind: DVPClusterConfiguration
-layout: Standard
-unknownField: boom
-`
-	resp, err := s.ValidateProviderSpecificClusterConfig(context.Background(), &pb.ValidateProviderSpecificClusterConfigRequest{
-		Config:         providerSection,
-		ClusterConfig:  `{"clusterType":"Cloud","cloud":{"provider":"DVP"}}`,
-		RegistryConfig: registryMCDoc,
-		Opts:           &pb.ValidateOptions{CommanderMode: true},
-	})
-	require.NoError(t, err)
-	require.NotEmpty(t, resp.Err, "schema violation must surface via the Err channel")
-	require.Contains(t, resp.Err, "unknownField")
-}
-
-// registryMCDoc carries registry access for the bundle delivery in tests.
-const registryMCDoc = `
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  enabled: true
-  settings:
-    registry:
-      mode: Unmanaged
-      unmanaged:
-        imagesRepo: r.example.com/test
-        username: u
-        password: p
-        scheme: HTTPS
-  version: 1
-`
-
-func TestValidateProviderSpecificClusterConfig_ExternalWithoutRegistrySkipped(t *testing.T) {
-	// External provider, bundle not delivered, no registry_config: there is
-	// nothing to validate with, so the check is skipped instead of failing.
-	globalOptions := &options.GlobalOptions{
-		CandiDir:    t.TempDir(),
-		ModulesDir:  t.TempDir(),
-		DownloadDir: t.TempDir(),
-	}
-
-	s := New(config.NewSchemaStore(nil), globalOptions)
+func TestValidateProviderSpecificClusterConfig_ExternalProviderSkipped(t *testing.T) {
+	// An external provider (not bundled in candi) validates against a schema
+	// that lives in its OCI bundle, which this stateless request cannot fetch;
+	// the check is skipped instead of failing. The real operation revalidates
+	// after reading the registry from the target cluster.
+	globalOptions := &options.GlobalOptions{CandiDir: t.TempDir(), ModulesDir: t.TempDir(), DownloadDir: t.TempDir()}
+	s := New(config.NewSchemaStore(globalOptions), globalOptions)
 
 	resp, err := s.ValidateProviderSpecificClusterConfig(context.Background(), &pb.ValidateProviderSpecificClusterConfigRequest{
 		Config:        "apiVersion: deckhouse.io/v1\nkind: DVPClusterConfiguration\nlayout: Standard\n",
@@ -155,5 +82,5 @@ func TestValidateProviderSpecificClusterConfig_ExternalWithoutRegistrySkipped(t 
 		Opts:          &pb.ValidateOptions{CommanderMode: true},
 	})
 	require.NoError(t, err)
-	require.Empty(t, resp.Err, "external provider without registry access must be skipped, not failed")
+	require.Empty(t, resp.Err, "external provider validation must be skipped, not failed")
 }

@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-f80cd91b36d545749726987cea9ab19348fca2ab9f04d7af8b0d3021bd9ca032",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "version": 10,
   "statements": [
     {
       "vulnerability": {
@@ -101,8 +101,64 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-41567 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает серверный обработчик PUT /containers/{id}/archive в демоне Docker Engine. Уязвимый код в патчах, привносящих данную зависимость в containerd, не выполняется.",
       "timestamp": "2026-06-18T12:31:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/cli"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker CLI local privilege escalation на Windows (путь поиска плагинов C:\\ProgramData\\Docker\\cli-plugins). Исполняемые файлы версии для Windows не используются, уязвимый код не выполняется.",
+      "timestamp": "2026-07-15T09:01:37.550612Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость находится в коде Docker daemon (AuthZ-плагины). Containerd не запускает Docker daemon, не использует AuthZ-плагины Moby; уязвимый путь выполнения отсутствует.",
+      "timestamp": "2026-07-15T09:14:47.031077Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость находится в коде Docker daemon (AuthZ-плагины). Containerd не запускает Docker daemon, не использует AuthZ-плагины Moby; уязвимый путь выполнения отсутствует.",
+      "timestamp": "2026-07-15T09:16:21.438843Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-54410"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость проявляется только в работе Docker-демона (dockerd), который не запускается containerd; взаимодействия с firewalld не происходит.",
+      "timestamp": "2026-07-15T09:19:53.053456Z"
     }
   ],
   "timestamp": "2026-03-04T09:36:23Z",
-  "last_updated": "2026-04-13T14:56:27Z"
+  "last_updated": "2026-07-15T09:19:53Z"
 }

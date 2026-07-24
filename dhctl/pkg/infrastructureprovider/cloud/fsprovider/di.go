@@ -106,7 +106,7 @@ func GetDi(ctx context.Context, params *DIParams) (*cloud.ProviderDI, error) {
 	}
 
 	return &cloud.ProviderDI{
-		SettingsProvider:    newSettingsProvider(ctx, params.InfraVersionsFile, loadOrGetStore),
+		SettingsProvider:    newSettingsProvider(ctx, params.InfraVersionsFile, params.DownloadDir, loadOrGetStore),
 		InfraUtilProvider:   newInfrastructureUtilProvider(params.BinariesDir),
 		InfraPluginProvider: newPluginsProvider(params.PluginsDir),
 		ModulesProvider:     newModulesProvider(params.CloudProviderDir, params.DownloadDir),

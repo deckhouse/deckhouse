@@ -6,7 +6,6 @@ import (
 
 	_ "github.com/deckhouse/deckhouse/ee/be/modules/350-node-local-dns/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/cse/modules/040-node-manager/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-monitoring-applications/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-okmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-dynamix/hooks"

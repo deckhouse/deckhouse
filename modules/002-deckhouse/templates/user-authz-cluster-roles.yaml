@@ -59,8 +59,6 @@ rules:
   - update
 - apiGroups:
   - deckhouse.io
-  resourceNames:
-  - deckhouse
   resources:
   - moduleconfigs
   verbs:

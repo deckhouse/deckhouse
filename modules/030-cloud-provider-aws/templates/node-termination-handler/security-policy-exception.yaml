@@ -1,0 +1,16 @@
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: node-termination-handler
+  namespace: d8-{{ .Chart.Name }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host network access for node-termination-handler.
+          Requires host network to reach the EC2 instance metadata service at 169.254.169.254, which is accessible only from the host network namespace. Used to detect spot interruption notices, rebalance recommendations, and scheduled maintenance events.
+{{- end }}

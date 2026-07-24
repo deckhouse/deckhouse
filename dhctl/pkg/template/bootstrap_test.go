@@ -28,7 +28,7 @@ import (
 )
 
 func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.GlobalOptions{})
+	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyValidatorProvider(), &options.GlobalOptions{})
 	require.NoError(t, err)
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))

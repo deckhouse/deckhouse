@@ -345,9 +345,9 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	// DHCTL_DEBUG (isDebug) deliberately does NOT touch the terminal — it only enriches the .log file
 	// (full DEBUG is always captured there, plus shell-operator/klog internals via BindShellOperator).
 	// So the terminal looks identical with or without DHCTL_DEBUG.
-	stdoutTTY := input.IsTerminal()
-	interactive := stdoutTTY && !i.opts.Global.ShowProgress
 	verbose := i.opts.Global.ShowProgress
+	stdoutTTY := input.IsTerminal() || verbose
+	interactive := stdoutTTY && !verbose
 
 	commandName := getCommandName(c)
 

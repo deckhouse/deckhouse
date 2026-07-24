@@ -60,6 +60,11 @@ func SecretEdit(
 	config, err := kubeCl.CoreV1().Secrets(namespace).Get(ctx, secret, metav1.GetOptions{})
 	switch {
 	case errors.IsNotFound(err):
+		if editOpts.OnAbsent != nil {
+			if err := editOpts.OnAbsent(ctx, kubeCl); err != nil {
+				return err
+			}
+		}
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Secret %s in namespace %s was not found, and will be created", secret, namespace))
 		config = emptySecret.DeepCopy()
 		config.ObjectMeta.Name, config.ObjectMeta.Namespace = secret, namespace
