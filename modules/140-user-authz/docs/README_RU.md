@@ -592,6 +592,8 @@ write:
     - cilium.io/ciliumclusterwidenetworkpolicies
     - cilium.io/ciliumnetworkpolicies
     - cluster.x-k8s.io/machinedeployments/scale
+    - cluster.x-k8s.io/machinepools/scale
+    - cluster.x-k8s.io/machinesets/scale
     - config.gatekeeper.sh/configs
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
