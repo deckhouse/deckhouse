@@ -108,8 +108,9 @@ spec:
         scheme: HTTPS
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 20) 100 }}m"
-        memory: "{{ div (mul $memory 20) 100 }}"
+        {{- $c := (($resourcesRequests.components | default dict).kubeControllerManager) | default dict }}
+        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 20) 100) }}m"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 20) 100) }}"
     securityContext:
       capabilities:
         drop:

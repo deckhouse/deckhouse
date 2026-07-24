@@ -37,6 +37,63 @@ properties:
             minimum: 0
             x-examples: [536870912]
             default: 0
+          components:
+            type: object
+            default: {}
+            additionalProperties: false
+            description: |
+              Per-component resource requests written by the autotune hook.
+              Absent keys fall back to the fixed %-split of milliCpuControlPlane /
+              memoryControlPlane in control-plane templates.
+            properties:
+              kubeApiserver:
+                type: object
+                additionalProperties: false
+                properties:
+                  milliCPU:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  memoryBytes:
+                    type: integer
+                    format: int64
+                    minimum: 0
+              etcd:
+                type: object
+                additionalProperties: false
+                properties:
+                  milliCPU:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  memoryBytes:
+                    type: integer
+                    format: int64
+                    minimum: 0
+              kubeControllerManager:
+                type: object
+                additionalProperties: false
+                properties:
+                  milliCPU:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  memoryBytes:
+                    type: integer
+                    format: int64
+                    minimum: 0
+              kubeScheduler:
+                type: object
+                additionalProperties: false
+                properties:
+                  milliCPU:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  memoryBytes:
+                    type: integer
+                    format: int64
+                    minimum: 0
       effectiveKubernetesVersion:
         type: string
         enum: ["1.32", "1.33", "1.34", "1.35", "1.36", "1.31"]

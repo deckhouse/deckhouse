@@ -51,6 +51,9 @@ memory: 10Mi
     "milliCPU" .milliCpuControlPlane
     "memoryBytes" .memoryControlPlane
   ) }}
+  {{- with .components }}
+    {{- $_ := set $tpl_context.settings.resourcesRequests "components" . }}
+  {{- end }}
 {{- end }}
 
 {{- $allowedKubernetesVersions := list }}

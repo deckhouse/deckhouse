@@ -649,6 +649,37 @@ alerts:
         Control-plane operation {{ $labels.operation }} for {{ $labels.component }} on node {{ $labels.node }} runs or retries longer than 10 minutes.
       severity: "4"
       markupFormat: markdown
+    - name: D8ControlPlaneResourcesAutotuneInsufficientCapacity
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The control-plane resources autotune wants to increase `{{ $labels.resource }}` requests for one or more
+        control-plane components (kube-apiserver, etcd, kube-controller-manager, kube-scheduler), but the
+        weakest master node does not have enough allocatable budget.
+
+        {{- if eq $labels.resource "memory" }}
+        Missing capacity: `{{ $value | humanize1024 }}B`.
+        {{- else }}
+        Missing capacity: `{{ $value }}m` CPU.
+        {{- end }}
+
+        Increase CPU/RAM on master servers by at least that amount so autotune can apply the recommendation.
+
+        The same deficit is stored in ConfigMap `kube-system/d8-control-plane-manager-resources-autotune-state`
+        under `data.state.<resource>.capacityBlocked.deficit`:
+
+        ```bash
+        d8 k -n kube-system get cm d8-control-plane-manager-resources-autotune-state -o yaml
+        ```
+
+        To disable autotune for this measurement and manage requests manually, set
+        `controlPlaneManager.resourcesRequests.{{ $labels.resource }}` in ModuleConfig `control-plane-manager`.
+      summary: |
+        Control-plane resources autotune cannot raise {{ $labels.resource }} requests — master nodes lack free capacity.
+      severity: "5"
+      markupFormat: markdown
     - name: D8DeckhouseConfigInvalid
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 002-deckhouse
