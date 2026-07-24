@@ -14,23 +14,6 @@ spec:
         description: |
           hubble-relay must run as root to read TLS material mounted with mode 0400 and
           to access the Cilium agent UNIX socket on the host.
-    runAsUser:
-      allowedValues:
-        - 0
-      metadata:
-        description: |
-          UID 0 is required for TLS secrets (defaultMode 0400) and the hubble.sock hostPath.
-    capabilities:
-      allowedValues:
-        add:
-          - DAC_OVERRIDE
-        drop:
-          - ALL
-      metadata:
-        description: |
-          DAC_OVERRIDE is required so root can execute the hubble-relay binary which is
-          owned by UID 64535 with mode 0700 after capabilities.drop ALL removes the
-          implicit root DAC bypass.
   volumes:
     types:
       allowedValues:
