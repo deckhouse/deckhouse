@@ -149,6 +149,17 @@ spec:
     {{- end }}
   {{- end }}
 
+  # markImage lives under spec.unvalidatedValues (not spec.values) for versions < 1.25:
+  # ProxyConfig is a proto message and CheckValues validates spec.values strictly against the
+  # proto descriptor (allowUnknownField=false); markImage is unknown to it and would be rejected.
+  # unvalidatedValues bypasses validation but is merged into the render-values overlay
+  # (operator/pkg/translate/translate.go), so it reaches the injection template as
+  # .Values.global.proxy.markImage.
+  unvalidatedValues:
+    global:
+      proxy:
+        markImage: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%sMark" $imageSuffix )) }}
+
   values:
     global:
       configValidation: false      # to deploy the ValidatingWebhookConfiguration resources by D8

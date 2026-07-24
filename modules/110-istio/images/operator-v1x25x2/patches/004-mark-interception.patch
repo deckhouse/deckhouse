@@ -1,0 +1,57 @@
+diff --git a/resources/v1.25.2/charts/istiod/files/injection-template.yaml b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
+--- a/resources/v1.25.2/charts/istiod/files/injection-template.yaml
++++ b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
+@@ -123,6 +123,10 @@
+     - "-c"
+     - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/excludeInterfaces` }}"
+     {{ end -}}
++    {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
++    - "--outbound-mark"
++    - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}"
++    {{ end -}}
+     - "--log_output_level={{ annotation .ObjectMeta `sidecar.istio.io/agentLogLevel` .Values.global.logging.level }}"
+     {{ if .Values.global.logAsJson -}}
+     - "--log_as_json"
+@@ -172,6 +176,8 @@
+   - name: istio-proxy
+-  {{- if contains "/" (annotation .ObjectMeta `sidecar.istio.io/proxyImage` .Values.global.proxy.image) }}
++  {{- if and (not (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`)) (contains "/" (annotation .ObjectMeta `sidecar.istio.io/proxyImage` .Values.global.proxy.image)) }}
+     image: "{{ annotation .ObjectMeta `sidecar.istio.io/proxyImage` .Values.global.proxy.image }}"
++  {{- else if isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}
++    image: "{{ .Values.global.proxy.markImage }}"
+   {{- else }}
+     image: "{{ .ProxyImage }}"
+   {{- end }}
+@@ -294,6 +300,10 @@
+           fieldPath: spec.nodeName
+     - name: ISTIO_META_INTERCEPTION_MODE
+       value: "{{ or (index .ObjectMeta.Annotations `sidecar.istio.io/interceptionMode`) .ProxyConfig.InterceptionMode.String }}"
++    {{- if isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}
++    - name: ISTIO_META_OUTBOUND_MARK
++      value: "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}"
++    {{- end }}
+     {{- if .Values.global.network }}
+     - name: ISTIO_META_NETWORK
+       value: "{{ .Values.global.network }}"
+@@ -366,9 +376,9 @@
+       runAsNonRoot: false
+       runAsUser: 0
+       {{- else }}
+-      allowPrivilegeEscalation: {{ .Values.global.proxy.privileged }}
++      allowPrivilegeEscalation: {{ or .Values.global.proxy.privileged (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) }}
+       capabilities:
+-        {{ if or (eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY`) (eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true`) -}}
++        {{ if or (eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY`) (eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true`) (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
+         add:
+         {{ if eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY` -}}
+         - NET_ADMIN
+@@ -376,6 +386,9 @@
+         {{ if eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true` -}}
+         - NET_BIND_SERVICE
+         {{- end }}
++        {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
++        - NET_RAW
++        {{- end }}
+         {{- end }}
+         drop:
+         - ALL

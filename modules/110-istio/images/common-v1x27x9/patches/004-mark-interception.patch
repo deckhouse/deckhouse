@@ -1,0 +1,552 @@
+diff --git a/cni/pkg/plugin/sidecar_iptables_linux.go b/cni/pkg/plugin/sidecar_iptables_linux.go
+--- a/cni/pkg/plugin/sidecar_iptables_linux.go	2026-07-03 17:28:32.501268159 +0300
++++ b/cni/pkg/plugin/sidecar_iptables_linux.go	2026-07-03 17:30:07.284711821 +0300
+@@ -39,6 +39,7 @@
+ 	cfg.ProxyPort = rdrct.targetPort
+ 	cfg.ProxyUID = rdrct.noRedirectUID
+ 	cfg.ProxyGID = rdrct.noRedirectGID
++	cfg.OutboundMark = rdrct.outboundMark
+ 	cfg.InboundInterceptionMode = rdrct.redirectMode
+ 	cfg.OutboundIPRangesInclude = rdrct.includeIPCidrs
+ 	cfg.InboundPortsExclude = rdrct.excludeInboundPorts
+diff --git a/cni/pkg/plugin/sidecar_redirect.go b/cni/pkg/plugin/sidecar_redirect.go
+--- a/cni/pkg/plugin/sidecar_redirect.go	2026-07-03 17:28:32.501268159 +0300
++++ b/cni/pkg/plugin/sidecar_redirect.go	2026-07-03 17:30:07.285711846 +0300
+@@ -81,6 +81,7 @@
+ 	redirectMode             string
+ 	noRedirectUID            string
+ 	noRedirectGID            string
++	outboundMark             string
+ 	includeIPCidrs           string
+ 	excludeIPCidrs           string
+ 	excludeInboundPorts      string
+@@ -310,5 +311,7 @@
+ 			log.Warnf("cannot parse invalid drop environment variable %v", valErr)
+ 		}
+ 	}
++	// Mark-based outbound interception: set when ISTIO_META_OUTBOUND_MARK is present on the proxy.
++	redir.outboundMark = pi.ProxyEnvironments["ISTIO_META_OUTBOUND_MARK"]
+ 	return redir, nil
+ }
+diff --git a/pilot/pkg/networking/core/cluster_builder.go b/pilot/pkg/networking/core/cluster_builder.go
+--- a/pilot/pkg/networking/core/cluster_builder.go	2026-07-03 17:28:32.502268185 +0300
++++ b/pilot/pkg/networking/core/cluster_builder.go	2026-07-03 17:30:07.286711872 +0300
+@@ -17,6 +17,7 @@
+ import (
+ 	"fmt"
+ 	"math"
++	"strconv"
+ 	"time"
+ 
+ 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+@@ -293,6 +294,7 @@
+ 	maybeApplyEdsConfig(subsetCluster.cluster)
+ 
+ 	cb.applyMetadataExchange(opts.mutable.cluster)
++	cb.applyOutboundSocketMark(opts.mutable.cluster)
+ 
+ 	// Add the DestinationRule+subsets metadata. Metadata here is generated on a per-cluster
+ 	// basis in buildCluster, so we can just insert without a copy.
+@@ -342,6 +344,7 @@
+ 	maybeApplyEdsConfig(mc.cluster)
+ 
+ 	cb.applyMetadataExchange(opts.mutable.cluster)
++	cb.applyOutboundSocketMark(opts.mutable.cluster)
+ 
+ 	if service.MeshExternal || opts.allInstancesHBONE {
+ 		// Conditionally skips based on config
+@@ -378,6 +381,35 @@
+ 	}
+ }
+ 
++// applyOutboundSocketMark tags upstream sockets with SO_MARK when the proxy advertises
++// OutboundMark (sidecar running with the same UID as the app). Envoy's setsockopt(SO_MARK)
++// requires CAP_NET_RAW (kernel >=5.17) or CAP_NET_ADMIN; iptables exempts marked packets.
++func (cb *ClusterBuilder) applyOutboundSocketMark(c *cluster.Cluster) {
++	if !cb.sidecarProxy() {
++		return
++	}
++	if cb.proxyMetadata == nil || cb.proxyMetadata.OutboundMark == "" {
++		return
++	}
++	mark, err := strconv.ParseUint(cb.proxyMetadata.OutboundMark, 10, 32)
++	if err != nil {
++		return
++	}
++	sockOpt := &core.SocketOption{
++		Description: "outbound socket mark to distinguish Envoy traffic in iptables",
++		Level:       1, // SOL_SOCKET
++		Name:        36, // SO_MARK
++		Value: &core.SocketOption_IntValue{
++			IntValue: int64(mark),
++		},
++		State: core.SocketOption_STATE_PREBIND,
++	}
++	if c.UpstreamBindConfig == nil {
++		c.UpstreamBindConfig = &core.BindConfig{}
++	}
++	c.UpstreamBindConfig.SocketOptions = append(c.UpstreamBindConfig.SocketOptions, sockOpt)
++}
++
+ // buildCluster builds the default cluster and also applies global options.
+ // It is used for building both inbound and outbound cluster.
+ func (cb *ClusterBuilder) buildCluster(name string, discoveryType cluster.Cluster_DiscoveryType,
+@@ -642,6 +674,7 @@
+ 	cluster.AltStatName = util.DelimitedStatsPrefix(util.PassthroughCluster)
+ 	cb.applyConnectionPool(cb.req.Push.Mesh, newClusterWrapper(cluster), &networking.ConnectionPoolSettings{}, nil)
+ 	cb.applyMetadataExchange(cluster)
++	cb.applyOutboundSocketMark(cluster)
+ 	return cluster
+ }
+ 
+diff --git a/pkg/dns/client/dns.go b/pkg/dns/client/dns.go
+--- a/pkg/dns/client/dns.go	2026-07-03 17:28:32.503268211 +0300
++++ b/pkg/dns/client/dns.go	2026-07-03 17:30:07.287711898 +0300
+@@ -87,7 +87,7 @@
+ 	defaultTTLInSeconds = 30
+ )
+ 
+-func NewLocalDNSServer(proxyNamespace, proxyDomain string, addr string, forwardToUpstreamParallel bool) (*LocalDNSServer, error) {
++func NewLocalDNSServer(proxyNamespace, proxyDomain string, addr string, forwardToUpstreamParallel bool, outboundMark string) (*LocalDNSServer, error) {
+ 	h := &LocalDNSServer{
+ 		proxyNamespace:            proxyNamespace,
+ 		forwardToUpstreamParallel: forwardToUpstreamParallel,
+@@ -166,7 +166,13 @@
+ 	}
++	// mark-mode: the agent's own DNS (bootstrap istiod resolution) is redirected into this proxy
++	// (owner-based exclusion is unavailable when app and sidecar share the UID), so the proxy must
++	// forward upstream even before the NDS table is synced, or bootstrap deadlocks.
++	if outboundMark != "" {
++		h.respondBeforeSync = true
++	}
+ 	for _, ipAddr := range addresses {
+ 		for _, proto := range []string{"udp", "tcp"} {
+-			proxy, err := newDNSProxy(proto, ipAddr, h)
++			proxy, err := newDNSProxy(proto, ipAddr, h, outboundMark)
+ 			if err != nil {
+ 				return nil, err
+ 			}
+diff --git a/pkg/dns/client/proxy.go b/pkg/dns/client/proxy.go
+--- a/pkg/dns/client/proxy.go	2026-07-03 17:28:32.504268236 +0300
++++ b/pkg/dns/client/proxy.go	2026-07-03 17:30:07.287711898 +0300
+@@ -16,9 +16,12 @@
+ 
+ import (
+ 	"net"
++	"strconv"
++	"syscall"
+ 	"time"
+ 
+ 	"github.com/miekg/dns"
++	"golang.org/x/sys/unix"
+ )
+ 
+ type dnsProxy struct {
+@@ -32,16 +35,11 @@
+ 	resolver       *LocalDNSServer
+ }
+ 
+-func newDNSProxy(protocol, addr string, resolver *LocalDNSServer) (*dnsProxy, error) {
++func newDNSProxy(protocol, addr string, resolver *LocalDNSServer, outboundMark string) (*dnsProxy, error) {
+ 	p := &dnsProxy{
+ 		serveMux: dns.NewServeMux(),
+ 		server:   &dns.Server{},
+-		upstreamClient: &dns.Client{
+-			Net:          protocol,
+-			DialTimeout:  5 * time.Second,
+-			ReadTimeout:  5 * time.Second,
+-			WriteTimeout: 5 * time.Second,
+-		},
++		upstreamClient: newUpstreamDNSClient(protocol, outboundMark),
+ 		protocol: protocol,
+ 		resolver: resolver,
+ 	}
+@@ -77,6 +75,40 @@
+ 	}
+ }
+ 
++// newUpstreamDNSClient builds a miekg/dns Client used to forward queries to the
++// real upstream resolver (e.g. CoreDNS). When outboundMark is set (mark-based
++// outbound interception), the dialer tags its socket with SO_MARK so that the
++// iptables mark-RETURN rule exempts the forwarded query from being redirected
++// back into the local DNS proxy (which would loop forever, since the agent
++// shares the application's UID/GID and cannot be excluded by owner).
++func newUpstreamDNSClient(protocol, outboundMark string) *dns.Client {
++	c := &dns.Client{
++		Net:          protocol,
++		DialTimeout:  5 * time.Second,
++		ReadTimeout:  5 * time.Second,
++		WriteTimeout: 5 * time.Second,
++	}
++	if outboundMark != "" {
++		mark, err := strconv.Atoi(outboundMark)
++		if err == nil && mark > 0 {
++			c.Dialer = &net.Dialer{
++				Timeout:  5 * time.Second,
++				Control: func(network, address string, c syscall.RawConn) error {
++					var serr error
++					if err := c.Control(func(fd uintptr) {
++						serr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_MARK, mark)
++					}); err != nil {
++						return err
++					}
++					return serr
++				},
++			}
++		}
++	}
++	return c
++}
++
++
+ func (p *dnsProxy) Address() string {
+ 	if p.server != nil {
+ 		if p.server.Listener != nil {
+diff --git a/pkg/istio-agent/agent.go b/pkg/istio-agent/agent.go
+--- a/pkg/istio-agent/agent.go	2026-07-03 17:28:32.505268262 +0300
++++ b/pkg/istio-agent/agent.go	2026-07-03 17:30:07.288711924 +0300
+@@ -542,7 +542,7 @@
+ func (a *Agent) initLocalDNSServer() (err error) {
+ 	if a.isDNSServerEnabled() {
+ 		if a.localDNSServer, err = dnsClient.NewLocalDNSServer(a.cfg.ProxyNamespace, a.cfg.ProxyDomain, a.cfg.DNSAddr,
+-			a.cfg.DNSForwardParallel); err != nil {
++			a.cfg.DNSForwardParallel, os.Getenv("ISTIO_META_OUTBOUND_MARK")); err != nil {
+ 			return err
+ 		}
+ 		a.localDNSServer.StartDNS()
+diff --git a/pkg/model/proxy.go b/pkg/model/proxy.go
+--- a/pkg/model/proxy.go	2026-07-03 17:28:32.506268288 +0300
++++ b/pkg/model/proxy.go	2026-07-03 17:30:07.289711950 +0300
+@@ -232,6 +232,11 @@
+ 	// traffic interception mode at the proxy
+ 	InterceptionMode TrafficInterceptionMode `json:"INTERCEPTION_MODE,omitempty"`
+ 
++	// OutboundMark, when set, enables mark-based outbound interception for this proxy:
++	// Envoy tags upstream sockets with SO_MARK=<mark> and the init container excludes marked
++	// packets instead of relying on the proxy UID/GID. Lets the sidecar share the app's UID/GID.
++	OutboundMark string `json:"OUTBOUND_MARK,omitempty"`
++
+ 	// ServiceAccount specifies the service account which is running the workload.
+ 	ServiceAccount string `json:"SERVICE_ACCOUNT,omitempty"`
+ 
+diff --git a/tools/common/config/config.go b/tools/common/config/config.go
+--- a/tools/common/config/config.go	2026-07-03 17:28:32.506268288 +0300
++++ b/tools/common/config/config.go	2026-07-03 17:30:07.289711950 +0300
+@@ -55,6 +55,12 @@
+ 	InboundTunnelPort        string        `json:"INBOUND_TUNNEL_PORT"`
+ 	ProxyUID                 string        `json:"PROXY_UID"`
+ 	ProxyGID                 string        `json:"PROXY_GID"`
++	// OutboundMark, when set, enables mark-based outbound interception: Envoy
++	// tags its outbound sockets with this mark (via SO_MARK) and the iptables
++	// rules exclude marked packets instead of relying on --uid-owner/--gid-owner.
++	// This lets the sidecar run with the same UID/GID as the application.
++	// Empty (default) keeps the legacy owner-based behavior.
++	OutboundMark             string        `json:"OUTBOUND_MARK"`
+ 	InboundInterceptionMode  string        `json:"INBOUND_INTERCEPTION_MODE"`
+ 	InboundTProxyMark        string        `json:"INBOUND_TPROXY_MARK"`
+ 	InboundTProxyRouteTable  string        `json:"INBOUND_TPROXY_ROUTE_TABLE"`
+@@ -114,6 +120,7 @@
+ 	b.WriteString(fmt.Sprintf("PROXY_TUNNEL_PORT=%s\n", c.InboundTunnelPort))
+ 	b.WriteString(fmt.Sprintf("PROXY_UID=%s\n", c.ProxyUID))
+ 	b.WriteString(fmt.Sprintf("PROXY_GID=%s\n", c.ProxyGID))
++	b.WriteString(fmt.Sprintf("OUTBOUND_MARK=%s\n", c.OutboundMark))
+ 	b.WriteString(fmt.Sprintf("INBOUND_INTERCEPTION_MODE=%s\n", c.InboundInterceptionMode))
+ 	b.WriteString(fmt.Sprintf("INBOUND_TPROXY_MARK=%s\n", c.InboundTProxyMark))
+ 	b.WriteString(fmt.Sprintf("INBOUND_TPROXY_ROUTE_TABLE=%s\n", c.InboundTProxyRouteTable))
+diff --git a/tools/istio-iptables/pkg/capture/run.go b/tools/istio-iptables/pkg/capture/run.go
+--- a/tools/istio-iptables/pkg/capture/run.go	2026-07-03 17:28:32.507268314 +0300
++++ b/tools/istio-iptables/pkg/capture/run.go	2026-07-03 17:30:07.290711975 +0300
+@@ -291,93 +291,124 @@
+ 	cfg.ruleBuilder.AppendVersionedRule("127.0.0.6/32", "::6/128", constants.ISTIOOUTPUT, "nat",
+ 		"-o", "lo", "-s", constants.IPVersionSpecific, "-j", "RETURN")
+ 
+-	for _, uid := range config.Split(cfg.cfg.ProxyUID) {
+-		// Redirect app calls back to itself via Envoy when using the service VIP
+-		// e.g. appN => Envoy (client) => Envoy (server) => appN.
+-		// nolint: lll
+-		if redirectDNS {
+-			// When DNS is enabled, we skip this for port 53. This ensures we do not have:
+-			// app => istio-agent => Envoy inbound => dns server
+-			// Instead, we just have:
+-			// app => istio-agent => dns server
+-			cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
+-				"-o", "lo",
+-				"!", "-d", constants.IPVersionSpecific,
+-				"-p", "tcp",
+-				"-m", "multiport",
+-				"!", "--dports", "53,"+cfg.cfg.InboundTunnelPort,
+-				"-m", "owner", "--uid-owner", uid, "-j", constants.ISTIOINREDIRECT)
+-		} else {
+-			cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
+-				"-o", "lo",
+-				"!", "-d", constants.IPVersionSpecific,
+-				"-p", "tcp",
+-				"!", "--dport", cfg.cfg.InboundTunnelPort,
+-				"-m", "owner", "--uid-owner", uid, "-j", constants.ISTIOINREDIRECT)
++	if cfg.cfg.OutboundMark != "" {
++		// Mark-based outbound interception. Envoy tags its upstream sockets with SO_MARK, so we
++		// exclude marked packets from redirection. This replaces the owner-based rules below and
++		// allows the sidecar to share the application's UID/GID (e.g. ingress-nginx under deckhouse).
++		//
++		// Known limitation: the "app calls its own VIP" redirect (app => Envoy outbound =>
++		// Envoy inbound => app) is not installed, since it cannot be expressed by mark alone
++		// without distinguishing app from Envoy. This is acceptable for ingress-nginx.
++		cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
++			"-m", "mark", "--mark", cfg.cfg.OutboundMark, "-j", "RETURN")
++
++		// Exclude only the istiod ports from redirection so the pilot-agent can bootstrap
++		// (resolve istiod, fetch certs/config) before Envoy is ready. In owner-based mode these
++		// are covered by the UID match; in mark mode the pilot-agent has no SO_MARK, so its own
++		// traffic must be excluded by port instead.
++		//
++		// DNS (port 53) is intentionally NOT excluded here: with the mark-based outbound socket
++		// mark applied to the agent's DNS forward socket too (see pkg/dns/client/proxy.go), the
++		// agent's "forward to real upstream resolver" query carries the same mark and is therefore
++		// RETURN'd by the mark-match rule above, so it is not redirected back into the local proxy.
++		// This avoids the loop that would otherwise occur (app => agent => agent => ...), and lets
++		// the standard DNS redirect chain (ISTIOOUTPUTDNS/SetupDNSRedir) capture the application's
++		// DNS queries just like in owner-based mode, so ServiceEntry/auto-allocate names resolve.
++		for _, port := range []string{"15012", "15017"} {
++			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
++				"-p", "tcp", "--dport", port, "-j", "RETURN")
++			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
++				"-p", "udp", "--dport", port, "-j", "RETURN")
+ 		}
+-		// Do not redirect app calls to back itself via Envoy when using the endpoint address
+-		// e.g. appN => appN by lo
+-		// If loopback explicitly set via OutboundIPRangesInclude, then don't return.
+-		if !ipv4RangesInclude.HasLoopBackIP && !ipv6RangesInclude.HasLoopBackIP {
++	} else {
++		for _, uid := range config.Split(cfg.cfg.ProxyUID) {
++			// Redirect app calls back to itself via Envoy when using the service VIP
++			// e.g. appN => Envoy (client) => Envoy (server) => appN.
++			// nolint: lll
+ 			if redirectDNS {
+-				// Users may have a DNS server that is on localhost. In these cases, applications may
+-				// send TCP traffic to the DNS server that we actually *do* want to intercept. To
+-				// handle this case, we exclude port 53 from this rule. Note: We cannot just move the
+-				// port 53 redirection rule further up the list, as we will want to avoid capturing
+-				// DNS requests from the proxy UID/GID
+-				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-o", "lo", "-p", "tcp",
+-					"!", "--dport", "53",
+-					"-m", "owner", "!", "--uid-owner", uid, "-j", "RETURN")
++				// When DNS is enabled, we skip this for port 53. This ensures we do not have:
++				// app => istio-agent => Envoy inbound => dns server
++				// Instead, we just have:
++				// app => istio-agent => dns server
++				cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
++					"-o", "lo",
++					"!", "-d", constants.IPVersionSpecific,
++					"-p", "tcp",
++					"-m", "multiport",
++					"!", "--dports", "53,"+cfg.cfg.InboundTunnelPort,
++					"-m", "owner", "--uid-owner", uid, "-j", constants.ISTIOINREDIRECT)
+ 			} else {
+-				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
+-					"-o", "lo", "-m", "owner", "!", "--uid-owner", uid, "-j", "RETURN")
++				cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
++					"-o", "lo",
++					"!", "-d", constants.IPVersionSpecific,
++					"-p", "tcp",
++					"!", "--dport", cfg.cfg.InboundTunnelPort,
++					"-m", "owner", "--uid-owner", uid, "-j", constants.ISTIOINREDIRECT)
++			}
++			// Do not redirect app calls to back itself via Envoy when using the endpoint address
++			// e.g. appN => appN by lo
++			// If loopback explicitly set via OutboundIPRangesInclude, then don't return.
++			if !ipv4RangesInclude.HasLoopBackIP && !ipv6RangesInclude.HasLoopBackIP {
++				if redirectDNS {
++					// Users may have a DNS server that is on localhost. In these cases, applications may
++					// send TCP traffic to the DNS server that we actually *do* want to intercept. To
++					// handle this case, we exclude port 53 from this rule. Note: We cannot just move the
++					// port 53 redirection rule further up the list, as we will want to avoid capturing
++					// DNS requests from the proxy UID/GID
++					cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-o", "lo", "-p", "tcp",
++						"!", "--dport", "53",
++						"-m", "owner", "!", "--uid-owner", uid, "-j", "RETURN")
++				} else {
++					cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
++						"-o", "lo", "-m", "owner", "!", "--uid-owner", uid, "-j", "RETURN")
++				}
+ 			}
++
++			// Avoid infinite loops. Don't redirect Envoy traffic directly back to
++			// Envoy for non-loopback traffic.
++			// Note that this rule is, unlike the others, protocol-independent - we want to unconditionally skip
++			// all UDP/TCP packets from Envoy, regardless of dest.
++			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
++				"-m", "owner", "--uid-owner", uid, "-j", "RETURN")
+ 		}
+ 
+-		// Avoid infinite loops. Don't redirect Envoy traffic directly back to
+-		// Envoy for non-loopback traffic.
+-		// Note that this rule is, unlike the others, protocol-independent - we want to unconditionally skip
+-		// all UDP/TCP packets from Envoy, regardless of dest.
+-		cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
+-			"-m", "owner", "--uid-owner", uid, "-j", "RETURN")
+-	}
++		for _, gid := range config.Split(cfg.cfg.ProxyGID) {
++			// Redirect app calls back to itself via Envoy when using the service VIP
++			// e.g. appN => Envoy (client) => Envoy (server) => appN.
++			cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
++				"-o", "lo",
++				"!", "-d", constants.IPVersionSpecific,
++				"-p", "tcp",
++				"!", "--dport", cfg.cfg.InboundTunnelPort,
++				"-m", "owner", "--gid-owner", gid, "-j", constants.ISTIOINREDIRECT)
+ 
+-	for _, gid := range config.Split(cfg.cfg.ProxyGID) {
+-		// Redirect app calls back to itself via Envoy when using the service VIP
+-		// e.g. appN => Envoy (client) => Envoy (server) => appN.
+-		cfg.ruleBuilder.AppendVersionedRule(cfg.cfg.HostIPv4LoopbackCidr, "::1/128", constants.ISTIOOUTPUT, "nat",
+-			"-o", "lo",
+-			"!", "-d", constants.IPVersionSpecific,
+-			"-p", "tcp",
+-			"!", "--dport", cfg.cfg.InboundTunnelPort,
+-			"-m", "owner", "--gid-owner", gid, "-j", constants.ISTIOINREDIRECT)
+-
+-		// Do not redirect app calls to back itself via Envoy when using the endpoint address
+-		// e.g. appN => appN by lo
+-		// If loopback explicitly set via OutboundIPRangesInclude, then don't return.
+-		if !ipv4RangesInclude.HasLoopBackIP && !ipv6RangesInclude.HasLoopBackIP {
+-			if redirectDNS {
+-				// Users may have a DNS server that is on localhost. In these cases, applications may
+-				// send TCP traffic to the DNS server that we actually *do* want to intercept. To
+-				// handle this case, we exclude port 53 from this rule. Note: We cannot just move the
+-				// port 53 redirection rule further up the list, as we will want to avoid capturing
+-				// DNS requests from the proxy UID/GID
+-				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
+-					"-o", "lo", "-p", "tcp",
+-					"!", "--dport", "53",
+-					"-m", "owner", "!", "--gid-owner", gid, "-j", "RETURN")
+-			} else {
+-				cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
+-					"-o", "lo", "-m", "owner", "!", "--gid-owner", gid, "-j", "RETURN")
++			// Do not redirect app calls to back itself via Envoy when using the endpoint address
++			// e.g. appN => appN by lo
++			// If loopback explicitly set via OutboundIPRangesInclude, then don't return.
++			if !ipv4RangesInclude.HasLoopBackIP && !ipv6RangesInclude.HasLoopBackIP {
++				if redirectDNS {
++					// Users may have a DNS server that is on localhost. In these cases, applications may
++					// send TCP traffic to the DNS server that we actually *do* want to intercept. To
++					// handle this case, we exclude port 53 from this rule. Note: We cannot just move the
++					// port 53 redirection rule further up the list, as we will want to avoid capturing
++					// DNS requests from the proxy UID/GID
++					cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
++						"-o", "lo", "-p", "tcp",
++						"!", "--dport", "53",
++						"-m", "owner", "!", "--gid-owner", gid, "-j", "RETURN")
++				} else {
++					cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat",
++						"-o", "lo", "-m", "owner", "!", "--gid-owner", gid, "-j", "RETURN")
++				}
+ 			}
+-		}
+ 
+-		// Avoid infinite loops. Don't redirect Envoy traffic directly back to
+-		// Envoy for non-loopback traffic.
+-		// Note that this rule is, unlike the others, protocol-independent - we want to unconditionally skip
+-		// all UDP/TCP packets from Envoy, regardless of dest.
+-		cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-m", "owner", "--gid-owner", gid, "-j", "RETURN")
+-	}
++			// Avoid infinite loops. Don't redirect Envoy traffic directly back to
++			// Envoy for non-loopback traffic.
++			// Note that this rule is, unlike the others, protocol-independent - we want to unconditionally skip
++			// all UDP/TCP packets from Envoy, regardless of dest.
++			cfg.ruleBuilder.AppendRule(constants.ISTIOOUTPUT, "nat", "-m", "owner", "--gid-owner", gid, "-j", "RETURN")
++		}
++	} // end owner-based interception (OutboundMark == "")
+ 
+ 	ownerGroupsFilter := config.ParseInterceptFilter(cfg.cfg.OwnerGroupsInclude, cfg.cfg.OwnerGroupsExclude)
+ 
+@@ -386,6 +417,6 @@
+ 	if redirectDNS {
+ 		SetupDNSRedir(
+ 			cfg.ruleBuilder, cfg.cfg.ProxyUID, cfg.cfg.ProxyGID,
+ 			cfg.cfg.DNSServersV4, cfg.cfg.DNSServersV6, cfg.cfg.CaptureAllDNS,
+-			ownerGroupsFilter)
++			ownerGroupsFilter, cfg.cfg.OutboundMark)
+ 	}
+@@ -452,4 +483,4 @@
+ func SetupDNSRedir(iptables *builder.IptablesRuleBuilder, proxyUID, proxyGID string, dnsServersV4 []string, dnsServersV6 []string, captureAllDNS bool,
+-	ownerGroupsFilter config.InterceptFilter,
++	ownerGroupsFilter config.InterceptFilter, outboundMark string,
+ ) {
+ 	// Uniquely for DNS (at this time) we need a jump in "raw:OUTPUT", so this jump is conditional on that setting.
+@@ -530,5 +561,5 @@
+ 	// Split UDP DNS traffic to separate conntrack zones
+-	addDNSConntrackZones(iptables, proxyUID, proxyGID, dnsServersV4, dnsServersV6, captureAllDNS)
++	addDNSConntrackZones(iptables, proxyUID, proxyGID, dnsServersV4, dnsServersV6, captureAllDNS, outboundMark)
+ }
+ 
+ // addDNSConntrackZones is a helper function to add iptables rules to split DNS traffic
+@@ -538,17 +569,29 @@
+ func addDNSConntrackZones(
+-	iptables *builder.IptablesRuleBuilder, proxyUID, proxyGID string, dnsServersV4 []string, dnsServersV6 []string, captureAllDNS bool,
++	iptables *builder.IptablesRuleBuilder, proxyUID, proxyGID string, dnsServersV4 []string, dnsServersV6 []string, captureAllDNS bool, outboundMark string,
+ ) {
+-	for _, uid := range config.Split(proxyUID) {
+-		// Packets with dst port 53 from istio to zone 1. These are Istio calls to upstream resolvers
+-		iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--dport", "53", "-m", "owner", "--uid-owner", uid, "-j", "CT", "--zone", "1")
+-		// Packets with src port 15053 from istio to zone 2. These are Istio response packets to application clients
+-		iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--sport", "15053", "-m", "owner", "--uid-owner", uid, "-j", "CT", "--zone", "2")
+-	}
+-	for _, gid := range config.Split(proxyGID) {
+-		// Packets with dst port 53 from istio to zone 1. These are Istio calls to upstream resolvers
+-		iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--dport", "53", "-m", "owner", "--gid-owner", gid, "-j", "CT", "--zone", "1")
+-		// Packets with src port 15053 from istio to zone 2. These are Istio response packets to application clients
+-		iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--sport", "15053", "-m", "owner", "--gid-owner", gid, "-j", "CT", "--zone", "2")
+-	}
++	if outboundMark != "" {
++		// Mark-based interception: the application and the sidecar share the same UID, so the
++		// owner-based zoning below would misassign the application's DNS query to zone 1 (it
++		// matches --uid-owner exactly like the agent's own forward), which breaks the un-DNAT of
++		// the proxy's reply (it lands in zone 2) and the application's resolver times out.
++		// Distinguish the agent's forward by its SO_MARK instead: the marked forward goes to
++		// zone 1 (matching the resolver's reply in ISTIO_INBOUND), while the application's
++		// unmarked query falls through to the zone-2 rule below (matching the proxy's :15053 reply).
++		iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--dport", "53", "-m", "mark", "--mark", outboundMark, "-j", "CT", "--zone", "1")
++		iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--sport", "15053", "-j", "CT", "--zone", "2")
++	} else {
++		for _, uid := range config.Split(proxyUID) {
++			// Packets with dst port 53 from istio to zone 1. These are Istio calls to upstream resolvers
++			iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--dport", "53", "-m", "owner", "--uid-owner", uid, "-j", "CT", "--zone", "1")
++			// Packets with src port 15053 from istio to zone 2. These are Istio response packets to application clients
++			iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--sport", "15053", "-m", "owner", "--uid-owner", uid, "-j", "CT", "--zone", "2")
++		}
++		for _, gid := range config.Split(proxyGID) {
++			// Packets with dst port 53 from istio to zone 1. These are Istio calls to upstream resolvers
++			iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--dport", "53", "-m", "owner", "--gid-owner", gid, "-j", "CT", "--zone", "1")
++			// Packets with src port 15053 from istio to zone 2. These are Istio response packets to application clients
++			iptables.AppendRule(constants.ISTIOOUTPUTDNS, "raw", "-p", "udp", "--sport", "15053", "-m", "owner", "--gid-owner", gid, "-j", "CT", "--zone", "2")
++		}
++	}
+ 
+ 	// For DNS conntrack, we need (at least one) inbound rule in raw/PREROUTING, so make a chain
+diff --git a/tools/istio-iptables/pkg/cmd/root.go b/tools/istio-iptables/pkg/cmd/root.go
+--- a/tools/istio-iptables/pkg/cmd/root.go	2026-07-03 17:28:32.508268340 +0300
++++ b/tools/istio-iptables/pkg/cmd/root.go	2026-07-03 17:30:07.291712001 +0300
+@@ -98,6 +98,12 @@
+ 		"Comma separated list of virtual interfaces whose inbound traffic (from VM) will be treated as outbound.",
+ 		&cfg.RerouteVirtualInterfaces)
+ 
++	flag.BindEnv(fs, constants.OutboundMarkFlag, "",
++		"When set (e.g. to \"1338\"), exclude Envoy outbound traffic from interception by packet mark "+
++			"(-m mark --mark <mark>) instead of by proxy UID/GID. Envoy must set the matching SO_MARK on "+
++			"its upstream sockets. Allows the sidecar to share the application's UID/GID.",
++		&cfg.OutboundMark)
++
+ 	flag.BindEnv(fs, constants.InboundTProxyMark, "t", "", &cfg.InboundTProxyMark)
+ 
+ 	flag.BindEnv(fs, constants.InboundTProxyRouteTable, "r", "", &cfg.InboundTProxyRouteTable)
+diff --git a/tools/istio-iptables/pkg/constants/constants.go b/tools/istio-iptables/pkg/constants/constants.go
+--- a/tools/istio-iptables/pkg/constants/constants.go	2026-07-03 17:28:32.509268366 +0300
++++ b/tools/istio-iptables/pkg/constants/constants.go	2026-07-03 17:30:07.292712026 +0300
+@@ -72,6 +72,7 @@
+ 	ProxyUID                  = "proxy-uid"
+ 	ProxyGID                  = "proxy-gid"
+ 	RerouteVirtualInterfaces  = "kube-virt-interfaces"
++	OutboundMarkFlag          = "outbound-mark"
+ 	DryRun                    = "dry-run"
+ 	TraceLogging              = "iptables-trace-logging"
+ 	SkipRuleApply             = "skip-rule-apply"

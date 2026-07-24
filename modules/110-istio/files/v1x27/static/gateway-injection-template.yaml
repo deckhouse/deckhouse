@@ -53,8 +53,8 @@ spec:
       {{ toYaml .Values.global.proxy.lifecycle | indent 6 }}
   {{- end }}
     securityContext:
-      runAsUser: {{ .ProxyUID | default "1337" }}
-      runAsGroup: {{ .ProxyGID | default "1337" }}
+      runAsUser: {{ .ProxyUID | default "64535" }}
+      runAsGroup: {{ .ProxyGID | default "64535" }}
     env:
     - name: PILOT_CERT_PROVIDER
       value: {{ .Values.global.pilotCertProvider }}

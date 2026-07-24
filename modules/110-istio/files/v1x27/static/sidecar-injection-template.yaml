@@ -96,7 +96,7 @@ spec:
     - "-z"
     - {{ .MeshConfig.ProxyInboundListenPort | default "15006" | quote }}
     - "-u"
-    - {{ if $tproxy }} "1337" {{ else }} {{ .ProxyUID | default "1337" | quote }} {{ end }}
+    - {{ if $tproxy }} "1337" {{ else }} {{ printf "%d,1337" (.ProxyUID | default 64535) | quote }} {{ end }}
     - "-m"
     - "{{ annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode }}"
     - "-i"
@@ -129,6 +129,10 @@ spec:
      {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/excludeInterfaces`) -}}
     - "-c"
     - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/excludeInterfaces` }}"
+    {{ end -}}
+    {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
+    - "--outbound-mark"
+    - "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}"
     {{ end -}}
     - "--log_output_level={{ annotation .ObjectMeta `sidecar.istio.io/agentLogLevel` .Values.global.logging.level }}"
     {{ if .Values.global.logAsJson -}}
@@ -171,8 +175,8 @@ spec:
       runAsUser: 0
     {{- else }}
       readOnlyRootFilesystem: true
-      runAsGroup: {{ if $tproxy }} 1337 {{ else }} {{ .ProxyGID | default "1337" }} {{ end }}
-      runAsUser: {{ if $tproxy }} 1337 {{ else }} {{ .ProxyUID | default "1337" }} {{ end }}
+      runAsGroup: {{ if $tproxy }} 1337 {{ else }} {{ .ProxyGID | default "64535" }} {{ end }}
+      runAsUser: {{ if $tproxy }} 1337 {{ else }} {{ .ProxyUID | default "64535" }} {{ end }}
       runAsNonRoot: true
     {{- end }}
   {{ end -}}
@@ -181,8 +185,10 @@ spec:
   containers:
   {{ end }}
   - name: istio-proxy
-  {{- if contains "/" (annotation .ObjectMeta `sidecar.istio.io/proxyImage` .Values.global.proxy.image) }}
+  {{- if and (not (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`)) (contains "/" (annotation .ObjectMeta `sidecar.istio.io/proxyImage` .Values.global.proxy.image)) }}
     image: "{{ annotation .ObjectMeta `sidecar.istio.io/proxyImage` .Values.global.proxy.image }}"
+  {{- else if isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}
+    image: "{{ .Values.global.proxy.markImage }}"
   {{- else }}
     image: "{{ .ProxyImage }}"
   {{- end }}
@@ -305,6 +311,10 @@ spec:
           fieldPath: spec.nodeName
     - name: ISTIO_META_INTERCEPTION_MODE
       value: "{{ or (index .ObjectMeta.Annotations `sidecar.istio.io/interceptionMode`) .ProxyConfig.InterceptionMode.String }}"
+    {{- if isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}
+    - name: ISTIO_META_OUTBOUND_MARK
+      value: "{{ index .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark` }}"
+    {{- end }}
     {{- if .Values.global.network }}
     - name: ISTIO_META_NETWORK
       value: "{{ .Values.global.network }}"
@@ -373,19 +383,22 @@ spec:
         - ALL
       privileged: true
       readOnlyRootFilesystem: true
-      runAsGroup: {{ .ProxyGID | default "1337" }}
+      runAsGroup: {{ .ProxyGID | default "64535" }}
       runAsNonRoot: false
       runAsUser: 0
       {{- else }}
-      allowPrivilegeEscalation: {{ .Values.global.proxy.privileged }}
+      allowPrivilegeEscalation: {{ or .Values.global.proxy.privileged (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) }}
       capabilities:
-        {{ if or $tproxy $capNetBindService -}}
+        {{ if or $tproxy $capNetBindService (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
         add:
         {{ if $tproxy -}}
         - NET_ADMIN
         {{- end }}
         {{ if $capNetBindService -}}
         - NET_BIND_SERVICE
+        {{- end }}
+        {{ if (isset .ObjectMeta.Annotations `traffic.sidecar.istio.io/outboundSocketMark`) -}}
+        - NET_RAW
         {{- end }}
         {{- end }}
         drop:
@@ -398,8 +411,8 @@ spec:
       runAsGroup: 1337
       {{- else -}}
       runAsNonRoot: true
-      runAsUser: {{ .ProxyUID | default "1337" }}
-      runAsGroup: {{ .ProxyGID | default "1337" }}
+      runAsUser: {{ .ProxyUID | default "64535" }}
+      runAsGroup: {{ .ProxyGID | default "64535" }}
       {{- end }}
       {{- end }}
     resources:

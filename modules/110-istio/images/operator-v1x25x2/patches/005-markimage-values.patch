@@ -1,0 +1,31 @@
+diff --git a/api/v1/values_types.gen.go b/api/v1/values_types.gen.go
+index 6886cdc5..aecbe5ef 100644
+--- a/api/v1/values_types.gen.go
++++ b/api/v1/values_types.gen.go
+@@ -700,6 +700,10 @@ type ProxyConfig struct {
+ 	//
+ 	// Examples: my-proxy (uses global.hub/tag), docker.io/myrepo/my-proxy:v1.0.0
+ 	Image *string `json:"image,omitempty"`
++	// MarkImage is the proxy image for pods that mark intercepted traffic via SO_MARK
++	// (Deckhouse-specific extension; used by the injection template for workloads that
++	// share the sidecar UID, where owner-based interception cannot be used).
++	MarkImage *string `json:"markImage,omitempty"`
+ 	// Lists the IP ranges of Istio egress traffic that the sidecar captures.
+ 	//
+ 	// Example: "172.30.0.0/16,172.20.0.0/16"
+diff --git a/api/v1/zz_generated.deepcopy.go b/api/v1/zz_generated.deepcopy.go
+index e3b6cf5f..7f762206 100644
+--- a/api/v1/zz_generated.deepcopy.go
++++ b/api/v1/zz_generated.deepcopy.go
+@@ -3857,6 +3857,11 @@ func (in *ProxyConfig) DeepCopyInto(out *ProxyConfig) {
+ 		*out = new(string)
+ 		**out = **in
+ 	}
++	if in.MarkImage != nil {
++		in, out := &in.MarkImage, &out.MarkImage
++		*out = new(string)
++		**out = **in
++	}
+ 	if in.IncludeIPRanges != nil {
+ 		in, out := &in.IncludeIPRanges, &out.IncludeIPRanges
+ 		*out = new(string)

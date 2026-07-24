@@ -1,0 +1,110 @@
+---
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-25" $ ) }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }}
+{{- $iptables_image_version := "1.8.9" | replace "." "-" }}
+# proxyv2 variant with CAP_NET_RAW baked into envoy/pilot-agent via setcap.
+# Used only for pods annotated with traffic.sidecar.istio.io/outboundSocketMark
+# (workloads sharing the sidecar UID, where iptables-owner interception doesn't work).
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/envoy_bootstrap.json
+  to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
+  owner: 64535
+  group: 64535
+  after: setup
+# envoy/pilot-agent run as non-root (64535) but need CAP_NET_RAW for setsockopt(SO_MARK) — on
+# envoy upstream sockets and the pilot-agent DNS forward socket (patch 004). securityContext only
+# populates the bounding set, not the effective cap, so the cap must be a file capability.
+#
+# setcap runs in this final stage because importing a file-capped binary into distroless drops
+# the security.capability xattr (CapEff=0 on a live pod). setcap+libcap+busybox are imported
+# `before: setup`, applied, and removed within this same stage — so they don't reach the final image.
+- image: {{ .ModuleName }}/{{ .ImageName }}-envoy-marked-artifact
+  add: /pilot-agent
+  to: /usr/local/bin/pilot-agent
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-envoy-marked-artifact
+  add: /envoy
+  to: /usr/local/bin/envoy
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-envoy-marked-artifact
+  add: /caps/setcap
+  to: /usr/sbin/setcap
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-envoy-marked-artifact
+  add: /caps/libcap.so.2
+  to: /lib64/libcap.so.2
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-envoy-marked-artifact
+  add: /caps/busybox
+  to: /usr/sbin/busybox
+  before: setup
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  before: install
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  before: install
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  before: install
+- image: {{ .ModuleName }}/proxyv2-{{ $istioImageVersion }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: setup
+{{- include "image mount points" . }}
+shell:
+  setup:
+  # Absolute paths: distroless has no PATH. busybox-static provides rm and deletes itself last.
+  - LD_LIBRARY_PATH=/lib64 /usr/sbin/setcap cap_net_raw=ep /usr/local/bin/pilot-agent
+  - LD_LIBRARY_PATH=/lib64 /usr/sbin/setcap cap_net_raw=ep /usr/local/bin/envoy
+  - /usr/sbin/busybox rm -f /usr/sbin/setcap /lib64/libcap.so.2 /usr/sbin/busybox
+imageSpec:
+  config:
+    user: "64535:64535"
+    env:
+      ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
+      ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
+    workingDir: "/"
+    entrypoint: ["/usr/local/bin/pilot-agent"]
+---
+# Proxy binaries + setcap/libcap/busybox, staged for the final image's setup.
+image: {{ .ModuleName }}/{{ .ImageName }}-envoy-marked-artifact
+from: {{ index $.Images "builder/golang-bookworm" }}
+final: false
+import:
+- image: {{ .ModuleName }}/proxyv2-{{ $istioImageVersion }}-build-envoy-artifact
+  add: /src/proxy/bin/envoy
+  to: /envoy
+  before: install
+- image: {{ .ModuleName }}/proxyv2-{{ $istioImageVersion }}-agent-artifact
+  add: /src/istio/out/pilot-agent
+  to: /pilot-agent
+  before: install
+shell:
+  install:
+  - apt-get update && apt-get install -y --no-install-recommends libcap2-bin busybox-static
+  - mkdir -p /caps
+  - cp -L "$(command -v setcap)" /caps/setcap
+  - cp -L /bin/busybox /caps/busybox
+  - cp -L "$(ldconfig -p | awk '$1=="libcap.so.2"{print $NF; exit}')" /caps/libcap.so.2

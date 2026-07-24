@@ -942,6 +942,11 @@ spec:
                                     type: object
                                 type: object
                             type: object
+                          markImage:
+                            description: |-
+                              Image name or path for the proxy image used to mark
+                              intercepted traffic (Deckhouse-specific extension).
+                            type: string
                           logLevel:
                             description: 'Log level for proxy, applies to gateways
                               and sidecars. If left empty, "warning" is used. Expected
