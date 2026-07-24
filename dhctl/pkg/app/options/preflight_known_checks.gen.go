@@ -20,7 +20,7 @@ var generatedPreflightChecks = []string{
 	"resolve-localhost",
 	"static-cidr-intersection",
 	"static-instances-ip-duplication",
-	"static-instances-ssh-credentials",
+	"static-instances-ssh-access",
 	"static-single-ssh-host",
 	"static-ssh-credential",
 	"static-ssh-tunnel",
