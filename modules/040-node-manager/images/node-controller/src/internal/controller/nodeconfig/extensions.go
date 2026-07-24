@@ -17,9 +17,6 @@ limitations under the License.
 package nodeconfig
 
 import (
-	"regexp"
-	"strings"
-
 	corev1 "k8s.io/api/core/v1"
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
@@ -31,19 +28,16 @@ import (
 // sysext to the module that asked for it.
 const moduleNameLabel = "module.deckhouse.io/name"
 
-// defaultModuleSourceName is the ModuleSource a request targets when it does not
-// name one via the "MODULE_SOURCE" param — the canonical Deckhouse source.
+// defaultModuleSourceName is the ModuleSource a request targets when its Sysext
+// does not name one — the canonical Deckhouse source.
 const defaultModuleSourceName = "deckhouse"
-
-// placeholderPattern matches an unresolved ${KEY} left in an image reference.
-var placeholderPattern = regexp.MustCompile(`\$\{[^}]+\}`)
 
 // nodeExtensions aggregates the NodeExtensionRequests that select this node into
 // the extensions and kernel modules to add to its NodeConfig. It is a pure
-// function of its inputs so the matching and template resolution can be tested
-// without a cluster. A request is dropped (not surfaced as an error) when its
-// image template cannot be fully resolved or no digest is known for it.
-func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string, digests map[string]string, kernelVersion string, moduleSourceRepos map[string]string) (extensions []internalv1alpha1.Extension, modules []internalv1alpha1.KernelModule) {
+// function of its inputs so the matching can be tested without a cluster. A
+// request is dropped (not surfaced as an error) when its sysext cannot be
+// resolved (unknown ModuleSource, or no path to locate the image).
+func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string, moduleSourceRepos map[string]string) (extensions []internalv1alpha1.Extension, modules []internalv1alpha1.KernelModule) {
 	seenExtensions := make(map[string]struct{})
 	seenModules := make(map[string]struct{})
 
@@ -53,42 +47,17 @@ func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.
 			continue
 		}
 
-		msRepo := moduleSourceRepo(ner, moduleSourceRepos)
-		ref := resolveImageTemplate(ner.Spec.ImageTemplate, ner.Spec.Params, kernelVersion, msRepo)
-		if placeholderPattern.MatchString(ref) {
-			// A placeholder with no value cannot be resolved to an image.
+		ext, reason := resolveExtension(ner, moduleSourceRepos)
+		if reason != "" {
 			continue
 		}
-
-		ref, pinnedDigest := splitDigest(ref)
-		repository, additionalPath, name := splitReference(ref, msRepo)
-		if name == "" {
-			continue
-		}
-		// A request may pin the digest in its image template (…@sha256:…); that
-		// digest wins. Otherwise the release digest map (base extensions) is
-		// consulted. Without either, the image cannot be pulled, so drop it.
-		digest := pinnedDigest
-		if digest == "" {
-			digest = digests[name]
-		}
-		if digest == "" {
-			continue
-		}
-
-		if _, ok := seenExtensions[name]; !ok {
-			seenExtensions[name] = struct{}{}
-			extensions = append(extensions, internalv1alpha1.Extension{
-				Name:           name,
-				Repository:     repository,
-				AdditionalPath: additionalPath,
-				Digest:         digest,
-				RequestedBy:    requestedBy(ner),
-			})
+		if _, seen := seenExtensions[ext.Name]; !seen {
+			seenExtensions[ext.Name] = struct{}{}
+			extensions = append(extensions, ext)
 		}
 
 		for _, module := range ner.Spec.KernelModules {
-			if _, ok := seenModules[module.Name]; ok {
+			if _, seen := seenModules[module.Name]; seen {
 				continue
 			}
 			seenModules[module.Name] = struct{}{}
@@ -100,6 +69,53 @@ func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.
 	}
 
 	return extensions, modules
+}
+
+// Reasons a request's sysext cannot be resolved, reported on its Ready
+// condition. An empty reason means the extension resolved.
+const (
+	reasonResolved      = "Resolved"
+	reasonInvalidSysext = "InvalidSysext"
+	reasonUnknownSource = "UnknownModuleSource"
+	reasonNoPath        = "NoPath"
+)
+
+// resolveExtension turns a request's Sysext into the NodeConfig extension the
+// on-node agent pulls through the registry-packages-proxy. Repository is the
+// ModuleSource repo — the key the proxy resolves credentials by, so the image is
+// fetched with that source's auth — and AdditionalPath is the repo path under
+// it, defaulting to the module name. The second return is the failure reason, or
+// empty when the extension resolved.
+func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest, moduleSourceRepos map[string]string) (internalv1alpha1.Extension, string) {
+	sysext := ner.Spec.Sysext
+	if sysext.Name == "" || sysext.Digest == "" {
+		return internalv1alpha1.Extension{}, reasonInvalidSysext
+	}
+
+	sourceName := sysext.ModuleSource
+	if sourceName == "" {
+		sourceName = defaultModuleSourceName
+	}
+	repository := moduleSourceRepos[sourceName]
+	if repository == "" {
+		return internalv1alpha1.Extension{}, reasonUnknownSource
+	}
+
+	path := sysext.Path
+	if path == "" {
+		path = ner.Labels[moduleNameLabel]
+	}
+	if path == "" {
+		return internalv1alpha1.Extension{}, reasonNoPath
+	}
+
+	return internalv1alpha1.Extension{
+		Name:           sysext.Name,
+		Repository:     repository,
+		AdditionalPath: path,
+		Digest:         sysext.Digest,
+		RequestedBy:    requestedBy(ner),
+	}, ""
 }
 
 // nerMatchesNode reports whether the request selects this node: its NodeGroup
@@ -127,92 +143,6 @@ func nerMatchesNode(ner *deckhousev1alpha1.NodeExtensionRequest, node *corev1.No
 		}
 	}
 	return true
-}
-
-// resolveImageTemplate substitutes the ${KEY} placeholders in the image
-// template: the reserved KERNEL_VERSION and MODULE_SOURCE_REPO first, then the
-// request's own params. MODULE_SOURCE_REPO is left in place when its repo is
-// unknown so the caller drops the request rather than emitting a malformed ref.
-func resolveImageTemplate(template string, params map[string]string, kernelVersion, moduleSourceRepo string) string {
-	ref := strings.ReplaceAll(template, "${KERNEL_VERSION}", kernelVersion)
-	if moduleSourceRepo != "" {
-		ref = strings.ReplaceAll(ref, "${MODULE_SOURCE_REPO}", moduleSourceRepo)
-	}
-	for key, value := range params {
-		ref = strings.ReplaceAll(ref, "${"+key+"}", value)
-	}
-	return ref
-}
-
-// moduleSourceRepo returns the registry repo of the ModuleSource a request
-// targets. Its "MODULE_SOURCE" param names the source, defaulting to the
-// canonical "deckhouse" source. Empty when the source is unknown, which leaves
-// ${MODULE_SOURCE_REPO} unresolved and drops the request.
-func moduleSourceRepo(ner *deckhousev1alpha1.NodeExtensionRequest, repos map[string]string) string {
-	name := ner.Spec.Params["MODULE_SOURCE"]
-	if name == "" {
-		name = defaultModuleSourceName
-	}
-	return repos[name]
-}
-
-// splitDigest separates a pinned "@sha256:<hex>" digest from the reference. NER
-// targets module images, which live at a per-module registry path rather than in
-// the release digest map; pinning the digest in the template is how such an image
-// is addressed. When present the pinned digest is authoritative.
-func splitDigest(ref string) (base, digest string) {
-	if idx := strings.LastIndex(ref, "@"); idx >= 0 {
-		return ref[:idx], ref[idx+1:]
-	}
-	return ref, ""
-}
-
-// splitReference separates a resolved image reference (already stripped of any
-// pinned "@digest") into the three fields the packages proxy consumes:
-//   - repository: the key the proxy resolves registry auth by — the ModuleSource
-//     repo the image lives under (registry-packages-proxy keys its per-source
-//     credentials by ModuleSource.spec.registry.repo). The proxy then fetches
-//     "<repository>/<additionalPath>@<digest>".
-//   - additionalPath: the sub-repo under that ModuleSource repo, minus the name.
-//   - name: the LAST segment, a logical sysext name matched against the image's
-//     extension-release, NOT part of the registry path (the digest, not the
-//     name, locates the manifest).
-//
-// With moduleSourceRepo "dev-registry.io/sys/deckhouse-oss/modules", the ref
-// "dev-registry.io/sys/deckhouse-oss/modules/sds-replicated-volume/drbd" yields
-// repository = the ModuleSource repo, additionalPath "sds-replicated-volume",
-// name "drbd". A reference not anchored to the ModuleSource repo falls back to a
-// host/path split (repository = host), which the proxy resolves only when a
-// matching per-registry config exists. A trailing ":tag" is stripped when it is
-// a tag rather than a host's ":port", told apart by a following "/".
-func splitReference(ref, moduleSourceRepo string) (repository, additionalPath, name string) {
-	if idx := strings.LastIndex(ref, ":"); idx >= 0 && !strings.Contains(ref[idx+1:], "/") {
-		ref = ref[:idx]
-	}
-	if moduleSourceRepo != "" && strings.HasPrefix(ref, moduleSourceRepo+"/") {
-		additionalPath, name = splitLast(strings.TrimPrefix(ref, moduleSourceRepo+"/"))
-		return moduleSourceRepo, additionalPath, name
-	}
-	repository = ref
-	rest := ""
-	if idx := strings.Index(ref, "/"); idx >= 0 {
-		repository, rest = ref[:idx], ref[idx+1:]
-	}
-	additionalPath, name = splitLast(rest)
-	if name == "" {
-		name = repository
-	}
-	return repository, additionalPath, name
-}
-
-// splitLast splits a slash path into everything before the last segment and the
-// last segment itself.
-func splitLast(path string) (prefix, last string) {
-	last = path
-	if idx := strings.LastIndex(path, "/"); idx >= 0 {
-		prefix, last = path[:idx], path[idx+1:]
-	}
-	return prefix, last
 }
 
 // requestedBy is the owner recorded on the extension: the module that created

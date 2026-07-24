@@ -59,14 +59,12 @@ type clusterInputs struct {
 	// NodeExtensionRequests are the operator's requests to merge extra system
 	// extensions onto the nodes they select.
 	NodeExtensionRequests []deckhousev1alpha1.NodeExtensionRequest
-	// KernelVersion fills the reserved ${KERNEL_VERSION} placeholder in a
-	// request's image template.
-	KernelVersion string
 	// ModuleSourceRepos maps a ModuleSource name to its registry repo
 	// (spec.registry.repo, e.g. dev-registry.deckhouse.io/sys/deckhouse-oss/modules).
-	// NER targets module images, which live under a ModuleSource's repo, so the
-	// reserved ${MODULE_SOURCE_REPO} placeholder is resolved from here — a request
-	// names the module and image, not the cluster's registry.
+	// A NER's sysext lives under its ModuleSource's repo; that repo becomes the
+	// extension's Repository, which is the key the packages proxy resolves the
+	// source's credentials by — so a request names the module and digest, not the
+	// cluster's registry.
 	ModuleSourceRepos map[string]string
 }
 
@@ -115,15 +113,19 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	}
 	in.RegistryPackagesProxyToken = token
 
-	in.KernelVersion = defaultKernelVersion
-
 	ners, err := s.readNodeExtensionRequests(ctx)
 	if err != nil {
 		return in, err
 	}
 	in.NodeExtensionRequests = ners
 
-	in.ModuleSourceRepos = s.readModuleSourceRepos(ctx)
+	// ModuleSource repos only resolve NER image templates; skip the cluster-wide
+	// list when no request could use it. This keeps the common path — and
+	// environments without the ModuleSource CRD, such as the bootstrap tests —
+	// from paying for (or tripping over) a lookup nothing consumes.
+	if len(ners) > 0 {
+		in.ModuleSourceRepos = s.readModuleSourceRepos(ctx)
+	}
 
 	return in, nil
 }
@@ -133,9 +135,9 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 var moduleSourceListGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleSourceList"}
 
 // readModuleSourceRepos lists ModuleSources and maps each name to its registry
-// repo. NER resolves ${MODULE_SOURCE_REPO} from this map. Absent or unreadable
-// sources are tolerated: a request that does not use the placeholder is
-// unaffected, and one that does is dropped when its repo cannot be resolved.
+// repo. A NER's sysext is located under its ModuleSource's repo. Absent or
+// unreadable sources are tolerated: the request is simply dropped when its repo
+// cannot be resolved.
 func (s *sourceReader) readModuleSourceRepos(ctx context.Context) map[string]string {
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(moduleSourceListGVK)

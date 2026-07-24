@@ -103,6 +103,12 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 			firstErr = err
 		}
 	}
+
+	// Report each request's resolution back on its own status. This runs on the
+	// same all-nodes pass a NER change triggers, so editing a request refreshes
+	// both the nodes it targets and its status.
+	r.reconcileNERStatuses(ctx, logger)
+
 	return ctrl.Result{}, firstErr
 }
 

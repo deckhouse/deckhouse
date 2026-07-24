@@ -93,9 +93,3 @@ const (
 // published there; until then the image is pinned to a known-good build so the
 // rest of the pipeline can be exercised end to end.
 const defaultOSImage = "registry.deckhouse.io/deckhouse/olcedar@v0.1"
-
-// defaultKernelVersion fills the reserved ${KERNEL_VERSION} placeholder in a
-// NodeExtensionRequest's image template.
-//
-// TODO: resolve from the osImage OCI label / release channel.
-const defaultKernelVersion = "6.12.85-lvc19"

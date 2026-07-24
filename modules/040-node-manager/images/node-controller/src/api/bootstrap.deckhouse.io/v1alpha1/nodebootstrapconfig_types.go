@@ -85,7 +85,7 @@ type NodeBootstrapConfigTemplateSpec struct {
 // NodeBootstrapConfig: its metadata (labels/annotations) and the empty spec.
 type NodeBootstrapConfigTemplateResource struct {
 	// +optional
-	ObjectMeta TemplateObjectMeta `json:"metadata,omitempty"`
+	ObjectMeta TemplateObjectMeta      `json:"metadata,omitempty"`
 	Spec       NodeBootstrapConfigSpec `json:"spec"`
 }
 
