@@ -46,6 +46,7 @@ spec:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: egress-gateway-agent
+        security.deckhouse.io/security-policy-exception: egress-gateway-agent
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized" "with-storage-problems") | nindent 6 }}

@@ -1,0 +1,50 @@
+{{- if (.Values.global.enabledModules | has "admission-policy-engine") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: safe-agent-updater
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "safe-agent-updater")) | nindent 2 }}
+spec:
+  securityContext:
+    capabilities:
+      allowedValues:
+        add:
+          - NET_ADMIN
+          - NET_RAW
+          - SYS_MODULE
+        drop:
+          - ALL
+      metadata:
+        description: |
+          check-wg-kernel-compat needs NET_ADMIN/NET_RAW/SYS_MODULE to probe WireGuard
+          kernel compatibility on the node.
+    seLinuxOptions:
+      allowedValues:
+        - level: s0
+          type: spc_t
+      metadata:
+        description: |
+          SELinux type spc_t is required for host CNI path access during kernel checks.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          safe-agent-updater runs on the host network to talk to the local Kubernetes
+          API proxy while coordinating Cilium agent updates.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          hostPath is required to access the host CNI binary directory.
+    hostPath:
+      allowedValues:
+        - path: /opt/cni/bin
+          readOnly: false
+          metadata:
+            description: Host CNI binary directory used during agent image pre-pull and update checks.
+{{- end }}
