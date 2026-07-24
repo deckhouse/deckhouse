@@ -83,6 +83,10 @@ func (e *StepExecutor) buildTargetStatefulSet(ctx context.Context) (*appsv1.Stat
 		return nil, fmt.Errorf("get target statefulset: %w", err)
 	}
 
+	if err := e.setCPNControllerOwner(sts); err != nil {
+		return nil, err
+	}
+
 	pkiSecret := &corev1.Secret{}
 	if err := e.client.Get(
 		ctx,
@@ -100,6 +104,17 @@ func (e *StepExecutor) buildTargetStatefulSet(ctx context.Context) (*appsv1.Stat
 	e.applyDesiredChecksums(sts, certsChecksum)
 
 	return sts, nil
+}
+
+// setCPNControllerOwner makes the StatefulSet a dependent of the ControlPlaneNode that owns
+// this operation, so VCP → CPN deletion garbage-collects component StatefulSets in a shared Namespace.
+func (e *StepExecutor) setCPNControllerOwner(sts *appsv1.StatefulSet) error {
+	owner := metav1.GetControllerOf(e.operation)
+	if owner == nil {
+		return fmt.Errorf("operation %s/%s has no controller owner (expected ControlPlaneNode)", e.operation.Namespace, e.operation.Name)
+	}
+	sts.SetOwnerReferences([]metav1.OwnerReference{*owner})
+	return nil
 }
 
 func (e *StepExecutor) loadTargetStatefulSet(ctx context.Context) (*appsv1.StatefulSet, error) {

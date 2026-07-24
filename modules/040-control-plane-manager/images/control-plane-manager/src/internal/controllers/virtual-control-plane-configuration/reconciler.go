@@ -208,7 +208,7 @@ func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) 
 			// Always ClusterIP: external exposure is handled by the per-VCP ALB (TLSRoute backend), not the Service.
 			Type: corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{
-				"app":                                      "kube-apiserver",
+				"app": "kube-apiserver",
 				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 			Ports: []corev1.ServicePort{
@@ -633,6 +633,12 @@ func (r *reconciler) reconcileControlPlaneNodes(
 		return reconcile.Result{}, err
 	}
 
+	for _, target := range targets {
+		if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	targetNames := make(map[string]struct{}, len(targets))
 	for _, target := range targets {
 		targetNames[target.Name] = struct{}{}
@@ -755,7 +761,7 @@ func buildTargetControlPlaneNode(
 }
 
 func computeControlPlaneNodeName(vcp *controlplanev1alpha1.VirtualControlPlane, ordinal int32) string {
-	return fmt.Sprintf("%s-%d", vcp.Name, ordinal)
+	return fmt.Sprintf("%s-master-%d", vcp.Name, ordinal)
 }
 
 func isControlPlaneNodeInSync(current, target *controlplanev1alpha1.ControlPlaneNode) bool {
