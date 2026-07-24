@@ -325,14 +325,22 @@ func CreateResourcesLoop(
 
 	waiter := NewWaiter(checkers)
 
-	gvks := make(map[string]struct{})
-	resourcesToCreate := make([]string, 0, len(resourceCreator.resources))
-	for _, resource := range resourceCreator.resources {
-		key := resource.DetailedGVKString()
-		if _, ok := gvks[key]; !ok {
-			gvks[key] = struct{}{}
-			resourcesToCreate = append(resourcesToCreate, key)
+	// List each object on its own line so operators see which resources are actually
+	// applied. The old output deduplicated by GVK, hiding distinct instances (a single
+	// "Kind=ModuleConfig" line stood in for 15 different ModuleConfigs). Labels are padded
+	// to a common width so the instance names line up in a column.
+	labels := make([]string, len(resourceCreator.resources))
+	names := make([]string, len(resourceCreator.resources))
+	maxLabel := 0
+	for i, resource := range resourceCreator.resources {
+		labels[i], names[i] = resourceListParts(resource)
+		if len(labels[i]) > maxLabel {
+			maxLabel = len(labels[i])
 		}
+	}
+	resourcesToCreate := make([]string, len(resourceCreator.resources))
+	for i := range resourcesToCreate {
+		resourcesToCreate[i] = fmt.Sprintf("%-*s %s", maxLabel, labels[i], names[i])
 	}
 
 	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resources to create", func(ctx context.Context) error {
@@ -458,6 +466,25 @@ func getUnstructuredName(obj *unstructured.Unstructured) string {
 		return fmt.Sprintf("%s %s", obj.GetKind(), obj.GetName())
 	}
 	return fmt.Sprintf("%s %s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+}
+
+// resourceListParts splits one object into its type label and instance name for the
+// "Resources to create" listing. The label is "Kind[ (group/version)]:"; the group/version
+// is shown only for non-core groups, since core resources (Namespace, ServiceAccount, …)
+// are self-evident, but a custom resource's version can matter (e.g. across module API
+// migrations). The name is "[namespace/]name", namespaced only for namespaced objects.
+func resourceListParts(r *template.Resource) (string, string) {
+	label := r.GVK.Kind
+	if r.GVK.Group != "" {
+		label += " (" + r.GVK.Group + "/" + r.GVK.Version + ")"
+	}
+	label += ":"
+
+	name := r.Object.GetName()
+	if ns := r.Object.GetNamespace(); ns != "" {
+		name = ns + "/" + name
+	}
+	return label, name
 }
 
 func DeleteResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources) error {
