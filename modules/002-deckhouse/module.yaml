@@ -11,3 +11,11 @@ disable:
 descriptions:
   en: 'Configures main Deckhouse parameters: logging level, set of modules enabled by default, and release channel.'
   ru: 'Настраивает основные параметры Deckhouse: уровень логирования, набор модулей, включенных по умолчанию, и канал обновлений.'
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+        - Minimal

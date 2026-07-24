@@ -11,3 +11,14 @@ disable:
 descriptions:
   en: Manages the configuration of the registry of Deckhouse components and provides an internal container registry.
   ru: Отвечает за управление конфигурацией registry компонентов Deckhouse и предоставляет внутреннее хранилище образов контейнеров.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+    cse:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

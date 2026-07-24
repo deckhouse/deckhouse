@@ -8,3 +8,14 @@ namespace: kube-system
 descriptions:
   en: Installs CoreDNS components for managing DNS in the Kubernetes cluster. Deletes all previously installed kubeadm Deployments, ConfigMaps and RBAC for CoreDNS.
   ru: Устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes. Удаляет ранее установленные kubeadm'ом Deployment, ConfigMap и RBAC для CoreDNS.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+    cse:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

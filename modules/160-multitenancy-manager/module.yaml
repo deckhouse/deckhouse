@@ -6,3 +6,10 @@ namespace: d8-multitenancy-manager
 descriptions:
   en: Enables creation of isolated projects in a cluster. Projects provide resource quotas, network isolation, and security features beyond standard namespaces.
   ru: Позволяет создавать изолированные проекты в кластере. Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных пространств имён.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

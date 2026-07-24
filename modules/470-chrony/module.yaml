@@ -8,3 +8,14 @@ stage: General Availability
 descriptions:
   en: Provides time synchronization on all cluster nodes using chrony. Ensures consistent time across all nodes for proper cluster operation.
   ru: Обеспечивает синхронизацию времени на всех узлах кластера с помощью chrony. Гарантирует единое время на всех узлах для корректной работы кластера.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+    cse:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
