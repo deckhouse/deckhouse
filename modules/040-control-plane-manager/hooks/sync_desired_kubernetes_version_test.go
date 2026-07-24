@@ -123,4 +123,84 @@ data:
 			Expect(cm.Field("metadata.labels.max-k8s-version").String()).To(Equal("1.34"))
 		})
 	})
+
+	Context("Default/Automatic version drift more than 1 minor below what's running", func() {
+		f := HookExecutionConfigInit(`{"controlPlaneManager":{}}`, `{}`)
+
+		const runningConfigMap = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    k8s-version: "1.36"
+    max-k8s-version: "1.36"
+data:
+  spec: |
+    desiredVersion: "1.36"
+    updateMode: Automatic
+  status: |
+    currentVersion: "1.36"
+    phase: UpToDate
+`
+
+		findMetric := func() (float64, bool) {
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == "d8_control_plane_default_version_drift" {
+					return *m.Value, true
+				}
+			}
+			return 0, false
+		}
+
+		It("skips the write and sets the drift metric when the resolved default is more than 1 minor below currentVersion", func() {
+			// No MC override, CC resolves (via the global hook, simulated here) to "1.34" — 2
+			// minors below the "1.36" the cluster is actually running.
+			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.34")
+			f.BindingContexts.Set(f.KubeStateSet(runningConfigMap + buildState("Automatic")))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.36"`), "spec must stay unchanged")
+
+			value, found := findMetric()
+			Expect(found).To(BeTrue())
+			Expect(value).To(Equal(1.0))
+		})
+
+		It("proceeds normally when the drift is within 1 minor", func() {
+			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.35")
+			f.BindingContexts.Set(f.KubeStateSet(runningConfigMap + buildState("Automatic")))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.35"`))
+
+			_, found := findMetric()
+			Expect(found).To(BeFalse())
+		})
+
+		It("an explicit MC pin is not subject to the drift guard, even if it downgrades", func() {
+			f.ValuesSet("controlPlaneManager.kubernetesVersion", "1.33")
+			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.36")
+			f.BindingContexts.Set(f.KubeStateSet(runningConfigMap + buildState("1.36")))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.33"`))
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring("updateMode: Manual"))
+
+			_, found := findMetric()
+			Expect(found).To(BeFalse())
+		})
+	})
 })

@@ -234,6 +234,41 @@
              ```
 
              Delete the `kubernetesVersion` field and save.
+    - alert: D8ControlPlaneDefaultVersionDrift
+      for: 5m
+      expr: |
+        d8_control_plane_default_version_drift == 1
+      labels:
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_control_plane_default_version_drift: "D8ControlPlaneDefaultVersionDrift,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_control_plane_default_version_drift: "D8ControlPlaneDefaultVersionDrift,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Control plane Kubernetes version is more than 1 minor above the current Deckhouse default; automatic rollback is blocked.
+        description: |-
+          `kubernetesVersion` is not pinned explicitly (unset or `Automatic`) in ModuleConfig `control-plane-manager` (or in the deprecated `ClusterConfiguration` field), so it's expected to track the version Deckhouse currently considers stable — but that default is now more than 1 minor version below what the control plane is actually running.
+
+          This can happen if the cluster was previously pinned to an explicit, newer version and later switched back to `Automatic`, while the installed Deckhouse release's default hasn't caught up.
+
+          To avoid an unattended downgrade, Deckhouse has **not** changed the cluster's version and will keep it as is until you act.
+
+          **To resolve this alert:**
+
+          - If you want to keep the current (higher) version, pin it explicitly:
+
+            ```bash
+            d8 k patch mc control-plane-manager --type merge -p '{"spec":{"settings":{"kubernetesVersion":"<current version>"}}}'
+            ```
+
+          - If you actually want to downgrade to the Deckhouse default, do it explicitly one minor version at a time (a downgrade of more than 1 minor version is rejected):
+
+            ```bash
+            d8 k patch mc control-plane-manager --type merge -p '{"spec":{"settings":{"kubernetesVersion":"<current version - 1 minor>"}}}'
+            ```
     - alert: D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig
       for: 5m
       expr: |

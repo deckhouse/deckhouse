@@ -19,7 +19,9 @@ package hooks
 import (
 	"context"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -43,11 +45,20 @@ Description:
 	status.* or the k8s-version/max-k8s-version labels update-observer owns, and it never writes
 	anything into the d8-cluster-configuration Secret (only reads it, to recover the raw/
 	unresolved ClusterConfiguration value needed for the updateMode decision below).
+
+	Soft validation: in Automatic mode (no explicit kubernetesVersion pinned anywhere), never
+	silently resolve to a version more than 1 minor below what's actually running — that would be
+	an unattended, unconfirmed downgrade of the control plane. Skip the write and raise
+	D8ControlPlaneDefaultVersionDrift instead; the operator can downgrade explicitly if that's
+	really wanted (hard validation then guards that explicit downgrade the usual way).
 */
 
 const (
 	desiredVersionConfigMapName      = "d8-cluster-kubernetes"
 	desiredVersionConfigMapNamespace = "kube-system"
+
+	defaultVersionDriftMetricGroup = "D8ControlPlaneDefaultVersionDrift"
+	defaultVersionDriftMetricName  = "d8_control_plane_default_version_drift"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -80,7 +91,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{desiredVersionConfigMapNamespace},
 				},
 			},
-			FilterFunc: sdkvFilterConfigMapSpec,
+			FilterFunc: sdkvFilterConfigMapSnapshot,
 		},
 	},
 }, syncDesiredKubernetesVersion)
@@ -108,13 +119,31 @@ func sdkvFilterRawClusterConfigurationVersion(unstructured *unstructured.Unstruc
 	return cc.KubernetesVersion, nil
 }
 
-func sdkvFilterConfigMapSpec(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+// configMapSnapshot carries both the ConfigMap's current data["spec"] (raw YAML, used to detect
+// a no-op write) and its data["status"].currentVersion (the actually-running version, as last
+// confirmed by update-observer — used for the drift check below). Both are read-only inputs to
+// this hook; only "spec" is ever written back.
+type configMapSnapshot struct {
+	Spec           string
+	CurrentVersion string
+}
+
+func sdkvFilterConfigMapSnapshot(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var cm corev1.ConfigMap
 	if err := sdk.FromUnstructured(unstructured, &cm); err != nil {
 		return nil, err
 	}
 
-	return cm.Data["spec"], nil
+	snapshot := configMapSnapshot{Spec: cm.Data["spec"]}
+
+	var status struct {
+		CurrentVersion string `json:"currentVersion"`
+	}
+	if err := yaml.Unmarshal([]byte(cm.Data["status"]), &status); err == nil {
+		snapshot.CurrentVersion = status.CurrentVersion
+	}
+
+	return snapshot, nil
 }
 
 // configMapSpec mirrors the Spec struct update-observer's controller/configmap.go writes/reads
@@ -125,6 +154,8 @@ type configMapSpec struct {
 }
 
 func syncDesiredKubernetesVersion(_ context.Context, input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire(defaultVersionDriftMetricGroup)
+
 	desired := resolveDeclaredKubernetesVersion(input)
 	if desired == "" {
 		// Nothing declared anywhere yet (e.g. the very first reconcile before
@@ -151,18 +182,25 @@ func syncDesiredKubernetesVersion(_ context.Context, input *go_hook.HookInput) e
 		updateMode = "Automatic"
 	}
 
+	var cm configMapSnapshot
+	if snaps, err := sdkobjectpatch.UnmarshalToStruct[configMapSnapshot](input.Snapshots, "cluster_kubernetes_configmap"); err == nil && len(snaps) > 0 {
+		cm = snaps[0]
+	}
+
+	if updateMode == "Automatic" && cm.CurrentVersion != "" {
+		if drifted, err := isMoreThanOneMinorBelow(desired, cm.CurrentVersion); err == nil && drifted {
+			input.MetricsCollector.Set(defaultVersionDriftMetricName, 1, map[string]string{}, metrics.WithGroup(defaultVersionDriftMetricGroup))
+			return nil
+		}
+	}
+
 	specBytes, err := yaml.Marshal(configMapSpec{DesiredVersion: desired, UpdateMode: updateMode})
 	if err != nil {
 		return err
 	}
 	specYAML := string(specBytes)
 
-	currentSpecYAML := ""
-	if snaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "cluster_kubernetes_configmap"); err == nil && len(snaps) > 0 {
-		currentSpecYAML = snaps[0]
-	}
-
-	if currentSpecYAML == specYAML {
+	if cm.Spec == specYAML {
 		return nil
 	}
 
@@ -187,4 +225,20 @@ func syncDesiredKubernetesVersion(_ context.Context, input *go_hook.HookInput) e
 	input.PatchCollector.PatchWithMerge(patch, "v1", "ConfigMap", desiredVersionConfigMapNamespace, desiredVersionConfigMapName, object_patch.WithIgnoreMissingObject())
 
 	return nil
+}
+
+// isMoreThanOneMinorBelow reports whether candidate is more than 1 minor version below current.
+func isMoreThanOneMinorBelow(candidate, current string) (bool, error) {
+	candidateV, err := semver.NewVersion(candidate)
+	if err != nil {
+		return false, err
+	}
+	currentV, err := semver.NewVersion(current)
+	if err != nil {
+		return false, err
+	}
+	if candidateV.Major() != currentV.Major() {
+		return candidateV.Major() < currentV.Major(), nil
+	}
+	return candidateV.Minor() < currentV.Minor()-1, nil
 }
