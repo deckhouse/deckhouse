@@ -128,8 +128,7 @@ memory: 50Mi
 
   {{- $resizerImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalResizer" $kubernetesSemVer) }}
 
-  {{- $syncerImageName := join "" (list "csiVsphereSyncer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $syncerImage := include "helm_lib_module_common_image_no_fail" (list $context $syncerImageName) }}
+  {{- $syncerImage := dig "syncerImage" "" $config }}
 
   {{- $snapshotterImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiExternalSnapshotter" $kubernetesSemVer) }}
 
@@ -173,7 +172,7 @@ spec:
         cpu: 20m
         memory: 50Mi
     {{- end }}
-    {{- if $syncerEnabled }}
+    {{- if and $syncerEnabled $syncerImage }}
     - containerName: "syncer"
       minAllowed:
         {{- include "syncer_resources" $context | nindent 8 }}
@@ -400,7 +399,7 @@ spec:
             {{- include "resizer_resources" $context | nindent 12 }}
   {{- end }}
             {{- end }}
-            {{- if $syncerEnabled }}
+            {{- if and $syncerEnabled $syncerImage }}
       - name: syncer
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true) | nindent 8 }}
         image: {{ $syncerImage | quote }}
