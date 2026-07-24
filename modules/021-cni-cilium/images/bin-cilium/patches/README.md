@@ -96,3 +96,19 @@ The patch removes `*.key` files from the state directory copy before archiving.
 - Released in cilium v1.17.15 / v1.18.9 / v1.19.3.
 
 **Remove this patch when the base cilium version in `modules/021-cni-cilium/oss.yaml` is bumped to v1.17.15 or newer** — the fix is then already in the upstream sources and this patch will fail to apply.
+
+## 019-bpf-masquerade-remote-node.patch
+
+Backport the BPF masquerading behavior for traffic from endpoints to remote node
+addresses. In Cilium 1.17 such traffic is punted to the stack without SNAT in
+native routing mode or when the ipcache entry has `skiptunnel`, which breaks
+connectivity when pod CIDRs are not routable from the target node address.
+
+This mirrors the `enable-remote-node-masquerade` behavior introduced upstream in
+Cilium 1.19, but applies it unconditionally for Deckhouse BPF masquerading.
+
+Upstream PR <https://github.com/cilium/cilium/pull/37568>.
+
+**Remove this patch when the base Cilium version is bumped to 1.19 or newer**,
+and explicitly enable the upstream option in the `cilium-config` ConfigMap:
+`enable-remote-node-masquerade: "true"`.
