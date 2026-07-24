@@ -27,3 +27,8 @@ Fix use expfmt library in pilot-agent. This library used for format metrics.
 
 Implement graceful transition for remote multicluster secrets. To prevent connectivity gaps during secret rotation, the old secret is no longer dismissed immediately. Instead, it remains active until the new secret is processed and all associated metadata is synced.
 Adopted upstream pr https://github.com/istio/istio/pull/58567.
+
+## 005-istio-init-readonly-rootfs.patch
+
+Set `readOnlyRootFilesystem: true` for the `istio-init` container in the sidecar injection template (`InitContainer` mode).
+Required for clusters that enforce read-only root filesystem via SecurityPolicy/PSS (e.g. CSE). Safe for the standard Deckhouse `proxyv2` image: `iptables-wrapper` selects nft in the pod network namespace, so `/run/xtables.lock` is not required.
