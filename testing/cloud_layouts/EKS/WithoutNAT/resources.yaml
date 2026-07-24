@@ -19,6 +19,7 @@ metadata:
   name: prometheus
 spec:
   enabled: true
+  version: 1
   settings:
     longtermRetentionDays: 0
 ---
