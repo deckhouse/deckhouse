@@ -42,6 +42,41 @@ cloud-provider-vsphere:
         ru: Если поле `.storageClass.compatibilityFlag` существует, перепишите значение с заглавной буквы.
       conversions:
         - if .storageClass | has("compatibilityFlag") then .storageClass.compatibilityFlag |= (.[0:1] | ascii_upcase) + (.[1:] | ascii_downcase) end
+cloud-provider-yandex:
+    - version: 2
+      description:
+        en: |
+            Migration to the new ModuleConfig schema for cloud-provider-yandex.
+            Sections `provider` and `nodes` with required fields are added.
+            Fields `nodes.parameters.layout` / `nodes.parameters.nodeNetworkCIDR` / `nodes.parameters.sshPublicKey` get placeholder values — update them manually.
+            Fields `storageClass.default` / `storageClass.exclude` are replaced with `storage.parameters.defaultStorageClass` / `storage.parameters.excludedStorageClasses`.
+            Field `additionalExternalNetworkIDs` is moved to `ccm.parameters.additionalExternalNetworkIDs`.
+        ru: |
+            Переход на новую схему ModuleConfig для cloud-provider-yandex.
+            Добавлены секции `provider` и `nodes` с обязательными полями.
+            Поля `nodes.parameters.layout` / `nodes.parameters.nodeNetworkCIDR` / `nodes.parameters.sshPublicKey` получают placeholder-значения — замените их реальными значениями вручную.
+            Поля `storageClass.default` / `storageClass.exclude` заменены на `storage.parameters.defaultStorageClass` / `storage.parameters.excludedStorageClasses`.
+            Поле `additionalExternalNetworkIDs` перемещено в `ccm.parameters.additionalExternalNetworkIDs`.
+      conversions:
+        - if .provider == null then .provider = {} end
+        - if .provider.parameters == null then .provider.parameters = {} end
+        - if .nodes == null then .nodes = {} end
+        - if .nodes.parameters == null then .nodes.parameters = {} end
+        - if .nodes.parameters.layout == null then .nodes.parameters.layout = "Standard" end
+        - if .nodes.parameters.nodeNetworkCIDR == null then .nodes.parameters.nodeNetworkCIDR = "10.0.0.0/16" end
+        - if .nodes.parameters.sshPublicKey == null then .nodes.parameters.sshPublicKey = "ssh-rsa PLACEHOLDER_REPLACE_ME" end
+        - if .nodes.disabled == null then .nodes.disabled = false end
+        - if .storage == null then .storage = {} end
+        - if .storage.parameters == null then .storage.parameters = {} end
+        - if .storageClass.default != null then .storage.parameters.defaultStorageClass = .storageClass.default end
+        - if .storageClass.exclude != null then .storage.parameters.excludedStorageClasses = .storageClass.exclude end
+        - del(.storageClass)
+        - if .storage.disabled == null then .storage.disabled = false end
+        - if .ccm == null then .ccm = {} end
+        - if .ccm.parameters == null then .ccm.parameters = {} end
+        - if .additionalExternalNetworkIDs != null then .ccm.parameters.additionalExternalNetworkIDs = .additionalExternalNetworkIDs end
+        - del(.additionalExternalNetworkIDs)
+        - if .ccm.disabled == null then .ccm.disabled = false end
 control-plane-manager:
     - version: 2
       description:
