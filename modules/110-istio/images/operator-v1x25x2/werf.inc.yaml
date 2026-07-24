@@ -73,6 +73,7 @@ shell:
   - git clone --depth 1 --branch {{ $istioVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/network/sail-operator.git /src/operator
   - cd /src/operator
   - git apply --verbose /patches/001-istio-go-mod.patch
+  - git apply --verbose /patches/002-istio-init-readonly-rootfs.patch
   - rm -rf /src/operator/.git
 ---
 ---
