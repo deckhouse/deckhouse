@@ -65,6 +65,14 @@ properties:
           root:
             type: string
             x-examples: ["---ROOT PEM---"]
+          source:
+            type: string
+            description: |
+              Provenance marker for the resolved CA material: `inline`, `cacerts`, `selfSigned`,
+              or `secretRef:<namespace>/<name>`. Used to decide whether a failed secretRef
+              re-resolution may keep the last-good CA (only when the marker matches the current
+              secretRef).
+            x-examples: ["secretRef:my-pki/my-istio-ca"]
       federations:
         type: array
         default: []

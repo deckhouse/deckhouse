@@ -12,6 +12,11 @@
   {{- end -}}
 {{- end -}}
 
+{{- define "istioCABundleChecksum" -}}
+  {{- $ca := .Values.istio.internal.ca -}}
+  {{- dict "cert" $ca.cert "key" $ca.key "chain" $ca.chain "root" $ca.root | toYaml | sha256sum -}}
+{{- end -}}
+
 {{- define "istioGlobalRevision" -}}
   {{- $version := $.Values.istio.internal.globalVersion -}}
   {{- $versionInfo := get .Values.istio.internal.versionMap $version -}}
