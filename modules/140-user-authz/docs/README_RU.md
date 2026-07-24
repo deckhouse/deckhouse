@@ -466,6 +466,7 @@ patch,update:
     - nodes
 read:
     - deckhouse.io/containerdintegritypolicies
+    - deckhouse.io/egressistiocontrollers
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
@@ -601,6 +602,7 @@ write:
     - deckhouse.io/deschedulers
     - deckhouse.io/dvpinstanceclasses
     - deckhouse.io/dynamixinstanceclasses
+    - deckhouse.io/egressistiocontrollers
     - deckhouse.io/gcpinstanceclasses
     - deckhouse.io/huaweicloudinstanceclasses
     - deckhouse.io/ingressistiocontrollers

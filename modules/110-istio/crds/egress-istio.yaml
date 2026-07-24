@@ -1,0 +1,167 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: egressistiocontrollers.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: istio
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: egressistiocontrollers
+    singular: egressistiocontroller
+    kind: EgressIstioController
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          x-kubernetes-validations:
+            - rule: 'size(self.metadata.name) <= 37'
+              message: 'EgressIstioController name must be no longer than 37 characters.'
+            - rule: "self.metadata.name.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')"
+              message: 'EgressIstioController name must be a DNS label.'
+          required: ['spec']
+          properties:
+            spec:
+              type: object
+              x-kubernetes-validations:
+                - rule: 'self.egressGatewayClass == oldSelf.egressGatewayClass'
+                  message: 'egressGatewayClass is immutable.'
+              required: ['egressGatewayClass']
+              properties:
+                egressGatewayClass:
+                  type: string
+                  maxLength: 63
+                  description: |
+                    Egress gateway class is used by application [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) resources for identifying the right egress gateway setup.
+
+                    The identification is organized by setting the spec.selector: `istio.deckhouse.io/egress-gateway-class: <egressGatewayClass value>`.
+
+                    This parameter does not change during the entire resource life.
+                  x-doc-examples: ['egress']
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                nodeSelector:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+                    If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
+
+                    **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
+                tolerations:
+                  type: array
+                  description: |
+                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
+
+                    If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
+
+                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: ["NoSchedule","PreferNoSchedule","NoExecute"]
+                      operator:
+                        type: string
+                        default: "Equal"
+                        enum: ["Exists","Equal"]
+                      key:
+                        type: string
+                      tolerationSeconds:
+                        format: int64
+                        type: integer
+                      value:
+                        type: string
+                resourcesRequests:
+                  required: ['mode']
+                  type: object
+                  description: |
+                    Settings for CPU and memory requests and limits by egress gateway pods.
+
+                    If omitted, the built-in VPA mode defaults are used. In `Static` mode, requests are specified directly in `static`. In `VPA` mode, the VPA adjusts requests within the configured minimum and maximum bounds.
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        Resource management mode:
+                        - `Static` — allows you to specify requests directly in the `static` section;
+                        - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the `vpa` section.
+                      enum: ['VPA', 'Static']
+                      default: 'VPA'
+                    vpa:
+                      type: object
+                      description: |
+                        Resource management options for the `VPA` mode.
+                      properties:
+                        mode:
+                          type: string
+                          description: |
+                            VPA operating mode.
+
+                            - `Initial` — VPA sets initial values for pod resource requests at pod creation time. Resource values are not changed automatically afterwards.
+
+                            - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster. If in-place updates are not possible, the pod is recreated.
+
+                            - `Auto` — VPA automatically recreates pods to apply updated resource values. This mode is considered legacy starting from Deckhouse version 1.75; `InPlaceOrRecreate` is recommended.
+                          enum: ['Initial', 'InPlaceOrRecreate', 'Auto']
+                          default: 'Initial'
+                        cpu:
+                          type: object
+                          description: |
+                            CPU-related VPA settings.
+                          properties:
+                            max:
+                              description: |
+                                The maximum value that the VPA can set for the CPU requests.
+                              default: '1000m'
+                              type: string
+                            min:
+                              description: |
+                                The minimum value that the VPA can set for the CPU requests.
+                              default: '100m'
+                              type: string
+                        memory:
+                          type: object
+                          description: |
+                            Memory-related VPA settings.
+                          properties:
+                            max:
+                              description: |
+                                The maximum memory requests the VPA can set.
+                              default: '2000Mi'
+                              type: string
+                            min:
+                              description: |
+                                The minimum memory requests the VPA can set.
+                              default: '128Mi'
+                              type: string
+                    static:
+                      type: object
+                      description: |
+                        Resource management options for the `Static` mode.
+                      properties:
+                        cpu:
+                          type: string
+                          description: |
+                            Configuring CPU requests.
+                          default: '100m'
+                        memory:
+                          type: string
+                          description: |
+                            Configuring memory requests.
+                          default: '128Mi'
+      additionalPrinterColumns:
+        - jsonPath: .spec.egressGatewayClass
+          name: Egress_Gateway_Class
+          description: 'Name of served Istio egress gateway class.'
+          type: string

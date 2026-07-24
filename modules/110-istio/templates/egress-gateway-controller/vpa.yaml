@@ -1,0 +1,27 @@
+{{- range $controller := .Values.istio.internal.egressControllers }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- $resourcesRequests := default (dict) $controller.spec.resourcesRequests }}
+{{- $mode := ($resourcesRequests.mode | default "VPA") }}
+{{- if eq $mode "VPA" }}
+{{- $resourcesManagement := include "istio_egress_gateway_resources_management" $controller | fromYaml }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: egress-gateway-controller-{{ $controller.name }}
+  namespace: d8-egress-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict
+      "app" "egress-gateway-controller"
+      "instance" $controller.name
+  )) | nindent 2 }}
+spec:
+{{- include "helm_lib_resources_management_vpa_spec" (list
+  "apps/v1"
+  "DaemonSet"
+  (printf "egress-gateway-controller-%s" $controller.name)
+  "istio-proxy"
+  $resourcesManagement
+) | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
