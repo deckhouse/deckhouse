@@ -75,6 +75,7 @@ spec:
   {{- end }}
   {{- end }}
   {{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
   - allowedRoutes:
       namespaces:
         from: Same
@@ -104,6 +105,7 @@ spec:
     name: kubeconfig
     port: 80
     protocol: HTTP
+  {{- end }}
   {{- end }}
   parentRef:
     group: gateway.networking.k8s.io
