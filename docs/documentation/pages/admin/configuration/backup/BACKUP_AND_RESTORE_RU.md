@@ -392,24 +392,30 @@ lang: ru
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до файла резервной копии etcd.
 OLD_IP=10.242.32.34                         # IP-адрес старого master-узла.
 NEW_IP=10.242.32.21                         # IP-адрес нового master-узла.
+NODE_NAME=master-0                          # Должно совпадать с --name в статическом манифесте etcd.
 
-mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
+mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
 mkdir ./etcd_old
-mv /var/lib/etcd ~/etcd_old
+mv /var/lib/etcd ./etcd_old
 ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
 ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
-ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
-
-mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+$ETCDUTL_PATH snapshot restore "$ETCD_SNAPSHOT_PATH" \
+  --data-dir=/var/lib/etcd \
+  --name="$NODE_NAME" \
+  --initial-advertise-peer-urls="https://$NEW_IP:2380" \
+  --initial-cluster="$NODE_NAME=https://$NEW_IP:2380"
 
 find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+find /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+sed -i "s/$OLD_IP/$NEW_IP/g" ~/etcd.yaml
 
 cp -r /etc/kubernetes/pki ./pki-backup
 
 d8 tools pki certs renew all --san $NEW_IP
+
+mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 
 crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -444,21 +450,17 @@ systemctl restart kubelet.service
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до файла резервной копии etcd.
+     NEW_IP=10.242.32.21                         # Новый IP-адрес master-узла.
+     NODE_NAME=master-0                          # Должно совпадать с --name в статическом манифесте etcd.
      ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
      ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
-     ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
-       etcd-backup.snapshot \
-       --data-dir=/var/lib/etcd
+     $ETCDUTL_PATH snapshot restore "$ETCD_SNAPSHOT_PATH" \
+       --data-dir=/var/lib/etcd \
+       --name="$NODE_NAME" \
+       --initial-advertise-peer-urls="https://$NEW_IP:2380" \
+       --initial-cluster="$NODE_NAME=https://$NEW_IP:2380"
      ```
-
-   - Верните манифест etcd на место, чтобы kubelet снова запустил под:
-
-     ```shell
-     mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-     ```
-
-   - Убедитесь, что etcd успешно запустился, проверив список подов с помощью `crictl ps | grep etcd` или просмотрев логи kubelet.
 
 1. Обновите IP-адреса в статичных конфигурационных файлах. Если в манифестах или системных сервисах kubelet прописан старый IP-адрес, замените его на новый:
 
@@ -468,7 +470,8 @@ systemctl restart kubelet.service
 
     find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-    find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+    find /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+    sed -i "s/$OLD_IP/$NEW_IP/g" ~/etcd.yaml
     ```
 
 1. Создайте резервную копию текущих сертификатов:
@@ -483,9 +486,11 @@ systemctl restart kubelet.service
    d8 tools pki certs renew all --san <NEW_IP>
    ```
 
-1. Перезапустите сервисы, чтобы компоненты загрузили обновлённые сертификаты и конфигурации:
+1. Верните манифест etcd на место (чтобы kubelet снова запустил под) и перезапустите сервисы, чтобы компоненты загрузили обновлённые сертификаты и конфигурации:
 
     ```shell
+    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+
     crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
     crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
     crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
@@ -493,6 +498,8 @@ systemctl restart kubelet.service
     systemctl daemon-reload
     systemctl restart kubelet.service
     ```
+
+    Убедитесь, что etcd успешно запустился, проверив список подов с помощью `crictl ps | grep etcd` или просмотрев логи kubelet.
 
 1. Дождитесь, пока kubelet обновит собственный сертификат. Kubelet автоматически генерирует и обновляет свой сертификат, в котором будет прописан новый IP-адрес:
   

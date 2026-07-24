@@ -392,24 +392,30 @@ To simplify cluster recovery after the master node's IP address changes, use the
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
 OLD_IP=10.242.32.34                         # Old master node IP address.
 NEW_IP=10.242.32.21                         # New master node IP address.
+NODE_NAME=master-0                          # Must match --name in the etcd static pod manifest.
 
-mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
+mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
 mkdir ./etcd_old
-mv /var/lib/etcd ~/etcd_old
+mv /var/lib/etcd ./etcd_old
 ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
 ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
-ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
-
-mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+$ETCDUTL_PATH snapshot restore "$ETCD_SNAPSHOT_PATH" \
+  --data-dir=/var/lib/etcd \
+  --name="$NODE_NAME" \
+  --initial-advertise-peer-urls="https://$NEW_IP:2380" \
+  --initial-cluster="$NODE_NAME=https://$NEW_IP:2380"
 
 find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+find /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+sed -i "s/$OLD_IP/$NEW_IP/g" ~/etcd.yaml
 
 cp -r /etc/kubernetes/pki ./pki-backup
 
 d8 tools pki certs renew all --san $NEW_IP
+
+mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 
 crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -444,21 +450,17 @@ If you prefer to manually make changes during cluster recovery after the master 
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
+     NEW_IP=10.242.32.21                         # New master node IP address.
+     NODE_NAME=master-0                          # Must match --name in the etcd static pod manifest.
      ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
      ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
-     ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
-       etcd-backup.snapshot \
-       --data-dir=/var/lib/etcd
+     $ETCDUTL_PATH snapshot restore "$ETCD_SNAPSHOT_PATH" \
+       --data-dir=/var/lib/etcd \
+       --name="$NODE_NAME" \
+       --initial-advertise-peer-urls="https://$NEW_IP:2380" \
+       --initial-cluster="$NODE_NAME=https://$NEW_IP:2380"
      ```
-
-   - Restore the etcd manifest so kubelet starts the etcd pod again:
-
-     ```shell
-     mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-     ```
-
-   - Verify etcd is running by checking the pod list using `crictl ps | grep etcd` or reviewing the kubelet logs.
 
 1. Update the IP address in static configuration files. If the old IP address is used in manifests or kubelet services, replace it with the new one:
 
@@ -468,7 +470,8 @@ If you prefer to manually make changes during cluster recovery after the master 
 
     find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-    find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+    find /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+    sed -i "s/$OLD_IP/$NEW_IP/g" ~/etcd.yaml
     ```
 
 1. Back up the current certificates:
@@ -483,9 +486,11 @@ If you prefer to manually make changes during cluster recovery after the master 
    d8 tools pki certs renew all --san <NEW_IP>
    ```
 
-1. Restart all services so that components load the updated certificates and configurations. To immediately stop active containers, run:
+1. Restore the etcd manifest (so kubelet starts the etcd pod again) and restart all services so that components load the updated certificates and configurations. To immediately stop active containers, run:
 
     ```shell
+    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+
     crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
     crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
     crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
@@ -493,6 +498,8 @@ If you prefer to manually make changes during cluster recovery after the master 
     systemctl daemon-reload
     systemctl restart kubelet.service
     ```
+
+    Verify etcd is running by checking the pod list using `crictl ps | grep etcd` or reviewing the kubelet logs.
 
 1. Wait for kubelet to regenerate its own certificate. Kubelet will automatically generate a new certificate with the updated IP address:
 
