@@ -16,7 +16,7 @@ It is recommended to use `loadbalancer.openstack.org/node-selector` to select on
 
 ### IngressNginxController example
 
-In this example, the ingress controller pods are scheduled on frontend nodes, while the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes:
+In this example, the Ingress controller pods are scheduled on frontend nodes, while the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes:
 
 ```yaml
 apiVersion: deckhouse.io/v1

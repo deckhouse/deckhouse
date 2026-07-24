@@ -16,7 +16,7 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ### Пример IngressNginxController
 
-В примере поды ingress-контроллера размещаются на frontend-узлах, а аннотация `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами:
+В примере поды Ingress-контроллера размещаются на frontend-узлах, а аннотация `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами:
 
 ```yaml
 apiVersion: deckhouse.io/v1
