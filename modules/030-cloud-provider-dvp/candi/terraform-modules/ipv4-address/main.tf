@@ -37,6 +37,12 @@ resource "kubernetes_manifest" "ipv4_address" {
     update = var.timeouts.update
     delete = var.timeouts.delete
   }
+
+  lifecycle {
+    ignore_changes = [
+      object.metadata.finalizers,
+    ]
+  }
 }
 
 data "kubernetes_resource" "ipv4_address" {
