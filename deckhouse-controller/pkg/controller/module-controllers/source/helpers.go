@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"sort"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 )
 
@@ -168,14 +171,16 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 	return true, nil
 }
 
-// needToEnsureRelease checks that the module enabled, the source is the active source,
-// release exists, and checksum not changed.
-func (r *reconciler) needToEnsureRelease(
+// releaseEnsureAllowed reports whether a release for the module may be ensured from
+// the given source at all. It is a pure policy predicate over already-fetched data
+// (no cluster I/O): it does not decide whether there is actually something to fetch -
+// that concrete diff (checksum change, missing target release, incomplete update
+// chain) is evaluated by the caller. It returns false to skip the module entirely for
+// experimental / not-active-source / disabled reasons.
+func (r *reconciler) releaseEnsureAllowed(
 	source *v1alpha1.ModuleSource,
 	module *v1alpha1.Module,
-	sourceModule v1alpha1.AvailableModule,
 	meta *downloader.ModuleDownloadResult,
-	releaseExists bool,
 	embeddedTargetSource string) bool {
 	// skip experimental modules when deckhouse does not allow them
 	if module.IsExperimental() && !r.deckhouseSettings.ExperimentalModuleAllowed(module.Name) {
@@ -225,7 +230,118 @@ func (r *reconciler) needToEnsureRelease(
 		return false
 	}
 
-	return sourceModule.Checksum != meta.Checksum || !releaseExists
+	return true
+}
+
+// releaseChainToTargetComplete reports whether the ModuleReleases already present in
+// the cluster form a continuous update sequence from the deployed release up to (and
+// including) the target version. It returns true (nothing to bridge) when there is no
+// deployed release yet or the target is not ahead of the deployed one - those cases
+// are handled by the regular first-install / no-op flow. A gap yields false,
+// signalling that the step-by-step fetch must run again.
+//
+// The gap rule is shared with the fetcher via isSequentialReleasePair, so this check
+// reports "complete" for exactly the chains the step-by-step fetch would leave
+// untouched (including legitimate non-adjacent jumps allowed by a release's from-to
+// update spec). This equivalence is what keeps the checksum guard from re-opening the
+// fetch on every reconcile for from-to modules.
+func (r *reconciler) releaseChainToTargetComplete(ctx context.Context, moduleName, targetVersion string) (bool, error) {
+	target, err := semver.NewVersion(targetVersion)
+	if err != nil {
+		return false, fmt.Errorf("parse target version %q: %w", targetVersion, err)
+	}
+
+	releaseList := new(v1alpha1.ModuleReleaseList)
+	if err = r.client.List(ctx, releaseList, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName}); err != nil {
+		return false, fmt.Errorf("list module releases: %w", err)
+	}
+
+	// GetVersion (used below and inside isSequentialReleasePair) relies on
+	// semver.MustParse, which panics on a malformed Spec.Version. This check now runs on
+	// the steady-state path (checksum unchanged, target exists) for every installed
+	// module, so validate every release up front: a single corrupt object must surface
+	// as a handled error - the caller keeps the known state and only sets errorsExist,
+	// so no fetch is triggered - instead of panicking the whole reconcile.
+	for i := range releaseList.Items {
+		release := &releaseList.Items[i]
+		if _, err = semver.NewVersion(release.Spec.Version); err != nil {
+			return false, fmt.Errorf("parse release %q version %q: %w", release.Name, release.Spec.Version, err)
+		}
+	}
+
+	// find the highest deployed release; without one the regular first-install flow applies
+	var deployed *v1alpha1.ModuleRelease
+	for i := range releaseList.Items {
+		release := &releaseList.Items[i]
+		if release.GetPhase() != v1alpha1.ModuleReleasePhaseDeployed {
+			continue
+		}
+		if deployed == nil || release.GetVersion().GreaterThan(deployed.GetVersion()) {
+			deployed = release
+		}
+	}
+	if deployed == nil || !target.GreaterThan(deployed.GetVersion()) {
+		return true, nil
+	}
+
+	// collect the deployed release together with the releases in (deployed, target]
+	// and verify they form a continuous update sequence up to the target
+	chain := []*v1alpha1.ModuleRelease{deployed}
+	for i := range releaseList.Items {
+		release := &releaseList.Items[i]
+		if version := release.GetVersion(); version.GreaterThan(deployed.GetVersion()) && !version.GreaterThan(target) {
+			chain = append(chain, release)
+		}
+	}
+	sort.Slice(chain, func(i, j int) bool {
+		return chain[i].GetVersion().LessThan(chain[j].GetVersion())
+	})
+
+	// the target itself must be present as the endpoint of the chain
+	if chain[len(chain)-1].GetVersion().Compare(target) != 0 {
+		return false, nil
+	}
+
+	for i := 1; i < len(chain); i++ {
+		if !isSequentialReleasePair(chain[i-1], chain[i]) {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+// isSequentialReleasePair reports whether an update may proceed directly from the
+// lower release to the higher one, without any release in between: either the versions
+// are naturally adjacent (isUpdatingSequence) or the higher release declares a from-to
+// transition rule (UpdateSpec) that covers the lower version. This is the single rule
+// used both to decide whether the in-cluster chain is complete
+// (releaseChainToTargetComplete) and to pick the starting point of the step-by-step
+// fetch (ensureReleases), so the two never disagree about what counts as a gap.
+func isSequentialReleasePair(lower, higher *v1alpha1.ModuleRelease) bool {
+	if isUpdatingSequence(lower.GetVersion(), higher.GetVersion()) {
+		return true
+	}
+
+	// the from-to rule is declared on the constrained (higher/"to") release
+	spec := higher.GetUpdateSpec()
+	if spec == nil || len(spec.Versions) == 0 {
+		return false
+	}
+
+	return isUpdatingSequenceWithFromTo(lower.GetVersion(), updateConstraintsToVersions(spec.Versions)) == nil
+}
+
+// updateConstraintsToVersions adapts the in-cluster from-to constraints stored on a
+// ModuleRelease to the shape consumed by isUpdatingSequenceWithFromTo, which is also
+// fed the same rules coming from freshly downloaded module definitions in the fetcher.
+func updateConstraintsToVersions(constraints []v1alpha1.UpdateConstraint) []moduletypes.ModuleUpdateVersion {
+	out := make([]moduletypes.ModuleUpdateVersion, len(constraints))
+	for i, c := range constraints {
+		out[i] = moduletypes.ModuleUpdateVersion{From: c.From, To: c.To}
+	}
+
+	return out
 }
 
 // getConfiguredModuleSource returns the source explicitly selected by the operator
