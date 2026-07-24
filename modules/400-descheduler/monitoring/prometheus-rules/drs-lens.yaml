@@ -1,6 +1,8 @@
 - name: descheduler.drs-lens.happiness
   rules:
   - record: descheduler:replicaset_workload
+    labels:
+      source: deckhouse
     expr: |
       max by (namespace, replicaset, workload_kind, workload_name) (
         label_replace(label_replace(
@@ -10,6 +12,8 @@
       )
 
   - record: descheduler:pod_workload
+    labels:
+      source: deckhouse
     expr: |
       max by (namespace, pod, node, workload_kind, workload_name) (
         (
@@ -44,9 +48,13 @@
         (kube_pod_status_phase{job="kube-state-metrics", phase="Succeeded"} == 1)
 
   - record: descheduler:workload_replicas
+    labels:
+      source: deckhouse
     expr: count by (namespace, workload_kind, workload_name) (descheduler:pod_workload)
 
   - record: descheduler:pod_restarts_15m
+    labels:
+      source: deckhouse
     expr: |
       round(sum by (namespace, pod) (
         increase(kube_pod_container_status_restarts_total{job="kube-state-metrics", namespace!~"d8-.*|kube-system"}[15m])
@@ -54,6 +62,8 @@
 
   # Primary source klog_pod_oomkill; fallback last_terminated_reason gated by a recent restart.
   - record: descheduler:pod_oom_15m
+    labels:
+      source: deckhouse
     expr: |
       max by (namespace, pod) (
         label_replace(
@@ -71,6 +81,8 @@
 
   # State penalties are share-weighted: sum of per-pod weight over the anchor / replicas.
   - record: descheduler:workload_phase_penalty
+    labels:
+      source: deckhouse
     expr: |
       sum by (namespace, workload_kind, workload_name) (
         (
@@ -85,6 +97,8 @@
 
   # Container-level readiness penalty is absorbed here: pod Ready=False already covers it.
   - record: descheduler:workload_readiness_penalty
+    labels:
+      source: deckhouse
     expr: |
       30 * sum by (namespace, workload_kind, workload_name) (
         (kube_pod_status_ready{job="kube-state-metrics", condition="false"} == 1)
@@ -94,6 +108,8 @@
       / descheduler:workload_replicas
 
   - record: descheduler:workload_restart_penalty
+    labels:
+      source: deckhouse
     expr: |
       sum by (namespace, workload_kind, workload_name) (
         (
@@ -106,6 +122,8 @@
       / descheduler:workload_replicas
 
   - record: descheduler:workload_oom_penalty
+    labels:
+      source: deckhouse
     expr: |
       35 * sum by (namespace, workload_kind, workload_name) (
         (descheduler:pod_oom_15m > bool 0)
@@ -115,6 +133,8 @@
       / descheduler:workload_replicas
 
   - record: descheduler:workload_cpu_request_cores
+    labels:
+      source: deckhouse
     expr: |
       sum by (namespace, workload_kind, workload_name) (
         kube_pod_container_resource_requests{job="kube-state-metrics", resource="cpu", unit="core"}
@@ -123,6 +143,8 @@
       )
 
   - record: descheduler:workload_cpu_usage_cores
+    labels:
+      source: deckhouse
     expr: |
       sum by (namespace, workload_kind, workload_name) (
         rate(container_cpu_usage_seconds_total{job="kubelet", container!~"|POD"}[5m])
@@ -131,6 +153,8 @@
       )
 
   - record: descheduler:workload_memory_request_bytes
+    labels:
+      source: deckhouse
     expr: |
       sum by (namespace, workload_kind, workload_name) (
         kube_pod_container_resource_requests{job="kube-state-metrics", resource="memory", unit="byte"}
@@ -139,6 +163,8 @@
       )
 
   - record: descheduler:workload_memory_usage_bytes
+    labels:
+      source: deckhouse
     expr: |
       sum by (namespace, workload_kind, workload_name) (
         container_memory_working_set_bytes{job="kubelet", container!~"|POD"}
@@ -148,13 +174,19 @@
 
   # The `> 0` guard drops zero/absent denominators so the ratio yields no series (not +Inf/NaN).
   - record: descheduler:workload_cpu_usage_ratio
+    labels:
+      source: deckhouse
     expr: descheduler:workload_cpu_usage_cores / (descheduler:workload_cpu_request_cores > 0)
 
   - record: descheduler:workload_memory_request_usage_ratio
+    labels:
+      source: deckhouse
     expr: descheduler:workload_memory_usage_bytes / (descheduler:workload_memory_request_bytes > 0)
 
   # MAX over pods: OOM proximity is per-pod physics.
   - record: descheduler:workload_memory_limit_usage_ratio
+    labels:
+      source: deckhouse
     expr: |
       max by (namespace, workload_kind, workload_name) (
         (
@@ -170,6 +202,8 @@
 
   # "no request" = workload has no aggregate request series at all (detected via `unless`).
   - record: descheduler:workload_cpu_penalty
+    labels:
+      source: deckhouse
     expr: |
       clamp_max(
           ((descheduler:workload_replicas unless descheduler:workload_cpu_request_cores) > bool 0) * 10
@@ -182,6 +216,8 @@
 
   # Terms are additive; each falls back to 0 via `or replicas*0`, so a limit-only workload still scores the limit rungs.
   - record: descheduler:workload_memory_penalty
+    labels:
+      source: deckhouse
     expr: |
       clamp_max(
           (((descheduler:workload_replicas unless descheduler:workload_memory_request_bytes) > bool 0) * 10
@@ -195,6 +231,8 @@
         35)
 
   - record: descheduler:workload_node_penalty
+    labels:
+      source: deckhouse
     expr: |
       sum by (namespace, workload_kind, workload_name) (
         descheduler:pod_workload
@@ -210,6 +248,8 @@
       / descheduler:workload_replicas
 
   - record: descheduler:workload_eviction_penalty
+    labels:
+      source: deckhouse
     expr: |
       max by (namespace, workload_kind, workload_name) (
           (increase(descheduler_pod_evictions_total{job="descheduler", result="success"}[15m]) > bool 0) * 10
@@ -218,6 +258,8 @@
       )
 
   - record: descheduler:workload_happiness_score
+    labels:
+      source: deckhouse
     expr: |
       clamp_min(clamp_max(
         100
@@ -232,27 +274,33 @@
       , 100), 0)
 
   - record: descheduler:workload_happiness_bucket
-    labels: { bucket: happy }
+    labels: { bucket: happy, source: deckhouse }
     expr: descheduler:workload_happiness_score >= 80
   - record: descheduler:workload_happiness_bucket
-    labels: { bucket: warning }
+    labels: { bucket: warning, source: deckhouse }
     expr: (descheduler:workload_happiness_score >= 60) and (descheduler:workload_happiness_score < 80)
   - record: descheduler:workload_happiness_bucket
-    labels: { bucket: unhappy }
+    labels: { bucket: unhappy, source: deckhouse }
     expr: descheduler:workload_happiness_score < 60
 
 - name: descheduler.drs-lens.balance
   rules:
   - record: descheduler:node_pod_allocation_ratio
+    labels:
+      source: deckhouse
     expr: |
       count by (node) (kube_pod_info{job="kube-state-metrics"})
         / on (node) group_left ()
         max by (node) (kube_node_status_allocatable{job="kube-state-metrics", resource="pods", unit="integer"})
 
   - record: descheduler:node_cpu_usage_ratio
+    labels:
+      source: deckhouse
     expr: 1 - avg by (node) (rate(node_cpu_seconds_total{job="node-exporter", mode="idle"}[5m]))
 
   - record: descheduler:node_memory_usage_ratio
+    labels:
+      source: deckhouse
     expr: |
       1 - (
         max by (node) (node_memory_MemAvailable_bytes{job="node-exporter"})
@@ -260,33 +308,37 @@
       )
 
   - record: descheduler:node_cpu_request_ratio
+    labels:
+      source: deckhouse
     expr: |
       sum by (node) (kube_pod_container_resource_requests{job="kube-state-metrics", resource="cpu", unit="core"})
         / on (node) group_left ()
         max by (node) (kube_node_status_allocatable{job="kube-state-metrics", resource="cpu", unit="core"})
 
   - record: descheduler:node_memory_request_ratio
+    labels:
+      source: deckhouse
     expr: |
       sum by (node) (kube_pod_container_resource_requests{job="kube-state-metrics", resource="memory", unit="byte"})
         / on (node) group_left ()
         max by (node) (kube_node_status_allocatable{job="kube-state-metrics", resource="memory", unit="byte"})
 
   - record: descheduler:cluster_imbalance_score
-    labels: { resource: pods }
+    labels: { resource: pods, source: deckhouse }
     expr: max(descheduler:node_pod_allocation_ratio) - min(descheduler:node_pod_allocation_ratio)
   - record: descheduler:cluster_imbalance_score
-    labels: { resource: cpu }
+    labels: { resource: cpu, source: deckhouse }
     expr: max(descheduler:node_cpu_usage_ratio) - min(descheduler:node_cpu_usage_ratio)
   - record: descheduler:cluster_imbalance_score
-    labels: { resource: memory }
+    labels: { resource: memory, source: deckhouse }
     expr: max(descheduler:node_memory_usage_ratio) - min(descheduler:node_memory_usage_ratio)
 
   - record: descheduler:cluster_imbalance_stddev
-    labels: { resource: pods }
+    labels: { resource: pods, source: deckhouse }
     expr: stddev(descheduler:node_pod_allocation_ratio)
   - record: descheduler:cluster_imbalance_stddev
-    labels: { resource: cpu }
+    labels: { resource: cpu, source: deckhouse }
     expr: stddev(descheduler:node_cpu_usage_ratio)
   - record: descheduler:cluster_imbalance_stddev
-    labels: { resource: memory }
+    labels: { resource: memory, source: deckhouse }
     expr: stddev(descheduler:node_memory_usage_ratio)

@@ -3870,56 +3870,6 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        This probably means that `machine-controller-manager` is unable to create Machines using the cloud provider module.
-
-        Possible causes:
-
-        1. Cloud provider resource limits.
-        2. No access to the cloud provider API.
-        3. Misconfiguration of the cloud provider or instance class.
-        4. Problems with bootstrapping the Machine.
-
-        Recommended actions:
-
-        1. Check the status of the NodeGroup:
-
-           ```shell
-           d8 k get ng {{ $labels.node_group }} -o yaml
-           ```
-
-           Look for errors in the `.status.lastMachineFailures` field.
-
-        2. If no Instances stay in the Pending state for more than a couple of minutes, it likely means that Instances are being continuously created and deleted due to an error:
-
-           ```shell
-           d8 k get instances
-           ```
-
-        3. If logs don’t show errors, and an Instance continues to be Pending, check its bootstrap status:
-
-           ```shell
-           d8 k get instances <INSTANCE_NAME> -o yaml | grep 'bootstrapStatus' -B0 -A2
-           ```
-
-        4. If the output looks like the example below, use the `logsEndpoint` (or the command in `description`) to examine bootstrap logs:
-
-           ```text
-           bootstrapStatus:
-             description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
-             logsEndpoint: http://192.168.199.158:8000
-           ```
-
-        5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
-      summary: |
-        NodeGroup {{ $labels.node_group }} has no available instances.
-      severity: "7"
-      markupFormat: markdown
-    - name: NodeGroupReplicasUnavailable
-      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
-      moduleUrl: 040-node-manager
-      module: node-manager
-      edition: ce
-      description: |
         The number of simultaneously unavailable instances in the {{ $labels.node_group }} NodeGroup exceeds the allowed threshold.
         This may indicate that the autoscaler has provisioned too many nodes at once. Check the state of the Machine in the cluster.
         This probably means that `machine-controller-manager` is unable to create Machines using the cloud provider module.
@@ -3964,7 +3914,57 @@ alerts:
         5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
       summary: |
         Too many unavailable instances in the {{ $labels.node_group }} NodeGroup.
-      severity: "8"
+      severity: "6"
+      markupFormat: markdown
+    - name: NodeGroupReplicasUnavailable
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        This probably means that `machine-controller-manager` is unable to create Machines using the cloud provider module.
+
+        Possible causes:
+
+        1. Cloud provider resource limits.
+        2. No access to the cloud provider API.
+        3. Misconfiguration of the cloud provider or instance class.
+        4. Problems with bootstrapping the Machine.
+
+        Recommended actions:
+
+        1. Check the status of the NodeGroup:
+
+           ```shell
+           d8 k get ng {{ $labels.node_group }} -o yaml
+           ```
+
+           Look for errors in the `.status.lastMachineFailures` field.
+
+        2. If no Instances stay in the Pending state for more than a couple of minutes, it likely means that Instances are being continuously created and deleted due to an error:
+
+           ```shell
+           d8 k get instances
+           ```
+
+        3. If logs don’t show errors, and an Instance continues to be Pending, check its bootstrap status:
+
+           ```shell
+           d8 k get instances <INSTANCE_NAME> -o yaml | grep 'bootstrapStatus' -B0 -A2
+           ```
+
+        4. If the output looks like the example below, use the `logsEndpoint` (or the command in `description`) to examine bootstrap logs:
+
+           ```text
+           bootstrapStatus:
+             description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+             logsEndpoint: http://192.168.199.158:8000
+           ```
+
+        5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
+      summary: |
+        NodeGroup {{ $labels.node_group }} has no available instances.
+      severity: "7"
       markupFormat: markdown
     - name: NodeGroupReplicasUnavailable
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
