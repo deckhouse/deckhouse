@@ -231,7 +231,7 @@ The machines you intend to turn into nodes of your future cluster must meet the 
 * Nodes must be able to access each other over the network. The [network policies](../documentation/v1/network_security_setup.html) must be met.
 * There are no MTU requirements.
 * Each node must have a permanent IP address. If you use a DHCP server to assign IP addresses to nodes, you must configure the DHCP server to explicitly assign addresses to each node. Changing the IP addresses of the nodes is undesirable.
-* Master nodes must be able to access time servers external to the cluster via NTP. Cluster nodes use master nodes to synchronize time, but can also synchronize with other time servers (see the [ntpServers](../documentation/v1/modules/chrony/configuration.html#parameters-ntpservers) parameter).
+* Master nodes must be able to access time servers external to the cluster via NTP. Cluster nodes use master nodes to synchronize time, but can also synchronize with other time servers (see the [ntpServers](/modules/chrony/configuration.html#parameters-ntpservers) parameter).
 
 ## Community
 

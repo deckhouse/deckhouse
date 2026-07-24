@@ -1437,7 +1437,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 Для этого выполните следующие шаги:
 
-* Настройте StorageClass [локального хранилища](../../../modules/local-path-provisioner/cr.html#localpathprovisioner), выполнив на master-узле следующую команду:
+* Настройте StorageClass [локального хранилища](/modules/local-path-provisioner/cr.html#localpathprovisioner), выполнив на master-узле следующую команду:
 
   ```console
   sudo -i d8 k create -f - << EOF
@@ -1476,7 +1476,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   EOF
   ```
 
-* Создайте в кластере ресурс [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:
+* Создайте в кластере ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:
 
   ```console
   sudo -i d8 k create -f - <<EOF
@@ -1496,7 +1496,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   cat /dev/shm/caps-id.pub
   ```
 
-* Создайте [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
+* Создайте [StaticInstance](/modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
 
   ```console
   # Укажите IP-адрес узла, который нужно подключить к кластеру.
@@ -1534,7 +1534,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 ### Установка ingress-контроллера
 
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](../../../modules/ingress-nginx/) запустился и находится в статусе `Running`. Для этого выполните на master-узле следующую команду:
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/modules/ingress-nginx/) запустился и находится в статусе `Running`. Для этого выполните на master-узле следующую команду:
 
 ```bash
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise

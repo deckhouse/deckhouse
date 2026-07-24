@@ -220,7 +220,7 @@ Deckhouse Kubernetes Platform, начиная с версии 1.74, имеет �
 
 ### Примеры конфигураций
 
-Для развертывания Deckhouse Kubernetes Platform в редакции Enterprise Edition с набором модулей [Default](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-bundle) необходима следующая конфигурация узлов:
+Для развертывания Deckhouse Kubernetes Platform в редакции Enterprise Edition с набором модулей [Default](/modules/deckhouse/configuration.html#parameters-bundle) необходима следующая конфигурация узлов:
 
 * **master-узлы** — 1 шт, 4 CPU, 8 ГБ RAM;
 * **frontend-узлы** — 1 шт, 2 CPU, 4 ГБ RAM;
@@ -244,7 +244,7 @@ Deckhouse Kubernetes Platform, начиная с версии 1.74, имеет �
 * Узлы должны иметь сетевой доступ друг к другу. Между узлами должны соблюдаться [сетевые политики](../documentation/v1/network_security_setup.html).
 * Требований к MTU нет.
 * У каждого узла должен быть постоянный IP-адрес. В случае использования DHCP-сервера для распределения IP-адресов по узлам необходимо настроить в нём чёткое соответствие выдаваемых адресов каждому узлу. Смена IP-адреса узлов нежелательна.
-* Доступ к внешним для кластера источникам времени по NTP должен быть открыт как минимум для master-узлов. Узлы кластера синхронизируют время с master-узлами, но могут синхронизироваться также и с другими серверами времени (параметр [ntpServers](../documentation/v1/modules/chrony/configuration.html#parameters-ntpservers)).
+* Доступ к внешним для кластера источникам времени по NTP должен быть открыт как минимум для master-узлов. Узлы кластера синхронизируют время с master-узлами, но могут синхронизироваться также и с другими серверами времени (параметр [ntpServers](/modules/chrony/configuration.html#parameters-ntpservers)).
 
 ## Сообщество
 

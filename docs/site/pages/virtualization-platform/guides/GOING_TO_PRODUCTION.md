@@ -183,8 +183,8 @@ Fast disks are recommended for platform components (the [storageClass](/products
 Configure one or more storage systems for virtual machine disks:
 
 - **Software-defined storage (SDS)**:
-  - `[sds-local-volume](../../../modules/sds-local-volume/stable/)`: Local storage based on LVM. High performance but without replication. Suitable for temporary data or when external backup is available.
-  - `[sds-replicated-volume](../../../modules/sds-replicated-volume/stable/)`: Replicated storage based on DRBD. Provides fault tolerance through replication between nodes. Recommended for production.
+  - `[sds-local-volume](/modules/sds-local-volume/)`: Local storage based on LVM. High performance but without replication. Suitable for temporary data or when external backup is available.
+  - `[sds-replicated-volume](/modules/sds-replicated-volume/)`: Replicated storage based on DRBD. Provides fault tolerance through replication between nodes. Recommended for production.
 
 - **External storage**: Ceph, NFS, TATLIN.UNIFIED (Yadro), Huawei Dorado, HPE 3par, iSCSI. Connected via corresponding CSI drivers.
 

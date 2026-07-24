@@ -76,7 +76,7 @@ layout: sidebar-guides
 Может быть полезно:
 
 - [Как добавить мастер-узлы в облачном кластере...](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#добавление-master-узлов-в-облачном-кластере).
-- [Работа со статическими узлами...](/products/kubernetes-platform/documentation/modules/node-manager/#работа-со-статическими-узлами).
+- [Работа со статическими узлами...](/modules/node-manager/#работа-со-статическими-узлами).
 
 ### Frontend-узлы
 
@@ -92,7 +92,7 @@ Frontend-узлы балансируют входящий трафик. На н�
 
 Например, если в кластере два frontend-узла, то каждый frontend-узел должен справляться со всей нагрузкой на кластер в случае, если второй выйдет из строя. Если в кластере три frontend-узла, то каждый frontend-узел должен выдерживать увеличение нагрузки как минимум в полтора раза.
 
-Выберите [тип инлета](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) (определяет способ поступления трафика).
+Выберите [тип инлета](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) (определяет способ поступления трафика).
 
 При развертывании кластера с помощью Deckhouse в облачной инфраструктуре, в которой поддерживается заказ балансировщиков (например, решения на базе OpenStack, сервисы Yandex Cloud, VK Cloud, Selectel Cloud, AWS, GCP, Azure и т. п.), используйте инлет `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
 
