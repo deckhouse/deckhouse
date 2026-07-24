@@ -61,7 +61,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
-	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7
+	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260724083958-9ba19d822bb3
 	github.com/deckhouse/lib-dhctl v0.21.0
 	github.com/deckhouse/module-sdk v0.12.1
 	github.com/ettle/strcase v0.2.0
