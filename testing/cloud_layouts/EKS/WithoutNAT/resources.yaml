@@ -46,3 +46,17 @@ metadata:
   annotations:
     kubernetes.io/service-account.name: argocd-application-controller-sa
 type: kubernetes.io/service-account-token
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-custom
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: upmeter
+spec:
+  enabled: true

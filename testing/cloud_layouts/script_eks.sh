@@ -125,7 +125,7 @@ function prepare_environment() {
   fi
 
   # shellcheck disable=SC2016
-  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" IMAGES_REPO="$IMAGES_REPO"\
+  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_READ_RU_REGISTRY_HOST="$DECKHOUSE_READ_RU_REGISTRY_HOST" DECKHOUSE_E2E_MODULES_DOCKERCFG="$DECKHOUSE_E2E_MODULES_DOCKERCFG" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" IMAGES_REPO="$IMAGES_REPO"\
       envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" PREFIX="$PREFIX" \
@@ -348,12 +348,13 @@ function chmod_dirs_for_cleanup() {
 
   if [ -n $USER_RUNNER_ID ]; then
     echo "Fix temp directories owner before cleanup ..."
-    chown -R $USER_RUNNER_ID "$(pwd)" || true
+    # chown -R $USER_RUNNER_ID "$(pwd)" || true
     chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
     chown -R $USER_RUNNER_ID /tmp || true
+
   else
     echo "Fix temp directories permissions before cleanup ..."
-    chmod -f -R 777 "$(pwd)" || true
+    # chmod -f -R 777 "$(pwd)" || true
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi
@@ -368,11 +369,15 @@ function main() {
   exitCode=0
   case "${1}" in
     run-test)
+      echo "start bootstrap_eks"
       run-test || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
+      echo "end bootstrap_eks"
     ;;
 
     wait_deckhouse_ready)
+      echo "start check deckhouse ready"
       wait_deckhouse_ready || exitCode=$?
+      echo "end check deckhouse ready"
     ;;
 
     wait_cluster_ready)
@@ -411,6 +416,7 @@ function main() {
   fi
 
   chmod_dirs_for_cleanup
+  echo exit code - $exitCode
   exit $exitCode
 }
 
