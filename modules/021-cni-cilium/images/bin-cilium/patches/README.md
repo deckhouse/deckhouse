@@ -129,3 +129,7 @@ The `redirectpolicy/manager.go` hunk was manually adapted to sit on top of patch
 - Released in cilium v1.17.16 / v1.18.10 / v1.19.4.
 
 **Remove this patch when the base cilium version in `modules/021-cni-cilium/oss.yaml` is bumped to v1.17.16 or newer.**
+
+## 022-fix-svacer.patch
+
+Fixed svacer DEREF_OF_NULL error in pkg/policy/api/icmp.go 
