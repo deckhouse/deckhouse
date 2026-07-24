@@ -473,14 +473,14 @@ func getUnstructuredName(obj *unstructured.Unstructured) string {
 // is shown only for non-core groups, since core resources (Namespace, ServiceAccount, …)
 // are self-evident, but a custom resource's version can matter (e.g. across module API
 // migrations). The name is "[namespace/]name", namespaced only for namespaced objects.
-func resourceListParts(r *template.Resource) (label, name string) {
-	label = r.GVK.Kind
+func resourceListParts(r *template.Resource) (string, string) {
+	label := r.GVK.Kind
 	if r.GVK.Group != "" {
 		label += " (" + r.GVK.Group + "/" + r.GVK.Version + ")"
 	}
 	label += ":"
 
-	name = r.Object.GetName()
+	name := r.Object.GetName()
 	if ns := r.Object.GetNamespace(); ns != "" {
 		name = ns + "/" + name
 	}
