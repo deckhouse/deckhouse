@@ -165,20 +165,23 @@ func TestMarshalRoundtrip_allStandardFields(t *testing.T) {
 	}
 }
 
-// TestMarshalRoundtrip_xDeckhouseExtensions verifies all three x-deckhouse-*
+// TestMarshalRoundtrip_xDeckhouseExtensions verifies all x-deckhouse-*
 // extensions survive JSON roundtrip.
 func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	original := &OpenAPIV3Schema{
 		Type: "object",
 		Properties: map[string]OpenAPIV3Schema{
 			"storageClass": {
-				Type:   "string",
-				XGrant: "storageclasses",
+				Type:                 "string",
+				XGrant:               "storageclasses",
+				XUIOrder:             int64Ptr(0),
+				XUIValidationMessage: "must reference an existing StorageClass",
 			},
 			"replicas": {
 				Type:        "integer",
 				Default:     jsonPtr("1"),
 				XUIAdvanced: true,
+				XUIOrder:    int64Ptr(2),
 			},
 		},
 		XValidations: []ValidationRule{
@@ -203,6 +206,12 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	if sc.XGrant != "storageclasses" {
 		t.Errorf("x-deckhouse-grantable-resource: got %q, want storageclasses", sc.XGrant)
 	}
+	if sc.XUIOrder == nil || *sc.XUIOrder != 0 {
+		t.Errorf("x-deckhouse-ui-order: explicit 0 not preserved")
+	}
+	if sc.XUIValidationMessage != "must reference an existing StorageClass" {
+		t.Errorf("x-deckhouse-ui-validation-message: got %q", sc.XUIValidationMessage)
+	}
 
 	rep, ok := restored.Properties["replicas"]
 	if !ok {
@@ -210,6 +219,9 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if !rep.XUIAdvanced {
 		t.Errorf("x-deckhouse-ui-advanced: got false, want true")
+	}
+	if rep.XUIOrder == nil || *rep.XUIOrder != 2 {
+		t.Errorf("x-deckhouse-ui-order mismatch")
 	}
 	if len(restored.XValidations) != 1 || restored.XValidations[0].Rule != "self.storageClass != ''" {
 		t.Errorf("x-deckhouse-validations: got %+v", restored.XValidations)
@@ -399,6 +411,7 @@ func realModuleSchema() *OpenAPIV3Schema {
 				Type:        "string",
 				Description: "Storage class for persistent volumes",
 				XGrant:      "storageclasses",
+				XUIOrder:    int64Ptr(1),
 			},
 			"replicas": {
 				Type:        "integer",
@@ -406,6 +419,7 @@ func realModuleSchema() *OpenAPIV3Schema {
 				Minimum:     float64Ptr(1),
 				Maximum:     float64Ptr(10),
 				XUIAdvanced: true,
+				XUIOrder:    int64Ptr(2),
 				XValidations: []ValidationRule{
 					{
 						Rule:      "self >= 1 && self <= 10",
@@ -479,9 +493,10 @@ func realModuleSchema() *OpenAPIV3Schema {
 				},
 			},
 			"logLevel": {
-				Type:    "string",
-				Pattern: "^(debug|info|warn|error)$",
-				Default: jsonPtr(`"info"`),
+				Type:                 "string",
+				Pattern:              "^(debug|info|warn|error)$",
+				Default:              jsonPtr(`"info"`),
+				XUIValidationMessage: "log level must be one of: debug, info, warn, error",
 			},
 		},
 		XValidations: []ValidationRule{
@@ -519,10 +534,16 @@ func TestRealModuleSchema_roundtrip(t *testing.T) {
 	if !ok || sc.XGrant != "storageclasses" {
 		t.Errorf("storageClass grant lost")
 	}
+	if sc.XUIOrder == nil || *sc.XUIOrder != 1 {
+		t.Errorf("storageClass ui-order lost")
+	}
 
 	replicas, ok := restored.Properties["replicas"]
 	if !ok || len(replicas.XValidations) != 1 || !replicas.XUIAdvanced {
 		t.Errorf("replicas extensions lost")
+	}
+	if replicas.XUIOrder == nil || *replicas.XUIOrder != 2 {
+		t.Errorf("replicas ui-order lost")
 	}
 
 	mode, ok := restored.Properties["mode"]
@@ -554,6 +575,11 @@ func TestRealModuleSchema_roundtrip(t *testing.T) {
 		t.Errorf("env items (multi schema) lost")
 	}
 
+	logLevel, ok := restored.Properties["logLevel"]
+	if !ok || logLevel.XUIValidationMessage != "log level must be one of: debug, info, warn, error" {
+		t.Errorf("logLevel ui-validation-message lost")
+	}
+
 	if len(restored.XValidations) != 1 {
 		t.Errorf("root-level x-deckhouse-validations lost")
 	}
@@ -574,6 +600,11 @@ func TestRealModuleSchema_deepCopy(t *testing.T) {
 
 	if original.Properties["storageClass"].XGrant != "storageclasses" {
 		t.Errorf("DeepCopy was shallow: original mutated by copy change")
+	}
+
+	*copied.Properties["replicas"].XUIOrder = 99
+	if *original.Properties["replicas"].XUIOrder != 2 {
+		t.Errorf("DeepCopy shares x-deckhouse-ui-order pointer with original")
 	}
 }
 

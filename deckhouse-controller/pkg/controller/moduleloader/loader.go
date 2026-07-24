@@ -410,6 +410,10 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 			}
 			deletedCount++
 			deleteSpan.End()
+
+			// The module has just been deleted; skip the status update below so we
+			// don't try to update a non-existent module.
+			continue
 		}
 
 		var found bool
@@ -454,7 +458,26 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 		attribute.Int("status_updated_modules", statusUpdatedCount),
 	)
 
+	l.syncModuleVersions(modulesList.Items)
+
 	return nil
+}
+
+// syncModuleVersions propagates Module.Properties.Version into each BasicModule.
+// Embedded modules are intentionally NOT filtered out: Properties.Version for
+// them holds the Deckhouse release version, which kubeall expects to see.
+func (l *Loader) syncModuleVersions(modules []v1alpha1.Module) {
+	for i := range modules {
+		m := &modules[i]
+		if m.Properties.Version == "" {
+			continue
+		}
+		mod, ok := l.modules[m.Name]
+		if !ok {
+			continue
+		}
+		mod.GetBasicModule().SetVersion(m.Properties.Version)
+	}
 }
 
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {

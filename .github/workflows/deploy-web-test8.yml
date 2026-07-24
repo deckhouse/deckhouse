@@ -201,6 +201,7 @@ jobs:
           fetch-depth: 0
       # </template: checkout_from_event_ref_step>
 
+
       # <template: read_werf_version_step>
       - name: Read werf version from werf_envs.yml
         id: read_werf_version
@@ -220,6 +221,51 @@ jobs:
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
       # </template: read_werf_version_step>
+
+      # <template: werf_install_step>
+      - name: Install werf-dk CLI
+        run: |
+          if [[ -z "${WERF_VERSION:-}" ]]; then
+            echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
+            exit 1
+          fi
+          MINIMAL_DDK_VERSION="v2.62.1"
+          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            minimal_ddk_major=${BASH_REMATCH[1]}
+            minimal_ddk_minor=${BASH_REMATCH[2]}
+            minimal_ddk_patch=${BASH_REMATCH[3]}
+          fi
+          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            werf_current_major=${BASH_REMATCH[1]}
+            werf_current_minor=${BASH_REMATCH[2]}
+            werf_current_patch=${BASH_REMATCH[3]}
+          fi
+          if (( werf_current_major > minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
+            werf_fallback=false
+          else
+            werf_fallback=true
+          fi
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+            echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
       # <template: update_comment_on_start>
       - name: Update comment on start
         if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
@@ -303,12 +349,9 @@ jobs:
 
       # <template: deploy_site_template>
       - name: Deploy site to test8
-        uses: werf/actions/converge@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
-          env: web-test8
         env:
+          WERF_ENV: web-test8
+          WERF_KUBE_CONFIG_BASE64: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/site"
           WERF_RELEASE: "deckhouse-site"
@@ -330,6 +373,9 @@ jobs:
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf converge
       # </template: deploy_site_template>
 
       # <template: doc_version_template>
@@ -341,12 +387,9 @@ jobs:
       # </template: doc_version_template>
       # <template: deploy_doc_template>
       - name: Deploy documentation to test8
-        uses: werf/actions/converge@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
-          env: web-test8
         env:
+          WERF_ENV: web-test8
+          WERF_KUBE_CONFIG_BASE64: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
@@ -361,6 +404,9 @@ jobs:
           WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
           WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}"
           WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_DEV }}"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf converge
       # </template: deploy_doc_template>
 
       # <template: update_comment_on_finish>

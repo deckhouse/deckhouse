@@ -38,9 +38,10 @@ func NewStore() *Store {
 }
 
 // NeedUpdate reports whether the package needs processing: true if the package
-// is new, the version changed, or the settings checksum differs.
+// is new, the version changed, the settings checksum differs, the settings
+// schema version changed, or the maintenance mode changed.
 // Used as a fast-path check before the more expensive Update call.
-func (s *Store) NeedUpdate(name, version, checksum string) bool {
+func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, maintenance string) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
 		return true
@@ -54,6 +55,14 @@ func (s *Store) NeedUpdate(name, version, checksum string) bool {
 		return true
 	}
 
+	if pkg.settingsVersion != settingsVersion {
+		return true
+	}
+
+	if pkg.maintenance != maintenance {
+		return true
+	}
+
 	return false
 }
 
@@ -63,19 +72,22 @@ func (s *Store) NeedUpdate(name, version, checksum string) bool {
 //  1. Package not in store → creates entry, returns root context
 //  2. Version differs → cancels all in-flight tasks, returns new root context
 //
-// Returns nil when only settings changed (no new context needed — settings are
-// stored and will be picked up by the scheduler via GetPendingSettings on next
-// Reschedule, or by the next Configure task in the schedule pipeline).
+// Returns nil when only settings, settingsVersion or maintenance changed (no new
+// context needed — the new values are stored and will be picked up by the scheduler
+// via GetPendingSettings/GetPendingMaintenance on next Reschedule, or by the next
+// Configure task in the schedule pipeline).
 //
-// Callers should check for nil: a nil return with a settings-only change means
-// the caller should trigger Reschedule to re-apply settings through the scheduler.
-func (s *Store) Update(name, version string, settings addonutils.Values) context.Context {
+// Callers should check for nil: a nil return with a settings- or maintenance-only
+// change means the caller should trigger Reschedule to re-apply them.
+func (s *Store) Update(name, version string, settingsVersion int, settings addonutils.Values, maintenance string) context.Context {
 	pkg, ok := s.packages[name]
 	if !ok {
 		s.packages[name] = &Package{
-			version:  version,
-			settings: settings,
-			cancels:  make(map[int]context.CancelFunc),
+			version:         version,
+			settingsVersion: settingsVersion,
+			settings:        settings,
+			maintenance:     maintenance,
+			cancels:         make(map[int]context.CancelFunc),
 		}
 
 		ctx := s.packages[name].newContext(EventUpdate)
@@ -84,40 +96,56 @@ func (s *Store) Update(name, version string, settings addonutils.Values) context
 
 	if pkg.version != version {
 		pkg.version = version
+		pkg.settingsVersion = settingsVersion
 		pkg.settings = settings
+		pkg.maintenance = maintenance
 
 		ctx := pkg.newContext(EventUpdate)
 		return ctx
 	}
 
-	if pkg.settings.Checksum() != settings.Checksum() {
+	checksumChanged := pkg.settings.Checksum() != settings.Checksum()
+	versionChanged := pkg.settingsVersion != settingsVersion
+
+	if checksumChanged {
 		pkg.settings = settings
 	}
+	if checksumChanged || versionChanged {
+		pkg.settingsVersion = settingsVersion
+	}
+
+	pkg.maintenance = maintenance
 
 	return nil
 }
 
-// UpdateSettings stores new pending settings for an already-tracked package
-// without touching its version or context tree. Returns true if the settings
-// checksum changed and the caller should Reschedule, false if nothing changed or
-// the package is not tracked yet.
+// UpdateSettings stores new pending settings and their schema version for an
+// already-tracked package without touching its version or context tree.
+// Returns true if the settings checksum or settingsVersion changed and the
+// caller should Reschedule, false if nothing changed or the package is not
+// tracked yet.
 //
 // Unlike Update, this never creates or cancels a context: in-flight deploy and
 // load tasks are left running. It is the settings-only counterpart to Update,
 // used when settings change independently of a version change. The ModuleConfig
-// enabled intent is tracked separately by the global module (see
-// global.Module.SetConfigEnabled), not here.
-func (s *Store) UpdateSettings(name string, settings addonutils.Values) bool {
+// enabled intent is tracked separately by the global module, not here.
+func (s *Store) UpdateSettings(name string, settingsVersion int, settings addonutils.Values) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
 		return false
 	}
 
-	if pkg.settings.Checksum() == settings.Checksum() {
+	checksumChanged := pkg.settings.Checksum() != settings.Checksum()
+	versionChanged := pkg.settingsVersion != settingsVersion
+
+	if !checksumChanged && !versionChanged {
 		return false
 	}
 
-	pkg.settings = settings
+	if checksumChanged {
+		pkg.settings = settings
+	}
+	pkg.settingsVersion = settingsVersion
 
 	return true
 }
@@ -136,18 +164,28 @@ func (s *Store) HandleEvent(event int, name string) context.Context {
 
 	if event == EventRemove {
 		pkg.version = ""
+		pkg.settingsVersion = 0
 		pkg.settings = make(addonutils.Values)
+		pkg.maintenance = ""
 	}
 
 	return pkg.newContext(event)
 }
 
-// GetPendingSettings returns the latest settings stored for a package.
-// Called by schedulePackage to pass current settings into the Configure task.
+// GetPendingSettings returns the latest settings and their schema version stored
+// for a package. Called by schedulePackage to pass current settings and version
+// into the Configure task so it can convert from the stored version to latest.
 // This late-binding approach ensures settings changes that arrive between Update
 // and schedule are automatically picked up.
-func (s *Store) GetPendingSettings(name string) addonutils.Values {
-	return s.packages[name].settings
+func (s *Store) GetPendingSettings(name string) (addonutils.Values, int) {
+	return s.packages[name].settings, s.packages[name].settingsVersion
+}
+
+// GetPendingMaintenance returns the latest maintenance mode stored for a package.
+// Called by schedulePackage to pass the current mode into the Run task. Empty
+// means the package is managed normally.
+func (s *Store) GetPendingMaintenance(name string) string {
+	return s.packages[name].maintenance
 }
 
 // Delete removes a package entry from the store if it still exists and is in

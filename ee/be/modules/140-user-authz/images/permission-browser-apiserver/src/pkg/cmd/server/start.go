@@ -47,6 +47,11 @@ func NewPermissionBrowserServerOptions(out, errOut io.Writer) *PermissionBrowser
 	}
 	// No etcd - ephemeral resources only
 	o.RecommendedOptions.Etcd = nil
+	// Profiling (/debug/pprof) is left enabled deliberately. The endpoints remain
+	// behind the generic apiserver's non-resource-URL authorization (only the
+	// service account and explicitly authorized principals can reach them), so
+	// the production-hardening exposure is limited. If a stricter posture is ever
+	// required, gate this behind a flag rather than flipping it unconditionally.
 	o.RecommendedOptions.Features.EnableProfiling = true
 
 	return o

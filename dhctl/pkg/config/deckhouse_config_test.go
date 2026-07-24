@@ -19,8 +19,9 @@ package config
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 const configOverridesTemplate = `

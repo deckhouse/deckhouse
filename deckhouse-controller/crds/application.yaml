@@ -71,6 +71,23 @@ spec:
           spec:
             description: Defines the application configuration.
             properties:
+              maintenance:
+                description: |-
+                  Defines the application maintenance mode.
+
+                  - `NoResourceReconciliation`: A mode for developing or tweaking the application.
+
+                    In this mode:
+
+                    - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
+                    - Resource monitoring is disabled, which prevents deleted resources from being restored.
+                    - All the application's resources are labeled with `maintenance.deckhouse.io/no-resource-reconciliation`.
+                    - The [`ApplicationIsInMaintenanceMode`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationisinmaintenancemode) alert is triggered.
+                enum:
+                - NoResourceReconciliation
+                type: string
+                x-doc-examples:
+                - NoResourceReconciliation
               packageName:
                 description: Name of the application package to install.
                 type: string
@@ -249,6 +266,7 @@ spec:
           metadata:
             name: example
           spec:
+            maintenance: NoResourceReconciliation
             packageName: console
             packageRepositoryName: deckhouse
             packageVersion: v1.0.0

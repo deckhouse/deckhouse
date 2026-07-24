@@ -116,6 +116,23 @@ cloudProviderVsphere:
     - .*
     default: other-bar
 `
+		initValuesStringF = `
+cloudProviderVsphere:
+  internal:
+    providerClusterConfiguration:
+      provider:
+        server: test.test.com
+        username: test
+        password: test
+        insecure: true
+      region: Test
+      regionTagCategory: test-region
+      zoneTagCategory: test-zone
+      sshPublicKey: test
+      vmFolderPath: test
+  storageClass:
+    compatibilityFlag: Legacy
+`
 	)
 
 	//nolint:misspell
@@ -242,6 +259,163 @@ parameters:
 			Expect(f.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
 [
           {
+            "name": "test-1-lun101-b39d82fa",
+            "path": "/DCTEST/datastore/test_1_Lun101",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
+            "storagePolicyName": ""
+          },
+          {
+            "name": "test-1-lun101-b39d82fa-management-storage-policy---large",
+            "path": "/DCTEST/datastore/test_1_Lun101",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
+            "storagePolicyName": "Management Storage Policy - Large"
+          },
+          {
+            "name": "test-1-lun101-b39d82fa-vvol-no-requirements-policy",
+            "path": "/DCTEST/datastore/test_1_Lun101",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
+            "storagePolicyName": "VVol No Requirements Policy"
+          },
+          {
+            "name": "test-1-lun102-0403073a",
+            "path": "/DCTEST/datastore/test_1_Lun102",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
+            "storagePolicyName": ""
+          },
+          {
+            "name": "test-1-lun102-0403073a-management-storage-policy---large",
+            "path": "/DCTEST/datastore/test_1_Lun102",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
+            "storagePolicyName": "Management Storage Policy - Large"
+          },
+          {
+            "name": "test-1-lun102-0403073a-vvol-no-requirements-policy",
+            "path": "/DCTEST/datastore/test_1_Lun102",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
+            "storagePolicyName": "VVol No Requirements Policy"
+          }
+        ]
+`))
+		})
+
+	})
+
+	b := HookExecutionConfigInit(initValuesStringB, `{}`)
+
+	Context("Cluster has minimal cloudProviderVsphere configuration with excluded storage classes", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(b.KubeStateSet(state))
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RunHook()
+		})
+
+		It("Should discover volumeTypes without excluded", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`[]`))
+		})
+	})
+
+	e := HookExecutionConfigInit(initValuesStringE, `{}`)
+
+	Context("When all discovered storage classes are excluded", func() {
+		BeforeEach(func() {
+			e.BindingContexts.Set(e.KubeStateSet(state))
+			e.BindingContexts.Set(e.GenerateBeforeHelmContext())
+			e.RunHook()
+		})
+
+		It("Should result empty storageClasses list", func() {
+			Expect(e).To(ExecuteSuccessfully())
+			Expect(e.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`[]`))
+		})
+	})
+
+	g := HookExecutionConfigInit(initValuesStringA, `{}`)
+
+	Context("Cluster without discovery data secret, but with deckhouse storage classes", func() {
+		BeforeEach(func() {
+			g.BindingContexts.Set(g.KubeStateSet(storageClassesState))
+			g.BindingContexts.Set(g.GenerateBeforeHelmContext())
+			g.RunHook()
+		})
+
+		It("Should restore storageClasses from storage class snapshots", func() {
+			Expect(g).To(ExecuteSuccessfully())
+			Expect(g.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+    "name": "deckhouse-default",
+    "path": "",
+    "zones": ["zone-c"],
+    "datastoreType": "",
+    "datastoreURL": "ds:///vmfs/volumes/default/",
+    "storagePolicyName": ""
+  },
+  {
+    "name": "deckhouse-gold",
+    "path": "",
+    "zones": ["zone-a", "zone-b"],
+    "datastoreType": "",
+    "datastoreURL": "ds:///vmfs/volumes/gold/",
+    "storagePolicyName": "Gold Policy"
+  }
+]
+`))
+		})
+	})
+
+	h := HookExecutionConfigInit(initValuesStringA, `{}`)
+
+	Context("Cluster without discovery data secret and without deckhouse storage classes", func() {
+		BeforeEach(func() {
+			h.BindingContexts.Set(h.GenerateBeforeHelmContext())
+			h.RunHook()
+		})
+
+		It("Should not fail and should keep storageClasses empty", func() {
+			Expect(h).To(ExecuteSuccessfully())
+			Expect(h.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(BeEmpty())
+		})
+	})
+
+	legacyF := HookExecutionConfigInit(initValuesStringF, `{}`)
+
+	Context("Legacy CSI mode: DatastoreCluster entries are preserved", func() {
+		BeforeEach(func() {
+			legacyF.BindingContexts.Set(legacyF.KubeStateSet(state))
+			legacyF.BindingContexts.Set(legacyF.GenerateBeforeHelmContext())
+			legacyF.RunHook()
+		})
+
+		It("Should keep DatastoreCluster entries in Legacy mode", func() {
+			Expect(legacyF).To(ExecuteSuccessfully())
+			Expect(legacyF.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
+[
+          {
             "name": "test-1-k8s-3cf5ce84",
             "path": "/DCTEST/datastore/test_1_k8s",
             "zones": [
@@ -333,118 +507,6 @@ parameters:
           }
         ]
 `))
-		})
-
-	})
-
-	b := HookExecutionConfigInit(initValuesStringB, `{}`)
-
-	Context("Cluster has minimal cloudProviderVsphere configuration with excluded storage classes", func() {
-		BeforeEach(func() {
-			b.BindingContexts.Set(b.KubeStateSet(state))
-			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
-			b.RunHook()
-		})
-
-		It("Should discover volumeTypes without excluded", func() {
-			Expect(b).To(ExecuteSuccessfully())
-			Expect(b.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
-[
-          {
-            "name": "test-1-k8s-3cf5ce84",
-            "path": "/DCTEST/datastore/test_1_k8s",
-            "zones": [
-              "ZONE-TEST"
-            ],
-            "datastoreType": "DatastoreCluster",
-            "datastoreURL": "",
-            "storagePolicyName": ""
-          },
-          {
-            "name": "test-1-k8s-3cf5ce84-management-storage-policy---large",
-            "path": "/DCTEST/datastore/test_1_k8s",
-            "zones": [
-              "ZONE-TEST"
-            ],
-            "datastoreType": "DatastoreCluster",
-            "datastoreURL": "",
-            "storagePolicyName": "Management Storage Policy - Large"
-          },
-          {
-            "name": "test-1-k8s-3cf5ce84-vvol-no-requirements-policy",
-            "path": "/DCTEST/datastore/test_1_k8s",
-            "zones": [
-              "ZONE-TEST"
-            ],
-            "datastoreType": "DatastoreCluster",
-            "datastoreURL": "",
-            "storagePolicyName": "VVol No Requirements Policy"
-          }
-]
-`))
-		})
-	})
-
-	e := HookExecutionConfigInit(initValuesStringE, `{}`)
-
-	Context("When all discovered storage classes are excluded", func() {
-		BeforeEach(func() {
-			e.BindingContexts.Set(e.KubeStateSet(state))
-			e.BindingContexts.Set(e.GenerateBeforeHelmContext())
-			e.RunHook()
-		})
-
-		It("Should result empty storageClasses list", func() {
-			Expect(e).To(ExecuteSuccessfully())
-			Expect(e.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`[]`))
-		})
-	})
-
-	g := HookExecutionConfigInit(initValuesStringA, `{}`)
-
-	Context("Cluster without discovery data secret, but with deckhouse storage classes", func() {
-		BeforeEach(func() {
-			g.BindingContexts.Set(g.KubeStateSet(storageClassesState))
-			g.BindingContexts.Set(g.GenerateBeforeHelmContext())
-			g.RunHook()
-		})
-
-		It("Should restore storageClasses from storage class snapshots", func() {
-			Expect(g).To(ExecuteSuccessfully())
-			Expect(g.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
-[
-  {
-    "name": "deckhouse-default",
-    "path": "",
-    "zones": ["zone-c"],
-    "datastoreType": "",
-    "datastoreURL": "ds:///vmfs/volumes/default/",
-    "storagePolicyName": ""
-  },
-  {
-    "name": "deckhouse-gold",
-    "path": "",
-    "zones": ["zone-a", "zone-b"],
-    "datastoreType": "",
-    "datastoreURL": "ds:///vmfs/volumes/gold/",
-    "storagePolicyName": "Gold Policy"
-  }
-]
-`))
-		})
-	})
-
-	h := HookExecutionConfigInit(initValuesStringA, `{}`)
-
-	Context("Cluster without discovery data secret and without deckhouse storage classes", func() {
-		BeforeEach(func() {
-			h.BindingContexts.Set(h.GenerateBeforeHelmContext())
-			h.RunHook()
-		})
-
-		It("Should not fail and should keep storageClasses empty", func() {
-			Expect(h).To(ExecuteSuccessfully())
-			Expect(h.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(BeEmpty())
 		})
 	})
 })

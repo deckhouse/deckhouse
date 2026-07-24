@@ -42,10 +42,12 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -66,13 +68,18 @@ type Module struct {
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
-	definition Definition        // Module definition
-	digests    map[string]string // Package digests
-	repository registry.Remote   // Module repository
+	definition Definition            // Module definition
+	digests    map[string]string     // Package digests
+	repository registry.Remote       // Module repository
+	converter  *conversion.Converter // Schema version converter for settings
 
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
+
+	// maintenance is the package maintenance mode, set by the Configure task and
+	// read by the Run/nelm layer. Empty (Managed) means reconcile normally.
+	maintenance nelm.MaintenanceState
 
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -99,6 +106,7 @@ type Config struct {
 	Hooks []hooks.Hook // Discovered hooks
 
 	SettingsCheck *kind.SettingsCheck
+	Conversions   *conversion.Converter // Schema version converter
 
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
@@ -124,6 +132,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.digests = cfg.Digests
 	m.repository = cfg.Repository
 	m.settingsCheck = cfg.SettingsCheck
+	m.converter = cfg.Conversions
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
@@ -291,8 +300,18 @@ func (m *Module) GetSettingsChecksum() string {
 	return m.values.GetSettingsChecksum()
 }
 
-// ValidateSettings validates settings against openAPI and call setting check if exists
-func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+// ValidateSettings converts settings to the latest schema version (if a converter
+// is available and settingsVersion > 0), then validates against OpenAPI schema
+// and calls the settings check hook if defined.
+func (m *Module) ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
+	// Convert to latest schema version before validation
+	if m.converter != nil && settingsVersion > 0 {
+		var err error
+		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		if err != nil {
+			return settingscheck.Result{}, fmt.Errorf("convert settings: %w", err)
+		}
+	}
 	if err := m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
@@ -329,7 +348,17 @@ func (m *Module) GetValues() addonutils.Values {
 }
 
 // ApplySettings applies settings values
-func (m *Module) ApplySettings(settings addonutils.Values) error {
+// ApplySettings converts settings to the latest schema version (if a converter
+// is available), then applies them to the values storage.
+func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) error {
+	// Convert to latest schema version before applying
+	if m.converter != nil && settingsVersion > 0 {
+		var err error
+		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
+		if err != nil {
+			return fmt.Errorf("convert settings: %w", err)
+		}
+	}
 	return m.values.ApplySettings(settings)
 }
 
@@ -337,6 +366,18 @@ func (m *Module) ApplySettings(settings addonutils.Values) error {
 // config-schema defaults. Same payload exposed to templates as .Module.Settings.
 func (m *Module) GetSettings() addonutils.Values {
 	return m.values.GetSettings()
+}
+
+// SetMaintenance records the module maintenance mode. Modules do not expose the
+// mode through a CR, so it stays Managed in practice.
+func (m *Module) SetMaintenance(state nelm.MaintenanceState) {
+	m.maintenance = state
+}
+
+// GetMaintenance returns the module maintenance mode. Empty (Managed) means the
+// module reconciles normally.
+func (m *Module) GetMaintenance() nelm.MaintenanceState {
+	return m.maintenance
 }
 
 // GetConstraints returns scheduler checks, their determine if an module should be enabled/disabled
@@ -412,7 +453,7 @@ func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.Controll
 }
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.
-// It creates a binding context with snapshots for BeforeHelm/AfterHelm/AfterDeleteHelm hooks.
+// It creates a binding context with snapshots for BeforeHelm/AfterHelm/BeforeDeleteHelm/AfterDeleteHelm hooks.
 func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error {
 	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "RunHooksByBinding")
 	defer span.End()
@@ -428,7 +469,8 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			Binding: string(binding),
 		}
 		// Update kubernetes snapshots just before execute m hook
-		if binding == addontypes.BeforeHelm || binding == addontypes.AfterHelm || binding == addontypes.AfterDeleteHelm {
+		if binding == addontypes.BeforeHelm || binding == addontypes.AfterHelm ||
+			binding == addontypes.BeforeDeleteHelm || binding == addontypes.AfterDeleteHelm {
 			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
 			bc.Metadata.IncludeAllSnapshots = true
 		}

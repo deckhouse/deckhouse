@@ -20,8 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
 var (
@@ -76,7 +74,9 @@ type ModulePullOverrideSpec struct {
 	ImageTag string `json:"imageTag"`
 	// Scan interval for checking the image digest. If the digest changes, the module is updated.
 	// +kubebuilder:default="15s"
-	ScanInterval libapi.Duration `json:"scanInterval,omitempty"`
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
+	ScanInterval metav1.Duration `json:"scanInterval,omitempty"`
 	// Indicates whether the module release should be rollback after deleting mpo.
 	// +kubebuilder:default=false
 	Rollback bool `json:"rollback,omitempty"`

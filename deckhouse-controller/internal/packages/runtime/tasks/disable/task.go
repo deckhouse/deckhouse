@@ -108,10 +108,11 @@ func (t *task) Execute(ctx context.Context) error {
 //
 // Process:
 //  1. Stop Helm resource monitoring
-//  2. Uninstall Helm release
-//  3. Run AfterDeleteHelm hooks
-//  4. Disable all schedule hooks
-//  5. Stop all Kubernetes event monitors
+//  2. Run BeforeDeleteHelm hooks (on failure: skip uninstall and AfterDeleteHelm, retry with backoff)
+//  3. Uninstall Helm release
+//  4. Run AfterDeleteHelm hooks
+//  5. Disable all schedule hooks
+//  6. Stop all Kubernetes event monitors
 func (t *task) disablePackage(ctx context.Context) error {
 	_, span := otel.Tracer(taskTracer).Start(ctx, "DisablePackage")
 	defer span.End()
@@ -124,6 +125,16 @@ func (t *task) disablePackage(ctx context.Context) error {
 	t.nelm.RemoveMonitor(t.pkg.GetName())
 
 	if !t.keep {
+		t.logger.Debug("run before delete helm hooks")
+
+		// Run beforeDeleteHelm hooks just before helm uninstall. On hook failure,
+		// helm uninstall and afterDeleteHelm are NOT executed and the disable is
+		// retried with backoff. Symmetric to beforeHelm aborting a helm install.
+		if err := t.pkg.RunHooksByBinding(ctx, addontypes.BeforeDeleteHelm); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return fmt.Errorf("run before delete helm hooks: %w", err)
+		}
+
 		t.logger.Debug("delete nelm release")
 		if err := t.nelm.Delete(ctx, t.namespace, t.pkg.GetName()); err != nil {
 			span.SetStatus(codes.Error, err.Error())

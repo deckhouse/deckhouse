@@ -1,7 +1,7 @@
 allowed_values: allowed values
 additional_property_name: item (key) name
 pattern_property_name: regular expression for parameter name
-search_placeholder_text: Search...
+search_placeholder_text: Search documentation
 search_context_dkpdocs_and_modules: The search is performed throughout DKP documentation and modules.
 search_context_modules: The search is performed throughout modules, excluding the DKP documentation.
 search_context_only_product_docs: The search is performed throughout the product documentation, excluding modules.
@@ -115,7 +115,7 @@ tags_filter_all_selected: All tags
 core: core
 community_edition_en: community edition
 commercial_editions_en: commercial editions
-requirements_for_alert: The module has [requirements](/modules/%s/configuration.html#requirements) for installation
+requirements_for_alert: The module has [requirements](./configuration.html#requirements) for installation
 requirements_title: Requirements
 requirements_deckhouse_title: To the Deckhouse version
 requirements_kubernetes_title: To the Kubernetes version
@@ -171,7 +171,6 @@ module_alert_preview_long: Preliminary version. The functionality may change, bu
 module_alert_general_availability_long: Generally available version. Ready to be used in production environments.
 module_alert_deprecated_long: Deprecated version. Development and support have been terminated.
 related_additional_resources: Additional resources
-reset_filter: reset filter
 deprecated_parameter: Deprecated
 deprecated_parameter_hint: Support for the parameter might be removed in a later release.
 show_more: Show more

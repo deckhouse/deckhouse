@@ -225,6 +225,15 @@ properties:
                 inlet:
                   type: string
                   x-examples:  ["HostPort", "LoadBalancer"]
+                networkTopology:
+                  type: object
+                  properties:
+                    numTrustedProxies:
+                      type: integer
+                      x-examples: [2]
+                    proxyProtocol:
+                      type: boolean
+                      x-examples: [true]
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -264,6 +273,8 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                    loadBalancerClass:
+                      type: string
                 nodePort:
                   type: object
                   default: {}

@@ -135,6 +135,15 @@ properties:
               - cse-pro
             example:
               yandex.cpi.flant.com/listener-subnet-id: xyz-123
+          loadBalancerClass:
+            type: string
+            description: |
+              Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+
+              Applies only when `inlet` is `LoadBalancer`.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
           gatewayPodAnnotations:
             type: object
             additionalProperties:

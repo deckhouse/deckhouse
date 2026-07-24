@@ -155,7 +155,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	etcdVotingMembers := make([]string, 0, len(etcdMembersResp.Members))
 	for _, mem := range etcdMembersResp.Members {
 		if mem.IsLearner {
-			input.Logger.Warn("found learner etcd member, will be skipped", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
+			input.Logger.Warn("found learner etcd member, will be skipped", slog.Uint64("member_id", mem.ID), slog.String("member_name", mem.Name))
 			continue
 		}
 		if ip, ok := discoveredEtcdNodesMap[mem.Name]; ok {
@@ -168,18 +168,18 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	for _, mem := range etcdMembersResp.Members {
 		if _, ok := discoveredEtcdNodesMap[mem.Name]; !ok {
 			removeListIDs = append(removeListIDs, mem.ID)
-			input.Logger.Warn("added etcd member to remove list", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
+			input.Logger.Warn("added etcd member to remove list", slog.Uint64("member_id", mem.ID), slog.String("member_name", mem.Name))
 		}
 	}
 
-	input.Logger.Warn("etcd members to remove", slog.Any("removeListIDs", removeListIDs))
+	input.Logger.Warn("etcd members to remove", slog.Any("remove_list_i_ds", removeListIDs))
 
 	if len(removeListIDs) == len(etcdMembersResp.Members) {
 		return fmt.Errorf("attempting do delete every single member from etcd cluster. Exiting")
 	}
 
 	for _, rm := range removeListIDs {
-		input.Logger.Warn("removing etcd member", slog.Uint64("memberID", rm))
+		input.Logger.Warn("removing etcd member", slog.Uint64("member_id", rm))
 		_, err = etcdcli.MemberRemove(ctx, rm)
 		if err != nil {
 			return errors.Wrap(err, "remove etcd member failed")

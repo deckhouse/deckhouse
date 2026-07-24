@@ -2864,7 +2864,7 @@ func schema_pkg_apis_authorization_v1alpha1_BulkSubjectAccessReviewSpec(ref comm
 				Properties: map[string]spec.Schema{
 					"user": {
 						SchemaProps: spec.SchemaProps{
-							Description: "User is the user to check access for. If empty, uses the authenticated user (self mode).",
+							Description: "User is the user to check access for. If empty, uses the authenticated user (self mode). A non-empty value additionally requires create on the bulksubjectaccessreviews/nonself subresource.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
