@@ -1,0 +1,206 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-68ba11ffab091d021f89629d40842cca204154d6bd7b58407e9744faea2c5826",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: разбор произвольного HTML с последующим Render может давать неожиданное дерево HTML. Компонент VPA admission-controller не разбирает и не рендерит HTML и не отдаёт контент в браузер — пакет golang.org/x/net/html не входит в путь исполнения компонента.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: обход санитизации при разборе и повторном рендеринге HTML. Компонент VPA admission-controller не работает с HTML и не имеет веб-интерфейса — уязвимый код golang.org/x/net/html не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость DoS в HTTP/2-транспорте golang.org/x/net: при получении SETTINGS-фрейма со значением SETTINGS_MAX_FRAME_SIZE=0 транспорт входит в бесконечный цикл записи CONTINUATION-фреймов. Хотя HTTP/2-клиент используется (client-go), вредоносный SETTINGS-фрейм может прийти только от сервера, к которому подключается admission-controller, — а это исключительно доверенный in-cluster kube-apiserver. Сетевой атакующий не может внедрить такой фрейм, поэтому уязвимый код не контролируется злоумышленником.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/idna: функции ToASCII/ToUnicode некорректно принимают Punycode-метки, декодируемые в ASCII-only имя, что может привести к повышению привилегий в программах, выполняющих проверки прав по имени хоста. Компонент VPA admission-controller не выполняет авторизацию или проверки привилегий по именам хостов и подключается только к доверенному in-cluster kube-apiserver — уязвимый путь idna не задействован.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39822"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.26.4"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-61 (переход по символьной ссылке, symlink following) в Go stdlib v1.26.4 (API os.Root): при открытии файла внутри os.Root финальная символьная ссылка с путём, оканчивающимся на «/», может вести за пределы корня. Компонент VPA admission-controller не использует sandbox-API os.Root и не обрабатывает произвольные пути файловой системы от недоверенных пользователей — уязвимый код не достигается. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47911"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/net/html: квадратичная сложность html.Parse на специально сформированном HTML. Компонент VPA admission-controller не разбирает и не рендерит HTML — пакет golang.org/x/net/html не входит в путь исполнения компонента.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58190"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/net/html: бесконечный цикл разбора в html.Parse на определённом вводе. Компонент VPA admission-controller не разбирает и не рендерит HTML — уязвимый код golang.org/x/net/html не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость DoS в golang.org/x/net/html: разбор произвольного HTML может потреблять чрезмерное время CPU. Компонент VPA admission-controller не разбирает и не рендерит HTML — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: разбор произвольного HTML с последующим Render может давать неожиданное дерево HTML. Компонент VPA admission-controller не разбирает и не рендерит HTML — уязвимый код не входит в путь исполнения компонента.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость XSS в golang.org/x/net/html: обход санитизации при разборе и повторном рендеринге HTML. Компонент VPA admission-controller не работает с HTML и не имеет веб-интерфейса — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42505"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.26.4"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость раскрытия информации CWE-201 в Go stdlib v1.26.4 (crypto/tls, Encrypted Client Hello): при использовании ECH идентификаторы pre-shared key раскрываются в незашифрованном ClientHello, что позволяет пассивному наблюдателю деанонимизировать рукопожатие. Компонент VPA admission-controller и client-go не включают ECH (требуется явная настройка EncryptedClientHelloConfigList, по умолчанию выключена), а TLS-соединения устанавливаются только к доверенному in-cluster kube-apiserver — уязвимый путь ECH не задействован. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/net/dns/dnsmessage: разбор некорректной SVCB- или HTTPS-записи ресурса может вызвать панику из-за переполнения буфера сообщения. Компонент VPA admission-controller не использует golang.org/x/net/dns/dnsmessage: разрешение имён выполняется штатным резолвером Go/ОС, DNS-сообщения компонент не разбирает — уязвимый код не достигается ни в одном пути выполнения.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/sys/windows: функция NewNTUnicodeString не проверяет переполнение длины строки и возвращает усечённую строку. Компонент VPA admission-controller собирается с GOOS=linux; файлы golang.org/x/sys/windows исключены ограничениями сборки (//go:build windows) и не компилируются в linux-бинарник — уязвимый код в артефакте отсутствует.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость DoS в golang.org/x/text: norm.Iter может войти в бесконечный цикл при обработке ввода с некорректными байтами UTF-8. В компоненте VPA admission-controller пакет golang.org/x/text/unicode/norm задействуется лишь косвенно через golang.org/x/net/idna при нормализации имени хоста во время исходящего TLS-подключения — а это исключительно доверенный in-cluster kube-apiserver с валидным ASCII-именем. Недоверенные данные (имена и метки объектов из API) через нормализацию не проходят, поэтому уязвимый код не контролируется злоумышленником.",
+      "timestamp": "2026-07-24T04:45:02.000000Z"
+    }
+  ],
+  "timestamp": "2026-07-24T04:45:02Z",
+  "last_updated": "2026-07-24T04:45:02Z"
+}
