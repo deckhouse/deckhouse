@@ -33,6 +33,8 @@ import (
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 )
 
+const istioMeshCompatCRDBaseVersion = "1.21"
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup:    &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_versions_to_install.go
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_versions_to_install.go
@@ -66,7 +68,9 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 
 	sort.Sort(semver.Collection(semvers))
 
-	CRDversionToInstall := fmt.Sprintf("%d.%d", semvers[len(semvers)-1].Major(), semvers[len(semvers)-1].Minor())
+	localMax := semvers[len(semvers)-1]
+	multiclusterEnabled := input.ConfigValues.Get("istio.multicluster.enabled").Bool()
+	CRDversionToInstall := resolveCRDBundleVersion(localMax, multiclusterEnabled)
 
 	crdsGlob := "/deckhouse/modules/110-istio/_crds/istio/" + CRDversionToInstall + "/*.yaml"
 
@@ -79,7 +83,8 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 	}
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
-	if !versionMap.DoesVersionSupportOperator(CRDversionToInstall) {
+	istioVersionForOperatorCheck := strings.TrimSuffix(CRDversionToInstall, "-mesh-compat")
+	if !versionMap.DoesVersionSupportOperator(istioVersionForOperatorCheck) {
 		for _, crdFile := range crds {
 			fileName := filepath.Base(crdFile)
 			if fileName == "crd-operator.yaml" || strings.HasPrefix(fileName, "sailoperator.io_") {
@@ -89,4 +94,13 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 	}
 
 	return ensure_crds.EnsureCRDsHandler(crdsGlob)(ctx, input, dc)
+}
+
+func resolveCRDBundleVersion(localMax *semver.Version, multiclusterEnabled bool) string {
+	base := fmt.Sprintf("%d.%d", localMax.Major(), localMax.Minor())
+	if multiclusterEnabled && base == istioMeshCompatCRDBaseVersion {
+		return base + "-mesh-compat"
+	}
+
+	return base
 }

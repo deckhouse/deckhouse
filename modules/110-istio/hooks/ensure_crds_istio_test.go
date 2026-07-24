@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -97,6 +98,28 @@ var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
 
 		It("Hook must not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("resolveCRDBundleVersion", func() {
+		It("multicluster off keeps base bundle", func() {
+			localMax := semver.MustParse("1.21")
+			Expect(resolveCRDBundleVersion(localMax, false)).To(Equal("1.21"))
+		})
+
+		It("multicluster on legacy version uses compat bundle", func() {
+			localMax := semver.MustParse("1.21")
+			Expect(resolveCRDBundleVersion(localMax, true)).To(Equal("1.21-mesh-compat"))
+		})
+
+		It("multicluster on modern version keeps base bundle", func() {
+			localMax := semver.MustParse("1.25")
+			Expect(resolveCRDBundleVersion(localMax, true)).To(Equal("1.25"))
+		})
+
+		It("multicluster on 1.27 keeps base bundle", func() {
+			localMax := semver.MustParse("1.27")
+			Expect(resolveCRDBundleVersion(localMax, true)).To(Equal("1.27"))
 		})
 	})
 })
