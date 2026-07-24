@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-8672d6eafe61e4f890bf57dfe22d2a4475b99af4354ceed6f3f9ae9a9ff2f1ed",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 8,
+  "version": 9,
   "statements": [
     {
       "vulnerability": {
@@ -87,8 +87,204 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-10T09:13:45.629451Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47913"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2025-47913 невозможно эксплуатировать в рамках Deckhouse: пакет golang.org/x/crypto/ssh/agent отсутствует в зависимостях control-plane-manager, компонент не обращается к SSH agent. Модуль x/crypto появляется только транзитивно через x/net, а не через импорты SSH.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-25681 невозможно эксплуатировать в рамках Deckhouse: пакет golang.org/x/net/html не импортируется control-plane-manager; компонент не выполняет html.Parse/html.Render недоверенной разметки.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-27136 невозможно эксплуатировать в рамках Deckhouse: пакет golang.org/x/net/html отсутствует в графе зависимостей control-plane-manager, поверхности parse→sanitize→render нет.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33814 невозможно эксплуатировать в рамках Deckhouse: golang.org/x/net/http2 присутствует (через client-go / etcd gRPC), однако исходящие HTTP/2-соединения идут только к доверенным внутрикластерным kube-apiserver и etcd, настроенным Deckhouse, а не к выбранным атакующим серверам.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-39821 невозможно эксплуатировать в рамках Deckhouse: golang.org/x/net/idna присутствует транзитивно, однако control-plane-manager не проверяет привилегии по контролируемым атакующим IDN-именам через ToASCII/ToUnicode и подключается к фиксированным endpoint API/etcd кластера по TLS.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39828 невозможно эксплуатировать в рамках Deckhouse: импорта golang.org/x/crypto/ssh в control-plane-manager нет; компонент не является SSH-сервером и не использует auth через PartialSuccessError.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39829 невозможно эксплуатировать в рамках Deckhouse: в control-plane-manager нет пути разбора SSH public-key; аутентификация к API/etcd выполняется через TLS и клиентские сертификаты.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39830 невозможно эксплуатировать в рамках Deckhouse: control-plane-manager не устанавливает SSH client/server соединений, поэтому deadlock от незапрошенных global-request недостижим.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39831 невозможно эксплуатировать в рамках Deckhouse: пакет golang.org/x/crypto/ssh отсутствует в зависимостях control-plane-manager, проверка подписей FIDO/U2F/sk-* не выполняется.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39832 невозможно эксплуатировать в рамках Deckhouse: пакет golang.org/x/crypto/ssh/agent не импортируется control-plane-manager; вызовов agent.Add и проброса ключей с constraint-расширениями нет.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39835 невозможно эксплуатировать в рамках Deckhouse: control-plane-manager не поднимает SSH-сервер и не использует ssh.CertChecker; путь panic при nil authority-callback недостижим.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42508 невозможно эксплуатировать в рамках Deckhouse: пакет golang.org/x/crypto/ssh/knownhosts не импортируется; доверие к хостам строится на Kubernetes/TLS PKI, а не на SSH CA @revoked в known_hosts.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46595 невозможно эксплуатировать в рамках Deckhouse: пакет golang.org/x/crypto/ssh отсутствует в зависимостях control-plane-manager; SSH-серверные callbacks (VerifiedPublicKeyCallback / смешанный auth) не используются.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46597 невозможно эксплуатировать в рамках Deckhouse: control-plane-manager не использует SSH AES-GCM; сетевая криптография выполняется через TLS (client-go / etcd client), а не через декодирование пакетов x/crypto/ssh.",
+      "timestamp": "2026-07-21T10:25:00Z"
     }
   ],
   "timestamp": "2025-10-28T18:45:30Z",
-  "last_updated": "2026-04-10T09:13:45Z"
+  "last_updated": "2026-07-21T10:25:00Z"
 }

@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 7,
+  "version": 8,
   "statements": [
     {
       "vulnerability": {
@@ -143,8 +143,176 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-10T09:13:29.162671Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-25681 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: golang.org/x/net/html используется только через k8s.io/apimachinery/pkg/util/proxy с html.NewTokenizer для переписывания URL service-proxy, а не через html.Parse/html.Render, необходимые для XSS-цепочки parse→sanitize→render.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-27136 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: единственный импортёр golang.org/x/net/html — apimachinery/pkg/util/proxy, который не строит и не санитизирует HTML-дерево через Parse/Render перед возвратом проксируемого контента; XSS с дублирующимися атрибутами требует tree-sanitizer + Render.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39821 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: idna используется только для нормализации хоста через idna.ToASCII (httpguts/http2); авторизация строится на RBAC/webhook/TLS identity, а не на проверке ACL по hostname с последующим ToUnicode.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39828 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: пакеты golang.org/x/crypto/ssh* отсутствуют в графе зависимостей ./cmd/kube-apiserver; SSH-серверных auth callbacks нет.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39829 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: разбор SSH-ключей не слинкован (crypto/ssh отсутствует в deps); аутентификация apiserver — HTTP/TLS/JWT/webhook, не SSH public-key auth.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39830 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: в графе зависимостей нет SSH client/server соединений; путь deadlock от global-request недостижим.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39831 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: проверка FIDO/U2F SSH-подписей не компилируется в бинарник; import path crypto/ssh отсутствует.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39832 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: golang.org/x/crypto/ssh/agent не является зависимостью ./cmd/kube-apiserver; пути forward/add-key agent нет.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39835 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: ssh.CertChecker не используется; пакет golang.org/x/crypto/ssh отсутствует в deps apiserver.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42508 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: ssh/knownhosts не импортируется; доверие к хостам строится на Kubernetes TLS/PKI, а не на SSH known_hosts.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46595 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: требуется SSH-сервер с VerifiedPublicKeyCallback; apiserver не реализует SSH-сервер и не линкует crypto/ssh.",
+      "timestamp": "2026-07-21T10:21:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46597 невозможно эксплуатировать в kube-apiserver в рамках Deckhouse: декодер AES-GCM SSH-пакетов не слинкован; apiserver использует TLS для шифрования транспорта, а не SSH.",
+      "timestamp": "2026-07-21T10:21:00Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-04-10T09:13:29Z"
+  "last_updated": "2026-07-21T10:21:00Z"
 }

@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-6f8aac734bc48eff1b66a4a70617115b764e90917b6c26eb8f5ac10b75b62c58",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 5,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -73,8 +73,190 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-10T09:13:22.357899Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-25681 невозможно эксплуатировать в etcd в рамках Deckhouse: уязвимый код находится в golang.org/x/net/html, который не входит в зависимости бинарников etcd/etcdctl/etcdutl. etcd не парсит и не рендерит недоверенный HTML; сетевой стек — gRPC/HTTP поверх mTLS.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-27136 невозможно эксплуатировать в etcd в рамках Deckhouse: пакет golang.org/x/net/html отсутствует в зависимостях бинарников etcd/etcdctl/etcdutl, путь XSS с дублирующимися HTML-атрибутами не выполняется.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33814 невозможно эксплуатировать в etcd в рамках Deckhouse: уязвимый путь находится в HTTP/2-клиенте http2.Transport, тогда как etcd вызывает только http2.ConfigureServer и использует http2.Framer/gRPC, без http2.Transport. Peer/client соединения — mTLS endpoint кластера, а не внешние HTTP/2-серверы под контролем атакующего.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39821 невозможно эксплуатировать в etcd в рамках Deckhouse: golang.org/x/net/idna тянется транзитивно, но исходники etcd не вызывают idna.ToASCII/ToUnicode для hostname ACL. Аутентификация — mTLS (SAN/CN) и username/password (bcrypt), поверхность обхода ACL по Punycode неприменима.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39828 невозможно эксплуатировать в etcd в рамках Deckhouse: из golang.org/x/crypto в бинарниках присутствует только bcrypt (+ blowfish) для хеширования паролей; пакет x/crypto/ssh не слинкован. etcd не является SSH-сервером.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39829 невозможно эксплуатировать в etcd в рамках Deckhouse: путь разбора SSH pubkey не слинкован; etcd использует x/crypto/bcrypt только для хеширования паролей (auth store). SSH public-key auth отсутствует.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39830 невозможно эксплуатировать в etcd в рамках Deckhouse: нет SSH client/server соединений; сеть — gRPC/HTTP поверх mTLS и rafthttp. Путь deadlock от незапрошенных SSH global-request недостижим, x/crypto/ssh отсутствует в deps.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39831 невозможно эксплуатировать в etcd в рамках Deckhouse: проверка FIDO/U2F SSH security-key не используется; x/crypto/ssh отсутствует в зависимостях бинарника. Auth — mTLS/bcrypt, не SK-подписи.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39832 невозможно эксплуатировать в etcd в рамках Deckhouse: golang.org/x/crypto/ssh/agent отсутствует в зависимостях etcd/etcdctl/etcdutl; проброс ключей SSH agent не используется.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39835 невозможно эксплуатировать в etcd в рамках Deckhouse: нет SSH-сервера и использования ssh.CertChecker; пакет x/crypto/ssh не слинкован. Путь panic в cert-authority callback не может выполниться.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42508 невозможно эксплуатировать в etcd в рамках Deckhouse: ssh/knownhosts не входит в зависимости бинарников; доверие к хостам основано на TLS-сертификатах (mTLS), а не на проверках OpenSSH known_hosts.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46595 невозможно эксплуатировать в etcd в рамках Deckhouse: требуется SSH-сервер с VerifiedPublicKeyCallback; у etcd нет стека SSH-сервера, x/crypto/ssh отсутствует в deps.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46597 невозможно эксплуатировать в etcd в рамках Deckhouse: декодер AES-GCM SSH-пакетов не задействуется; шифрование peer/client трафика etcd — TLS/mTLS, не SSH. Пакет x/crypto/ssh отсутствует в зависимостях бинарника.",
+      "timestamp": "2026-07-21T10:25:00.000000Z"
     }
   ],
   "timestamp": "2025-12-29T21:11:59Z",
-  "last_updated": "2026-04-10T09:13:22Z"
+  "last_updated": "2026-07-21T10:25:00Z"
 }

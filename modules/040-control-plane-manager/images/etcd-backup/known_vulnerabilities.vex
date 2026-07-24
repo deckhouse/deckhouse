@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7152d16cd60103e4d28ca93cb2ce02ff6d4c675c1f276558bde6c780ae8d1e01",
   "author": "Unknown Author",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -17,7 +17,64 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в etcdBackup в рамках Deckhouse: etcdctl является CLI-утилитой (gRPC-клиентом), а не сервером. Уязвимость затрагивает исключительно серверную часть gRPC-Go, серверный путь исполнения в etcdctl не задействован.",
       "timestamp": "2026-03-24T14:32:07.038997Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-25681 невозможно эксплуатировать в etcdBackup в рамках Deckhouse: CronJob запускает только etcdctl snapshot save против локального etcd. Пакет golang.org/x/net/html отсутствует в графе зависимостей etcdctl, путь бэкапа не парсит и не рендерит HTML.",
+      "timestamp": "2026-07-21T10:21:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-27136 невозможно эксплуатировать в etcdBackup в рамках Deckhouse: CronJob вызывает etcdctl snapshot save и не использует пайплайн sanitize/render HTML. Пакет golang.org/x/net/html не входит в зависимости etcdctl.",
+      "timestamp": "2026-07-21T10:21:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33814 невозможно эксплуатировать в etcdBackup в рамках Deckhouse: CronJob через etcdctl snapshot save устанавливает соединение только с доверенным локальным etcd по https://127.0.0.1:2379 с mTLS-сертификатами кластера. Вредоносный HTTP/2-сервер с SETTINGS_MAX_FRAME_SIZE=0 атакующим здесь не контролируется.",
+      "timestamp": "2026-07-21T10:21:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-39821 невозможно эксплуатировать в etcdBackup в рамках Deckhouse: endpoint CronJob для etcdctl snapshot save — литеральный IPv4 127.0.0.1 без контролируемого атакующим hostname, без преобразования недоверенных IDN и без hostname ACL на базе Punycode.",
+      "timestamp": "2026-07-21T10:21:00.000000Z"
     }
   ],
-  "timestamp": "2026-03-24T14:32:07Z"
+  "timestamp": "2026-03-24T14:32:07Z",
+  "last_updated": "2026-07-21T10:21:00Z"
 }

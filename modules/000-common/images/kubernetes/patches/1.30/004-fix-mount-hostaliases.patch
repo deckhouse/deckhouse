@@ -1,8 +1,8 @@
 diff --git a/pkg/kubelet/kubelet_pods.go b/pkg/kubelet/kubelet_pods.go
-index b93c8a3bd18..9e102be4759 100644
+index f1bef9abc76..1beda306a22 100644
 --- a/pkg/kubelet/kubelet_pods.go
 +++ b/pkg/kubelet/kubelet_pods.go
-@@ -232,10 +232,10 @@ func (kl *Kubelet) makeBlockVolumes(pod *v1.Pod, container *v1.Container, podVol
+@@ -239,10 +239,10 @@ func (kl *Kubelet) makeBlockVolumes(pod *v1.Pod, container *v1.Container, podVol
  // - container is not an infrastructure (pause) container
  // - container is not already mounting on /etc/hosts
  // Kubernetes will not mount /etc/hosts if:

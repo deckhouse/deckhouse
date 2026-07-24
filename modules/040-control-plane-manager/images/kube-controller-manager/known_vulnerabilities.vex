@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-4967f958f1248545eec7a13485884e349b6110e4acb5fe1825953bd6a8abef98",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 7,
+  "version": 8,
   "statements": [
     {
       "vulnerability": {
@@ -143,8 +143,190 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
       "timestamp": "2026-04-10T09:13:38.125045Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-25681 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: XSS в golang.org/x/net/html требует пайплайн parse→sanitize→render для браузеров. KCM не парсит недоверенный HTML и не использует proxy HTML rewriter apimachinery; он рекончилит через client-go к apiserver.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-27136 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: XSS с дублирующимися HTML-атрибутами требует sanitize-on-tree и Render для браузеров. У KCM такого пути нет; компонент не импортирует и не использует proxy HTML rewriter.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33814 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: бесконечный цикл HTTP/2-клиента возникает при SETTINGS_MAX_FRAME_SIZE=0 от peer-сервера. KCM как HTTP(S)-клиент обращается только к доверенному cluster kube-apiserver (kubeconfig оператора + mTLS), а не к HTTP/2-серверу под контролем атакующего.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39821 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: обход hostname ACL через IDNA (ToASCII/ToUnicode) требует ACL-проверку и последующую IDNA-конвертацию контролируемых атакующим имён. KCM подключается к фиксированному endpoint apiserver и авторизуется через Kubernetes RBAC/API credentials, без hostname ACL + idna.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39828"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39828 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: требуется SSH-сервер с PartialSuccessError и Permissions. Upstream Kubernetes импортирует golang.org/x/crypto/ssh только в test/e2e; production-бинарник KCM не содержит SSH-сервер и не является SSH-клиентом.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39829"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39829 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: срабатывает при разборе специально сформированных RSA/DSA SSH-ключей. KCM не выполняет SSH-аутентификацию и не парсит недоверенные SSH public keys; x/crypto/ssh в Kubernetes присутствует только в test/e2e.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39830"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39830 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: нужна установленная SSH-сессия с вредоносным peer, заливающим незапрошенные ответы на global request. KCM не открывает SSH client/server соединений и общается с apiserver только по HTTP(S).",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39831"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39831 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: затрагивает проверку FIDO/U2F sk-* SSH-подписей. KCM не проверяет SSH security-key подписи и не выполняет SSH-аутентификацию; уязвимый код отсутствует в production-бинарнике.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39832"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39832 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: требуется проброс ключей в удалённый SSH agent. Подпакет ssh/agent не входит в production-бинарники Kubernetes; KCM никогда не обращается к SSH agent.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39835"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39835 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: panic в SSH-сервере CertChecker при nil authority callbacks. KCM не реализует SSH-сервер и не создаёт ssh.CertChecker; уязвимый код отсутствует.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42508"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42508 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: затрагивает SSH-клиентов с ssh/knownhosts и записями @revoked CA. KCM доверяет apiserver через TLS client certs/kubeconfig, не через SSH known_hosts; ssh/knownhosts отсутствует в пути исполнения.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46595"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46595 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: связана с некорректной конфигурацией SSH-сервера вокруг VerifiedPublicKeyCallback. KCM не является SSH-сервером и не использует этот callback API.",
+      "timestamp": "2026-07-21T10:25:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46597"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46597 невозможно эксплуатировать в kube-controller-manager в рамках Deckhouse: panic декодера AES-GCM SSH-пакетов требует согласования SSH с вредоносным peer. У KCM нет SSH-транспорта; криптография control-plane — TLS к apiserver.",
+      "timestamp": "2026-07-21T10:25:00Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-04-10T09:13:38Z"
+  "last_updated": "2026-07-21T10:25:00Z"
 }
