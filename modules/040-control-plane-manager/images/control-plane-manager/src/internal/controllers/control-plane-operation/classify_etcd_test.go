@@ -95,21 +95,22 @@ func TestClassifyEtcd(t *testing.T) {
 			wantState:      etcdJoined,
 		},
 		{
-			name: "name conflict: same node name, different peer URL",
+			name: "member matched by name when peer URL differs",
 			members: []etcdMemberInfo{
 				{Name: nodeName, PeerURLs: []string{oldPeer}},
 			},
 			dataDirPresent: false,
-			wantState:      etcdNameConflict,
+			wantState:      etcdNeedsJoin,
 		},
 		{
-			name: "conflict wins over peer match: new exact-peer learner plus old same-name voter",
+			name: "exact peer match wins over name match",
 			members: []etcdMemberInfo{
 				{Name: "", PeerURLs: []string{ourPeer}, IsLearner: true},
 				{Name: nodeName, PeerURLs: []string{oldPeer}},
 			},
 			dataDirPresent: true,
-			wantState:      etcdNameConflict,
+			wantState:      etcdJoined,
+			wantIsLearner:  true,
 		},
 	}
 

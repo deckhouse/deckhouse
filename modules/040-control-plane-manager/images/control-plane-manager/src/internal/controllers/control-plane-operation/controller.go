@@ -332,9 +332,6 @@ func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOpe
 		if err != nil {
 			return false, err
 		}
-		if cls.state == etcdNameConflict {
-			return false, fmt.Errorf("etcd member %q already registered with a different peer URL (node IP change?): manual member replacement required", r.node.Name)
-		}
 		// The join is committed only when our member is a voting member (not a learner) with a bootstrapped data dir. A learner/interrupted/fresh/orphan state re-runs join+promote.
 		return cls.state == etcdJoined && !cls.isLearner, nil
 	default:

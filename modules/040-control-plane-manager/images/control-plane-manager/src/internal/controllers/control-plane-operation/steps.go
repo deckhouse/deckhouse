@@ -170,7 +170,7 @@ type joinEtcdClusterStep struct{}
 func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	op := env.State.Raw()
 	if op.Spec.Component != controlplanev1alpha1.OperationComponentEtcd {
-		return StepResult{Outcome: OutcomeCompleted}, nil
+		return StepResult{Outcome: OutcomeCompleted, Message: "skipped: component is not etcd"}, nil
 	}
 
 	kubeconfigDir := env.Node.KubeconfigDir
@@ -186,13 +186,8 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 		return StepResult{}, fmt.Errorf("classify etcd state: %w", err)
 	}
 
+	joinMessage := "etcd member joined"
 	switch cls.state {
-	case etcdNameConflict:
-		// Fail closed with a plain error (requeue): a member with our node name is registered under a different peer URL (node IP change?).
-		// Auto-joining would add a duplicate and strand the old voter, changing quorum.
-		// The operation stays visibly stuck with this message until an operator performs an explicit member replacement.
-		return StepResult{}, fmt.Errorf("etcd member %q already registered with a different peer URL (node IP change?): manual member replacement required", env.Node.Name)
-
 	case etcdJoined:
 		// Member registered and local etcd bootstrapped: etcd ignores --initial-cluster on restart, so the self-only manifest from syncFullManifest is safe.
 		// Promote our own member only if it is still a learner (a previous join added it but never promoted it).
@@ -212,23 +207,25 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 				logger.Error("failed to promote own etcd member", log.Err(err))
 				return StepResult{}, fmt.Errorf("promote own etcd member: %w", err)
 			}
+			return StepResult{Outcome: OutcomeCompleted, Message: "etcd learner promoted; manifest synchronized"}, nil
 		}
-		return StepResult{Outcome: OutcomeCompleted}, nil
+		return StepResult{Outcome: OutcomeCompleted, Message: "etcd member already joined; manifest synchronized"}, nil
 
-	case etcdOrphan, etcdNeedsJoin:
+	case etcdOrphan:
 		// Orphan cleanup happens only here, for the explicitly classified state, so a concurrently starting etcd data dir is never deleted.
-		if cls.state == etcdOrphan {
-			logger.Info("etcd orphan: cleaning stale data dir before rejoin")
-			if err := cleanupEtcdDataDir(); err != nil {
-				logger.Error("failed to cleanup etcd data dir", log.Err(err))
-				return StepResult{}, fmt.Errorf("cleanup etcd data dir: %w", err)
-			}
+		logger.Info("etcd orphan: cleaning stale data dir before rejoin")
+		if err := cleanupEtcdDataDir(); err != nil {
+			logger.Error("failed to cleanup etcd data dir", log.Err(err))
+			return StepResult{}, fmt.Errorf("cleanup etcd data dir: %w", err)
 		}
+		joinMessage = "stale etcd data directory removed; member rejoined"
+		fallthrough
+	case etcdNeedsJoin:
 		logger.Info("etcd needs join, executing idempotent join flow")
 		if err := reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, checksumAnnotationsFromSpec(op.Spec), logger); err != nil {
 			return StepResult{}, err
 		}
-		return StepResult{Outcome: OutcomeCompleted}, nil
+		return StepResult{Outcome: OutcomeCompleted, Message: joinMessage}, nil
 
 	default:
 		return StepResult{}, fmt.Errorf("unknown etcd join state: %d", cls.state)

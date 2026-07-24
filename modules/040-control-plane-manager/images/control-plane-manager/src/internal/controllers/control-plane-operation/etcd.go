@@ -50,10 +50,6 @@ const (
 	etcdNeedsJoin
 	// etcdOrphan: our member is not registered but a stale local data dir exists. Wipe it and rejoin fresh.
 	etcdOrphan
-	// etcdNameConflict: a member carries our node name but none of its peer URLs is ours (e.g. the node was recreated with a new IP).
-	// Joining would add a second member and leave the old, unreachable voter in place (the removal hook keeps it by name), changing quorum requirements.
-	// Fail closed and require an explicit member replacement.
-	etcdNameConflict
 )
 
 type etcdMemberInfo struct {
@@ -68,26 +64,25 @@ type etcdClassification struct {
 }
 
 // classifyEtcd is the pure decision given the current members, whether the local data dir exists, and this node identity (name + peer URL).
-//
-// A member with our node name but none of its peer URLs equal to ours is a distinct, conflicting member (IP change): this takes priority over a successful peer-URL match,
-// because promoting/joining while a stale same-name voter lingers would strand quorum.
+// The peer URL is the strongest identity signal; the node name is a compatibility fallback.
 func classifyEtcd(members []etcdMemberInfo, dataDirPresent bool, nodeName, peerURL string) etcdClassification {
 	var ourMember *etcdMemberInfo
-	nameConflict := false
+	var memberByName *etcdMemberInfo
 	for i := range members {
 		m := &members[i]
 		if memberHasPeerURL(m, peerURL) {
 			ourMember = m
-			continue
+			break
 		}
-		if nodeName != "" && m.Name == nodeName {
-			nameConflict = true
+		if memberByName == nil && nodeName != "" && m.Name == nodeName {
+			memberByName = m
 		}
+	}
+	if ourMember == nil {
+		ourMember = memberByName
 	}
 
 	switch {
-	case nameConflict:
-		return etcdClassification{state: etcdNameConflict}
 	case ourMember != nil && dataDirPresent:
 		return etcdClassification{state: etcdJoined, isLearner: ourMember.IsLearner}
 	case ourMember != nil:
