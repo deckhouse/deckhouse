@@ -1,12 +1,12 @@
 module check-wg-kernel-compat
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250822071735-593e2d66e31b
 	github.com/vishvananda/netlink v1.3.1
-	golang.org/x/sys v0.31.0
+	golang.org/x/sys v0.44.0
 )
 
 require (

@@ -48,3 +48,5 @@ import:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/cilium-operator"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
