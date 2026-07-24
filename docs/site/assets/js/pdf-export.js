@@ -151,13 +151,11 @@
   }
 
   function formatDate(d) {
-    // YYYY-MM-DD HH:MM — locale-neutral, unambiguous.
+    // YYYY-MM-DD — locale-neutral, unambiguous.
     return (
       d.getFullYear() +
       '-' + pad(d.getMonth() + 1) +
-      '-' + pad(d.getDate()) +
-      ' ' + pad(d.getHours()) +
-      ':' + pad(d.getMinutes())
+      '-' + pad(d.getDate())
     );
   }
 
