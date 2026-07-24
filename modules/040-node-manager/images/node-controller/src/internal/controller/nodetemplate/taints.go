@@ -136,7 +136,7 @@ func taintToString(t corev1.Taint) string {
 
 func applyTemplateTaints(actual, template, lastApplied []corev1.Taint) ([]corev1.Taint, bool) {
 	if template == nil && lastApplied == nil {
-		return []corev1.Taint{}, true
+		return actual, false
 	}
 
 	changed := false
