@@ -1,7 +1,7 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://deckhouse.io/vex/cloud-provider-openstack/cinder-csi-plugin",
-  "author": "Deckhouse <contact@deckhouse.io>",
+  "@id": "https://openvex.dev/docs/public/vex-6e7587c014cb4ccc3191ba6aec397808d3bf664c636d0ac42e6c407d93c6447d",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 1,
   "statements": [
     {
@@ -16,8 +16,8 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-41579 присутствует в пакете github.com/opencontainers/runc, который является транзитивной зависимостью. Исправление недоступно в ветках 1.1.x и 1.2.x (исправлено только в 1.3.6/1.4.3). Образ cinder-csi-plugin является CSI-плагином хранилища и не запускает контейнерные процессы через runc напрямую — этот код недостижим в данном артефакте.",
-      "timestamp": "2026-07-08T00:00:00Z"
+      "timestamp": "2026-07-24T09:07:45.978055Z"
     }
   ],
-  "timestamp": "2026-07-08T00:00:00Z"
+  "timestamp": "2026-07-24T09:07:45Z"
 }

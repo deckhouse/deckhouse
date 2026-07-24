@@ -1,23 +1,9 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://deckhouse.io/vex/cloud-provider-azure/azuredisk-csi",
-  "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "@id": "merged-vex-d991075bb84b3f4a4ef34acd3db41587cb770d21606776cc7d955e1bb349fc50",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
   "statements": [
-    {
-      "vulnerability": {
-        "name": "GO-2026-5932"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость GO-2026-5932 в пакете golang.org/x/crypto не имеет исправленной версии в upstream. Уязвимый код (пакет openpgp) не используется бинарным файлом azurediskplugin — образ azuredisk CSI не реализует и не вызывает функциональность OpenPGP-подписей, поэтому эксплуатация недостижима в данном артефакте.",
-      "timestamp": "2026-07-15T00:00:00Z"
-    },
     {
       "vulnerability": {
         "name": "CVE-2025-13281"
@@ -30,7 +16,7 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Образ azuredisk CSI собирает бинарный файл CSI-драйвера, а не kube-controller-manager. Уязвимый путь SSRF для Portworx находится в kube-controller-manager и не выполняется бинарным файлом azurediskplugin.",
-      "timestamp": "2026-07-06T12:00:00Z"
+      "timestamp": "2026-07-24T09:07:46.590646Z"
     },
     {
       "vulnerability": {
@@ -44,8 +30,22 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Образ azuredisk CSI собирает бинарный файл CSI-драйвера, а не kubelet. Уязвимый встроенный путь обработки томов gitRepo относится к kubelet и не выполняется бинарным файлом azurediskplugin.",
-      "timestamp": "2026-07-06T12:00:00Z"
+      "timestamp": "2026-07-24T09:07:46.6251Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp небезопасен по дизайну и не рекомендуется к использованию. Образ azure azuredisk-csi не использует и не вызывает функциональность OpenPGP — данный код недостижим в артефакте, поэтому уязвимость не эксплуатируется.",
+      "timestamp": "2026-07-24T09:07:46.554346Z"
     }
   ],
-  "timestamp": "2026-07-06T12:00:00Z"
+  "timestamp": "2026-07-24T09:07:46Z"
 }
