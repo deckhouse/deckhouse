@@ -28,6 +28,7 @@ spec:
       labels:
         app: agent
         module: cni-cilium
+        security.deckhouse.io/security-policy-exception: agent
     spec:
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-uninitialized" "with-cloud-provider-uninitialized" "with-storage-problems") | nindent 6 }}

@@ -1,0 +1,39 @@
+{{- if (.Values.global.enabledModules | has "admission-policy-engine") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: egress-gateway-agent
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "egress-gateway-agent")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          egress-gateway-agent must run as root to announce VirtualIP addresses via ARP/NDP
+          on the host network interfaces.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for raw network operations used by VirtualIP announcement.
+    capabilities:
+      allowedValues:
+        add:
+          - NET_RAW
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_RAW is required to craft ARP/NDP packets for VirtualIP advertisement.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          egress-gateway-agent must join the host network to announce VirtualIP addresses
+          on node interfaces.
+{{- end }}
