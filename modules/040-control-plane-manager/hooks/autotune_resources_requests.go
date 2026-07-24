@@ -20,10 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math"
-	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -35,12 +32,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -624,42 +621,36 @@ func podMetricName(component, resourceName string) string {
 }
 
 func fetchComponentUsageFromMetricsAPI(ctx context.Context, dc dependency.Container, component, resourceName string) (float64, bool, error) {
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		return 0, false, fmt.Errorf("get k8s client: %w", err)
+	}
+
 	container := componentContainer[component]
 	metric := podMetricName(component, resourceName)
-	selector := url.QueryEscape(fmt.Sprintf("component=%s,tier=control-plane", container))
-	requestURI := fmt.Sprintf(
-		"/apis/custom.metrics.k8s.io/v1beta1/namespaces/%s/pods/*/%s?labelSelector=%s",
-		kubeSystemNS, metric, selector,
-	)
 
-	body, err := rawGetCustomMetrics(ctx, dc, requestURI)
+	// Avoid pods/*/metric: client-go path-escapes '*' to %2A and custom.metrics
+	// rejects it; Opaque URLs break Host. Query each matching pod by name instead.
+	pods, err := client.CoreV1().Pods(kubeSystemNS).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("component=%s,tier=control-plane", container),
+	})
 	if err != nil {
-		return 0, false, err
+		return 0, false, fmt.Errorf("list control-plane pods: %w", err)
 	}
-
-	var list customMetricValueList
-	if err := json.Unmarshal(body, &list); err != nil {
-		return 0, false, fmt.Errorf("decode metrics response: %w", err)
-	}
-	if len(list.Items) == 0 {
+	if len(pods.Items) == 0 {
 		return 0, false, nil
 	}
 
 	var maxVal float64
 	found := false
-	for _, item := range list.Items {
-		q, err := resource.ParseQuantity(item.Value)
-		if err != nil {
+	var lastErr error
+	for i := range pods.Items {
+		v, ok, ferr := fetchPodMetric(ctx, client, pods.Items[i].Name, metric, resourceName)
+		if ferr != nil {
+			lastErr = ferr
 			continue
 		}
-		var v float64
-		switch resourceName {
-		case resourceCPU:
-			v = float64(q.MilliValue()) / 1000.0
-		case resourceMemory:
-			v = float64(q.Value())
-		}
-		if math.IsNaN(v) || v < 0 {
+		if !ok {
 			continue
 		}
 		if !found || v > maxVal {
@@ -667,57 +658,43 @@ func fetchComponentUsageFromMetricsAPI(ctx context.Context, dc dependency.Contai
 			found = true
 		}
 	}
+	if !found && lastErr != nil {
+		return 0, false, lastErr
+	}
 	return maxVal, found, nil
 }
 
-// rawGetCustomMetrics GETs a custom.metrics request URI.
-//
-// client-go's rest.Request and net/url.EscapedPath turn path '*' into '%2A',
-// but custom.metrics.k8s.io only accepts a literal '*' as the "all objects"
-// wildcard (kubectl --raw works; AbsPath/Do does not). Use url.URL.Opaque so
-// the path is sent unescaped.
-func rawGetCustomMetrics(ctx context.Context, dc dependency.Container, requestURI string) ([]byte, error) {
-	config, err := dc.GetClientConfig()
+func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric, resourceName string) (float64, bool, error) {
+	path := fmt.Sprintf(
+		"/apis/custom.metrics.k8s.io/v1beta1/namespaces/%s/pods/%s/%s",
+		kubeSystemNS, podName, metric,
+	)
+	body, err := client.CoreV1().RESTClient().Get().AbsPath(path).Do(ctx).Raw()
 	if err != nil {
-		return nil, fmt.Errorf("get client config: %w", err)
-	}
-	httpClient, err := rest.HTTPClientFor(config)
-	if err != nil {
-		return nil, fmt.Errorf("http client: %w", err)
+		return 0, false, fmt.Errorf("GET %s: %w", path, err)
 	}
 
-	base, err := url.Parse(config.Host)
-	if err != nil {
-		return nil, fmt.Errorf("parse host: %w", err)
+	var list customMetricValueList
+	if err := json.Unmarshal(body, &list); err != nil {
+		return 0, false, fmt.Errorf("decode metrics response for %s: %w", podName, err)
 	}
-	rel, err := url.Parse(requestURI)
-	if err != nil {
-		return nil, fmt.Errorf("parse request uri: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	// Opaque is written as-is by RequestURI(); Path/RawPath would escape '*'.
-	req.URL = &url.URL{
-		Scheme:   base.Scheme,
-		Opaque:   "//" + base.Host + rel.Path,
-		RawQuery: rel.RawQuery,
+	if len(list.Items) == 0 {
+		return 0, false, nil
 	}
 
-	resp, err := httpClient.Do(req)
+	q, err := resource.ParseQuantity(list.Items[0].Value)
 	if err != nil {
-		return nil, fmt.Errorf("GET %s: %w", requestURI, err)
+		return 0, false, nil
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("GET %s: read body: %w", requestURI, err)
+	var v float64
+	switch resourceName {
+	case resourceCPU:
+		v = float64(q.MilliValue()) / 1000.0
+	case resourceMemory:
+		v = float64(q.Value())
 	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("GET %s: %s: %s", requestURI, resp.Status, string(body))
+	if math.IsNaN(v) || v < 0 {
+		return 0, false, nil
 	}
-	return body, nil
+	return v, true, nil
 }
