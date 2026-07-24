@@ -184,7 +184,7 @@ tls.key: KEYKEYKEY
 `)
 			hec.HelmRender()
 		})
-		It("Should deploy basic auth ingress with rewrite", func() {
+		It("Should deploy basic auth access infrastructure", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 			Expect(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()).To(
@@ -193,6 +193,11 @@ tls.key: KEYKEYKEY
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
 				Equal("1.1.1.1,192.168.0.0/24"))
 			Expect(hec.KubernetesResource("Secret", "kube-system", "d8-publish-api-config").Field("data.whitelistSourceRanges").String()).To(Equal("WzEuMS4xLjEgMTkyLjE2OC4wLjAvMjRd"))
+			Expect(hec.KubernetesResource("Ingress", "kube-system", "basic-auth-proxy").Field(
+				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
+				Equal("1.1.1.1,192.168.0.0/24"))
+			Expect(hec.KubernetesResource("Service", "kube-system", "basic-auth-proxy").Field("spec.type").String()).To(Equal("ExternalName"))
+			Expect(hec.KubernetesResource("Service", "kube-system", "basic-auth-proxy").Field("spec.externalName").String()).To(Equal("basic-auth-proxy.d8-user-authn.svc"))
 
 		})
 	})
