@@ -19,6 +19,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+                - image: nginx
+                  name: nginx
     securityPolicyException:
       document:
         apiVersion: deckhouse.io/v1alpha1
@@ -352,3 +364,77 @@ spec:
                     name: sidecar
                     securityContext:
                       allowPrivilegeEscalation: false
+    - name: pss-restricted-controller-deployment
+      gatorBlock: pss-restricted-controller-deployment
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: controller-allowed-allowprivilegeescalation-false
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.containers[].securityContext.allowPrivilegeEscalation
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-allowed-allowprivilegeescalation-false
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          allowPrivilegeEscalation: false
+        - name: controller-disallowed-allowprivilegeescalation-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.containers[].securityContext.allowPrivilegeEscalation
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-allowprivilegeescalation-true
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          allowPrivilegeEscalation: true
+        - name: controller-disallowed-initcontainer-allowprivilegeescalation-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.initContainers[].securityContext.allowPrivilegeEscalation
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-initcontainer-allowprivilegeescalation-true
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          allowPrivilegeEscalation: false
+                    initContainers:
+                      - image: busybox
+                        name: init
+                        securityContext:
+                          allowPrivilegeEscalation: true

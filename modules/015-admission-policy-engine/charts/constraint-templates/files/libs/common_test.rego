@@ -2,18 +2,73 @@ package lib.common_test
 
 import data.lib.common
 
-# input_containers_from collects all container types
+# input_containers_from collects all container types from a normalized pod spec
 
 test_input_containers_from_all_types if {
-  obj := {
-    "spec": {
-      "containers": [{"name": "c1"}],
-      "initContainers": [{"name": "i1"}],
-      "ephemeralContainers": [{"name": "e1"}]
+  pod_spec := {
+    "containers": [{"name": "c1"}],
+    "initContainers": [{"name": "i1"}],
+    "ephemeralContainers": [{"name": "e1"}]
+  }
+  result := common.input_containers_from(pod_spec)
+  count(result) == 3
+}
+
+# pod_spec resolves for Pod kind
+
+test_pod_spec_for_pod if {
+  common.pod_spec.containers[0].name == "pod-c" with input as {
+    "review": {
+      "object": {
+        "kind": "Pod",
+        "spec": {
+          "containers": [{"name": "pod-c"}]
+        }
+      }
     }
   }
-  result := common.input_containers_from(obj)
-  count(result) == 3
+}
+
+# pod_spec resolves for controller kinds with spec.template.spec
+
+test_pod_spec_for_deployment if {
+  common.pod_spec.containers[0].name == "dep-c" with input as {
+    "review": {
+      "object": {
+        "kind": "Deployment",
+        "spec": {
+          "template": {
+            "spec": {
+              "containers": [{"name": "dep-c"}]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# pod_spec resolves for CronJob with spec.jobTemplate.spec.template.spec
+
+test_pod_spec_for_cronjob if {
+  common.pod_spec.containers[0].name == "cron-c" with input as {
+    "review": {
+      "object": {
+        "kind": "CronJob",
+        "spec": {
+          "jobTemplate": {
+            "spec": {
+              "template": {
+                "spec": {
+                  "containers": [{"name": "cron-c"}]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 # has_field checks direct field existence

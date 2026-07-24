@@ -19,6 +19,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+                - image: nginx
+                  name: nginx
     securityPolicyException:
       document:
         apiVersion: deckhouse.io/v1alpha1
@@ -414,4 +426,59 @@ spec:
                 name: disallowed-exception-allows-false-constraint-allows-true
               spec:
                 hostPID: true
+    - name: pss-baseline-controller-deployment
+      gatorBlock: pss-baseline-controller-deployment
+      defaultObjectBase: ""
+      template: ../../../../templates/security/allow-host-processes.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: controller-allowed-no-hostpid-no-hostipc
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.hostPID
+              scenario: absent
+            - path: spec.template.spec.hostIPC
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-allowed-no-hostpid-no-hostipc
+        - name: controller-disallowed-hostpid-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.hostPID
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-hostpid-true
+              spec:
+                template:
+                  spec:
+                    hostPID: true
+        - name: controller-disallowed-hostipc-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.template.spec.hostIPC
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-hostipc-true
+              spec:
+                template:
+                  spec:
+                    hostIPC: true
  

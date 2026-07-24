@@ -68,6 +68,7 @@ spec:
               import data.lib.exception.resolve_spe_for_container
               import data.lib.expand_synonyms.expand
               import data.lib.expand_synonyms.normalize
+              import data.lib.common.pod_spec
               import data.lib.resolve_value.resolve_from_sources
 
               apparmor_translation := {
@@ -84,7 +85,11 @@ spec:
                   {"type": "annotation", "key": sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])},
                   {"type": "pod_field", "path": ["spec", "securityContext", "appArmorProfile", "type"]}
                 ]
-                raw_profile := resolve_from_sources(input.review.object, container, sources)
+                normalized_obj := {
+                  "metadata": object.get(input.review.object, "metadata", {}),
+                  "spec": pod_spec,
+                }
+                raw_profile := resolve_from_sources(normalized_obj, container, sources)
                 profile := normalize(raw_profile, apparmor_translation)
                 labels := object.get(input.review.object.metadata, "labels", {})
                 exception := resolve_spe_for_container(container, labels, input.review.object.metadata.namespace)
