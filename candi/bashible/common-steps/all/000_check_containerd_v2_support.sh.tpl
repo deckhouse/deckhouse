@@ -66,6 +66,16 @@ is_kernel_erofs_cve_vulnerable() {
     (( build >= 1010 )) && return 1
   fi
 
+  # Exception for Oracle Linux UEK kernels: base version stays 6.12.0 while the fix is backported. 
+  # CVE fixed starting kernel-uek 6.12.0-101.33.4.3.el10uek
+  # (ELSA-2025-20480). Compare the full release string, not just the base version.
+  if [[ "$full_kv" == *.el10uek || "$full_kv" == *.el10uek.* ]]; then
+    local rel="${full_kv%.el10uek*}"   # e.g. 6.12.0-101.33.4.3
+    rel="${rel/-/.}"                   # normalize to dotted form for sort -V
+    version_ge "$rel" "6.12.0.101.33.4.3" && return 1
+    return 0
+  fi
+
   local kv=$(echo "$full_kv" | cut -d- -f1)
   if version_ge "$kv" "6.12.0" && ! version_ge "$kv" "6.12.29"; then
     return 0
