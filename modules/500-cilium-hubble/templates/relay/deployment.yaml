@@ -53,10 +53,12 @@ spec:
         - name: deckhouse-registry
       containers:
         - name: hubble-relay
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "DAC_OVERRIDE")) | nindent 10 }}
+            seccompProfile:
+              type: RuntimeDefault
           image: {{ include "helm_lib_module_image" (list . "relay") }}
           command:
-            - hubble-relay
+            - /usr/local/bin/hubble-relay
           args:
             - serve
           {{- if .Values.ciliumHubble.debugLogging }}
