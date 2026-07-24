@@ -18,6 +18,9 @@ go_generate:
     - !reference [.scripts, read_werf_version]
     - !reference [.scripts, install_werf]
   script:
+    - id -u #debug
+    - id -g #debug
+    - cat /etc/passwd
     - |
       set -euo pipefail
       git config --global --add safe.directory "${CI_PROJECT_DIR}"
