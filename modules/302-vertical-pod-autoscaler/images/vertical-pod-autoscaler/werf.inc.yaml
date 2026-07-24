@@ -21,7 +21,7 @@ shell:
     - rm -rf /src/autoscaler /src/vertical-pod-autoscaler/e2e/ /patches /src/autoscaler/.git/
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
   - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -35,7 +35,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-    - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src/vertical-pod-autoscaler/
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
 
