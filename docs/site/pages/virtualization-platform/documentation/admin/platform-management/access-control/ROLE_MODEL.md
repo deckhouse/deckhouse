@@ -12,23 +12,23 @@ There are two types of roles:
 - [Manage roles](#manage-roles): Intended for DVP administrators, granting them permissions to manage resources at the platform-wide level.
 
 DVP permissions are configured using the standard Kubernetes RBAC approach.
-This involves creating `RoleBinding` or `ClusterRoleBinding` resources to assign the appropriate role.
+This involves creating RoleBinding or ClusterRoleBinding resources to assign the appropriate role.
 
 ### Use roles
 
 {% alert level="warning" %}
-The use role can only be used in the `RoleBinding` resource.
+The use role can only be used in the RoleBinding resource.
 {% endalert %}
 
 Use roles are intended to assign rights to a user **in a specific namespace**. Users refer to, for example, developers who use a cluster configured by an administrator to deploy their applications. Such users don't need to manage DVP modules or a cluster, but they need to be able to, for example, create their Ingress resources, configure application authentication, and collect logs from applications.
 
-The use role defines permissions for accessing namespaced resources of modules and standard namespaced resources of Kubernetes (`Pod`, `Deployment`, `Secret`, `ConfigMap`, etc.).
+The use role defines permissions for accessing namespaced resources of modules and standard namespaced resources of Kubernetes (Pod, Deployment, Secret, ConfigMap, etc.).
 
 The module creates the following use roles:
 - `d8:use:role:viewer`: Allows viewing standard Kubernetes resources in a specific namespace, except for Secrets and RBAC resources, as well as authenticating in the cluster.
 - `d8:use:role:user`: In addition to the role `d8:use:role:viewer` it allows viewing secrets and RBAC resources in a specific namespace, connecting to pods, deleting pods (but not creating or modifying them), executing `kubectl port-forward` and `kubectl proxy`, as well as changing the number of replicas of controllers.
-- `d8:use:role:manager`: In addition to the role `d8:use:role:user` it allows managing module resources (for example, `Certificate`, `PodLoggingConfig`, etc.) and standard namespaced Kubernetes resources (`Pod`, `ConfigMap`, `CronJob`, etc.) in a specific namespace.
-- `d8:use:role:admin`: In addition to the role `d8:use:role:manager` it allows managing the resources `ResourceQuota`, `ServiceAccount`, `Role`, `RoleBinding`, `NetworkPolicy` in a specific namespace.
+- `d8:use:role:manager`: In addition to the role `d8:use:role:user` it allows managing module resources (for example, Certificate, PodLoggingConfig, etc.) and standard namespaced Kubernetes resources (Pod, ConfigMap, CronJob, etc.) in a specific namespace.
+- `d8:use:role:admin`: In addition to the role `d8:use:role:manager` it allows managing the resources ResourceQuota, ServiceAccount, Role, RoleBinding, NetworkPolicy in a specific namespace.
 
 Example of administrator permissions granted to the `joe` user in the `vms` project:
 
@@ -78,7 +78,7 @@ Manage roles are intended for assigning rights to manage the entire DVP or a par
 
 The manage role defines access rights:
 - To cluster-wide Kubernetes resources.
-- To manage DVP modules (`moduleConfig` resource) within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all DVP modules for the role `d8:manage:all:*`.
+- To manage DVP modules (ModuleConfig resource) within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all DVP modules for the role `d8:manage:all:*`.
 - To manage cluster-wide resources of DVP modules within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all resources of DVP modules for the role `d8:manage:all:*`.
 - To system namespaces (starting with `d8-` or `kube-`) in which the modules of the [subsystem](#subsystems-of-the-role-based-model) of the role operate, or to all system namespaces for the role `d8:manage:all:*`.
 
@@ -87,13 +87,13 @@ The manage role name format is `d8:manage:<SUBSYSTEM>:<ACCESS_LEVEL>`, where:
 - `ACCESS_LEVEL` is the access level.
 
   Examples of manage roles:
-  - `d8:manage:all:viewer`: Access to view the configuration of all DVP modules (`moduleConfig` resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in all system namespaces (starting with `d8-` or `kube-`).
-  - `d8:manage:all:manager`: Similar to the role `d8:manage:all:viewer`, but with admin-level access, i.e., view/create/modify/delete the configuration of all DVP modules (`moduleConfig` resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects in all system namespaces (starting with `d8-` or `kube-`).
-  - `d8:manage:observability:viewer`: Access to view the configuration of DVP modules (`moduleConfig` resource) from the `observability` area, their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except secrets and RBAC resources) in the system namespaces `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
+  - `d8:manage:all:viewer`: Access to view the configuration of all DVP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in all system namespaces (starting with `d8-` or `kube-`).
+  - `d8:manage:all:manager`: Similar to the role `d8:manage:all:viewer`, but with admin-level access, i.e., view/create/modify/delete the configuration of all DVP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects in all system namespaces (starting with `d8-` or `kube-`).
+  - `d8:manage:observability:viewer`: Access to view the configuration of DVP modules (ModuleConfig resource) from the `observability` area, their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except secrets and RBAC resources) in the system namespaces `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
 
 The module provides two access levels for administrators:
-- `viewer`: Allows viewing standard Kubernetes resources, the configuration of modules (resources `moduleConfig`), cluster-wide resources of modules, and namespaced resources of modules in the module namespace.
-- `manager`: In addition to the role `viewer` it allows managing standard Kubernetes resources, the configuration of modules (resources `moduleConfig`), cluster-wide resources of modules, and namespaced resources of modules in the module namespace.
+- `viewer`: Allows viewing standard Kubernetes resources, the configuration of modules (resources ModuleConfig), cluster-wide resources of modules, and namespaced resources of modules in the module namespace.
+- `manager`: In addition to the role `viewer` it allows managing standard Kubernetes resources, the configuration of modules (resources ModuleConfig), cluster-wide resources of modules, and namespaced resources of modules in the module namespace.
 
 Example of cluster manager permissions granted to the `joe` user:
 
@@ -135,7 +135,7 @@ roleRef:
 
 Each DVP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
 
-For example, for the `networking` subsystem, there are the following manage roles that can be used in `ClusterRoleBinding`:
+For example, for the `networking` subsystem, there are the following manage roles that can be used in ClusterRoleBinding:
 
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
@@ -164,9 +164,9 @@ In addition to the RBAC, you can use a set of high-level roles in the module:
 - `User`: Has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding.
 - `PrivilegedUser`: The same as `User` + can exec into containers, read secrets, and delete pods (and thus, restart them).
 - `Editor`: Is the same as `PrivilegedUser` + can create and edit all objects that are usually required for application tasks.
-- `Admin`: The same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`).
-- `ClusterEditor`: The same as `Editor` + can manage a limited set of `cluster-wide` objects that can be used in application tasks (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet`, etc.). This role is best suited for cluster operators.
-- `ClusterAdmin`: The same as both `ClusterEditor` and `Admin` + can manage `cluster-wide` service objects (e.g.,  `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., as well as `ClusterAuthorizationRule`, `ClusterRoleBindings` and `ClusterRole`). This role is best suited for cluster administrators. **Note** that since `ClusterAdmin` can edit `ClusterRoleBindings`, they can **broaden their privileges within the cluster**.
+- `Admin`: The same as `Editor` + can delete service objects (auxiliary resources such as ReplicaSet, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`).
+- `ClusterEditor`: The same as `Editor` + can manage a limited set of cluster-wide objects that can be used in application tasks (ClusterXXXMetric, KeepalivedInstance, DaemonSet, etc.). This role is best suited for cluster operators.
+- `ClusterAdmin`: The same as both `ClusterEditor` and `Admin` + can manage `cluster-wide` service objects (e.g.,  MachineSets, Machines, OpenstackInstanceClasses..., as well as ClusterAuthorizationRule, ClusterRoleBindings and ClusterRole). This role is best suited for cluster administrators. **Note** that since `ClusterAdmin` can edit ClusterRoleBindings, they can **broaden their privileges within the cluster**.
 - `SuperAdmin`: Can perform any actions with any objects (note that `namespaceSelector` and `limitNamespaces` restrictions remain valid).
 
 {% alert level="warning" %}
@@ -179,18 +179,18 @@ The `allowAccessToSystemNamespaces`, `namespaceSelector` and `limitNamespaces` o
 
 ## Experimental role-based model
 
-Unlike the [current DVP role-based model](#current-role-based-model), the new role-based one does not use `ClusterAuthorizationRule` and `AuthorizationRule` resources. All access rights are configured in the standard Kubernetes RBAC way, i.e., by creating `RoleBinding` or `ClusterRoleBinding` resources and specifying one of the roles prepared by the `user-authz` module in them.
+Unlike the [current DVP role-based model](#current-role-based-model), the new role-based one does not use ClusterAuthorizationRule and AuthorizationRule resources. All access rights are configured in the standard Kubernetes RBAC way, i.e., by creating RoleBinding or ClusterRoleBinding resources and specifying one of the roles prepared by the `user-authz` module in them.
 
-The module creates special aggregated cluster roles (`ClusterRole`). By using these roles in `RoleBinding` or `ClusterRoleBinding`, you can do the following:
+The module creates special aggregated cluster roles (ClusterRole). By using these roles in RoleBinding or ClusterRoleBinding, you can do the following:
 - Manage access to modules of a specific [subsystem](#subsystems-of-the-role-based-model).
 
-  For example, you can use the `d8:manage:networking:manager` role in `ClusterRoleBinding` to allow a network administrator to configure *network* modules (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.).
+  For example, you can use the `d8:manage:networking:manager` role in ClusterRoleBinding to allow a network administrator to configure *network* modules (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.).
 - Manage access to *user* resources of modules within the namespace.
 
-  For example, the `d8:use:role:manager` role in `RoleBinding` enables deleting/creating/editing the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
+  For example, the `d8:use:role:manager` role in RoleBinding enables deleting/creating/editing the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
 
-{% alert level="warning" %}
-Pay attention to the specifics of configuring combined access and shared use of RoleBinding and ClusterAuthorizationRule (CAR) for the same user when multitenancy mode is enabled in the cluster (parameter [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). For more details, see the [`user-authz`](/modules/user-authz/#rolebinding-car) module documentation.
+{% alert level="info" %}
+If multitenancy mode is enabled in the cluster (via [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), RoleBinding and ClusterAuthorizationRule can be used together for the same user. For details, refer to the `user-authz` module [documentation](/modules/user-authz/#using-clusterauthorizationrule-and-authorizationrule-together-with-rbac).
 {% endalert %}
 
 ### Default access list for each role
