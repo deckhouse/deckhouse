@@ -1,0 +1,259 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Объект верхнего уровня, описывающий желаемое состояние узла Deckhouse на базе гипервизора первого типа.
+
+            Один и тот же тип используется в двух местах: на узле он хранится в файле `/config/nodeconfig.yaml` и читается загрузчиком конфигурации, а в кластере представлен ресурсом группы `internal.deckhouse.io` версии `v1alpha1`.
+          properties:
+            spec:
+              description: |
+                Желаемое состояние узла.
+              properties:
+                nodeName:
+                  description: |
+                    Имя узла Kubernetes, к которому относится конфигурация.
+                osImage:
+                  description: |
+                    Образ системы, с которого загружается узел (определяется каналом обновлений).
+                registryPackagesProxyAccessTokenB64:
+                  description: |
+                    Токен в кодировке base64 для аутентификации в registry packages proxy.
+                apiServerEndpoints:
+                  description: |
+                    Список адресов серверов API, к которым подключается узел (через локальный на узле API-прокси).
+                storage:
+                  description: |
+                    Выбор целевого диска для установки ОС. Разметка разделов фиксирована (boot/config/data), поэтому достаточно указать устройство диска целиком.
+                  properties:
+                    device:
+                      description: |
+                        Блочное устройство диска целиком, на которое выполняется установка, например `/dev/sda`, `/dev/nvme0n1` или стабильный путь вида `/dev/disk/by-id/...`. Игнорируется, если задан `diskSelector`.
+                    diskSelector:
+                      description: |
+                        Выбор целевого диска по атрибутам вместо фиксированного пути. Имеет приоритет над `device` (семантика соответствует Talos). Должны совпасть все заданные условия; используется первый подошедший диск.
+                      properties:
+                        busPath:
+                          description: |
+                            Соответствие пути аппаратной шины (glob).
+                        model:
+                          description: |
+                            Соответствие модели устройства (glob), например `Samsung*`.
+                        name:
+                          description: |
+                            Соответствие имени устройства в ядре (glob), например `nvme0n1`.
+                        rotational:
+                          description: |
+                            Соответствие типу накопителя: `true` — диск с вращающимися пластинами, `false` — твердотельный.
+                        serial:
+                          description: |
+                            Соответствие серийному номеру диска (glob).
+                        size:
+                          description: |
+                            Соответствие объёму диска, опционально с оператором сравнения, например `>=100Gi`, `>1Ti`, `512Gi`.
+                        type:
+                          description: |
+                            Соответствие типу диска.
+                        wwid:
+                          description: |
+                            Соответствие World Wide Identifier (glob).
+                    wipe:
+                      description: |
+                        Определяет, будет ли уже размеченный диск очищен и размечен заново. По умолчанию `false`: настраивается только неразмеченный (или не соответствующий ожидаемой разметке) диск, поэтому корректная существующая разметка остаётся нетронутой, а перезагрузка никогда не приводит к потере данных.
+                extensions:
+                  description: |
+                    Подписанные образы systemd-sysext с verity, подключаемые поверх корневой файловой системы.
+                  items:
+                    description: |
+                      Подписанный образ systemd-sysext с verity, собранный из канала обновлений. Загружается из registry-packages-proxy по digest.
+
+                      Необязательное поле `repository` (хост registry, например `cr.flant.com`) выбирает конфигурацию клиента прокси для конкретного registry; если поле пустое, используется конфигурация прокси по умолчанию. Необязательное поле `additionalPath` (например, `deckhouse/sysext/containerd`) передаётся прокси в параметре запроса `path` и определяет расположение артефакта в репозитории.
+                    properties:
+                      name:
+                        description: |
+                          Имя расширения (оно же — базовое имя образа sysext).
+                      digest:
+                        description: |
+                          Дайджест `sha256:` образа sysext.
+                      repository:
+                        description: |
+                          Выбирает конфигурацию клиента прокси для конкретного registry.
+                      additionalPath:
+                        description: |
+                          Передаётся прокси в параметре запроса `path`.
+                      requestedBy:
+                        description: |
+                          Кто запросил расширение (например, `node-manager`).
+                kernel:
+                  description: |
+                    Параметры sysctl и модули ядра, которые нужно загрузить.
+                  properties:
+                    modules:
+                      items:
+                        description: |
+                          Модуль ядра, загружаемый с необязательными параметрами.
+                    sysctl:
+                      additionalProperties:
+                        description: |
+                          Значение параметра sysctl. Длина значения ограничена, чтобы стоимость вычисления CEL-выражений в CRD оставалась предсказуемой.
+                network:
+                  description: |
+                    Имя хоста, DNS, NTP, сетевые интерфейсы и маршруты.
+                  properties:
+                    dns:
+                      description: |
+                        Параметры DNS-резолвера.
+                    ntp:
+                      description: |
+                        Параметры синхронизации времени по NTP.
+                    interfaces:
+                      items:
+                        description: |
+                          Описание одного сетевого интерфейса.
+                        properties:
+                          addresses:
+                            description: |
+                              Статические адреса в формате CIDR (используются, если `dhcp` выключен).
+                          dhcp:
+                            description: |
+                              Включает DHCPv4 на интерфейсе.
+                    routes:
+                      items:
+                        description: |
+                          Статический маршрут.
+                kubelet:
+                  description: |
+                    Параметры kubelet.
+                  properties:
+                    bootstrapToken:
+                      description: |
+                        Bootstrap-токен, с помощью которого kubelet получает свой клиентский сертификат при первой загрузке.
+                    caCert:
+                      description: |
+                        CA-сертификат кластера в кодировке base64, используемый в `bootstrap-kubelet.conf` для проверки сервера API.
+                    clusterDNS:
+                      description: |
+                        Список IP-адресов DNS-серверов кластера.
+                    clusterDomain:
+                      description: |
+                        DNS-домен кластера (например, `cluster.local`).
+                    containerLogMaxFiles:
+                      description: |
+                        Количество сохраняемых файлов журналов с учётом ротации.
+                    containerLogMaxSize:
+                      description: |
+                        Максимальный размер файла журнала, при достижении которого выполняется ротация (например, `50Mi`).
+                    externalCloudProvider:
+                      description: |
+                        Включает `--cloud-provider=external`, чтобы узлом (зона, регион, providerID) управлял cloud-controller-manager.
+                    maxPods:
+                      description: |
+                        Максимальное количество подов на узле.
+                    nodeLabels:
+                      description: |
+                        Лейблы, добавляемые к объекту узла при регистрации kubelet.
+                      additionalProperties:
+                        description: |
+                          Значение лейбла, проверяемое в CRD по правилам Kubernetes.
+                    registerWithTaints:
+                      description: |
+                        Список taint'ов, добавляемых к объекту узла при регистрации kubelet. Применяется только при первичной регистрации.
+                      items:
+                        description: |
+                          Taint Kubernetes, добавляемый узлу при регистрации.
+                containerRuntime:
+                  description: |
+                    Параметры containerd.
+                  properties:
+                    maxConcurrentDownloads:
+                      description: |
+                        Максимальное количество потоков одновременного скачивания слоёв образов.
+                    registryMirrors:
+                      description: |
+                        Список адресов зеркал для каждого хоста registry (пока не переносится в `hosts.toml`, зарезервировано для будущего использования).
+                      additionalProperties:
+                        description: |
+                          Список адресов зеркал для registry.
+                    sandboxImage:
+                      description: |
+                        Образ pause, используемый для песочниц подов.
+                updatePolicy:
+                  description: |
+                    Определяет, как и когда обновляется узел.
+                  properties:
+                    mode:
+                      description: |
+                        Режим обновления.
+                    window:
+                      description: |
+                        Окно обслуживания, в течение которого выполняются обновления.
+                      properties:
+                        days:
+                          description: |
+                            Дни недели, в которые действует окно.
+                        from:
+                          description: |
+                            Время начала окна в формате `HH:MM` (24-часовой формат).
+                        to:
+                          description: |
+                            Время окончания окна в формате `HH:MM` (24-часовой формат).
+            status:
+              description: |
+                Состояние, публикуемое агентом на узле после каждого цикла согласования.
+              properties:
+                phase:
+                  description: |
+                    Сводка по узлу. `Ready` — узел исполняет опубликованную конфигурацию и здоров.
+                    `Pending` — узел здоров, но ещё не исполняет опубликованную конфигурацию (удерживает её до одобрения прерывания).
+                    `Degraded` — подсистема отказала, конфигурация отклонена или произошёл откат.
+                observedGeneration:
+                  description: |
+                    Последнее поколение spec, которое узел обработал — увидел и принял решение.
+                    Достигает нового поколения, как только узел его увидел, даже если оно ещё удерживается до одобрения и не исполняется (см. `appliedGeneration`).
+                appliedGeneration:
+                  description: |
+                    Поколение spec, которое узел реально исполняет. Отстаёт от `observedGeneration`, пока прерывающая конфигурация удерживается.
+                    Проверка «узел сошёлся» на стороне кластера — `appliedGeneration == metadata.generation`.
+                conditions:
+                  description: |
+                    Результаты согласования на уровне узла (`ConfigurationApplied`, `DisruptionRequired`) и подсистем-гейтов (`APIEndpointsReachable`, `SysctlApplied`). Результаты по каждому расширению и юниту публикуются в `extensions` и `units` — по одной записи, а не единым агрегированным условием.
+                extensions:
+                  description: |
+                    Результат по каждому настроенному системному расширению (sysext) — по одной записи на расширение, чтобы было видно, какое именно расширение отказало, а не единый агрегированный статус.
+                  items:
+                    description: |
+                      Результат согласования одного системного расширения.
+                    properties:
+                      name:
+                        description: |
+                          Имя расширения, совпадает с `spec.extensions[].name`.
+                      digest:
+                        description: |
+                          Дайджест образа, установленного узлом для этого расширения.
+                      state:
+                        description: |
+                          `Ready` — расширение установлено и подключено (merge). `Pending` — расширение загружается или ожидает окна обновления. `Failed` — отказ, причина в `message`.
+                      message:
+                        description: |
+                          Причина, когда `state` равно `Failed`.
+                units:
+                  description: |
+                    Результат по каждому управляемому systemd-юниту (containerd, kubelet и каждый юнит, поставляемый расширением) — по одной записи на юнит.
+                  items:
+                    description: |
+                      Результат согласования одного управляемого systemd-юнита.
+                    properties:
+                      name:
+                        description: |
+                          Имя systemd-юнита (например, `containerd.service`).
+                      state:
+                        description: |
+                          `Active` — юнит запущен. `Pending` — юнит поставлен в очередь на запуск позже в этом цикле. `Failed` — отказ, причина в `message`.
+                      message:
+                        description: |
+                          Причина, когда `state` равно `Failed`.
+                maintenanceToken:
+                  description: |
+                    Токен для аутентификации отправки конфигурации в maintenance-эндпоинт узла. Агент на узле генерирует его при старте и переопубликовывает здесь на каждом проходе, пока доступен API кластера. Когда узел теряет доступ к API и открывает порт `:50000`, оператор читает этот токен из последнего опубликованного статуса и передаёт его как `Authorization: Bearer <токен>` при отправке конфигурации.

@@ -35,6 +35,11 @@ const (
 	NodeGroupCRDFile NodeManagerCRDFile = "node_group.yaml"
 	MCMCRDFile       NodeManagerCRDFile = "mcm.yaml"
 	InstanceCRDFile  NodeManagerCRDFile = "instance.yaml"
+
+	NodeConfigCRDFile                  NodeManagerCRDFile = "nodeconfig.yaml"
+	NodeOperationCRDFile               NodeManagerCRDFile = "nodeoperation.yaml"
+	NodeBootstrapConfigCRDFile         NodeManagerCRDFile = "nodebootstrapconfig.yaml"
+	NodeBootstrapConfigTemplateCRDFile NodeManagerCRDFile = "nodebootstrapconfigtemplate.yaml"
 )
 
 // RealCacheCRDPaths returns the CRDs every envtest manager needs regardless of what the
@@ -114,6 +119,22 @@ func WithMCMCRDFile() crdOpt {
 
 func WithInstanceCRDFile() crdOpt {
 	return WithNodeManager(InstanceCRDFile)
+}
+
+func WithNodeConfigCRDFile() crdOpt {
+	return WithNodeManager(NodeConfigCRDFile)
+}
+
+func WithNodeOperationCRDFile() crdOpt {
+	return WithNodeManager(NodeOperationCRDFile)
+}
+
+func WithNodeBootstrapConfigCRDFile() crdOpt {
+	return WithNodeManager(NodeBootstrapConfigCRDFile)
+}
+
+func WithNodeBootstrapConfigTemplateCRDFile() crdOpt {
+	return WithNodeManager(NodeBootstrapConfigTemplateCRDFile)
 }
 
 func CRDPaths(opts ...crdOpt) []string {
