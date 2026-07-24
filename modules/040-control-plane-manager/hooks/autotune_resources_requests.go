@@ -344,7 +344,9 @@ func repopulateComponents(input *go_hook.HookInput, state *autotuneState, cpuOve
 	}
 
 	if len(components) == 0 {
-		input.Values.Remove("controlPlaneManager.internal.resourcesRequests.components")
+		if input.Values.Exists("controlPlaneManager.internal.resourcesRequests.components") {
+			input.Values.Remove("controlPlaneManager.internal.resourcesRequests.components")
+		}
 		return
 	}
 	// Set the whole map so JSON-patch does not need intermediate parents.
