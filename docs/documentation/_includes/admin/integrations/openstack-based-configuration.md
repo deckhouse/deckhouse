@@ -460,12 +460,18 @@ For the API endpoints and ports, refer to the [official documentation](https://c
 ### LoadBalancer configuration
 
 {% alert level="warning" %}
-To correctly detect client IP addresses, you must use a LoadBalancer that supports Proxy Protocol.
+To correctly determine the client IP address, use a LoadBalancer with Proxy Protocol support.
 {% endalert %}
 
-#### Example: IngressNginxController
+It is recommended to limit the list of nodes added to the load balancer pool using the [`loadbalancer.openstack.org/node-selector`](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#load-balancer) annotation.
 
-The following is a simple configuration example for an [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
+Without a `node-selector` restriction, cloud-controller-manager may use all suitable cluster nodes as load balancer targets. As a result, adding or removing nodes that are not related to the workload served by the load balancer may trigger an update of the load balancer pool membership. In large or frequently changing clusters, such updates may occur regularly and, in some configurations, may cause brief disruptions to existing connections.
+
+It is recommended to use `loadbalancer.openstack.org/node-selector` to select only the nodes that should be used as targets for the corresponding LoadBalancer.
+
+#### IngressNginxController example
+
+In this example, the ingress controller pods are scheduled on frontend nodes, while the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -477,6 +483,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
   nodeSelector:

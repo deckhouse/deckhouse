@@ -4,11 +4,19 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ## How do I set up LoadBalancer?
 
-> **Note!** Load Balancer must support Proxy Protocol to determine the client IP correctly.
+{% alert level="warning" %}
+To correctly determine the client IP address, use a LoadBalancer with Proxy Protocol support.
+{% endalert %}
 
-### An example of IngressNginxController
+It is recommended to limit the list of nodes added to the load balancer pool using the [`loadbalancer.openstack.org/node-selector`](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#load-balancer) annotation.
 
-Below is a simple example of the `IngressNginxController' configuration:
+Without a `node-selector` restriction, cloud-controller-manager may use all suitable cluster nodes as load balancer targets. As a result, adding or removing nodes that are not related to the workload served by the load balancer may trigger an update of the load balancer pool membership. In large or frequently changing clusters, such updates may occur regularly and, in some configurations, may cause brief disruptions to existing connections.
+
+It is recommended to use `loadbalancer.openstack.org/node-selector` to select only the nodes that should be used as targets for the corresponding LoadBalancer.
+
+### IngressNginxController example
+
+In this example, the ingress controller pods are scheduled on frontend nodes, while the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -20,6 +28,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
   nodeSelector:
@@ -35,9 +44,9 @@ spec:
 
 There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
 
-* Allow VMs on a different subnet to connect to cluster nodes.
-* Allow connecting to the ports of the static node so that the application can work.
-* Restrict access to external resources or other VMs in the cloud for security reasons.
+- Allow VMs on a different subnet to connect to cluster nodes.
+- Allow connecting to the ports of the static node so that the application can work.
+- Restrict access to external resources or other VMs in the cloud for security reasons.
 
 For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
 
@@ -45,8 +54,8 @@ For all this, additional security groups should be used. You can only use securi
 
 This parameter can be set either in an existing cluster or when creating one. In both cases, additional security groups are declared in the `OpenStackClusterConfiguration`:
 
-* for master nodes, in the `additionalSecurityGroups` of the `masterNodeGroup` section;
-* for static nodes, in the `additionalSecurityGroups` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
+- for master nodes, in the `additionalSecurityGroups` of the `masterNodeGroup` section;
+- for static nodes, in the `additionalSecurityGroups` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
 
 The `additionalSecurityGroups` field contains an array of strings with security group names.
 
@@ -213,8 +222,8 @@ username = {{ nova_service_user_name }}
 
 The node disk can be local or network. A local disk in OpenStack, is an ephemeral disk, and a network disk is a persistent disk (cinder storage). Nodes with local disks cannot migrate between hypervisors.
 
-* A network disk is preferred for the master node so that the node can migrate between hypervisors.
-* A local disk is preffered for the ephemeral node to save on cost. Not all cloud providers support the use of local disks. If local disks are not supported, you have to use network disks for ephemeral nodes.
+- A network disk is preferred for the master node so that the node can migrate between hypervisors.
+- A local disk is preffered for the ephemeral node to save on cost. Not all cloud providers support the use of local disks. If local disks are not supported, you have to use network disks for ephemeral nodes.
 
 | Local disk (ephemeral)        | Network disk (persistent)                    |
 | ----------------------------- | -------------------------------------------- |
@@ -227,22 +236,22 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 
 |                                     | flavor disk size = 0                 | flavor disk size > 0                              |
 | ----------------------------------- | ------------------------------------ | ------------------------------------------------- |
-| **`rootDiskSize` is not specified** | ❗️*You need to set the size*. Without specifying the size, there will be an error creating a VM. | Local disk with size according to the flavor    |
+| **`rootDiskSize` is not specified** | ❗*You need to set the size*. Without specifying the size, there will be an error creating a VM. | Local disk with size according to the flavor    |
 | **`rootDiskSize` is specified**     | Network disk with the `rootDiskSize` size                                         | ❗ Network disk (rootDiskSize) and local disk (according to the flavor). Avoid using this option, as the cloud provider will charge for both disks. |
 
 > Please note, that to create a node with the `CloudEphemeral` type in a zone other than zone A, you must first create a flavor with a disk of the required size. The [rootDiskSize](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter does not need to be specified.
 
 #### Network disk is recommended for master nodes and bastion host
 
-* Use flavor with a zero disk size.
-* Set the `rootDiskSize` in the `OpenStackInstanceClass`.
-* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
+- Use flavor with a zero disk size.
+- Set the `rootDiskSize` in the `OpenStackInstanceClass`.
+- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
 #### Local disk is recommended for ephemeral nodes
 
-* Use flavor with the specified disk size.
-* Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
-* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
+- Use flavor with the specified disk size.
+- Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
+- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
 
 ### How do I check the disk volume in a flavor?
 
