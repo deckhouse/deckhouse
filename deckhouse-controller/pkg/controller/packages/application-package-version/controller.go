@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"time"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -47,6 +47,8 @@ const (
 	maxConcurrentReconciles = 1
 
 	defaultRequeue = 15 * time.Second
+
+	currentPackageSchemaSerializationVersion = "2"
 
 	schemaTypeSettings = iota
 	schemaTypeValues
@@ -123,7 +125,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 //  5. Check if the package image exists in the registry and label accordingly
 //  6. Add a finalizer and remove the draft label, completing promotion
 //
-// Non-draft resources are skipped since they have already been promoted.
+// Non-draft resources written with the current schema serialization are
+// skipped. Older promoted resources are rehydrated in place from their
+// immutable package artifact.
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) error {
 	logger := r.logger.With(
 		slog.String("name", apv.Name),
@@ -131,11 +135,17 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		slog.String("version", apv.Spec.PackageVersion),
 		slog.String("repository", apv.Spec.PackageRepositoryName))
 
-	// Non-draft APVs have already been promoted — nothing to do.
-	if !apv.IsDraft() {
+	isDraft := apv.IsDraft()
+
+	// Current promoted APVs have already been projected by this controller.
+	if !isDraft && hasCurrentSchemaSerialization(apv) {
 		logger.Debug("package is not draft")
 
 		return nil
+	}
+
+	if !isDraft {
+		logger.Info("rehydrating package metadata written by an older schema serializer")
 	}
 
 	repo := new(v1alpha1.PackageRepository)
@@ -144,7 +154,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
-			fmt.Sprintf("failed to get repository '%s': %s", apv.Spec.PackageRepositoryName, err.Error()),
+			metadataLoadConditionMessage(
+				isDraft,
+				fmt.Sprintf("failed to get repository '%s': %s", apv.Spec.PackageRepositoryName, err.Error()),
+			),
 		)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
@@ -164,7 +177,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
-			fmt.Sprintf("get image: %s", err.Error()),
+			metadataLoadConditionMessage(isDraft, fmt.Sprintf("get image: %s", err.Error())),
 		)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
@@ -180,7 +193,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
-			fmt.Sprintf("fetch package metadata: %s", err.Error()),
+			metadataLoadConditionMessage(isDraft, fmt.Sprintf("fetch package metadata: %s", err.Error())),
 		)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
@@ -195,7 +208,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
-			fmt.Sprintf("fetch package metadata: %s", err.Error()),
+			metadataLoadConditionMessage(isDraft, fmt.Sprintf("fetch package metadata: %s", err.Error())),
 		)
 
 		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
@@ -205,10 +218,21 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		return fmt.Errorf("set package metadata '%s': %w", apv.Name, err)
 	}
 
+	if apv.Status.PackageSchemas == nil {
+		apv.Status.PackageSchemas = new(v1alpha1.ApplicationPackageVersionStatusSchemas)
+	}
+	apv.Status.PackageSchemas.SerializationVersion = currentPackageSchemaSerializationVersion
+
 	r.setMetadataLoadedConditionTrue(apv)
 
 	if err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch status '%s': %w", apv.Name, err)
+	}
+
+	// Rehydration updates status only. Spec, labels, finalizers and usedBy
+	// references remain untouched.
+	if !isDraft {
+		return nil
 	}
 
 	original = apv.DeepCopy()
@@ -237,6 +261,19 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	return nil
+}
+
+func hasCurrentSchemaSerialization(apv *v1alpha1.ApplicationPackageVersion) bool {
+	return apv.Status.PackageSchemas != nil &&
+		apv.Status.PackageSchemas.SerializationVersion == currentPackageSchemaSerializationVersion
+}
+
+func metadataLoadConditionMessage(isDraft bool, draftMessage string) string {
+	if isDraft {
+		return draftMessage
+	}
+
+	return "failed to rehydrate immutable package metadata; retrying"
 }
 
 // handleDelete removes the finalizer from the ApplicationPackageVersion once it is
@@ -329,24 +366,22 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 
 // setPackageSchema parses a raw YAML/JSON OpenAPI v3 schema and stores it on the
 // ApplicationPackageVersion status under either SettingsSchema or ValuesSchema,
-// selected by schemaType. The schema is wrapped in a lightweight envelope that
-// recognises the x-config-version marker used by packages to version their schema
-// format. An empty rawSchema is treated as "no schema supplied" and returns nil
+// selected by schemaType. The schema is stored as a typed openapi.OpenAPIV3Schema
+// that preserves all Deckhouse x-* extensions as explicit fields.
+// The x-config-version envelope marker is stripped.
+// An empty rawSchema is treated as "no schema supplied" and returns nil
 // without touching the status. Unknown schemaType values are silently ignored.
 func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, rawSchema []byte) error {
 	if len(rawSchema) == 0 {
 		return nil
 	}
 
-	type schemaVersion struct {
+	var wrapper struct {
 		Version string `json:"x-config-version"`
-		apiextensionsv1.JSONSchemaProps
+		openapi.OpenAPIV3Schema
 	}
 
-	jsonSchema := &schemaVersion{
-		Version: "1",
-	}
-	if err := yaml.Unmarshal(rawSchema, jsonSchema); err != nil {
+	if err := yaml.Unmarshal(rawSchema, &wrapper); err != nil {
 		return fmt.Errorf("invalid JSON schema: %w", err)
 	}
 
@@ -354,15 +389,15 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 		apv.Status.PackageSchemas = new(v1alpha1.ApplicationPackageVersionStatusSchemas)
 	}
 
+	schema := &v1alpha1.PackageSchema{
+		OpenAPIV3Schema: &wrapper.OpenAPIV3Schema,
+	}
+
 	switch schemaType {
 	case schemaTypeSettings:
-		apv.Status.PackageSchemas.SettingsSchema = &apiextensionsv1.CustomResourceValidation{
-			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
-		}
+		apv.Status.PackageSchemas.SettingsSchema = schema
 	case schemaTypeValues:
-		apv.Status.PackageSchemas.ValuesSchema = &apiextensionsv1.CustomResourceValidation{
-			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
-		}
+		apv.Status.PackageSchemas.ValuesSchema = schema
 	default:
 	}
 

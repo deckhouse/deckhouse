@@ -373,6 +373,12 @@ spec:
               packageSchemas:
                 description: Schemas for validating settings and values passed to the package.
                 properties:
+                  serializationVersion:
+                    description: |-
+                      SerializationVersion identifies the controller schema projection used to
+                      populate this status. Controllers use it to rehydrate schemas that were
+                      written before custom Console extensions were preserved.
+                    type: string
                   settingsSchema:
                     description: |-
                       SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied

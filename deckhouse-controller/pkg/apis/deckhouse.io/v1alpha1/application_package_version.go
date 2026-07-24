@@ -19,10 +19,11 @@ package v1alpha1
 import (
 	"slices"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 )
 
 const (
@@ -127,7 +128,24 @@ type ApplicationPackageVersionStatus struct {
 	UsedByCount int `json:"usedByCount,omitempty"`
 }
 
+// PackageSchema is an OpenAPI v3 schema wrapper that preserves all custom x-*
+// extensions (e.g. x-deckhouse-grantable-resource) as typed fields on the
+// embedded OpenAPIV3Schema. The serialised JSON shape is
+// {"openAPIV3Schema": <schema-object>}, identical to
+// apiextensionsv1.CustomResourceValidation but with all Deckhouse extensions
+// retained.
+type PackageSchema struct {
+	// +optional
+	OpenAPIV3Schema *openapi.OpenAPIV3Schema `json:"openAPIV3Schema,omitempty"`
+}
+
 type ApplicationPackageVersionStatusSchemas struct {
+	// SerializationVersion identifies the controller schema projection used to
+	// populate this status. Controllers use it to rehydrate schemas that were
+	// written before custom Console extensions were preserved.
+	// +optional
+	SerializationVersion string `json:"serializationVersion,omitempty"`
+
 	// SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
 	// settings of the package. Stored as an opaque object because its contents
 	// form a recursive JSON schema that cannot be expressed structurally in a
@@ -137,7 +155,7 @@ type ApplicationPackageVersionStatusSchemas struct {
 	// +kubebuilder:validation:Schemaless
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Type=object
-	SettingsSchema *apiextensionsv1.CustomResourceValidation `json:"settingsSchema,omitempty"`
+	SettingsSchema *PackageSchema `json:"settingsSchema,omitempty"`
 
 	// ValuesSchema is the OpenAPI v3 schema used to validate the effective
 	// values (defaults merged with settings) passed to the package's hooks and
@@ -148,7 +166,7 @@ type ApplicationPackageVersionStatusSchemas struct {
 	// +kubebuilder:validation:Schemaless
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Type=object
-	ValuesSchema *apiextensionsv1.CustomResourceValidation `json:"valuesSchema,omitempty"`
+	ValuesSchema *PackageSchema `json:"valuesSchema,omitempty"`
 }
 
 type ApplicationPackageVersionStatusInstance struct {
