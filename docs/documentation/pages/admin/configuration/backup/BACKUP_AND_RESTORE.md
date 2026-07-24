@@ -387,13 +387,21 @@ To restore a control-plane component file from a CPM backup:
    d8 k label cpn <NODE_NAME> control-plane-manager.deckhouse.io/maintenance=""
    ```
 
-1. Copy the required file(s) from the backup directory back to their original location. For example, to restore the `kube-apiserver` manifest:
+1. Copy the required file(s) from the backup directory back to their original location, preserving their relative path under `/etc/kubernetes`. For example, to restore the `kube-apiserver` manifest:
 
    ```shell
    cp /etc/kubernetes/deckhouse/backup/KubeAPIServer/<OPERATION_NAME>/manifests/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
-   Restoring a static Pod manifest is enough to trigger kubelet to restart the Pod — no manual restart is required. PKI and kubeconfig files (`admin.conf`, certificates, etc.) are restored the same way, preserving their original relative path under `/etc/kubernetes`.
+   Restoring a static Pod manifest is enough to trigger kubelet to restart the Pod automatically — no manual restart is required.
+
+1. If you restored certificates, keys, or a kubeconfig (`admin.conf` and similar files under `pki/`) rather than the manifest itself, restart the corresponding component's Pod manually. kubelet only reacts to changes in the manifest file — it doesn't watch the files a Pod mounts, so the running container keeps using the old, already-loaded certificate until it's restarted:
+
+   ```shell
+   crictl stopp $(crictl pods --name=<COMPONENT_POD_NAME> -q)
+   ```
+
+   Here `<COMPONENT_POD_NAME>` is the static Pod name of the component whose certificate you restored (for example, `kube-apiserver`). kubelet will recreate the Pod, and its container will pick up the restored file.
 
 1. Make sure the component came back up healthy:
 
