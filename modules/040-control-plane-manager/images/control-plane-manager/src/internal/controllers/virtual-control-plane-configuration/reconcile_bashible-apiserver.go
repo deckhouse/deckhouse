@@ -162,56 +162,6 @@ func (r *reconciler) reconcileBashibleApiserver(
 	return reconcile.Result{}, nil
 }
 
-// reconcileNestedNodeCleanup ports node-controller bashiblecleanup for the nested cluster
-// once a node reports bashible-first-run-finished, drop that label and the uninitialized taints in one patch so it becomes schedulable and bashible does not re-apply the label.
-func (r *reconciler) reconcileNestedNodeCleanup(ctx context.Context, nestedClient client.Client) (reconcile.Result, error) {
-	nodes := &corev1.NodeList{}
-	if err := nestedClient.List(ctx, nodes, client.HasLabels{bashibleFirstRunFinishedLabel}); err != nil {
-		return reconcile.Result{}, fmt.Errorf("list nested nodes: %w", err)
-	}
-
-	for i := range nodes.Items {
-		node := &nodes.Items[i]
-		base := node.DeepCopy()
-
-		delete(node.Labels, bashibleFirstRunFinishedLabel)
-		node.Spec.Taints = filterTaints(node.Spec.Taints, nodeUninitializedTaintKey, bashibleUninitializedTaintKey)
-
-		if equality.Semantic.DeepEqual(base.Labels, node.Labels) &&
-			equality.Semantic.DeepEqual(base.Spec.Taints, node.Spec.Taints) {
-			continue
-		}
-		if err := nestedClient.Patch(ctx, node, client.MergeFrom(base)); err != nil {
-			return reconcile.Result{}, fmt.Errorf("cleanup nested node %s: %w", node.Name, err)
-		}
-	}
-
-	return reconcile.Result{}, nil
-}
-
-func helmOwnershipMeta(releaseName string) (labels map[string]string, annotations map[string]string) {
-	return map[string]string{
-			"app.kubernetes.io/managed-by": "Helm",
-		}, map[string]string{
-			"meta.helm.sh/release-name":      releaseName,
-			"meta.helm.sh/release-namespace": deckhouseSystemNamespace,
-		}
-}
-
-func filterTaints(taints []corev1.Taint, dropKeys ...string) []corev1.Taint {
-	drop := make(map[string]struct{}, len(dropKeys))
-	for _, k := range dropKeys {
-		drop[k] = struct{}{}
-	}
-	out := make([]corev1.Taint, 0, len(taints))
-	for _, t := range taints {
-		if _, ok := drop[t.Key]; !ok {
-			out = append(out, t)
-		}
-	}
-	return out
-}
-
 func (r *reconciler) reconcileBashibleKubeconfigSecret(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
@@ -1001,4 +951,54 @@ func applyNestedBashibleEndpointSlice(slice *discoveryv1.EndpointSlice, namespac
 		Protocol: &protocol,
 		Port:     &port,
 	}}
+}
+
+// reconcileNestedNodeCleanup ports node-controller bashiblecleanup for the nested cluster
+// once a node reports bashible-first-run-finished, drop that label and the uninitialized taints in one patch so it becomes schedulable and bashible does not re-apply the label.
+func (r *reconciler) reconcileNestedNodeCleanup(ctx context.Context, nestedClient client.Client) (reconcile.Result, error) {
+	nodes := &corev1.NodeList{}
+	if err := nestedClient.List(ctx, nodes, client.HasLabels{bashibleFirstRunFinishedLabel}); err != nil {
+		return reconcile.Result{}, fmt.Errorf("list nested nodes: %w", err)
+	}
+
+	for i := range nodes.Items {
+		node := &nodes.Items[i]
+		base := node.DeepCopy()
+
+		delete(node.Labels, bashibleFirstRunFinishedLabel)
+		node.Spec.Taints = filterTaints(node.Spec.Taints, nodeUninitializedTaintKey, bashibleUninitializedTaintKey)
+
+		if equality.Semantic.DeepEqual(base.Labels, node.Labels) &&
+			equality.Semantic.DeepEqual(base.Spec.Taints, node.Spec.Taints) {
+			continue
+		}
+		if err := nestedClient.Patch(ctx, node, client.MergeFrom(base)); err != nil {
+			return reconcile.Result{}, fmt.Errorf("cleanup nested node %s: %w", node.Name, err)
+		}
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func helmOwnershipMeta(releaseName string) (labels map[string]string, annotations map[string]string) {
+	return map[string]string{
+			"app.kubernetes.io/managed-by": "Helm",
+		}, map[string]string{
+			"meta.helm.sh/release-name":      releaseName,
+			"meta.helm.sh/release-namespace": deckhouseSystemNamespace,
+		}
+}
+
+func filterTaints(taints []corev1.Taint, dropKeys ...string) []corev1.Taint {
+	drop := make(map[string]struct{}, len(dropKeys))
+	for _, k := range dropKeys {
+		drop[k] = struct{}{}
+	}
+	out := make([]corev1.Taint, 0, len(taints))
+	for _, t := range taints {
+		if _, ok := drop[t.Key]; !ok {
+			out = append(out, t)
+		}
+	}
+	return out
 }
