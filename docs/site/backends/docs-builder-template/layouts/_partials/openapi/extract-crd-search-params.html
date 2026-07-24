@@ -7,6 +7,10 @@
 {{- $searchParams := slice }}
 
 {{- $kind := $crdData.spec.names.kind }}
+{{- $shortNames := slice }}
+{{- if $crdData.spec.names.shortNames }}
+  {{- $shortNames = $crdData.spec.names.shortNames }}
+{{- end }}
 
 {{- if $crdData.spec.versions }}
   {{- /* Find the stablest API version according to Kubernetes rules */}}
@@ -78,6 +82,10 @@
   {{- if $langVersionData.schema.openAPIV3Schema.description }}
     {{- $description = $langVersionData.schema.openAPIV3Schema.description }}
   {{- end }}
+  {{- $content := default "" $description }}
+  {{- if gt (len $shortNames) 0 }}
+    {{- $content = printf "%s\nShort names: %s" $content (delimit $shortNames ", ") }}
+  {{- end }}
 
   {{- /* Add CRD resource itself as a searchable item */}}
   {{- $crdParam := dict
@@ -86,7 +94,7 @@
     "moduletype" "source"
     "url" (printf "/modules/%s/%s/cr.html#%s" $moduleName $moduleChannel ( $kind | lower))
     "path" (printf "%s-%s" ($kind | lower) $versionName)
-    "content" $description
+    "content" $content
     "resName" $kind
     "isResource" "true" }}
 
