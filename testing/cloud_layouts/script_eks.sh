@@ -345,7 +345,7 @@ function cleanup() {
 }
 
 function chmod_dirs_for_cleanup() {
-
+  echo $pwd
   if [ -n $USER_RUNNER_ID ]; then
     echo "Fix temp directories owner before cleanup ..."
     # chown -R $USER_RUNNER_ID "$(pwd)" || true
