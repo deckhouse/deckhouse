@@ -138,7 +138,7 @@ func effectiveMasterResources(n *Node) (int64, int64) {
 // minMasterNodeBudget returns the control-plane allocatable budget of the
 // weakest master: effectiveMasterResources(minNode) − configEveryNode.
 // Returns false when there are no master nodes (managed cloud).
-func minMasterNodeBudget(nodes []Node) (milliCPU, memoryBytes int64, ok bool) {
+func minMasterNodeBudget(nodes []Node) (int64, int64, bool) {
 	if len(nodes) == 0 {
 		return 0, 0, false
 	}
