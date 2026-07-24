@@ -1,16 +1,65 @@
 // PDF export for documentation pages.
 //
 // Enabled only on pages that set `allowPDFDownload: true` in their front matter
-// (the button and the pdfmake/html-to-pdfmake libraries are rendered/loaded only
-// in that case). Builds a client-side PDF from the current page content using a
-// single fixed template: a title page plus running header/footer.
+// (this small handler is loaded there). Builds a client-side PDF from the
+// current page content using a single fixed template: a title page plus running
+// header/footer.
 //
-// Depends on the globals provided by the libraries loaded in head-site.html:
+// The heavy libraries it relies on are NOT loaded with the page — they are
+// fetched lazily on the first download click (see loadPdfLibraries):
 //   - pdfMake        (pdfmake.min.js + vfs_fonts.js)
 //   - htmlToPdfmake  (html-to-pdfmake.min.js)
 
 (function () {
   'use strict';
+
+  // Lazy-loaded library filenames, in dependency order. vfs_fonts must follow
+  // pdfmake (it augments the pdfMake global); html-to-pdfmake is independent.
+  var PDF_LIBS = ['pdfmake.min.js', 'vfs_fonts.js', 'html-to-pdfmake.min.js'];
+
+  // Directory + cache-busting version for the lazy libraries, derived from this
+  // script's own <script src> so they match the built asset hash.
+  var ASSET_BASE = (function () {
+    var self = document.currentScript ||
+      document.querySelector('script[src*="pdf-export.js"]');
+    var src = self ? self.getAttribute('src') : '/assets/js/pdf-export.js';
+    var version = self ? self.getAttribute('data-pdf-assets-version') : '';
+    var dir = src.replace(/[?#].*$/, '').replace(/\/[^/]*$/, '/'); // strip filename
+    return { dir: dir || '/assets/js/', query: version ? '?v=' + version : '' };
+  })();
+
+  var librariesPromise = null;
+
+  // Load a single script once; resolves when it has executed.
+  function loadScript(url) {
+    return new Promise(function (resolve, reject) {
+      var el = document.createElement('script');
+      el.src = url;
+      el.async = false; // preserve execution order across sequential loads
+      el.onload = function () { resolve(); };
+      el.onerror = function () { reject(new Error('Failed to load ' + url)); };
+      document.head.appendChild(el);
+    });
+  }
+
+  // Load pdfmake + fonts + html-to-pdfmake once, on demand. Subsequent calls
+  // reuse the same promise (and thus the browser cache).
+  function loadPdfLibraries() {
+    if (typeof pdfMake !== 'undefined' && typeof htmlToPdfmake !== 'undefined') {
+      return Promise.resolve();
+    }
+    if (librariesPromise) {
+      return librariesPromise;
+    }
+    librariesPromise = PDF_LIBS.reduce(function (chain, name) {
+      return chain.then(function () {
+        return loadScript(ASSET_BASE.dir + name + ASSET_BASE.query);
+      });
+    }, Promise.resolve());
+    // Reset on failure so a later click can retry.
+    librariesPromise.catch(function () { librariesPromise = null; });
+    return librariesPromise;
+  }
 
   var LANG = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
   var IS_RU = LANG.indexOf('ru') === 0;
@@ -593,11 +642,6 @@
   }
 
   function onClick(button) {
-    if (typeof pdfMake === 'undefined' || typeof htmlToPdfmake === 'undefined') {
-      // Libraries failed to load; nothing we can do client-side.
-      return;
-    }
-
     var contentClone = getContentClone();
     if (!contentClone) {
       return;
@@ -613,9 +657,12 @@
       button.classList.remove('is-loading');
     };
 
-    // Images must be inlined (fetched/rasterized) before pdfmake runs, since it
-    // cannot resolve image URLs in the browser.
-    inlineImages(contentClone)
+    // Fetch the heavy libraries on demand, then inline images (pdfmake cannot
+    // resolve image URLs in the browser) and finally generate the PDF.
+    loadPdfLibraries()
+      .then(function () {
+        return inlineImages(contentClone);
+      })
       .then(function () {
         var docDefinition = buildDocDefinition(title, contentClone);
         pdfMake.createPdf(docDefinition).download(slugify(title) + '.pdf');
