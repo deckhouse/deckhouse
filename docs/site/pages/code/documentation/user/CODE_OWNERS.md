@@ -297,7 +297,7 @@ CODEOWNERS checks, which are enabled by default in Deckhouse Code, can be disabl
 
 To disable these checks, navigate to "Project" → "Settings" → "Merge requests" → the additional approval rule settings, and select "Disable Code Owners approval checks".
 
-![Disable Code Owners approval checks](/images/code/disable_code_owners_checks_en.png)
+![Setting "Disable Code Owners approval checks"](/images/code/disable_code_owners_checks_en.png)
 
 Once the checks are disabled, CODEOWNERS are skipped across the whole project:
 
@@ -313,7 +313,7 @@ Code owners matching the changed files can be automatically assigned as reviewer
 
 To enable that, navigate to "Project" → "Settings" → "Merge requests" → "Automatic reviewer assignment", and select "Automatically assign code owners as reviewers".
 
-![Automatically assign code owners as reviewers](/images/code/assign_code_owners_reviewers_en.png)
+![Setting "Automatically assign code owners as reviewers"](/images/code/assign_code_owners_reviewers_en.png)
 
 This setting is disabled by default. When it is enabled, code owners are assigned as reviewers:
 
