@@ -395,13 +395,19 @@ To restore a control-plane component file from a CPM backup:
 
    Restoring a static Pod manifest is enough to trigger kubelet to restart the Pod automatically — no manual restart is required.
 
-1. If you restored certificates, keys, or a kubeconfig (`admin.conf` and similar files under `pki/`) rather than the manifest itself, restart the corresponding component's Pod manually. kubelet only reacts to changes in the manifest file — it doesn't watch the files a Pod mounts, so the running container keeps using the old, already-loaded certificate until it's restarted:
+1. If you restored certificates, keys, or a kubeconfig (`admin.conf` and similar files under `pki/`) rather than the manifest itself, restart the corresponding component's Pod manually. kubelet only reacts to changes in the manifest file — it doesn't watch the files a Pod mounts, so the running container keeps using the old, already-loaded certificate until it's restarted. Deleting the Pod is enough — kubelet recreates it from the (unchanged) static manifest:
 
    ```shell
-   crictl stopp $(crictl pods --name=<COMPONENT_POD_NAME> -q)
+   d8 k -n kube-system delete po <COMPONENT_POD_NAME>
    ```
 
-   Here `<COMPONENT_POD_NAME>` is the static Pod name of the component whose certificate you restored (for example, `kube-apiserver`). kubelet will recreate the Pod, and its container will pick up the restored file.
+   Here `<COMPONENT_POD_NAME>` is the static Pod's name, for example `kube-apiserver-<NODE_NAME>`.
+
+   If the API server itself is unreachable (for example, on a single control-plane node whose own certificate is what you're restoring), restart the container directly on the node instead:
+
+   ```shell
+   crictl stopp $(crictl pods --name=<COMPONENT_NAME> -q)
+   ```
 
 1. Make sure the component came back up healthy:
 
