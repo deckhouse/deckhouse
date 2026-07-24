@@ -18,6 +18,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
     - name: d8imagepullpolicy
@@ -64,3 +76,29 @@ spec:
                   - name: nginx
                     image: nginx
                     imagePullPolicy: IfNotPresent
+    - name: op-controller-deployment
+      gatorBlock: op-controller-deployment
+      defaultObjectBase: ""
+      template: ../../templates/operation/image-pull-policy.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        name: controller-disallowed-pull-policy
+        violations: "yes"
+        assertionMessage: ''
+        fields:
+        - path: spec.template.spec.containers[].imagePullPolicy
+          scenario: negative
+        object:
+          base: admissionDeployment
+          merge:
+            metadata:
+              name: controller-disallowed-pull-policy
+            spec:
+              template:
+                spec:
+                  containers:
+                  - name: nginx
+                    image: nginx
+                    imagePullPolicy: Never
+          exception: ""
+          exceptionRef: ""

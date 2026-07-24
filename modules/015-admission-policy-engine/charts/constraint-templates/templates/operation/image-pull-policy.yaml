@@ -27,14 +27,23 @@ spec:
                 - IfNotPresent
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          required := input.parameters.policy
-          container := input.review.object.spec.containers[_]
-          provided := container.imagePullPolicy
-          required != provided
-          msg := sprintf("Container <%v> in your %v <%v> has invalid pull policy: <%v>", [container.name, input.review.kind.kind, input.review.object.metadata.name, provided])
-        }
+              import data.lib.common.input_containers
+
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                required := input.parameters.policy
+                container := input_containers[_]
+                provided := object.get(container, "imagePullPolicy", "")
+                required != provided
+                msg := sprintf("Container <%v> in your %v <%v> has invalid pull policy: <%v>", [container.name, input.review.kind.kind, input.review.object.metadata.name, provided])
+              }

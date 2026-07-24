@@ -19,6 +19,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
     securityPolicyException:
       document:
         apiVersion: deckhouse.io/v1alpha1
@@ -717,3 +729,32 @@ spec:
                           - NET_ADMIN
                         drop:
                           - ALL
+    - name: pss-controller-deployment
+      gatorBlock: pss-controller-deployment
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        name: controller-allowed-capability
+        violations: "no"
+        assertionMessage: ''
+        fields:
+        - path: spec.template.spec.containers[].securityContext.capabilities.add
+          scenario: positive
+        object:
+          base: admissionDeployment
+          merge:
+            metadata:
+              name: controller-allowed-capability
+            spec:
+              template:
+                spec:
+                  containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                        - NET_BIND_SERVICE
+          exception: ""
+          exceptionRef: ""

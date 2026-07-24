@@ -18,6 +18,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
     - name: d8priorityclass
@@ -70,3 +82,29 @@ spec:
                 containers:
                   - name: nginx
                     image: nginx
+    - name: op-controller-deployment
+      gatorBlock: op-controller-deployment
+      defaultObjectBase: ""
+      template: ../../templates/operation/priority-class.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        name: controller-disallowed-priority-class
+        violations: "yes"
+        assertionMessage: ''
+        fields:
+        - path: spec.template.spec.priorityClassName
+          scenario: negative
+        object:
+          base: admissionDeployment
+          merge:
+            metadata:
+              name: controller-disallowed-priority-class
+            spec:
+              template:
+                spec:
+                  priorityClassName: invalid
+                  containers:
+                  - name: nginx
+                    image: nginx
+          exception: ""
+          exceptionRef: ""

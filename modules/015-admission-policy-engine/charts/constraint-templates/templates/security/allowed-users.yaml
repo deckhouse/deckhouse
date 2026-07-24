@@ -147,13 +147,15 @@ spec:
               import data.lib.exception.path_value_resolved
               import data.lib.exception.resolve_spe_for_container
               import data.lib.exception.resolve_spe_from_labels
+              import data.lib.common.pod_spec
+              import data.lib.common.input_containers
               import data.lib.range.is_in_any_range
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 fields := ["runAsUser", "runAsGroup", "supplementalGroups", "fsGroup"]
                 field := fields[_]
-                container := review_containers[_]
+                container := input_containers[_]
                 msg := get_type_violation(field, container)
               }
 
@@ -172,21 +174,21 @@ spec:
               # RunAsUser
               get_user_violation(params, container) := msg if {
                 rule := params.rule
-                provided_user := get_field_value("runAsUser", container, review_pod_spec)
+                provided_user := get_field_value("runAsUser", container, pod_spec)
                 not accept_users(rule, provided_user)
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := sprintf("Actual runAsUser: %v", [provided_user])
                 labels := object.get(input.review.object.metadata, "labels", {})
                 namespace := object.get(input.review.object.metadata, "namespace", "")
                 spe := resolve_spe_for_container(container, labels, namespace)
-                run_as_non_root := get_field_value_or_default("runAsNonRoot", container, review_pod_spec, false)
+                run_as_non_root := get_field_value_or_default("runAsNonRoot", container, pod_spec, false)
                 not allow_user_by_spe(rule, provided_user, run_as_non_root, spe)
                 spe_ctx := run_as_user_spe_ctx(spe, provided_user, params)
                 msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
               }
 
               get_user_violation(params, container) := msg if {
-                not get_field_value("runAsUser", container, review_pod_spec)
+                not get_field_value("runAsUser", container, pod_spec)
                 params.rule == "MustRunAs"
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := "Actual runAsUser: not set"
@@ -199,8 +201,8 @@ spec:
 
               get_user_violation(params, container) := msg if {
                 params.rule == "MustRunAsNonRoot"
-                not get_field_value("runAsUser", container, review_pod_spec)
-                not get_field_value("runAsNonRoot", container, review_pod_spec)
+                not get_field_value("runAsUser", container, pod_spec)
+                not get_field_value("runAsNonRoot", container, pod_spec)
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := "Actual runAsUser: not set, runAsNonRoot: not set"
                 labels := object.get(input.review.object.metadata, "labels", {})
@@ -269,7 +271,7 @@ spec:
               # Group Options
               get_group_violation(field, params, container) := msg if {
                 rule := params.rule
-                provided_value := get_field_value(field, container, review_pod_spec)
+                provided_value := get_field_value(field, container, pod_spec)
                 not is_array(provided_value)
                 not accept_value(rule, provided_value, params.ranges)
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
@@ -280,7 +282,7 @@ spec:
               # SupplementalGroups is array value
               get_group_violation(field, params, container) := msg if {
                 rule := params.rule
-                array_value := get_field_value(field, container, review_pod_spec)
+                array_value := get_field_value(field, container, pod_spec)
                 is_array(array_value)
                 provided_value := array_value[_]
                 not accept_value(rule, provided_value, params.ranges)
@@ -290,7 +292,7 @@ spec:
               }
 
               get_group_violation(field, params, container) := msg if {
-                not get_field_value(field, container, review_pod_spec)
+                not get_field_value(field, container, pod_spec)
                 params.rule == "MustRunAs"
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
                 actual_value := sprintf("Actual %v: not set", [field])
@@ -342,21 +344,4 @@ spec:
                 out := object.get(pod_ctx, field, default_val)
               }
 
-              review_pod_spec := object.get(
-                object.get(
-                  object.get(input.review.object, "spec", {}),
-                  "template",
-                  {},
-                ),
-                "spec",
-                input.review.object.spec,
-              )
-
-              review_containers := array.concat(
-                array.concat(
-                  object.get(review_pod_spec, "containers", []),
-                  object.get(review_pod_spec, "initContainers", []),
-                ),
-                object.get(review_pod_spec, "ephemeralContainers", []),
-              )
 

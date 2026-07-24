@@ -33,34 +33,34 @@ spec:
                 description: "Shell command."
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+            rego: |
+              package d8.security_policies
 
-        import future.keywords.in
+              import future.keywords.in
+              import data.lib.common.input_containers
 
-        all_containers[c] {
-          c := object.get(input.review.object.spec, "containers", [])[_]
-        }
+              all_containers contains c if {
+                c := input_containers[_]
+              }
 
-        all_containers[c] {
-          c := object.get(input.review.object.spec, "initContainers", [])[_]
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                c := all_containers[_]
+                object.get(c, "stdin", false) == true
+                msg := "Interactive exec is not permitted."
+              }
 
-        all_containers[c] {
-          c := object.get(input.review.object.spec, "ephemeralContainers", [])[_]
-        }
-
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          c := all_containers[_]
-          object.get(c, "stdin", false) == true
-          msg := "Interactive exec is not permitted."
-        }
-
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          c := all_containers[_]
-          some command in object.get(c, "command", [])
-          not command in object.get(input.parameters, "allowedCommands", [])
-          msg := sprintf("Only %v commands are allowed.", [object.get(input.parameters, "allowedCommands", [])])
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                c := all_containers[_]
+                some command in object.get(c, "command", [])
+                not command in object.get(input.parameters, "allowedCommands", [])
+                msg := sprintf("Only %v commands are allowed.", [object.get(input.parameters, "allowedCommands", [])])
+              }

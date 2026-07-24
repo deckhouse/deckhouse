@@ -19,6 +19,18 @@ spec:
           containers:
             - image: nginx
               name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
     - name: security-policy
@@ -104,3 +116,32 @@ spec:
                 volumes:
                   - emptyDir: {}
                     name: demo-vol
+    - name: pss-controller-deployment
+      gatorBlock: pss-controller-deployment
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        name: controller-disallowed-flexvolume
+        violations: "yes"
+        assertionMessage: ''
+        fields:
+        - path: spec.template.spec.volumes[].flexVolume
+          scenario: negative
+        object:
+          base: admissionDeployment
+          merge:
+            metadata:
+              name: controller-disallowed-flexvolume
+            spec:
+              template:
+                spec:
+                  volumes:
+                  - name: test
+                    flexVolume:
+                      driver: invalid/driver
+                  containers:
+                  - image: nginx
+                    name: nginx
+          exception: ""
+          exceptionRef: ""
