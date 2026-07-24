@@ -6,9 +6,6 @@
   id: ccm-openstack
   versions:
     - condition:
-        k8s: "1.31"
-      version: v1.31.4
-    - condition:
         k8s: "1.32"
       version: v1.32.1
     - condition:
@@ -32,9 +29,6 @@
   id: csi-openstack
   versions:
     - condition:
-        k8s: "1.31"
-      version: v1.31.2
-    - condition:
         k8s: "1.32"
       version: v1.32.1
     - condition:
@@ -45,7 +39,7 @@
       version: v1.34.1
     - condition:
         k8s: "1.35"
-      version: v1.34.1
+      version: v1.35.0
     - condition:
         k8s: "1.36"
       version: v1.36.0

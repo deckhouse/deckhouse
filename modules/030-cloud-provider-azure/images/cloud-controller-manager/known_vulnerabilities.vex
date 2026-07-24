@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-0096a7cb4e1a22e002f4fa1e1a7f8b63f58c9ab8384a9aeb96e4afd5b4b7528d",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp небезопасен по дизайну и не рекомендуется к использованию. Образ azure cloud-controller-manager не использует и не вызывает функциональность OpenPGP — данный код недостижим в артефакте, поэтому уязвимость не эксплуатируется.",
+      "timestamp": "2026-07-24T09:07:46.779917Z"
+    }
+  ],
+  "timestamp": "2026-07-24T09:07:46Z"
+}

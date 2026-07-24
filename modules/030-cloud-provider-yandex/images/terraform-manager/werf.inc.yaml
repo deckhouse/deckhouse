@@ -65,3 +65,5 @@ shell:
   - strip /terraform-provider-yandex
   - chmod -R 755 /terraform-provider-yandex
   - chown 64535:64535 /terraform-provider-yandex
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

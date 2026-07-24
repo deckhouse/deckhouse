@@ -1,5 +1,5 @@
 {{- $version := "v0.6.4" }}
-{{- $version_common := "v0.8.0" }}
+{{- $version_common := "v0.8.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -50,3 +50,5 @@ shell:
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caphc-controller-manager cmd/main.go
   - chown 64535:64535 /caphc-controller-manager
   - chmod 0700 /caphc-controller-manager
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

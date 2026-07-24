@@ -6,9 +6,6 @@
   id: ccm-vsphere
   versions:
     - condition:
-        k8s: "1.31"
-      version: v1.31.1
-    - condition:
         k8s: "1.32"
       version: v1.32.3
     - condition:
@@ -31,9 +28,6 @@
   license: Apache License 2.0
   id: csi-vsphere
   versions:
-    - condition:
-        k8s: "1.31"
-      version: v3.5.1
     - condition:
         k8s: "1.32"
       version: v3.6.2

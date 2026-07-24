@@ -52,3 +52,5 @@ shell:
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-provider-for-cloud-director/release.Version={{ $version }}" -o bin/cloud-provider-for-cloud-director cmd/ccm/main.go
   - chown 64535:64535 bin/cloud-provider-for-cloud-director
   - chmod 0755 bin/cloud-provider-for-cloud-director
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

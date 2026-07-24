@@ -66,3 +66,5 @@ shell:
   - strip /terraform-provider-aws
   - chmod -R 755 /terraform-provider-aws
   - chown 64535:64535 /terraform-provider-aws
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

@@ -3,4 +3,4 @@ Bump ovirt client to v3 with reconnect fix and fixes for bugs in the driver
 
 ## 002-go-mod.patch
 
-Bump deps to fix CVEs
+Bump go.mod dependencies to fix known CVEs.
