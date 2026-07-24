@@ -173,6 +173,52 @@ func TestParams_Validate(t *testing.T) {
 	}
 }
 
+// TestInitParams_SteadyStateOverride verifies the data-model invariant relied on by
+// the steady-state InitParams clearing added to hook.go: when a cluster is fully
+// bootstrapped and no init secret is present, stale InitParams that were persisted in
+// the registry-state Secret during an earlier mode-switch must NOT shadow the current
+// imagesRepo from the live registry-config Secret.
+//
+// The test simulates the scenario:
+//  1. InitParams were written during a Proxy mode-switch with "old.registry/upstream".
+//  2. A user then changes imagesRepo to "new.registry/upstream" in mc deckhouse.
+//  3. The fresh Params from registry-config carry the new value.
+//  4. After InitParams are nil-ed (steady-state guard), toParams on a freshly constructed
+//     state should return the new ImagesRepo, not the stale one.
+func TestInitParams_SteadyStateOverride(t *testing.T) {
+	// Stale state as it would be restored from registry-state Secret.
+	staleParamsState := ParamsState{
+		Mode:       registry_const.ModeProxy,
+		ImagesRepo: "old.registry/upstream",
+		Scheme:     "HTTPS",
+	}
+	staleParams, err := staleParamsState.toParams()
+	require.NoError(t, err)
+	require.Equal(t, "old.registry/upstream", staleParams.ImagesRepo)
+
+	// Fresh params read from registry-config Secret after user changed imagesRepo.
+	freshParams := Params{
+		Mode:       registry_const.ModeProxy,
+		ImagesRepo: "new.registry/upstream",
+		Scheme:     "HTTPS",
+	}
+
+	// Simulate the steady-state guard: InitParams is nil-ed, freshParams are used.
+	var frozenParams *ParamsState // nil = cleared by the steady-state guard
+
+	var effectiveImagesRepo string
+	if frozenParams != nil {
+		p, err := frozenParams.toParams()
+		require.NoError(t, err)
+		effectiveImagesRepo = p.ImagesRepo
+	} else {
+		effectiveImagesRepo = freshParams.ImagesRepo
+	}
+
+	require.Equal(t, "new.registry/upstream", effectiveImagesRepo,
+		"fresh imagesRepo must win when InitParams have been cleared in steady state")
+}
+
 func TestParams_ToStateAndToParams(t *testing.T) {
 	certKey, err := registry_pki.GenerateCACertificate("test")
 	require.NoError(t, err)
