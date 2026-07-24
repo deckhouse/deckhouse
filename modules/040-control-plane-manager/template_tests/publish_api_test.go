@@ -96,6 +96,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 		hec.ValuesSet("global.discovery.kubernetesCA", "plainstring")
+		hec.ValuesSet("global.discovery.clusterDomain", "cluster.local")
 		hec.ValuesSet("controlPlaneManager.internal.effectiveKubernetesVersion", "1.32")
 		hec.ValuesSet("controlPlaneManager.internal.authn.enableBasicAuth", true)
 		hec.ValuesSet("controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA", "publishedapica")
@@ -197,7 +198,7 @@ tls.key: KEYKEYKEY
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
 				Equal("1.1.1.1,192.168.0.0/24"))
 			Expect(hec.KubernetesResource("Service", "kube-system", "basic-auth-proxy").Field("spec.type").String()).To(Equal("ExternalName"))
-			Expect(hec.KubernetesResource("Service", "kube-system", "basic-auth-proxy").Field("spec.externalName").String()).To(Equal("basic-auth-proxy.d8-user-authn.svc"))
+			Expect(hec.KubernetesResource("Service", "kube-system", "basic-auth-proxy").Field("spec.externalName").String()).To(Equal("basic-auth-proxy.d8-user-authn.svc.cluster.local"))
 
 		})
 	})
