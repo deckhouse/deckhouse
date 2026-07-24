@@ -549,7 +549,19 @@
         Possible reasons:
          - The Module image is corrupted.
 
-        To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
+        To resolve this issue, ensure that the {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid.
+
+        Check which versions of the '{{ $labels.module }}' Module are available in the registry:
+
+        ```bash
+        d8 cr ls {{ $labels.registry }}/{{ $labels.module }}/release
+        ```
+
+        For a private registry, pass the credentials from the corresponding ModuleSource:
+
+        ```bash
+        d8 cr ls -u <USERNAME> -p <PASSWORD> {{ $labels.registry }}/{{ $labels.module }}/release
+        ```
 
         To get the exact error, check Deckhouse logs:
         `d8 k -n d8-system logs deploy/deckhouse | grep "failed to download module"`
