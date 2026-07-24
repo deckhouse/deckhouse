@@ -118,6 +118,8 @@ spec:
           securityContext:
             {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
             privileged: true
+            {{- else }}
+            allowPrivilegeEscalation: false
             {{- end }}
             readOnlyRootFilesystem: true
             runAsNonRoot: false
