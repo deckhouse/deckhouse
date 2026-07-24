@@ -31,6 +31,16 @@ rules:
       - get
       - list
       - watch
+  # Allow getting unmasked sensitive data in spec.registry (dockerCfg, login, password).
+  # Needed to authenticate to a private registry when serving package icons.
+  - apiGroups:
+      - "deckhouse.io"
+    resources:
+      - packagerepositories/sensitive
+    verbs:
+      - get
+      - list
+      - watch
   - apiGroups:
       - authentication.k8s.io
     resources:
