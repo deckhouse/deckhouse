@@ -49,6 +49,9 @@ func TestNodeExtensions(t *testing.T) {
 		"drbd": "sha256:aaa",
 		"foo":  "sha256:bbb",
 	}
+	moduleSourceRepos := map[string]string{
+		"deckhouse": "dev-registry.deckhouse.io/sys/deckhouse-oss/modules",
+	}
 
 	tests := []struct {
 		name           string
@@ -70,10 +73,11 @@ func TestNodeExtensions(t *testing.T) {
 			node:   nodeWith(nil),
 			ngName: "worker",
 			wantExtensions: []internalv1alpha1.Extension{{
-				Name:        "drbd",
-				Repository:  "registry.example.com/deckhouse/sysext/drbd",
-				Digest:      "sha256:aaa",
-				RequestedBy: "drbd",
+				Name:           "drbd",
+				Repository:     "registry.example.com",
+				AdditionalPath: "deckhouse/sysext",
+				Digest:         "sha256:aaa",
+				RequestedBy:    "drbd",
 			}},
 		},
 		{
@@ -100,10 +104,11 @@ func TestNodeExtensions(t *testing.T) {
 			node:   nodeWith(map[string]string{"storage": "drbd"}),
 			ngName: "worker",
 			wantExtensions: []internalv1alpha1.Extension{{
-				Name:        "drbd",
-				Repository:  "registry.example.com/deckhouse/sysext/drbd",
-				Digest:      "sha256:aaa",
-				RequestedBy: "drbd",
+				Name:           "drbd",
+				Repository:     "registry.example.com",
+				AdditionalPath: "deckhouse/sysext",
+				Digest:         "sha256:aaa",
+				RequestedBy:    "drbd",
 			}},
 		},
 		{
@@ -129,10 +134,11 @@ func TestNodeExtensions(t *testing.T) {
 			node:   nodeWith(nil),
 			ngName: "worker",
 			wantExtensions: []internalv1alpha1.Extension{{
-				Name:        "drbd",
-				Repository:  "registry.example.com/deckhouse/sysext/drbd",
-				Digest:      "sha256:aaa",
-				RequestedBy: "csi-drbd",
+				Name:           "drbd",
+				Repository:     "registry.example.com",
+				AdditionalPath: "deckhouse/sysext",
+				Digest:         "sha256:aaa",
+				RequestedBy:    "csi-drbd",
 			}},
 		},
 		{
@@ -172,10 +178,11 @@ func TestNodeExtensions(t *testing.T) {
 			node:   nodeWith(nil),
 			ngName: "worker",
 			wantExtensions: []internalv1alpha1.Extension{{
-				Name:        "drbd",
-				Repository:  "registry.example.com/deckhouse/sysext/drbd",
-				Digest:      "sha256:aaa",
-				RequestedBy: "first",
+				Name:           "drbd",
+				Repository:     "registry.example.com",
+				AdditionalPath: "deckhouse/sysext",
+				Digest:         "sha256:aaa",
+				RequestedBy:    "first",
 			}},
 		},
 		{
@@ -201,8 +208,8 @@ func TestNodeExtensions(t *testing.T) {
 			node:   nodeWith(nil),
 			ngName: "worker",
 			wantExtensions: []internalv1alpha1.Extension{
-				{Name: "drbd", Repository: "registry.example.com/deckhouse/sysext/drbd", Digest: "sha256:aaa", RequestedBy: "drbd"},
-				{Name: "foo", Repository: "registry.example.com/deckhouse/sysext/foo", Digest: "sha256:bbb", RequestedBy: "foo"},
+				{Name: "drbd", Repository: "registry.example.com", AdditionalPath: "deckhouse/sysext", Digest: "sha256:aaa", RequestedBy: "drbd"},
+				{Name: "foo", Repository: "registry.example.com", AdditionalPath: "deckhouse/sysext", Digest: "sha256:bbb", RequestedBy: "foo"},
 			},
 			wantModules: []internalv1alpha1.KernelModule{
 				{Name: "drbd", Params: []string{"usermode_helper=disabled"}},
@@ -210,11 +217,39 @@ func TestNodeExtensions(t *testing.T) {
 				{Name: "foo_mod"},
 			},
 		},
+		{
+			name: "module image resolves via ModuleSource repo with a pinned digest",
+			ners: []deckhousev1alpha1.NodeExtensionRequest{
+				ner("sds-drbd", deckhousev1alpha1.NodeExtensionRequestSpec{
+					ImageTemplate: "${MODULE_SOURCE_REPO}/sds-replicated-volume/drbd@sha256:cafe",
+				}, map[string]string{moduleNameLabel: "sds-replicated-volume"}),
+			},
+			node:   nodeWith(nil),
+			ngName: "worker",
+			wantExtensions: []internalv1alpha1.Extension{{
+				Name:           "drbd",
+				Repository:     "dev-registry.deckhouse.io/sys/deckhouse-oss/modules",
+				AdditionalPath: "sds-replicated-volume",
+				Digest:         "sha256:cafe",
+				RequestedBy:    "sds-replicated-volume",
+			}},
+		},
+		{
+			name: "unknown ModuleSource leaves the placeholder unresolved and drops the request",
+			ners: []deckhousev1alpha1.NodeExtensionRequest{
+				ner("drbd-sysext", deckhousev1alpha1.NodeExtensionRequestSpec{
+					ImageTemplate: "${MODULE_SOURCE_REPO}/sds-replicated-volume/drbd-sysext@sha256:cafe",
+					Params:        map[string]string{"MODULE_SOURCE": "nonexistent"},
+				}, nil),
+			},
+			node:   nodeWith(nil),
+			ngName: "worker",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			extensions, modules := nodeExtensions(tt.ners, tt.node, tt.ngName, digests, testKernelVersion)
+			extensions, modules := nodeExtensions(tt.ners, tt.node, tt.ngName, digests, testKernelVersion, moduleSourceRepos)
 			if !reflect.DeepEqual(extensions, tt.wantExtensions) {
 				t.Fatalf("extensions = %#v, want %#v", extensions, tt.wantExtensions)
 			}

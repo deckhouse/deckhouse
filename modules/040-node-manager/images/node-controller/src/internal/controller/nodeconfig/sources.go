@@ -29,6 +29,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
@@ -60,6 +62,12 @@ type clusterInputs struct {
 	// KernelVersion fills the reserved ${KERNEL_VERSION} placeholder in a
 	// request's image template.
 	KernelVersion string
+	// ModuleSourceRepos maps a ModuleSource name to its registry repo
+	// (spec.registry.repo, e.g. dev-registry.deckhouse.io/sys/deckhouse-oss/modules).
+	// NER targets module images, which live under a ModuleSource's repo, so the
+	// reserved ${MODULE_SOURCE_REPO} placeholder is resolved from here — a request
+	// names the module and image, not the cluster's registry.
+	ModuleSourceRepos map[string]string
 }
 
 // sourceReader reads cluster state. It falls back to the cached client when no
@@ -115,7 +123,33 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	}
 	in.NodeExtensionRequests = ners
 
+	in.ModuleSourceRepos = s.readModuleSourceRepos(ctx)
+
 	return in, nil
+}
+
+// moduleSourceListGVK identifies the cluster-scoped ModuleSource resource. Its
+// type is not vendored into node-controller, so it is read unstructured.
+var moduleSourceListGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleSourceList"}
+
+// readModuleSourceRepos lists ModuleSources and maps each name to its registry
+// repo. NER resolves ${MODULE_SOURCE_REPO} from this map. Absent or unreadable
+// sources are tolerated: a request that does not use the placeholder is
+// unaffected, and one that does is dropped when its repo cannot be resolved.
+func (s *sourceReader) readModuleSourceRepos(ctx context.Context) map[string]string {
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(moduleSourceListGVK)
+	if err := s.reader().List(ctx, list); err != nil {
+		return nil
+	}
+	repos := make(map[string]string, len(list.Items))
+	for i := range list.Items {
+		repo, _, _ := unstructured.NestedString(list.Items[i].Object, "spec", "registry", "repo")
+		if repo != "" {
+			repos[list.Items[i].GetName()] = repo
+		}
+	}
+	return repos
 }
 
 // readNodeExtensionRequests lists the extension requests. They are additive, so
