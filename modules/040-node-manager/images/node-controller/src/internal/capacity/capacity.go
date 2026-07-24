@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,8 +22,6 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-
-	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
 var (
@@ -31,12 +29,19 @@ var (
 	ErrNotFound    = errors.New("Instance Type not found")
 )
 
-type InstanceTypesCatalog struct {
-	Types map[string]v1alpha1.InstanceType
+type InstanceType struct {
+	Name     string            `json:"name"`
+	CPU      resource.Quantity `json:"cpu"`
+	Memory   resource.Quantity `json:"memory"`
+	RootDisk resource.Quantity `json:"rootDisk"`
 }
 
-func NewInstanceTypesCatalog(types []v1alpha1.InstanceType) *InstanceTypesCatalog {
-	tt := make(map[string]v1alpha1.InstanceType, len(types))
+type InstanceTypesCatalog struct {
+	Types map[string]InstanceType
+}
+
+func NewInstanceTypesCatalog(types []InstanceType) *InstanceTypesCatalog {
+	tt := make(map[string]InstanceType, len(types))
 	for _, t := range types {
 		tt[t.Name] = t
 	}
@@ -46,7 +51,7 @@ func NewInstanceTypesCatalog(types []v1alpha1.InstanceType) *InstanceTypesCatalo
 	}
 }
 
-func (c *InstanceTypesCatalog) Get(ic instanceClass) (*v1alpha1.InstanceType, error) {
+func (c *InstanceTypesCatalog) Get(ic instanceClass) (*InstanceType, error) {
 	iType := ic.GetType()
 	if iType == "" {
 		return nil, ErrInvalidSpec
@@ -57,10 +62,6 @@ func (c *InstanceTypesCatalog) Get(ic instanceClass) (*v1alpha1.InstanceType, er
 		return &inst, nil
 	}
 
-	// TODO remove after 1.48
-	// we cannot remove capacity now
-	// because InstanceTypesCatalog may not have time for discovery
-	// and we get empty catalog, machine deployment will be changed
 	capacity := ic.GetCapacity()
 	if capacity != nil {
 		return capacity.ToInstanceType(), nil
@@ -75,8 +76,8 @@ type Capacity struct {
 	Memory resource.Quantity `json:"memory,omitempty"`
 }
 
-func (c *Capacity) ToInstanceType() *v1alpha1.InstanceType {
-	return &v1alpha1.InstanceType{
+func (c *Capacity) ToInstanceType() *InstanceType {
+	return &InstanceType{
 		CPU:      c.CPU.DeepCopy(),
 		Memory:   c.Memory.DeepCopy(),
 		RootDisk: resource.MustParse("0"),
@@ -88,7 +89,7 @@ type vsphereInstanceClass struct {
 	Memory int `json:"memory"`
 }
 
-func (vic vsphereInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (vic vsphereInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
 	cpuStr := strconv.FormatInt(int64(vic.CPU), 10)
 	memStr := strconv.FormatInt(int64(vic.Memory), 10)
 
@@ -101,7 +102,7 @@ func (vic vsphereInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alp
 		return nil, err
 	}
 
-	return &v1alpha1.InstanceType{
+	return &InstanceType{
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
@@ -121,7 +122,7 @@ func (aic *awsInstanceClass) GetType() string {
 	return aic.InstanceType
 }
 
-func (aic *awsInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (aic *awsInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
 	return catalog.Get(aic)
 }
 
@@ -138,7 +139,7 @@ func (aic *azureInstanceClass) GetType() string {
 	return aic.MachineSize
 }
 
-func (aic *azureInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (aic *azureInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
 	return catalog.Get(aic)
 }
 
@@ -155,7 +156,7 @@ func (aic *gcpInstanceClass) GetType() string {
 	return aic.MachineType
 }
 
-func (aic *gcpInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (aic *gcpInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
 	return catalog.Get(aic)
 }
 
@@ -164,7 +165,7 @@ type yandexInstanceClass struct {
 	Memory int `json:"memory"`
 }
 
-func (yic yandexInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (yic yandexInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
 	cpuStr := strconv.FormatInt(int64(yic.Cores), 10)
 	memStr := strconv.FormatInt(int64(yic.Memory), 10)
 
@@ -177,7 +178,7 @@ func (yic yandexInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alph
 		return nil, err
 	}
 
-	return &v1alpha1.InstanceType{
+	return &InstanceType{
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
@@ -197,7 +198,7 @@ func (aic *openStackInstanceClass) GetType() string {
 	return aic.FlavorName
 }
 
-func (aic *openStackInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (aic *openStackInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
 	return catalog.Get(aic)
 }
 
@@ -213,7 +214,7 @@ func (aic *vcdInstanceClass) GetType() string {
 	return aic.SizingPolicy
 }
 
-func (aic *vcdInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (aic *vcdInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
 	return catalog.Get(aic)
 }
 
@@ -222,7 +223,7 @@ type zvirtInstanceClass struct {
 	Memory int `json:"memory"`
 }
 
-func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
 	cpuStr := strconv.FormatInt(int64(zic.Cores), 10)
 	memStr := strconv.FormatInt(int64(zic.Memory), 10)
 
@@ -235,7 +236,7 @@ func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha
 		return nil, err
 	}
 
-	return &v1alpha1.InstanceType{
+	return &InstanceType{
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
@@ -247,7 +248,7 @@ type dynamixInstanceClass struct {
 	Memory int `json:"memory"`
 }
 
-func (d dynamixInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (d dynamixInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
 	cpuStr := strconv.FormatInt(int64(d.Cores), 10)
 	memStr := strconv.FormatInt(int64(d.Memory), 10)
 
@@ -260,7 +261,7 @@ func (d dynamixInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha
 		return nil, err
 	}
 
-	return &v1alpha1.InstanceType{
+	return &InstanceType{
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
@@ -279,7 +280,7 @@ func (c *huaweiCloudInstanceClass) GetType() string {
 	return c.FlavorName
 }
 
-func (c *huaweiCloudInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (c *huaweiCloudInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
 	return catalog.Get(c)
 }
 
@@ -295,7 +296,7 @@ type dvpInstanceClass struct {
 	} `json:"virtualMachine"`
 }
 
-func (d dvpInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (d dvpInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
 	cpuStr := strconv.FormatInt(int64(d.VirtualMachine.CPU.Cores), 10)
 
 	cpuRes, err := resource.ParseQuantity(cpuStr)
@@ -308,7 +309,7 @@ func (d dvpInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.In
 		return nil, err
 	}
 
-	return &v1alpha1.InstanceType{
+	return &InstanceType{
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
@@ -328,7 +329,7 @@ func (aic *testInstanceClass) GetType() string {
 	return aic.Type
 }
 
-func (aic *testInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func (aic *testInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
 	return catalog.Get(aic)
 }
 
@@ -339,11 +340,11 @@ type instanceClass interface {
 
 // extract capacity from defined InstanceClass
 type capacityExtractor interface {
-	ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error)
+	ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error)
 }
 
 // CalculateNodeTemplateCapacity calculates capacity of the node based on InstanceClass and it's spec
-func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec interface{}, catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec interface{}, catalog *InstanceTypesCatalog) (*InstanceType, error) {
 	var extractor capacityExtractor
 
 	switch instanceClassName {
@@ -398,8 +399,6 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 		return nil, errors.New("Unknown cloud provider")
 	}
 
-	// unless we don't have structs for InstanceClasses this is the easiest way to get fields from abstract spec
-	// trying to use type assertion is much uglier, don't try to use it
 	data, _ := json.Marshal(instanceClassSpec)
 	err := json.Unmarshal(data, extractor)
 	if err != nil {

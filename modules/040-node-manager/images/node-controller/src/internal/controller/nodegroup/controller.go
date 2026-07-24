@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -40,10 +41,15 @@ import (
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	ngconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditions"
 	calcconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditionscalc"
+	derivedstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	nodestatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/node_status"
 	processedstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/processed_status"
 	"github.com/deckhouse/node-controller/internal/register"
 )
+
+// statusResyncInterval bounds staleness of status inputs the controller does not watch
+// (cluster configuration, InstanceClasses); the For-predicate suppresses the manager resync.
+const statusResyncInterval = 10 * time.Minute
 
 func init() {
 	register.RegisterController("nodegroup-status", &v1.NodeGroup{}, &Status{})
@@ -51,7 +57,23 @@ func init() {
 
 type Status struct {
 	register.Base
+	apiReader        client.Reader
 	conditionService ngconditions.Service
+}
+
+func (r *Status) Setup(mgr ctrl.Manager) error {
+	r.apiReader = mgr.GetAPIReader()
+	return nil
+}
+
+// ForPredicates: the status is derived from the NodeGroup spec plus Node/Machine/MD state
+// (watched separately below); the controller's own status writes must not re-enqueue the
+// NodeGroup — during a burst that echo multiplied reconciles ~40x per NodeGroup.
+func (r *Status) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)}
 }
 
 func (r *Status) SetupWatches(w register.Watcher) {
@@ -102,15 +124,23 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		"instances", cloudResult.Instances,
 	)
 
+	ds := derivedstatus.Service{Client: r.Client, Reader: r.apiReader}
+	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng)
+	if err != nil {
+		logger.Error(err, "failed to compute derived nodegroup status", "nodeGroup", ng.Name)
+		return ctrl.Result{}, err
+	}
+	validationError := validationResult.Error
+
 	var conditionErrors []string
-	if ng.Status.Error != "" {
-		conditionErrors = append(conditionErrors, ng.Status.Error)
+	if validationError != "" {
+		conditionErrors = append(conditionErrors, validationError)
 	}
 	if cloudResult.LatestError != "" {
 		conditionErrors = append(conditionErrors, cloudResult.LatestError)
 	}
 
-	eventMsg := fmt.Sprintf("%s %s", ng.Status.Error, cloudResult.LatestError)
+	eventMsg := fmt.Sprintf("%s %s", validationError, cloudResult.LatestError)
 	eventMsg = strings.TrimSpace(eventMsg)
 	if len(eventMsg) > 1024 {
 		eventMsg = eventMsg[:1024]
@@ -145,6 +175,8 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	ng.Status.Nodes = nodeResult.NodesCount
 	ng.Status.Ready = nodeResult.ReadyCount
 	ng.Status.UpToDate = nodeResult.UpToDateCount
+	ng.Status.Error = validationError
+	ng.Status.KubernetesVersion = derivedResult.KubernetesVersion
 	ng.Status.Conditions = newConditions
 	ng.Status.ConditionSummary = conditionSummary
 
@@ -162,6 +194,17 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		ng.Status.Max = 0
 		ng.Status.Instances = 0
 		ng.Status.LastMachineFailures = nil
+	}
+
+	// Persist status.engine, which get_crds used to write and which the
+	// MachineDeployment reconciler gates on. Only a definitive engine is
+	// written: "None" (provider info absent yet, or genuinely engineless) is
+	// left empty so a later reconcile — re-triggered by the cloud-provider
+	// secret watch — can fill it, instead of getting stuck on a sticky "None".
+	if ng.Status.Engine == "" {
+		if engine := derivedResult.Engine; engine != "" && engine != "None" {
+			ng.Status.Engine = engine
+		}
 	}
 
 	if !apiequality.Semantic.DeepEqual(statusBefore, ng.Status) {
@@ -183,5 +226,8 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	}
 
 	logger.V(1).Info("updated nodegroup status", "name", ng.Name, "nodes", nodeResult.NodesCount, "ready", nodeResult.ReadyCount, "upToDate", nodeResult.UpToDateCount)
-	return ctrl.Result{}, nil
+	// The For-predicate filters this controller's own status-write echoes, which also
+	// suppresses the manager resync; the periodic requeue keeps unwatched status inputs
+	// (cluster configuration, a later-created InstanceClass) from going stale forever.
+	return ctrl.Result{RequeueAfter: statusResyncInterval}, nil
 }

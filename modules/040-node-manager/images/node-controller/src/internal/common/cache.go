@@ -52,6 +52,14 @@ func CacheOptions() (cache.Options, client.Options) {
 	)
 	machineNSSecretSelector := labels.NewSelector().Add(*machineNSSecretReq)
 
+	dnsServiceReq, _ := labels.NewRequirement("k8s-app", selection.In, []string{"kube-dns", "coredns"})
+	dnsServiceSelector := labels.NewSelector().Add(*dnsServiceReq)
+
+	apiserverPodSelector := labels.SelectorFromSet(labels.Set{
+		"component": "kube-apiserver",
+		"tier":      "control-plane",
+	})
+
 	cacheOpts := cache.Options{
 		DefaultTransform: func(obj interface{}) (interface{}, error) {
 			stripNodeHeavyFields(obj)
@@ -66,26 +74,63 @@ func CacheOptions() (cache.Options, client.Options) {
 					MachineNamespace: {
 						LabelSelector: machineNSSecretSelector,
 					},
+					// Unfiltered on purpose: the NodeGroup webhook and the derived-status
+					// service read d8-cluster-configuration (and the provider configs) on
+					// every NodeGroup write, and a name FieldSelector can list only one
+					// secret — the rest became live GETs on the apiserver hot path (and the
+					// webhook's cached reads silently missed). All kube-system secrets are
+					// ~140KiB total, so caching them all is cheaper than one live GET.
+					"kube-system": {},
+				},
+			},
+			&corev1.Pod{}: {
+				Namespaces: map[string]cache.Config{
+					"kube-system": {LabelSelector: apiserverPodSelector},
+				},
+			},
+			&corev1.Service{}: {
+				Namespaces: map[string]cache.Config{
+					"kube-system": {LabelSelector: dnsServiceSelector},
+				},
+			},
+			&corev1.ConfigMap{}: {
+				Namespaces: map[string]cache.Config{
 					"kube-system": {
-						FieldSelector: fields.SelectorFromSet(fields.Set{
-							"metadata.name": "d8-node-manager-cloud-provider",
-						}),
+						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-cluster-uuid"}),
+					},
+					"d8-system": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},
 				},
 			},
 			&mcmv1alpha1.Machine{}: machineNS,
 			&capiv1beta2.Machine{}: machineNS,
+			// NOTE: ByObject keys are mapped by GVK, so a typed and an unstructured key of
+			// the same kind (e.g. corev1.Secret and an unstructured v1/Secret) COLLIDE: map
+			// iteration order decides which scope wins and the loser's reads break
+			// non-deterministically. Never add per-representation Secret entries here.
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"):                 machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):                     machineNS,
-			&capiv1beta2.MachineDeployment{}:                                                        machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "Cluster"):                               machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineHealthCheck"):                    machineNS,
 			newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane"): machineNS,
+			// The NodeGroup webhook reads only ModuleConfig "global"; without this scope the
+			// lazily-created informer would watch and cache every ModuleConfig cluster-wide.
+			newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig"): {
+				Field: fields.SelectorFromSet(fields.Set{"metadata.name": "global"}),
+			},
 		},
 	}
 
 	clientOpts := client.Options{
 		Cache: &client.CacheOptions{
+			// Serve unstructured reads from informers too: InstanceClass objects and the
+			// InstanceTypesCatalog are read as unstructured on every derived-status pass,
+			// and the default (uncached) client turns each of them into a live apiserver
+			// GET/List — hundreds of requests during a NodeGroup burst. Informers keep the
+			// data watch-fresh; wide unstructured kinds (MachineDeployment, Cluster, ...)
+			// are already namespace/label-scoped via ByObject above.
+			Unstructured: true,
 			DisableFor: []client.Object{
 				&corev1.Pod{},
 				&coordinationv1.Lease{},
@@ -102,7 +147,7 @@ func stripNodeHeavyFields(obj interface{}) {
 		return
 	}
 	node.Status.Images = nil
-	node.Status.NodeInfo = corev1.NodeSystemInfo{}
+	node.Status.NodeInfo = corev1.NodeSystemInfo{KubeletVersion: node.Status.NodeInfo.KubeletVersion}
 	node.Status.Addresses = nil
 	node.Status.Capacity = nil
 	node.Status.Allocatable = nil

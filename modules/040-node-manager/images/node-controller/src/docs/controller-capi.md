@@ -1,8 +1,8 @@
 # capi
 
 **Package:** `internal/controller/capi`
-**Replaces helm templates:** `_capi_machine_deployment.tpl`, `_static_or_hybrid_machine_deployment.tpl`, `static-cluster.yaml` (v1beta2 parts)
-**Replaces hook:** `capi_set_replicas` (MCM replica scaling)
+**Replaces helm templates:** `_capi_machine_deployment.tpl`, `_static_or_hybrid_machine_deployment.tpl`, `static-cluster.yaml` (v1beta2 parts), plus the MCM `_machine_class.tpl` / `_machine_deployment.tpl` / `_static_or_hybrid_machine_template.tpl` (now rendered from disk via the `nodegroup/machineclass` package; only the MachineClass Secret stays helm-owned)
+**Replaces hooks:** `capi_set_replicas`, `machineclass_checksum_assign`, `machineclass_checksum_collect`
 
 The package registers six **independent** controllers. They do not call each other —
 each has its own primary resource, watches and reconcile loop. All share the
@@ -35,16 +35,25 @@ NodeGroup changed (or MD re-enqueues by node-group label)
   │
   ├─ NodeGroup not found? → done
   │
+  ├─ being deleted? → cleanupMachineDeployments → remove finalizer → done
+  │
+  ├─ ensureFinalizer (node-manager.deckhouse.io/capi-md-cleanup)
+  │
   ├─ nodeType == CloudEphemeral:
-  │   ├─ status.engine == CAPI  → reconcileCloudMDs
-  │   ├─ status.engine == MCM   → reconcileMCMReplicas
+  │   ├─ status.engine == CAPI  → reconcileCloudMDsRendered
+  │   ├─ status.engine == MCM   → reconcileCloudMCMs
   │   └─ else                   → skip (engine not set)
   │
   └─ nodeType == Static/CloudStatic (with staticInstances):
-      └─ reconcileStaticMD
+      └─ reconcileStaticMDRendered
 ```
 
-### reconcileCloudMDs (CAPI engine)
+On NodeGroup deletion the reconciler runs `cleanupMachineDeployments` — deletes the
+NodeGroup's CAPI and MCM MachineDeployments (and each MCM MachineDeployment's referenced
+MachineClass) — then removes its `node-manager.deckhouse.io/capi-md-cleanup` finalizer.
+The node drain itself is driven asynchronously by capi/caps-controller-manager.
+
+### reconcileCloudMDsRendered (CAPI engine)
 
 Creates/updates one `MachineDeployment` (cluster.x-k8s.io/v1beta2) **per zone**:
 
@@ -61,7 +70,7 @@ Creates/updates one `MachineDeployment` (cluster.x-k8s.io/v1beta2) **per zone**:
   current replica count into `[min, max]`. The desired count is changed by editing NodeGroup `min/max`, not by patching the MD.
 - Applied with server-side apply (`FieldOwner("node-controller")`, `ForceOwnership`).
 
-### reconcileStaticMD (static engine)
+### reconcileStaticMDRendered (static engine)
 
 Creates one `MachineDeployment` named `{ng.name}`:
 
@@ -71,11 +80,17 @@ Creates one `MachineDeployment` named `{ng.name}`:
 - `spec.rollout.strategy`: maxSurge 1, maxUnavailable 0.
 - selector/template labels: `cluster-name=static`, `deployment-name={ng.name}`.
 
-### reconcileMCMReplicas (MCM engine)
+### reconcileCloudMCMs (MCM engine)
 
-Lists MCM `MachineDeployment`s by `node-group` label and patches `spec.replicas`
-to `calculateReplicas(current, min, max)` only when it differs
-(`FieldOwner("capi-set-replicas")`). This replaces the legacy `capi_set_replicas` hook.
+Renders and server-side-applies, **per zone**, the MCM `MachineClass`
+(machine.sapcloud.io/v1alpha1) and its `MachineDeployment` from the on-disk provider
+templates (via the `nodegroup/machineclass` package), then prunes the MachineDeployments
+and their referenced MachineClasses for zones no longer desired. Only the MachineClass
+**Secret** stays helm-owned. The instance-class checksum (rendered from the provider
+`machine-class.checksum` template) is applied on the MachineClass before its
+MachineDeployment, preserving the "don't roll until the MachineClass updates" ordering.
+Replica math is unchanged (`calculateReplicas(current, min, max)`). Replaces the legacy
+`capi_set_replicas`, `machineclass_checksum_assign` and `machineclass_checksum_collect` hooks.
 
 ### Helpers
 
@@ -201,7 +216,10 @@ Referenced by `capi-machine-deployment` and `capi-cluster-resources`:
 
 ## Files
 
-- `machinedeployment.go` — MachineDeployment reconciler (cloud/static/MCM), data readers, hash/serialize helpers
+- `machinedeployment.go` — `capi-machine-deployment` reconciler: dispatch, finalizer + deletion cleanup, `buildStaticMD`, data readers, hash/serialize helpers
+- `capi_cloud.go` — CAPI cloud/static MachineDeployment rendering (`reconcileCloudMDsRendered`, `reconcileStaticMDRendered`)
+- `mcm_cloud.go` — MCM MachineClass + MachineDeployment rendering, replica math, stale-resource prune (`reconcileCloudMCMs`)
+- `mcm_machinedeployment.go` — MCM `MachineDeployment` builder
 - `cluster.go` — Cluster + MachineHealthCheck reconciler (cloud + static)
 - `apiversion.go` — `infrastructureRef.apiGroup` backfill for MD/Machine/Cluster
 - `controlplane.go` — DeckhouseControlPlane status patcher

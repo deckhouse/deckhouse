@@ -39,6 +39,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -84,8 +89,19 @@ func AssetsAvailable() bool {
 // Start boots an envtest apiserver with the given scheme and CRD files and returns a client.
 // Call testEnv.Stop() in AfterSuite.
 func Start(scheme *runtime.Scheme, crdPaths ...string) (*envtest.Environment, *rest.Config, client.Client, error) {
+	// The production cache scoping used by NewManager needs RESTMappings for every kind it
+	// scopes, so those CRDs are always installed on top of whatever the suite asked for.
+	seen := make(map[string]struct{})
+	allPaths := make([]string, 0, len(crdPaths)+8)
+	for _, p := range append(append([]string{}, crdPaths...), RealCacheCRDPaths()...) {
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		allPaths = append(allPaths, p)
+	}
 	env := &envtest.Environment{
-		CRDDirectoryPaths:     crdPaths,
+		CRDDirectoryPaths:     allPaths,
 		ErrorIfCRDPathMissing: true,
 		BinaryAssetsDirectory: BinaryAssetsDir(),
 	}
@@ -104,10 +120,28 @@ func Start(scheme *runtime.Scheme, crdPaths ...string) (*envtest.Environment, *r
 // registered itself via register.RegisterController in the test binary. Import only the
 // controller package under test so only it gets wired. Start it with `go mgr.Start(ctx)`.
 func NewManager(cfg *rest.Config, scheme *runtime.Scheme) (manager.Manager, error) {
+	// Use the production cache/client scoping: a reconciler reading an object outside the
+	// scoped informers fails only against this configuration ("unknown namespace for the
+	// cache", empty cached reads), so tests on a default wide cache would miss exactly the
+	// regressions this exists to catch. The production cache references types from these
+	// groups, so they must be in the scheme just like in cmd/main.go — regardless of what
+	// the suite itself registers.
+	for _, add := range []func(*runtime.Scheme) error{
+		apiextensionsv1.AddToScheme,
+		capiv1beta2.AddToScheme,
+		mcmv1alpha1.AddToScheme,
+	} {
+		if err := add(scheme); err != nil {
+			return nil, fmt.Errorf("add production cache types to scheme: %w", err)
+		}
+	}
+	cacheOpts, clientOpts := common.CacheOptions()
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:         scheme,
 		Metrics:        metricsserver.Options{BindAddress: "0"},
 		LeaderElection: false,
+		Cache:          cacheOpts,
+		Client:         clientOpts,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("new manager: %w", err)

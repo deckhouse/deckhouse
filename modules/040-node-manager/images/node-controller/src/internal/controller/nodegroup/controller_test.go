@@ -18,6 +18,7 @@ package nodegroup
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -227,7 +228,7 @@ func TestReconcile_StaticNG_Idempotent(t *testing.T) {
 	}
 }
 
-func TestReconcile_StaticNG_ExistingError_EventCreated(t *testing.T) {
+func TestReconcile_StaticNG_ExistingErrorCleared(t *testing.T) {
 	setEnv(t)
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
@@ -246,19 +247,84 @@ func TestReconcile_StaticNG_ExistingError_EventCreated(t *testing.T) {
 	doReconcile(t, r, "worker")
 
 	updated := getNodeGroup(t, r, "worker")
+	if updated.Status.Error != "" {
+		t.Fatalf("expected stale Status.Error to be cleared, got %q", updated.Status.Error)
+	}
 	if updated.Status.ConditionSummary == nil {
 		t.Fatal("expected ConditionSummary to be set")
 	}
-	if updated.Status.ConditionSummary.Ready != "False" {
-		t.Fatalf("expected ConditionSummary.Ready=False, got %q", updated.Status.ConditionSummary.Ready)
+	if updated.Status.ConditionSummary.Ready != "True" {
+		t.Fatalf("expected ConditionSummary.Ready=True, got %q", updated.Status.ConditionSummary.Ready)
 	}
 
 	select {
 	case event := <-rec.Events:
-		if event == "" {
-			t.Fatal("expected non-empty event")
+		t.Fatalf("expected no event for cleared stale error, got %q", event)
+	default:
+	}
+}
+
+func TestReconcile_StatusKubernetesVersionUpdated(t *testing.T) {
+	setEnv(t)
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
+	}
+	clusterConfig := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: "kube-system"},
+		Data: map[string][]byte{
+			"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.29\"\n"),
+		},
+	}
+
+	r, _ := newReconciler(t, ng, clusterConfig)
+	doReconcile(t, r, "worker")
+
+	updated := getNodeGroup(t, r, "worker")
+	if updated.Status.KubernetesVersion != "1.29" {
+		t.Fatalf("expected KubernetesVersion=1.29, got %q", updated.Status.KubernetesVersion)
+	}
+}
+
+func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
+	setEnv(t)
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "cloud"},
+		Spec: v1.NodeGroupSpec{
+			NodeType: v1.NodeTypeCloudEphemeral,
+			CloudInstances: &v1.CloudInstancesSpec{
+				MinPerZone: 1,
+				MaxPerZone: 3,
+				ClassReference: v1.ClassReference{
+					Kind: "WrongInstanceClass",
+					Name: "system",
+				},
+			},
+		},
+	}
+	cloudProvider := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "d8-node-manager-cloud-provider", Namespace: "kube-system"},
+		Data: map[string][]byte{
+			"instanceClassKind": []byte("AWSInstanceClass"),
+		},
+	}
+
+	r, rec := newReconciler(t, ng, cloudProvider)
+	doReconcile(t, r, "cloud")
+
+	updated := getNodeGroup(t, r, "cloud")
+	if !strings.Contains(updated.Status.Error, "Invalid classReference.kind") {
+		t.Fatalf("expected validation error in status, got %q", updated.Status.Error)
+	}
+	if updated.Status.ConditionSummary == nil || updated.Status.ConditionSummary.Ready != "False" {
+		t.Fatalf("expected Ready=False due to validation error, got %#v", updated.Status.ConditionSummary)
+	}
+	select {
+	case event := <-rec.Events:
+		if !strings.Contains(event, "Invalid classReference.kind") {
+			t.Fatalf("expected validation event, got %q", event)
 		}
 	default:
-		t.Fatal("expected an event to be recorded")
+		t.Fatal("expected validation event")
 	}
 }

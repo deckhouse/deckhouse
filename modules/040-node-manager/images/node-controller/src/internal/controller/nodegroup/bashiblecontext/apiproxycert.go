@@ -1,0 +1,196 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package bashiblecontext
+
+import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"fmt"
+	"time"
+
+	"github.com/go-logr/logr"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	csrutil "k8s.io/client-go/util/certificate/csr"
+)
+
+const (
+	certCommonName = "kubernetes-api-proxy"
+	certRoleName   = "node-manager:kubernetes-api-proxy"
+
+	certOutdatedDuration = (24 * time.Hour) * 365 / 2
+
+	csrWaitTimeout = time.Minute
+)
+
+// certExpirationSeconds requests a 10-year cert from the signer.
+var certExpirationSeconds = int32((time.Hour * 24 * 365 * 10).Seconds())
+
+func (c *Controller) ensureCertificate(ctx context.Context, logger logr.Logger) error {
+	secret, err := c.clientset.CoreV1().Secrets(kubeSystemNS).Get(ctx, apiProxyCertSecretName, metav1.GetOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get %s/%s: %w", kubeSystemNS, apiProxyCertSecretName, err)
+	}
+
+	if err == nil {
+		if crt := secret.Data["crt"]; len(crt) > 0 {
+			cert, perr := parseCertificate(crt)
+			if perr == nil && time.Until(cert.NotAfter) >= certOutdatedDuration {
+				return nil
+			}
+		}
+	}
+
+	logger.Info("issuing kubernetes-api-proxy discovery certificate")
+	crtPEM, keyPEM, err := c.issueCertificate(ctx)
+	if err != nil {
+		return err
+	}
+	return c.writeCertSecret(ctx, crtPEM, keyPEM)
+}
+
+func (c *Controller) issueCertificate(ctx context.Context) ([]byte, []byte, error) {
+	csrPEM, keyPEM, err := generateCSR(certCommonName, []string{certRoleName})
+	if err != nil {
+		return nil, nil, fmt.Errorf("generate CSR: %w", err)
+	}
+
+	csrClient := c.clientset.CertificatesV1().CertificateSigningRequests()
+
+	// Drop a stale CSR left by a previous partial run (same fixed name).
+	_ = csrClient.Delete(ctx, certCommonName, metav1.DeleteOptions{})
+
+	csr := &certificatesv1.CertificateSigningRequest{
+		ObjectMeta: metav1.ObjectMeta{Name: certCommonName},
+		Spec: certificatesv1.CertificateSigningRequestSpec{
+			Request:           csrPEM,
+			SignerName:        certificatesv1.KubeAPIServerClientSignerName,
+			Usages:            []certificatesv1.KeyUsage{certificatesv1.UsageClientAuth},
+			ExpirationSeconds: &certExpirationSeconds,
+		},
+	}
+
+	req, err := csrClient.Create(ctx, csr, metav1.CreateOptions{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("create CertificateSigningRequest: %w", err)
+	}
+
+	req.Status.Conditions = append(req.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
+		Type:    certificatesv1.CertificateApproved,
+		Status:  corev1.ConditionTrue,
+		Reason:  "NodeControllerApprove",
+		Message: "This CSR was approved by node-controller.",
+	})
+	if _, err := csrClient.UpdateApproval(ctx, req.Name, req, metav1.UpdateOptions{}); err != nil {
+		return nil, nil, fmt.Errorf("approve CertificateSigningRequest: %w", err)
+	}
+
+	waitCtx, cancel := context.WithTimeout(ctx, csrWaitTimeout)
+	defer cancel()
+
+	crtPEM, err := csrutil.WaitForCertificate(waitCtx, c.clientset, req.Name, req.UID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("wait for signed certificate: %w", err)
+	}
+
+	_ = csrClient.Delete(ctx, certCommonName, metav1.DeleteOptions{})
+
+	return crtPEM, keyPEM, nil
+}
+
+func (c *Controller) writeCertSecret(ctx context.Context, crtPEM, keyPEM []byte) error {
+	labels := map[string]string{
+		"heritage": "deckhouse",
+		"module":   "node-manager",
+	}
+	data := map[string][]byte{
+		"crt": crtPEM,
+		"key": keyPEM,
+	}
+
+	secrets := c.clientset.CoreV1().Secrets(kubeSystemNS)
+	existing, err := secrets.Get(ctx, apiProxyCertSecretName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		_, err = secrets.Create(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      apiProxyCertSecretName,
+				Namespace: kubeSystemNS,
+				Labels:    labels,
+			},
+			Data: data,
+		}, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("create %s/%s: %w", kubeSystemNS, apiProxyCertSecretName, err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("get %s/%s: %w", kubeSystemNS, apiProxyCertSecretName, err)
+	}
+
+	if existing.Labels == nil {
+		existing.Labels = map[string]string{}
+	}
+	for k, v := range labels {
+		existing.Labels[k] = v
+	}
+	existing.Data = data
+	if _, err := secrets.Update(ctx, existing, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("update %s/%s: %w", kubeSystemNS, apiProxyCertSecretName, err)
+	}
+	return nil
+}
+
+func generateCSR(commonName string, organizations []string) ([]byte, []byte, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	der, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+		Subject:            pkix.Name{CommonName: commonName, Organization: organizations},
+		SignatureAlgorithm: x509.ECDSAWithSHA256,
+	}, key)
+	if err != nil {
+		return nil, nil, err
+	}
+	csrPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der})
+
+	keyDER, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		return nil, nil, err
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER})
+
+	return csrPEM, keyPEM, nil
+}
+
+// parseCertificate decodes the first PEM block of a cert to read NotAfter.
+func parseCertificate(pemData []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(pemData)
+	if block == nil {
+		return nil, fmt.Errorf("no PEM block found")
+	}
+	return x509.ParseCertificate(block.Bytes)
+}
