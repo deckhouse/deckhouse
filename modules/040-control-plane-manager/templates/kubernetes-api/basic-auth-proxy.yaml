@@ -1,4 +1,4 @@
-{{- if .Values.controlPlaneManager.internal.authn.enableBasicAuth }}
+{{- if and .Values.controlPlaneManager.internal.authn.enableBasicAuth .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -39,7 +39,7 @@ spec:
   externalName: basic-auth-proxy.d8-user-authn.svc
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
 {{- $apiHost := include "helm_lib_module_public_domain" (list . "api") }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
