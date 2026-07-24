@@ -29,8 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
@@ -59,13 +57,6 @@ type clusterInputs struct {
 	// NodeExtensionRequests are the operator's requests to merge extra system
 	// extensions onto the nodes they select.
 	NodeExtensionRequests []deckhousev1alpha1.NodeExtensionRequest
-	// ModuleSourceRepos maps a ModuleSource name to its registry repo
-	// (spec.registry.repo, e.g. dev-registry.deckhouse.io/sys/deckhouse-oss/modules).
-	// A NER's sysext lives under its ModuleSource's repo; that repo becomes the
-	// extension's Repository, which is the key the packages proxy resolves the
-	// source's credentials by — so a request names the module and digest, not the
-	// cluster's registry.
-	ModuleSourceRepos map[string]string
 }
 
 // sourceReader reads cluster state. It falls back to the cached client when no
@@ -119,39 +110,7 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	}
 	in.NodeExtensionRequests = ners
 
-	// ModuleSource repos only resolve NER image templates; skip the cluster-wide
-	// list when no request could use it. This keeps the common path — and
-	// environments without the ModuleSource CRD, such as the bootstrap tests —
-	// from paying for (or tripping over) a lookup nothing consumes.
-	if len(ners) > 0 {
-		in.ModuleSourceRepos = s.readModuleSourceRepos(ctx)
-	}
-
 	return in, nil
-}
-
-// moduleSourceListGVK identifies the cluster-scoped ModuleSource resource. Its
-// type is not vendored into node-controller, so it is read unstructured.
-var moduleSourceListGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleSourceList"}
-
-// readModuleSourceRepos lists ModuleSources and maps each name to its registry
-// repo. A NER's sysext is located under its ModuleSource's repo. Absent or
-// unreadable sources are tolerated: the request is simply dropped when its repo
-// cannot be resolved.
-func (s *sourceReader) readModuleSourceRepos(ctx context.Context) map[string]string {
-	list := &unstructured.UnstructuredList{}
-	list.SetGroupVersionKind(moduleSourceListGVK)
-	if err := s.reader().List(ctx, list); err != nil {
-		return nil
-	}
-	repos := make(map[string]string, len(list.Items))
-	for i := range list.Items {
-		repo, _, _ := unstructured.NestedString(list.Items[i].Object, "spec", "registry", "repo")
-		if repo != "" {
-			repos[list.Items[i].GetName()] = repo
-		}
-	}
-	return repos
 }
 
 // readNodeExtensionRequests lists the extension requests. They are additive, so

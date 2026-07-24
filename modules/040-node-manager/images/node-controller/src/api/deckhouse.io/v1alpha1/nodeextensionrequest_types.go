@@ -60,9 +60,9 @@ type NodeExtensionRequestSpec struct {
 }
 
 // Sysext locates a module's system-extension image. The image lives in the
-// module's registry repo, which the registry-packages-proxy already reaches from
-// the ModuleSource, so a request pins only the digest and — when it differs from
-// the module name — the path.
+// module's registry repo, which the registry-packages-proxy already reaches with
+// the cluster's own registry credentials, so a request pins only the digest and
+// — when it differs from "modules/<module>" — the path.
 type Sysext struct {
 	// Name is the sysext name: it is matched against the image's
 	// extension-release and installed on the node as "<name>.raw".
@@ -73,15 +73,10 @@ type Sysext struct {
 	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
 	Digest string `json:"digest"`
 
-	// Path is the image's repo path under the ModuleSource registry. Defaults to
-	// the module name (the module.deckhouse.io/name label on the request).
+	// Path is the image's repo path under the cluster registry. Defaults to
+	// "modules/<module>" from the module.deckhouse.io/name label on the request.
 	// +optional
 	Path string `json:"path,omitempty"`
-
-	// ModuleSource names the ModuleSource whose registry hosts the image; the
-	// proxy resolves its credentials from that source. Defaults to "deckhouse".
-	// +optional
-	ModuleSource string `json:"moduleSource,omitempty"`
 }
 
 // NodeGroupSelector selects NodeGroups by name.

@@ -53,11 +53,10 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 		return
 	}
 
-	repos := r.sources.readModuleSourceRepos(ctx)
 	groups := r.immutableNodeGroupNames(ctx, logger)
 
 	for i := range ners.Items {
-		if err := r.updateNERStatus(ctx, &ners.Items[i], repos, groups); err != nil {
+		if err := r.updateNERStatus(ctx, &ners.Items[i], groups); err != nil {
 			logger.Error(err, "cannot update NodeExtensionRequest status", "request", ners.Items[i].Name)
 		}
 	}
@@ -83,12 +82,12 @@ func (r *Reconciler) immutableNodeGroupNames(ctx context.Context, logger logr.Lo
 
 // updateNERStatus computes and patches one request's status, skipping the write
 // when nothing changed.
-func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, repos map[string]string, immutableGroups []string) error {
+func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, immutableGroups []string) error {
 	desired := ner.Status.DeepCopy()
 	desired.ObservedGeneration = ner.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(ner, immutableGroups)
 
-	ext, reason := resolveExtension(ner, repos)
+	ext, reason := resolveExtension(ner)
 	if reason == "" {
 		desired.ResolvedImage = fmt.Sprintf("%s/%s@%s", ext.Repository, ext.AdditionalPath, ext.Digest)
 		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
@@ -148,8 +147,6 @@ func nerReasonMessage(reason string) string {
 	switch reason {
 	case reasonInvalidSysext:
 		return "sysext must set both name and digest"
-	case reasonUnknownSource:
-		return "no ModuleSource registry known for the sysext"
 	case reasonNoPath:
 		return "sysext path is unset and no module.deckhouse.io/name label to default it from"
 	default:

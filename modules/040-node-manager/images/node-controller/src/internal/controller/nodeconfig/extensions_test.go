@@ -45,17 +45,12 @@ func moduleLabel(module string) map[string]string {
 }
 
 func TestNodeExtensions(t *testing.T) {
-	moduleSourceRepos := map[string]string{
-		"deckhouse": "dev-registry.deckhouse.io/sys/deckhouse-oss/modules",
-	}
-
-	// The extension the drbd requests below resolve to: repository is the
-	// ModuleSource repo (the proxy's auth key), the path is the module name, and
-	// the name is the logical sysext.
+	// The extension the drbd requests below resolve to: the repository is left
+	// empty (the proxy uses the cluster's registry config), the path defaults to
+	// modules/<module>, and the name is the logical sysext.
 	drbdExtension := internalv1alpha1.Extension{
 		Name:           "drbd",
-		Repository:     "dev-registry.deckhouse.io/sys/deckhouse-oss/modules",
-		AdditionalPath: "sds-replicated-volume",
+		AdditionalPath: "modules/sds-replicated-volume",
 		Digest:         drbdDigest,
 		RequestedBy:    "sds-replicated-volume",
 	}
@@ -69,7 +64,7 @@ func TestNodeExtensions(t *testing.T) {
 		wantModules    []internalv1alpha1.KernelModule
 	}{
 		{
-			name: "path defaults to the module name and matched by nodeGroupSelector",
+			name: "path defaults to modules/<module> and matched by nodeGroupSelector",
 			ners: []deckhousev1alpha1.NodeExtensionRequest{
 				ner("sds-drbd", deckhousev1alpha1.NodeExtensionRequestSpec{
 					Sysext:            deckhousev1alpha1.Sysext{Name: "drbd", Digest: drbdDigest},
@@ -115,7 +110,7 @@ func TestNodeExtensions(t *testing.T) {
 			ngName: "worker",
 		},
 		{
-			name: "explicit path overrides the module name",
+			name: "explicit path is used verbatim",
 			ners: []deckhousev1alpha1.NodeExtensionRequest{
 				ner("sds-drbd", deckhousev1alpha1.NodeExtensionRequestSpec{
 					Sysext: deckhousev1alpha1.Sysext{Name: "drbd", Digest: drbdDigest, Path: "custom/drbd-path"},
@@ -125,21 +120,10 @@ func TestNodeExtensions(t *testing.T) {
 			ngName: "worker",
 			wantExtensions: []internalv1alpha1.Extension{{
 				Name:           "drbd",
-				Repository:     "dev-registry.deckhouse.io/sys/deckhouse-oss/modules",
 				AdditionalPath: "custom/drbd-path",
 				Digest:         drbdDigest,
 				RequestedBy:    "sds-replicated-volume",
 			}},
-		},
-		{
-			name: "unknown ModuleSource drops the request",
-			ners: []deckhousev1alpha1.NodeExtensionRequest{
-				ner("sds-drbd", deckhousev1alpha1.NodeExtensionRequestSpec{
-					Sysext: deckhousev1alpha1.Sysext{Name: "drbd", Digest: drbdDigest, ModuleSource: "nonexistent"},
-				}, moduleLabel("sds-replicated-volume")),
-			},
-			node:   nodeWith(nil),
-			ngName: "worker",
 		},
 		{
 			name: "no path and no module label drops the request",
@@ -198,7 +182,7 @@ func TestNodeExtensions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			extensions, modules := nodeExtensions(tt.ners, tt.node, tt.ngName, moduleSourceRepos)
+			extensions, modules := nodeExtensions(tt.ners, tt.node, tt.ngName)
 			if !reflect.DeepEqual(extensions, tt.wantExtensions) {
 				t.Fatalf("extensions = %#v, want %#v", extensions, tt.wantExtensions)
 			}

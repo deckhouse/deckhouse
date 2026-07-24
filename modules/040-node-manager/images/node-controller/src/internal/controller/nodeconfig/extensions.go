@@ -25,19 +25,20 @@ import (
 
 // moduleNameLabel records which Deckhouse module owns a NodeExtensionRequest.
 // It becomes the extension's RequestedBy so the on-node agent can attribute the
-// sysext to the module that asked for it.
+// sysext to the module that asked for it, and defaults the sysext's repo path.
 const moduleNameLabel = "module.deckhouse.io/name"
 
-// defaultModuleSourceName is the ModuleSource a request targets when its Sysext
-// does not name one — the canonical Deckhouse source.
-const defaultModuleSourceName = "deckhouse"
+// moduleRepoPrefix is where a module publishes its images under the registry the
+// packages proxy is configured with — <registry>/modules/<module>. A sysext with
+// no explicit path defaults to "modules/<module>".
+const moduleRepoPrefix = "modules"
 
 // nodeExtensions aggregates the NodeExtensionRequests that select this node into
 // the extensions and kernel modules to add to its NodeConfig. It is a pure
 // function of its inputs so the matching can be tested without a cluster. A
 // request is dropped (not surfaced as an error) when its sysext cannot be
-// resolved (unknown ModuleSource, or no path to locate the image).
-func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string, moduleSourceRepos map[string]string) (extensions []internalv1alpha1.Extension, modules []internalv1alpha1.KernelModule) {
+// resolved (invalid sysext, or no path to locate the image).
+func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string) (extensions []internalv1alpha1.Extension, modules []internalv1alpha1.KernelModule) {
 	seenExtensions := make(map[string]struct{})
 	seenModules := make(map[string]struct{})
 
@@ -47,7 +48,7 @@ func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.
 			continue
 		}
 
-		ext, reason := resolveExtension(ner, moduleSourceRepos)
+		ext, reason := resolveExtension(ner)
 		if reason != "" {
 			continue
 		}
@@ -76,42 +77,32 @@ func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.
 const (
 	reasonResolved      = "Resolved"
 	reasonInvalidSysext = "InvalidSysext"
-	reasonUnknownSource = "UnknownModuleSource"
 	reasonNoPath        = "NoPath"
 )
 
 // resolveExtension turns a request's Sysext into the NodeConfig extension the
-// on-node agent pulls through the registry-packages-proxy. Repository is the
-// ModuleSource repo — the key the proxy resolves credentials by, so the image is
-// fetched with that source's auth — and AdditionalPath is the repo path under
-// it, defaulting to the module name. The second return is the failure reason, or
-// empty when the extension resolved.
-func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest, moduleSourceRepos map[string]string) (internalv1alpha1.Extension, string) {
+// on-node agent pulls through the registry-packages-proxy. Repository is left
+// empty so the proxy uses the cluster's registry config (which already has the
+// credentials for the module images); AdditionalPath is the repo path under it,
+// defaulting to "modules/<module>" from the module.deckhouse.io/name label. The
+// second return is the failure reason, or empty when the extension resolved.
+func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest) (internalv1alpha1.Extension, string) {
 	sysext := ner.Spec.Sysext
 	if sysext.Name == "" || sysext.Digest == "" {
 		return internalv1alpha1.Extension{}, reasonInvalidSysext
 	}
 
-	sourceName := sysext.ModuleSource
-	if sourceName == "" {
-		sourceName = defaultModuleSourceName
-	}
-	repository := moduleSourceRepos[sourceName]
-	if repository == "" {
-		return internalv1alpha1.Extension{}, reasonUnknownSource
-	}
-
 	path := sysext.Path
 	if path == "" {
-		path = ner.Labels[moduleNameLabel]
-	}
-	if path == "" {
-		return internalv1alpha1.Extension{}, reasonNoPath
+		module := ner.Labels[moduleNameLabel]
+		if module == "" {
+			return internalv1alpha1.Extension{}, reasonNoPath
+		}
+		path = moduleRepoPrefix + "/" + module
 	}
 
 	return internalv1alpha1.Extension{
 		Name:           sysext.Name,
-		Repository:     repository,
 		AdditionalPath: path,
 		Digest:         sysext.Digest,
 		RequestedBy:    requestedBy(ner),

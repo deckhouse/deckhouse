@@ -398,18 +398,6 @@ rules:
   - watch
   - update
   - patch
-# ModuleSources carry the registry a module publishes to. node-controller reads
-# them to resolve the ${MODULE_SOURCE_REPO} placeholder in a NodeExtensionRequest
-# image template, so a request names the module and image rather than the
-# cluster's registry.
-- apiGroups:
-  - deckhouse.io
-  resources:
-  - modulesources
-  verbs:
-  - get
-  - list
-  - watch
 - apiGroups:
   - internal.deckhouse.io
   resources:
