@@ -35,8 +35,7 @@ mount:
 {{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - pm install autoconf automake libtool build-base linux-headers pkgconf
+  - pm install autoconf m4 automake libtool build-base linux-headers pkgconf
   setup:
   - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
   - cd /src/libmnl
