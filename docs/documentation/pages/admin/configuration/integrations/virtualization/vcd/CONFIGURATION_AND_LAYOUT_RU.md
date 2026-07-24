@@ -4,6 +4,18 @@ permalink: ru/admin/integrations/virtualization/vcd/configuration-and-layout-sch
 lang: ru
 ---
 
+## Список необходимых сервисов VMware Cloud Director
+
+Для работы Deckhouse Kubernetes Platform должен быть доступен следующий сервис VMware Cloud Director:
+
+| Сервис                    | Версия API    |
+| :------------------------ | :--------:    |
+| VMware Cloud Director API | `37.2` и выше |
+
+{% alert level="info" %}
+Для версий VMware Cloud Director API ниже `37.2` используется режим совместимости с устаревшими версиями API.
+{% endalert %}
+
 ## Схемы размещения
 
 Deckhouse Kubernetes Platform поддерживает две схемы размещения ресурсов в VCD.

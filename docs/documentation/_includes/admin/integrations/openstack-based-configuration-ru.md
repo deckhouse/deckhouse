@@ -1,3 +1,22 @@
+<!-- markdownlint-disable-next-line MD041 -->
+## Список необходимых сервисов OpenStack
+
+Для работы Deckhouse Kubernetes Platform должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
+
+| Сервис                     |                         Версия API                         |
+| :------------------------- | :--------------------------------------------------------: |
+| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
+| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
+| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
+
+* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
+
+{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
+Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+{% endif %}
+
 ## Схемы размещения
 
 Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
