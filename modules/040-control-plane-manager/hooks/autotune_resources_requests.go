@@ -607,9 +607,8 @@ type customMetricValueList struct {
 	} `json:"items"`
 }
 
-func podMetricName(component, resourceName string) string {
-	container := componentContainer[component]
-	return fmt.Sprintf("d8-cpm-autotune-%s-%s", container, resourceName)
+func podMetricName(resourceName string) string {
+	return fmt.Sprintf("d8-cpm-autotune-%s", resourceName)
 }
 
 func fetchComponentUsageFromMetricsAPI(ctx context.Context, dc dependency.Container, component, resourceName string) (float64, bool, error) {
@@ -619,10 +618,8 @@ func fetchComponentUsageFromMetricsAPI(ctx context.Context, dc dependency.Contai
 	}
 
 	container := componentContainer[component]
-	metric := podMetricName(component, resourceName)
+	metric := podMetricName(resourceName)
 
-	// Avoid pods/*/metric: client-go path-escapes '*' to %2A and custom.metrics
-	// rejects it; Opaque URLs break Host. Query each matching pod by name instead.
 	pods, err := client.CoreV1().Pods(kubeSystemNS).List(ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("component=%s,tier=control-plane", container),
 	})
