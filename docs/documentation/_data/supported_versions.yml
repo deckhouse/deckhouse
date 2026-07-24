@@ -203,8 +203,8 @@ registries:
     shortname: Artifactory
     url: https://jfrog.com/artifactory/
   dockerv2:
-    longname: CNCF Distribution Registry (ранее известный как Docker Registry)
-    shortname: CNCF Distribution (formerly known as Docker Registry)
+    longname: CNCF Distribution Registry
+    shortname: CNCF Distribution
     url: https://distribution.github.io/distribution/
     additionalInfo:
       ru: Ранее известный как Docker Registry. Подробнее можно прочитать <a href="https://docs.docker.com/retired/#registry-now-cncf-distribution">в документации</a>.
