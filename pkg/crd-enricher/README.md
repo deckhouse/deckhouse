@@ -212,12 +212,12 @@ type ModuleConfig struct { ... }
 
 Attach a short **name** and/or a longer **description** to the example
 introduced by the *preceding* `examples` marker. They render as
-`x-name` and `x-description`.
+`x-description` and `x-name`.
 
 The rule is **all-or-nothing per field**: as soon as *any* example in a field
 carries a name or a description, every entry of that field's `x-doc-examples`
 switches from a bare value to a wrapper object
-`{x-example, x-description, x-name}` (an entry missing
+`{x-description, x-name, x-example}` (an entry missing
 an attribute simply omits that key). When *no* example has either, the list stays
 a plain list of values — so examples written before this feature are untouched.
 
@@ -239,15 +239,15 @@ registry:
   type: object
   # ...properties (sorted)...
   x-doc-examples:
-    - x-example:
+    - x-description: Anonymous, read-only access.
+      x-name: Public registry
+      x-example:
         repo: registry.example.io/modules
         dockerCfg: <base64>
-      x-description: Anonymous, read-only access.
-      x-name: Public registry
-    - x-example:
+    - x-name: Private registry
+      x-example:
         repo: registry.internal/modules
         dockerCfg: <base64>
-      x-name: Private registry
 ```
 
 The second entry has a name but no description, so it omits
@@ -258,8 +258,8 @@ whole opted into the wrapper form.
 
 - A `examples-name` / `examples-description` attaches to the **most recent**
   `examples` marker above it.
-- Key order in the wrapper is always `x-example`, then
-  `x-description`, then `x-name`.
+- Key order in the wrapper is always `x-description`, then `x-name`, then
+  `x-example`.
 - A name or description with no preceding `examples` marker is ignored with a
   warning; a second name/description for the same example overrides the first
   (also warned).
@@ -292,7 +292,7 @@ registry:
 ```
 
 This also holds inside the wrapper form: the outer keys follow the fixed
-`x-example` → `x-description` → `x-name` order, and the
+`x-description` → `x-name` → `x-example` order, and the
 object under `x-example` keeps its own authored order.
 
 ### `default` — documented default

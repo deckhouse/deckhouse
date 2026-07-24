@@ -28,19 +28,19 @@ spec:
                 type: string
                 x-doc-examples:
                 - x-example: 5m
-                - x-example: 1h
-                  x-description: one hour
+                - x-description: one hour
+                  x-example: 1h
               settings:
                 additionalProperties:
                   type: string
                 type: object
                 x-doc-examples:
-                - x-example:
+                - x-description: my super example
+                  x-example:
                     field: value
-                  x-description: my super example
-                - x-example:
+                - x-description: my super example two
+                  x-example:
                     field: value2
-                  x-description: my super example two
             type: object
         type: object
     served: true

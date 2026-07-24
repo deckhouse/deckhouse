@@ -29,26 +29,26 @@ spec:
                   type: string
                 type: object
                 x-doc-examples:
-                - x-example:
-                    field: a
-                  x-description: the first example
+                - x-description: the first example
                   x-name: First
-                - x-example:
-                    field: b
-                  x-description: the second example
+                  x-example:
+                    field: a
+                - x-description: the second example
                   x-name: Second
+                  x-example:
+                    field: b
               nameOnly:
                 type: string
                 x-doc-examples:
-                - x-example: 1h
-                  x-name: one hour
-                - x-example: 1d
-                  x-name: one day
+                - x-name: one hour
+                  x-example: 1h
+                - x-name: one day
+                  x-example: 1d
               trigger:
                 type: string
                 x-doc-examples:
-                - x-example: x
-                  x-name: the x
+                - x-name: the x
+                  x-example: x
                 - x-example: "y"
             type: object
         type: object
