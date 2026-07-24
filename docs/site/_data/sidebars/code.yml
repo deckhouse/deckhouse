@@ -127,3 +127,7 @@ entries:
           en: Push rules
           ru: Правила отправки изменений
         url: /code/documentation/user/push-rules.html
+      - title:
+          en: CodeScoring integration
+          ru: Интеграция CodeScoring
+        url: /code/documentation/user/codescoring.html
