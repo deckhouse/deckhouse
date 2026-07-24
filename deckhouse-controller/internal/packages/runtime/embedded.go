@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 const (
@@ -47,6 +48,7 @@ const (
 var dummyModules = []string{
 	"000-common",
 	"007-registrypackages",
+	"040-node-manager", // TODO(pilot/module-settings): remove after scheduler integration
 }
 
 // loadGlobal loads the global module from the embedded directory and registers
@@ -81,11 +83,17 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 	return nil
 }
 
-// loadEmbedded discovers embedded modules under embeddedDir and registers the
-// ones enabled by the bundle. It reads the bundle's enabled map, then for each
-// module directory builds the module from its on-disk config, wires the
-// runtime's shared managers into it, and stores it in the runtime's module map.
-// Modules not marked enabled in the bundle are skipped.
+// loadEmbedded discovers embedded modules under embeddedDir and registers
+// them in the runtime. It scans every subdirectory under embeddedDir, loads
+// each module from its on-disk configuration, wires the runtime's shared
+// managers, and stores it in the module map. When PackageSystemEnabled is
+// true the modules are also registered in the scheduler with AddNode.
+// Dummy modules (listed in dummyModules) are explicitly skipped.
+//
+// TODO: currently the controller fails to start if even a single embedded
+// module cannot be loaded (e.g. a dependency cycle in its constraints
+// rejected by AddNode). Consider mitigations and proper error handling that
+// do not abort the whole controller flow.
 func (r *Runtime) loadEmbedded(ctx context.Context) error {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbedded")
 	defer span.End()
@@ -139,6 +147,20 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 
 			r.mu.Lock()
 			r.modules[module.GetName()] = module
+			// When the package system is enabled, register the module in the
+			// scheduler so Reschedule can drive its lifecycle. Gated by the
+			// feature flag to avoid injecting startup failures when the
+			// scheduler is never started.
+			if app.PackageSystemEnabled() {
+				// Optimistically register before AddNode so a successful
+				// schedule can resolve it; if AddNode rejects the addition
+				// (dependency cycle), roll back the map entry.
+				if err = r.scheduler.AddNode(module); err != nil {
+					delete(r.modules, module.GetName())
+					r.mu.Unlock()
+					return fmt.Errorf("add node: %w", err)
+				}
+			}
 			r.mu.Unlock()
 
 			// register package in status and packages stores

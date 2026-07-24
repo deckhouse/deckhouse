@@ -24,6 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -71,19 +72,23 @@ func RegisterController(
 	handler *confighandler.Handler,
 	ms metricsstorage.Storage,
 	exts extenders.IExtendersStack,
+	pkgRuntime packageRuntime,
+	packageSystemEnabled bool,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:             new(sync.WaitGroup),
-		client:           runtimeManager.GetClient(),
-		logger:           logger,
-		handler:          handler,
-		conversionsStore: conversionsStore,
-		moduleManager:    mm,
-		edition:          edition,
-		metricStorage:    ms,
-		configValidator:  configtools.NewValidator(mm, conversionsStore),
-		exts:             exts,
+		init:                 new(sync.WaitGroup),
+		client:               runtimeManager.GetClient(),
+		logger:               logger,
+		handler:              handler,
+		conversionsStore:     conversionsStore,
+		moduleManager:        mm,
+		edition:              edition,
+		metricStorage:        ms,
+		configValidator:      configtools.NewValidator(mm, conversionsStore),
+		exts:                 exts,
+		packageRuntime:       pkgRuntime,
+		packageSystemEnabled: packageSystemEnabled,
 	}
 
 	r.init.Add(1)
@@ -121,17 +126,24 @@ func RegisterController(
 	return nil
 }
 
+type packageRuntime interface {
+	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, enabled *bool)
+	HasModule(name string) bool
+}
+
 type reconciler struct {
-	init             *sync.WaitGroup
-	client           client.Client
-	conversionsStore *conversion.ConversionsStore
-	edition          *d8edition.Edition
-	handler          *confighandler.Handler
-	moduleManager    moduleManager
-	metricStorage    metricsstorage.Storage
-	configValidator  *configtools.Validator
-	exts             extenders.IExtendersStack
-	logger           *log.Logger
+	init                 *sync.WaitGroup
+	client               client.Client
+	conversionsStore     *conversion.ConversionsStore
+	edition              *d8edition.Edition
+	handler              *confighandler.Handler
+	moduleManager        moduleManager
+	packageRuntime       packageRuntime
+	packageSystemEnabled bool
+	metricStorage        metricsstorage.Storage
+	configValidator      *configtools.Validator
+	exts                 extenders.IExtendersStack
+	logger               *log.Logger
 }
 
 type moduleManager interface {
@@ -209,11 +221,29 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		}
 	}
 
-	// send an event to addon-operator only if the module exists, or it is the global one
-	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
-	if moduleConfig.Name == moduleGlobal || basicModule != nil {
-		r.logger.Debug("send event to operator", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
-		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
+	// Route settings to the appropriate runtime engine.
+	// v2-managed modules (embedded or downloaded via packages) use
+	// the package runtime; everything else falls back to addon-operator.
+	// The v2 path is gated by the PackageSystemEnabled feature flag:
+	// when the flag is off, the scheduler goroutine is not started and
+	// settings must reach addon-operator for the v1 (Helm) path.
+	if r.packageSystemEnabled && (r.packageRuntime.HasModule(moduleConfig.Name) || moduleConfig.Name == moduleGlobal) {
+		// v2 path: update settings in the package runtime and skip
+		// the addon-operator event to avoid double-application (G2).
+		r.logger.Debug("update v2 module settings", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
+		r.packageRuntime.UpdateModulesSettings(
+			moduleConfig.Name,
+			moduleConfig.Spec.Version,
+			addonutils.Values(moduleConfig.Spec.Settings.GetMap()),
+			moduleConfig.Spec.Enabled,
+		)
+	} else {
+		// v1 path: existing addon-operator event dispatch.
+		basicModule := r.moduleManager.GetModule(moduleConfig.Name)
+		if moduleConfig.Name == moduleGlobal || basicModule != nil {
+			r.logger.Debug("send event to operator", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
+			r.handler.HandleEvent(moduleConfig, config.EventUpdate)
+		}
 	}
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
@@ -411,8 +441,30 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 }
 
 func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
-	// send event to addon-operator
-	r.handler.HandleEvent(moduleConfig, config.EventDelete)
+	// Route delete to the appropriate runtime engine.
+	// The v2 path is gated by the PackageSystemEnabled feature flag — when the
+	// flag is off, deletes are delivered to addon-operator for the v1 (Helm) path.
+	if r.packageSystemEnabled && (r.packageRuntime.HasModule(moduleConfig.Name) || moduleConfig.Name == moduleGlobal) {
+		// v2 path: reset settings and clear the enabled intent.
+		// For embedded modules, deletion of ModuleConfig does not mean
+		// package removal — only settings/intent are reset (G4).
+		// settingsVersion 0 signals "reset to defaults" to the runtime;
+		// the runtime treats version 0 as a no-version datum.
+		//
+		// enabled is explicitly set to false rather than nil (which would
+		// fall back to the bundle default) so the runtime's view of the
+		// module stays in sync with disableModule below, which always sets
+		// Module.ConditionEnabledByModuleConfig to False on delete for
+		// non-system modules. Without this, an enabled-by-bundle module
+		// would be reported as disabled in the Module CR while the v2
+		// scheduler kept treating it as enabled and running it.
+		r.logger.Debug("reset v2 module settings on delete", slog.String("name", moduleConfig.Name))
+		disabled := false
+		r.packageRuntime.UpdateModulesSettings(moduleConfig.Name, 0, make(addonutils.Values), &disabled)
+	} else {
+		// v1 path: existing addon-operator event dispatch.
+		r.handler.HandleEvent(moduleConfig, config.EventDelete)
+	}
 
 	// clear obsolete metrics
 	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, moduleConfig.Name)
