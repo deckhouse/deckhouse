@@ -29,14 +29,18 @@ const (
 	deckhouseDisableAdditionalPropertiesMarker                = "deckhouse:DisableAdditionalProperties"
 	deckhouseXDocSearchMarker                                 = "deckhouse:XDocSearch"
 	deckhouseXDocSkipMarker                                   = "deckhouse:XDocSkip"
+	deckhouseXDocDefaultMarker                                = "deckhouse:XDocDefault"
 	deckhouseXDocExampleMarker                                = "deckhouse:XDocExample"
+	deckhouseXDocExamplesMarker                               = "deckhouse:XDocExamples"
 	deckhouseXRulesMarker                                     = "deckhouse:XRules"
 	deckhouseXConfigVersionMarker                             = "deckhouse:XConfigVersion"
 	deckhouseValidationAdditionalPropertiesItemsPatternMarker = "deckhouse:validation:AdditionalProperties:items:Pattern"
 )
 
 const (
+	XDocDefaultExtensionKey    = "x-doc-default"
 	XDocExampleExtensionKey    = "x-doc-example"
+	XDocExamplesExtensionKey   = "x-doc-examples"
 	XDocSkipExtensionKey       = "x-doc-skip"
 	XDocSearchExtensionKey     = "x-doc-search"
 	XRulesExtensionKey         = "x-rules"
@@ -68,6 +72,15 @@ type deckhouseExampleType struct {
 
 type deckhouseDisableAdditionalPropertiesType struct {
 	Value bool `marker:",optional"`
+}
+
+type deckhouseXDocDefaultType struct {
+	Value any `marker:"value,optional"`
+}
+
+type deckhouseXDocExamplesType struct {
+	Value  string `marker:"value,optional"`
+	values []any
 }
 
 type deckhouseXDocSearchType struct {
@@ -105,6 +118,8 @@ func BuildDeckhouseOpenAPIMarkerRegistry() (*ctmarkers.Registry, error) {
 			deckhouseXDocSearchMarker:                                 deckhouseXDocSearchType{},
 			deckhouseXDocSkipMarker:                                   deckhouseXDocSkipType{},
 			deckhouseXDocExampleMarker:                                deckhouseXDocExampleType{},
+			deckhouseXDocDefaultMarker:                                deckhouseXDocDefaultType{},
+			deckhouseXDocExamplesMarker:                               deckhouseXDocExamplesType{},
 			deckhouseXRulesMarker:                                     deckhouseXRulesType{},
 			deckhouseXConfigVersionMarker:                             deckhouseXConfigVersionType{},
 			deckhouseValidationAdditionalPropertiesItemsPatternMarker: deckhouseValidationAdditionalPropertiesItemsPatternType{},
@@ -200,6 +215,31 @@ func (m deckhouseXDocSkipType) ApplyToSchema(schema *openapi3.Schema) error {
 
 func (m deckhouseXDocExampleType) ApplyToSchema(schema *openapi3.Schema) error {
 	schema.Extensions[XDocExampleExtensionKey] = m.Value
+	return nil
+}
+
+func (m deckhouseXDocDefaultType) ApplyToSchema(schema *openapi3.Schema) error {
+	schema.Extensions[XDocDefaultExtensionKey] = m.Value
+	return nil
+}
+
+func (m deckhouseXDocExamplesType) MergeFrom(occurrences []any) (SchemaMarker, error) {
+	if len(occurrences) == 0 {
+		return nil, fmt.Errorf("merge: empty occurrences")
+	}
+	var result deckhouseXDocExamplesType
+	for i, raw := range occurrences {
+		typed, ok := raw.(deckhouseXDocExamplesType)
+		if !ok {
+			return nil, fmt.Errorf("merge: occurrence[%d] has type %T, want deckhouseXDocExamplesType", i, raw)
+		}
+		result.values = append(result.values, typed.Value)
+	}
+	return result, nil
+}
+
+func (m deckhouseXDocExamplesType) ApplyToSchema(schema *openapi3.Schema) error {
+	schema.Extensions[XDocExamplesExtensionKey] = m.values
 	return nil
 }
 

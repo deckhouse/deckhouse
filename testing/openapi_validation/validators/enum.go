@@ -238,6 +238,17 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.type",
 			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
+		"modules/030-cloud-provider-yandex/openapi/config-values.yaml": {
+			// ignore internal values
+			"properties.nodes.properties.parameters.properties.zones.items",
+		},
+		"modules/030-cloud-provider-yandex/crds/instance_class.yaml": {
+			// ignore internal values
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.platform",
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			"spec.versions[1].schema.openAPIV3Schema.properties.spec.properties.platform",
+			"spec.versions[1].schema.openAPIV3Schema.properties.spec.properties.diskType",
+		},
 		"modules/030-cloud-provider-yandex/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
