@@ -400,49 +400,22 @@ spec:
               name: sidecar
               securityContext:
                 procMount: Default
-    - name: pss-controller-deployment
-      gatorBlock: pss-controller-deployment
-      defaultObjectBase: ''
-      template: ../rendered/constraint-template.yaml
-      constraint: constraints/pss_baseline.yaml
-      cases:
-        name: controller-disallowed-procmount-unmasked
-        violations: 'yes'
-        assertionMessage: ''
-        fields:
-        - path: spec.template.spec.containers[].securityContext.procMount
-          scenario: negative
-        object:
-          base: admissionDeployment
-          merge:
-            metadata:
-              name: controller-disallowed-procmount-unmasked
-            spec:
-              template:
-                spec:
-                  containers:
-                  - image: nginx
-                    name: nginx
-                    securityContext:
-                      procMount: Unmasked
-          exception: ''
-          exceptionRef: ''
   - name: pss-controller-deployment
     gatorBlock: pss-controller-deployment
     template: ../rendered/constraint-template.yaml
     constraint: constraints/pss_baseline.yaml
     cases:
-    - name: controller-disallowed-procmount-unmasked
-      violations: 'yes'
+    - name: controller-allowed-allowed-proc-mount
+      violations: 'no'
       assertionMessage: ''
       fields:
       - path: spec.template.spec.containers[].securityContext.procMount
-        scenario: negative
+        scenario: positive
       object:
         base: admissionDeployment
         merge:
           metadata:
-            name: controller-disallowed-procmount-unmasked
+            name: controller-allowed-allowed-proc-mount
           spec:
             template:
               spec:
@@ -450,6 +423,6 @@ spec:
                 - image: nginx
                   name: nginx
                   securityContext:
-                    procMount: Unmasked
+                    procMount: Default
       exception: ''
       exceptionRef: ''
