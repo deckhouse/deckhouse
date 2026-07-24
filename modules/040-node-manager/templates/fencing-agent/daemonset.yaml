@@ -3,7 +3,14 @@ cpu: 10m
 memory: 50Mi
 {{- end }}
 
+{{/* Single source of the memberlist port: the security-policy-exception hostPorts allowlist must match the DaemonSet. */}}
+{{- define "fencing_agent_memberlist_port" -}}
+8500
+{{- end }}
+
 {{ $ctx := . }}
+{{ $memberlistPort := include "fencing_agent_memberlist_port" . | int }}
+{{ $healthPort := 8081 }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{ $mode := dig "fencing" "mode" "" $ng }}
   {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
@@ -18,7 +25,7 @@ metadata:
 spec:
   targetRef:
     apiVersion: "apps/v1"
-    kind: Daemonset
+    kind: DaemonSet
     name: fencing-agent-{{ $ng.name }}
   updatePolicy:
     updateMode: "Initial"
@@ -39,6 +46,14 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $ctx (dict "app" "fencing-agent")) | nindent 2 }}
 spec:
+  # Agents of one NodeGroup form a single gossip network: a replacement agent
+  # cannot become Ready until peers listen on the memberlist port, so pods are
+  # replaced together instead of gating on each other's readiness (hostPort
+  # also forbids surge pods).
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
   selector:
     matchLabels:
       app: fencing-agent
@@ -84,30 +99,41 @@ spec:
               value: {{ dig "fencing" "profile" "Medium" $ng | toString | quote }}
             - name: API_SOCKET_PATH
               value: /var/run/fencing-agent/fencing-agent.sock
+            - name: HEALTH_PROBE_BIND_ADDRESS
+              value: ":{{ $healthPort }}"
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
             - name: NODE_GROUP
               value: {{ $ng.name }}
+            - name: MEMBERLIST_PORT
+              value: {{ $memberlistPort | quote }}
 
           ports:
             - name: memberlist-tcp
-              containerPort: 8500
-              hostPort: 8500
+              containerPort: {{ $memberlistPort }}
+              hostPort: {{ $memberlistPort }}
               protocol: TCP
             - name: memberlist-udp
-              containerPort: 8500
-              hostPort: 8500
+              containerPort: {{ $memberlistPort }}
+              hostPort: {{ $memberlistPort }}
               protocol: UDP
           image: {{ include "helm_lib_module_image" (list $ctx "fencingAgent") }}
           livenessProbe:
             httpGet:
               path: /healthz
-              port:  8081
+              port: {{ $healthPort }}
             initialDelaySeconds:  15
             periodSeconds:  20
             failureThreshold:  3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ $healthPort }}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" $ctx | nindent 14 }}

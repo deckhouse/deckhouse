@@ -21,11 +21,16 @@ import (
 	"errors"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	"fencing-agent/internal/adapters/kubeclient"
+	"fencing-agent/internal/adapters/memberlist"
 	"fencing-agent/internal/config"
 	"fencing-agent/internal/controllers/health"
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/usecase/join"
 )
 
 type Agent struct {
@@ -33,7 +38,6 @@ type Agent struct {
 	deps     Deps
 	identity domain.NodeIdentity
 	logger   *log.Logger
-	health   *health.Server
 }
 
 func New(cfg *config.Config, deps Deps, identity domain.NodeIdentity, logger *log.Logger) *Agent {
@@ -42,7 +46,6 @@ func New(cfg *config.Config, deps Deps, identity domain.NodeIdentity, logger *lo
 		deps:     deps,
 		identity: identity,
 		logger:   logger,
-		health:   health.NewServer(cfg.HealthProbeBindAddress, logger),
 	}
 }
 
@@ -51,17 +54,68 @@ func (a *Agent) Run(ctx context.Context) error {
 		return errors.New("agent dependencies are not wired: K8sClient and FencingClient are required")
 	}
 
-	a.logger.Info("fencing-agent context initialized, fencing flow is not started",
+	a.logger.Info("fencing-agent starting",
 		"node", a.identity.Name,
-		"nodeUID", a.identity.UID,
-		"nodeGroup", a.cfg.NodeGroup,
+		"node_uid", a.identity.UID,
+		"node_ip", a.identity.IP,
+		"node_group", a.cfg.NodeGroup,
 		"profile", a.cfg.ProfileRefName,
-		"watchdogDevice", a.cfg.WatchdogDevice,
-		"apiSocketPath", a.cfg.APISocketPath,
+		"memberlist_port", a.cfg.MemberlistPort,
+		"watchdog_device", a.cfg.WatchdogDevice,
+		"api_socket_path", a.cfg.APISocketPath,
 	)
 
-	if err := a.health.Run(ctx); err != nil {
-		return fmt.Errorf("health server: %w", err)
+	cluster, err := memberlist.New(memberlist.Config{
+		NodeName:      a.identity.Name,
+		NodeGroup:     a.cfg.NodeGroup,
+		AdvertiseAddr: a.identity.IP,
+		Port:          a.cfg.MemberlistPort,
+	}, a.logger)
+	if err != nil {
+		return fmt.Errorf("create gossip network: %w", err)
+	}
+
+	defer func() {
+		if shutdownErr := cluster.Shutdown(); shutdownErr != nil {
+			a.logger.Error("shutdown gossip network", "error", shutdownErr)
+		}
+	}()
+
+	joiner := join.New(kubeclient.NewNodes(a.deps.K8sClient), cluster, join.Params{
+		NodeName:         a.identity.Name,
+		NodeIP:           a.identity.IP,
+		NodeGroup:        a.cfg.NodeGroup,
+		MemberlistPort:   a.cfg.MemberlistPort,
+		APITimeout:       a.cfg.KubernetesAPITimeout,
+		RetryInterval:    a.cfg.RejoinInterval,
+		MaxRetryInterval: a.cfg.RejoinMaxInterval,
+	}, a.logger)
+
+	// The health server runs alongside the join: the liveness probe fires before a
+	// slow join can finish, so blocking on the join would get the pod killed.
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		return health.NewServer(a.cfg.HealthProbeBindAddress, a.logger, joiner.Joined).Run(gctx)
+	})
+
+	g.Go(func() error {
+		joiner.Bootstrap(gctx)
+
+		if gctx.Err() != nil {
+			return nil
+		}
+
+		// The fencing flow starts here, after the gossip network is joined.
+		a.logger.Info("gossip network joined, fencing flow is not started")
+
+		<-gctx.Done()
+
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	a.logger.Info("fencing-agent stopped")

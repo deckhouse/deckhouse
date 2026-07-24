@@ -24,12 +24,15 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"fencing-agent/internal/adapters/fencingstate"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/agent"
 	"fencing-agent/internal/config"
+	"fencing-agent/internal/domain"
 )
 
 const resolveIdentityTimeout = 30 * time.Second
@@ -70,7 +73,7 @@ func run(cfg *config.Config, logger *log.Logger) error {
 	resolveCtx, cancel := context.WithTimeout(ctx, resolveIdentityTimeout)
 	defer cancel()
 
-	identity, err := kubeclient.ResolveIdentity(resolveCtx, deps.K8sClient, cfg.NodeName)
+	identity, err := resolveIdentity(resolveCtx, deps.K8sClient, cfg.NodeName, logger)
 	if err != nil {
 		return fmt.Errorf("resolve node identity: %w", err)
 	}
@@ -78,6 +81,29 @@ func run(cfg *config.Config, logger *log.Logger) error {
 	cfg.NodeUID = identity.UID
 
 	return agent.New(cfg, deps, identity, logger).Run(ctx)
+}
+
+// resolveIdentity retries within its context window: on a freshly registered
+// node the InternalIP may be populated by the cloud controller a few seconds
+// after the pod starts, and a single-shot failure would send the pod into
+// restart backoff instead.
+func resolveIdentity(ctx context.Context, k8s kubernetes.Interface, nodeName string, logger *log.Logger) (domain.NodeIdentity, error) {
+	const retryInterval = 2 * time.Second
+
+	for {
+		identity, err := kubeclient.ResolveIdentity(ctx, k8s, nodeName)
+		if err == nil {
+			return identity, nil
+		}
+
+		logger.Warn("resolve node identity failed, retrying", "error", err, "retry_interval", retryInterval.String())
+
+		select {
+		case <-ctx.Done():
+			return domain.NodeIdentity{}, err
+		case <-time.After(retryInterval):
+		}
+	}
 }
 
 func newLogger(level string) *log.Logger {

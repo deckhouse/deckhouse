@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -34,6 +34,12 @@ func NewRestConfig() (*rest.Config, error) {
 }
 
 func New(cfg *rest.Config) (kubernetes.Interface, error) {
+	// Core-group requests use protobuf: the bootstrap retry relists the whole
+	// NodeGroup, and protobuf decodes several times cheaper than JSON at fleet
+	// scale. CRD clients must keep JSON, so mutate a copy.
+	cfg = rest.CopyConfig(cfg)
+	cfg.ContentType = runtime.ContentTypeProtobuf
+
 	return kubernetes.NewForConfig(cfg)
 }
 
@@ -43,17 +49,16 @@ func ResolveIdentity(ctx context.Context, k8s kubernetes.Interface, nodeName str
 		return domain.NodeIdentity{}, fmt.Errorf("get node %q: %w", nodeName, err)
 	}
 
-	identity := domain.NodeIdentity{
+	// The InternalIP becomes the memberlist advertise address, so an empty one
+	// silently degrades into advertising the pod IP, which peers cannot reach.
+	ip := internalIP(node)
+	if ip == "" {
+		return domain.NodeIdentity{}, fmt.Errorf("node %q has no InternalIP address", nodeName)
+	}
+
+	return domain.NodeIdentity{
 		Name: node.Name,
 		UID:  string(node.UID),
-	}
-
-	for _, addr := range node.Status.Addresses {
-		if addr.Type == corev1.NodeInternalIP {
-			identity.IP = addr.Address
-			break
-		}
-	}
-
-	return identity, nil
+		IP:   ip,
+	}, nil
 }
