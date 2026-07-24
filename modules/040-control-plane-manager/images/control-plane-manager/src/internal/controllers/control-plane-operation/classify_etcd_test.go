@@ -27,7 +27,7 @@ func TestClassifyEtcd(t *testing.T) {
 		nodeName  = "master-0"
 		ourPeer   = "https://10.0.0.1:2380"
 		otherPeer = "https://10.0.0.2:2380"
-		oldPeer   = "https://10.0.0.9:2380" // same node name, different IP -> conflict
+		oldPeer   = "https://10.0.0.9:2380"
 	)
 
 	tests := []struct {
@@ -95,7 +95,7 @@ func TestClassifyEtcd(t *testing.T) {
 			wantState:      etcdJoined,
 		},
 		{
-			name: "member matched by name when peer URL differs",
+			name: "rare case: member matched by name when peer URL differs",
 			members: []etcdMemberInfo{
 				{Name: nodeName, PeerURLs: []string{oldPeer}},
 			},
