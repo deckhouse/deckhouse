@@ -165,7 +165,10 @@ data:
   # BPF trace events dominate cilium-agent CPU/memory on dense nodes; disabled
   # cluster-wide. `drop` and `policy verdict` events are unaffected. To enable
   # on specific or all nodes, use CiliumNodeConfig (see docs/EXAMPLES.md).
+  # Enabled with cilium-hubble; otherwise off (override via CiliumNodeConfig).
+  {{- if not (has "cilium-hubble" .Values.global.enabledModules) }}
   bpf-events-trace-enabled: "false"
+  {{- end }}
 
   # Local hubble sever section
   {{- if or (has "cilium-hubble" .Values.global.enabledModules) .Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled .Values.cniCilium.internal.hubble.settings.flowLogs.enabled }}
