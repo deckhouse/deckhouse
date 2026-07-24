@@ -27,8 +27,8 @@ import (
 
 func TestCheckSudo(t *testing.T) {
 	tests := []struct {
-		name          string
-		setupMock     func(
+		name      string
+		setupMock func(
 			*mocks.MockNodeInterface,
 			*mocks.MockCommand,
 			*mocks.MockCommand,
@@ -44,8 +44,8 @@ func TestCheckSudo(t *testing.T) {
 			) {
 				mni.On(
 					"Command",
-					"command -v sudo >/dev/null 2>&1",
-					[]string(nil),
+					"command",
+					[]string{"-v", "sudo"},
 				).Return(checkInstalledCmd)
 
 				checkInstalledCmd.
@@ -73,8 +73,8 @@ func TestCheckSudo(t *testing.T) {
 			) {
 				mni.On(
 					"Command",
-					"command -v sudo >/dev/null 2>&1",
-					[]string(nil),
+					"command",
+					[]string{"-v", "sudo"},
 				).Return(checkInstalledCmd)
 
 				checkInstalledCmd.
@@ -92,8 +92,8 @@ func TestCheckSudo(t *testing.T) {
 			) {
 				mni.On(
 					"Command",
-					"command -v sudo >/dev/null 2>&1",
-					[]string(nil),
+					"command",
+					[]string{"-v", "sudo"},
 				).Return(checkInstalledCmd)
 
 				checkInstalledCmd.
@@ -113,7 +113,7 @@ func TestCheckSudo(t *testing.T) {
 					On("Run", mock.Anything).
 					Return(exitErr)
 			},
-			expectedError: "Provided SSH user is not allowed to sudo",
+			expectedError: "provided SSH user is not allowed to sudo",
 		},
 		{
 			name: "unexpected error during sudo check",
@@ -124,8 +124,8 @@ func TestCheckSudo(t *testing.T) {
 			) {
 				mni.On(
 					"Command",
-					"command -v sudo >/dev/null 2>&1",
-					[]string(nil),
+					"command",
+					[]string{"-v", "sudo"},
 				).Return(checkInstalledCmd)
 
 				checkInstalledCmd.
@@ -147,7 +147,7 @@ func TestCheckSudo(t *testing.T) {
 					On("StderrBytes").
 					Return([]byte("timeout"))
 			},
-			expectedError: "Unexpected error when checking sudoers permissions for SSH user:",
+			expectedError: "unexpected error when checking sudo permissions for SSH user:",
 		},
 	}
 

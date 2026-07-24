@@ -46,7 +46,7 @@ func (SudoAllowedCheck) RetryPolicy() preflight.RetryPolicy {
 // checkSudo checks that sudo is installed and that the SSH user
 // is allowed to execute commands through sudo.
 func checkSudo(ctx context.Context, nodeInterface libcon.Interface) error {
-	checkInstalledCmd := nodeInterface.Command("command -v sudo >/dev/null 2>&1")
+	checkInstalledCmd := nodeInterface.Command("command", "-v", "sudo")
 	if err := checkInstalledCmd.Run(ctx); err != nil {
 		return errors.New(`required command "sudo" is not installed; install sudo or use root user for bootstrap`)
 	}
