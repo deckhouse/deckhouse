@@ -1,0 +1,164 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodeextensionrequests.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: nodeextensionrequests
+    singular: nodeextensionrequest
+    kind: NodeExtensionRequest
+    shortNames:
+      - ner
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Image
+          jsonPath: .status.resolvedImage
+          type: string
+        - name: Age
+          jsonPath: .metadata.creationTimestamp
+          type: date
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Asks for a system extension (a sysext image, optionally with kernel modules) to be merged onto the nodes it selects.
+
+            The image is not named directly but templated: `imageTemplate` carries `${KEY}` placeholders that node-controller fills in — `KERNEL_VERSION` from the node the extension is being built for, the rest from `params` — before resolving the result to an `image@digest` recorded in the status.
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - imageTemplate
+              properties:
+                imageTemplate:
+                  type: string
+                  minLength: 1
+                  description: |
+                    The sysext image reference with `${KEY}` placeholders, for example `registry.deckhouse.io/deckhouse/sysext/drbd:${DRBD_VERSION}-k${KERNEL_VERSION}`.
+
+                    `KERNEL_VERSION` is reserved and resolved by node-controller for each node; every other key is taken from `params`.
+                params:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    Values for the `${KEY}` placeholders in `imageTemplate`, except the reserved `KERNEL_VERSION`.
+                nodeGroupSelector:
+                  type: object
+                  description: |
+                    Narrows the extension to nodes of the named NodeGroups.
+                  properties:
+                    matchNames:
+                      type: array
+                      items:
+                        type: string
+                      description: |
+                        The set of NodeGroup names the extension applies to.
+                nodeSelector:
+                  type: object
+                  description: |
+                    Narrows the extension to nodes carrying the given labels.
+                  properties:
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      description: |
+                        The set of node labels a node must carry to be selected.
+                kernelModules:
+                  type: array
+                  description: |
+                    The modules to load once the extension is merged.
+                  items:
+                    type: object
+                    required:
+                      - name
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                        pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
+                        description: |
+                          The kernel module name.
+                      params:
+                        type: array
+                        items:
+                          type: string
+                        description: |
+                          The module parameters, passed as `key=value` strings.
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  description: |
+                    The generation of the spec this status reflects.
+                resolvedImage:
+                  type: string
+                  description: |
+                    The last `image@digest` `imageTemplate` resolved to.
+                matchedNodeGroups:
+                  type: array
+                  items:
+                    type: string
+                  description: |
+                    The NodeGroups the selectors currently match.
+                conditions:
+                  type: array
+                  description: |
+                    The latest details of the request's progress.
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        type: string
+                        maxLength: 316
+                        pattern: '^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$'
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      reason:
+                        type: string
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: '^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$'
+                      message:
+                        type: string
+                        maxLength: 32768
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        minimum: 0

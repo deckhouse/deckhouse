@@ -1,0 +1,59 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Запрашивает применение системного расширения (образа sysext, при необходимости с модулями ядра) к узлам, которые оно выбирает.
+
+            Образ задаётся не напрямую, а шаблоном: `imageTemplate` содержит подстановки `${KEY}`, которые заполняет node-controller — `KERNEL_VERSION` берётся с узла, для которого собирается расширение, остальные из `params` — после чего результат разрешается до `image@digest` и записывается в status.
+          properties:
+            spec:
+              properties:
+                imageTemplate:
+                  description: |
+                    Ссылка на образ sysext с подстановками `${KEY}`, например `registry.deckhouse.io/deckhouse/sysext/drbd:${DRBD_VERSION}-k${KERNEL_VERSION}`.
+
+                    `KERNEL_VERSION` зарезервирован и разрешается node-controller для каждого узла; все остальные ключи берутся из `params`.
+                params:
+                  description: |
+                    Значения для подстановок `${KEY}` в `imageTemplate`, кроме зарезервированного `KERNEL_VERSION`.
+                nodeGroupSelector:
+                  description: |
+                    Ограничивает расширение узлами перечисленных NodeGroup.
+                  properties:
+                    matchNames:
+                      description: |
+                        Набор имён NodeGroup, к которым применяется расширение.
+                nodeSelector:
+                  description: |
+                    Ограничивает расширение узлами с указанными метками.
+                  properties:
+                    matchLabels:
+                      description: |
+                        Набор меток, которые должен нести узел, чтобы быть выбранным.
+                kernelModules:
+                  description: |
+                    Модули, которые нужно загрузить после применения расширения.
+                  items:
+                    properties:
+                      name:
+                        description: |
+                          Имя модуля ядра.
+                      params:
+                        description: |
+                          Параметры модуля, передаваемые строками вида `key=value`.
+            status:
+              properties:
+                observedGeneration:
+                  description: |
+                    Поколение spec, которому соответствует текущий status.
+                resolvedImage:
+                  description: |
+                    Последний `image@digest`, до которого разрешился `imageTemplate`.
+                matchedNodeGroups:
+                  description: |
+                    NodeGroup, которым сейчас соответствуют селекторы.
+                conditions:
+                  description: |
+                    Подробности о ходе выполнения запроса.
