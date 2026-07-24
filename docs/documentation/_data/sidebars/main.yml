@@ -1322,6 +1322,14 @@ entries:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
+            - title:
+                en: Direct mode of registry module
+                ru: Режим Direct модуля registry
+              url: /architecture/deckhouse/registry-direct-mode.html
+            - title:
+                en: DKP cluster management
+                ru: Управление кластерами DKP
+              url: /architecture/deckhouse/commander.html
         - title:
             en: Delivery subsystem
             ru: Подсистема Delivery
