@@ -290,18 +290,10 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	}
 
 	if !cpuOverridden {
-		changed, err := evaluateMeasurement(input, state, resourceCPU, recsCPU, budgetCPU, combinedCPU, now)
-		if err != nil {
-			return err
-		}
-		stateDirty = stateDirty || changed
+		stateDirty = stateDirty || evaluateMeasurement(input, state, resourceCPU, recsCPU, budgetCPU, combinedCPU, now)
 	}
 	if !memoryOverridden {
-		changed, err := evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMem, combinedMem, now)
-		if err != nil {
-			return err
-		}
-		stateDirty = stateDirty || changed
+		stateDirty = stateDirty || evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMem, combinedMem, now)
 	}
 
 	// Re-emit after evaluate (capacityBlocked may have changed).
@@ -435,9 +427,9 @@ func evaluateMeasurement(
 	nodeBudget int64,
 	combinedBudget int64,
 	now time.Time,
-) (bool, error) {
+) bool {
 	if len(recs) == 0 {
-		return false, nil
+		return false
 	}
 
 	m := state.measurement(resourceName)
@@ -529,7 +521,7 @@ func evaluateMeasurement(
 			"component", comp, "resource", resourceName, "action", actionName(action), "value", val)
 	}
 
-	return changed, nil
+	return changed
 }
 
 func actionName(a decideAction) string {
