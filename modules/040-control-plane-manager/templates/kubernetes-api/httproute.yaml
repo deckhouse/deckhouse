@@ -17,7 +17,7 @@ metadata:
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
   hostnames:
   - {{ $apiHost }}
