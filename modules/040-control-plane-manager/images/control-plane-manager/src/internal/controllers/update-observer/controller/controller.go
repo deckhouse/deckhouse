@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"go.yaml.in/yaml/v2"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
@@ -82,9 +83,9 @@ func RegisterController(manager manager.Manager) error {
 		}).
 		Named(common.ControllerName).
 		Watches(
-			&corev1.Secret{},
+			&corev1.ConfigMap{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(getSecretPredicate()),
+			builder.WithPredicates(getConfigMapSpecPredicate()),
 		).
 		Watches(
 			&corev1.Node{},
@@ -106,22 +107,34 @@ func RegisterController(manager manager.Manager) error {
 		Complete(r)
 }
 
-func getSecretPredicate() predicate.Predicate {
+// getConfigMapSpecPredicate reacts to the ConfigMap this controller owns, but only when its
+// data["spec"] block actually changed — that's the only part an external actor (the
+// sync_desired_kubernetes_version.go Helm hook) ever writes. Filtering out data["status"]-only
+// changes is what keeps this watch from re-triggering a reconcile on the controller's own status
+// writes to the same object.
+func getConfigMapSpecPredicate() predicate.Predicate {
+	parseSpec := func(cm *corev1.ConfigMap) Spec {
+		var spec Spec
+		_ = yaml.Unmarshal([]byte(cm.Data["spec"]), &spec)
+		return spec
+	}
+
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			secret, ok := e.Object.(*corev1.Secret)
+			cm, ok := e.Object.(*corev1.ConfigMap)
 			if !ok {
 				return false
 			}
-			return secret.Name == common.SecretName
+			return cm.Name == common.ConfigMapName
 		},
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			secret, ok := e.ObjectNew.(*corev1.Secret)
-			if !ok {
+			newCM, ok1 := e.ObjectNew.(*corev1.ConfigMap)
+			oldCM, ok2 := e.ObjectOld.(*corev1.ConfigMap)
+			if !ok1 || !ok2 || newCM.Name != common.ConfigMapName {
 				return false
 			}
-			return secret.Name == common.SecretName
+			return parseSpec(oldCM) != parseSpec(newCM)
 		},
 
 		DeleteFunc: func(e event.DeleteEvent) bool {
@@ -167,9 +180,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	clusterCfg, err := r.getClusterConfiguration(ctx)
+	clusterCfg, err := getDesiredConfiguration(configMap)
 	if err != nil {
-		logger.Error("Failed to get cluster configuration from secret", "namespace", common.KubeSystemNamespace, "name", common.SecretName, log.Err(err))
+		logger.Error("Failed to get desired cluster configuration from configMap", "namespace", common.KubeSystemNamespace, "name", common.ConfigMapName, log.Err(err))
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 

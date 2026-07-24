@@ -113,8 +113,18 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 		configMap.Data["status"] = string(statusBytes)
 	}
 
+	// GetAnnotations/GetLabels can return nil for a ConfigMap this controller didn't create itself
+	// (e.g. one seeded by the sync_desired_kubernetes_version.go Helm hook with data.spec only,
+	// or a ConfigMap that came back from the API server with an empty map omitted via
+	// `omitempty`) — guard against assigning into a nil map below.
 	annotations := configMap.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
 	labels := configMap.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	annotations[common.LastReconciliationTime] = now
