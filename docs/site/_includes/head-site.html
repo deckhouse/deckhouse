@@ -104,8 +104,8 @@
 {%- if page.allowPDFDownload %}
 {%- comment %}
 Only the small handler is loaded up front. The heavy libraries (pdfmake ~1.4MB,
-vfs_fonts ~0.8MB, html-to-pdfmake) are fetched lazily by pdf-export.js the first
-time the user clicks the download button — see loadPdfLibraries() there.
+html-to-pdfmake, DejaVu Sans TTFs ~2.7MB) are fetched lazily by pdf-export.js
+the first time the user clicks the download button — see loadPdfLibraries().
 {%- endcomment %}
 <script type="text/javascript" src="/assets/js/pdf-export.js?v={{ assetHash }}" data-pdf-assets-version="{{ assetHash }}"></script>
 {%- endif %}
