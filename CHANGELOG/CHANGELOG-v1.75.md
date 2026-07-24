@@ -270,6 +270,7 @@
  - **[deckhouse-controller]** Exclude all service accounts from `d8-` namespaces in `d8ms-prefix` ValidatingAdmissionPolicy. [#17440](https://github.com/deckhouse/deckhouse/pull/17440)
  - **[deckhouse-controller]** Fix conversions for external modules [#16772](https://github.com/deckhouse/deckhouse/pull/16772)
  - **[deckhouse-controller]** Fix false DeckhouseUpdatingFailed alert on registries without version tags in release-channel repo [#18310](https://github.com/deckhouse/deckhouse/pull/18310)
+ - **[deckhouse-controller]** Fix maintenance state tracking — module no longer gets stuck in Unmanaged after removing maintenance. [#21427](https://github.com/deckhouse/deckhouse/pull/21427)
  - **[deckhouse-controller]** Fixed D8ModuleOutdatedByMajorVersion alert persist after update. [#17468](https://github.com/deckhouse/deckhouse/pull/17468)
  - **[deckhouse-controller]** Fixed `--insecure` flag being ignored in registry client operations. [#17554](https://github.com/deckhouse/deckhouse/pull/17554)
  - **[deckhouse-controller]** Fixed corner cases in d8-cluster-configuration webhook. [#17342](https://github.com/deckhouse/deckhouse/pull/17342)
@@ -286,6 +287,7 @@
  - **[deckhouse]** Allow updating scanInterval on the deckhouse ModuleSource. [#19417](https://github.com/deckhouse/deckhouse/pull/19417)
  - **[deckhouse]** Bump nelm version with deadlock fix. [#18586](https://github.com/deckhouse/deckhouse/pull/18586)
  - **[deckhouse]** Ensure heritage label on d8-system namespace via hook. [#19196](https://github.com/deckhouse/deckhouse/pull/19196)
+ - **[deckhouse]** Fix CVEs. [#21542](https://github.com/deckhouse/deckhouse/pull/21542)
  - **[deckhouse]** Fix exp modules auto enabling. [#19699](https://github.com/deckhouse/deckhouse/pull/19699)
  - **[deckhouse]** Fix module docs rendering. [#17245](https://github.com/deckhouse/deckhouse/pull/17245)
  - **[deckhouse]** Fix module enabling. [#17009](https://github.com/deckhouse/deckhouse/pull/17009)
@@ -297,6 +299,7 @@
  - **[deckhouse]** Fixed missing module stage in the Module CR, restoring experimental module warnings. [#17244](https://github.com/deckhouse/deckhouse/pull/17244)
  - **[deckhouse]** Overwrite currentReleaseImageName on mismatch. [#19416](https://github.com/deckhouse/deckhouse/pull/19416)
  - **[deckhouse]** Remove notified=false annotation reset from runReleaseDeploy in the module release controller. [#19182](https://github.com/deckhouse/deckhouse/pull/19182)
+ - **[deckhouse]** atomically install modules and re-download incomplete versions [#21459](https://github.com/deckhouse/deckhouse/pull/21459)
  - **[descheduler]** Fixed module queue hang when a v1alpha1 Descheduler CR with deprecated-only strategies is applied. [#17986](https://github.com/deckhouse/deckhouse/pull/17986)
  - **[descheduler]** Removed implicit default thresholds from Descheduler CRD and align behavior with upstream. [#17488](https://github.com/deckhouse/deckhouse/pull/17488)
     Thresholds and targetThresholds are no longer implicitly defaulted.
