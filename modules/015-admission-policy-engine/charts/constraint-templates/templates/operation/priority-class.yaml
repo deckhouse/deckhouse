@@ -40,10 +40,10 @@ spec:
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 priority_class := object.get(pod_spec, "priorityClassName", "")
-                not contains(input.parameters.priorityClassNames, priority_class)
-                msg := sprintf("Workload <%v> has invalid priority class: %v, allowed: %v", [input.review.object.metadata.name, priority_class, input.parameters.priorityClassNames])
+                not list_contains(input.parameters.priorityClassNames, priority_class)
+                msg := sprintf("Pod <%v> has invalid priority class: %v, allowed: %v", [input.review.object.metadata.name, priority_class, input.parameters.priorityClassNames])
               }
 
-              contains(list, elem) if {
-                list[_] = elem
+              list_contains(list, elem) if {
+                list[_] == elem
               }

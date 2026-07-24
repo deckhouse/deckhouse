@@ -46,7 +46,7 @@ spec:
               remote_data := response if {
                 images := [img | img = retrieve_images[_]]
                 filtered_images := [image |
-                  image := images[_];
+                  image := images[_]
                   regex.match(input.parameters.references[_], image)
                 ]
                 response := get_data(filtered_images)
@@ -96,7 +96,7 @@ spec:
               # Base Gatekeeper violation
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
-                general_violation contains {"result": msg}
+                msg := general_violation[_].result
               }
 
               # Check if there are any system errors

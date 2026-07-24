@@ -35,14 +35,14 @@ spec:
                 container := input_containers_envs[_]
                 cdata := container.envs[_]
                 count(cdata) > 1
-                msg := sprintf("Container <%v> in workload <%v> has duplicated env variable names: '%v'", [container.name, input.review.object.metadata.name, cdata[0]])
+                msg := sprintf("Container <%v> in pod <%v> has duplicated env variable names: '%v'", [container.name, input.review.object.metadata.name, cdata[0]])
               }
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 cdata := input_containers[_]
                 count(cdata) > 1
-                msg := sprintf("Workload <%v> has duplicated container names: '%v'", [input.review.object.metadata.name, cdata[0]])
+                msg := sprintf("Pod <%v> has duplicated container names: '%v'", [input.review.object.metadata.name, cdata[0]])
               }
 
               container_names := {name: list |
