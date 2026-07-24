@@ -21,7 +21,6 @@ spec:
   enabled: true
   settings:
     longtermRetentionDays: 0
-  version: 2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
