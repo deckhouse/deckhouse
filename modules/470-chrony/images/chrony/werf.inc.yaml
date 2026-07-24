@@ -24,7 +24,7 @@ shell:
   - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/chrony/chrony /src/chrony && rm -rf /src/chrony/.git
 ---
 image: {{ .ModuleName }}/build-chrony-static-artifact
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -33,8 +33,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache automake autoconf libtool build-base bison asciidoctor libcap-dev libcap-static
+  - pm install automake autoconf libtool build-base bison asciidoctor libcap-devel libucontext
   install:
   - cd /src
   - echo "{{ $version }}" > version.txt
@@ -46,7 +45,7 @@ shell:
   - chmod +x /opt/chrony-static/sbin/chronyd
 ---
 image: {{ .ModuleName }}/build-entrypoint-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
