@@ -9,6 +9,31 @@ properties:
       The default value can be calculated based on the `ClusterConfiguration` struct if the cluster is installed via the Deckhouse installer.
     x-examples:
       - kube
+  defaultCRI:
+    type: string
+    default: "Containerd"
+    description: |
+      The container runtime type used on cluster nodes (NodeGroups) by default.
+
+      Used for NodeGroups that don't set `spec.cri.type` explicitly.
+
+      If the value `NotManaged` is used, then Deckhouse does not manage the container runtime (and doesn't install it).
+      In this case, it is necessary to use images for NodeGroups on which the container runtime is already installed.
+
+      If `ContainerdV2` is set, `CgroupsV2` will be used (providing improved security and resource management). To use `ContainerdV2` as the container runtime, cluster nodes must meet the following requirements:
+
+      - Support for `CgroupsV2`.
+      - Linux kernel version 5.8 or newer, except for the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS).
+      - Systemd version `244` or newer.
+      - Support for `erofs` kernel module.
+
+      If parameter not set, the value from `ClusterConfiguration.defaultCRI` is used (defaults to `Containerd`).
+    enum:
+      - "Containerd"
+      - "ContainerdV2"
+      - "NotManaged"
+    x-examples:
+      - "ContainerdV2"
   mcmEmergencyBrake:
     type: boolean
     default: false

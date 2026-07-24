@@ -123,6 +123,53 @@ func moduleConfigGlobal(customTolerationKeys []string) *unstructured.Unstructure
 	return obj
 }
 
+func moduleConfigNodeManager(defaultCRI string) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig",
+	})
+	obj.SetName("node-manager")
+	if defaultCRI != "" {
+		_ = unstructured.SetNestedField(obj.Object, defaultCRI, "spec", "settings", "defaultCRI")
+	}
+	return obj
+}
+
+func TestLoadClusterConfig_DefaultCRIPrecedence(t *testing.T) {
+	tests := []struct {
+		name        string
+		clusterCRI  string
+		moduleCRI   string
+		expectedCRI string
+	}{
+		{name: "only ClusterConfiguration", clusterCRI: "ContainerdV2", moduleCRI: "", expectedCRI: "ContainerdV2"},
+		{name: "only ModuleConfig", clusterCRI: "", moduleCRI: "ContainerdV2", expectedCRI: "ContainerdV2"},
+		{name: "ModuleConfig overrides ClusterConfiguration", clusterCRI: "Containerd", moduleCRI: "ContainerdV2", expectedCRI: "ContainerdV2"},
+		{name: "ModuleConfig at default falls back to ClusterConfiguration", clusterCRI: "ContainerdV2", moduleCRI: "Containerd", expectedCRI: "ContainerdV2"},
+		{name: "neither set", clusterCRI: "", moduleCRI: "", expectedCRI: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := newScheme()
+			builder := fake.NewClientBuilder().WithScheme(s).
+				WithObjects(clusterConfigSecret("Cloud", "kube", tt.clusterCRI, 24))
+			if tt.moduleCRI != "" {
+				builder = builder.WithObjects(moduleConfigNodeManager(tt.moduleCRI))
+			}
+			w := &NodeGroupValidator{Client: builder.Build(), decoder: admission.NewDecoder(s)}
+
+			cfg, err := w.loadClusterConfig(context.Background())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if cfg.DefaultCRI != tt.expectedCRI {
+				t.Fatalf("expected DefaultCRI %q, got %q", tt.expectedCRI, cfg.DefaultCRI)
+			}
+		})
+	}
+}
+
 func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
 	addresses := make([]corev1.EndpointAddress, addressCount)
 	for i := 0; i < addressCount; i++ {

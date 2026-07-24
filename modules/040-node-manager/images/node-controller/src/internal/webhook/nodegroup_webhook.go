@@ -430,6 +430,10 @@ func validateDisruptionWindows(d *v1.DisruptionsSpec) error {
 	return nil
 }
 
+// defaultCRIType is the built-in container runtime used when neither the
+// NodeGroup, the node-manager ModuleConfig, nor ClusterConfiguration specify one.
+const defaultCRIType = "Containerd"
+
 func getCRIType(ng *v1.NodeGroup, defaultCRI string) string {
 	if ng.Spec.CRI != nil && ng.Spec.CRI.Type != "" {
 		return string(ng.Spec.CRI.Type)
@@ -437,7 +441,7 @@ func getCRIType(ng *v1.NodeGroup, defaultCRI string) string {
 	if defaultCRI != "" {
 		return defaultCRI
 	}
-	return "Containerd"
+	return defaultCRIType
 }
 
 // ClusterConfig holds relevant fields from d8-cluster-configuration Secret
@@ -497,7 +501,50 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterCon
 		}
 	}
 
+	// The node-manager ModuleConfig setting is the new home for defaultCRI and takes
+	// precedence over the deprecated ClusterConfiguration field when set to a non-default value.
+	mcCRI, err := w.loadDefaultCRIFromModuleConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if mcCRI != "" && mcCRI != defaultCRIType {
+		config.DefaultCRI = mcCRI
+	}
+
 	return config, nil
+}
+
+// loadDefaultCRIFromModuleConfig reads spec.settings.defaultCRI from the
+// node-manager ModuleConfig. Returns an empty string if the ModuleConfig or the
+// field is not set. Returns an error for transient failures (timeout, permission
+// denied, etc.).
+func (w *NodeGroupValidator) loadDefaultCRIFromModuleConfig(ctx context.Context) (string, error) {
+	// ModuleConfig is deckhouse.io/v1alpha1
+	mc := &unstructured.Unstructured{}
+	mc.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "deckhouse.io",
+		Version: "v1alpha1",
+		Kind:    "ModuleConfig",
+	})
+
+	webhookLog.Info("reading ModuleConfig", "name", "node-manager")
+	err := w.Client.Get(ctx, types.NamespacedName{Name: "node-manager"}, mc)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			webhookLog.V(1).Info("ModuleConfig 'node-manager' not found")
+			return "", nil
+		}
+		// Timeout, permission denied, API unavailable - this is an error
+		return "", fmt.Errorf("failed to get ModuleConfig 'node-manager': %w", err)
+	}
+
+	// Path: .spec.settings.defaultCRI
+	cri, found, _ := unstructured.NestedString(mc.Object, "spec", "settings", "defaultCRI")
+	if !found {
+		return "", nil
+	}
+
+	return cri, nil
 }
 
 // loadProviderClusterConfig reads provider cluster configuration from d8-provider-cluster-configuration Secret.

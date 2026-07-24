@@ -586,10 +586,10 @@ containerd v2 uses the new scheme by default. For more details, see the section 
 To view the container runtime type used by default on cluster nodes (in NodeGroups), use the following command:
 
 ```shell
-d8 system edit cluster-configuration
+d8 k get moduleconfig node-manager -o jsonpath='{.spec.settings.defaultCRI}'
 ```
 
-The container runtime type is specified in the `defaultCRI` parameter.
+The container runtime type is specified in the `defaultCRI` parameter of the `node-manager` ModuleConfig.
 
 If containerd v2 is used as the container runtime, follow the [containerd v2](#for-containerd-v2) migration instructions.
 

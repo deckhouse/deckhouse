@@ -357,9 +357,10 @@ kubernetesValidating:
 | Snapshot | Resource | What it extracts |
 |----------|----------|------------------|
 | `endpoints` | Endpoints/kubernetes | API server endpoint count |
-| `cluster_config` | Secret/d8-cluster-configuration | defaultCRI, clusterPrefixLen, clusterType, podSubnetNodeCIDRPrefix |
+| `cluster_config` | Secret/d8-cluster-configuration | defaultCRI (fallback), clusterPrefixLen, clusterType, podSubnetNodeCIDRPrefix |
 | `provider_cluster_config` | Secret/d8-provider-cluster-configuration | Available zones |
 | `deckhouse_config` | ModuleConfig/global | customTolerationKeys |
+| `node_manager_config` | ModuleConfig/node-manager | defaultCRI (overrides ClusterConfiguration) |
 | `nodes_with_containerd_custom_conf` | Nodes with label `containerd-config=custom` | Nodes with custom containerd |
 | `nodes_without_containerd_support` | Nodes with label `containerd-v2-unsupported` | Nodes without containerd v2 support |
 
