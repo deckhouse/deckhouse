@@ -56,6 +56,43 @@ const docKeyPrefix = "x-doc-"
 // instead of overwriting each other. It renders as x-doc-examples.
 const examplesMarker = "examples"
 
+// examplesDescriptionMarker attaches a human-readable description to the example
+// introduced by the preceding examplesMarker. When present, the pair renders as
+// a wrapper object inside x-doc-examples:
+//
+//	// +crd-enricher:deckhouse:documentation:examples={field: value}
+//	// +crd-enricher:deckhouse:documentation:examples-description=My example
+//
+// becomes
+//
+//	x-doc-examples:
+//	  - x-example:
+//	      field: value
+//	    x-description: My example
+//
+// As long as no example carries a name or a description the list stays a plain
+// list of values, so existing examples are unaffected. As soon as any example
+// has a name or a description, every entry switches to the wrapper form (an
+// entry missing either attribute omits the corresponding key) so the array
+// stays homogeneous.
+const examplesDescriptionMarker = "examples-description"
+
+// examplesNameMarker attaches a short name to the example introduced by the
+// preceding examplesMarker, exactly like examplesDescriptionMarker. It renders
+// as x-name inside the wrapper and, like a description, switches the whole
+// x-doc-examples list to the wrapper form.
+const examplesNameMarker = "examples-name"
+
+// docExampleKey, docNameKey and docDescriptionKey are the schema fields that a
+// wrapped example renders to inside an x-doc-examples entry. Unlike the list key
+// itself they are not under the x-doc- namespace: an entry reads
+// {x-example, x-description, x-name}.
+const (
+	docExampleKey     = "x-example"
+	docNameKey        = "x-name"
+	docDescriptionKey = "x-description"
+)
+
 // rawMarkerPrefix is the entity that injects an arbitrary standard schema field
 // named by the <key> that follows it (not under an x-doc-* key). For example
 // "+crd-enricher:raw:pattern=^\d+$" sets the schema

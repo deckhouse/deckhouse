@@ -38,6 +38,19 @@ type Options struct {
 	// Dir is the working directory used to resolve the package patterns.
 	// When empty the current working directory is used.
 	Dir string
+	// GenerateExamples enables the automatic bottom-up synthesis of
+	// x-doc-examples. It is off by default: explicit examples markers are always
+	// applied, but composite examples (the synthesized root example and, under
+	// crd:exampleScope=tree, the per-node examples) are only produced when this
+	// flag is set.
+	GenerateExamples bool
+	// Reindent switches the output encoder to the goyaml.v3 layout, which indents
+	// every block sequence under its parent key (SetIndent(2)). It is off by
+	// default: the enricher then keeps the sigs.k8s.io/yaml layout (block
+	// sequences flush with their parent key), leaving files byte-identical to
+	// controller-gen output except at the enriched nodes. Key ordering (authored
+	// order for examples, sorted elsewhere) is the same either way.
+	Reindent bool
 }
 
 // Enricher applies custom x-doc-* schema fields to controller-gen output based
@@ -64,6 +77,21 @@ type Enricher struct {
 	// (and "root") attaches a single synthesized example to the CRD root, while
 	// "tree" attaches a composite example to every object node as well.
 	exampleScope string
+
+	// generateExamplesEnabled turns the automatic example synthesis on. It mirrors
+	// Options.GenerateExamples and is off by default, so composite examples are
+	// only produced when the caller opts in.
+	generateExamplesEnabled bool
+
+	// orderedExamples is set per file when an example marker produced an
+	// order-preserving orderedMap. Such files are encoded with the
+	// order-preserving marshaller so the authored field order survives; files
+	// without ordered examples keep the default sigs.k8s.io/yaml encoding.
+	orderedExamples bool
+
+	// reindent mirrors Options.Reindent. When set, every document is encoded with
+	// the goyaml.v3 indented layout instead of the flush sigs.k8s.io/yaml one.
+	reindent bool
 }
 
 // Run loads the API packages, then walks and enriches every CRD file in the
@@ -82,8 +110,10 @@ func Run(opts Options) ([]string, error) {
 	}
 
 	enr := &Enricher{
-		pkgByPath:      pkgByPath,
-		rootsByVersion: make(map[string]map[string]*types.Named),
+		pkgByPath:               pkgByPath,
+		rootsByVersion:          make(map[string]map[string]*types.Named),
+		generateExamplesEnabled: opts.GenerateExamples,
+		reindent:                opts.Reindent,
 	}
 	for _, info := range pkgByPath {
 		for kind, named := range info.roots {
@@ -160,9 +190,23 @@ func (e *Enricher) enrichFile(path string) (bool, error) {
 
 	e.curatedStyle = false
 	e.exampleScope = ""
+	e.orderedExamples = false
 	e.enrichCRD(crd)
 
-	out, err := yaml.Marshal(crd)
+	// Documents that carry authored (ordered) examples are encoded with the
+	// order-preserving marshaller so the example fields keep their authored
+	// order; everything else keeps the default sigs.k8s.io/yaml encoding, which
+	// leaves files without markers byte for byte identical. The reindent flag
+	// overrides both and encodes every document with the goyaml.v3 indented
+	// layout (it also preserves ordered examples).
+	marshal := yaml.Marshal
+	switch {
+	case e.reindent:
+		marshal = marshalIndented
+	case e.orderedExamples:
+		marshal = marshalOrdered
+	}
+	out, err := marshal(crd)
 	if err != nil {
 		return false, fmt.Errorf("encode yaml: %w", err)
 	}
@@ -249,8 +293,11 @@ func (e *Enricher) enrichCRD(crd map[string]any) {
 		}
 
 		// Examples are generated bottom-up after every marker has been applied,
-		// so explicit examples, defaults and enums are already in place.
-		e.generateExamples(spec, names, name, openAPISchema)
+		// so explicit examples, defaults and enums are already in place. This is
+		// opt-in: without the flag only the explicit examples markers survive.
+		if e.generateExamplesEnabled {
+			e.generateExamples(spec, names, name, openAPISchema)
+		}
 	}
 }
 
@@ -535,14 +582,15 @@ func (e *Enricher) enrichValue(schema map[string]any, typ types.Type) {
 }
 
 // applyMarkers writes the x-doc-* keys described by the markers into a schema
-// node. examplesMarker accumulates a list, value-less markers become boolean
+// node. examplesMarker accumulates a list (each entry optionally described by a
+// following examples-description marker), value-less markers become boolean
 // flags and everything else stores its parsed YAML value.
 func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 	if schema == nil {
 		return
 	}
 
-	var examples []any
+	var examples []exampleEntry
 	for _, m := range markers {
 		if !m.isDoc() {
 			continue
@@ -555,16 +603,73 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 
 		switch {
 		case m.name == examplesMarker:
+			// Examples are decoded with the order-preserving decoder so an
+			// example object keeps its authored field order when rendered. Each
+			// value becomes its own entry so a following examples-description
+			// marker can attach to it.
+			value, err := decodeOrderedValue(m.rawValue)
+			if err != nil {
+				e.warnings = append(e.warnings, err.Error())
+				continue
+			}
+			// An example authored in ascending key order renders identically
+			// under the default encoder, so collapse it to the plain (sorted)
+			// model. This keeps the whole document on the default sigs.k8s.io/yaml
+			// encoding instead of switching to the order-preserving one, which
+			// would reindent every sequence in the file. Examples that
+			// deliberately reorder keys stay ordered and keep their authored order.
+			if plain, ok := plainIfSorted(value); ok {
+				value = plain
+			}
+			if list, ok := value.([]any); ok {
+				for _, item := range list {
+					examples = append(examples, exampleEntry{value: item})
+				}
+			} else {
+				examples = append(examples, exampleEntry{value: value})
+			}
+
+		case m.name == examplesDescriptionMarker:
+			// A description attaches to the example introduced by the preceding
+			// examples marker. Without one there is nothing to describe.
+			if len(examples) == 0 {
+				e.warnings = append(e.warnings, fmt.Sprintf(
+					"%s marker has no preceding %s marker to attach to", examplesDescriptionMarker, examplesMarker))
+				continue
+			}
 			value, err := decodeValue(m.rawValue)
 			if err != nil {
 				e.warnings = append(e.warnings, err.Error())
 				continue
 			}
-			if list, ok := value.([]any); ok {
-				examples = append(examples, list...)
-			} else {
-				examples = append(examples, value)
+			last := &examples[len(examples)-1]
+			if last.hasDescription {
+				e.warnings = append(e.warnings, fmt.Sprintf(
+					"%s marker overrides an earlier description for the same example", examplesDescriptionMarker))
 			}
+			last.description = value
+			last.hasDescription = true
+
+		case m.name == examplesNameMarker:
+			// A name attaches to the example introduced by the preceding examples
+			// marker, exactly like a description.
+			if len(examples) == 0 {
+				e.warnings = append(e.warnings, fmt.Sprintf(
+					"%s marker has no preceding %s marker to attach to", examplesNameMarker, examplesMarker))
+				continue
+			}
+			value, err := decodeValue(m.rawValue)
+			if err != nil {
+				e.warnings = append(e.warnings, err.Error())
+				continue
+			}
+			last := &examples[len(examples)-1]
+			if last.hasName {
+				e.warnings = append(e.warnings, fmt.Sprintf(
+					"%s marker overrides an earlier name for the same example", examplesNameMarker))
+			}
+			last.name = value
+			last.hasName = true
 
 		case strings.HasPrefix(m.name, rawMarkerPrefix):
 			value, err := decodeValue(m.rawValue)
@@ -621,8 +726,60 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 	}
 
 	if len(examples) > 0 {
-		schema[docKeyPrefix+examplesMarker] = examples
+		schema[docKeyPrefix+examplesMarker] = e.buildExamples(examples)
 	}
+}
+
+// exampleEntry is one authored example together with the optional name and
+// description gathered from following examples-name and examples-description
+// markers.
+type exampleEntry struct {
+	value          any
+	name           any
+	hasName        bool
+	description    any
+	hasDescription bool
+}
+
+// buildExamples renders the collected entries into the x-doc-examples list. If
+// no entry carries a name or a description the list stays a plain list of
+// values, exactly as before. As soon as any entry has a name or a description,
+// every entry switches to the wrapper form {x-example, x-description, x-name}
+// (an entry missing either attribute omits its key), so the array stays
+// homogeneous for consumers. Wrapping (and any ordered example value) forces the
+// order-preserving encoder so the example keeps its place ahead of its
+// attributes.
+func (e *Enricher) buildExamples(entries []exampleEntry) []any {
+	wrap := false
+	for _, entry := range entries {
+		if entry.hasName || entry.hasDescription {
+			wrap = true
+			break
+		}
+	}
+
+	out := make([]any, 0, len(entries))
+	for _, entry := range entries {
+		if containsOrdered(entry.value) {
+			e.orderedExamples = true
+		}
+		if !wrap {
+			out = append(out, entry.value)
+			continue
+		}
+
+		e.orderedExamples = true
+		wrapper := make(orderedMap, 0, 3)
+		wrapper = append(wrapper, orderedEntry{key: docExampleKey, val: entry.value})
+		if entry.hasDescription {
+			wrapper = append(wrapper, orderedEntry{key: docDescriptionKey, val: entry.description})
+		}
+		if entry.hasName {
+			wrapper = append(wrapper, orderedEntry{key: docNameKey, val: entry.name})
+		}
+		out = append(out, wrapper)
+	}
+	return out
 }
 
 // setNested walks an existing schema sub-tree along path and sets the final
