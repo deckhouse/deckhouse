@@ -128,6 +128,9 @@ function prepare_environment() {
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" IMAGES_REPO="$IMAGES_REPO"\
       envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
+  env DECKHOUSE_READ_RU_REGISTRY_HOST="$DECKHOUSE_READ_RU_REGISTRY_HOST" DECKHOUSE_E2E_MODULES_DOCKERCFG="$DECKHOUSE_E2E_MODULES_DOCKERCFG" \
+      envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
+
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" PREFIX="$PREFIX" \
       envsubst <"$cwd/infra.tf.tpl" >"$cwd/infra.tf"
 
