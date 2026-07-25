@@ -36,6 +36,11 @@ import (
 // nodes can pull.
 const readyConditionType = "Ready"
 
+// phaseDegraded is the NER phase when the sysext cannot be resolved; the Ready
+// (phaseReady, shared with NodeConfig) phase means it resolved. Mirrors the
+// NodeConfig status shape (phase + typed conditions).
+const phaseDegraded = "Degraded"
+
 // reconcileNERStatuses writes each NodeExtensionRequest's status: the image its
 // sysext resolves to, the immutable NodeGroups it selects, and a Ready condition
 // carrying the reason when it does not resolve. It is best-effort — a status
@@ -88,18 +93,18 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 	desired.ObservedGeneration = ner.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(ner, immutableGroups)
 
-	ext, reason := resolveExtension(ner, repos)
+	_, reason := resolveExtension(ner, repos)
 	if reason == "" {
-		desired.ResolvedImage = fmt.Sprintf("%s/%s@%s", ext.Repository, ext.AdditionalPath, ext.Digest)
+		desired.Phase = phaseReady
 		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
 			Type:               readyConditionType,
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: ner.Generation,
 			Reason:             reasonResolved,
-			Message:            "sysext resolved to " + desired.ResolvedImage,
+			Message:            "the sysext resolved and is ready to merge onto the matched nodes",
 		})
 	} else {
-		desired.ResolvedImage = ""
+		desired.Phase = phaseDegraded
 		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
 			Type:               readyConditionType,
 			Status:             metav1.ConditionFalse,

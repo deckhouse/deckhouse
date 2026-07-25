@@ -31,7 +31,7 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=ner
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name=Image,jsonPath=.status.resolvedImage,type=string
+// +kubebuilder:printcolumn:name=Phase,jsonPath=.status.phase,type=string
 // +kubebuilder:printcolumn:name=Age,jsonPath=.metadata.creationTimestamp,type=date
 type NodeExtensionRequest struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -112,21 +112,25 @@ type KernelModule struct {
 }
 
 // NodeExtensionRequestStatus is written by node-controller as it resolves the
-// image and matches the selectors.
+// sysext and matches the selectors. It mirrors the NodeConfig status shape: a
+// phase, typed conditions, and the observed generation.
 type NodeExtensionRequestStatus struct {
 	// ObservedGeneration is the generation of the spec this status reflects.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Conditions carry the details of the request's progress.
+	// Phase is Ready when the sysext resolves to an image the selected nodes can
+	// pull, or Degraded when it cannot — the Ready condition carries the reason.
+	// +kubebuilder:validation:Enum=Ready;Degraded
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// Conditions carry the details of the request's progress. Ready answers
+	// whether the sysext resolved.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-
-	// ResolvedImage is the last image@digest ImageTemplate resolved to.
-	// +optional
-	ResolvedImage string `json:"resolvedImage,omitempty"`
 
 	// MatchedNodeGroups are the NodeGroups the selectors currently match.
 	// +optional

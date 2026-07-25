@@ -56,9 +56,9 @@ spec:
                 observedGeneration:
                   description: |
                     Поколение spec, которому соответствует текущий status.
-                resolvedImage:
+                phase:
                   description: |
-                    `repo/path@digest`, до которого разрешился sysext.
+                    `Ready`, когда sysext разрешился в образ, который выбранные узлы могут скачать; `Degraded`, когда не разрешился (причина — в condition `Ready`).
                 matchedNodeGroups:
                   description: |
                     NodeGroup, которым сейчас соответствуют селекторы.

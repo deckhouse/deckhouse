@@ -22,8 +22,8 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: Image
-          jsonPath: .status.resolvedImage
+        - name: Phase
+          jsonPath: .status.phase
           type: string
         - name: Age
           jsonPath: .metadata.creationTimestamp
@@ -127,10 +127,11 @@ spec:
                   minimum: 0
                   description: |
                     The generation of the spec this status reflects.
-                resolvedImage:
+                phase:
                   type: string
+                  enum: ["Ready", "Degraded"]
                   description: |
-                    The `repo/path@digest` the sysext resolves to.
+                    `Ready` when the sysext resolves to an image the selected nodes can pull, `Degraded` when it cannot (the `Ready` condition carries the reason).
                 matchedNodeGroups:
                   type: array
                   items:
