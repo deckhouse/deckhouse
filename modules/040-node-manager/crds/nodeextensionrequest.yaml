@@ -34,7 +34,7 @@ spec:
           description: |
             Asks for a system extension (a module's sysext image, optionally with kernel modules) to be merged onto the nodes it selects.
 
-            The image is a module's sysext. It is not named by a full reference: the registry-packages-proxy already reaches a module's repo with the cluster's own registry credentials, so a request pins only the digest and the repo path (which defaults to `modules/<module>`), and node-controller records the resolved `path@digest` in the status.
+            The image is a module's sysext. It is not named by a full reference: the registry-packages-proxy already reaches a module's repo from its ModuleSource, so a request pins only the digest and the repo path (which defaults to the module name), and node-controller records the resolved `repo/path@digest` in the status.
           required:
             - spec
           properties:
@@ -70,7 +70,11 @@ spec:
                     path:
                       type: string
                       description: |
-                        The image's repo path under the cluster registry. Defaults to `modules/<module>`, taken from the `module.deckhouse.io/name` label on the request.
+                        The image's repo path under the ModuleSource registry. Defaults to the module name (the `module.deckhouse.io/name` label on the request).
+                    moduleSource:
+                      type: string
+                      description: |
+                        The ModuleSource whose registry hosts the image; the proxy resolves its credentials from that source. Defaults to `deckhouse`.
                 nodeGroupSelector:
                   type: object
                   description: |
