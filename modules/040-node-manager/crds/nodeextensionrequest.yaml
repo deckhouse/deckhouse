@@ -60,8 +60,10 @@ spec:
                     name:
                       type: string
                       minLength: 1
+                      maxLength: 63
+                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                       description: |
-                        The sysext name: it is matched against the image's extension-release and installed on the node as `<name>.raw`.
+                        The sysext name: it is matched against the image's extension-release and installed on the node as `<name>.raw`. Copied verbatim into the NodeConfig extension name, so it must be a DNS-label-like token.
                     digest:
                       type: string
                       pattern: '^sha256:[a-f0-9]{64}$'

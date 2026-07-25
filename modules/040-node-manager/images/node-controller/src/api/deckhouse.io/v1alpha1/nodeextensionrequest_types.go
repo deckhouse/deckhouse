@@ -65,8 +65,12 @@ type NodeExtensionRequestSpec struct {
 // the module name — the path.
 type Sysext struct {
 	// Name is the sysext name: it is matched against the image's
-	// extension-release and installed on the node as "<name>.raw".
+	// extension-release and installed on the node as "<name>.raw". It is copied
+	// verbatim into the NodeConfig extension name, so it must satisfy that field's
+	// constraints (a DNS-label-like token).
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	Name string `json:"name"`
 
 	// Digest is the sysext image manifest digest.
