@@ -58,11 +58,11 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 		return
 	}
 
-	repos := r.sources.readModuleSourceRepos(ctx)
+	conflicts := resolveNERConflicts(ners.Items)
 	groups := r.immutableNodeGroupNames(ctx, logger)
 
 	for i := range ners.Items {
-		if err := r.updateNERStatus(ctx, &ners.Items[i], repos, groups); err != nil {
+		if err := r.updateNERStatus(ctx, &ners.Items[i], conflicts, groups); err != nil {
 			logger.Error(err, "cannot update NodeExtensionRequest status", "request", ners.Items[i].Name)
 		}
 	}
@@ -88,12 +88,12 @@ func (r *Reconciler) immutableNodeGroupNames(ctx context.Context, logger logr.Lo
 
 // updateNERStatus computes and patches one request's status, skipping the write
 // when nothing changed.
-func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, repos map[string]string, immutableGroups []string) error {
+func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, immutableGroups []string) error {
 	desired := ner.Status.DeepCopy()
 	desired.ObservedGeneration = ner.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(ner, immutableGroups)
 
-	_, reason := resolveExtension(ner, repos)
+	reason, message := nerStatusReason(ner, conflicts)
 	if reason == "" {
 		desired.Phase = phaseReady
 		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
@@ -110,7 +110,7 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: ner.Generation,
 			Reason:             reason,
-			Message:            nerReasonMessage(reason),
+			Message:            message,
 		})
 	}
 
@@ -148,16 +148,37 @@ func matchedNodeGroups(ner *deckhousev1alpha1.NodeExtensionRequest, immutableGro
 	return matched
 }
 
-// nerReasonMessage explains a not-ready reason for the condition message.
+// nerStatusReason returns the reason a request is not ready and a human message
+// for its Ready condition, or empty strings when it resolved. An invalid sysext
+// is reported first; otherwise a lost name/digest contest (resolveNERConflicts).
+func nerStatusReason(ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict) (string, string) {
+	if _, reason := resolveExtension(ner); reason != "" {
+		return reason, nerReasonMessage(reason)
+	}
+	if conflict, lost := conflicts[ner.Name]; lost {
+		return conflict.reason, conflictMessage(conflict)
+	}
+	return "", ""
+}
+
+// nerReasonMessage explains a resolveExtension reason for the condition message.
 func nerReasonMessage(reason string) string {
 	switch reason {
 	case reasonInvalidSysext:
 		return "sysext must set both name and digest"
-	case reasonUnknownSource:
-		return "no ModuleSource registry known for the sysext"
-	case reasonNoPath:
-		return "sysext path is unset and no module.deckhouse.io/name label to default it from"
 	default:
 		return reason
+	}
+}
+
+// conflictMessage explains a lost uniqueness contest for the condition message.
+func conflictMessage(conflict nerConflict) string {
+	switch conflict.reason {
+	case reasonReservedName:
+		return "sysext name is reserved for a platform extension"
+	case reasonConflict:
+		return fmt.Sprintf("sysext %s already claimed by NodeExtensionRequest %q", conflict.field, conflict.winner)
+	default:
+		return conflict.reason
 	}
 }

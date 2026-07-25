@@ -23,10 +23,10 @@ import (
 // NodeExtensionRequest asks for a system extension (a sysext image, optionally
 // with kernel modules) to be merged onto the nodes it selects.
 //
-// The image is a module's sysext. It is not named by a full reference: the
-// registry-packages-proxy already reaches a module's repo from its ModuleSource,
-// so a request only pins the digest and the repo path (which defaults to the
-// module name), and node-controller records the resolved repo@digest in status.
+// The image is addressed the way the registry-packages-proxy addresses any
+// package: a name, a digest, and an optional repository and path. node-controller
+// passes these straight through to the NodeConfig extension the on-node agent
+// pulls — it resolves no module and no ModuleSource.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=ner
@@ -59,10 +59,10 @@ type NodeExtensionRequestSpec struct {
 	KernelModules []KernelModule `json:"kernelModules,omitempty"`
 }
 
-// Sysext locates a module's system-extension image. The image lives in the
-// module's registry repo, which the registry-packages-proxy already reaches from
-// the ModuleSource, so a request pins only the digest and — when it differs from
-// the module name — the path.
+// Sysext locates a system-extension image the same way the
+// registry-packages-proxy locates any package: by name and digest, optionally
+// narrowed to a repository and a path within it. node-controller forwards these
+// verbatim into the NodeConfig extension; it resolves no module or ModuleSource.
 type Sysext struct {
 	// Name is the sysext name: it is matched against the image's
 	// extension-release and installed on the node as "<name>.raw". It is copied
@@ -77,15 +77,38 @@ type Sysext struct {
 	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
 	Digest string `json:"digest"`
 
-	// Path is the image's repo path under the ModuleSource registry. Defaults to
-	// the module name (the module.deckhouse.io/name label on the request).
+	// Repository is the key the registry-packages-proxy resolves credentials by
+	// (its --rpp-repository), for example a ModuleSource's spec.registry.repo. Left
+	// empty, the image is pulled from the cluster's main registry.
+	// +optional
+	Repository string `json:"repository,omitempty"`
+
+	// Path is the image's path within the repository (the proxy's --rpp-path).
+	// Left empty, the repository root is used.
 	// +optional
 	Path string `json:"path,omitempty"`
+}
 
-	// ModuleSource names the ModuleSource whose registry hosts the image; the
-	// proxy resolves its credentials from that source. Defaults to "deckhouse".
-	// +optional
-	ModuleSource string `json:"moduleSource,omitempty"`
+// reservedSysextNames are the platform system-extension names a request may not
+// claim: node-controller renders an extension with one of these names itself, so
+// a request reusing one would be dropped where the two sets merge (platform
+// wins). Kept here, next to the Sysext contract, so the admission webhook and the
+// controller backstop enforce one list.
+const (
+	reservedSysextNameContainerd = "containerd"
+	reservedSysextNameKubelet    = "kubelet"
+	reservedSysextNameCNI        = "kubernetes-cni"
+)
+
+// IsReservedSysextName reports whether a sysext name is reserved for a platform
+// extension and so may not be requested.
+func IsReservedSysextName(name string) bool {
+	switch name {
+	case reservedSysextNameContainerd, reservedSysextNameKubelet, reservedSysextNameCNI:
+		return true
+	default:
+		return false
+	}
 }
 
 // NodeGroupSelector selects NodeGroups by name.

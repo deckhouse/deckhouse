@@ -32,9 +32,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Asks for a system extension (a module's sysext image, optionally with kernel modules) to be merged onto the nodes it selects.
+            Asks for a system extension (a sysext image, optionally with kernel modules) to be merged onto the nodes it selects.
 
-            The image is a module's sysext. It is not named by a full reference: the registry-packages-proxy already reaches a module's repo from its ModuleSource, so a request pins only the digest and the repo path (which defaults to the module name), and node-controller records the resolved `repo/path@digest` in the status.
+            The image is addressed the way the registry-packages-proxy addresses any package: a name, a digest, and an optional repository and path. node-controller forwards these straight into the NodeConfig extension the on-node agent pulls; it resolves no module or ModuleSource.
           required:
             - spec
           properties:
@@ -55,7 +55,7 @@ spec:
                     - name
                     - digest
                   description: |
-                    Locates the module's system-extension image to merge.
+                    Locates the system-extension image to merge, the way the registry-packages-proxy locates any package.
                   properties:
                     name:
                       type: string
@@ -69,14 +69,14 @@ spec:
                       pattern: '^sha256:[a-f0-9]{64}$'
                       description: |
                         The sysext image manifest digest.
+                    repository:
+                      type: string
+                      description: |
+                        The key the registry-packages-proxy resolves credentials by (its `--rpp-repository`), for example a ModuleSource's `spec.registry.repo`. Left empty, the image is pulled from the cluster's main registry.
                     path:
                       type: string
                       description: |
-                        The image's repo path under the ModuleSource registry. Defaults to the module name (the `module.deckhouse.io/name` label on the request).
-                    moduleSource:
-                      type: string
-                      description: |
-                        The ModuleSource whose registry hosts the image; the proxy resolves its credentials from that source. Defaults to `deckhouse`.
+                        The image's path within the repository (the proxy's `--rpp-path`). Left empty, the repository root is used.
                 nodeGroupSelector:
                   type: object
                   description: |

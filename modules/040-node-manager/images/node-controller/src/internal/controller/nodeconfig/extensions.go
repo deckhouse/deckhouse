@@ -17,28 +17,22 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"sort"
+
 	corev1 "k8s.io/api/core/v1"
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
-// moduleNameLabel records which Deckhouse module owns a NodeExtensionRequest.
-// It becomes the extension's RequestedBy so the on-node agent can attribute the
-// sysext to the module that asked for it.
-const moduleNameLabel = "module.deckhouse.io/name"
-
-// defaultModuleSourceName is the ModuleSource a request targets when its Sysext
-// does not name one — the canonical Deckhouse source.
-const defaultModuleSourceName = "deckhouse"
-
 // nodeExtensions aggregates the NodeExtensionRequests that select this node into
 // the extensions and kernel modules to add to its NodeConfig. It is a pure
 // function of its inputs so the matching can be tested without a cluster. A
-// request is dropped (not surfaced as an error) when its sysext cannot be
-// resolved (unknown ModuleSource, or no path to locate the image).
-func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string, moduleSourceRepos map[string]string) (extensions []internalv1alpha1.Extension, modules []internalv1alpha1.KernelModule) {
-	seenExtensions := make(map[string]struct{})
+// request is dropped (not surfaced as an error) when its sysext is invalid or it
+// lost the name/digest uniqueness contest to another request (see
+// resolveNERConflicts) — its own status carries the reason.
+func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string) (extensions []internalv1alpha1.Extension, modules []internalv1alpha1.KernelModule) {
+	conflicts := resolveNERConflicts(ners)
 	seenModules := make(map[string]struct{})
 
 	for i := range ners {
@@ -46,15 +40,15 @@ func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.
 		if !nerMatchesNode(ner, node, ngName) {
 			continue
 		}
+		if _, lost := conflicts[ner.Name]; lost {
+			continue
+		}
 
-		ext, reason := resolveExtension(ner, moduleSourceRepos)
+		ext, reason := resolveExtension(ner)
 		if reason != "" {
 			continue
 		}
-		if _, seen := seenExtensions[ext.Name]; !seen {
-			seenExtensions[ext.Name] = struct{}{}
-			extensions = append(extensions, ext)
-		}
+		extensions = append(extensions, ext)
 
 		for _, module := range ner.Spec.KernelModules {
 			if _, seen := seenModules[module.Name]; seen {
@@ -71,51 +65,88 @@ func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.
 	return extensions, modules
 }
 
-// Reasons a request's sysext cannot be resolved, reported on its Ready
-// condition. An empty reason means the extension resolved.
+// Reasons a request is not ready, reported on its Ready condition. An empty
+// reason means the extension resolved and won its sysext name and digest.
 const (
 	reasonResolved      = "Resolved"
 	reasonInvalidSysext = "InvalidSysext"
-	reasonUnknownSource = "UnknownModuleSource"
-	reasonNoPath        = "NoPath"
+	reasonConflict      = "Conflict"
+	reasonReservedName  = "ReservedName"
 )
 
 // resolveExtension turns a request's Sysext into the NodeConfig extension the
-// on-node agent pulls through the registry-packages-proxy. Repository is the
-// ModuleSource repo — the key the proxy resolves credentials by, so the image is
-// fetched with that source's auth — and AdditionalPath is the repo path under
-// it, defaulting to the module name. The second return is the failure reason, or
+// on-node agent pulls through the registry-packages-proxy. The sysext fields pass
+// straight through: Repository is the proxy's credential key and AdditionalPath
+// the path within it, both optional. The second return is the failure reason, or
 // empty when the extension resolved.
-func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest, moduleSourceRepos map[string]string) (internalv1alpha1.Extension, string) {
+func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest) (internalv1alpha1.Extension, string) {
 	sysext := ner.Spec.Sysext
 	if sysext.Name == "" || sysext.Digest == "" {
 		return internalv1alpha1.Extension{}, reasonInvalidSysext
 	}
-
-	sourceName := sysext.ModuleSource
-	if sourceName == "" {
-		sourceName = defaultModuleSourceName
-	}
-	repository := moduleSourceRepos[sourceName]
-	if repository == "" {
-		return internalv1alpha1.Extension{}, reasonUnknownSource
-	}
-
-	path := sysext.Path
-	if path == "" {
-		path = ner.Labels[moduleNameLabel]
-	}
-	if path == "" {
-		return internalv1alpha1.Extension{}, reasonNoPath
-	}
-
 	return internalv1alpha1.Extension{
 		Name:           sysext.Name,
-		Repository:     repository,
-		AdditionalPath: path,
+		Repository:     sysext.Repository,
+		AdditionalPath: sysext.Path,
 		Digest:         sysext.Digest,
-		RequestedBy:    requestedBy(ner),
+		RequestedBy:    ner.Name,
 	}, ""
+}
+
+// nerConflict records why a request lost its sysext: it either reused a platform
+// name (reasonReservedName) or clashed with an older request on its sysext name
+// or digest (reasonConflict — winner names that request, field the clashing one).
+type nerConflict struct {
+	reason string
+	winner string
+	field  string
+}
+
+// resolveNERConflicts enforces sysext uniqueness across all requests: each sysext
+// name and each digest backs at most one request. The winner of a clash is the
+// oldest request (by creation time, then name); every later request claiming the
+// same name or digest loses, as does any request whose name is reserved for a
+// platform extension. The result maps each losing request's name to why it lost;
+// winners are absent. Requests with an invalid sysext (no name or digest) do not
+// take part — resolveExtension reports those.
+func resolveNERConflicts(ners []deckhousev1alpha1.NodeExtensionRequest) map[string]nerConflict {
+	ordered := make([]*deckhousev1alpha1.NodeExtensionRequest, 0, len(ners))
+	for i := range ners {
+		if ners[i].Spec.Sysext.Name == "" || ners[i].Spec.Sysext.Digest == "" {
+			continue
+		}
+		ordered = append(ordered, &ners[i])
+	}
+	sort.Slice(ordered, func(i, j int) bool {
+		ti, tj := ordered[i].CreationTimestamp, ordered[j].CreationTimestamp
+		if !ti.Equal(&tj) {
+			return ti.Before(&tj)
+		}
+		return ordered[i].Name < ordered[j].Name
+	})
+
+	nameOwner := make(map[string]string, len(ordered))
+	digestOwner := make(map[string]string, len(ordered))
+	conflicts := make(map[string]nerConflict)
+
+	for _, ner := range ordered {
+		sysext := ner.Spec.Sysext
+		if deckhousev1alpha1.IsReservedSysextName(sysext.Name) {
+			conflicts[ner.Name] = nerConflict{reason: reasonReservedName}
+			continue
+		}
+		if owner, taken := nameOwner[sysext.Name]; taken {
+			conflicts[ner.Name] = nerConflict{reason: reasonConflict, winner: owner, field: "name"}
+			continue
+		}
+		if owner, taken := digestOwner[sysext.Digest]; taken {
+			conflicts[ner.Name] = nerConflict{reason: reasonConflict, winner: owner, field: "digest"}
+			continue
+		}
+		nameOwner[sysext.Name] = ner.Name
+		digestOwner[sysext.Digest] = ner.Name
+	}
+	return conflicts
 }
 
 // nerMatchesNode reports whether the request selects this node: its NodeGroup
@@ -143,15 +174,6 @@ func nerMatchesNode(ner *deckhousev1alpha1.NodeExtensionRequest, node *corev1.No
 		}
 	}
 	return true
-}
-
-// requestedBy is the owner recorded on the extension: the module that created
-// the request, falling back to the request's own name.
-func requestedBy(ner *deckhousev1alpha1.NodeExtensionRequest) string {
-	if module := ner.Labels[moduleNameLabel]; module != "" {
-		return module
-	}
-	return ner.Name
 }
 
 // mergeExtensions appends the extra extensions to the base set, dropping any
