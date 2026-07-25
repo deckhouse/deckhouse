@@ -95,6 +95,8 @@ spec:
         env:
         - name: SMOKE_MINI_STS_LIST
           value: {{ join " " (keys $context.Values.upmeter.internal.smokeMini.sts | sortAlpha) }}
+        - name: CLUSTER_DOMAIN
+          value: {{ $context.Values.global.discovery.clusterDomain | quote }}
         - name: POD_NAMESPACE
           valueFrom:
             fieldRef:
