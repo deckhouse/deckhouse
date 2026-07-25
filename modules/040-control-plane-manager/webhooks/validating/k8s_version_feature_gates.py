@@ -44,6 +44,20 @@ kubernetesValidating:
     operations:  ["UPDATE"]
     resources:   ["secrets"]
     scope:       "Namespaced"
+# kubernetesVersion can also be set directly on the ModuleConfig, without ever touching the
+# d8-cluster-configuration secret above — this binding covers that path.
+- name: cpm-k8s-version-feature-gates-mc.deckhouse.io
+  group: cpm-feature-gates-validation
+  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}"]
+  matchConditions:
+  - name: "only-control-plane-manager-module"
+    expression: 'request.name == "control-plane-manager"'
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["moduleconfigs"]
+    scope:       "Cluster"
 
 kubernetes:
 - name: {CLUSTER_CONFIG_SNAPSHOT_NAME}
@@ -144,59 +158,55 @@ def normalize_version(version: str) -> str:
         return version
     return f"{version_parts[0]}.{version_parts[1]}"
 
-def validate(ctx: DotMap) -> Optional[str]:
-    req = ctx.review.request
-    
-    old_secret = req.get('oldObject')
-    new_secret = req.get('object')
-    
-    if not old_secret:
+
+def get_cluster_configuration_secret_data(ctx: DotMap):
+    snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
+    if not snapshot or len(snapshot) == 0:
         return None
-    
-    if not new_secret:
+
+    secret = snapshot[0]
+    if not secret or not hasattr(secret, 'object'):
         return None
-    
-    old_data = old_secret.get('data')
-    new_data = new_secret.get('data')
-    
-    if not old_data or not new_data:
+
+    return secret.object.data
+
+
+def resolve_effective_version(mc_kubernetes_version: Optional[str], ctx: DotMap) -> Optional[str]:
+    # Mirrors resolveDeclaredKubernetesVersion in
+    # modules/040-control-plane-manager/hooks/kubernetes_version_source.go: the ModuleConfig
+    # setting wins when present and not "Automatic", otherwise fall back to ClusterConfiguration.
+    if mc_kubernetes_version and mc_kubernetes_version != "Automatic":
+        return mc_kubernetes_version
+
+    secret_data = get_cluster_configuration_secret_data(ctx)
+    if not secret_data:
         return None
-    
-    old_config_version = get_k8s_version_from_cluster_config(old_data)
-    new_config_version = get_k8s_version_from_cluster_config(new_data)
-    
-    if old_config_version == new_config_version:
+
+    cc_version = get_k8s_version_from_cluster_config(secret_data)
+    if not cc_version:
         return None
-    
-    if not new_config_version:
-        return None
-    
-    target_version = new_config_version
-    
-    if target_version == "Automatic":
-        default_version = get_deckhouse_default_version_from_secret(new_data)
-        if not default_version:
-            return None
-        target_version = default_version
-    
+
+    if cc_version == "Automatic":
+        return get_deckhouse_default_version_from_secret(secret_data)
+
+    return cc_version
+
+
+def build_deprecated_feature_gates_error(target_version: str, enabled_feature_gates: List[str]) -> Optional[str]:
     normalized_version = normalize_version(target_version)
-    
-    enabled_feature_gates = get_enabled_feature_gates(ctx)
-    if not enabled_feature_gates:
-        return None
-    
+
     deprecated_feature_gates = []
-    
+
     for feature_gate in enabled_feature_gates:
         if not feature_gate:
             continue
-        
+
         try:
             if is_feature_gate_deprecated_up_to_version(feature_gate, normalized_version):
                 deprecated_feature_gates.append(feature_gate)
         except Exception:
             continue
-    
+
     if deprecated_feature_gates:
         feature_gates_str = ', '.join(f"'{fg}'" for fg in deprecated_feature_gates)
         return (
@@ -204,7 +214,85 @@ def validate(ctx: DotMap) -> Optional[str]:
             f"The following feature gates are deprecated in this version or earlier: {feature_gates_str}\n"
             f"You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
         )
-    
+
+    return None
+
+
+def validate_cluster_configuration_change(ctx: DotMap) -> Optional[str]:
+    req = ctx.review.request
+
+    old_secret = req.get('oldObject')
+    new_secret = req.get('object')
+
+    if not old_secret:
+        return None
+
+    if not new_secret:
+        return None
+
+    old_data = old_secret.get('data')
+    new_data = new_secret.get('data')
+
+    if not old_data or not new_data:
+        return None
+
+    old_config_version = get_k8s_version_from_cluster_config(old_data)
+    new_config_version = get_k8s_version_from_cluster_config(new_data)
+
+    if old_config_version == new_config_version:
+        return None
+
+    if not new_config_version:
+        return None
+
+    target_version = new_config_version
+
+    if target_version == "Automatic":
+        default_version = get_deckhouse_default_version_from_secret(new_data)
+        if not default_version:
+            return None
+        target_version = default_version
+
+    enabled_feature_gates = get_enabled_feature_gates(ctx)
+    if not enabled_feature_gates:
+        return None
+
+    return build_deprecated_feature_gates_error(target_version, enabled_feature_gates)
+
+
+def validate_module_config_change(ctx: DotMap) -> Optional[str]:
+    req = ctx.review.request
+
+    new_object = req.get('object')
+    if not new_object:
+        return None
+
+    settings = new_object.get('spec', {}).get('settings', {})
+
+    enabled_feature_gates = settings.get('enabledFeatureGates', [])
+    if not enabled_feature_gates or not isinstance(enabled_feature_gates, list):
+        return None
+    enabled_feature_gates = [fg for fg in enabled_feature_gates if fg]
+    if not enabled_feature_gates:
+        return None
+
+    target_version = resolve_effective_version(settings.get('kubernetesVersion'), ctx)
+    if not target_version:
+        return None
+
+    return build_deprecated_feature_gates_error(target_version, enabled_feature_gates)
+
+
+def validate(ctx: DotMap) -> Optional[str]:
+    req = ctx.review.request
+    kind = req.kind.kind.lower()
+
+    if kind == "secret":
+        return validate_cluster_configuration_change(ctx)
+
+    if kind == "moduleconfig":
+        return validate_module_config_change(ctx)
+
     return None
 
 
