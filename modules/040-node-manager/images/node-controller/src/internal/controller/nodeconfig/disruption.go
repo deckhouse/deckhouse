@@ -86,10 +86,14 @@ func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.Node
 			op.Spec.ConfigGeneration == nil || *op.Spec.ConfigGeneration != nc.Generation {
 			continue
 		}
-		// A finished operation is not one in flight. Treating a failed one as
-		// still pending would leave the node asking forever for permission
-		// nobody is going to grant again.
-		if op.Status.Phase == v1alpha1.NodeOperationCompleted || op.Status.Phase == v1alpha1.NodeOperationFailed {
+		// A failed operation allows a fresh attempt: treating it as still
+		// pending would leave the node asking forever for permission nobody is
+		// going to grant again. A completed one, however, means this very
+		// revision was already approved and carried out — returning it (rather
+		// than skipping to createApproval) stops a second approval, and a second
+		// drain, from being minted while the node is still applying the config
+		// and has not yet cleared its DisruptionRequired condition.
+		if op.Status.Phase == v1alpha1.NodeOperationFailed {
 			continue
 		}
 		return op, nil

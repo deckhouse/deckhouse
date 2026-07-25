@@ -16,7 +16,11 @@ limitations under the License.
 
 package nodeoperation
 
-import "time"
+import (
+	"time"
+
+	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+)
 
 const (
 	controllerName = "node-operation"
@@ -30,9 +34,9 @@ const (
 	// on its own, and an operation left open keeps it out of the scheduler.
 	operationTimeout = 30 * time.Minute
 
-	// operationNodeLabel names the node an operation is for, so the operations
-	// of one node can be found without reading everyone else's.
-	operationNodeLabel = "node-manager.deckhouse.io/node"
+	// operationNodeLabel names the node an operation is for; shared with the
+	// creator (nodeconfig) so the lookup contract cannot drift.
+	operationNodeLabel = v1alpha1.NodeOperationNodeLabel
 
 	// drainingSource marks the drains this controller asked for, so it only
 	// releases nodes it took away itself.

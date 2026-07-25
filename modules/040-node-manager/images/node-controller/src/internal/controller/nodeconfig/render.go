@@ -123,8 +123,16 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 		// cannot rewrite it after a reboot and kubelet never comes back.
 		CACert: in.KubernetesCA,
 		// Without it the node never gets a providerID, and CAPI cannot match
-		// the Machine it ordered to the Node that registered.
-		ExternalCloudProvider: ng.Spec.NodeType == v1.NodeTypeCloudEphemeral,
+		// the Machine it ordered to the Node that registered. Both cloud node
+		// types are CAPI-backed (have a Machine), so both need it — not just
+		// CloudEphemeral.
+		ExternalCloudProvider: isCloudNodeType(ng.Spec.NodeType),
+		// Defaults mirror the NodeConfig CRD defaults so the bootstrap path,
+		// which marshals the spec to a file instead of creating it through the
+		// API server (where CRD defaulting runs), gets the same values.
+		MaxPods:              defaultMaxPods,
+		ContainerLogMaxSize:  defaultContainerLogMaxSize,
+		ContainerLogMaxFiles: defaultContainerLogMaxFiles,
 	}
 	if in.ClusterDNS != "" {
 		kubelet.ClusterDNS = []string{in.ClusterDNS}
@@ -134,7 +142,9 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 		if ng.Spec.Kubelet.MaxPods != nil {
 			kubelet.MaxPods = int(*ng.Spec.Kubelet.MaxPods)
 		}
-		kubelet.ContainerLogMaxSize = ng.Spec.Kubelet.ContainerLogMaxSize
+		if ng.Spec.Kubelet.ContainerLogMaxSize != "" {
+			kubelet.ContainerLogMaxSize = ng.Spec.Kubelet.ContainerLogMaxSize
+		}
 		if ng.Spec.Kubelet.ContainerLogMaxFiles != nil {
 			kubelet.ContainerLogMaxFiles = int(*ng.Spec.Kubelet.ContainerLogMaxFiles)
 		}
@@ -180,10 +190,22 @@ func renderTaints(ng *v1.NodeGroup) []internalv1alpha1.Taint {
 	return taints
 }
 
+// isCloudNodeType reports whether a node type is CAPI-backed (has a Machine) and
+// so needs the external cloud provider to be assigned its providerID.
+func isCloudNodeType(t v1.NodeType) bool {
+	return t == v1.NodeTypeCloudEphemeral || t == v1.NodeTypeCloudPermanent
+}
+
 // renderContainerRuntime carries over the only containerd knob a NodeGroup
-// exposes; the runtime itself is a system extension chosen by the platform.
+// exposes; the runtime itself is a system extension chosen by the platform. The
+// defaults mirror the NodeConfig CRD defaults so the bootstrap path (which
+// marshals the spec to a file rather than creating it through the API server,
+// where CRD defaulting runs) produces the same values as a day-2 object.
 func renderContainerRuntime(ng *v1.NodeGroup) internalv1alpha1.ContainerRuntime {
-	runtime := internalv1alpha1.ContainerRuntime{}
+	runtime := internalv1alpha1.ContainerRuntime{
+		SandboxImage:           defaultSandboxImage,
+		MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
+	}
 	if ng.Spec.CRI == nil {
 		return runtime
 	}

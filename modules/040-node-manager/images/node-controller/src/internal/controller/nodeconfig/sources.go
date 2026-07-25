@@ -323,17 +323,24 @@ func (s *sourceReader) readSysextDigests(ctx context.Context, kubernetesVersion 
 	return digests, nil
 }
 
-// pickDigest returns the digest of the newest image with the given prefix.
-// Newest is the highest version suffix, compared as a plain string because the
-// suffixes are zero-free digit runs of the same shape.
+// pickDigest returns the digest of the newest image with the given prefix. The
+// version suffix (the digits after the prefix, e.g. "1356" for kubeletSysext1356)
+// is compared numerically, not lexicographically: once a component reaches two
+// digits a string compare picks the wrong image ("kubeletSysext1356" sorts after
+// "kubeletSysext13510", i.e. patch 6 over patch 10).
 func pickDigest(packages map[string]string, prefix string) string {
-	best, bestKey := "", ""
+	best, bestVer := "", -1
 	for name, digest := range packages {
-		if !strings.HasPrefix(name, prefix) {
+		suffix, ok := strings.CutPrefix(name, prefix)
+		if !ok {
 			continue
 		}
-		if name > bestKey {
-			best, bestKey = digest, name
+		ver, err := strconv.Atoi(suffix)
+		if err != nil {
+			continue
+		}
+		if ver > bestVer {
+			best, bestVer = digest, ver
 		}
 	}
 	return best

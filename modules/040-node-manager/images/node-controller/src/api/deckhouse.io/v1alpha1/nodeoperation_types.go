@@ -20,6 +20,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// NodeOperationNodeLabel names the node a NodeOperation is for, so one node's
+// operations can be listed without reading everyone else's. The controller that
+// creates operations and the one that reconciles them share this single key
+// rather than each spelling out the literal (a typo in either would silently
+// break the lookup contract between them).
+const NodeOperationNodeLabel = "node-manager.deckhouse.io/node"
+
 // NodeOperation is one interruption of a node's work: a reboot, an eviction of
 // its workload, or the permission a node needs before applying a configuration
 // it cannot apply without a pause.

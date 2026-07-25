@@ -17,6 +17,7 @@ limitations under the License.
 package nodeconfig
 
 import (
+	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
@@ -78,18 +79,29 @@ const (
 	// was given.
 	phaseReady = "Ready"
 
-	// operationNodeLabel names the node an operation was created for, so the
-	// operations of one node can be found without reading everyone else's.
-	operationNodeLabel = "node-manager.deckhouse.io/node"
+	// operationNodeLabel names the node an operation was created for; shared with
+	// the reconciler (nodeoperation) so the lookup contract cannot drift.
+	operationNodeLabel = v1alpha1.NodeOperationNodeLabel
 
 	// disruptionRequiredCondition is how the agent says it cannot apply the
 	// config it was given without interrupting the node.
 	disruptionRequiredCondition = "DisruptionRequired"
 )
 
-// defaultOSImage is the olcedar image the node boots from.
-//
-// TODO: resolve this from the Deckhouse release channel once the OS image is
-// published there; until then the image is pinned to a known-good build so the
-// rest of the pipeline can be exercised end to end.
-const defaultOSImage = "registry.deckhouse.io/deckhouse/olcedar@v0.1"
+// defaultOSImage is the olcedar image the node boots from. It is pinned to a
+// known-good build (a tag, not an @digest); resolving it from the Deckhouse
+// release channel is deferred until the OS image is published there and is
+// tracked outside the code.
+const defaultOSImage = "registry.deckhouse.io/deckhouse/olcedar:v0.1"
+
+// Defaults mirroring the NodeConfig CRD field defaults. render applies them so
+// the bootstrap file path — which marshals the spec to a file rather than
+// creating it through the API server, where CRD defaulting runs — produces the
+// same values as a day-2 object.
+const (
+	defaultMaxPods                = 110
+	defaultContainerLogMaxSize    = "50Mi"
+	defaultContainerLogMaxFiles   = 4
+	defaultSandboxImage           = "registry.k8s.io/pause:3.10"
+	defaultMaxConcurrentDownloads = 3
+)

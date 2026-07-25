@@ -180,11 +180,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// The node has had it for a while and said nothing. Something is wrong with
 	// the node, and leaving the operation open would keep it out of the
 	// scheduler forever, with no sign that nothing is coming.
-	if waited := r.since(op); waited > operationTimeout {
+	waited := r.since(op)
+	if waited >= operationTimeout {
 		return ctrl.Result{}, r.fail(ctx, op, "NodeTimedOut",
 			fmt.Sprintf("the node did not report back within %s", operationTimeout), logger)
 	}
-	return ctrl.Result{RequeueAfter: operationTimeout}, nil
+	// Requeue when the deadline is actually due, not a whole period later:
+	// requeuing a full operationTimeout here would only time the node out after
+	// roughly two periods.
+	return ctrl.Result{RequeueAfter: operationTimeout - waited}, nil
 }
 
 // since is how long the operation has been waiting for the node.

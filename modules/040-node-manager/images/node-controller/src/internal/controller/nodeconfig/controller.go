@@ -87,7 +87,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if req.Name == allRequestName {
 		return r.reconcileAllNodes(ctx, logger)
 	}
-	return r.reconcileNode(ctx, req.Name, logger)
+	return r.reconcileNode(ctx, req.Name, logger, inputsCache{})
+}
+
+// inputsCache memoises the cluster-wide render inputs within a single reconcile
+// pass, keyed by Kubernetes version. An all-nodes pass renders every node from
+// the same cluster state, so the ~6 uncached reads readClusterInputs performs
+// are done once per distinct version rather than once per node — a single agent
+// heartbeat no longer fans out into O(nodes) API-server reads.
+type inputsCache map[string]clusterInputs
+
+// clusterInputs returns the render inputs for the group's Kubernetes version,
+// reading them once per version per pass and serving the rest from the cache.
+func (r *Reconciler) clusterInputs(ctx context.Context, ng *v1.NodeGroup, cache inputsCache) (clusterInputs, error) {
+	version := r.kubernetesVersion(ctx, ng)
+	if in, ok := cache[version]; ok {
+		return in, nil
+	}
+	in, err := r.sources.readClusterInputs(ctx, version)
+	if err != nil {
+		return clusterInputs{}, err
+	}
+	cache[version] = in
+	return in, nil
 }
 
 // reconcileAllNodes re-renders every node that belongs to an immutable group.
@@ -98,8 +120,9 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 	}
 
 	var firstErr error
+	cache := inputsCache{}
 	for i := range nodes.Items {
-		if _, err := r.reconcileNode(ctx, nodes.Items[i].Name, logger); err != nil && firstErr == nil {
+		if _, err := r.reconcileNode(ctx, nodes.Items[i].Name, logger, cache); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
@@ -115,7 +138,7 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 // reconcileNode brings one node's NodeConfig in line with its NodeGroup. A node
 // that is gone, ungrouped, or in a bashible-managed group has no NodeConfig of
 // ours; any leftover object is removed.
-func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger logr.Logger) (ctrl.Result, error) {
+func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger logr.Logger, cache inputsCache) (ctrl.Result, error) {
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -143,7 +166,7 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
 	}
 
-	inputs, err := r.sources.readClusterInputs(ctx, r.kubernetesVersion(ctx, ng))
+	inputs, err := r.clusterInputs(ctx, ng, cache)
 	if err != nil {
 		logger.Error(err, "cannot render NodeConfig yet", "node", nodeName, "nodeGroup", ngName)
 		return ctrl.Result{}, err
