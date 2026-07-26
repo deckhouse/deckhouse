@@ -386,7 +386,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -906,7 +906,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -1426,7 +1426,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -1946,7 +1946,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -2466,7 +2466,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -2986,7 +2986,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -3506,7 +3506,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -4026,7 +4026,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -4546,7 +4546,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -5066,7 +5066,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -5586,7 +5586,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -6106,7 +6106,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -6626,7 +6626,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
@@ -7146,7 +7146,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_READ_RU_REGISTRY_HOST | DECKHOUSE_READ_RU_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_READ_RU_HOST | DECKHOUSE_REGISTRY_READ_RU_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>

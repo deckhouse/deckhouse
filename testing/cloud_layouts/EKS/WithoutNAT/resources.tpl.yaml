@@ -5,7 +5,7 @@ metadata:
   name: deckhouse-upstream-ee
 spec:
   registry:
-    repo: '${DECKHOUSE_READ_RU_REGISTRY_HOST}/deckhouse/ee/modules'
+    repo: '${DECKHOUSE_REGISTRY_READ_RU_HOST}/deckhouse/ee/modules'
     dockerCfg: '${DECKHOUSE_E2E_MODULES_DOCKERCFG}'
 ---
 apiVersion: deckhouse.io/v1alpha1
