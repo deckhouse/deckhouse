@@ -40,6 +40,7 @@ import (
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	ngconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditions"
 	calcconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditionscalc"
+	derivedstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	nodestatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/node_status"
 	processedstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/processed_status"
 	"github.com/deckhouse/node-controller/internal/register"
@@ -162,6 +163,18 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		ng.Status.Max = 0
 		ng.Status.Instances = 0
 		ng.Status.LastMachineFailures = nil
+	}
+
+	// Persist status.engine, which get_crds used to write and which the
+	// MachineDeployment reconciler gates on. Only a definitive engine is
+	// written: "None" (provider info absent yet, or genuinely engineless) is
+	// left empty so a later reconcile — re-triggered by the cloud-provider
+	// secret watch — can fill it, instead of getting stuck on a sticky "None".
+	if ng.Status.Engine == "" {
+		ds := derivedstatus.Service{Client: r.Client}
+		if engine := ds.ComputeEngine(ctx, ng); engine != "" && engine != "None" {
+			ng.Status.Engine = engine
+		}
 	}
 
 	if !apiequality.Semantic.DeepEqual(statusBefore, ng.Status) {

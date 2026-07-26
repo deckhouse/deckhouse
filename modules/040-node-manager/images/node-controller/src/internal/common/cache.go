@@ -102,7 +102,7 @@ func stripNodeHeavyFields(obj interface{}) {
 		return
 	}
 	node.Status.Images = nil
-	node.Status.NodeInfo = corev1.NodeSystemInfo{}
+	node.Status.NodeInfo = corev1.NodeSystemInfo{KubeletVersion: node.Status.NodeInfo.KubeletVersion}
 	node.Status.Addresses = nil
 	node.Status.Capacity = nil
 	node.Status.Allocatable = nil
