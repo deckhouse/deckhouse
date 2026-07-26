@@ -75,6 +75,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("get VirtualControlPlane: %w", err)
 	}
 
+	res, err := r.reconcileFinalizer(ctx, vcp)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+	if !vcp.DeletionTimestamp.IsZero() {
+		return reconcile.Result{}, nil
+	}
+
 	albVIP, err := r.albVIP(ctx, vcp)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("resolve ALB VIP: %w", err)
@@ -826,6 +834,11 @@ func (r *reconciler) createSecret(ctx context.Context, secret *corev1.Secret) er
 
 func (r *reconciler) patchSecret(ctx context.Context, base, secret *corev1.Secret) error {
 	return r.client.Patch(ctx, secret, client.MergeFrom(base))
+}
+
+func (r *reconciler) deleteSecret(ctx context.Context, namespace, name string) error {
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+	return client.IgnoreNotFound(r.client.Delete(ctx, secret))
 }
 
 // ConfigMap
