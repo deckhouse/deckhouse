@@ -63,6 +63,8 @@ function prepare_environment() {
   export INITIAL_IMAGE_TAG="$INITIAL_IMAGE_TAG"
   export DECKHOUSE_IMAGE_TAG="$DECKHOUSE_IMAGE_TAG"
   export PREFIX="$PREFIX"
+  export DECKHOUSE_REGISTRY_READ_RU_HOST="$DECKHOUSE_REGISTRY_READ_RU_HOST"
+  export DECKHOUSE_E2E_MODULES_DOCKERCFG="$DECKHOUSE_E2E_MODULES_DOCKERCFG"
   export EDITION=$(echo "${WERF_ENV:-FE}" | tr '[:upper:]' '[:lower:]')
 
   if [[ -z "$KUBERNETES_VERSION" ]]; then

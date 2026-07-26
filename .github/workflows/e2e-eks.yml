@@ -627,6 +627,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -688,6 +690,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -709,6 +713,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -853,6 +859,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -1284,6 +1292,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -1345,6 +1355,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -1366,6 +1378,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -1510,6 +1524,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -1941,6 +1957,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -2002,6 +2020,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -2023,6 +2043,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -2167,6 +2189,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -2598,6 +2622,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -2659,6 +2685,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -2680,6 +2708,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -2824,6 +2854,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -3255,6 +3287,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -3316,6 +3350,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -3337,6 +3373,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -3481,6 +3519,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -3912,6 +3952,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -3973,6 +4015,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -3994,6 +4038,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -4138,6 +4184,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -4569,6 +4617,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -4630,6 +4680,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -4651,6 +4703,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -4795,6 +4849,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -5226,6 +5282,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -5287,6 +5345,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -5308,6 +5368,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -5452,6 +5514,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -5883,6 +5947,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -5944,6 +6010,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -5965,6 +6033,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -6109,6 +6179,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -6540,6 +6612,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -6601,6 +6675,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -6622,6 +6698,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -6766,6 +6844,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -7197,6 +7277,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -7258,6 +7340,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -7279,6 +7363,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -7423,6 +7509,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -7854,6 +7942,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -7915,6 +8005,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -7936,6 +8028,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -8080,6 +8174,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -8511,6 +8607,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -8572,6 +8670,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -8593,6 +8693,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -8737,6 +8839,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -9168,6 +9272,8 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+          DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
@@ -9229,6 +9335,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -9250,6 +9358,8 @@ jobs:
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -9394,6 +9504,8 @@ jobs:
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
           -e PREFIX=${PREFIX} \
+          -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+          -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
