@@ -52,6 +52,14 @@ func CacheOptions() (cache.Options, client.Options) {
 	)
 	machineNSSecretSelector := labels.NewSelector().Add(*machineNSSecretReq)
 
+	dnsServiceReq, _ := labels.NewRequirement("k8s-app", selection.In, []string{"kube-dns", "coredns"})
+	dnsServiceSelector := labels.NewSelector().Add(*dnsServiceReq)
+
+	apiserverPodSelector := labels.SelectorFromSet(labels.Set{
+		"component": "kube-apiserver",
+		"tier":      "control-plane",
+	})
+
 	cacheOpts := cache.Options{
 		DefaultTransform: func(obj interface{}) (interface{}, error) {
 			stripNodeHeavyFields(obj)
@@ -70,6 +78,26 @@ func CacheOptions() (cache.Options, client.Options) {
 						FieldSelector: fields.SelectorFromSet(fields.Set{
 							"metadata.name": "d8-node-manager-cloud-provider",
 						}),
+					},
+				},
+			},
+			&corev1.Pod{}: {
+				Namespaces: map[string]cache.Config{
+					"kube-system": {LabelSelector: apiserverPodSelector},
+				},
+			},
+			&corev1.Service{}: {
+				Namespaces: map[string]cache.Config{
+					"kube-system": {LabelSelector: dnsServiceSelector},
+				},
+			},
+			&corev1.ConfigMap{}: {
+				Namespaces: map[string]cache.Config{
+					"kube-system": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-cluster-uuid"}),
+					},
+					"d8-system": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},
 				},
 			},

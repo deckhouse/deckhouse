@@ -24,6 +24,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -165,9 +166,25 @@ func (s *Service) readDefaultZones(_ context.Context, cloudProvider map[string]i
 	return zones
 }
 
+// resolveInstanceClassVersion returns the served API version for a cloud InstanceClass
+// kind via the RESTMapper's preferred mapping. Providers publish different versions
+// (VCD/Dynamix/HuaweiCloud serve only deckhouse.io/v1), so the version must not be
+// hardcoded. Falls back to instanceClassVersion when the kind is unknown to the mapper.
+func resolveInstanceClassVersion(mapper meta.RESTMapper, kind string) string {
+	if mapper == nil {
+		return instanceClassVersion
+	}
+	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: instanceClassGroup, Kind: kind})
+	if err != nil {
+		return instanceClassVersion
+	}
+	return mapping.GroupVersionKind.Version
+}
+
 func (s *Service) readInstanceClassSpec(ctx context.Context, kind, name string) (interface{}, error) {
 	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceClassVersion, Kind: kind})
+	version := resolveInstanceClassVersion(s.Client.RESTMapper(), kind)
+	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: version, Kind: kind})
 	if err := s.Client.Get(ctx, types.NamespacedName{Name: name}, obj); err != nil {
 		return nil, err
 	}

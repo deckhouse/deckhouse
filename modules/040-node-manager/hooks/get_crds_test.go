@@ -103,6 +103,20 @@ metadata:
   name: proper2-bbb
   namespace: d8-cloud-instance-manager
 `
+		stateICProper = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: proper1
+spec: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: proper2
+spec: {}
+`
 	)
 
 	// Freeze the dynamic 'ics' kind detection. This is a package-level var shared
@@ -111,14 +125,19 @@ metadata:
 	detectInstanceClassKind = func(_ *go_hook.HookInput, _ *go_hook.HookConfig) (string, string) {
 		return "D8TestInstanceClass", "D8TestInstanceClass"
 	}
+	// Point the dynamic 'ics' binding (index 0) at the test InstanceClass kind so its
+	// snapshot is populated and the hook can validate classReference against known classes.
+	getCRDsHookConfig.Kubernetes[0].Kind = "D8TestInstanceClass"
+	getCRDsHookConfig.Kubernetes[0].ApiVersion = "deckhouse.io/v1alpha1"
 
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.32.5", "kubernetesVersions":["1.32.5"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},},"nodeManager":{"internal": {"static": {"internalNetworkCIDRs":["172.18.200.0/24"]}}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 
 	Context("Cluster with NGs, MDs and provider secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + machineDeployments + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + machineDeployments + stateCloudProviderSecret + stateICProper))
 			f.RunHook()
 		})
 
@@ -144,7 +163,7 @@ metadata:
 
 	Context("Cluster with NG only, no provider", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGProper))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper))
 			f.RunHook()
 		})
 
@@ -171,6 +190,7 @@ metadata:
 				    },
 				    "engine": "None",
 				    "manualRolloutID": "",
+				    "instanceClass": {},
 				    "name": "proper1"
 				  },
 				  {
@@ -192,6 +212,7 @@ metadata:
 				    },
 				    "engine": "None",
 				    "manualRolloutID": "",
+				    "instanceClass": {},
 				    "name": "proper2"
 				  }
 				]
@@ -227,7 +248,7 @@ metadata:
 	Context("Engine defaulting from cloud provider", func() {
 		BeforeEach(func() {
 			f.ValuesSet("nodeManager.internal.cloudProvider.machineClassKind", "AWSInstanceClass")
-			f.BindingContexts.Set(f.KubeStateSet(stateNGProper))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper))
 			f.RunHook()
 		})
 
@@ -314,7 +335,7 @@ spec:
       name: proper1
     zones: [a,b]
 `
-			f.BindingContexts.Set(f.KubeStateSet(ng))
+			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
 			f.RunHook()
 		})
 
@@ -343,10 +364,41 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not validate; NG passes through (validation owned by node-controller)", func() {
+		It("Invalid NG must be excluded from helm values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.name").String()).To(Equal("improper"))
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances.classReference.kind").String()).To(Equal("ImproperInstanceClass"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(`[]`))
+		})
+	})
+
+	Context("Invalid NG with a stored last-good value", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(`
+- name: lastgood
+  nodeType: CloudEphemeral
+  instanceClass:
+    saved: true
+`))
+			ng := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: lastgood
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: missing
+`
+			f.BindingContexts.Set(f.KubeStateSet(ng))
+			f.RunHook()
+		})
+
+		It("keeps the last valid NodeGroup configuration", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.name").String()).To(Equal("lastgood"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.instanceClass.saved").Bool()).To(BeTrue())
 		})
 	})
 })
