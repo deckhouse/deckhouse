@@ -19,6 +19,7 @@ package common
 import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -45,10 +46,13 @@ func CacheOptions() (cache.Options, client.Options) {
 		"cluster.x-k8s.io/provider": "cluster-api",
 	})
 
+	// Only apps whose Secrets are actually read: the bashible context Secret and its inputs.
+	// A label with no reader still costs a watch and, worse, wakes the context assembly on
+	// every change of an unrelated Secret.
 	machineNSSecretReq, _ := labels.NewRequirement(
 		"app",
 		selection.In,
-		[]string{"bashible-apiserver", "node-controller", "capi-controller-manager", "registry-packages-proxy"},
+		[]string{"bashible-apiserver", "node-controller", "registry-packages-proxy"},
 	)
 	machineNSSecretSelector := labels.NewSelector().Add(*machineNSSecretReq)
 
@@ -103,16 +107,28 @@ func CacheOptions() (cache.Options, client.Options) {
 					},
 				},
 			},
+			// The one EndpointSlice behind the kubernetes service: it carries the master
+			// addresses handed to every bootstrapping node. Scoped to that single object, it is
+			// cheap enough to watch, and watching it is what keeps the addresses from going
+			// stale for a whole resync interval after a master is replaced.
+			&discoveryv1.EndpointSlice{}: {
+				Namespaces: map[string]cache.Config{
+					"default": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "kubernetes"}),
+					},
+				},
+			},
 			&mcmv1alpha1.Machine{}: machineNS,
 			&capiv1beta2.Machine{}: machineNS,
 			// NOTE: ByObject keys are mapped by GVK, so a typed and an unstructured key of
 			// the same kind (e.g. corev1.Secret and an unstructured v1/Secret) COLLIDE: map
 			// iteration order decides which scope wins and the loser's reads break
 			// non-deterministically. Never add per-representation Secret entries here.
-			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"):                 machineNS,
-			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):                     machineNS,
-			newUnstructured("cluster.x-k8s.io", "v1beta2", "Cluster"):                               machineNS,
-			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineHealthCheck"):                    machineNS,
+			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):     machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "Cluster"):               machineNS,
+			// No MachineHealthCheck entry: the controller only creates it and never reads it
+			// back, so an informer would never even start. Add a scope here if that changes.
 			newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane"): machineNS,
 			// The NodeGroup webhook reads only ModuleConfig "global"; without this scope the
 			// lazily-created informer would watch and cache every ModuleConfig cluster-wide.
@@ -131,8 +147,11 @@ func CacheOptions() (cache.Options, client.Options) {
 			// data watch-fresh; wide unstructured kinds (MachineDeployment, Cluster, ...)
 			// are already namespace/label-scoped via ByObject above.
 			Unstructured: true,
+			// Pod is deliberately absent: it used to be here to keep an unscoped informer from
+			// appearing, but the ByObject entry above already narrows it to the kube-apiserver
+			// Pods of kube-system. Disabling the cache on top of that scope would pay for the
+			// informer and still send every read to the apiserver.
 			DisableFor: []client.Object{
-				&corev1.Pod{},
 				&coordinationv1.Lease{},
 			},
 		},

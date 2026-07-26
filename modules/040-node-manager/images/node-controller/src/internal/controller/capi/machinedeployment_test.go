@@ -91,8 +91,12 @@ func TestIntOrDefault(t *testing.T) {
 	if got := intOrDefault(nil, 1); got != 1 {
 		t.Fatalf("nil pointer: got %d, want default 1", got)
 	}
-	if got := intOrDefault(ptr(int32(0)), 1); got != 0 {
-		t.Fatalf("explicit zero must override default: got %d, want 0", got)
+	// helm rendered these with `| default`, where 0 is falsy: maxSurgePerZone: 0 came out as 1.
+	if got := intOrDefault(ptr(int32(0)), 1); got != 1 {
+		t.Fatalf("explicit zero must fall back like helm's default: got %d, want 1", got)
+	}
+	if got := intOrDefault(ptr(int32(0)), 0); got != 0 {
+		t.Fatalf("zero default stays zero: got %d, want 0", got)
 	}
 	if got := intOrDefault(ptr(int32(5)), 1); got != 5 {
 		t.Fatalf("got %d, want 5", got)

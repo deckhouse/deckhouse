@@ -121,7 +121,12 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	tmplList.SetGroupVersionKind(schema.GroupVersionKind{
 		Group: gv.Group, Version: gv.Version, Kind: cloudConfig.capiMachineTemplateKind + "List",
 	})
-	if err := r.Client.List(ctx, tmplList,
+	// Read live, like templatesInUse below: the kind comes from the provider Secret and is not
+	// in cache.Options.ByObject, so a cached list would lazily start a cluster-wide informer for
+	// it. It cannot be added to ByObject either — controller-runtime resolves a REST mapping for
+	// every entry when the manager is built, so naming a provider kind whose CRD is absent (any
+	// other cloud) would stop node-controller from starting.
+	if err := r.APIReader.List(ctx, tmplList,
 		client.InNamespace(common.MachineNamespace),
 		client.MatchingLabels{"node-group": ngName},
 	); err != nil {

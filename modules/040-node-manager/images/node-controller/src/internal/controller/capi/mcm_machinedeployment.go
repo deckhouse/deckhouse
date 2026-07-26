@@ -138,7 +138,11 @@ func mcmDrainTimeout(blob map[string]interface{}) (string, int64) {
 			return "5m", 9
 		}
 	}
-	if n, ok := blobInt64(blob, "nodeDrainTimeoutSecond"); ok {
+	// helm branched on `{{- else if $ng.nodeDrainTimeoutSecond }}`, so an explicit 0 was falsy
+	// and fell through to the default. Honouring it literally would render drainTimeout: 0s
+	// with maxEvictRetries: 0 — nodes deleted with no drain grace at all — and change
+	// spec.template on upgrade, rolling every node of the group.
+	if n, ok := blobInt64(blob, "nodeDrainTimeoutSecond"); ok && n > 0 {
 		return fmt.Sprintf("%ds", n), n / 20
 	}
 	return "600s", 30

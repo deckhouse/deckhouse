@@ -276,7 +276,7 @@ func secretDataEqual(a, b map[string][]byte) bool {
 	return true
 }
 
-func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup, rawSpec map[string]interface{}) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
@@ -299,10 +299,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	}
 	cloudType, _ := cloudProvider["type"].(string)
 
-	rawSpec, err := r.readNodeGroupRawSpec(ctx, ng.Name)
-	if err != nil {
-		return err
-	}
 	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
 	blob, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
 	if err != nil {
@@ -353,8 +349,10 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	maxSurge := intOrDefault(ng.Spec.CloudInstances.MaxSurgePerZone, 1)
 	maxUnavailable := intOrDefault(ng.Spec.CloudInstances.MaxUnavailablePerZone, 0)
 
+	// Same falsy-zero rule as intOrDefault above: helm branched on
+	// `{{- if $ng.nodeDrainTimeoutSecond }}`, so an explicit 0 kept the default.
 	drainTimeout := 600
-	if ng.Spec.NodeDrainTimeoutSecond != nil {
+	if ng.Spec.NodeDrainTimeoutSecond != nil && *ng.Spec.NodeDrainTimeoutSecond > 0 {
 		drainTimeout = *ng.Spec.NodeDrainTimeoutSecond
 	}
 

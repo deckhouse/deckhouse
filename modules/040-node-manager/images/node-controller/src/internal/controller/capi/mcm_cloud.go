@@ -24,6 +24,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,7 +38,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
-func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup, rawSpec map[string]interface{}) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
@@ -57,10 +58,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	cloudType, _ := cloudProvider["type"].(string)
 	region, _ := cloudProvider["region"].(string)
 
-	rawSpec, err := r.readNodeGroupRawSpec(ctx, ng.Name)
-	if err != nil {
-		return err
-	}
 	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
 	blob, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
 	if err != nil {
@@ -109,6 +106,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	awsSpot := cloudType == "aws" && blobInstanceClassSpot(blob)
 
 	desiredMDNames := make(map[string]struct{}, len(zones))
+	desiredClassNames := make(map[string]struct{}, len(zones))
 
 	for _, zone := range zones {
 		hash := sha256Hash(clusterUUID + zone)
@@ -118,6 +116,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 			mdName = fmt.Sprintf("%s-%s", instancePrefix, machineClassName)
 		}
 		desiredMDNames[mdName] = struct{}{}
+		desiredClassNames[machineClassName] = struct{}{}
 
 		renderCtx := map[string]interface{}{
 			"Chart": map[string]interface{}{"Name": "node-manager"},
@@ -147,6 +146,9 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 			return fmt.Errorf("parse rendered MachineClass for NodeGroup %s zone %s: %w", ng.Name, zone, err)
 		}
 		machineClassObj := &unstructured.Unstructured{Object: mcObject}
+		// The node-group label is what makes a MachineClass findable after its
+		// MachineDeployment is gone — pruning and NodeGroup cleanup list by it.
+		setNodeGroupLabel(machineClassObj, ng.Name)
 
 		replicas, err := r.mcmDesiredReplicas(ctx, mdName, minReplicas, maxReplicas)
 		if err != nil {
@@ -175,87 +177,145 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		logger.Info("applied MCM MachineClass + MachineDeployment", "name", mdName, "zone", zone)
 	}
 
-	if err := r.pruneStaleMCMs(ctx, ng.Name, desiredMDNames); err != nil {
+	if _, err := r.pruneStaleMCMs(ctx, r.Client, ng.Name, machineClassKind, desiredMDNames, desiredClassNames); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// pruneStaleMCMs deletes MCM MachineDeployments (and their referenced MachineClasses)
-// that belong to the NodeGroup but are no longer desired, e.g. after a zone is removed.
-// MachineDeployments are the reliable anchor: both helm (pre-migration) and node-controller
-// stamp them with the node-group label, and each one references its MachineClass by name.
-func (r *MachineDeploymentReconciler) pruneStaleMCMs(ctx context.Context, ngName string, desired map[string]struct{}) error {
+// pruneStaleMCMs deletes the MCM MachineDeployments of the NodeGroup that are no longer desired
+// (a removed zone, or every one of them when desiredMDs is empty) and then the MachineClasses
+// left without a deployment. It returns how many undesired MachineDeployments are still present:
+// machine-controller-manager keeps them alive on its finalizer until the Machines are deleted,
+// and a caller tearing the NodeGroup down must wait for that count to reach zero.
+//
+// Deletion order is the whole point. machine-controller-manager resolves the cloud credentials
+// through MachineClass.spec.secretRef while it drains and deletes the Machines, so a class
+// removed first orphans the cloud VMs (still billed) and wedges the Machines on their
+// finalizers. A stale MachineClass is inert; an early deletion is not.
+//
+// reader picks where the MachineDeployment list comes from: the informer cache is fine while the
+// NodeGroup lives, but the teardown path passes APIReader — dropping the finalizer on a stale
+// "no deployments left" read is exactly the mistake this ordering exists to prevent.
+func (r *MachineDeploymentReconciler) pruneStaleMCMs(ctx context.Context, reader client.Reader, ngName, machineClassKind string, desiredMDs, desiredClasses map[string]struct{}) (int, error) {
 	logger := log.FromContext(ctx)
 
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{
 		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeploymentList",
 	})
-	if err := r.Client.List(ctx, list,
+	if err := reader.List(ctx, list,
 		client.InNamespace(common.MachineNamespace),
 		client.MatchingLabels{"node-group": ngName},
 	); err != nil {
-		return fmt.Errorf("list MCM MachineDeployments for NodeGroup %s: %w", ngName, err)
+		if meta.IsNoMatchError(err) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("list MCM MachineDeployments for NodeGroup %s: %w", ngName, err)
 	}
 
+	stale := 0
+	inUse := make(map[string]struct{}, len(list.Items))
 	for i := range list.Items {
 		md := &list.Items[i]
-		if _, ok := desired[md.GetName()]; ok {
+		if _, ok := desiredMDs[md.GetName()]; ok {
 			continue
 		}
+		stale++
+
+		classKind, _, _ := unstructured.NestedString(md.Object, "spec", "template", "spec", "class", "kind")
+		className, _, _ := unstructured.NestedString(md.Object, "spec", "template", "spec", "class", "name")
+		if className != "" {
+			inUse[className] = struct{}{}
+			// MachineClasses rendered by helm before the migration carry no node-group label,
+			// and this reference is the only way back to them once the MachineDeployment is
+			// gone. Stamp the label while it is still readable.
+			if err := r.adoptMachineClass(ctx, classKind, className, ngName); err != nil {
+				return 0, err
+			}
+		}
+
 		if !md.GetDeletionTimestamp().IsZero() {
 			continue
 		}
-		if err := r.deleteMachineDeploymentWithClass(ctx, md); err != nil {
-			return err
+		if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
+			return 0, fmt.Errorf("delete MCM MachineDeployment %s: %w", md.GetName(), err)
 		}
-		logger.Info("pruned stale MCM MachineDeployment", "name", md.GetName(), "ng", ngName)
+		logger.Info("deleted stale MCM MachineDeployment", "name", md.GetName(), "ng", ngName)
+	}
+
+	if machineClassKind == "" {
+		return stale, nil
+	}
+	if err := r.deleteOrphanMachineClasses(ctx, ngName, machineClassKind, desiredClasses, inUse); err != nil {
+		return 0, err
+	}
+	return stale, nil
+}
+
+// deleteOrphanMachineClasses removes the MachineClasses labelled with this NodeGroup that are
+// neither wanted nor still referenced by a (possibly terminating) MachineDeployment.
+func (r *MachineDeploymentReconciler) deleteOrphanMachineClasses(ctx context.Context, ngName, machineClassKind string, desired, inUse map[string]struct{}) error {
+	logger := log.FromContext(ctx)
+
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: machineClassKind + "List",
+	})
+	// APIReader: a cached list would start a cluster-wide informer for a provider-specific kind
+	// nothing else reads.
+	if err := r.APIReader.List(ctx, list,
+		client.InNamespace(common.MachineNamespace),
+		client.MatchingLabels{"node-group": ngName},
+	); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
+		return fmt.Errorf("list %s for NodeGroup %s: %w", machineClassKind, ngName, err)
+	}
+
+	for i := range list.Items {
+		mc := &list.Items[i]
+		if _, ok := desired[mc.GetName()]; ok {
+			continue
+		}
+		if _, ok := inUse[mc.GetName()]; ok {
+			continue
+		}
+		if err := r.Client.Delete(ctx, mc); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("delete MachineClass %s: %w", mc.GetName(), err)
+		}
+		logger.Info("deleted orphan MCM MachineClass", "name", mc.GetName(), "ng", ngName)
 	}
 
 	return nil
 }
 
-// deleteReferencedMachineClass deletes the MCM MachineClass referenced by the given
-// MachineDeployment via spec.template.spec.class. A missing MachineClass is not an error.
-// deleteMachineDeploymentWithClass deletes an MCM MachineDeployment and, only once the object
-// is really gone, the MachineClass it referenced. The order matters: machine-controller-manager
-// resolves the cloud credentials through MachineClass.spec.secretRef while draining and deleting
-// the Machines, so a class removed first orphans the cloud VMs (still billed) and wedges the
-// Machines on their finalizers. While the MachineDeployment is still terminating the class is
-// left in place — a stale MachineClass is inert, an early deletion is not.
-func (r *MachineDeploymentReconciler) deleteMachineDeploymentWithClass(ctx context.Context, md *unstructured.Unstructured) error {
-	if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("delete MCM MachineDeployment %s: %w", md.GetName(), err)
-	}
-
-	gone := &unstructured.Unstructured{}
-	gone.SetGroupVersionKind(md.GroupVersionKind())
-	err := r.Client.Get(ctx, types.NamespacedName{Name: md.GetName(), Namespace: md.GetNamespace()}, gone)
-	if err == nil {
-		// Still terminating: machine-controller-manager keeps needing the class.
+// adoptMachineClass stamps the node-group label on a MachineClass this NodeGroup owns but did
+// not render itself (helm did, before the migration). A missing class is not an error.
+func (r *MachineDeploymentReconciler) adoptMachineClass(ctx context.Context, machineClassKind, name, ngName string) error {
+	if machineClassKind == "" {
 		return nil
 	}
-	if !errors.IsNotFound(err) {
-		return fmt.Errorf("get MCM MachineDeployment %s after delete: %w", md.GetName(), err)
-	}
-	return r.deleteReferencedMachineClass(ctx, md)
-}
-
-func (r *MachineDeploymentReconciler) deleteReferencedMachineClass(ctx context.Context, md *unstructured.Unstructured) error {
-	kind, _, _ := unstructured.NestedString(md.Object, "spec", "template", "spec", "class", "kind")
-	name, _, _ := unstructured.NestedString(md.Object, "spec", "template", "spec", "class", "name")
-	if kind == "" || name == "" {
-		return nil
-	}
-	mc := newUnstructured("machine.sapcloud.io", "v1alpha1", kind)
+	mc := newUnstructured("machine.sapcloud.io", "v1alpha1", machineClassKind)
 	mc.SetName(name)
 	mc.SetNamespace(common.MachineNamespace)
-	if err := r.Client.Delete(ctx, mc); err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("delete MachineClass %s: %w", name, err)
+	patch := fmt.Appendf(nil, `{"metadata":{"labels":{"node-group":%q}}}`, ngName)
+	err := r.Client.Patch(ctx, mc, client.RawPatch(types.MergePatchType, patch))
+	if err != nil && !errors.IsNotFound(err) && !meta.IsNoMatchError(err) {
+		return fmt.Errorf("label MachineClass %s: %w", name, err)
 	}
 	return nil
+}
+
+func setNodeGroupLabel(obj *unstructured.Unstructured, ngName string) {
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels["node-group"] = ngName
+	obj.SetLabels(labels)
 }
 
 func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) (int64, error) {
@@ -308,18 +368,6 @@ func decodeCloudProviderSecret(data map[string][]byte) map[string]interface{} {
 		res[k] = val
 	}
 	return res
-}
-
-func (r *MachineDeploymentReconciler) readNodeGroupRawSpec(ctx context.Context, name string) (map[string]interface{}, error) {
-	obj := newUnstructured(deckhousev1.GroupVersion.Group, deckhousev1.GroupVersion.Version, "NodeGroup")
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, obj); err != nil {
-		if errors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("get NodeGroup %s: %w", name, err)
-	}
-	spec, _ := obj.Object["spec"].(map[string]interface{})
-	return spec, nil
 }
 
 func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string, error) {

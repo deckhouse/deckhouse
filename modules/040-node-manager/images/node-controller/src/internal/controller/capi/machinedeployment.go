@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -62,10 +63,22 @@ const (
 	// input the controller does not watch (e.g. a provider-specific InstanceClass spec)
 	// changes. The cloud-provider secret is watched directly for faster reaction.
 	resyncInterval = 10 * time.Minute
+
+	// cleanupRetryInterval re-checks a deleted NodeGroup whose MachineDeployments are still
+	// terminating. The MachineDeployment Delete event drives the common case; this only backs
+	// it up.
+	cleanupRetryInterval = 15 * time.Second
 )
 
+// The primary object is the unstructured NodeGroup, not the typed one, so that the event, the
+// typed value the logic runs on and the raw spec the rendered objects are hashed from all come
+// from a single informer. Reading the typed object from one informer and the raw spec from
+// another gave two views of the same NodeGroup: under load they disagreed, and a spec hashed
+// from the disagreeing half produced a transient MachineTemplate name — an extra node rollout.
 func init() {
-	register.RegisterController("capi-machine-deployment", &deckhousev1.NodeGroup{}, &MachineDeploymentReconciler{})
+	register.RegisterController("capi-machine-deployment",
+		newUnstructured(deckhousev1.GroupVersion.Group, deckhousev1.GroupVersion.Version, "NodeGroup"),
+		&MachineDeploymentReconciler{})
 }
 
 type MachineDeploymentReconciler struct {
@@ -135,17 +148,29 @@ func (r *MachineDeploymentReconciler) enqueueAllNodeGroups(ctx context.Context, 
 func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	ng := &deckhousev1.NodeGroup{}
-	if err := r.Client.Get(ctx, req.NamespacedName, ng); err != nil {
+	obj := newUnstructured(deckhousev1.GroupVersion.Group, deckhousev1.GroupVersion.Version, "NodeGroup")
+	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("get NodeGroup: %w", err)
 	}
+	ng := &deckhousev1.NodeGroup{}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, ng); err != nil {
+		return ctrl.Result{}, fmt.Errorf("decode NodeGroup %s: %w", req.Name, err)
+	}
+	rawSpec, _ := obj.Object["spec"].(map[string]interface{})
 
 	if !ng.DeletionTimestamp.IsZero() {
-		if err := r.cleanupMachineDeployments(ctx, ng.Name); err != nil {
+		done, err := r.cleanupMachineDeployments(ctx, ng.Name)
+		if err != nil {
 			return ctrl.Result{}, err
+		}
+		if !done {
+			// The finalizer holds until the MCM MachineDeployments are really gone: the
+			// MachineClass carrying the cloud credentials may only be deleted after them, and
+			// once the NodeGroup disappears there is no reconcile left to do it.
+			return ctrl.Result{RequeueAfter: cleanupRetryInterval}, nil
 		}
 		if err := r.removeFinalizer(ctx, ng); err != nil {
 			return ctrl.Result{}, err
@@ -169,11 +194,11 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		switch derived_status.ComputeEngine(ng, cloudProvider) {
 		case engineCAPI:
-			if err := r.reconcileCloudMDsRendered(ctx, ng); err != nil {
+			if err := r.reconcileCloudMDsRendered(ctx, ng, rawSpec); err != nil {
 				return ctrl.Result{}, err
 			}
 		case engineMCM:
-			if err := r.reconcileCloudMCMs(ctx, ng); err != nil {
+			if err := r.reconcileCloudMCMs(ctx, ng, rawSpec); err != nil {
 				return ctrl.Result{}, err
 			}
 		default:
@@ -216,47 +241,43 @@ func (r *MachineDeploymentReconciler) removeFinalizer(ctx context.Context, ng *d
 	return nil
 }
 
-// cleanupMachineDeployments deletes the CAPI and MCM MachineDeployments belonging to the NodeGroup.
-// The actual node drain is driven asynchronously by capi/caps-controller-manager via their own
-// finalizers, so this only issues the deletes and returns — the NodeGroup is not held waiting for it.
-func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string) error {
+// cleanupMachineDeployments deletes the CAPI and MCM MachineDeployments belonging to the NodeGroup
+// and reports whether the cleanup is finished. A CAPI deployment needs nothing else from us — the
+// node drain runs asynchronously under capi/caps-controller-manager finalizers. An MCM one does:
+// its MachineClass holds the cloud credentials the deletion itself needs, so the class outlives
+// the deployment and the NodeGroup stays finalized until both are gone (see pruneStaleMCMs).
+func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string) (bool, error) {
 	logger := log.FromContext(ctx)
 
-	gvks := []schema.GroupVersionKind{
-		{Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineDeploymentList"},
-		{Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeploymentList"},
+	capiMDs := &unstructured.UnstructuredList{}
+	capiMDs.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineDeploymentList",
+	})
+	if err := r.Client.List(ctx, capiMDs,
+		client.InNamespace(common.MachineNamespace),
+		client.MatchingLabels{"node-group": ngName},
+	); err != nil && client.IgnoreNotFound(err) != nil {
+		return false, fmt.Errorf("list CAPI MachineDeployments for NodeGroup %s: %w", ngName, err)
+	}
+	for i := range capiMDs.Items {
+		md := &capiMDs.Items[i]
+		if !md.GetDeletionTimestamp().IsZero() {
+			continue
+		}
+		if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
+			return false, fmt.Errorf("delete MachineDeployment %s: %w", md.GetName(), err)
+		}
+		logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
 	}
 
-	for _, gvk := range gvks {
-		list := &unstructured.UnstructuredList{}
-		list.SetGroupVersionKind(gvk)
-		if err := r.Client.List(ctx, list,
-			client.InNamespace(common.MachineNamespace),
-			client.MatchingLabels{"node-group": ngName},
-		); err != nil {
-			if client.IgnoreNotFound(err) == nil {
-				continue
-			}
-			return fmt.Errorf("list %s for NodeGroup %s: %w", gvk.Kind, ngName, err)
-		}
-
-		for i := range list.Items {
-			md := &list.Items[i]
-			if !md.GetDeletionTimestamp().IsZero() {
-				continue
-			}
-			if gvk.Group == "machine.sapcloud.io" {
-				if err := r.deleteMachineDeploymentWithClass(ctx, md); err != nil {
-					return err
-				}
-				logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
-				continue
-			}
-			if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
-				return fmt.Errorf("delete MachineDeployment %s: %w", md.GetName(), err)
-			}
-			logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
-		}
+	cloudProvider, err := r.readCloudProviderTree(ctx)
+	if err != nil {
+		return false, err
+	}
+	machineClassKind, _ := cloudProvider["machineClassKind"].(string)
+	staleMCMs, err := r.pruneStaleMCMs(ctx, r.APIReader, ngName, machineClassKind, nil, nil)
+	if err != nil {
+		return false, err
 	}
 
 	// The StaticMachineTemplate is named after the NodeGroup and nothing else removes it: helm
@@ -269,11 +290,17 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 	smt.SetName(ngName)
 	smt.SetNamespace(common.MachineNamespace)
 	if err := r.Client.Delete(ctx, smt); err != nil && !errors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-		return fmt.Errorf("delete StaticMachineTemplate %s: %w", ngName, err)
+		return false, fmt.Errorf("delete StaticMachineTemplate %s: %w", ngName, err)
 	}
 	logger.V(1).Info("deleted StaticMachineTemplate for removed NodeGroup", "name", ngName)
 
-	return nil
+	if staleMCMs > 0 {
+		logger.V(1).Info("waiting for MCM MachineDeployments to go away before deleting their MachineClasses",
+			"ng", ngName, "remaining", staleMCMs)
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // buildStaticMD renders the cluster.x-k8s.io/v1beta2 MachineDeployment for a
@@ -453,8 +480,12 @@ func sha256Hash(input string) string {
 	return fmt.Sprintf("%x", h)[:8]
 }
 
+// intOrDefault mirrors the helm `| default` these values were rendered with before the
+// migration: go templates treat 0 as falsy, so an explicit maxSurgePerZone: 0 (the CRD allows
+// it) fell back to the default too. Keeping that matters for maxSurge — 0 together with the
+// default maxUnavailable: 0 describes a rollout that can never make progress.
 func intOrDefault(ptr *int32, def int) int {
-	if ptr != nil {
+	if ptr != nil && *ptr != 0 {
 		return int(*ptr)
 	}
 	return def

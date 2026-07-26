@@ -21,6 +21,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -89,6 +90,14 @@ func (c *Controller) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.ConfigMap{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS, versionInfoCMNS)))
 	w.Watches(&corev1.Service{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS)))
 	w.Watches(&corev1.Pod{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS)))
+	// The master addresses in the context come from this EndpointSlice as well as from the
+	// kube-apiserver Pods. An endpoint change that no Pod event accompanies — an
+	// advertise-address change, a master replaced behind the same Pod identity — would
+	// otherwise sit unpublished until the resync, handing bootstrapping nodes dead addresses.
+	w.Watches(&discoveryv1.EndpointSlice{}, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetNamespace() == kubernetesEndpointSliceNS && obj.GetName() == kubernetesEndpointSliceName
+		})))
 }
 
 func inNamespaces(namespaces ...string) predicate.Predicate {

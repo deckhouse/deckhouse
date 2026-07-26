@@ -148,6 +148,29 @@ func TestBuildMCMMachineDeployment_NodeDrainTimeout(t *testing.T) {
 	assert.Equal(t, int64(10), ts["maxEvictRetries"])
 }
 
+// TestBuildMCMMachineDeployment_ZeroNodeDrainTimeout pins the helm behaviour the migration has
+// to keep: the template branched on `{{- else if $ng.nodeDrainTimeoutSecond }}`, so an explicit
+// 0 was falsy and kept the 600s/30 default. Rendering "0s" would delete nodes with no drain
+// grace at all and change spec.template, rolling the whole group on upgrade.
+func TestBuildMCMMachineDeployment_ZeroNodeDrainTimeout(t *testing.T) {
+	blob := blobFromJSON(t, `{"name":"worker","nodeDrainTimeoutSecond":0}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{blob: blob, ngName: "worker", zone: "z"})
+	ts := mdTemplateSpec(t, md.Object)
+	assert.Equal(t, "600s", ts["drainTimeout"])
+	assert.Equal(t, int64(30), ts["maxEvictRetries"])
+}
+
+// TestBuildMCMMachineDeployment_ZeroMaxSurge pins the other falsy-zero default: helm rendered
+// `maxSurgePerZone | default "1"`, so 0 (which the CRD allows) came out as 1. maxSurge 0 with
+// maxUnavailable 0 is a rollout that can never make progress.
+func TestBuildMCMMachineDeployment_ZeroMaxSurge(t *testing.T) {
+	blob := blobFromJSON(t, `{"name":"worker","cloudInstances":{"maxSurgePerZone":0,"maxUnavailablePerZone":0}}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{blob: blob, ngName: "worker", zone: "z"})
+	ru := mdSpec(t, md.Object)["strategy"].(map[string]interface{})["rollingUpdate"].(map[string]interface{})
+	assert.Equal(t, int64(1), ru["maxSurge"])
+	assert.Equal(t, int64(0), ru["maxUnavailable"])
+}
+
 // TestBuildMCMMachineDeployment_MaxSurgeUnavailable covers the per-zone overrides.
 func TestBuildMCMMachineDeployment_MaxSurgeUnavailable(t *testing.T) {
 	blob := blobFromJSON(t, `{"name":"worker","cloudInstances":{"maxSurgePerZone":3,"maxUnavailablePerZone":2}}`)
