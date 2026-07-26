@@ -29,10 +29,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type NodeGroupCrdInfo struct {
@@ -403,7 +402,6 @@ func calculateNodeGroupEngine(input *go_hook.HookInput, nodeGroup NodeGroupCrdIn
 		return ngv1.NodeGroupEngineNone
 	}
 }
-
 
 func defaultCloudEphemeralNodeGroupEngineForNewNodeGroups(input *go_hook.HookInput, useMCM bool) ngv1.NodeGroupEngine {
 	hasMCM := valueExistsAndNotEmpty(input, "nodeManager.internal.cloudProvider.machineClassKind")

@@ -69,7 +69,11 @@ func (s *Service) ComputeWithCloudChecks(ctx context.Context, ng *v1.NodeGroup) 
 	if err != nil {
 		return result, CloudCheckResult{}, err
 	}
-	return result, s.runCloudChecks(ctx, ng, cloudProvider), nil
+	check, err := s.runCloudChecks(ctx, ng, cloudProvider)
+	if err != nil {
+		return result, CloudCheckResult{}, err
+	}
+	return result, check, nil
 }
 
 func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}) (Result, error) {

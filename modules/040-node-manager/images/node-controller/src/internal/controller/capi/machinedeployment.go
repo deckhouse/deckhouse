@@ -28,6 +28,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -245,9 +246,11 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 				continue
 			}
 			if gvk.Group == "machine.sapcloud.io" {
-				if err := r.deleteReferencedMachineClass(ctx, md); err != nil {
+				if err := r.deleteMachineDeploymentWithClass(ctx, md); err != nil {
 					return err
 				}
+				logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
+				continue
 			}
 			if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("delete MachineDeployment %s: %w", md.GetName(), err)
@@ -255,6 +258,20 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 			logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
 		}
 	}
+
+	// The StaticMachineTemplate is named after the NodeGroup and nothing else removes it: helm
+	// no longer renders it, set_keep_policy_on_capi_resources marks staticmachinetemplates
+	// resource-policy: keep, and an ownerReference is not durable either — caps-controller-manager
+	// replaces it with one pointing at the CAPI Cluster, so garbage collection never ties the
+	// template back to the NodeGroup. Delete it explicitly, or a NodeGroup recreated under the
+	// same name silently adopts the stale labelSelector.
+	smt := newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "StaticMachineTemplate")
+	smt.SetName(ngName)
+	smt.SetNamespace(common.MachineNamespace)
+	if err := r.Client.Delete(ctx, smt); err != nil && !errors.IsNotFound(err) && !meta.IsNoMatchError(err) {
+		return fmt.Errorf("delete StaticMachineTemplate %s: %w", ngName, err)
+	}
+	logger.V(1).Info("deleted StaticMachineTemplate for removed NodeGroup", "name", ngName)
 
 	return nil
 }
@@ -374,20 +391,23 @@ type mdClusterConfiguration struct {
 	} `json:"cloud"`
 }
 
+// readInstancePrefix returns cloud.prefix from the cluster configuration. It fails closed on
+// every read problem — a missing Secret or key must NOT degrade into an empty prefix, because
+// the prefix is part of every MachineDeployment name: an empty one makes the desired-name set
+// miss all real "<prefix>-<ng>-<hash>" MachineDeployments, and the prune that follows would
+// delete every one of them (and their MachineClasses), destroying the NodeGroup's nodes.
+// An empty prefix is only legitimate when the configuration parsed and simply has none.
 func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (string, error) {
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace,
 	}, secret); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return "", nil
-		}
 		return "", fmt.Errorf("get cluster-configuration secret: %w", err)
 	}
 
 	raw, ok := secret.Data["cluster-configuration.yaml"]
 	if !ok {
-		return "", nil
+		return "", fmt.Errorf("cluster-configuration secret has no cluster-configuration.yaml key")
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(string(raw))

@@ -127,12 +127,26 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	); err != nil {
 		return fmt.Errorf("list CAPI MachineTemplates for NodeGroup %s: %w", ngName, err)
 	}
+	inUse, err := r.templatesInUse(ctx, ngName)
+	if err != nil {
+		return err
+	}
+
 	for i := range tmplList.Items {
 		tmpl := &tmplList.Items[i]
 		if _, ok := desiredTemplates[tmpl.GetName()]; ok {
 			continue
 		}
 		if !tmpl.GetDeletionTimestamp().IsZero() {
+			continue
+		}
+		// A rollout keeps the previous MachineSet alive until its Machines are replaced, and
+		// that MachineSet still points at the old template. Deleting it mid-rollout leaves the
+		// old MachineSet unable to create replacement Machines, so the rollout stalls
+		// (kubernetes-sigs/cluster-api#6588 — the helm templates carried resource-policy: keep
+		// for the same reason).
+		if _, ok := inUse[tmpl.GetName()]; ok {
+			logger.V(1).Info("keeping CAPI MachineTemplate still referenced by a MachineSet", "name", tmpl.GetName(), "ng", ngName)
 			continue
 		}
 		if err := r.Client.Delete(ctx, tmpl); err != nil && !errors.IsNotFound(err) {
@@ -142,4 +156,30 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	}
 
 	return nil
+}
+
+// templatesInUse returns the infrastructure MachineTemplate names the NodeGroup's MachineSets
+// still reference. Read live: this runs only on the prune path, and a cached read would need a
+// cluster-wide MachineSet informer for a rarely used check.
+func (r *MachineDeploymentReconciler) templatesInUse(ctx context.Context, ngName string) (map[string]struct{}, error) {
+	msList := &unstructured.UnstructuredList{}
+	msList.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineSetList",
+	})
+	if err := r.APIReader.List(ctx, msList,
+		client.InNamespace(common.MachineNamespace),
+		client.MatchingLabels{"node-group": ngName},
+	); err != nil {
+		return nil, fmt.Errorf("list CAPI MachineSets for NodeGroup %s: %w", ngName, err)
+	}
+
+	inUse := make(map[string]struct{}, len(msList.Items))
+	for i := range msList.Items {
+		name, _, _ := unstructured.NestedString(msList.Items[i].Object,
+			"spec", "template", "spec", "infrastructureRef", "name")
+		if name != "" {
+			inUse[name] = struct{}{}
+		}
+	}
+	return inUse, nil
 }

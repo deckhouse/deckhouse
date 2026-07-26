@@ -106,4 +106,53 @@ var _ = Describe("CAPI MachineDeployment rendering", func() {
 		}, mt)).To(Succeed())
 		Expect(mt.GetLabels()).To(HaveKeyWithValue("node-group", ng.Name))
 	})
+
+	// Rolling nodes is never acceptable. dataSecretName is part of spec.template, so rewriting
+	// it replaces the MachineSet and recreates every node of the group. MachineDeployments
+	// created before the Secret name became zone-based carry a checksum-based name, and the
+	// reconciler must keep it instead of applying the name it would compute today.
+	It("never rewrites the bootstrap secret name of an existing MachineDeployment", func() {
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, newInstanceClass()))).To(Succeed())
+
+		ng := newNodeGroup("cap-adopt")
+		Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, ng) })
+
+		mdKey := types.NamespacedName{}
+		Eventually(func() error {
+			mdList := &capiv1beta2.MachineDeploymentList{}
+			if err := k8sClient.List(suiteCtx, mdList, client.InNamespace(common.MachineNamespace),
+				client.MatchingLabels{"node-group": ng.Name}); err != nil {
+				return err
+			}
+			if len(mdList.Items) != 1 {
+				return fmt.Errorf("expected 1 MachineDeployment, got %d", len(mdList.Items))
+			}
+			mdKey = client.ObjectKeyFromObject(&mdList.Items[0])
+			return nil
+		}, 20*time.Second, 250*time.Millisecond).Should(Succeed())
+
+		By("pinning a legacy, checksum-style bootstrap secret name on the existing MD")
+		const legacyName = "cap-adopt-legacychecksum"
+		md := &capiv1beta2.MachineDeployment{}
+		Expect(k8sClient.Get(suiteCtx, mdKey, md)).To(Succeed())
+		patched := md.DeepCopy()
+		patched.Spec.Template.Spec.Bootstrap.DataSecretName = ptr(legacyName)
+		Expect(k8sClient.Patch(suiteCtx, patched, client.MergeFrom(md))).To(Succeed())
+
+		By("forcing a reconcile that re-applies the MachineDeployment")
+		fresh := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: ng.Name}, fresh)).To(Succeed())
+		bumped := fresh.DeepCopy()
+		bumped.Annotations = map[string]string{"manual-rollout-id": "adopt-1"}
+		Expect(k8sClient.Patch(suiteCtx, bumped, client.MergeFrom(fresh))).To(Succeed())
+
+		By("the legacy name survives — no MachineSet replacement, no node roll")
+		Consistently(func(g Gomega) {
+			got := &capiv1beta2.MachineDeployment{}
+			g.Expect(k8sClient.Get(suiteCtx, mdKey, got)).To(Succeed())
+			g.Expect(got.Spec.Template.Spec.Bootstrap.DataSecretName).NotTo(BeNil())
+			g.Expect(*got.Spec.Template.Spec.Bootstrap.DataSecretName).To(Equal(legacyName))
+		}, 5*time.Second, 500*time.Millisecond).Should(Succeed())
+	})
 })

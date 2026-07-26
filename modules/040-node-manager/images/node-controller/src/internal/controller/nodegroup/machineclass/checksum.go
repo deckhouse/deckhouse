@@ -29,13 +29,22 @@ func BuildChecksumElement(instanceClass map[string]interface{}, manualRolloutID 
 	}
 }
 
-func RenderChecksum(templateContent []byte, blobElement map[string]interface{}) (string, error) {
-	return RenderChecksumWithContext(templateContent, map[string]interface{}{"nodeGroup": blobElement})
-}
+// RenderChecksum renders a provider instance-class checksum template. Every template reads
+// .nodeGroup; some (vcd CAPI) additionally require
+// .Values.nodeManager.internal.cloudProvider.<type> and fail rendering without it, so the
+// cloud-provider tree is always part of the context — callers cannot omit it.
+func RenderChecksum(templateContent []byte, blobElement, cloudProvider map[string]interface{}) (string, error) {
+	ctx := map[string]interface{}{
+		"nodeGroup": blobElement,
+		"Values": map[string]interface{}{
+			"nodeManager": map[string]interface{}{
+				"internal": map[string]interface{}{
+					"cloudProvider": cloudProvider,
+				},
+			},
+		},
+	}
 
-// RenderChecksumWithContext renders against a caller-built context. Some
-// templates (e.g. vcd CAPI) read .Values in addition to .nodeGroup.
-func RenderChecksumWithContext(templateContent []byte, ctx map[string]interface{}) (string, error) {
 	t, err := template.New("machine-class.checksum").Funcs(FuncMap()).Parse(string(templateContent))
 	if err != nil {
 		return "", fmt.Errorf("parse checksum template: %w", err)

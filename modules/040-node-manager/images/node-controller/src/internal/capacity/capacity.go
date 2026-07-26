@@ -76,6 +76,26 @@ type Capacity struct {
 	Memory resource.Quantity `json:"memory,omitempty"`
 }
 
+// capacityFromExplicitField reads a provider-agnostic spec.capacity {cpu, memory} from any
+// InstanceClass spec. It returns nil unless both cpu and memory are set, so a partial or
+// absent field falls back to the provider-specific extraction.
+func capacityFromExplicitField(instanceClassSpec interface{}) *InstanceType {
+	var generic struct {
+		Capacity *Capacity `json:"capacity,omitempty"`
+	}
+	data, err := json.Marshal(instanceClassSpec)
+	if err != nil {
+		return nil
+	}
+	if err := json.Unmarshal(data, &generic); err != nil {
+		return nil
+	}
+	if generic.Capacity == nil || generic.Capacity.CPU.IsZero() || generic.Capacity.Memory.IsZero() {
+		return nil
+	}
+	return generic.Capacity.ToInstanceType()
+}
+
 func (c *Capacity) ToInstanceType() *InstanceType {
 	return &InstanceType{
 		CPU:      c.CPU.DeepCopy(),
@@ -396,6 +416,13 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 		var spec testInstanceClass
 		extractor = &spec
 	default:
+		// Provider-agnostic path: node-controller has no case for this kind (an out-of-tree
+		// provider), but any InstanceClass may publish an explicit spec.capacity. Use it
+		// instead of failing, so capacity for scale-from-zero works without a per-provider
+		// case here. An in-tree provider's case can be dropped once it publishes spec.capacity.
+		if it := capacityFromExplicitField(instanceClassSpec); it != nil {
+			return it, nil
+		}
 		return nil, errors.New("Unknown cloud provider")
 	}
 

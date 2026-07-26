@@ -47,6 +47,11 @@ func TestBuildStaticMachineTemplate_LabelSelector(t *testing.T) {
 	assert.Equal(t, "worker-static", meta["name"], "name = ng.Name")
 	assert.Equal(t, common.MachineNamespace, meta["namespace"])
 
+	// No ownerReference on purpose: caps-controller-manager replaces it with one pointing at
+	// the CAPI Cluster, so it cannot be relied on for cleanup — cleanupMachineDeployments
+	// deletes the template explicitly instead (verified on a live cluster).
+	assert.NotContains(t, meta, "ownerReferences")
+
 	labels := meta["labels"].(map[string]interface{})
 	assert.Equal(t, "deckhouse", labels["heritage"])
 	assert.Equal(t, "node-manager", labels["module"])

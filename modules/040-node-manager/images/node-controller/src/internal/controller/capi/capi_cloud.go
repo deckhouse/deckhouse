@@ -17,12 +17,15 @@ limitations under the License.
 package capi
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -64,10 +67,16 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 		annotations["capacity.cluster-autoscaler.kubernetes.io/taints"] = s
 	}
 
-	commonLabels := map[string]interface{}{
-		"heritage":   "deckhouse",
-		"module":     "node-manager",
-		"node-group": in.ng.Name,
+	// Separate instances on purpose: the provider spec patch is deep-merged into spec below,
+	// so a patch touching template.metadata.labels would otherwise write through the shared map
+	// into the MachineDeployment's own metadata.labels — the node-group label every List
+	// selector, prune and cleanup depends on.
+	commonLabels := func() map[string]interface{} {
+		return map[string]interface{}{
+			"heritage":   "deckhouse",
+			"module":     "node-manager",
+			"node-group": in.ng.Name,
+		}
 	}
 
 	return &unstructured.Unstructured{Object: map[string]interface{}{
@@ -76,7 +85,7 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 		"metadata": map[string]interface{}{
 			"name":        in.mdName,
 			"namespace":   common.MachineNamespace,
-			"labels":      commonLabels,
+			"labels":      commonLabels(),
 			"annotations": annotations,
 		},
 		"spec": map[string]interface{}{
@@ -84,7 +93,7 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 			"replicas":    int64(in.desired),
 			"template": map[string]interface{}{
 				"metadata": map[string]interface{}{
-					"labels": commonLabels,
+					"labels": commonLabels(),
 				},
 				"spec": map[string]interface{}{
 					"clusterName": in.clusterName,
@@ -116,30 +125,155 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	}}
 }
 
-func (r *MachineDeploymentReconciler) capiDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) (int32, error) {
-	existing := newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment")
-	// Read spec.replicas LIVE (APIReader), not from the informer cache. The cluster
-	// autoscaler owns spec.replicas; we read its current value, clamp it into [min,max],
-	// then re-apply the whole MachineDeployment with ForceOwnership — so this is a
-	// read-modify-write of a field a foreign controller changes at will. A cached read can
-	// lag the autoscaler's write by the informer's propagation delay (seconds under load),
-	// which would make us re-apply a stale value and stomp a fresh scale-up/down until the
-	// autoscaler retries. A live GET keeps the read-modify-write window at microseconds,
-	// matching the behavior node-controller shipped before unstructured reads were cached.
-	if err := r.APIReader.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing); err != nil {
+// existingCAPIMachineDeployment carries the parts of an already-created MachineDeployment that
+// node-controller must take into account instead of overwriting blindly.
+type existingCAPIMachineDeployment struct {
+	// replicas is spec.replicas; hasReplicas is false when the field is absent, which is
+	// legitimate (it was the autoscaler's field to own, and pre-migration objects may lack it).
+	replicas    int32
+	hasReplicas bool
+	// bootstrapSecretName is spec.template.spec.bootstrap.dataSecretName as stored today.
+	bootstrapSecretName string
+}
+
+// readExistingCAPIMachineDeployment returns the MachineDeployment as it currently exists, or nil
+// when there is none yet.
+//
+// The read is LIVE (APIReader), never the informer cache, because both values it feeds are
+// read-modify-write of fields a foreign controller changes:
+//   - spec.replicas is owned by the cluster autoscaler. A cached read can lag its write by the
+//     informer propagation delay (seconds under load), and re-applying that stale value would
+//     stomp a fresh scale-up/down until the autoscaler retries.
+//   - dataSecretName decides whether nodes roll (see resolveBootstrapSecretName), so it must
+//     reflect the object as it really is.
+//
+// One read serves both: the previous code fetched the same object twice per zone.
+func (r *MachineDeploymentReconciler) readExistingCAPIMachineDeployment(ctx context.Context, mdName string) (*existingCAPIMachineDeployment, error) {
+	obj := newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment")
+	if err := r.APIReader.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, obj); err != nil {
 		if errors.IsNotFound(err) {
-			return minReplicas, nil
+			return nil, nil
 		}
-		return 0, fmt.Errorf("get CAPI MachineDeployment %s: %w", mdName, err)
+		return nil, fmt.Errorf("get CAPI MachineDeployment %s: %w", mdName, err)
 	}
-	replicas, found, err := unstructured.NestedInt64(existing.Object, "spec", "replicas")
+
+	out := &existingCAPIMachineDeployment{}
+	replicas, found, err := unstructured.NestedInt64(obj.Object, "spec", "replicas")
 	if err != nil {
-		return 0, fmt.Errorf("read spec.replicas of CAPI MachineDeployment %s: %w", mdName, err)
+		return nil, fmt.Errorf("read spec.replicas of CAPI MachineDeployment %s: %w", mdName, err)
 	}
-	if !found {
-		return 0, fmt.Errorf("CAPI MachineDeployment %s has no spec.replicas", mdName)
+	if found {
+		out.replicas, out.hasReplicas = int32(replicas), true
 	}
-	return calculateReplicas(int32(replicas), minReplicas, maxReplicas), nil
+	out.bootstrapSecretName, _, _ = unstructured.NestedString(obj.Object,
+		"spec", "template", "spec", "bootstrap", "dataSecretName")
+	return out, nil
+}
+
+// desiredReplicas clamps the replica count that is already in the cluster into [min,max]. A
+// MachineDeployment that does not exist yet starts at min; one that exists without spec.replicas
+// counts as zero (scale-from-zero) rather than an error, otherwise adopting such an object would
+// deadlock the NodeGroup — mcmDesiredReplicas treats it the same way.
+func desiredReplicas(existing *existingCAPIMachineDeployment, minReplicas, maxReplicas int32) int32 {
+	if existing == nil {
+		return minReplicas
+	}
+	current := int32(0)
+	if existing.hasReplicas {
+		current = existing.replicas
+	}
+	return calculateReplicas(current, minReplicas, maxReplicas)
+}
+
+// resolveBootstrapSecretName decides which bootstrap Secret the MachineDeployment must point at.
+//
+// Background: the Secret used to be named after the infrastructure MachineTemplate, i.e. with the
+// instance-class checksum in it. That coupling was incidental — the template needs a
+// checksum-derived name because CAPI infrastructure templates are immutable and a new name is
+// what drives a rollout, while the Secret's content (cloud-init) does not depend on the instance
+// class at all. It is now named per zone, so an instance-class change no longer churns it.
+//
+// The catch is existing clusters: dataSecretName lives in spec.template, so changing it makes
+// CAPI create a new MachineSet and replace every node of the group. Rolling nodes on an upgrade
+// that changes nothing the user asked for is not acceptable, so an existing MachineDeployment
+// keeps the name it already carries, forever. Only MachineDeployments created from now on (new
+// clusters, new zones) get the zone-based name; a migrated cluster therefore ends up with mixed
+// names, which is the deliberate price of not rolling.
+func (r *MachineDeploymentReconciler) resolveBootstrapSecretName(
+	ctx context.Context,
+	existing *existingCAPIMachineDeployment,
+	rendered string,
+) (string, error) {
+	if existing == nil || existing.bootstrapSecretName == "" || existing.bootstrapSecretName == rendered {
+		return rendered, nil
+	}
+
+	if err := r.mirrorBootstrapSecret(ctx, rendered, existing.bootstrapSecretName); err != nil {
+		return "", err
+	}
+	return existing.bootstrapSecretName, nil
+}
+
+// mirrorBootstrapSecret copies the Secret helm renders under the current name onto the legacy
+// name an adopted MachineDeployment still references.
+//
+// It is required, not cosmetic: the cloud-init inside the Secret embeds a bootstrap token that is
+// rotated roughly every 4 hours (hooks/order_bootstrap_token.go), and helm only renders the
+// current name. Without mirroring, the adopted Secret would keep a token that expires within
+// hours and the next scale-up would create a Machine that cannot join the cluster.
+//
+// Both reads are live: the bootstrap Secret carries no app label, so it is outside the
+// namespace-scoped Secret informer and a cached read would never find it.
+func (r *MachineDeploymentReconciler) mirrorBootstrapSecret(ctx context.Context, from, to string) error {
+	src := &corev1.Secret{}
+	if err := r.APIReader.Get(ctx, types.NamespacedName{Name: from, Namespace: common.MachineNamespace}, src); err != nil {
+		if errors.IsNotFound(err) {
+			// helm has not rendered it yet; the adopted Secret still holds a usable token.
+			return nil
+		}
+		return fmt.Errorf("get bootstrap secret %s: %w", from, err)
+	}
+
+	dst := &corev1.Secret{}
+	err := r.APIReader.Get(ctx, types.NamespacedName{Name: to, Namespace: common.MachineNamespace}, dst)
+	if errors.IsNotFound(err) {
+		dst = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: to, Namespace: common.MachineNamespace, Labels: src.Labels},
+			Type:       src.Type,
+			Data:       src.Data,
+		}
+		if err := r.Client.Create(ctx, dst); err != nil && !errors.IsAlreadyExists(err) {
+			return fmt.Errorf("create adopted bootstrap secret %s: %w", to, err)
+		}
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("get adopted bootstrap secret %s: %w", to, err)
+	}
+	// Write only on a real difference: the token rotation is the only expected change, and an
+	// unconditional update would bump resourceVersion on every reconcile of every zone.
+	if secretDataEqual(dst.Data, src.Data) {
+		return nil
+	}
+	dst.Data = src.Data
+	dst.Type = src.Type
+	if err := r.Client.Update(ctx, dst); err != nil {
+		return fmt.Errorf("refresh adopted bootstrap secret %s: %w", to, err)
+	}
+	return nil
+}
+
+func secretDataEqual(a, b map[string][]byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, av := range a {
+		bv, ok := b[k]
+		if !ok || !bytes.Equal(av, bv) {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup) error {
@@ -196,7 +330,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	if err != nil {
 		return err
 	}
-	checksum, err := machineclass.RenderChecksum(checksumTpl, blob)
+	checksum, err := machineclass.RenderChecksum(checksumTpl, blob, cloudProvider)
 	if err != nil {
 		return fmt.Errorf("render CAPI instance-class checksum for NodeGroup %s: %w", ng.Name, err)
 	}
@@ -242,20 +376,23 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 
 		templateName := fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone+checksum))
 		desiredTemplateNames[templateName] = struct{}{}
-		// The bootstrap Secret is rendered by helm with a stable per-zone name (its content
-		// does not depend on the instance class), so mdSuffix (%s-%s of ng and sha(uuid+zone))
-		// matches helm's $ng-$zone_hash. The MachineTemplate is checksum-named and owned by
-		// node-controller; helm never computes that checksum, so there is no cross-parity to keep.
-		bootstrapSecretName := mdSuffix
+		// helm renders the bootstrap Secret under a stable per-zone name, which mdSuffix
+		// reproduces ($ng-$zone_hash). resolveBootstrapSecretName may override it to keep an
+		// already-created MachineDeployment on its legacy name.
+		existingMD, err := r.readExistingCAPIMachineDeployment(ctx, mdName)
+		if err != nil {
+			return err
+		}
+		bootstrapSecretName, err := r.resolveBootstrapSecretName(ctx, existingMD, mdSuffix)
+		if err != nil {
+			return err
+		}
 
 		if err := r.applyCAPIMachineTemplate(ctx, machineTemplateTpl, cloudProvider, blob, clusterUUID, podSubnet, zone, templateName, checksum); err != nil {
 			return err
 		}
 
-		desired, err := r.capiDesiredReplicas(ctx, mdName, minReplicas, maxReplicas)
-		if err != nil {
-			return err
-		}
+		desired := desiredReplicas(existingMD, minReplicas, maxReplicas)
 
 		md := buildCAPIMachineDeployment(capiMDInput{
 			ng:                  ng,
@@ -302,10 +439,14 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 }
 
 func buildStaticMachineTemplate(ng *deckhousev1.NodeGroup) (*unstructured.Unstructured, error) {
-	labels := map[string]interface{}{
-		"heritage":   "deckhouse",
-		"module":     "node-manager",
-		"node-group": ng.Name,
+	// One map instance per placement — see buildCAPIMachineDeployment: a shared map lets any
+	// later merge into spec write through into the object's own metadata.labels.
+	labels := func() map[string]interface{} {
+		return map[string]interface{}{
+			"heritage":   "deckhouse",
+			"module":     "node-manager",
+			"node-group": ng.Name,
+		}
 	}
 
 	templateSpec := map[string]interface{}{}
@@ -323,12 +464,12 @@ func buildStaticMachineTemplate(ng *deckhousev1.NodeGroup) (*unstructured.Unstru
 		"metadata": map[string]interface{}{
 			"name":      ng.Name,
 			"namespace": common.MachineNamespace,
-			"labels":    labels,
+			"labels":    labels(),
 		},
 		"spec": map[string]interface{}{
 			"template": map[string]interface{}{
 				"metadata": map[string]interface{}{
-					"labels": labels,
+					"labels": labels(),
 				},
 				"spec": templateSpec,
 			},

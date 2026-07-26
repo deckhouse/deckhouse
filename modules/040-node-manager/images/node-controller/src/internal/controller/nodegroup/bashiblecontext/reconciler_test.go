@@ -41,7 +41,12 @@ func newReconciler(t *testing.T, objs ...client.Object) *Reconciler {
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, discoveryv1.AddToScheme(scheme))
 	require.NoError(t, v1.AddToScheme(scheme))
-	objs = append(objs, endpointSlice([]string{"10.0.0.1"}, "https", 6443))
+	// Every real cluster has the kube-dns Service; the assembly refuses to publish a context
+	// without a cluster DNS address, so the fixture must carry it.
+	objs = append(objs,
+		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
+		kubeDNSService("10.222.0.10"),
+	)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 	return &Reconciler{
 		Client:        c,
@@ -58,6 +63,17 @@ func readAssembledNodeGroups(t *testing.T, c client.Client) []interface{} {
 	require.NoError(t, yaml.Unmarshal(secret.Data[secretInputKey], &parsed))
 	ngs, _ := parsed["nodeGroups"].([]interface{})
 	return ngs
+}
+
+func kubeDNSService(clusterIP string) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kube-dns",
+			Namespace: kubeSystemNS,
+			Labels:    map[string]string{dnsAppLabel: "kube-dns"},
+		},
+		Spec: corev1.ServiceSpec{ClusterIP: clusterIP},
+	}
 }
 
 func staticNodeGroup(name string) *v1.NodeGroup {

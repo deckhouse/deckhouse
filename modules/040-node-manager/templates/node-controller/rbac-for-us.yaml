@@ -143,6 +143,9 @@ rules:
   resources:
   - machines
   - machinedeployments
+  # machinesets are read (never written) to tell whether an infrastructure MachineTemplate is
+  # still referenced by an in-flight rollout before pruning it.
+  - machinesets
   - clusters
   - machinehealthchecks
   verbs:

@@ -202,7 +202,55 @@ func TestCapacityExtractor(t *testing.T) {
 		assert.Equal(t, "8Gi", capac.Memory.String())
 		assert.Equal(t, "4", capac.CPU.String())
 	})
+
+	// An out-of-tree provider node-controller has no case for still works if its
+	// InstanceClass publishes an explicit spec.capacity.
+	t.Run("OutOfTreeProviderWithExplicitCapacity", func(t *testing.T) {
+		t.Parallel()
+		var instanceClass map[string]interface{}
+		err := yaml.Unmarshal([]byte(outOfTreeSpecWithCapacity), &instanceClass)
+		require.NoError(t, err)
+		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
+		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
+		require.NoError(t, err)
+		assert.Equal(t, "16Gi", capac.Memory.String())
+		assert.Equal(t, "8", capac.CPU.String())
+	})
+
+	// Without a case and without spec.capacity there is nothing to derive capacity from.
+	t.Run("UnknownProviderWithoutCapacity", func(t *testing.T) {
+		t.Parallel()
+		var instanceClass map[string]interface{}
+		err := yaml.Unmarshal([]byte(outOfTreeSpecNoCapacity), &instanceClass)
+		require.NoError(t, err)
+		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
+		_, err = CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
+		assert.Error(t, err)
+	})
 }
+
+const (
+	outOfTreeSpecWithCapacity = `
+apiVersion: deckhouse.io/v1
+kind: AcmeCloudInstanceClass
+metadata:
+  name: system
+spec:
+  someProviderField: whatever
+  capacity:
+    cpu: 8
+    memory: 16Gi
+`
+
+	outOfTreeSpecNoCapacity = `
+apiVersion: deckhouse.io/v1
+kind: AcmeCloudInstanceClass
+metadata:
+  name: system
+spec:
+  someProviderField: whatever
+`
+)
 
 const (
 	vsphereSpec = `

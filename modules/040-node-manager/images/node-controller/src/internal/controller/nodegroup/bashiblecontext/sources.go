@@ -45,11 +45,20 @@ const (
 	cloudProviderSecretName = ngcommon.CloudProviderSecretName
 
 	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
-
-	defaultRootCAFile = "/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 )
 
-var allowedBundles = []string{"ubuntu-lts", "centos", "debian", "opensuse"}
+// rootCAFiles are the candidate locations of the projected service-account CA, canonical path
+// first. See readKubernetesCA.
+var rootCAFiles = []string{
+	"/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+	"/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+}
+
+// allowedBundles is the same in every edition: it mirrors the distributions declared in
+// candi/version_map.yml (shared by all editions) and the allowedBundles default in every
+// openapi/values.yaml. Keep the three in sync — the values list also drives the bashible
+// Role's resourceNames, so a shorter list here silently disagrees with the granted RBAC.
+var allowedBundles = []string{"ubuntu-lts", "centos", "debian", "redos", "rosa", "astra", "altlinux", "opensuse"}
 
 // Service reads the bashible input.yaml fields from live kube objects.
 type Service struct {
@@ -153,16 +162,23 @@ func (s *Service) readAPIServerProxyCerts(ctx context.Context) apiserverProxyCer
 	}
 }
 
+// readKubernetesCA reads the projected service-account CA. The kubelet mounts it under
+// /var/run/..., which resolves to /run/... only in images where /var/run is a symlink — the
+// hook this was ported from ran in the deckhouse image (where it is), node-controller runs on
+// distroless. Both spellings are therefore tried, so the CA never silently ends up empty in the
+// bashible context.
 func (s *Service) readKubernetesCA() string {
-	path := s.RootCAFile
-	if path == "" {
-		path = defaultRootCAFile
+	paths := rootCAFiles
+	if s.RootCAFile != "" {
+		paths = []string{s.RootCAFile}
 	}
-	caBytes, err := os.ReadFile(path)
-	if err != nil {
-		return ""
+	for _, path := range paths {
+		caBytes, err := os.ReadFile(path)
+		if err == nil {
+			return string(caBytes)
+		}
 	}
-	return string(caBytes)
+	return ""
 }
 
 func (s *Service) readBootstrapTokens(ctx context.Context) map[string]string {

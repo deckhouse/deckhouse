@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 )
@@ -105,6 +106,22 @@ func TestMarshal_RoundTrips(t *testing.T) {
 	assert.Contains(t, string(raw), "clusterUUID: u")
 }
 
+// An empty cluster DNS address would render "clusterDNS:\n- " into every node's kubelet
+// config, so the context must not be published at all until the address is discoverable.
+func TestWriteSecret_RefusesWithoutClusterDNS(t *testing.T) {
+	s := newService(t,
+		configMap(kubeSystemNS, clusterUUIDConfigMapName, map[string]string{clusterUUIDKey: "uuid-1"}),
+		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
+	)
+
+	err := s.WriteSecret(t.Context(), []map[string]interface{}{{"name": "worker"}})
+	require.ErrorContains(t, err, "cluster DNS address not discovered")
+
+	got := &corev1.Secret{}
+	getErr := s.Client.Get(t.Context(), types.NamespacedName{Namespace: secretNamespace, Name: secretName}, got)
+	require.True(t, apierrors.IsNotFound(getErr), "no context Secret must be written")
+}
+
 func TestWriteSecret_UpsertsInputYAML(t *testing.T) {
 	s := newService(t,
 		configMap(kubeSystemNS, clusterUUIDConfigMapName, map[string]string{clusterUUIDKey: "uuid-1"}),
@@ -112,6 +129,7 @@ func TestWriteSecret_UpsertsInputYAML(t *testing.T) {
 			"data.json": `{"channel":"stable","version":"v1.2.3","edition":"EE"}`,
 		}),
 		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
+		kubeDNSService("10.222.0.10"),
 	)
 	blob := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
 

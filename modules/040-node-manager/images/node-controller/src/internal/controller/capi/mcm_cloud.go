@@ -100,7 +100,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		return err
 	}
 
-	checksum, err := machineclass.RenderChecksum(checksumTemplate, blob)
+	checksum, err := machineclass.RenderChecksum(checksumTemplate, blob, cloudProvider)
 	if err != nil {
 		return fmt.Errorf("render checksum for NodeGroup %s: %w", ng.Name, err)
 	}
@@ -208,11 +208,8 @@ func (r *MachineDeploymentReconciler) pruneStaleMCMs(ctx context.Context, ngName
 		if !md.GetDeletionTimestamp().IsZero() {
 			continue
 		}
-		if err := r.deleteReferencedMachineClass(ctx, md); err != nil {
+		if err := r.deleteMachineDeploymentWithClass(ctx, md); err != nil {
 			return err
-		}
-		if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("delete stale MCM MachineDeployment %s: %w", md.GetName(), err)
 		}
 		logger.Info("pruned stale MCM MachineDeployment", "name", md.GetName(), "ng", ngName)
 	}
@@ -222,6 +219,30 @@ func (r *MachineDeploymentReconciler) pruneStaleMCMs(ctx context.Context, ngName
 
 // deleteReferencedMachineClass deletes the MCM MachineClass referenced by the given
 // MachineDeployment via spec.template.spec.class. A missing MachineClass is not an error.
+// deleteMachineDeploymentWithClass deletes an MCM MachineDeployment and, only once the object
+// is really gone, the MachineClass it referenced. The order matters: machine-controller-manager
+// resolves the cloud credentials through MachineClass.spec.secretRef while draining and deleting
+// the Machines, so a class removed first orphans the cloud VMs (still billed) and wedges the
+// Machines on their finalizers. While the MachineDeployment is still terminating the class is
+// left in place — a stale MachineClass is inert, an early deletion is not.
+func (r *MachineDeploymentReconciler) deleteMachineDeploymentWithClass(ctx context.Context, md *unstructured.Unstructured) error {
+	if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("delete MCM MachineDeployment %s: %w", md.GetName(), err)
+	}
+
+	gone := &unstructured.Unstructured{}
+	gone.SetGroupVersionKind(md.GroupVersionKind())
+	err := r.Client.Get(ctx, types.NamespacedName{Name: md.GetName(), Namespace: md.GetNamespace()}, gone)
+	if err == nil {
+		// Still terminating: machine-controller-manager keeps needing the class.
+		return nil
+	}
+	if !errors.IsNotFound(err) {
+		return fmt.Errorf("get MCM MachineDeployment %s after delete: %w", md.GetName(), err)
+	}
+	return r.deleteReferencedMachineClass(ctx, md)
+}
+
 func (r *MachineDeploymentReconciler) deleteReferencedMachineClass(ctx context.Context, md *unstructured.Unstructured) error {
 	kind, _, _ := unstructured.NestedString(md.Object, "spec", "template", "spec", "class", "kind")
 	name, _, _ := unstructured.NestedString(md.Object, "spec", "template", "spec", "class", "name")

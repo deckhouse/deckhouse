@@ -19,6 +19,7 @@ package derived_status
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -58,7 +59,7 @@ func (s *Service) BuildElement(ctx context.Context, ng *v1.NodeGroup, rawSpec ma
 	return BuildNodeGroupBlob(in, result), check.Error, nil
 }
 
-func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}) CloudCheckResult {
+func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}) (CloudCheckResult, error) {
 	kindInUse, _ := cloudProvider["instanceClassKind"].(string)
 
 	in := CloudCheckInput{
@@ -74,7 +75,14 @@ func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudPro
 	}
 
 	if in.NodeType == v1.NodeTypeCloudEphemeral && kindInUse != "" {
-		in.KnownClassNames = s.readInstanceClassNames(ctx, kindInUse)
+		// A failed List must not reach the checks: an empty name set reads as "instance class
+		// not found", which marks the NodeGroup invalid and stops its MachineDeployments from
+		// being rendered. Surface the error so the reconcile retries instead.
+		names, err := s.readInstanceClassNames(ctx, kindInUse)
+		if err != nil {
+			return CloudCheckResult{}, err
+		}
+		in.KnownClassNames = names
 		in.DefaultZones = s.readDefaultZones(ctx, cloudProvider)
 		if in.MinPerZone == 0 && in.MaxPerZone > 0 &&
 			in.ClassRefKind == kindInUse && containsString(in.KnownClassNames, in.ClassRefName) {
@@ -82,7 +90,7 @@ func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudPro
 		}
 	}
 
-	return RunCloudChecks(in)
+	return RunCloudChecks(in), nil
 }
 
 func (s *Service) capacityError(ctx context.Context, kind, name string) error {
@@ -95,18 +103,18 @@ func (s *Service) capacityError(ctx context.Context, kind, name string) error {
 	return err
 }
 
-func (s *Service) readInstanceClassNames(ctx context.Context, kind string) []string {
+func (s *Service) readInstanceClassNames(ctx context.Context, kind string) ([]string, error) {
 	list := &unstructured.UnstructuredList{}
 	version := resolveInstanceClassVersion(s.Client.RESTMapper(), kind)
 	list.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: version, Kind: kind + "List"})
 	if err := s.Client.List(ctx, list); err != nil {
-		return nil
+		return nil, fmt.Errorf("list %s: %w", kind, err)
 	}
 	names := make([]string, 0, len(list.Items))
 	for i := range list.Items {
 		names = append(names, list.Items[i].GetName())
 	}
-	return names
+	return names, nil
 }
 
 func (s *Service) readStatic(ctx context.Context) map[string]interface{} {

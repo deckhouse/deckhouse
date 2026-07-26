@@ -162,7 +162,7 @@ func TestRenderChecksum_CAPIProviderParity(t *testing.T) {
 			tmpl, err := os.ReadFile(tc.path)
 			require.NoError(t, err, "provider CAPI checksum template must exist")
 
-			got, err := RenderChecksum(tmpl, tc.blob)
+			got, err := RenderChecksum(tmpl, tc.blob, nil)
 			require.NoError(t, err)
 
 			want := expectedChecksum(t, tc.wantOptions)
@@ -172,36 +172,29 @@ func TestRenderChecksum_CAPIProviderParity(t *testing.T) {
 	}
 }
 
-// vcd folds cloudProvider.vcd.metadata into the hash and reads .Values, so it
-// goes through RenderChecksumWithContext (as the CAPI reconciler does).
+// vcd is the only provider whose checksum template reads .Values (its own
+// cloudProvider.vcd subtree, with `required`), so it renders only when the cloud-provider
+// tree reaches the template — exactly what the CAPI reconciler passes.
 func TestRenderChecksum_CAPIVcdParity(t *testing.T) {
 	tmpl, err := os.ReadFile(vcdCAPIChecksumPath)
 	require.NoError(t, err, "vcd CAPI checksum template must exist")
 
-	ctx := map[string]interface{}{
-		"nodeGroup": map[string]interface{}{
-			"instanceClass": map[string]interface{}{
-				"storageProfile": "sp1",
-				"template":       "tmpl-1",
-				"rootDiskSizeGb": float64(40),
-			},
-			"manualRolloutID": "r1",
+	blob := map[string]interface{}{
+		"instanceClass": map[string]interface{}{
+			"storageProfile": "sp1",
+			"template":       "tmpl-1",
+			"rootDiskSizeGb": float64(40),
 		},
-		"Values": map[string]interface{}{
-			"nodeManager": map[string]interface{}{
-				"internal": map[string]interface{}{
-					"cloudProvider": map[string]interface{}{
-						"vcd": map[string]interface{}{
-							"metadata": map[string]interface{}{"owner": "team-x"},
-						},
-					},
-				},
-			},
+		"manualRolloutID": "r1",
+	}
+	cloudProvider := map[string]interface{}{
+		"vcd": map[string]interface{}{
+			"metadata": map[string]interface{}{"owner": "team-x"},
 		},
 	}
 
-	got, err := RenderChecksumWithContext(tmpl, ctx)
-	require.NoError(t, err, "vcd checksum must render once .Values is supplied")
+	got, err := RenderChecksum(tmpl, blob, cloudProvider)
+	require.NoError(t, err, "vcd checksum must render when the cloud-provider tree is supplied")
 
 	want := expectedChecksum(t, map[string]interface{}{
 		"storageProfile":  "sp1",
@@ -214,4 +207,19 @@ func TestRenderChecksum_CAPIVcdParity(t *testing.T) {
 	})
 	assert.Len(t, got, 64)
 	assert.Equal(t, want, got)
+}
+
+// Guards why RenderChecksum takes the cloud-provider tree at all: vcd's template declares
+// `required` on it, so dropping it fails every CAPI reconcile on a vcd cluster.
+func TestRenderChecksum_CAPIVcdRequiresCloudProvider(t *testing.T) {
+	tmpl, err := os.ReadFile(vcdCAPIChecksumPath)
+	require.NoError(t, err, "vcd CAPI checksum template must exist")
+
+	blob := map[string]interface{}{
+		"instanceClass": map[string]interface{}{"storageProfile": "sp1", "template": "tmpl-1"},
+	}
+
+	_, err = RenderChecksum(tmpl, blob, nil)
+	require.ErrorContains(t, err, "cloudProvider.vcd is required",
+		"vcd checksum must not silently render without the cloud-provider tree")
 }

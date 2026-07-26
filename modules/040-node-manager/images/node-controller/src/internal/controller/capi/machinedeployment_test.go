@@ -228,3 +228,43 @@ func TestApplyMachineDeploymentSpecPatchInvalidYAML(t *testing.T) {
 		t.Fatal("expected invalid patch error, got nil")
 	}
 }
+
+// desiredReplicas is pure: it only clamps what already exists into the NodeGroup's bounds.
+func TestDesiredReplicas(t *testing.T) {
+	tests := []struct {
+		name     string
+		existing *existingCAPIMachineDeployment
+		min, max int32
+		expOut   int32
+	}{
+		{name: "no MachineDeployment yet: start at min", existing: nil, min: 2, max: 5, expOut: 2},
+		{
+			name:     "exists without spec.replicas: scale-from-zero, not an error",
+			existing: &existingCAPIMachineDeployment{},
+			min:      1, max: 4, expOut: 1,
+		},
+		{
+			name:     "current value kept when inside bounds",
+			existing: &existingCAPIMachineDeployment{replicas: 3, hasReplicas: true},
+			min:      1, max: 5, expOut: 3,
+		},
+		{
+			name:     "current value clamped down to max",
+			existing: &existingCAPIMachineDeployment{replicas: 9, hasReplicas: true},
+			min:      1, max: 5, expOut: 5,
+		},
+		{
+			name:     "current value raised to min",
+			existing: &existingCAPIMachineDeployment{replicas: 0, hasReplicas: true},
+			min:      2, max: 5, expOut: 2,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := desiredReplicas(tc.existing, tc.min, tc.max); got != tc.expOut {
+				t.Fatalf("desiredReplicas() = %d, want %d", got, tc.expOut)
+			}
+		})
+	}
+}

@@ -105,6 +105,13 @@ func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]inter
 	logger := log.FromContext(ctx)
 
 	globals := s.ReadGlobals(ctx)
+	// The DNS address goes straight into the kubelet config the nodes render
+	// (064_configure_kubelet.sh.tpl: "clusterDNS:\n- {{ .normal.clusterDNSAddress }}"), so an
+	// empty one produces an invalid entry on every node. Publishing nothing is better than
+	// publishing that: the Secret keeps its previous, valid content and the reconcile retries.
+	if globals.ClusterDNSAddress == "" {
+		return fmt.Errorf("cluster DNS address not discovered yet: refusing to publish bashible context without it")
+	}
 	input, err := s.Build(ctx, globals, nodeGroups)
 	if err != nil {
 		return err

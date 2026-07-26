@@ -48,7 +48,7 @@ func CacheOptions() (cache.Options, client.Options) {
 	machineNSSecretReq, _ := labels.NewRequirement(
 		"app",
 		selection.In,
-		[]string{"bashible-apiserver", "node-controller", "capi-controller-manager"},
+		[]string{"bashible-apiserver", "node-controller", "capi-controller-manager", "registry-packages-proxy"},
 	)
 	machineNSSecretSelector := labels.NewSelector().Add(*machineNSSecretReq)
 

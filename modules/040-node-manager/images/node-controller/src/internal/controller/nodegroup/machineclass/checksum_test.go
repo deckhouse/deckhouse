@@ -56,7 +56,7 @@ func TestRenderChecksum_AWSParity(t *testing.T) {
 		"manualRolloutID": "rollout-42",
 	}
 
-	got, err := RenderChecksum(tmpl, blobElement)
+	got, err := RenderChecksum(tmpl, blobElement, nil)
 	require.NoError(t, err)
 
 	want := expectedChecksum(t, map[string]interface{}{
@@ -87,7 +87,7 @@ func TestRenderChecksum_CAPIYandexParity(t *testing.T) {
 		"manualRolloutID": "rollout-7",
 	}
 
-	got, err := RenderChecksum(tmpl, blobElement)
+	got, err := RenderChecksum(tmpl, blobElement, nil)
 	require.NoError(t, err)
 
 	want := expectedChecksum(t, map[string]interface{}{
@@ -119,9 +119,9 @@ func TestRenderChecksum_AWSDefaultDiskSizeExcluded(t *testing.T) {
 		},
 	}
 
-	a, err := RenderChecksum(tmpl, withDefault)
+	a, err := RenderChecksum(tmpl, withDefault, nil)
 	require.NoError(t, err)
-	b, err := RenderChecksum(tmpl, withoutDisk)
+	b, err := RenderChecksum(tmpl, withoutDisk, nil)
 	require.NoError(t, err)
 
 	assert.Equal(t, b, a, "default diskSizeGb=20 is excluded, so checksum must not change")
@@ -174,9 +174,9 @@ func TestBuildChecksumElement_OnlyInstanceClassAndRolloutMatter(t *testing.T) {
 				"kubernetesVersion": "1.29",
 			}
 
-			gotMinimal, err := RenderChecksum(tc.tmpl, minimal)
+			gotMinimal, err := RenderChecksum(tc.tmpl, minimal, nil)
 			require.NoError(t, err)
-			gotFull, err := RenderChecksum(tc.tmpl, full)
+			gotFull, err := RenderChecksum(tc.tmpl, full, nil)
 			require.NoError(t, err)
 
 			assert.Equal(t, gotFull, gotMinimal,
@@ -320,7 +320,7 @@ func TestRenderChecksum_MCMProviderParity(t *testing.T) {
 			tmpl, err := os.ReadFile(tc.path)
 			require.NoError(t, err, "provider MCM checksum template must exist")
 
-			got, err := RenderChecksum(tmpl, tc.blob)
+			got, err := RenderChecksum(tmpl, tc.blob, nil)
 			require.NoError(t, err)
 
 			want := expectedChecksum(t, tc.wantOptions)
@@ -343,9 +343,9 @@ func TestRenderChecksum_ManualRolloutIDChangesChecksum(t *testing.T) {
 		"manualRolloutID": "roll-2",
 	}
 
-	a, err := RenderChecksum(tmpl, base)
+	a, err := RenderChecksum(tmpl, base, nil)
 	require.NoError(t, err)
-	b, err := RenderChecksum(tmpl, bumped)
+	b, err := RenderChecksum(tmpl, bumped, nil)
 	require.NoError(t, err)
 
 	assert.NotEqual(t, a, b, "a non-empty manualRolloutID must change the checksum")

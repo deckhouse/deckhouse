@@ -82,7 +82,7 @@ func (c *Controller) SetupWatches(w register.Watcher) {
 	// The controller's own output Secret must not feed back into its trigger, otherwise
 	// every assembly re-enqueues the next one and the loop free-runs.
 	notOwnSecret := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return !(obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == secretName)
+		return obj.GetNamespace() != cloudInstanceManagerNS || obj.GetName() != secretName
 	})
 	w.Watches(&corev1.Secret{}, enqueue, builder.WithPredicates(predicate.And(
 		inNamespaces(kubeSystemNS, cloudInstanceManagerNS), notOwnSecret)))
@@ -115,9 +115,14 @@ func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 	}
 	c.lastAssemble = time.Now()
 
-	if err := c.ensureCertificate(ctx, logger); err != nil {
-		logger.Error(err, "failed to ensure kubernetes-api-proxy discovery certificate")
-		return ctrl.Result{}, err
+	// Certificate issuance and context assembly were independent before they were folded into
+	// this controller, and they must stay independent: issueCertificate waits on a CSR that a
+	// fresh cluster's signer may not serve yet, and letting that failure return early would
+	// leave the context Secret unwritten — bashible-apiserver would serve no bootstrap scripts
+	// and no node could join. The context simply omits the proxy certs until they exist.
+	certErr := c.ensureCertificate(ctx, logger)
+	if certErr != nil {
+		logger.Error(certErr, "failed to ensure kubernetes-api-proxy discovery certificate; assembling context without it")
 	}
 
 	r := &Reconciler{
@@ -130,5 +135,9 @@ func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, err
 	}
 	logger.Info("assembled bashible-apiserver-context")
+	if certErr != nil {
+		// Retry the certificate without discarding the assembly that just succeeded.
+		return ctrl.Result{}, certErr
+	}
 	return ctrl.Result{RequeueAfter: resyncInterval}, nil
 }

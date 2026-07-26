@@ -123,7 +123,10 @@ var _ = BeforeSuite(func() {
 		// In production the CAPI mutating webhook defaults spec.selector; envtest has no
 		// CAPI webhooks, so the provider spec-patch (a production mechanism) supplies a
 		// selector matching the node-group template label.
-		"capiMachineDeploymentSpecPatch": []byte(`{"selector":{"matchLabels":{"node-group":"{{ .nodeGroupName }}"}}}`),
+		// ${name} is the substitution syntax the reconciler implements (as in the shipped
+		// openstack patch, which uses ${zone}); helm's {{ .name }} is never expanded and would
+		// leave the literal text as the selector value.
+		"capiMachineDeploymentSpecPatch": []byte(`{"selector":{"matchLabels":{"node-group":"${nodeGroupName}"}}}`),
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, cloudProvider))).To(Succeed())
 
@@ -143,7 +146,7 @@ var _ = BeforeSuite(func() {
 	templates.Namespace = providerTemplateSecretNamespace
 	templates.Name = "d8-cloud-provider-dvp-capi"
 	templates.Data = map[string][]byte{
-		"machine-template.yaml":  []byte(capiMachineTemplateFixture),
+		"machine-template.yaml":   []byte(capiMachineTemplateFixture),
 		"instance-class.checksum": []byte(instanceClassChecksumFixture),
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, templates))).To(Succeed())
