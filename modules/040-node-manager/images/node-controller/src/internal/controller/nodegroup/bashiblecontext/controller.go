@@ -46,6 +46,11 @@ type Controller struct {
 	register.Base
 	apiReader client.Reader
 	clientset kubernetes.Interface
+	// lastAssemble implements the debounce. NodeGroup events enqueue per-name keys (only
+	// the secondary watches map to the fixed "assemble" key), so sequential access relies
+	// on the controller running with a single worker — enforced via
+	// --max-concurrent-reconciles=...,bashible-context=1 in the deployment.
+	lastAssemble time.Time
 }
 
 func (c *Controller) Setup(mgr ctrl.Manager) error {
@@ -60,11 +65,27 @@ func (c *Controller) Setup(mgr ctrl.Manager) error {
 
 var assembleRequest = []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "assemble"}}}
 
+// ForPredicates: the assembled context depends on NodeGroup specs only, so status writes
+// and finalizer patches must not re-run the whole assembly (each run derives every
+// NodeGroup — during a burst the unfiltered events multiplied into hundreds of passes).
+func (c *Controller) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)}
+}
+
 func (c *Controller) SetupWatches(w register.Watcher) {
 	enqueue := handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
 		return assembleRequest
 	})
-	w.Watches(&corev1.Secret{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS, cloudInstanceManagerNS)))
+	// The controller's own output Secret must not feed back into its trigger, otherwise
+	// every assembly re-enqueues the next one and the loop free-runs.
+	notOwnSecret := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return !(obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == secretName)
+	})
+	w.Watches(&corev1.Secret{}, enqueue, builder.WithPredicates(predicate.And(
+		inNamespaces(kubeSystemNS, cloudInstanceManagerNS), notOwnSecret)))
 	w.Watches(&corev1.ConfigMap{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS, versionInfoCMNS)))
 	w.Watches(&corev1.Service{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS)))
 	w.Watches(&corev1.Pod{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS)))
@@ -80,8 +101,19 @@ func inNamespaces(namespaces ...string) predicate.Predicate {
 	})
 }
 
+// assembleDebounce coalesces context assemblies: every write of the output Secret makes
+// bashible-apiserver re-render every bashible step for every NodeGroup (an expensive full
+// rebuild), so a burst of NodeGroup changes must collapse into one assembly per window
+// instead of one per event.
+const assembleDebounce = 3 * time.Second
+
 func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
+	if since := time.Since(c.lastAssemble); since < assembleDebounce {
+		return ctrl.Result{RequeueAfter: assembleDebounce - since}, nil
+	}
+	c.lastAssemble = time.Now()
 
 	if err := c.ensureCertificate(ctx, logger); err != nil {
 		logger.Error(err, "failed to ensure kubernetes-api-proxy discovery certificate")

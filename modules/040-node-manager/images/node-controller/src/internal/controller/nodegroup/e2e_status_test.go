@@ -98,6 +98,10 @@ func createChecksumSecret(ngName, checksum string) *corev1.Secret {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.ConfigurationChecksumsSecretName,
 			Namespace: common.MachineNamespace,
+			// bashible-apiserver owns and labels this secret in production; the production
+			// cache scopes machine-namespace Secret informers by that label, so cached reads
+			// (and the checksum watch) see the fixture only when it carries the label.
+			Labels: map[string]string{"app": "bashible-apiserver"},
 		},
 		Data: map[string][]byte{ngName: []byte(checksum)},
 	}
@@ -162,17 +166,19 @@ func conditionStatus(ng *v1.NodeGroup, condType string) metav1.ConditionStatus {
 	return ""
 }
 
-// processedDeckhouse reads the unstructured status.deckhouse the processed-status service writes
-// (synced flag and processed.checkSum); these fields are not on the typed NodeGroupStatus.
-func processedDeckhouse(name string) (synced, processedCheckSum string) {
+// processedDeckhouse reads the unstructured status.deckhouse the status controller writes
+// (synced flag, observed.checkSum and processed.checkSum); these fields are not on the typed
+// NodeGroupStatus.
+func processedDeckhouse(name string) (synced, observedCheckSum, processedCheckSum string) {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(v1.GroupVersion.WithKind("NodeGroup"))
 	if err := k8sClient.Get(suiteCtx, types.NamespacedName{Name: name}, u); err != nil {
-		return "", ""
+		return "", "", ""
 	}
 	synced, _, _ = unstructured.NestedString(u.Object, "status", "deckhouse", "synced")
+	observedCheckSum, _, _ = unstructured.NestedString(u.Object, "status", "deckhouse", "observed", "checkSum")
 	processedCheckSum, _, _ = unstructured.NestedString(u.Object, "status", "deckhouse", "processed", "checkSum")
-	return synced, processedCheckSum
+	return synced, observedCheckSum, processedCheckSum
 }
 
 // User story: As a platform user, I want my NodeGroup's status to accurately report node/ready/
@@ -285,19 +291,18 @@ var _ = Describe("NodeGroup status controller", func() {
 	})
 
 	Context("processed status", func() {
-		It("writes status.deckhouse.processed and a synced flag after reconciliation", func() {
+		It("records observed and processed and settles synced=True after reconciliation", func() {
 			name := uniqueNG("processed")
 			createNodeGroup(staticNodeGroup(name))
 
-			// The controller computes a checksum of the filtered NodeGroup into
-			// status.deckhouse.processed.checkSum and sets synced=False until an external
-			// component records a matching status.deckhouse.observed.checkSum (not present in
-			// envtest). So the controller-observable result is: a non-empty processed checksum
-			// and synced=False.
+			// The controller records the observed spec and the processed spec from the same
+			// reconcile (get_crds used to write observed BeforeHelm; without a writer synced
+			// stayed False forever). Both checksums match, so synced settles True.
 			Eventually(func(g Gomega) {
-				synced, processedCheckSum := processedDeckhouse(name)
+				synced, observedCheckSum, processedCheckSum := processedDeckhouse(name)
 				g.Expect(processedCheckSum).NotTo(BeEmpty())
-				g.Expect(synced).To(Equal("False"))
+				g.Expect(observedCheckSum).To(Equal(processedCheckSum))
+				g.Expect(synced).To(Equal("True"))
 			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 		})
 	})

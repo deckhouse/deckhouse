@@ -85,12 +85,18 @@ type clusterConfiguration struct {
 }
 
 func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
+	// Served from the kube-system Secret informer (watch-fresh); a live GET here used to
+	// cost hundreds of ms on every derived-status pass during a NodeGroup burst.
 	secret := &corev1.Secret{}
-	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
+	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
 		return nil, ""
 	}
+	data := make(map[string]string, len(secret.Data))
+	for k, v := range secret.Data {
+		data[k] = string(v)
+	}
 
-	raw, ok := secret.Data["cluster-configuration.yaml"]
+	raw, ok := []byte(data["cluster-configuration.yaml"]), data["cluster-configuration.yaml"] != ""
 	if !ok {
 		return nil, ""
 	}
@@ -106,8 +112,12 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 	var target *semver.Version
 	switch {
 	case cfg.KubernetesVersion == automaticKubernetesVersion:
-		if raw, ok := secret.Data[deckhouseDefaultK8sVersionKey]; ok {
-			if ver, err := semver.NewVersion(strings.TrimSpace(string(raw))); err == nil {
+		if enc, ok := data[deckhouseDefaultK8sVersionKey]; ok {
+			verRaw := []byte(enc)
+			if decoded, err := base64.StdEncoding.DecodeString(enc); err == nil {
+				verRaw = decoded
+			}
+			if ver, err := semver.NewVersion(strings.TrimSpace(string(verRaw))); err == nil {
 				target = ver
 			}
 		}

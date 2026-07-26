@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -46,6 +47,10 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
+// statusResyncInterval bounds staleness of status inputs the controller does not watch
+// (cluster configuration, InstanceClasses); the For-predicate suppresses the manager resync.
+const statusResyncInterval = 10 * time.Minute
+
 func init() {
 	register.RegisterController("nodegroup-status", &v1.NodeGroup{}, &Status{})
 }
@@ -59,6 +64,16 @@ type Status struct {
 func (r *Status) Setup(mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
 	return nil
+}
+
+// ForPredicates: the status is derived from the NodeGroup spec plus Node/Machine/MD state
+// (watched separately below); the controller's own status writes must not re-enqueue the
+// NodeGroup — during a burst that echo multiplied reconciles ~40x per NodeGroup.
+func (r *Status) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)}
 }
 
 func (r *Status) SetupWatches(w register.Watcher) {
@@ -211,5 +226,8 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	}
 
 	logger.V(1).Info("updated nodegroup status", "name", ng.Name, "nodes", nodeResult.NodesCount, "ready", nodeResult.ReadyCount, "upToDate", nodeResult.UpToDateCount)
-	return ctrl.Result{}, nil
+	// The For-predicate filters this controller's own status-write echoes, which also
+	// suppresses the manager resync; the periodic requeue keeps unwatched status inputs
+	// (cluster configuration, a later-created InstanceClass) from going stale forever.
+	return ctrl.Result{RequeueAfter: statusResyncInterval}, nil
 }

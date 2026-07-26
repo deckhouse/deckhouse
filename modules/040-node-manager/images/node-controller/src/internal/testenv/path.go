@@ -19,7 +19,15 @@ package testenv
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 )
+
+// testdataPath resolves a file in this package's testdata directory. Built from the source
+// file location, not the working directory, so it works from any test package.
+func testdataPath(name string) string {
+	_, self, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(self), "testdata", name)
+}
 
 func findDirUp(name string) string {
 	dir, err := os.Getwd()
