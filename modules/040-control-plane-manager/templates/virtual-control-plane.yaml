@@ -147,7 +147,7 @@ rules:
   verbs: ["get", "list", "watch", "create", "update", "patch"]
 - apiGroups: ["control-plane.deckhouse.io"]
   resources: ["virtualcontrolplanes"]
-  verbs: ["get", "list", "watch"]
+  verbs: ["get", "list", "watch", "patch"]
 - apiGroups: ["control-plane.deckhouse.io"]
   resources: ["virtualcontrolplanes/status"]
   verbs: ["get", "update", "patch"]
