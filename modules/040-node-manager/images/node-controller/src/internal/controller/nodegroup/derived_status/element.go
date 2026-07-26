@@ -27,6 +27,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/capacity"
 )
 
 const (
@@ -38,13 +39,10 @@ const (
 )
 
 func (s *Service) BuildElement(ctx context.Context, ng *v1.NodeGroup, rawSpec map[string]interface{}) (map[string]interface{}, string, error) {
-	result, err := s.Compute(ctx, ng)
+	result, check, err := s.ComputeWithCloudChecks(ctx, ng)
 	if err != nil {
 		return nil, "", err
 	}
-
-	cloudProvider := s.readCloudProviderData(ctx)
-	check := s.runCloudChecks(ctx, ng, cloudProvider)
 
 	in := BlobInput{
 		Name:            ng.Name,
@@ -93,7 +91,7 @@ func (s *Service) capacityError(ctx context.Context, kind, name string) error {
 		return err
 	}
 	catalog := s.readInstanceTypesCatalog(ctx)
-	_, err = calculateNodeCapacity(kind, spec, catalog)
+	_, err = capacity.CalculateNodeTemplateCapacity(kind, spec, catalog)
 	return err
 }
 

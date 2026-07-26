@@ -193,7 +193,8 @@ func TestReadEndpoints_UnionSortedSplit(t *testing.T) {
 		apiserverPod("kube-apiserver-3", "10.0.0.9", false), // not ready -> excluded
 		endpointSlice([]string{"10.0.0.1"}, "https", 6443),  // duplicate of pod 2
 	)
-	got := s.readEndpoints(context.Background())
+	got, err := s.readEndpoints(context.Background())
+	require.NoError(t, err)
 
 	assert.Equal(t, []string{"10.0.0.1:6443", "10.0.0.2:6443"}, got.apiserverEndpoints)
 	require.Len(t, got.clusterMasterEndpoints, 2)
@@ -203,6 +204,14 @@ func TestReadEndpoints_UnionSortedSplit(t *testing.T) {
 		"rppServerPort":          packagesProxyPort,
 		"rppBootstrapServerPort": packagesProxyBootstrapPort,
 	}, got.clusterMasterEndpoints[0])
+}
+
+func TestReadEndpoints_EmptyReturnsError(t *testing.T) {
+	s := newService(t)
+	got, err := s.readEndpoints(context.Background())
+	require.Error(t, err)
+	assert.Empty(t, got.apiserverEndpoints)
+	assert.Empty(t, got.clusterMasterEndpoints)
 }
 
 func TestReadCloudProvider(t *testing.T) {

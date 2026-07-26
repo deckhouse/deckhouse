@@ -190,7 +190,6 @@ spec: {}
 				    },
 				    "engine": "None",
 				    "manualRolloutID": "",
-				    "instanceClass": {},
 				    "name": "proper1"
 				  },
 				  {
@@ -212,7 +211,6 @@ spec: {}
 				    },
 				    "engine": "None",
 				    "manualRolloutID": "",
-				    "instanceClass": {},
 				    "name": "proper2"
 				  }
 				]

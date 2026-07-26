@@ -35,8 +35,9 @@ var mandatoryInputKeys = []string{
 
 func TestBuild_MandatoryFieldsAlwaysPresent(t *testing.T) {
 	// Empty cluster: only the mandatory (unconditional) keys must appear.
-	s := newService(t)
-	input := s.Build(context.Background(), Globals{}, nil)
+	s := newService(t, endpointSlice([]string{"10.0.0.1"}, "https", 6443))
+	input, err := s.Build(context.Background(), Globals{}, nil)
+	require.NoError(t, err)
 
 	for _, k := range mandatoryInputKeys {
 		assert.Contains(t, input, k, "mandatory input.yaml key %q must be present", k)
@@ -66,6 +67,7 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 			"featureGates.json": []byte(`{"kubelet":["X"]}`),
 		}),
 		secret(cloudInstanceManagerNS, packagesProxyTokenSecretName, map[string][]byte{"token": []byte("tok")}),
+		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
 	)
 
 	globals := Globals{
@@ -75,7 +77,8 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 		Proxy:            map[string]interface{}{"httpProxy": "http://p"},
 	}
 	blob := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
-	input := s.Build(context.Background(), globals, blob)
+	input, err := s.Build(context.Background(), globals, blob)
+	require.NoError(t, err)
 
 	assert.Equal(t, map[string]interface{}{"type": "yandex"}, input["cloudProvider"])
 	assert.Equal(t, map[string]interface{}{"httpProxy": "http://p"}, input["proxy"])
@@ -92,8 +95,9 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 }
 
 func TestMarshal_RoundTrips(t *testing.T) {
-	s := newService(t)
-	input := s.Build(context.Background(), Globals{ClusterUUID: "u"}, nil)
+	s := newService(t, endpointSlice([]string{"10.0.0.1"}, "https", 6443))
+	input, err := s.Build(context.Background(), Globals{ClusterUUID: "u"}, nil)
+	require.NoError(t, err)
 
 	raw, err := Marshal(input)
 	require.NoError(t, err)
@@ -107,6 +111,7 @@ func TestWriteSecret_UpsertsInputYAML(t *testing.T) {
 		configMap(versionInfoCMNS, versionInfoCMName, map[string]string{
 			"data.json": `{"channel":"stable","version":"v1.2.3","edition":"EE"}`,
 		}),
+		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
 	)
 	blob := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
 

@@ -32,6 +32,8 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
 type capiMDInput struct {
@@ -132,13 +134,6 @@ func (r *MachineDeploymentReconciler) capiDesiredReplicas(ctx context.Context, m
 	return calculateReplicas(int32(replicas), minReplicas, maxReplicas), nil
 }
 
-func resolveCAPIZones(ng *deckhousev1.NodeGroup, defaultZones []string) []string {
-	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 {
-		return ng.Spec.CloudInstances.Zones
-	}
-	return defaultZones
-}
-
 func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
 
@@ -156,27 +151,53 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		return nil
 	}
 
-	zones := resolveCAPIZones(ng, cloudConfig.zones)
+	cloudProvider, err := r.readCloudProviderTree(ctx)
+	if err != nil {
+		return err
+	}
+	cloudType, _ := cloudProvider["type"].(string)
+
+	rawSpec, err := r.readNodeGroupRawSpec(ctx, ng.Name)
+	if err != nil {
+		return err
+	}
+	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
+	blob, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
+	if err != nil {
+		return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
+	}
+	if validationErr != "" {
+		logger.Info("skipping CAPI: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
+		return nil
+	}
+	zones := blobZones(blob)
 	if len(zones) == 0 {
 		logger.V(1).Info("skipping CAPI: no zones")
 		return nil
 	}
 
-	// The instance-class checksum is owned by helm: it renders the infrastructure
-	// MachineTemplate (with a checksum/instance-class annotation) and the bootstrap
-	// Secret, both named by that checksum. node-controller reads the annotation instead
-	// of recomputing the checksum, so MachineTemplate/Secret names stay byte-identical to
-	// helm and existing nodes never roll.
-	checksum, err := r.readInstanceClassChecksum(ctx, cloudConfig, ng.Name)
+	// node-controller renders the infrastructure MachineTemplate and its instance-class
+	// checksum from the cloud-provider CAPI template secret (published at the 030 step),
+	// so it no longer waits for helm. The checksum must stay byte-identical to helm's
+	// former output, otherwise the template name changes and existing nodes roll.
+	machineTemplateTpl, err := r.readProviderTemplate(ctx, cloudType, engineCAPITemplates, "machine-template.yaml")
 	if err != nil {
 		return err
 	}
-	if checksum == "" {
-		logger.V(1).Info("skipping CAPI: infrastructure template not found yet, waiting for helm")
-		return nil
+	checksumTpl, err := r.readProviderTemplate(ctx, cloudType, engineCAPITemplates, "instance-class.checksum")
+	if err != nil {
+		return err
+	}
+	checksum, err := machineclass.RenderChecksum(checksumTpl, blob)
+	if err != nil {
+		return fmt.Errorf("render CAPI instance-class checksum for NodeGroup %s: %w", ng.Name, err)
 	}
 
 	clusterUUID, err := r.readClusterUUID(ctx)
+	if err != nil {
+		return err
+	}
+	podSubnet, err := r.readPodSubnet(ctx)
 	if err != nil {
 		return err
 	}
@@ -200,17 +221,28 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		infraAPIGroup = infraAPIGroup[:idx]
 	}
 
+	desiredMDNames := make(map[string]struct{}, len(zones))
+	desiredTemplateNames := make(map[string]struct{}, len(zones))
+
 	for _, zone := range zones {
 		mdSuffix := fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone))
 		mdName := mdSuffix
 		if instancePrefix != "" {
 			mdName = fmt.Sprintf("%s-%s", instancePrefix, mdSuffix)
 		}
+		desiredMDNames[mdName] = struct{}{}
 
 		templateName := fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone+checksum))
-		// Bootstrap secret name mirrors the MachineTemplate name (checksum-based) to keep
-		// byte-parity with helm's node-group.yaml ($bootstrap_secret_name := $template_name).
-		bootstrapSecretName := templateName
+		desiredTemplateNames[templateName] = struct{}{}
+		// The bootstrap Secret is rendered by helm with a stable per-zone name (its content
+		// does not depend on the instance class), so mdSuffix (%s-%s of ng and sha(uuid+zone))
+		// matches helm's $ng-$zone_hash. The MachineTemplate is checksum-named and owned by
+		// node-controller; helm never computes that checksum, so there is no cross-parity to keep.
+		bootstrapSecretName := mdSuffix
+
+		if err := r.applyCAPIMachineTemplate(ctx, machineTemplateTpl, cloudProvider, blob, clusterUUID, podSubnet, zone, templateName, checksum); err != nil {
+			return err
+		}
 
 		desired, err := r.capiDesiredReplicas(ctx, mdName, minReplicas, maxReplicas)
 		if err != nil {
@@ -251,7 +283,11 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply CAPI MachineDeployment %s: %w", mdName, err)
 		}
-		logger.Info("applied CAPI MachineDeployment", "name", mdName, "zone", zone)
+		logger.Info("applied CAPI MachineTemplate + MachineDeployment", "name", mdName, "zone", zone)
+	}
+
+	if err := r.pruneStaleCAPI(ctx, ng.Name, cloudConfig, desiredMDNames, desiredTemplateNames); err != nil {
+		return err
 	}
 
 	return nil

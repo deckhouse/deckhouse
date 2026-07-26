@@ -41,6 +41,7 @@ func newReconciler(t *testing.T, objs ...client.Object) *Reconciler {
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, discoveryv1.AddToScheme(scheme))
 	require.NoError(t, v1.AddToScheme(scheme))
+	objs = append(objs, endpointSlice([]string{"10.0.0.1"}, "https", 6443))
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 	return &Reconciler{
 		Client:        c,

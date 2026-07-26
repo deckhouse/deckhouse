@@ -1110,42 +1110,13 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 				Expect(machineDeployment.Exists()).To(BeFalse())
 			})
 
-			It("must render allowed address pairs for internal OpenStack networks", func() {
+			It("must not render the infrastructure MachineTemplate in helm (owned by node-controller)", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
+				// The OpenStackMachineTemplate is rendered by node-controller from the
+				// cloud-provider CAPI template secret, not by helm.
 				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", "worker-d03da7ca")
-				Expect(openStackTemplate.Exists()).To(BeTrue())
-
-				Expect(openStackTemplate.Field("spec.template.spec.ports").String()).To(MatchYAML(`
-- network:
-    filter:
-      name: shared
-  securityGroups:
-  - filter:
-      name: groupa
-  - filter:
-      name: groupb
-- network:
-    filter:
-      name: mynetwork
-  securityGroups:
-  - filter:
-      name: groupa
-  - filter:
-      name: groupb
-  allowedAddressPairs:
-  - ipAddress: 10.111.0.0/16
-- network:
-    filter:
-      name: mynetwork2
-  securityGroups:
-  - filter:
-      name: groupa
-  - filter:
-      name: groupb
-  allowedAddressPairs:
-  - ipAddress: 10.111.0.0/16
-`))
+				Expect(openStackTemplate.Exists()).To(BeFalse())
 			})
 
 			It("must keep API floating IP enabled for Standard-like layouts", func() {
@@ -1182,35 +1153,9 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			It("must not render allowed address pairs for VXLAN", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
+				// The OpenStackMachineTemplate is rendered by node-controller, not helm.
 				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", "worker-d03da7ca")
-				Expect(openStackTemplate.Exists()).To(BeTrue())
-
-				Expect(openStackTemplate.Field("spec.template.spec.ports").String()).To(MatchYAML(`
-- network:
-    filter:
-      name: shared
-  securityGroups:
-  - filter:
-      name: groupa
-  - filter:
-      name: groupb
-- network:
-    filter:
-      name: mynetwork
-  securityGroups:
-  - filter:
-      name: groupa
-  - filter:
-      name: groupb
-- network:
-    filter:
-      name: mynetwork2
-  securityGroups:
-  - filter:
-      name: groupa
-  - filter:
-      name: groupb
-`))
+				Expect(openStackTemplate.Exists()).To(BeFalse())
 			})
 		})
 
@@ -1947,19 +1892,19 @@ internal:
 					templateName string
 				}
 
-				// Only the MachineDeployment is created by node-controller
-				// (capi.reconcileCloudMDsRendered). Helm owns the instance-class checksum:
-				// it renders the bootstrap Secret and the infrastructure VCDMachineTemplate,
-				// both named after the checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
+				// The MachineDeployment and the infrastructure VCDMachineTemplate are created
+				// by node-controller (capi.reconcileCloudMDsRendered) from the cloud-provider
+				// CAPI template secret. Helm only renders the bootstrap Secret, still named
+				// after the instance-class checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeFalse())
 
-					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", strings.TrimPrefix(d.name, "myprefix-"))
 					Expect(secret.Exists()).To(BeTrue())
 
 					vcdTemplate := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", d.templateName)
-					Expect(vcdTemplate.Exists()).To(BeTrue())
+					Expect(vcdTemplate.Exists()).To(BeFalse())
 				}
 				//
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -1982,7 +1927,7 @@ internal:
 				})
 
 				vcdTemplateWithCatalog := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", "worker-big-c10b569f")
-				Expect(vcdTemplateWithCatalog.Exists()).To(BeTrue())
+				Expect(vcdTemplateWithCatalog.Exists()).To(BeFalse())
 			})
 		})
 
@@ -2068,19 +2013,19 @@ internal:
 					templateName string
 				}
 
-				// Only the MachineDeployment is created by node-controller
-				// (capi.reconcileCloudMDsRendered). Helm owns the instance-class checksum:
-				// it renders the bootstrap Secret and the infrastructure DeckhouseMachineTemplate,
-				// both named after the checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
+				// The MachineDeployment and the infrastructure DeckhouseMachineTemplate are
+				// created by node-controller (capi.reconcileCloudMDsRendered) from the
+				// cloud-provider CAPI template secret. Helm only renders the bootstrap Secret,
+				// still named after the instance-class checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeFalse())
 
-					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", strings.TrimPrefix(d.name, "myprefix-"))
 					Expect(secret.Exists()).To(BeTrue())
 
 					dvpTemplate := f.KubernetesResource("DeckhouseMachineTemplate", "d8-cloud-instance-manager", d.templateName)
-					Expect(dvpTemplate.Exists()).To(BeTrue())
+					Expect(dvpTemplate.Exists()).To(BeFalse())
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")

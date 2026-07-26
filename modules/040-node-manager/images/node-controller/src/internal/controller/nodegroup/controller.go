@@ -52,7 +52,13 @@ func init() {
 
 type Status struct {
 	register.Base
+	apiReader        client.Reader
 	conditionService ngconditions.Service
+}
+
+func (r *Status) Setup(mgr ctrl.Manager) error {
+	r.apiReader = mgr.GetAPIReader()
+	return nil
 }
 
 func (r *Status) SetupWatches(w register.Watcher) {
@@ -103,15 +109,23 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		"instances", cloudResult.Instances,
 	)
 
+	ds := derivedstatus.Service{Client: r.Client, Reader: r.apiReader}
+	derivedResult, validationResult, err := ds.ComputeWithCloudChecks(ctx, ng)
+	if err != nil {
+		logger.Error(err, "failed to compute derived nodegroup status", "nodeGroup", ng.Name)
+		return ctrl.Result{}, err
+	}
+	validationError := validationResult.Error
+
 	var conditionErrors []string
-	if ng.Status.Error != "" {
-		conditionErrors = append(conditionErrors, ng.Status.Error)
+	if validationError != "" {
+		conditionErrors = append(conditionErrors, validationError)
 	}
 	if cloudResult.LatestError != "" {
 		conditionErrors = append(conditionErrors, cloudResult.LatestError)
 	}
 
-	eventMsg := fmt.Sprintf("%s %s", ng.Status.Error, cloudResult.LatestError)
+	eventMsg := fmt.Sprintf("%s %s", validationError, cloudResult.LatestError)
 	eventMsg = strings.TrimSpace(eventMsg)
 	if len(eventMsg) > 1024 {
 		eventMsg = eventMsg[:1024]
@@ -146,6 +160,8 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	ng.Status.Nodes = nodeResult.NodesCount
 	ng.Status.Ready = nodeResult.ReadyCount
 	ng.Status.UpToDate = nodeResult.UpToDateCount
+	ng.Status.Error = validationError
+	ng.Status.KubernetesVersion = derivedResult.KubernetesVersion
 	ng.Status.Conditions = newConditions
 	ng.Status.ConditionSummary = conditionSummary
 
@@ -171,8 +187,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	// left empty so a later reconcile — re-triggered by the cloud-provider
 	// secret watch — can fill it, instead of getting stuck on a sticky "None".
 	if ng.Status.Engine == "" {
-		ds := derivedstatus.Service{Client: r.Client}
-		if engine := ds.ComputeEngine(ctx, ng); engine != "" && engine != "None" {
+		if engine := derivedResult.Engine; engine != "" && engine != "None" {
 			ng.Status.Engine = engine
 		}
 	}

@@ -58,25 +58,6 @@ func TestBlobZones(t *testing.T) {
 	})
 }
 
-func TestResolveCAPIZones(t *testing.T) {
-	defaultZones := []string{"ru-central1-a", "ru-central1-b", "ru-central1-d", "ru-central1-e"}
-
-	t.Run("spec zones override defaults", func(t *testing.T) {
-		ng := &deckhousev1.NodeGroup{}
-		ng.Spec.CloudInstances = &deckhousev1.CloudInstancesSpec{Zones: []string{"ru-central1-a"}}
-		assert.Equal(t, []string{"ru-central1-a"}, resolveCAPIZones(ng, defaultZones))
-	})
-	t.Run("empty spec zones fall back to defaults", func(t *testing.T) {
-		ng := &deckhousev1.NodeGroup{}
-		ng.Spec.CloudInstances = &deckhousev1.CloudInstancesSpec{}
-		assert.Equal(t, defaultZones, resolveCAPIZones(ng, defaultZones))
-	})
-	t.Run("nil cloudInstances falls back to defaults", func(t *testing.T) {
-		ng := &deckhousev1.NodeGroup{}
-		assert.Equal(t, defaultZones, resolveCAPIZones(ng, defaultZones))
-	})
-}
-
 func TestBlobInstanceClassSpot(t *testing.T) {
 	t.Run("spot true", func(t *testing.T) {
 		blob := map[string]interface{}{"instanceClass": map[string]interface{}{"spot": true}}

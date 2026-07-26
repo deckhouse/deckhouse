@@ -25,18 +25,22 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
 func newTestScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
+	scheme.AddKnownTypeWithName(ngcommon.MCMMachineDeploymentGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(ngcommon.MCMMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"), &unstructured.UnstructuredList{})
 	return scheme
 }
 
@@ -92,6 +96,21 @@ func TestReadStatic_ParsesInternalNetworkCIDRs(t *testing.T) {
 
 func TestReadStatic_AbsentReturnsNil(t *testing.T) {
 	assert.Nil(t, newTestService(t).readStatic(context.Background()))
+}
+
+func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T) {
+	md := &unstructured.Unstructured{}
+	md.SetGroupVersionKind(ngcommon.MCMMachineDeploymentGVK)
+	md.SetName("worker-a")
+	md.SetNamespace(ngcommon.MachineNamespace)
+	md.SetAnnotations(map[string]string{"zone": "zone-a"})
+
+	s := newTestService(t, md)
+	got := s.readDefaultZones(context.Background(), map[string]interface{}{
+		"zones": []interface{}{"zone-b", "zone-a"},
+	})
+
+	assert.Equal(t, []string{"zone-a", "zone-b"}, got)
 }
 
 func TestBuildElement_StaticWiresNameRolloutAndStatic(t *testing.T) {

@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	cljson "github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -48,14 +47,6 @@ const (
 	useMCMAnnotation          = "node.deckhouse.io/use-mcm"
 	manualRolloutIDAnnotation = "manual-rollout-id"
 )
-
-// CloudFillerFunc fills provider-specific defaults into the instanceClass spec map
-// (used only to keep the bootstrap-secret name checksum byte-parity with helm).
-type CloudFillerFunc func(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error
-
-var fillCloudSpecificDefaults = map[string][]CloudFillerFunc{
-	"vsphere": {fillVsphereMainNewtork},
-}
 
 // InstanceClassCrdInfo is a name+spec of a cloud InstanceClass CRD (kind is dynamic).
 type InstanceClassCrdInfo struct {
@@ -229,9 +220,10 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
-	// instanceClass specs, keyed by name. Only used to keep the CAPI bootstrap-secret
-	// name checksum byte-parity with helm (spec is passed through to values verbatim,
-	// aside from provider-specific defaults filled by applyCloudSpecificDefaults).
+	// instanceClass names, keyed by name. Only used to validate that a CloudEphemeral
+	// NodeGroup references an existing instanceClass; node-controller renders the
+	// provider templates and reads the instanceClass spec itself, so the spec is no
+	// longer overlaid into helm values.
 	instanceClasses := make(map[string]interface{})
 	for ic, err := range sdkobjectpatch.SnapshotIter[InstanceClassCrdInfo](input.Snapshots.Get("ics")) {
 		if err != nil {
@@ -252,12 +244,11 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		ngForValues["engine"] = string(calculateNodeGroupEngine(input, nodeGroup))
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
 
-		// Overlay the raw instanceClass spec so helm can recompute the CAPI bootstrap
-		// secret name via capi/<type>/instance-class.checksum (byte-parity with main).
-		// A NodeGroup with a wrong classReference.kind or a missing instanceClass must not
-		// reach helm rendering without instanceClass — provider templates require its fields
-		// and would fail the whole module converge. Fall back to the last valid values and
-		// skip the raw element; the diagnostic status is published by node-controller.
+		// A NodeGroup with a wrong classReference.kind or a missing instanceClass is kept
+		// out of helm rendering; node-controller renders the CAPI/MCM templates and the
+		// instanceClass is read by it directly, so it is no longer overlaid into values.
+		// Fall back to the last valid values and skip the raw element; the diagnostic
+		// status is published by node-controller.
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral && kindInUse != "" {
 			classRefKind := nodeGroup.Spec.CloudInstances.ClassReference.Kind
 			if classRefKind != kindInUse {
@@ -272,24 +263,16 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 			}
 
 			nodeGroupInstanceClassName := nodeGroup.Spec.CloudInstances.ClassReference.Name
-			instanceClassSpec, ok := instanceClasses[nodeGroupInstanceClassName]
-			if !ok {
+			if _, ok := instanceClasses[nodeGroupInstanceClassName]; !ok {
 				input.Logger.Error("NodeGroup instance class not found",
 					slog.String("name", nodeGroup.Name),
-					slog.String("instanceClass", nodeGroupInstanceClassName),
+					slog.String("instance_class", nodeGroupInstanceClassName),
 					slog.String("kind", classRefKind))
 				if saved, ok := lastGoodNodeGroup(input, nodeGroup.Name); ok {
 					finalNodeGroups = append(finalNodeGroups, saved)
 				}
 				continue
 			}
-
-			providerName := strings.ToLower(input.Values.Get("nodeManager.internal.cloudProvider.type").String())
-			updatedSpecMap, err := applyCloudSpecificDefaults(input, providerName, instanceClassSpec)
-			if err != nil {
-				return fmt.Errorf("failed to fill cloud specific defaults for %s: %w", providerName, err)
-			}
-			ngForValues["instanceClass"] = updatedSpecMap
 		}
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeStatic {
@@ -421,50 +404,6 @@ func calculateNodeGroupEngine(input *go_hook.HookInput, nodeGroup NodeGroupCrdIn
 	}
 }
 
-func fillVsphereMainNewtork(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error {
-	if _, ok := instanceClass["mainNetwork"]; ok {
-		return nil
-	}
-	instancesRaw, ok := cloudVariables["instances"]
-	if !ok {
-		return nil
-	}
-	instancesMap, ok := instancesRaw.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("cloudVariables.instances: expected map[string]interface{}, got %T", instancesRaw)
-	}
-	val, ok := instancesMap["mainNetwork"]
-	if !ok {
-		return nil
-	}
-	mn, ok := val.(string)
-	if !ok {
-		return fmt.Errorf("instances.mainNetwork: expected string, got %T", val)
-	}
-	instanceClass["mainNetwork"] = mn
-	return nil
-}
-
-func applyCloudSpecificDefaults(input *go_hook.HookInput, providerName string, instanceClassSpec interface{}) (interface{}, error) {
-	specMap, ok := instanceClassSpec.(map[string]interface{})
-	if !ok {
-		return instanceClassSpec, nil
-	}
-	raw, ok := input.Values.GetOk("nodeManager.internal.cloudProvider." + providerName)
-	if !ok || !raw.IsObject() {
-		return specMap, nil
-	}
-	cloudVariables, ok := raw.Value().(map[string]interface{})
-	if !ok {
-		return specMap, nil
-	}
-	for _, fillFn := range fillCloudSpecificDefaults[providerName] {
-		if err := fillFn(cloudVariables, specMap); err != nil {
-			return nil, fmt.Errorf("fill %s defaults: %w", providerName, err)
-		}
-	}
-	return specMap, nil
-}
 
 func defaultCloudEphemeralNodeGroupEngineForNewNodeGroups(input *go_hook.HookInput, useMCM bool) ngv1.NodeGroupEngine {
 	hasMCM := valueExistsAndNotEmpty(input, "nodeManager.internal.cloudProvider.machineClassKind")
