@@ -114,7 +114,7 @@ rules:
   verbs: ["get", "list", "watch", "create", "update", "patch"]
 - apiGroups: [""]
   resources: ["secrets"]
-  verbs: ["get", "list", "watch", "create", "update", "patch"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 - apiGroups: [""]
   resources: ["configmaps"]
   verbs: ["get", "list", "watch", "create", "update", "patch"]
