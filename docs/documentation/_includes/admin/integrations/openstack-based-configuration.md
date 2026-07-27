@@ -1,4 +1,3 @@
-<!-- markdownlint-disable-next-line MD041 -->
 ## List of required OpenStack services
 
 The following {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services must be available for Deckhouse Kubernetes Platform to operate:
