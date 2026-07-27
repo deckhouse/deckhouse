@@ -6,7 +6,7 @@ spec:
         description: |
           Описывает tenant control plane Kubernetes, которым управляет модуль `control-plane-manager`.
 
-          Ресурс является cluster-scoped. Каждый объект VirtualControlPlane представляет один control plane тенанта и
+          Каждый объект VirtualControlPlane представляет один control plane тенанта и
           используется как источник желаемого состояния для ресурсов, необходимых для его запуска в управляющем кластере.
         properties:
           spec:

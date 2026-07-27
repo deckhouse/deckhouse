@@ -53,7 +53,7 @@ func (r *reconciler) mapConfigSecretToVirtualControlPlanes(ctx context.Context, 
 	for i := range vcpList.Items {
 		vcp := &vcpList.Items[i]
 		requests = append(requests, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: vcp.Name},
+			NamespacedName: client.ObjectKey{Namespace: vcp.Namespace, Name: vcp.Name},
 		})
 	}
 

@@ -15,7 +15,7 @@ spec:
     - vcp
     singular: virtualcontrolplane
   preserveUnknownFields: false
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - description: Desired Kubernetes version.
@@ -44,7 +44,7 @@ spec:
         description: |-
           VirtualControlPlane describes a tenant Kubernetes control plane managed by the control-plane-manager module.
 
-          The resource is cluster-scoped. Each VirtualControlPlane represents one tenant control plane and is used as
+          Each VirtualControlPlane represents one tenant control plane and is used as
           the desired-state source for the resources required to run it in the management cluster.
         properties:
           apiVersion:

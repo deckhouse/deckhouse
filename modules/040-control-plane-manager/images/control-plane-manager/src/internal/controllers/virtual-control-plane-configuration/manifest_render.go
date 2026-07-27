@@ -133,8 +133,6 @@ func buildManifestReplacer(
 	apiAdvertiseAddress string,
 	clusterUUID string,
 ) *strings.Replacer {
-	namespace := vcpNamespace(vcp)
-
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
 		"${VCP_CLUSTER_UUID}", clusterUUID,
@@ -147,7 +145,7 @@ func buildManifestReplacer(
 		"${IMAGE_CILIUM}", fixed.Cilium,
 		"${IMAGE_CILIUM_OPERATOR}", fixed.CiliumOperator,
 		"${VCP_NAME}", vcp.Name,
-		"${NAMESPACE}", namespace,
+		"${NAMESPACE}", vcp.Namespace,
 		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
 		"${CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
 		"${SERVICE_SUBNET_CIDR}", constants.DefaultTenantServiceSubnetCIDR,
@@ -155,5 +153,16 @@ func buildManifestReplacer(
 		"${VCP_API_HOST}", apiExposeHost(vcp),
 		"${VCP_KONN_HOST}", konnExposeHost(vcp),
 		"${VCP_PKG_HOST}", packagesExposeHost(vcp),
+		"${PKI_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualPKISecretName, vcp.Name),
+		"${KUBE_APISERVER_SERVICE_NAME}", constants.VirtualResourceName(constants.VirtualAPIServerServiceName, vcp.Name),
+		"${KONNECTIVITY_EGRESS_CM_NAME}", constants.VirtualResourceName(constants.VirtualKonnectivityEgressConfigMapName, vcp.Name),
+		"${KONNECTIVITY_SERVER_SERVICE_NAME}", constants.VirtualResourceName(constants.VirtualKonnectivityServerServiceName, vcp.Name),
+		"${KONNECTIVITY_AGENT_CP_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualKonnectivityAgentCPSecretName, vcp.Name),
+		"${ADMIN_KUBECONFIG_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualAdminKubeconfigSecretName, vcp.Name),
+		"${KUBECONFIG_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualKubeconfigSecretName, vcp.Name),
+		"${DATASTORE_NAME}", constants.VirtualResourceName(constants.VirtualDatastoreName, vcp.Name),
+		"${DATASTORE_CREDS_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualDatastoreCredsSecretName, vcp.Name),
+		"${CILIUM_CONFIG_NAME}", constants.VirtualResourceName("cilium-config", vcp.Name),
+		"${CILIUM_OPERATOR_NAME}", constants.VirtualResourceName("cilium-operator", vcp.Name),
 	)
 }

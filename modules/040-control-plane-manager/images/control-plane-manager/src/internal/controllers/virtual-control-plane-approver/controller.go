@@ -45,7 +45,7 @@ const (
 
 func rateLimiter() workqueue.TypedRateLimiter[reconcile.Request] {
 	return workqueue.NewTypedMaxOfRateLimiter(
-		workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](100*time.Millisecond, 3*time.Second),
+		workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](5*time.Second, 3*time.Minute),
 		&workqueue.TypedBucketRateLimiter[reconcile.Request]{
 			Limiter: rate.NewLimiter(rate.Limit(maxConcurrentReconciles), maxConcurrentReconciles),
 		},
@@ -56,7 +56,7 @@ func mapToNamespace(_ context.Context, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
 			Namespace: obj.GetNamespace(),
-			Name:      approverRequestName,
+			Name:      obj.GetLabels()[constants.VirtualControlPlaneScopeLabelKey],
 		},
 	}}
 }
