@@ -54,6 +54,8 @@ spec:
               package d8.security_policies
 
               import data.lib.common.get_field
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.common.pod_spec
               import data.lib.exception.path_value_resolved
               import data.lib.exception.resolve_spe_from_labels
@@ -62,8 +64,8 @@ spec:
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 obj := input.review.object
-                labels := object.get(obj.metadata, "labels", {})
-                namespace := object.get(obj.metadata, "namespace", "")
+                labels := object_labels
+                namespace := object_namespace
                 spe := resolve_spe_from_labels(labels, namespace)
                 checks := [
                   {
@@ -102,8 +104,8 @@ spec:
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 obj := input.review.object
-                labels := object.get(obj.metadata, "labels", {})
-                namespace := object.get(obj.metadata, "namespace", "")
+                labels := object_labels
+                namespace := object_namespace
                 spe := resolve_spe_from_labels(labels, namespace)
                 checks := [
                   {

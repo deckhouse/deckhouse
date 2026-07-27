@@ -104,13 +104,15 @@ get_field(obj, path, _default) := out if {
 
 # Backwards-compatible exception label lookup (uses input.review)
 get_exception_label(container) := label if {
+  labels := object_labels
   key := sprintf("security.deckhouse.io/security-policy-exception.container.%v", [container.name])
-  label := input.review.object.metadata.labels[key]
+  label := labels[key]
   label != ""
 } else := label if {
+  labels := object_labels
   key := sprintf("security.deckhouse.io/security-policy-exception.container.%v", [container.name])
-  object.get(input.review.object.metadata.labels, key, "") == ""
-  label := object.get(input.review.object.metadata.labels, "security.deckhouse.io/security-policy-exception", "")
+  object.get(labels, key, "") == ""
+  label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
   label != ""
 } else := "" if {
   true
@@ -128,4 +130,99 @@ get_exception_label_from_labels(container, labels) := label if {
   label != ""
 } else := "" if {
   true
+}
+
+# =============================================================================
+# SPE label resolution helpers for controllers
+# =============================================================================
+# When a controller (Deployment, StatefulSet, etc.) is intercepted, the SPE
+# label may be on the controller's top-level metadata.labels OR on the pod
+# template's metadata.labels (spec.template.metadata.labels). These helpers
+# merge both label sets so SPE resolution works correctly for controllers.
+# Pod template labels take precedence (they are the labels that will be on
+# the actual pods).
+# =============================================================================
+
+# Pod template metadata labels for the current review object.
+# For Pod: empty (no pod template)
+# For CronJob: spec.jobTemplate.spec.template.metadata.labels
+# For other controllers: spec.template.metadata.labels
+pod_template_metadata_labels := labels if {
+  obj := object.get(input.review, "object", {})
+  kind := object.get(obj, "kind", "")
+  labels := pod_template_metadata_labels_for_kind(obj, kind)
+}
+
+pod_template_metadata_labels_for_kind(obj, "Pod") := {} if {
+  true
+}
+
+pod_template_metadata_labels_for_kind(obj, "CronJob") := labels if {
+  labels := object.get(obj, ["spec", "jobTemplate", "spec", "template", "metadata", "labels"], {})
+}
+
+pod_template_metadata_labels_for_kind(obj, kind) := labels if {
+  kind != "Pod"
+  kind != "CronJob"
+  labels := object.get(obj, ["spec", "template", "metadata", "labels"], {})
+}
+
+# Merge two label maps; values from override take precedence.
+merge_labels(base, override) := merged if {
+  all_keys := {k | base[k]} | {k | override[k]}
+  merged := {k: v |
+    k := all_keys[_]
+    v := merge_label_value(base, override, k)
+  }
+}
+
+# Override takes precedence
+merge_label_value(base, override, k) := v if {
+  override[k]
+  v := override[k]
+}
+
+# Fall back to base when override doesn't have the key
+merge_label_value(base, override, k) := v if {
+  not override[k]
+  v := base[k]
+}
+
+# Effective labels for SPE resolution from input.review.object.
+# Merges top-level metadata.labels with pod template metadata.labels.
+# Pod template labels take precedence.
+object_labels := labels if {
+  obj := object.get(input.review, "object", {})
+  top := object.get(obj, ["metadata", "labels"], {})
+  tmpl := pod_template_metadata_labels
+  labels := merge_labels(top, tmpl)
+}
+
+# Effective namespace for SPE resolution from input.review.object.
+object_namespace := ns if {
+  obj := object.get(input.review, "object", {})
+  ns := object.get(obj, ["metadata", "namespace"], "")
+}
+
+# Effective labels for SPE resolution from a given object.
+# Used by library functions that receive obj as a parameter.
+effective_labels(obj) := labels if {
+  top := object.get(obj, ["metadata", "labels"], {})
+  kind := object.get(obj, "kind", "")
+  tmpl := effective_pod_template_labels_for_kind(obj, kind)
+  labels := merge_labels(top, tmpl)
+}
+
+effective_pod_template_labels_for_kind(obj, "Pod") := {} if {
+  true
+}
+
+effective_pod_template_labels_for_kind(obj, "CronJob") := labels if {
+  labels := object.get(obj, ["spec", "jobTemplate", "spec", "template", "metadata", "labels"], {})
+}
+
+effective_pod_template_labels_for_kind(obj, kind) := labels if {
+  kind != "Pod"
+  kind != "CronJob"
+  labels := object.get(obj, ["spec", "template", "metadata", "labels"], {})
 }
