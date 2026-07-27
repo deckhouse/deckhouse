@@ -203,7 +203,7 @@ registries:
     shortname: Artifactory
     url: https://jfrog.com/artifactory/
   dockerv2:
-    longname: CNCF Distribution Registry
+    longname: CNCF Distribution Registry (Docker Registry)
     shortname: CNCF Distribution
     url: https://distribution.github.io/distribution/
   quay:
