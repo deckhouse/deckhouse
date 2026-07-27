@@ -26,14 +26,22 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 )
 
-const istioMeshCompatCRDBaseVersion = "1.21"
+const (
+	moduleValuesStoreSecretName      = "module-values-store"
+	moduleValuesStoreSecretNamespace = "d8-istio"
+	maxIstioVersionBeenInClusterKey  = "maxIstioVersionBeenInCluster"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup:    &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_versions_to_install.go
@@ -68,9 +76,10 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 
 	sort.Sort(semver.Collection(semvers))
 
-	localMax := semvers[len(semvers)-1]
-	multiclusterEnabled := input.ConfigValues.Get("istio.multicluster.enabled").Bool()
-	CRDversionToInstall := resolveCRDBundleVersion(localMax, multiclusterEnabled)
+	CRDversionToInstall, err := resolveCRDBundleVersion(ctx, input, dc, semvers[len(semvers)-1])
+	if err != nil {
+		return err
+	}
 
 	crdsGlob := "/deckhouse/modules/110-istio/_crds/istio/" + CRDversionToInstall + "/*.yaml"
 
@@ -83,8 +92,7 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 	}
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
-	istioVersionForOperatorCheck := strings.TrimSuffix(CRDversionToInstall, "-mesh-compat")
-	if !versionMap.DoesVersionSupportOperator(istioVersionForOperatorCheck) {
+	if !versionMap.DoesVersionSupportOperator(CRDversionToInstall) {
 		for _, crdFile := range crds {
 			fileName := filepath.Base(crdFile)
 			if fileName == "crd-operator.yaml" || strings.HasPrefix(fileName, "sailoperator.io_") {
@@ -96,11 +104,71 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 	return ensure_crds.EnsureCRDsHandler(crdsGlob)(ctx, input, dc)
 }
 
-func resolveCRDBundleVersion(localMax *semver.Version, multiclusterEnabled bool) string {
-	base := fmt.Sprintf("%d.%d", localMax.Major(), localMax.Minor())
-	if multiclusterEnabled && base == istioMeshCompatCRDBaseVersion {
-		return base + "-mesh-compat"
+func resolveCRDBundleVersion(ctx context.Context, input *go_hook.HookInput, dc dependency.Container, desiredVersion *semver.Version) (string, error) {
+	k8sClient, err := dc.GetK8sClient()
+	if err != nil {
+		return "", err
 	}
 
-	return base
+	versionToInstall := desiredVersion
+
+	secret, err := k8sClient.CoreV1().Secrets(moduleValuesStoreSecretNamespace).Get(ctx, moduleValuesStoreSecretName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		storedMaxVersion := string(secret.Data[maxIstioVersionBeenInClusterKey])
+		if storedMaxVersion != "" {
+			stored, parseErr := semver.NewVersion(storedMaxVersion)
+			if parseErr != nil {
+				return "", fmt.Errorf("invalid %s value %q in secret %s/%s: %w",
+					maxIstioVersionBeenInClusterKey, storedMaxVersion, moduleValuesStoreSecretNamespace, moduleValuesStoreSecretName, parseErr)
+			}
+			if stored.GreaterThan(versionToInstall) {
+				versionToInstall = stored
+			}
+		}
+	case apierrors.IsNotFound(err):
+		// no secret yet
+	default:
+		return "", fmt.Errorf("failed to get secret %s/%s: %w", moduleValuesStoreSecretNamespace, moduleValuesStoreSecretName, err)
+	}
+
+	CRDversionToInstall := fmt.Sprintf("%d.%d", versionToInstall.Major(), versionToInstall.Minor())
+
+	if err := upsertMaxIstioVersionBeenInCluster(ctx, input, k8sClient, CRDversionToInstall); err != nil {
+		return "", err
+	}
+
+	return CRDversionToInstall, nil
+}
+
+func upsertMaxIstioVersionBeenInCluster(ctx context.Context, input *go_hook.HookInput, k8sClient k8s.Client, version string) error {
+	_, err := k8sClient.CoreV1().Namespaces().Get(ctx, moduleValuesStoreSecretNamespace, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get namespace %s: %w", moduleValuesStoreSecretNamespace, err)
+	}
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      moduleValuesStoreSecretName,
+			Namespace: moduleValuesStoreSecretNamespace,
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"module":   "istio",
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			maxIstioVersionBeenInClusterKey: []byte(version),
+		},
+	}
+
+	input.PatchCollector.CreateOrUpdate(secret)
+	return nil
 }
