@@ -1,6 +1,6 @@
 ---
 title: "Настройка ролевой модели доступа"
-permalink: ru/admin/configuration/delivery/argocd/rbac.html
+permalink: ru/admin/configuration/delivery/argocd/rbac/
 description: "Настройка ролевой модели доступа Argo CD в Deckhouse Kubernetes Platform."
 lang: ru
 relatedLinks:
@@ -10,14 +10,14 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-Argo CD использует собственную ролевую модель (Role-based Access Control, RBAC), не основанную на ролевой модели Kubernetes. Ролевая модель Argo CD позволяет ограничивать доступ к ресурсам и операциям через собственные политики и роли.
+Argo CD использует собственную ролевую модель (Role-based Access Control, RBAC), не основанную на ролевой модели Kubernetes и Deckhouse Kubernetes Platform. Ролевая модель Argo CD позволяет ограничивать доступ к ресурсам и операциям через собственные политики и роли.
 
-Перед настройкой ролевой модели доступа выполните [настройку аутентификации и авторизации](authentication.html). После этого назначайте роли пользователям и группам, а также задавайте разрешения на уровне всего экземпляра Argo CD или отдельных проектов с помощью ресурса `AppProject`.
+Перед настройкой ролевой модели доступа выполните [настройку аутентификации и авторизации](../authentication/). После этого назначайте роли пользователям и группам, а также задавайте разрешения на уровне всего экземпляра Argo CD или отдельных проектов с помощью объекта [AppProject](/modules/operator-argo/cr.html#appproject).
 
 Правила ролевой модели доступа (Role-Based Access Control, RBAC) можно определить в двух местах:
 
-- глобально — в ресурсе [`ArgoCD`](/modules/operator-argo/cr.html#argocd);
-- на уровне проекта — в ролях ресурса [`AppProject`](/modules/operator-argo/cr.html#appproject).
+- глобально — в объекте [ArgoCD](/modules/operator-argo/cr.html#argocd);
+- на уровне проекта — в ролях объекта [AppProject](/modules/operator-argo/cr.html#appproject).
 
 ## Встроенные роли
 
@@ -85,13 +85,13 @@ g, admin, role:admin
 
 ## Политика по умолчанию для аутентифицированных пользователей
 
-После успешной аутентификации пользователь получает роль, указанную в параметре `spec.rbac.defaultPolicy` ресурса `ArgoCD`.
+После успешной аутентификации пользователь получает роль, указанную в параметре [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy) ArgoCD.
 
 {% alert level="warning" %}
-Все аутентифицированные пользователи получают как минимум те разрешения, которые заданы в `spec.rbac.defaultPolicy`. Эти права нельзя отозвать правилом с эффектом `deny`.
+Все аутентифицированные пользователи получают как минимум те разрешения, которые заданы в параметре [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy). Эти права нельзя отозвать правилом с эффектом `deny`.
 {% endalert %}
 
-Рекомендуется создать отдельную роль, например `role:authenticated`, выдать ей минимальный набор разрешений и использовать её в `spec.rbac.defaultPolicy`.
+Рекомендуется создать отдельную роль, например `role:authenticated`, выдать ей минимальный набор разрешений и использовать её в [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy).
 
 Пример:
 
@@ -111,17 +111,17 @@ spec:
 
 ## Анонимный доступ
 
-Если включить анонимный доступ к экземпляру Argo CD, пользователи смогут получить права из `spec.rbac.defaultPolicy` без аутентификации.
+Если включить анонимный доступ к экземпляру Argo CD, пользователи смогут получить права согласно политике, указанной в параметре [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy), без аутентификации.
 
-Анонимный доступ включается параметром `spec.usersAnonymousEnabled` ресурса `ArgoCD`.
+Анонимный доступ включается параметром [`spec.usersAnonymousEnabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-usersanonymousenabled) ArgoCD.
 
 {% alert level="warning" %}
-При включении анонимного доступа создайте отдельную роль по умолчанию, например `role:unauthenticated`, и назначьте её в `spec.rbac.defaultPolicy`.
+При включении анонимного доступа создайте отдельную роль по умолчанию, например `role:unauthenticated`, и назначьте её в [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy).
 {% endalert %}
 
 ## Структура ролевой модели доступа
 
-Синтаксис ролевой модели доступа в Argo CD основан на модели [Casbin](https://casbin.org/docs/overview). Используются два типа записей:
+Синтаксис ролевой модели доступа в Argo CD основан на модели [Casbin](https://casbin.org/docs/overview), в которой используются два типа записей:
 
 - привязка пользователя или группы к роли;
 - назначение разрешений роли, пользователю или группе.
@@ -200,7 +200,7 @@ p, role:developer, logs, get, dev-project/*, allow
 - `logs`;
 - `exec`.
 
-Для таких ресурсов значение `<object>` обычно имеет формат `<app-project>/<app-name>`.
+Для таких ресурсов значение `<object>` обычно имеет формат `<APP_PROJECT>/<APP_NAME>`.
 
 Пример:
 
@@ -209,7 +209,7 @@ p, example-user, applications, get, *, allow
 p, example-user, logs, get, example-project/my-app, allow
 ```
 
-Если в Argo CD включён режим размещения приложений в произвольных неймспейсах, формат `<object>` меняется на `<app-project>/<app-namespace>/<app-name>`.
+Если в Argo CD включён режим размещения приложений в произвольных неймспейсах, формат `<object>` меняется на `<APP_PROJECT>/<APP_NAMESPACE>/<APP_NAME>`.
 
 Пример:
 
@@ -304,7 +304,7 @@ p, example-user, applications, action/*, default/*, allow
 
 ### Ресурс `applicationsets`
 
-Ресурс `applicationsets` также относится к политикам, привязанным к приложениям. Разрешение `create` для этого ресурса фактически даёт возможность создавать объекты `Application` через `ApplicationSet`.
+Ресурс `applicationsets` также относится к политикам, привязанным к приложениям. Разрешение `create` для этого ресурса фактически даёт возможность создавать объекты [Application](/modules/operator-argo/cr.html#application) через [ApplicationSet](/modules/operator-argo/cr.html#applicationset).
 
 Пример:
 
@@ -312,7 +312,7 @@ p, example-user, applications, action/*, default/*, allow
 p, dev-group, applicationsets, *, dev-project/*, allow
 ```
 
-С таким правилом пользователи из `dev-group` смогут создавать `ApplicationSet`, который управляет приложениями только в рамках проекта `dev-project`.
+С таким правилом пользователи из `dev-group` смогут создавать ApplicationSet, который управляет приложениями только в рамках проекта `dev-project`.
 
 ### Ресурс `logs`
 
@@ -337,18 +337,18 @@ p, example-user, extensions, invoke, httpbin, allow
 
 Если политика с эффектом `deny` совпала с запросом, доступ будет запрещён, даже если есть более специфичные правила с эффектом `allow`.
 
-Порядок строк в `spec.rbac.defaultPolicy` на результат не влияет.
+Порядок строк в [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy) на результат не влияет.
 
 ## Порядок проверки политик и режимы сопоставления
 
 Проверка доступа выполняется в два этапа:
 
-1. Проверяются правила из `spec.rbac.defaultPolicy`.
+1. Проверяются правила из [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy).
 1. Если решение не найдено, проверяются правила, относящиеся к пользователю и его группам.
 
 Если доступ явно разрешён или запрещён политикой по умолчанию, дальнейшая проверка не выполняется.
 
-Argo CD поддерживает два режима сопоставления значений, задаваемых в `spec.rbac.policyMatchMode`:
+Argo CD поддерживает два режима сопоставления значений, задаваемых в [`spec.rbac.policyMatchMode`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-policymatchmode):
 
 - `glob` — сопоставление по glob-шаблонам;
 - `regex` — сопоставление по регулярным выражениям.
@@ -374,7 +374,7 @@ p, example-user, applications, action/extensions/*, default/*, allow
 
 Параметр `scopes` определяет, какие OIDC scopes Argo CD должен анализировать при проверке RBAC помимо `sub`. Если параметр не задан, по умолчанию используется значение `'[groups]'`.
 
-Пример ресурса `ArgoCD`:
+Пример объекта ArgoCD с настройкой scopes:
 
 ```yaml
 apiVersion: argoproj.io/v1beta1
@@ -399,7 +399,7 @@ spec:
 1. `g, admin, role:admin` явно привязывает встроенного пользователя `admin` к роли `role:admin`.
 1. `g, role:admin, role:readonly` задаёт наследование ролей: все, у кого есть `role:admin`, автоматически получают и права `role:readonly`.
 
-Этот подход можно комбинировать с ролями на уровне `AppProject`:
+Этот подход можно комбинировать с ролями на уровне [AppProject](/modules/operator-argo/cr.html#appproject). Например, можно создать проект `team-beta-project` и назначить права пользователям и группам:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -451,7 +451,11 @@ p, my-local-user, *, *, *, allow
 
 ## Тестирование политик RBAC
 
-Чтобы проверить корректность правил RBAC, используйте CLI-утилиту `argocd`. Для проверки того, может ли конкретный пользователь, группа или роль выполнить определённое действие, используйте команду `argocd admin settings rbac can`.
+Чтобы проверить корректность правил RBAC, используйте CLI-утилиту `argocd`. Для проверки того, может ли конкретный пользователь, группа или роль выполнить определённое действие, используйте команду:
+
+```bash
+argocd admin settings rbac can
+```
 
 Например, выполните команду ниже, чтобы проверить, есть ли у пользователя `admin@deckhouse.io` права на создание `applications` в проекте `default`:
 

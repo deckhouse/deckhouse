@@ -31,7 +31,7 @@ Argo CD позволяет описывать приложения деклар�
 - администратор развернул хотя бы один экземпляр Argo CD;
 - у пользователя есть доступ к нужному экземпляру Argo CD и целевым неймспейсам.
 
-Если экземпляр Argo CD ещё не развёрнут, обратитесь к администратору или воспользуйтесь инструкцией из раздела [«Запуск Argo CD»](/products/kubernetes-platform/documentation/v1/admin/configuration/delivery/argocd/setup.html).
+Если экземпляр Argo CD ещё не развёрнут, обратитесь к администратору или воспользуйтесь инструкцией из раздела [«Запуск Argo CD»](/products/kubernetes-platform/documentation/v1/admin/configuration/delivery/argocd/setup/).
 
 ## Проекты `AppProject`
 

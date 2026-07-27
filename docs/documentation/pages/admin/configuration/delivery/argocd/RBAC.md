@@ -1,6 +1,6 @@
 ---
 title: "Configuring role-based access control (RBAC)"
-permalink: en/admin/configuration/delivery/argocd/rbac.html
+permalink: en/admin/configuration/delivery/argocd/rbac/
 description: "Configuring Argo CD role-based access control in Deckhouse Kubernetes Platform."
 lang: en
 relatedLinks:

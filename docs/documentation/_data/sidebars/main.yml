@@ -916,15 +916,15 @@ entries:
                 - title:
                     en: Running Argo CD
                     ru: Запуск Argo CD
-                  url: /admin/configuration/delivery/argocd/setup.html
+                  url: /admin/configuration/delivery/argocd/setup/
                 - title:
                     en: Configuring authentication and authorization
                     ru: Настройка аутентификации и авторизации
-                  url: /admin/configuration/delivery/argocd/authentication.html
+                  url: /admin/configuration/delivery/argocd/authentication/
                 - title:
                     en: Configuring role-based access control (RBAC)
                     ru: Настройка ролевой модели доступа
-                  url: /admin/configuration/delivery/argocd/rbac.html
+                  url: /admin/configuration/delivery/argocd/rbac/
             - title:
                 en: Marketplace
                 ru: Marketplace

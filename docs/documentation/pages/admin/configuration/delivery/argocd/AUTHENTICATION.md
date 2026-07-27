@@ -1,6 +1,6 @@
 ---
 title: "Configuring authentication and authorization"
-permalink: en/admin/configuration/delivery/argocd/authentication.html
+permalink: en/admin/configuration/delivery/argocd/authentication/
 description: "Configuring Argo CD authentication and authorization in Deckhouse Kubernetes Platform."
 lang: en
 relatedLinks:

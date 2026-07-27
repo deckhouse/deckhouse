@@ -1,6 +1,6 @@
 ---
 title: "Running Argo CD"
-permalink: en/admin/configuration/delivery/argocd/setup.html
+permalink: en/admin/configuration/delivery/argocd/setup/
 description: "Running Argo CD in Deckhouse Kubernetes Platform."
 lang: en
 relatedLinks:
