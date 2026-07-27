@@ -38,16 +38,21 @@
 #      `create` on the pods/exec, pods/attach, pods/portforward subresources targeting a
 #      system-labeled pod is denied for users below superadmin. The admission object for a CONNECT
 #      request is a PodExecOptions/PodPortForwardOptions, not the Pod, so the target pod's marker is
-#      resolved through the `system-pods` snapshot (pods selected by the marker label server-side).
+#      resolved by reading that one pod live (see the note on live reads below).
 #
-# Requester level: "superadmin" is determined as membership (directly by username, by ServiceAccount,
-# or by one of the request's groups) in a (Cluster)RoleBinding to one of the built-in superadmin
-# ClusterRoles (d8:namespace:superadmin / d8:project:superadmin / d8:system:superadmin), scoped to the
-# request namespace for RoleBindings; OR membership in a cluster-admin/system group. The relevant
-# bindings are kept in the `superadmin-rolebindings` / `superadmin-clusterrolebindings` snapshots.
-# Known limitations: snapshot freshness; only the built-in superadmin ClusterRoles are recognised — a
-# custom role aggregating the superadmin lineage is not detected; group membership is matched by name
-# as presented in request.userInfo.groups.
+# Requester level is resolved from the (Cluster)RoleBindings the requester matches — directly by
+# username, by ServiceAccount, or by one of the request's groups — with RoleBindings read only in the
+# request namespace. Two tiers are recognised:
+#
+#   * superadmin — the built-in d8:namespace:superadmin / d8:project:superadmin / d8:system:superadmin
+#     roles. Passes the system-resource protection, but not the heritage one.
+#   * cluster administrator — Kubernetes' own `cluster-admin`, the legacy `user-authz:super-admin`
+#     (what a ClusterAuthorizationRule with `accessLevel: SuperAdmin` binds to), or membership in a
+#     cluster-admin/system group. Passes everything.
+#
+# Known limitations: only the roles listed below are recognised — a custom role that aggregates the
+# superadmin lineage is not detected; group membership is matched by name as presented in
+# request.userInfo.groups.
 #
 # Out of scope (documented as follow-ups): the GET/LIST "visibility" split (admin+ sees vendor-API
 # system resources, everyone sees shared-API ones) is a READ/authorization concern that admission
@@ -79,6 +84,21 @@ SUPERADMIN_ROLES = {
     "d8:system:superadmin",
 }
 
+# ClusterRoles that make their holder a cluster administrator rather than a scoped superadmin:
+# Kubernetes' own `cluster-admin`, and `user-authz:super-admin` from the legacy role model, which a
+# ClusterAuthorizationRule with `accessLevel: SuperAdmin` binds its subjects to. Both already grant
+# `*` on `*`, so protecting anything from them is decorative — they can drop this webhook outright —
+# and they need break-glass access for the same reason system:masters does. They therefore bypass the
+# heritage protection too, which a scoped superadmin does not. Matching on the role name rather than
+# on the binding means it does not matter how the grant was made: a rule-generated binding, a
+# hand-written ClusterRoleBinding and a namespace-scoped RoleBinding all resolve the same way.
+CLUSTER_ADMIN_ROLES = {
+    "cluster-admin",
+    "user-authz:super-admin",
+}
+
+PRIVILEGED_ROLES = SUPERADMIN_ROLES | CLUSTER_ADMIN_ROLES
+
 # Identities that author/reconcile system and controller-managed objects; they bypass all checks.
 PRIVILEGED_USERS = {
     "system:apiserver",
@@ -88,10 +108,13 @@ PRIVILEGED_USERS = {
 }
 
 # Cluster-admin and cluster-component groups. Members bypass protection: a true cluster-admin
-# (super-admin.conf / system:masters) and system controllers must keep break-glass access and must be
-# able to reconcile heritage objects, mirroring 160/.../webhooks/protect.go's systemBypassGroups.
+# (super-admin.conf / system:masters, and the cluster-administrator groups conventionally mapped
+# through the authentication provider) and system controllers must keep break-glass access and must
+# be able to reconcile heritage objects, mirroring 160/.../webhooks/protect.go's systemBypassGroups.
 BYPASS_GROUPS = {
     "system:masters",
+    "system:sudousers",
+    "cluster:admins",
     "system:nodes",
     "system:serviceaccounts:kube-system",
     "system:serviceaccounts:d8-system",
@@ -253,11 +276,11 @@ def _kubectl_get(resource: str, name: str = "", namespace: str = "") -> Optional
     return json.loads(proc.stdout)
 
 
-def _superadmin_bindings(resource: str, namespace: str = "") -> list:
-    """Live-list the (Cluster)RoleBindings of `resource`, keeping only those bound to a built-in
-    superadmin ClusterRole."""
+def _privileged_bindings(resource: str, namespace: str = "") -> list:
+    """Live-list the (Cluster)RoleBindings of `resource`, keeping only those bound to a role that
+    confers superadmin or cluster-admin."""
     items = (_kubectl_get(resource, namespace=namespace) or {}).get("items") or []
-    return [b for b in items if (b.get("roleRef") or {}).get("name") in SUPERADMIN_ROLES]
+    return [b for b in items if (b.get("roleRef") or {}).get("name") in PRIVILEGED_ROLES]
 
 
 def _subject_matches(subject: dict, username: str, groups: set) -> bool:
@@ -274,26 +297,29 @@ def _subject_matches(subject: dict, username: str, groups: set) -> bool:
     return False
 
 
-def _any_subject_matches(bindings: list, username: str, groups: set) -> bool:
+def _matched_roles(bindings: list, username: str, groups: set) -> set:
+    roles = set()
     for binding in bindings:
         for subject in binding.get("subjects") or []:
             if _subject_matches(subject, username, groups):
-                return True
-    return False
+                roles.add((binding.get("roleRef") or {}).get("name"))
+                break
+    return roles
 
 
-def is_superadmin(username: str, groups: set, namespace: str) -> bool:
-    # Cluster-wide superadmin: a ClusterRoleBinding to a superadmin role grants it everywhere.
-    crbs = _superadmin_bindings("clusterrolebindings")
-    if _any_subject_matches(crbs, username, groups):
-        return True
-    # Namespace-scoped superadmin: a RoleBinding to a superadmin role IN THE REQUEST NAMESPACE only
-    # (read just that namespace, never all of them).
+def privileged_roles(username: str, groups: set, namespace: str) -> set:
+    """The privileged ClusterRoles the requester is bound to. Both the superadmin and the
+    cluster-admin question are answered from this one pair of reads, so a request never costs more
+    live reads than it did when only superadmin was recognised."""
+    # Cluster-wide: a ClusterRoleBinding to a privileged role grants it everywhere.
+    roles = _matched_roles(_privileged_bindings("clusterrolebindings"), username, groups)
+    # Namespace-scoped: a RoleBinding IN THE REQUEST NAMESPACE only (read just that namespace, never
+    # all of them). Its reach is that namespace, which is exactly the namespace being reviewed.
     if namespace:
-        rbs = _superadmin_bindings("rolebindings", namespace=namespace)
-        if _any_subject_matches(rbs, username, groups):
-            return True
-    return False
+        roles |= _matched_roles(
+            _privileged_bindings("rolebindings", namespace=namespace), username, groups
+        )
+    return roles
 
 
 def is_system_pod(namespace: str, name: str) -> bool:
@@ -341,6 +367,12 @@ def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
     name = meta.get("name") or request.name or ""
     namespace = meta.get("namespace") or request.namespace or ""
 
+    roles = privileged_roles(username, groups, namespace)
+
+    # A cluster administrator passes everything, heritage objects included.
+    if roles & CLUSTER_ADMIN_ROLES:
+        return None
+
     # heritage protection wins: ProjectTemplate-owned objects are controller-managed and must not be
     # mutated by users — not even by a project superadmin.
     if is_heritage:
@@ -352,7 +384,7 @@ def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
         )
 
     # system-resource protection: editable only by superadmin.
-    if is_system and not is_superadmin(username, groups, namespace):
+    if is_system and not roles:
         return (
             f'{kind} "{name}" is a Deckhouse system resource '
             f'(label {SYSTEM_RESOURCE_LABEL}={SYSTEM_RESOURCE_VALUE}) placed in this '
@@ -371,7 +403,7 @@ def validate_exec(request: DotMap, username: str, groups: set) -> Optional[str]:
     if not is_system_pod(namespace, pod_name):
         return None
 
-    if is_superadmin(username, groups, namespace):
+    if privileged_roles(username, groups, namespace):
         return None
 
     action = subresource or "exec"

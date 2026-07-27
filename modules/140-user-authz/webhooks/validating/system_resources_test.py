@@ -266,6 +266,71 @@ class TestSystemResourceExec(unittest.TestCase):
         tests.assert_validation_allowed(self, out, None)
 
 
+class TestClusterAdminTier(unittest.TestCase):
+    """Kubernetes' own cluster-admin and the legacy user-authz:super-admin (what a
+    ClusterAuthorizationRule with accessLevel: SuperAdmin binds to) already grant * on *, so they pass
+    everything the scoped superadmin passes plus the heritage protection, no matter whether the grant
+    arrived as a ClusterRoleBinding or as a RoleBinding in the reviewed namespace."""
+
+    def test_cluster_admin_clusterrolebinding_may_edit_system_resource(self):
+        api = FakeAPI(clusterrolebindings=[clusterrolebinding("cluster-admin", [user_subject(USER)])])
+        out = _run(edit_context("Pod", "dex-authenticator-0", labels=SYSTEM_LABEL), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_cluster_admin_rolebinding_may_edit_system_resource(self):
+        api = FakeAPI(rolebindings_by_ns={NS: [rolebinding("cluster-admin", [user_subject(USER)])]})
+        out = _run(edit_context("Pod", "dex-authenticator-0", labels=SYSTEM_LABEL), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_cluster_admin_may_mutate_heritage_resource(self):
+        api = FakeAPI(clusterrolebindings=[clusterrolebinding("cluster-admin", [user_subject(USER)])])
+        out = _run(edit_context("Deployment", "app", labels=HERITAGE_LABELS), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_legacy_super_admin_may_edit_system_resource(self):
+        api = FakeAPI(clusterrolebindings=[
+            clusterrolebinding("user-authz:super-admin", [user_subject(USER)]),
+        ])
+        out = _run(edit_context("Pod", "dex-authenticator-0", labels=SYSTEM_LABEL), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_legacy_super_admin_via_group_may_exec_into_system_pod(self):
+        api = FakeAPI(
+            clusterrolebindings=[
+                clusterrolebinding("user-authz:super-admin", [group_subject("legacy-admins")]),
+            ],
+            pods={(NS, "dex-authenticator-0"): SYSTEM_LABEL},
+        )
+        out = _run(exec_context("dex-authenticator-0", groups=["legacy-admins"]), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_legacy_super_admin_may_mutate_heritage_resource(self):
+        api = FakeAPI(clusterrolebindings=[
+            clusterrolebinding("user-authz:super-admin", [user_subject(USER)]),
+        ])
+        out = _run(edit_context("Deployment", "app", labels=HERITAGE_LABELS), api)
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_scoped_superadmin_still_cannot_mutate_heritage_resource(self):
+        api = FakeAPI(rolebindings_by_ns={NS: superadmin_rb()})
+        out = _run(edit_context("Deployment", "app", labels=HERITAGE_LABELS), api)
+        tests.assert_validation_deny(self, out, expected_heritage_deny("Deployment", "app"))
+
+    def test_legacy_cluster_admin_access_level_is_not_enough(self):
+        # user-authz:cluster-admin is the legacy ClusterAdmin level, one step below SuperAdmin.
+        api = FakeAPI(clusterrolebindings=[
+            clusterrolebinding("user-authz:cluster-admin", [user_subject(USER)]),
+        ])
+        out = _run(edit_context("Pod", "dex-authenticator-0", labels=SYSTEM_LABEL), api)
+        tests.assert_validation_deny(self, out, expected_system_deny("Pod", "dex-authenticator-0"))
+
+    def test_cluster_admin_group_bypasses(self):
+        for group in ("cluster:admins", "system:sudousers"):
+            with self.subTest(group=group):
+                out = _run(edit_context("Deployment", "app", labels=HERITAGE_LABELS, groups=[group]))
+                tests.assert_validation_allowed(self, out, None)
+
+
 class TestWebhookConfig(unittest.TestCase):
     """Both webhooks are fail-closed and the exec one matches every pod in the cluster, so the
     break-glass bypass has to be evaluated by the apiserver: an unavailable webhook-handler must not
