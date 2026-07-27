@@ -496,8 +496,18 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				// set deckhouse version to embedded modules
 				module.Properties.Version = l.version
 
-				// set embedded source if its unset
-				if len(module.Properties.Source) == 0 {
+				// A physically embedded module must always report Source == "Embedded".
+				// This branch runs for a def parsed from the embedded modules dir, which
+				// takes precedence over the downloaded one, so the module is served by the
+				// embedded copy and its active source cannot be an external one.
+				//
+				// Force the sentinel back, do not merely fill it when empty: a stale
+				// external value (e.g. left over from an erroneous flip after a registry
+				// migration) would otherwise stick across restarts and could only be
+				// cleared by manually deleting the Module resource. ensureModule runs on
+				// every startup over exactly the set of physically embedded modules, so it
+				// is the authoritative reconciliation point for this invariant.
+				if module.Properties.Source != v1alpha1.ModuleSourceEmbedded {
 					module.Properties.Source = v1alpha1.ModuleSourceEmbedded
 				}
 			}
