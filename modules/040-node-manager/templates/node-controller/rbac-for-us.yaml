@@ -595,6 +595,16 @@ subjects:
 # cannot narrow them to "this node's own object". A node can therefore read the
 # configs of its neighbours, which is the same trade kubelet self-registration
 # makes; restricting it needs an admission policy rather than RBAC.
+#
+# There is deliberately NO rule for nodeconfigs/sensitive, and that is what keeps
+# the one field this trade could not cover out of reach: status.maintenanceToken
+# is the bearer credential for the node's root-equivalent :50000 config push, so
+# it carries x-kubernetes-sensitive-data and the API strips it from every
+# get/list/watch answer served without that subresource. Without this, any holder
+# of a kubelet identity could read a neighbour's token and push it a
+# configuration the moment that node dropped off the API. The agent never needs
+# to read its own token back — it keeps the copy it generated on disk and only
+# writes it — so cluster-admin remains the only reader.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -617,8 +627,12 @@ rules:
   - internal.deckhouse.io
   resources:
   - nodeconfigs/status
+  # No "get". The API masks sensitive fields on the resource endpoint only, not
+  # on the status subresource, so a node holding get here could read a
+  # neighbour's maintenance token straight out of
+  # GET /nodeconfigs/<other>/status and walk around the mask above. The agent
+  # never reads status back — it watches the resource and only ever writes here.
   verbs:
-  - get
   - patch
   - update
 # Operations tell the node what the cluster has prepared for it — a reboot to

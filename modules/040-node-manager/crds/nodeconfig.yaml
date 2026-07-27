@@ -614,7 +614,16 @@ spec:
                   here; an operator reads it from the last status the node published
                   while the API was reachable and presents it when pushing a config to
                   the node's :50000 endpoint after the node has lost the API.
+
+                  The token is a credential for a root-equivalent config push, so it is
+                  marked sensitive: the API strips it from get/list/watch responses for
+                  any caller without the nodeconfigs/sensitive subresource. Nodes read
+                  NodeConfigs cluster-wide (RBAC cannot narrow a cluster-scoped resource
+                  to a node's own object) and are deliberately NOT granted it, so one
+                  node cannot read another's token and push it a configuration the
+                  moment that node drops off the API.
                 type: string
+                x-kubernetes-sensitive-data: true
             type: object
         required:
         - spec

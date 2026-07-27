@@ -92,6 +92,13 @@ type NodeConfigStatus struct {
 	// operator reads it from the last status the node published while the API was
 	// reachable and presents it when pushing a config to the node's :50000
 	// endpoint after the node has lost the API.
+	//
+	// The token is a credential for a root-equivalent config push, so it is
+	// marked sensitive: the API strips it from get/list/watch responses for any
+	// caller without the nodeconfigs/sensitive subresource, which nodes are
+	// deliberately not granted (see the d8:node-manager:node-agent ClusterRole).
+	// controller-gen cannot emit the marker, so it is maintained by hand in
+	// crds/nodeconfig.yaml — keep it there when regenerating.
 	// +optional
 	MaintenanceToken string `json:"maintenanceToken,omitempty"`
 }
