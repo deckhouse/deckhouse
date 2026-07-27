@@ -485,7 +485,7 @@ This is the only modification allowed for objects with the `d8:` prefix (except 
 
 ## How do I find out who has access to a resource?
 
-In the Enterprise Edition, with the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), a reverse authorization query is available — the `WhoCan` resource. It answers the question "who can perform action X on resource Y?" and returns the list of users, groups, and ServiceAccounts:
+With the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), a reverse authorization query is available — the `WhoCan` resource. It answers the question "who can perform action X on resource Y?" and returns the list of users, groups, and ServiceAccounts:
 
 ```shell
 d8 k create -o yaml -f - <<EOF
@@ -508,7 +508,7 @@ The right to create `WhoCan` queries is granted by the `d8:user-authz:who-can-ch
 
 ## How do I find out what a specific user, group, or ServiceAccount is allowed to do?
 
-In the Enterprise Edition, with the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the `SubjectAccessReport` resource is available — the counterpart of `WhoCan`. It answers the question "what is this subject allowed to do" and returns a ready-made report: which roles are granted through which bindings, which actions on which resources are allowed cluster-wide and in every namespace, and where each permission comes from.
+With the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the `SubjectAccessReport` resource is available — the counterpart of `WhoCan`. It answers the question "what is this subject allowed to do" and returns a ready-made report: which roles are granted through which bindings, which actions on which resources are allowed cluster-wide and in every namespace, and where each permission comes from.
 
 ```shell
 d8 k create -o yaml -f - <<EOF
@@ -539,7 +539,7 @@ The right to build a report about **another** subject is granted by the `d8:user
 
 ## How does a user see the list of namespaces available to them?
 
-In the Enterprise Edition, with the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the namespace list is filtered automatically: the `d8 k get namespaces` command returns to a user only the namespaces they have access to — via any of the mechanisms (role bindings, `ProjectRoleBinding`/`ClusterProjectRoleBinding`, `ClusterAuthorizationRule`/`AuthorizationRule`). A user does not see foreign namespaces and cannot learn about their existence from the list.
+With the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the namespace list is filtered automatically: the `d8 k get namespaces` command returns to a user only the namespaces they have access to — via any of the mechanisms (role bindings, `ProjectRoleBinding`/`ClusterProjectRoleBinding`, `ClusterAuthorizationRule`/`AuthorizationRule`). A user does not see foreign namespaces and cannot learn about their existence from the list.
 
 The same list is served by the read-only `accessiblenamespaces` resource — any authenticated user can query it **for themselves**:
 
