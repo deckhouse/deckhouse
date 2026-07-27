@@ -4,9 +4,9 @@ permalink: ru/admin/configuration/delivery/argocd/rbac/
 description: "Настройка ролевой модели доступа Argo CD в Deckhouse Kubernetes Platform."
 lang: ru
 relatedLinks:
-  - title: "Официальный сайт проекта Argo CD"
+  - title: "Официальный сайт Argo CD"
     url: "https://argo-cd.readthedocs.io"
-  - title: "Официальный сайт проекта Argo CD Operator"
+  - title: "Официальный сайт Argo CD Operator"
     url: "https://argocd-operator.readthedocs.io"
 ---
 
@@ -26,7 +26,7 @@ Argo CD использует собственную ролевую модель 
 - `role:readonly` — доступ только на чтение;
 - `role:admin` — доступ с полномочиями администратора.
 
-{% offtopic title="Полное описание политик предопределенных ролей.." %}
+{% offtopic title="Полное описание политик предопределённых ролей..." %}
 
 ```text
 # Политики роли readonly.
@@ -251,7 +251,7 @@ p, example-user, applications, delete, default/prod-app, deny
 p, example-user, applications, delete/*/Pod/*/*, default/prod-app, allow
 ```
 
-Чтобы разрешить обновление приложения, но запретить обновление любых подресурсов:
+Чтобы разрешить обновление приложения, но запретить обновление любых субресурсов:
 
 ```csv
 p, example-user, applications, update, default/prod-app, allow
@@ -304,7 +304,7 @@ p, example-user, applications, action/*, default/*, allow
 
 ### Ресурс `applicationsets`
 
-Ресурс `applicationsets` также относится к политикам, привязанным к приложениям. Разрешение `create` для этого ресурса фактически даёт возможность создавать объекты [Application](/modules/operator-argo/cr.html#application) через [ApplicationSet](/modules/operator-argo/cr.html#applicationset).
+Ресурс `applicationsets` также относится к политикам, привязанным к приложениям. Разрешение `create` для этого ресурса фактически даёт возможность создавать объекты [Application](/modules/operator-argo/cr.html#application) через объект [ApplicationSet](/modules/operator-argo/cr.html#applicationset).
 
 Пример:
 

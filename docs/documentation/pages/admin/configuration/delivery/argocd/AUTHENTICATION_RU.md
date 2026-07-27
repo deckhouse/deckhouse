@@ -4,9 +4,9 @@ permalink: ru/admin/configuration/delivery/argocd/authentication/
 description: "Настройка аутентификации и авторизации Argo CD в Deckhouse Kubernetes Platform."
 lang: ru
 relatedLinks:
-  - title: "Официальный сайт проекта Argo CD"
+  - title: "Официальный сайт Argo CD"
     url: "https://argo-cd.readthedocs.io"
-  - title: "Официальный сайт проекта Argo CD Operator"
+  - title: "Официальный сайт Argo CD Operator"
     url: "https://argocd-operator.readthedocs.io"
 ---
 
@@ -55,13 +55,13 @@ spec:
 EOF
 ```
 
-После создания пользователя и применения манифеста ArgoCD дополнительно сгенерируйте пароль для доступа к веб-интерфейсу, если пользователю выданы соответствующие права.
+После создания пользователя и применения манифеста объекта ArgoCD дополнительно сгенерируйте пароль для доступа к веб-интерфейсу, если пользователю выданы соответствующие права.
 
 Чтобы задать пароль через Secret, сначала вычислите его bcrypt-хеш, а затем закодируйте результат в Base64:
 
 ```bash
-ARGOCD_USER=<имя пользователя>
-ARGOCD_PASS=$(echo "<пароль пользователя>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0)
+ARGOCD_USER=<USER_NAME>
+ARGOCD_PASS=$(echo "<USER_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0)
 d8 k -n argocd patch secret argocd-secret -p "{\"data\":{\"accounts.$ARGOCD_USER.password\":\"$ARGOCD_PASS\"}}"
 ```
 
@@ -69,11 +69,11 @@ d8 k -n argocd patch secret argocd-secret -p "{\"data\":{\"accounts.$ARGOCD_USER
 Пароль локального пользователя можно задать или изменить с помощью CLI-утилиты `argocd`:
 
 ```bash
-argocd login <fqdn Argo CD ingress> --username admin --password <admin-пароль>
+argocd login <ARGOCD_DOMAIN>:443 --username admin --password <ADMIN_PASSWORD>
 argocd account update-password \
-  --account <аккаунт> \
-  --current-password <admin-пароль> \
-  --new-password <желаемый-пароль>
+  --account <ACCOUNT> \
+  --current-password <ADMIN_PASSWORD> \
+  --new-password <NEW_PASSWORD>
 ```
 
 {% endalert %}
@@ -88,7 +88,7 @@ argocd account update-password \
 
 ```bash
 argocd login <ARGOCD_DOMAIN>:443 --username admin
-argocd account generate-token --account <аккаунт>
+argocd account generate-token --account <ACCOUNT>
 ```
 
 {% alert level="info" %}
@@ -103,7 +103,7 @@ argocd account generate-token --account <аккаунт>
 
 ## Аутентификация с помощью SSO
 
-Перед настройкой объекта ArgoCD создайте OAuth2-клиент, создав объект DexClient, необходимый для интеграции с Deckhouse Kubernetes Platform:
+Перед настройкой объекта ArgoCD создайте OAuth2-клиент — объект [DexClient](/modules/user-authn/cr.html#dexclient), необходимый для интеграции с Deckhouse Kubernetes Platform:
 
 ```bash
 d8 k create -f -<<EOF
@@ -213,7 +213,7 @@ spec:
             id: deckhouse
             name: deckhouse
             config:
-              issuer: "https://dex.<cluster-domain>/"
+              issuer: "https://dex.<CLUSTER_DOMAIN>/"
               rootCAs:
                 - |
                   -----BEGIN CERTIFICATE-----
@@ -250,5 +250,6 @@ argocd login <ARGOCD_DOMAIN>:443 --sso
 При выполнении этой команды на рабочей станции администратора будет запущен веб-браузер с формой аутентификации в Deckhouse Kubernetes Platform.
 
 {% alert level="info" %}
-Чтобы настроить бессрочный токен, создайте локального пользователя Argo CD и укажите для него атрибут `apiKey`. В этом случае у пользователя будут права доступа только к Argo CD API. Подробнее см. в разделе [«Создание дополнительных локальных пользователей»](../authentication/#создание-дополнительных-локальных-пользователей).
+Чтобы настроить бессрочный токен, создайте локального пользователя Argo CD и укажите для него атрибут `apiKey`. В этом случае у пользователя будут права доступа только к Argo CD API.
+Подробнее — в разделе [«Создание дополнительных локальных пользователей»](#создание-дополнительных-локальных-пользователей).
 {% endalert %}

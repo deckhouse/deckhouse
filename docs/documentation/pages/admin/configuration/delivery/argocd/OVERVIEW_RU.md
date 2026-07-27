@@ -4,9 +4,9 @@ permalink: ru/admin/configuration/delivery/argocd/
 description: "Доставка приложений с помощью Argo CD в Deckhouse Kubernetes Platform."
 lang: ru
 relatedLinks:
-  - title: "Официальный сайт проекта Argo CD"
+  - title: "Официальный сайт Argo CD"
     url: "https://argo-cd.readthedocs.io"
-  - title: "Официальный сайт проекта Argo CD Operator"
+  - title: "Официальный сайт Argo CD Operator"
     url: "https://argocd-operator.readthedocs.io"
 ---
 
