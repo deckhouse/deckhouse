@@ -33,13 +33,28 @@ kubernetesCustomResourceConversion:
 EOF
 }
 
-# v1alpha1 -> v1alpha2 is a no-op on the data: every v1alpha1 field (description, parametersSchema,
-# resourcesTemplate) keeps its name and shape in v1alpha2. Such templates carry no structured fields,
-# so the controller keeps rendering them through the legacy resourcesTemplate path.
+# Annotation carrying the structured-only part of the spec across a v1alpha1 round-trip. See the
+# down-conversion below for why it exists.
+STRUCTURED_SPEC_ANNOTATION="conversion.deckhouse.io/v1alpha2-spec"
+
+# v1alpha1 -> v1alpha2 keeps every v1alpha1 field (description, parametersSchema, resourcesTemplate)
+# as is — they have the same name and shape in v1alpha2. A genuine v1alpha1 template carries no
+# structured fields and keeps being rendered through the legacy resourcesTemplate path.
+# When the object comes back from a down-conversion it also carries the structured spec in an
+# annotation: restore those fields and drop both the annotation and the placeholders the
+# down-conversion had to add, so the stored object is exactly what it was before the round-trip. The
+# live v1alpha1 fields win over the stashed copy, so an edit made through v1alpha1 is never reverted.
 function __on_conversion::v1alpha1_to_v1alpha2() {
-  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+  if converted=$(context::jq -rc --arg ann "$STRUCTURED_SPEC_ANNOTATION" '.review.request.objects//[] | map(
      if .apiVersion == "deckhouse.io/v1alpha1" then
-       .apiVersion = "deckhouse.io/v1alpha2"
+       .apiVersion = "deckhouse.io/v1alpha2" |
+       (if (((.metadata.annotations // {})[$ann]) // "") != "" then
+          ((.metadata.annotations[$ann]) | fromjson) as $structured |
+          .spec = ($structured + (.spec // {})) |
+          del(.metadata.annotations[$ann]) |
+          (if .spec.resourcesTemplate == "" then del(.spec.resourcesTemplate) else . end) |
+          (if .spec.parametersSchema == {"openAPIV3Schema": {}} then del(.spec.parametersSchema) else . end)
+        else . end)
      else . end
   )'); then
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
@@ -56,10 +71,19 @@ EOF
 # (resourcesTemplate, parametersSchema.openAPIV3Schema) when a structured-only template omits them.
 # The structured-only fields (resources, grantPolicies, podSecurityStandard, ...) are unknown to the
 # v1alpha1 schema and pruned by the apiserver, so they need no explicit removal here.
+# They are, however, stashed in an annotation first: v1alpha2 is the storage version but v1alpha1 is
+# still served, so a client that reads a structured template through v1alpha1 and writes it back
+# would otherwise erase every structured field from storage — the pruned response is all it has to
+# send back. The up-conversion restores them from the annotation, which makes the round-trip
+# lossless; the v1alpha1 view itself is unchanged, since the annotation is not part of the spec.
 function __on_conversion::v1alpha2_to_v1alpha1() {
-  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+  if converted=$(context::jq -rc --arg ann "$STRUCTURED_SPEC_ANNOTATION" '.review.request.objects//[] | map(
      if .apiVersion == "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha1" |
+       (((.spec // {}) | del(.description, .parametersSchema, .resourcesTemplate)) as $structured |
+        if ($structured | length) > 0 then
+          .metadata.annotations = ((.metadata.annotations // {}) + {($ann): ($structured | tojson)})
+        else . end) |
        .spec = ((.spec // {})
          | (.resourcesTemplate //= "")
          | (.parametersSchema //= {"openAPIV3Schema": {}})
