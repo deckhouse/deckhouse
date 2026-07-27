@@ -61,13 +61,15 @@ spec:
  
               import data.lib.check_set.check_container_value_in_set
               import data.lib.common.input_containers
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.message.violation_message
  
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 c := input_containers[_]
                 allowed_proc_mount := get_allowed_proc_mount(input)
-                labels := object.get(input.review.object.metadata, "labels", {})
+                labels := object_labels
                 result := check_container_value_in_set(
                   c,
                   ["securityContext", "procMount"],
@@ -75,7 +77,7 @@ spec:
                   allowed_proc_mount,
                   ["spec", "securityContext", "procMount", "allowedValues"],
                   labels,
-                  input.review.object.metadata.namespace
+                  object_namespace
                 )
                 not result.allowed
                 msg := violation_message("ProcMount type is not allowed", sprintf("container: %v", [c.name]), result.detail)

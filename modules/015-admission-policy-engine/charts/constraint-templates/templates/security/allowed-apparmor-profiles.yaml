@@ -69,6 +69,8 @@ spec:
               import data.lib.expand_synonyms.expand
               import data.lib.expand_synonyms.normalize
               import data.lib.common.pod_spec
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.resolve_value.resolve_from_sources
 
               apparmor_translation := {
@@ -91,8 +93,8 @@ spec:
                 }
                 raw_profile := resolve_from_sources(normalized_obj, container, sources)
                 profile := normalize(raw_profile, apparmor_translation)
-                labels := object.get(input.review.object.metadata, "labels", {})
-                exception := resolve_spe_for_container(container, labels, input.review.object.metadata.namespace)
+                labels := object_labels
+                exception := resolve_spe_for_container(container, labels, object_namespace)
                 spe_allowed := allowed_values_or_empty(exception, ["spec", "securityContext", "appArmorProfile", "allowedValues"])
                 allowed := expand(input.parameters.allowedProfiles, apparmor_translation)
                 spe_allowed_expanded := expand(spe_allowed, apparmor_translation)

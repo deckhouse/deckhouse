@@ -54,6 +54,8 @@ spec:
               import data.lib.common.has_field
               import data.lib.common.input_containers
               import data.lib.common.pod_spec
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_from_labels
 
@@ -62,8 +64,8 @@ spec:
                 volume := pod_spec.volumes[_]
                 has_field(volume, "hostPath")
                 allowed_paths := get_allowed_paths(input)
-                labels := object.get(input.review.object.metadata, "labels", {})
-                spe := resolve_spe_from_labels(labels, input.review.object.metadata.namespace)
+                labels := object_labels
+                spe := resolve_spe_from_labels(labels, object_namespace)
                 spe_paths := allowed_values_or_empty(spe, ["spec", "volumes", "hostPath", "allowedValues"])
                 result := check_hostpath_allowed(
                   volume,

@@ -11,6 +11,7 @@
 package lib.check_bool
 
 import data.lib.common.get_field
+import data.lib.common.effective_labels
 import data.lib.exception.allowed_values_or_empty
 import data.lib.exception.path_value_resolved
 import data.lib.exception.resolve_spe_for_container
@@ -75,7 +76,7 @@ check_pod_bool(obj, field_path, field_name, expected, default_val, spe_path) := 
 check_pod_bool(obj, field_path, field_name, expected, default_val, spe_path) := result if {
   actual := get_field(obj, field_path, default_val)
   actual != expected
-  labels := object.get(obj, ["metadata", "labels"], {})
+  labels := effective_labels(obj)
   namespace := object.get(obj, ["metadata", "namespace"], "")
   exception := resolve_spe_from_labels(labels, namespace)
   spe_val := object.get(exception, spe_path, null)
@@ -87,7 +88,7 @@ check_pod_bool(obj, field_path, field_name, expected, default_val, spe_path) := 
 check_pod_bool(obj, field_path, field_name, expected, default_val, spe_path) := result if {
   actual := get_field(obj, field_path, default_val)
   actual != expected
-  labels := object.get(obj, ["metadata", "labels"], {})
+  labels := effective_labels(obj)
   namespace := object.get(obj, ["metadata", "namespace"], "")
   exception := resolve_spe_from_labels(labels, namespace)
   spe_val := object.get(exception, spe_path, null)

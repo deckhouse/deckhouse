@@ -87,6 +87,8 @@ spec:
               import data.lib.message.violation_message
               import data.lib.common.input_containers
               import data.lib.common.pod_spec
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_for_container
               import data.lib.expand_synonyms.expand
@@ -126,8 +128,8 @@ spec:
                   normalize_empty_undefined_values(allowed_base),
                   object.get(input.parameters, "allowedLocalhostFiles", [])
                 )
-                labels := object.get(input.review.object.metadata, "labels", {})
-                exception := resolve_spe_for_container(container, labels, input.review.object.metadata.namespace)
+                labels := object_labels
+                exception := resolve_spe_for_container(container, labels, object_namespace)
                 spe_allowed_base := allowed_values_or_empty(exception, ["spec", "securityContext", "seccompProfile", "allowedValues"])
                 spe_allowed := normalize_empty_undefined_values(spe_allowed_base)
                 result := check_value_in_set_with_wildcards(

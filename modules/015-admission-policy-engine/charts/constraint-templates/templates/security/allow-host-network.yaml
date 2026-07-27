@@ -71,6 +71,8 @@ spec:
               import data.lib.check_range.check_ports_with_protocol_in_ranges
               import data.lib.message.violation_message
               import data.lib.common.input_containers
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.common.pod_spec
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.path_value_resolved
@@ -80,8 +82,8 @@ spec:
                 not input.review.operation == "DELETE"
                 obj := input.review.object
                 allow_host_network := object.get(input.parameters, "allowHostNetwork", false)
-                labels := object.get(obj.metadata, "labels", {})
-                namespace := object.get(obj.metadata, "namespace", "")
+                labels := object_labels
+                namespace := object_namespace
                 spe := resolve_spe_from_labels(labels, namespace)
                 bool_result := host_network_result(obj, allow_host_network, spe)
                 host_network := object.get(pod_spec, "hostNetwork", false)
