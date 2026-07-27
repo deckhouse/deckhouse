@@ -187,6 +187,8 @@ spec:
               value: "false"
             - name: USE_NELM
               value: "true"
+            - name: PACKAGE_NELM_TIMEOUT
+              value: "30m"
             - name: LOG_TYPE
               value: "json"
             - name: DECKHOUSE_HA
