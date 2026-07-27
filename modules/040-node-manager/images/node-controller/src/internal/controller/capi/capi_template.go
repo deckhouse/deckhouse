@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -158,6 +159,58 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 			return fmt.Errorf("delete stale CAPI MachineTemplate %s: %w", tmpl.GetName(), err)
 		}
 		logger.Info("pruned stale CAPI MachineTemplate", "name", tmpl.GetName(), "ng", ngName)
+	}
+
+	return nil
+}
+
+// deleteInfraMachineTemplates removes every infrastructure MachineTemplate of a NodeGroup that is
+// going away. Nothing else does: pruneStaleCAPI only runs while the NodeGroup still exists, and
+// once it is gone no reconcile is left to clean up after it. Before the migration helm rendered
+// these templates and pruned them when the NodeGroup left its values — set_keep_policy_on_capi_resources
+// does not stamp them, so the prune worked — and taking the rendering over without taking the
+// deletion over leaked one template per zone on every NodeGroup removal.
+//
+// Deleting them right away (rather than waiting for the Machines, as MCM MachineClasses must)
+// matches what helm did: an infrastructure template is read when a Machine is created, never
+// during its deletion.
+func (r *MachineDeploymentReconciler) deleteInfraMachineTemplates(ctx context.Context, ngName string) error {
+	logger := log.FromContext(ctx)
+
+	cloudConfig, err := r.readCloudProviderConfig(ctx)
+	if err != nil {
+		return err
+	}
+	if cloudConfig.capiMachineTemplateKind == "" || cloudConfig.capiMachineTemplateAPIVersion == "" {
+		return nil
+	}
+	gv, err := schema.ParseGroupVersion(cloudConfig.capiMachineTemplateAPIVersion)
+	if err != nil {
+		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.capiMachineTemplateAPIVersion, err)
+	}
+
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: gv.Group, Version: gv.Version, Kind: cloudConfig.capiMachineTemplateKind + "List",
+	})
+	// Live read for the same reason as in pruneStaleCAPI: the kind comes from the provider Secret
+	// and is not in cache.Options.ByObject.
+	if err := r.APIReader.List(ctx, list,
+		client.InNamespace(common.MachineNamespace),
+		client.MatchingLabels{"node-group": ngName},
+	); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
+		return fmt.Errorf("list %s for NodeGroup %s: %w", cloudConfig.capiMachineTemplateKind, ngName, err)
+	}
+
+	for i := range list.Items {
+		tmpl := &list.Items[i]
+		if err := r.Client.Delete(ctx, tmpl); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("delete CAPI MachineTemplate %s: %w", tmpl.GetName(), err)
+		}
+		logger.V(1).Info("deleted CAPI MachineTemplate for removed NodeGroup", "name", tmpl.GetName(), "ng", ngName)
 	}
 
 	return nil

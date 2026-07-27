@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,6 +30,7 @@ import (
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
 // This spec guards the two regressions the cluster benchmarks caught:
@@ -105,6 +107,39 @@ var _ = Describe("CAPI MachineDeployment rendering", func() {
 			Namespace: common.MachineNamespace, Name: infraRef.Name,
 		}, mt)).To(Succeed())
 		Expect(mt.GetLabels()).To(HaveKeyWithValue("node-group", ng.Name))
+	})
+
+	// Before the migration helm rendered the infrastructure template and pruned it when the
+	// NodeGroup left its values. node-controller took the rendering over, and for a while
+	// nothing took the deletion over: a live cluster ended up with one orphaned template per
+	// zone for every NodeGroup ever deleted.
+	It("deletes the infrastructure template when the NodeGroup is removed", func() {
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, newInstanceClass()))).To(Succeed())
+
+		ng := newNodeGroup(testenv.UniqueName("cap-teardown"))
+		Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+
+		templates := func(g Gomega) []unstructured.Unstructured {
+			list := &unstructured.UnstructuredList{}
+			list.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
+			list.SetKind("DeckhouseMachineTemplateList")
+			g.Expect(k8sClient.List(suiteCtx, list, client.InNamespace(common.MachineNamespace),
+				client.MatchingLabels{"node-group": ng.Name})).To(Succeed())
+			return list.Items
+		}
+
+		Eventually(func(g Gomega) int { return len(templates(g)) },
+			20*time.Second, 250*time.Millisecond).Should(Equal(1), "the template must be rendered first")
+
+		Expect(k8sClient.Delete(suiteCtx, ng)).To(Succeed())
+
+		Eventually(func(g Gomega) int { return len(templates(g)) },
+			30*time.Second, 250*time.Millisecond).Should(BeZero(), "no template may outlive its NodeGroup")
+
+		Eventually(func() bool {
+			got := &deckhousev1.NodeGroup{}
+			return apierrors.IsNotFound(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(ng), got))
+		}, 30*time.Second, 250*time.Millisecond).Should(BeTrue(), "the finalizer must be released")
 	})
 
 	// Rolling nodes is never acceptable. dataSecretName is part of spec.template, so rewriting

@@ -270,6 +270,10 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 		logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
 	}
 
+	if err := r.deleteInfraMachineTemplates(ctx, ngName); err != nil {
+		return false, err
+	}
+
 	cloudProvider, err := r.readCloudProviderTree(ctx)
 	if err != nil {
 		return false, err
