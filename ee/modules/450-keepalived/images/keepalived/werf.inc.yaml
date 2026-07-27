@@ -76,7 +76,5 @@ import:
   - lib64
   excludePaths:
   - usr/lib/python*/site-packages/pip-25.3*
-  - usr/lib64/python*/site-packages/pip-25.3*
   - usr/lib/python*/test
-  - usr/lib64/python*/test
 {{- include "image mount points" . }}
