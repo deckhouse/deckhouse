@@ -52,11 +52,11 @@ const (
 )
 
 const (
-	// envPackageNelmTimeout sets the timeout for every nelm release operation on the
-	// packages path. Its value is a Go duration (for example "30m") and is set on the
-	// Deckhouse deployment.
+	// envPackageNelmTimeout is the env var (set on the Deckhouse deployment) that
+	// bounds each nelm release operation on the packages path. Its value is a Go
+	// duration, e.g. "30m".
 	envPackageNelmTimeout = "PACKAGE_NELM_TIMEOUT"
-	// defaultPackageNelmTimeout applies when PACKAGE_NELM_TIMEOUT is unset or malformed.
+	// defaultPackageNelmTimeout applies when envPackageNelmTimeout is unset or malformed.
 	defaultPackageNelmTimeout = 30 * time.Minute
 )
 
@@ -109,6 +109,12 @@ type Service struct {
 
 // NewService creates a new nelm service for managing Helm releases.
 func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
+	timeout, err := releaseTimeout()
+	if err != nil {
+		logger.Warn("invalid PACKAGE_NELM_TIMEOUT, using default",
+			slog.Duration("default", defaultPackageNelmTimeout), log.Err(err))
+	}
+
 	nelmClient := nelm.New(logger,
 		nelm.WithResourcesLabels(map[string]string{
 			"heritage": "deckhouse",
@@ -116,7 +122,7 @@ func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status 
 		nelm.WithReleaseAnnotations(map[string]string{
 			managedByAnnotation: managedByAnnotationValue,
 		}),
-		nelm.WithTimeout(packageNelmTimeout(logger)),
+		nelm.WithTimeout(timeout),
 	)
 
 	return &Service{
@@ -128,27 +134,19 @@ func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status 
 	}
 }
 
-// packageNelmTimeout returns the timeout for every nelm release operation on the
-// packages path. It reads PACKAGE_NELM_TIMEOUT (a Go duration such as "30m") set on
-// the Deckhouse deployment; an unset or malformed value falls back to
-// defaultPackageNelmTimeout.
-func packageNelmTimeout(logger *log.Logger) time.Duration {
-	raw := os.Getenv(envPackageNelmTimeout)
-	if raw == "" {
-		return defaultPackageNelmTimeout
+// releaseTimeout reads PACKAGE_NELM_TIMEOUT (a Go duration such as "30m"). An empty
+// value yields defaultPackageNelmTimeout; a malformed value yields the same default
+// together with the parse error so the caller can report it.
+func releaseTimeout() (time.Duration, error) {
+	v, ok := os.LookupEnv(envPackageNelmTimeout)
+	if !ok || v == "" {
+		return defaultPackageNelmTimeout, nil
 	}
-
-	timeout, err := time.ParseDuration(raw)
+	timeout, err := time.ParseDuration(v)
 	if err != nil {
-		logger.Warn("invalid PACKAGE_NELM_TIMEOUT, using default",
-			slog.String("value", raw),
-			slog.Duration("default_timeout", defaultPackageNelmTimeout),
-			log.Err(err))
-
-		return defaultPackageNelmTimeout
+		return defaultPackageNelmTimeout, err
 	}
-
-	return timeout
+	return timeout, nil
 }
 
 // HasMonitor checks if a release monitor exists for the given name.
