@@ -232,71 +232,48 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	combinedCPU := input.Values.Get("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()
 	combinedMem := input.Values.Get("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()
 
-	// Always rebuild components from state (idempotent repopulate).
-	repopulateComponents(input, state, cpuOverridden, memoryOverridden)
-
-	input.MetricsCollector.Expire(autotuneMetricGroup)
-	emitCapacityBlockedMetrics(input, state)
-
-	if !schedule {
-		if stateDirty {
-			return persistAutotuneState(input, state)
-		}
-		return nil
-	}
-
 	// Schedule path: evaluate only when PMA is enabled. Without it keep applied
-	// state and re-emitted alert markers.
-	if !pmaEnabled {
-		if stateDirty {
-			return persistAutotuneState(input, state)
-		}
-		return nil
-	}
+	// state and re-emitted alert markers. Repopulate values exactly once at the
+	// end — a second Remove of `components` fails merge when Exists still sees
+	// the pre-patch snapshot.
+	if schedule && pmaEnabled {
+		now := dc.GetClock().Now().UTC()
+		usageOK := true
+		recsCPU := make(map[string]int64, len(controlPlaneComponents))
+		recsMem := make(map[string]int64, len(controlPlaneComponents))
 
-	now := dc.GetClock().Now().UTC()
-	usageOK := true
-	recsCPU := make(map[string]int64, len(controlPlaneComponents))
-	recsMem := make(map[string]int64, len(controlPlaneComponents))
-
-	for _, comp := range controlPlaneComponents {
-		if !cpuOverridden {
-			v, ok, ferr := fetchComponentUsage(ctx, dc, comp, resourceCPU)
-			if ferr != nil {
-				input.Logger.Warn("autotune: metrics API cpu fetch failed", "component", comp, "error", ferr)
-				usageOK = false
-			} else if ok {
-				recsCPU[comp] = clampRecommendation(v, resourceCPU, budgetCPU)
+		for _, comp := range controlPlaneComponents {
+			if !cpuOverridden {
+				v, ok, ferr := fetchComponentUsage(ctx, dc, comp, resourceCPU)
+				if ferr != nil {
+					input.Logger.Warn("autotune: metrics API cpu fetch failed", "component", comp, "error", ferr)
+					usageOK = false
+				} else if ok {
+					recsCPU[comp] = clampRecommendation(v, resourceCPU, budgetCPU)
+				}
+			}
+			if !memoryOverridden {
+				v, ok, ferr := fetchComponentUsage(ctx, dc, comp, resourceMemory)
+				if ferr != nil {
+					input.Logger.Warn("autotune: metrics API memory fetch failed", "component", comp, "error", ferr)
+					usageOK = false
+				} else if ok {
+					recsMem[comp] = clampRecommendation(v, resourceMemory, budgetMem)
+				}
 			}
 		}
-		if !memoryOverridden {
-			v, ok, ferr := fetchComponentUsage(ctx, dc, comp, resourceMemory)
-			if ferr != nil {
-				input.Logger.Warn("autotune: metrics API memory fetch failed", "component", comp, "error", ferr)
-				usageOK = false
-			} else if ok {
-				recsMem[comp] = clampRecommendation(v, resourceMemory, budgetMem)
+
+		// Missing/failed metrics: do not mutate applied*; keep capacityBlocked as-is.
+		if usageOK || len(recsCPU) > 0 || len(recsMem) > 0 {
+			if !cpuOverridden {
+				stateDirty = stateDirty || evaluateMeasurement(input, state, resourceCPU, recsCPU, budgetCPU, combinedCPU, now)
+			}
+			if !memoryOverridden {
+				stateDirty = stateDirty || evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMem, combinedMem, now)
 			}
 		}
 	}
 
-	// Missing/failed metrics: do not mutate applied*; keep capacityBlocked as-is
-	// (alert re-emitted above). Still persist override-driven deletions.
-	if !usageOK && len(recsCPU) == 0 && len(recsMem) == 0 {
-		if stateDirty {
-			return persistAutotuneState(input, state)
-		}
-		return nil
-	}
-
-	if !cpuOverridden {
-		stateDirty = stateDirty || evaluateMeasurement(input, state, resourceCPU, recsCPU, budgetCPU, combinedCPU, now)
-	}
-	if !memoryOverridden {
-		stateDirty = stateDirty || evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMem, combinedMem, now)
-	}
-
-	// Re-emit after evaluate (capacityBlocked may have changed).
 	input.MetricsCollector.Expire(autotuneMetricGroup)
 	emitCapacityBlockedMetrics(input, state)
 	repopulateComponents(input, state, cpuOverridden, memoryOverridden)

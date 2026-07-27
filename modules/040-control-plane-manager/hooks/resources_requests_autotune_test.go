@@ -202,6 +202,49 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		})
 	})
 
+	Context("Schedule: both measurements overridden clears components without merge error", func() {
+		BeforeEach(func() {
+			// Pre-seed components so Remove is exercised (the previous double-Remove
+			// bug only appeared when this key already existed in module values).
+			f.ValuesSetFromYaml("controlPlaneManager.internal.resourcesRequests.components", []byte(`
+kubeApiserver:
+  milliCPU: 700
+  memoryBytes: 536870912
+etcd:
+  milliCPU: 800
+`))
+			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
+			f.ValuesSet("controlPlaneManager.resourcesRequests.memory", "2Gi")
+			st := autotuneState{
+				CPU: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
+					},
+				},
+				Memory: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver: {AppliedBytes: ptr.To(int64(512 * 1024 * 1024)), LastChange: "2026-07-01T00:00:00Z"},
+					},
+				},
+			}
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.RunHook()
+		})
+
+		It("removes components and both state branches", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components").Exists()).To(BeFalse())
+
+			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
+			Expect(ops.Exists()).To(BeTrue())
+			var st autotuneState
+			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+			Expect(st.CPU).To(BeNil())
+			Expect(st.Memory).To(BeNil())
+		})
+	})
+
 	Context("Schedule: PMA disabled still repopulates applied state", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
