@@ -1,0 +1,27 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow the node controller to run on the host network during bootstrap so it works without kube-proxy.
+    hostPorts:
+      - port: 4290
+        protocol: TCP
+        metadata:
+          description: Node controller webhook listener.
+      - port: 4291
+        protocol: TCP
+        metadata:
+          description: Node controller metrics endpoint exposed through kube-rbac-proxy.
+{{- end }}
