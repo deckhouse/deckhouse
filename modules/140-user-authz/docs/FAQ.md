@@ -506,6 +506,37 @@ The answer is returned in the `status` field (`users`, `groups`, `serviceAccount
 
 The right to create `WhoCan` queries is granted by the `d8:user-authz:who-can-checker` cluster role. It is intentionally not bound to anyone by default: the query result discloses access subjects across all namespaces, so grant it only to trusted administrators via a `ClusterRoleBinding`.
 
+## How do I find out what a specific user, group, or ServiceAccount is allowed to do?
+
+In the Enterprise Edition, with the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the `SubjectAccessReport` resource is available — the counterpart of `WhoCan`. It answers the question "what is this subject allowed to do" and returns a ready-made report: which roles are granted through which bindings, which actions on which resources are allowed cluster-wide and in every namespace, and where each permission comes from.
+
+```shell
+d8 k create -o yaml -f - <<EOF
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: SubjectAccessReport
+metadata:
+  name: what-can-jane-do
+spec:
+  subject:
+    kind: User
+    name: jane@example.com
+EOF
+```
+
+The `spec.subject.kind` field accepts `User`, `Group`, and `ServiceAccount` (for the latter, `spec.subject.namespace` is required). If `spec.subject` is omitted, the report is built for the caller.
+
+Report specifics:
+
+- The user's groups are resolved automatically from the [Group](../user-authn/cr.html#group) catalog, including nested ones: if the user belongs to group `B` and `B` belongs to `A`, the permissions of `A` are included as well. The groups taken into account are returned in `status.subject.groups`. Groups that are not in the catalog (for example, the ones coming from an external identity provider) can be passed in `spec.groups`.
+- Every source of a permission (`status.scopes[].resources[].sources[]`) carries a `matchedBy` field showing whether the permission was granted to the subject personally or through a group, which makes it possible to view the access with group-derived grants excluded.
+- Namespaces with identical access are merged into a single section (`status.scopes[].namespaces`), so a project with a dozen namespaces does not turn into a dozen identical tables.
+- Permissions granted by a `ClusterRoleBinding` are reported once, in the cluster-wide scope (`status.scopes[].cluster: true`), since they apply in every namespace.
+- The report can be limited to specific namespaces with `spec.namespaces`.
+
+The report is built from RBAC data and does not account for admission webhook restrictions: for example, editing and deleting system resources is denied to everyone below the `superadmin` level. Such cases are flagged in `status.scopes[].caveat`. If the subject's permissions are limited by a `ClusterAuthorizationRule`, this is reported in `status.notes`.
+
+The right to build a report about **another** subject is granted by the `d8:user-authz:subject-access-checker` cluster role. Like `who-can-checker`, it is intentionally not bound to anyone by default: the report discloses the full permission map of the subject, including other namespaces. A report about oneself is available to every authenticated user and requires no extra permissions.
+
 ## How does a user see the list of namespaces available to them?
 
 In the Enterprise Edition, with the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the namespace list is filtered automatically: the `d8 k get namespaces` command returns to a user only the namespaces they have access to — via any of the mechanisms (role bindings, `ProjectRoleBinding`/`ClusterProjectRoleBinding`, `ClusterAuthorizationRule`/`AuthorizationRule`). A user does not see foreign namespaces and cannot learn about their existence from the list.
