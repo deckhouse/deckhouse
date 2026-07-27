@@ -44,12 +44,12 @@ const nestedDigests = `{
 func TestDigestsDeckhouseImage(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
 	reg.MustAddImage("deckhouse/fe", "v1.73.0",
-		fake.NewImageBuilder().WithFile(bundle.DigestsPath, nestedDigests).MustBuild())
+		fake.NewImageBuilder().WithFile(bundle.ModulesPath, nestedDigests).MustBuild())
 
 	got, err := newFakeRegistry(t, reg).Deckhouse().Digests(t.Context(), "v1.73.0")
 	require.NoError(t, err)
 
-	assert.Equal(t, bundle.DigestsPath, got.Source)
+	assert.Equal(t, bundle.ModulesPath, got.Source)
 	assert.True(t, got.IsNested())
 	assert.ElementsMatch(t, []string{"ingressNginx", "userAuthn"}, got.Modules())
 	assert.Equal(t, 3, got.Count())
@@ -67,12 +67,12 @@ func TestDigestsDeckhouseImage(t *testing.T) {
 func TestDigestsModuleImage(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
 	reg.MustAddImage("deckhouse/fe/modules/stronghold", "v1.0.1",
-		fake.NewImageBuilder().WithFile(bundle.DigestsPath, flatDigests).MustBuild())
+		fake.NewImageBuilder().WithFile(bundle.RootPath, flatDigests).MustBuild())
 
 	got, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Digests(t.Context(), "v1.0.1")
 	require.NoError(t, err)
 
-	assert.Equal(t, bundle.DigestsPath, got.Source)
+	assert.Equal(t, bundle.RootPath, got.Source)
 	assert.False(t, got.IsNested())
 	assert.Nil(t, got.Modules())
 	assert.Equal(t, map[string]string{"controller": "sha256:aaa", "webhook": "sha256:bbb"}, got.Images)
@@ -87,19 +87,21 @@ func TestDigestsModuleImage(t *testing.T) {
 func TestDigestsPackageImage(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
 	reg.MustAddImage("deckhouse/fe/packages/elma", "v1.0.1",
-		fake.NewImageBuilder().WithFile(bundle.DigestsPath, flatDigests).MustBuild())
+		fake.NewImageBuilder().WithFile(bundle.RootPath, flatDigests).MustBuild())
 
 	got, err := newFakeRegistry(t, reg).Packages().Package("elma").Digests(t.Context(), "v1.0.1")
 	require.NoError(t, err)
 
-	assert.Equal(t, bundle.DigestsPath, got.Source)
+	assert.Equal(t, bundle.RootPath, got.Source)
 	assert.Equal(t, 2, got.Count())
 }
 
-// TestDigestsInstallerImages covers all three installer bundles.
+// TestDigestsInstallerImages covers all three installer bundles. An installer
+// carries the images of many modules, so its file is nested like the Deckhouse
+// image's — the shape follows what is bundled, not the kind of bundle.
 func TestDigestsInstallerImages(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
-	img := fake.NewImageBuilder().WithFile(bundle.DigestsPath, flatDigests).MustBuild()
+	img := fake.NewImageBuilder().WithFile(bundle.CandiPath, nestedDigests).MustBuild()
 	reg.MustAddImage("deckhouse/fe/install", "v1.73.0", img)
 	reg.MustAddImage("deckhouse/fe/install-standalone", "v1.73.0", img)
 	reg.MustAddImage("deckhouse/installer", "v1.73.0", img)
@@ -115,9 +117,9 @@ func TestDigestsInstallerImages(t *testing.T) {
 			got, err := svc.Digests(t.Context(), "v1.73.0")
 			require.NoError(t, err)
 
-			assert.Equal(t, bundle.DigestsPath, got.Source)
-			assert.False(t, got.IsNested())
-			assert.Equal(t, 2, got.Count())
+			assert.Equal(t, bundle.CandiPath, got.Source)
+			assert.True(t, got.IsNested())
+			assert.Equal(t, 3, got.Count())
 		})
 	}
 }
@@ -139,4 +141,32 @@ func TestDigestsMissingImage(t *testing.T) {
 	_, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Digests(t.Context(), "v9.9.9")
 	require.Error(t, err)
 	assert.True(t, dhregistry.IsNotFound(err), "expected a not-found error, got %v", err)
+}
+
+// TestDigestsPathsPerBundle pins where each bundle keeps its file. The
+// locations differ, and reading the wrong one must miss rather than silently
+// succeed — a module's root file cannot satisfy a Deckhouse-image read.
+func TestDigestsPathsPerBundle(t *testing.T) {
+	assert.Equal(t, "images_digests.json", bundle.RootPath)
+	assert.Equal(t, "deckhouse/modules/images_digests.json", bundle.ModulesPath)
+	assert.Equal(t, "deckhouse/candi/images_digests.json", bundle.CandiPath)
+
+	reg := newFE(t)
+	assert.Equal(t, bundle.ModulesPath, reg.Deckhouse().DigestsPath())
+	assert.Equal(t, bundle.CandiPath, reg.Deckhouse().Install().DigestsPath())
+	assert.Equal(t, bundle.CandiPath, reg.Deckhouse().InstallStandalone().DigestsPath())
+	assert.Equal(t, bundle.CandiPath, reg.Installer().DigestsPath())
+	assert.Equal(t, bundle.RootPath, reg.Modules().Module("stronghold").DigestsPath())
+	assert.Equal(t, bundle.RootPath, reg.Packages().Package("elma").DigestsPath())
+}
+
+// TestDigestsWrongPathMisses covers a Deckhouse image that only carries a
+// root-level file: the read must not fall back to it.
+func TestDigestsWrongPathMisses(t *testing.T) {
+	reg := fake.NewRegistry("registry.deckhouse.io")
+	reg.MustAddImage("deckhouse/fe", "v1.73.0",
+		fake.NewImageBuilder().WithFile(bundle.RootPath, flatDigests).MustBuild())
+
+	_, err := newFakeRegistry(t, reg).Deckhouse().Digests(t.Context(), "v1.73.0")
+	require.ErrorIs(t, err, dhregistry.ErrNoDigests)
 }

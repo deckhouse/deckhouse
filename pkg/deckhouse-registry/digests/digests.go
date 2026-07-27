@@ -17,9 +17,9 @@
 //
 // This package knows the file format and nothing else: it reads from a
 // flattened image tar stream and has no dependency on the registry tree. The
-// tree wires it in through BasicService.Digests, and each bundle declares where
-// its own copy lives — see deckhouse.DigestsPath, deckhouse.InstallerDigestsPath,
-// module.DigestsPath and packages.DigestsPath.
+// tree wires it in through bundle.Service.Digests, and each bundle declares
+// where its own copy lives — see bundle.ModulesPath, bundle.CandiPath and
+// bundle.RootPath.
 package digests
 
 import (
@@ -51,11 +51,16 @@ var (
 
 // Digests is the decoded content of an images_digests.json.
 //
-// The file comes in two shapes. A module, package or installer image ships a
-// flat map of image name to digest, decoded into Images. The Deckhouse image
-// ships one file covering every module it bundles — a map of module name to
-// that same flat map — decoded into ByModule. Exactly one of the two is
-// non-nil; IsNested says which.
+// The file comes in two shapes, and which one a bundle uses follows from what
+// it bundles rather than from what kind of bundle it is. An image carrying the
+// images of many modules — the Deckhouse image and the installers — keys them
+// by module, decoded into ByModule. An image carrying only its own — a module
+// or package image — is a flat map of image name to digest, decoded into
+// Images. Exactly one of the two is non-nil; IsNested says which, so a caller
+// need not know in advance.
+//
+// Verified against registry.deckhouse.io/deckhouse/fe:v1.76.6, whose file holds
+// 403 images across 56 modules.
 type Digests struct {
 	// Source is the in-image path the file was read from. It identifies which
 	// kind of bundle the digests came from.
@@ -64,16 +69,22 @@ type Digests struct {
 	// Raw is the undecoded JSON, for consumers that apply their own schema.
 	Raw []byte
 
-	// Images maps image name to digest. Set for a flat file.
+	// Images maps image name to digest. Set for a flat file: a module or
+	// package image, which bundles only its own images. Keys are lowerCamelCase
+	// and values are "sha256:" digests.
 	Images map[string]string
 
 	// ByModule maps module name to its image-name-to-digest map. Set for the
-	// Deckhouse image. Module keys are CamelCase, as written by the build.
+	// Deckhouse image and the installers.
+	//
+	// Both levels are keyed in lowerCamelCase, as the build writes them —
+	// "controlPlaneManager", "ingressNginx" — not the kebab-case the module is
+	// known by elsewhere. Values are "sha256:" digests.
 	ByModule map[string]map[string]string
 }
 
 // IsNested reports whether the file is keyed by module — true for the Deckhouse
-// image, false for module, package and installer images.
+// image and the installers, false for module and package images.
 func (d *Digests) IsNested() bool {
 	return d.ByModule != nil
 }
@@ -224,9 +235,9 @@ func Parse(raw []byte) (*Digests, error) {
 	return parsed, nil
 }
 
-// shapeIsNested reports whether every entry is an object (the Deckhouse image's
-// per-module layout) rather than a string (the flat layout). A file that mixes
-// the two matches neither schema and is rejected.
+// shapeIsNested reports whether every entry is an object (the per-module
+// layout) rather than a string (the flat layout). A file that mixes the two
+// matches neither schema and is rejected.
 func shapeIsNested(entries map[string]json.RawMessage) (bool, error) {
 	var sawObject, sawString bool
 

@@ -160,8 +160,12 @@ func New(client registry.Client, opts ...Option) *Registry {
 	r.cli = cli.New(editionRoot)
 
 	// The installer is published once for all editions, so it hangs off the
-	// non-edition root. It is a bundle like the edition-scoped installers.
-	r.installer = bundle.New(service.NewBasicService(installerServiceName, client.WithSegment(InstallerSegment), logger))
+	// non-edition root. It is a bundle like the edition-scoped installers, and
+	// keeps its digests in the same place.
+	r.installer = bundle.New(
+		service.NewBasicService(installerServiceName, client.WithSegment(InstallerSegment), logger),
+		bundle.CandiPath,
+	)
 
 	return r
 }

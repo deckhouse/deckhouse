@@ -78,13 +78,15 @@ type Service struct {
 // itself, which is also the Deckhouse image repository.
 //
 // The Deckhouse image and both installers are artifact bundles and carry
-// images_digests.json; the release-channel repository is not and does not.
+// images_digests.json; the release-channel repository is not and does not. The
+// Deckhouse image keeps the file under deckhouse/modules/ and the installers
+// under deckhouse/candi/, so each is built with its own path.
 func New(editionRoot *service.BasicService) *Service {
 	return &Service{
-		Service:           bundle.New(editionRoot),
+		Service:           bundle.New(editionRoot, bundle.ModulesPath),
 		releases:          &ReleaseService{Service: release.New(editionRoot.Sub(releaseServiceName, ReleaseChannelSegment))},
-		install:           bundle.New(editionRoot.Sub(installServiceName, InstallSegment)),
-		installStandalone: bundle.New(editionRoot.Sub(standaloneServiceName, InstallStandaloneSegment)),
+		install:           bundle.New(editionRoot.Sub(installServiceName, InstallSegment), bundle.CandiPath),
+		installStandalone: bundle.New(editionRoot.Sub(standaloneServiceName, InstallStandaloneSegment), bundle.CandiPath),
 	}
 }
 

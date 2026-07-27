@@ -139,7 +139,7 @@ type Service struct {
 // version and extra sub-repositories are not and do not.
 func New(svc *service.BasicService) *Service {
 	return &Service{
-		Service:  bundle.New(svc),
+		Service:  bundle.New(svc, bundle.RootPath),
 		versions: &VersionService{Service: release.New(svc.Sub(versionServiceName, VersionSegment))},
 		extra:    extra.NewCatalog(svc, extraServiceName, extraImageServiceName),
 	}

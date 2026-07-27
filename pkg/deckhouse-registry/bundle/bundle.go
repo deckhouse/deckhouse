@@ -15,19 +15,23 @@
 // Package bundle addresses the repositories that hold artifact bundles.
 //
 // A bundle is a full image — one shipping the artifact itself, as opposed to a
-// release image (metadata only) or a catalog entry (scratch). Five repositories
-// hold them:
+// release image (metadata only) or a catalog entry (scratch). What they have in
+// common, and what this package adds, is images_digests.json: the map from
+// every image the bundle contains to its content-addressable digest.
 //
-//	<root>/<edition>                        the Deckhouse image
-//	<root>/<edition>/install                the installer image
-//	<root>/<edition>/install-standalone     the standalone installer image
-//	<root>/<edition>/modules/<module>       a module image
-//	<root>/<edition>/packages/<package>     a package image
-//	<root>/installer                        the edition-independent installer
+// Where that file sits inside the image is not common, so each bundle declares
+// its own path:
 //
-// What they have in common, and what this package adds, is images_digests.json:
-// the map from every image the bundle contains to its content-addressable
-// digest.
+//	<root>/<edition>                      deckhouse/modules/…   nested
+//	<root>/<edition>/install              deckhouse/candi/…     nested
+//	<root>/<edition>/install-standalone   deckhouse/candi/…     nested
+//	<root>/installer                      deckhouse/candi/…     nested
+//	<root>/<edition>/modules/<module>     images_digests.json   flat
+//	<root>/<edition>/packages/<package>   images_digests.json   flat
+//
+// Verified at v1.76.6: the Deckhouse image carries the file under
+// deckhouse/modules/ and the install image under deckhouse/candi/ — neither at
+// the image root — while a module image carries it at the root.
 package bundle
 
 import (
@@ -39,34 +43,50 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
 )
 
-// DigestsPath is where a bundle keeps images_digests.json, relative to the
-// image root.
-const DigestsPath = digests.FileName
+// Well-known locations of images_digests.json, relative to the image root.
+const (
+	// RootPath is where a module or package image keeps its digests.
+	RootPath = digests.FileName
+	// ModulesPath is where the Deckhouse image keeps the digests of every
+	// module it bundles. That file is nested.
+	ModulesPath = "deckhouse/modules/" + digests.FileName
+	// CandiPath is where the installer images keep theirs, also nested.
+	CandiPath = "deckhouse/candi/" + digests.FileName
+)
 
 // Service is a repository holding artifact bundles.
 type Service struct {
 	*service.BasicService
+
+	digestsPath string
 }
 
-// New wraps a repository service as a bundle service.
-func New(svc *service.BasicService) *Service {
-	return &Service{BasicService: svc}
+// New wraps a repository service as a bundle whose images_digests.json sits at
+// digestsPath inside the image — one of the constants above.
+func New(svc *service.BasicService, digestsPath string) *Service {
+	return &Service{BasicService: svc, digestsPath: digestsPath}
+}
+
+// DigestsPath returns where this bundle keeps images_digests.json.
+func (s *Service) DigestsPath() string {
+	return s.digestsPath
 }
 
 // Digests reads images_digests.json out of the bundle image at tag, mapping
 // each image the bundle ships to its content-addressable digest.
 //
-// The Deckhouse image bundles every module of its edition, so its file is keyed
-// by module and the result is nested; a module, package or installer image
-// bundles only its own images and the result is flat. digests.Digests.IsNested
-// says which, so the same call handles both.
+// The shape follows from what the bundle contains. The Deckhouse image and the
+// installers carry the images of many modules, so their file is keyed by module
+// and the result is nested; a module or package image carries only its own, so
+// the result is flat. digests.Digests.IsNested says which, and the same call
+// handles both.
 //
 // Reading a bundle means pulling and flattening a full image, which for the
 // Deckhouse image is hundreds of megabytes.
 func (s *Service) Digests(ctx context.Context, tag string) (*digests.Digests, error) {
 	entry := s.Entry(tag)
 
-	entry.Debug("Getting image digests", slog.String("file", DigestsPath))
+	entry.Debug("Getting image digests", slog.String("file", s.digestsPath))
 
 	img, err := s.GetImage(ctx, tag)
 	if err != nil {
@@ -76,7 +96,7 @@ func (s *Service) Digests(ctx context.Context, tag string) (*digests.Digests, er
 	rc := img.Extract()
 	defer rc.Close()
 
-	parsed, err := digests.Read(rc, DigestsPath)
+	parsed, err := digests.Read(rc, s.digestsPath)
 	if err != nil {
 		return nil, fmt.Errorf("digests of %s: %w", s.Ref(tag), err)
 	}

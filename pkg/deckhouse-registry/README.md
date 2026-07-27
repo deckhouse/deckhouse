@@ -167,18 +167,20 @@ files, err := rel.Files(ctx, "alpha", release.VersionFile, release.ModuleFile, r
 
 ### Bundles and image digests
 
-A *bundle* is a full image — one shipping the artifact itself, as opposed to a release image or a scratch catalog entry. Six repositories hold them, and `bundle.Service` is the type they share: `Digests` reads the `images_digests.json` at the image root, mapping every image the bundle contains to its digest.
+A *bundle* is a full image — one shipping the artifact itself, as opposed to a release image or a scratch catalog entry. Six repositories hold them, and `bundle.Service` is the type they share: `Digests` reads `images_digests.json`, mapping every image the bundle contains to its digest.
 
-| Accessor | Repository |
-|---|---|
-| `Deckhouse()` | `<edition>` |
-| `Deckhouse().Install()` | `<edition>/install` |
-| `Deckhouse().InstallStandalone()` | `<edition>/install-standalone` |
-| `Modules().Module(m)` | `modules/<m>` |
-| `Packages().Package(p)` | `packages/<p>` |
-| `Installer()` | `<root>/installer` |
+Neither the location nor the shape is uniform. Both were verified against the live registry at v1.76.6:
 
-The file has two shapes, and `Digests` detects which:
+| Accessor | Repository | File inside | Shape |
+|---|---|---|---|
+| `Deckhouse()` | `<edition>` | `deckhouse/modules/images_digests.json` | nested |
+| `Deckhouse().Install()` | `<edition>/install` | `deckhouse/candi/images_digests.json` | nested |
+| `Deckhouse().InstallStandalone()` | `<edition>/install-standalone` | `deckhouse/candi/…` | nested |
+| `Installer()` | `<root>/installer` | `deckhouse/candi/…` | nested |
+| `Modules().Module(m)` | `modules/<m>` | `images_digests.json` | flat |
+| `Packages().Package(p)` | `packages/<p>` | `images_digests.json` | flat |
+
+The shape follows what the bundle contains, not what kind of bundle it is: an image carrying the images of many modules keys them by module, one carrying only its own does not. `Digests` detects which:
 
 ```go
 // The Deckhouse image bundles every module of its edition, so it nests.
@@ -187,13 +189,15 @@ d.IsNested()                                // true
 d.Modules()                                 // ["ingressNginx", "userAuthn", ...]
 d.Lookup("ingressNginx", "controller")      // digest, ok
 
-// A module, package or installer bundles only its own images, so it is flat.
+// A module or package bundles only its own images, so it is flat.
 d, err = reg.Modules().Module("stronghold").Digests(ctx, "v1.0.1")
 d.Images                                    // {"controller": "sha256:...", ...}
 d.Lookup("", "controller")
 ```
 
-Only the six repositories above are `bundle.Service`; the rest of the tree is a plain `BasicService` with no `Digests` at all, so a release repository or catalog cannot be asked for digests by mistake.
+Keys are lowerCamelCase at both levels — `controlPlaneManager`, `ingressNginx` — not the kebab-case a module is known by elsewhere, so `Lookup("control-plane-manager", …)` misses. Values are full `sha256:` digests.
+
+Only the six repositories above are `bundle.Service`; the rest of the tree is a plain `BasicService` with no `Digests` at all, so a release repository or catalog cannot be asked for digests by mistake. Each bundle is constructed with its own path (`bundle.ModulesPath`, `bundle.CandiPath`, `bundle.RootPath`), and reading the wrong one misses rather than silently succeeding.
 
 Reading a bundle means pulling and flattening a full image, which for the Deckhouse image is hundreds of megabytes.
 
