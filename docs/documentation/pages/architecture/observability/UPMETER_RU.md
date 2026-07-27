@@ -21,8 +21,7 @@ description: Архитектура модуля upmeter в Deckhouse Kubernetes
 
 Архитектура модуля [`upmeter`](/modules/upmeter/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля upmeter](../../../images/architecture/observability/c4-l2-upmeter.ru.png)
+![Архитектура модуля upmeter](../../images/architecture/observability/c4-l2-upmeter.ru.svg)
 
 {% alert level="info" %}
 Номерами на схеме отмечен порядок прохождения запроса пользователя к компонентам `status` и `webui`:
@@ -47,7 +46,7 @@ description: Архитектура модуля upmeter в Deckhouse Kubernetes
     - **migrator** — init-контейнер, применяющий SQL-миграцию к SQLite-базе компонента;
     - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к API upmeter.
 
-1. **Upmeter-agent** (DaemonSet) — компонент, работающий на `master` узлах кластера и выполняющий на регулярной основе следующие группы проверок:
+1. **Upmeter-agent** (DaemonSet) — компонент, работающий на master-узлах кластера и выполняющий на регулярной основе следующие группы проверок:
 
     - `control-plane` — проверка доступности `apiserver`, а также проверки работы контроллеров;
     - `deckhouse` — проверка состояния кластера DKP, а также проверка работоспособности deckhouse контроллера модуля [deckhouse](/modules/deckhouse);
@@ -73,7 +72,7 @@ description: Архитектура модуля upmeter в Deckhouse Kubernetes
 
     Проверки или группы проверок могут быть отключены в параметре [`.spec.settings.disabledProbes`](/modules/upmeter/configuration.html#parameters-disabledprobes) модуля.
 
-    Собранные результаты проб upmeter-agent отправляет через HTTP POST-запрос `/downtime` в upmeter.
+    Собранные результаты проб upmeter-agent отправляет через HTTP запрос `POST /downtime` в upmeter.
 
     Состоит из следующих контейнеров:
 
@@ -100,10 +99,10 @@ description: Архитектура модуля upmeter в Deckhouse Kubernetes
     - авторизация запросов к upmeter;
     - создание, проверка и удаление стандартных ресурсов Pod, StatefulSet, Namespace, Certificate, Secret.
 
-1. **Внешние системы хранения метрик** - отправка результатов проверок через протокол `remote-write`.
+1. **Внешние системы хранения метрик** — отправка результатов проверок через протокол `remote-write`.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
 1. **Prometheus-main** — использует правила мониторинга и метрики, связанные с модулем upmeter.
 
-1. **Controller nginx** — пересылка внешних запросов пользователя к веб-интерфейсу модуля.
+1. **Ingress контроллер** — пересылка внешних запросов пользователя к веб-интерфейсу модуля.
