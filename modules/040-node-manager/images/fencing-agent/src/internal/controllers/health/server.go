@@ -33,8 +33,7 @@ type Server struct {
 	ready  func() bool
 }
 
-// NewServer serves the liveness probe unconditionally and gates the readiness
-// probe on ready, which must not be nil.
+// NewServer serves liveness unconditionally and gates readiness on ready (non-nil).
 func NewServer(addr string, logger *log.Logger, ready func() bool) *Server {
 	return &Server{addr: addr, logger: logger, ready: ready}
 }

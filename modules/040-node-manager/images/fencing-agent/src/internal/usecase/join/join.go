@@ -33,19 +33,14 @@ import (
 	"fencing-agent/internal/domain"
 )
 
-// maxSeeds bounds a single join. memberlist contacts every seed sequentially
-// and exchanges the full member state with each of them, even after the first
-// success, and every unreachable seed costs a full TCP dial timeout. One
-// reachable seed is enough, gossip delivers the rest, and every retry samples
-// a fresh subset.
+// maxSeeds caps a join: memberlist dials seeds sequentially and exchanges full
+// state with each, so a few reachable seeds suffice and gossip delivers the rest.
 const maxSeeds = 3
 
-// NodeLister reads the current NodeGroup membership from the Kubernetes API.
 type NodeLister interface {
 	ListNodeGroup(ctx context.Context, nodeGroup string) ([]domain.Peer, error)
 }
 
-// Cluster is the gossip network of the NodeGroup.
 type Cluster interface {
 	Join(seeds []string) (int, error)
 	NumMembers() int
@@ -53,9 +48,8 @@ type Cluster interface {
 
 type Params struct {
 	NodeName string
-	// NodeIP also filters the local node out of the seed list: a stale Node
-	// object may carry the same IP under another name, and joining our own
-	// advertised address is a hairpin that can succeed and fake a join.
+	// NodeIP also drops a stale Node object that carries the local IP under
+	// another name, and prevents a hairpin self-join.
 	NodeIP           string
 	NodeGroup        string
 	MemberlistPort   int
@@ -81,15 +75,13 @@ func New(nodes NodeLister, cluster Cluster, params Params, logger *log.Logger) *
 	}
 }
 
-// Joined reports whether the startup join has completed. The fencing flow must
-// not start before it has.
+// Joined is false until the startup join completes; the fencing flow must not start before it.
 func (j *Joiner) Joined() bool {
 	return j.joined.Load()
 }
 
-// Bootstrap joins the gossip network, retrying with exponential backoff until
-// it succeeds or ctx is cancelled. A permanent failure keeps the pod NotReady
-// instead of crashing it, and cancellation is a shutdown, not a failure.
+// Bootstrap retries the join with exponential backoff until it succeeds or ctx
+// is cancelled; a permanent failure keeps the pod NotReady instead of crashing.
 func (j *Joiner) Bootstrap(ctx context.Context) {
 	backoff := j.params.RetryInterval
 
@@ -127,16 +119,14 @@ func (j *Joiner) attempt(ctx context.Context) error {
 		return err
 	}
 
-	// Being the first agent of the NodeGroup is not a failure: the listeners are
-	// already up and the peers that start later seed themselves from this node.
+	// First agent of the group: listeners are up, later peers seed from us.
 	if peers == 0 {
 		j.logger.Info("no peers in node group, starting alone", "node_group", j.params.NodeGroup)
 
 		return nil
 	}
 
-	// Peers exist but none is usable yet (addresses not populated): declaring
-	// "alone" here would split the group into islands, so keep retrying.
+	// Peers exist but have no address yet; declaring "alone" would split the group into islands.
 	if len(seeds) == 0 {
 		return fmt.Errorf("none of the %d peers has a usable address yet", peers)
 	}
@@ -162,9 +152,8 @@ func (j *Joiner) attempt(ctx context.Context) error {
 	return nil
 }
 
-// join runs Cluster.Join on its own goroutine: the underlying call dials seeds
-// sequentially without honoring a context, and a SIGTERM must not wait out its
-// dial timeouts. An abandoned call unblocks once the transport is closed.
+// join wraps the uncancellable Cluster.Join so a SIGTERM does not wait out its
+// per-seed dial timeouts; the abandoned goroutine unblocks when the transport closes.
 func (j *Joiner) join(ctx context.Context, seeds []string) (int, error) {
 	type result struct {
 		joined int
@@ -195,9 +184,8 @@ func (j *Joiner) join(ctx context.Context, seeds []string) (int, error) {
 	}
 }
 
-// seedList is rebuilt on every attempt so that a retry always uses the current
-// NodeGroup membership instead of a snapshot taken before the outage. It also
-// returns how many peer Nodes (self excluded) the group currently has.
+// seedList is rebuilt every attempt so a retry uses current membership, not a
+// pre-outage snapshot. It also returns the peer count (self excluded).
 func (j *Joiner) seedList(ctx context.Context) ([]string, int, error) {
 	listCtx, cancel := context.WithTimeout(ctx, j.params.APITimeout)
 	defer cancel()
@@ -217,8 +205,7 @@ func (j *Joiner) seedList(ctx context.Context) ([]string, int, error) {
 			continue
 		}
 
-		// A stale Node object can carry the local IP under another name; it is
-		// leftover metadata of this machine, not a peer.
+		// Stale Node object of this machine under an old name, not a peer.
 		if peer.IP != "" && peer.IP == j.params.NodeIP {
 			j.logger.Warn("node shares the local InternalIP, excluded from seed list", "member", peer.Name)
 
@@ -246,9 +233,8 @@ func (j *Joiner) seedList(ctx context.Context) ([]string, int, error) {
 	return seeds, peers, nil
 }
 
-// delay is a full-jitter sample in [RetryInterval, backoff]: agents of one
-// NodeGroup share outages, and a narrow jitter would keep their retries in
-// lockstep.
+// delay is full jitter in [RetryInterval, backoff]: narrow jitter would keep a
+// group's agents retrying in lockstep after a shared outage.
 func (j *Joiner) delay(backoff time.Duration) time.Duration {
 	spread := backoff - j.params.RetryInterval
 	if spread <= 0 {

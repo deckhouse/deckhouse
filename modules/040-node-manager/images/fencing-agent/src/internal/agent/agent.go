@@ -91,8 +91,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		MaxRetryInterval: a.cfg.RejoinMaxInterval,
 	}, a.logger)
 
-	// The health server runs alongside the join: the liveness probe fires before a
-	// slow join can finish, so blocking on the join would get the pod killed.
 	g, gctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
@@ -106,7 +104,6 @@ func (a *Agent) Run(ctx context.Context) error {
 			return nil
 		}
 
-		// The fencing flow starts here, after the gossip network is joined.
 		a.logger.Info("gossip network joined, fencing flow is not started")
 
 		<-gctx.Done()

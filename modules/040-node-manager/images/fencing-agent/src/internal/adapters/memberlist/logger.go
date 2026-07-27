@@ -27,8 +27,7 @@ import (
 
 var debugPrefix = []byte("[DEBUG]")
 
-// logWriter turns the "[LEVEL] memberlist: message" lines memberlist writes into
-// the standard logger into structured records of the agent logger.
+// logWriter maps memberlist's "[LEVEL] ..." log lines onto the agent logger.
 type logWriter struct {
 	logger *log.Logger
 	debug  bool
@@ -42,8 +41,8 @@ func newLogWriter(logger *log.Logger) io.Writer {
 }
 
 func (w *logWriter) Write(p []byte) (int, error) {
-	// Suppressed debug lines are dropped before any conversion: memberlist is
-	// chatty at debug level and this path runs on its goroutines.
+	// Drop suppressed debug lines before parsing: memberlist is chatty at debug
+	// level and this runs on its goroutines.
 	if !w.debug && bytes.HasPrefix(p, debugPrefix) {
 		return len(p), nil
 	}

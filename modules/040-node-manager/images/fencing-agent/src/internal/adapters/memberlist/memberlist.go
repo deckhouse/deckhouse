@@ -30,19 +30,16 @@ const (
 	bindAddress  = "0.0.0.0"
 	leaveTimeout = 3 * time.Second
 
-	// deadNodeReclaimTime lets a node that died without a graceful Leave come
-	// back under the same name with a new address: with the zero default,
-	// peers refuse the address update forever — exactly the post-fencing
-	// re-provisioning path.
+	// deadNodeReclaimTime lets a hard-died node rejoin under the same name with a
+	// new address; the zero default makes peers refuse it forever.
 	deadNodeReclaimTime = 10 * time.Second
 )
 
 type Config struct {
 	NodeName  string
 	NodeGroup string
-	// AdvertiseAddr must be the Node InternalIP. The agent runs in the pod network
-	// and peers reach it only through the hostPort published on the Node address,
-	// so the auto-detected pod IP would make the node unreachable.
+	// AdvertiseAddr must be the Node InternalIP: peers reach the pod only through
+	// the hostPort on the Node, so the auto-detected pod IP is unreachable.
 	AdvertiseAddr string
 	Port          int
 }
@@ -75,8 +72,7 @@ func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcm
 	mlCfg.BindPort = cfg.Port
 	mlCfg.AdvertiseAddr = cfg.AdvertiseAddr
 	mlCfg.AdvertisePort = cfg.Port
-	// Every NodeGroup gossips in its own network: packets carrying a foreign
-	// label are dropped instead of merging two groups.
+	// Label keeps each NodeGroup a separate gossip network; foreign packets are dropped.
 	mlCfg.Label = cfg.NodeGroup
 	mlCfg.DeadNodeReclaimTime = deadNodeReclaimTime
 	mlCfg.Logger = stdlog.New(newLogWriter(logger), "", 0)
@@ -93,8 +89,8 @@ func (c *Cluster) NumMembers() int {
 	return c.list.NumMembers()
 }
 
-// Shutdown leaves the gossip network first, so peers see the node as left and
-// not as dead: a planned restart must not look like a failure.
+// Shutdown leaves before closing so peers see the node as left, not dead: a
+// planned restart must not look like a failure.
 func (c *Cluster) Shutdown() error {
 	defer close(c.stop)
 

@@ -83,10 +83,8 @@ func run(cfg *config.Config, logger *log.Logger) error {
 	return agent.New(cfg, deps, identity, logger).Run(ctx)
 }
 
-// resolveIdentity retries within its context window: on a freshly registered
-// node the InternalIP may be populated by the cloud controller a few seconds
-// after the pod starts, and a single-shot failure would send the pod into
-// restart backoff instead.
+// resolveIdentity retries: a cloud controller may populate the InternalIP a few
+// seconds after the pod starts, and a single-shot failure would crash-loop it.
 func resolveIdentity(ctx context.Context, k8s kubernetes.Interface, nodeName string, logger *log.Logger) (domain.NodeIdentity, error) {
 	const retryInterval = 2 * time.Second
 

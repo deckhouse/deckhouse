@@ -34,9 +34,8 @@ func NewRestConfig() (*rest.Config, error) {
 }
 
 func New(cfg *rest.Config) (kubernetes.Interface, error) {
-	// Core-group requests use protobuf: the bootstrap retry relists the whole
-	// NodeGroup, and protobuf decodes several times cheaper than JSON at fleet
-	// scale. CRD clients must keep JSON, so mutate a copy.
+	// Core objects use protobuf: bootstrap relists the whole NodeGroup and
+	// protobuf decodes far cheaper than JSON at scale. CRD clients keep JSON.
 	cfg = rest.CopyConfig(cfg)
 	cfg.ContentType = runtime.ContentTypeProtobuf
 
@@ -49,8 +48,7 @@ func ResolveIdentity(ctx context.Context, k8s kubernetes.Interface, nodeName str
 		return domain.NodeIdentity{}, fmt.Errorf("get node %q: %w", nodeName, err)
 	}
 
-	// The InternalIP becomes the memberlist advertise address, so an empty one
-	// silently degrades into advertising the pod IP, which peers cannot reach.
+	// Without an InternalIP the agent would advertise the pod IP, which peers cannot reach.
 	ip := internalIP(node)
 	if ip == "" {
 		return domain.NodeIdentity{}, fmt.Errorf("node %q has no InternalIP address", nodeName)

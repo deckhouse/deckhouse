@@ -24,8 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// eventBuffer absorbs bursts: one push/pull with a large group delivers an
-// event per member.
+// eventBuffer absorbs the per-member event burst of a push/pull with a large group.
 const eventBuffer = 1024
 
 type nodeEvent struct {
@@ -34,11 +33,9 @@ type nodeEvent struct {
 	addr string
 }
 
-// eventDelegate hands membership changes to its own goroutine. memberlist
-// delivers notifications while holding its internal state lock, so the
-// delegate must never block; when the buffer is full, events are counted and
-// dropped instead. Reacting to events belongs to the fencing flow, which is
-// implemented in a follow-up task — for now they are only logged.
+// eventDelegate offloads notifications to its own goroutine: memberlist invokes
+// them under its state lock, so the delegate must not block. A full buffer drops
+// and counts events.
 type eventDelegate struct {
 	logger  *log.Logger
 	events  chan nodeEvent
@@ -72,7 +69,6 @@ func (d *eventDelegate) enqueue(kind string, node *hcml.Node) {
 	}
 }
 
-// run logs queued events until stop is closed.
 func (d *eventDelegate) run(stop <-chan struct{}) {
 	for {
 		select {

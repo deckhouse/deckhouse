@@ -49,9 +49,7 @@ type Config struct {
 	RejoinInterval    time.Duration `env:"REJOIN_INTERVAL" env-default:"1s"`
 	RejoinMaxInterval time.Duration `env:"REJOIN_MAX_INTERVAL" env-default:"10s"`
 
-	// KubernetesAPITimeout bounds one Node list during bootstrap; on large
-	// NodeGroups a tight value turns a slow apiserver into a permanent
-	// bootstrap failure.
+
 	KubernetesAPITimeout time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"10s"`
 
 	APISocketPath          string `env:"API_SOCKET_PATH" env-default:"/var/run/fencing-agent/fencing-agent.sock"`
