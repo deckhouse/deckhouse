@@ -297,6 +297,8 @@ spec:
       - sourceLabels: [__meta_kubernetes_pod_ready]
         regex: "true"
         action: keep
+      - targetLabel: source
+        replacement: deckhouse
     {{- with $additionalRelabelings }}
       {{- toYaml . | nindent 6 }}
     {{- end }}

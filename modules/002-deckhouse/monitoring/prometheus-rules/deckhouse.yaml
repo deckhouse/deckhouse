@@ -166,6 +166,8 @@
         This alert often indicates that the Deckhouse Pod is experiencing connectivity issues with the Internet.
 
   - record: d8:deckhouse_queue_is_hung:with_head
+    labels:
+      source: deckhouse
     expr: |
       (max by (pod, instance, queue) (
         min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier|/modules/deckhouse/update_deckhouse_image"}[__SCRAPE_INTERVAL_X_3__])

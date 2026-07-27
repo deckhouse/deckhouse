@@ -52,7 +52,7 @@ properties:
       type: string
     x-examples:
     # fake *-crd modules are required for backward compatibility with lib_helm library TODO: remove fake crd modules
-    - [ "cert-manager", "vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "prometheus", "prometheus-crd", "operator-prometheus", "operator-prometheus" ]
+    - [ "cert-manager", "vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "prometheus", "prometheus-crd", "operator-prometheus", "operator-prometheus-crd" ]
     - [ "cert-manager", "prometheus" ]
   discovery:
     additionalProperties: true
