@@ -23,6 +23,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 /*
@@ -67,8 +69,14 @@ func checkKubernetesVersionMigration(_ context.Context, input *go_hook.HookInput
 
 	mcVersion := input.Values.Get("controlPlaneManager.kubernetesVersion").String()
 	ccVersion := rawClusterConfigurationVersion(input)
+	migrated := isKubernetesVersionMigrated(mcVersion, ccVersion)
 
-	if !isKubernetesVersionMigrated(mcVersion, ccVersion) {
+	// Publish for the T+2 DeckhouseRelease gate (requirements/check.go). Same predicate as the
+	// alert below — a divergence would either alert clusters that have nothing to migrate, or
+	// block their upgrade outright.
+	requirements.SaveValue(KubernetesVersionMigratedRequirementKey, migrated)
+
+	if !migrated {
 		input.MetricsCollector.Set(
 			obsoleteKubernetesVersionMetricName, 1,
 			map[string]string{},

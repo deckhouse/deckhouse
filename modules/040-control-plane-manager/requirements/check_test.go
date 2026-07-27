@@ -64,3 +64,42 @@ func TestAutoKubernetesVersionRequirement(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestKubernetesVersionMigratedRequirement(t *testing.T) {
+	t.Run("gate disarmed — empty requirement", func(t *testing.T) {
+		requirements.SaveValue(hooks.KubernetesVersionMigratedRequirementKey, false)
+		ok, err := requirements.CheckRequirement(kubernetesVersionMigratedRequirementsKey, "")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("gate disarmed — false requirement", func(t *testing.T) {
+		requirements.SaveValue(hooks.KubernetesVersionMigratedRequirementKey, false)
+		ok, err := requirements.CheckRequirement(kubernetesVersionMigratedRequirementsKey, "false")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("migrated — requirement met", func(t *testing.T) {
+		requirements.SaveValue(hooks.KubernetesVersionMigratedRequirementKey, true)
+		ok, err := requirements.CheckRequirement(kubernetesVersionMigratedRequirementsKey, "true")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("not migrated — requirement failed with migration command", func(t *testing.T) {
+		requirements.SaveValue(hooks.KubernetesVersionMigratedRequirementKey, false)
+		ok, err := requirements.CheckRequirement(kubernetesVersionMigratedRequirementsKey, "true")
+		assert.False(t, ok)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "d8 k patch moduleconfig control-plane-manager")
+		assert.Contains(t, err.Error(), "d8 system edit cluster-configuration")
+	})
+
+	t.Run("value not published yet — fail open", func(t *testing.T) {
+		requirements.RemoveValue(hooks.KubernetesVersionMigratedRequirementKey)
+		ok, err := requirements.CheckRequirement(kubernetesVersionMigratedRequirementsKey, "true")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+}

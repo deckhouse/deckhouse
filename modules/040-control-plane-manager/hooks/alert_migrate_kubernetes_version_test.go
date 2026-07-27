@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -72,6 +73,11 @@ data:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(metricIsSet()).To(Equal(expectSet))
+
+			// Same predicate feeds the T+2 release gate; keep alert and requirement in lockstep.
+			migrated, exists := requirements.GetValue(KubernetesVersionMigratedRequirementKey)
+			Expect(exists).To(BeTrue())
+			Expect(migrated.(bool)).To(Equal(!expectSet))
 		},
 		// Nothing migrated yet: ClusterConfiguration still drives the version.
 		Entry("CC pins a version, MC unset — fires", "1.34", "", true),
@@ -96,6 +102,10 @@ data:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(metricIsSet()).To(BeFalse())
+
+			migrated, exists := requirements.GetValue(KubernetesVersionMigratedRequirementKey)
+			Expect(exists).To(BeTrue())
+			Expect(migrated.(bool)).To(BeTrue())
 		})
 	})
 })

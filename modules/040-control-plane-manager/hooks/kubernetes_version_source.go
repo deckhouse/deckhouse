@@ -30,6 +30,14 @@ import (
 // kube-system/d8-cluster-configuration Secret when it needs the raw, unresolved kubernetesVersion.
 const clusterConfigurationSecretSnapshot = "cluster_configuration_secret"
 
+// KubernetesVersionMigratedRequirementKey is the requirements.SaveValue key that records whether
+// kubernetesVersion no longer depends on the deprecated ClusterConfiguration field.
+//
+// Published by the migration alert hook starting at T+0 so that a DeckhouseRelease at T+2 can
+// gate on RegisterCheck("kubernetesVersionMigrated") — the installed Deckhouse evaluates the
+// candidate release, so the value must already be present before the requirement appears.
+const KubernetesVersionMigratedRequirementKey = "controlPlaneManager:kubernetesVersionMigrated"
+
 // rawClusterConfiguration captures only the raw (possibly literal "Automatic") kubernetesVersion
 // field from the embedded ClusterConfiguration YAML — unlike
 // global.clusterConfiguration.kubernetesVersion in Values, which the global discovery hook has
@@ -90,9 +98,12 @@ func isPinnedKubernetesVersion(version string) bool {
 // does not pin it either, so resolution lands on the Deckhouse default both before and after.
 //
 // Two consumers must agree on this predicate: the migration reminder alert
-// (alert_migrate_kubernetes_version.go) and the release requirement that will gate the upgrade
-// removing the field. Keep it in one place — a divergence would either alert clusters that have
-// nothing to migrate, or block their upgrade outright.
+// (alert_migrate_kubernetes_version.go), which also publishes it via
+// requirements.SaveValue(KubernetesVersionMigratedRequirementKey), and the release
+// requirement that will gate the upgrade removing the field
+// (requirements.RegisterCheck("kubernetesVersionMigrated")). Keep it in one place —
+// a divergence would either alert clusters that have nothing to migrate, or block
+// their upgrade outright.
 func isKubernetesVersionMigrated(mcVersion, ccVersion string) bool {
 	return isPinnedKubernetesVersion(mcVersion) || !isPinnedKubernetesVersion(ccVersion)
 }
