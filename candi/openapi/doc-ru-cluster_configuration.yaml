@@ -63,10 +63,11 @@ apiVersions:
       defaultCRI:
         x-doc-deprecated: true
         description: |
-          **Устарело.** Используйте `defaultCRI` в ModuleConfig `node-manager`.
-          Если поле задано в ModuleConfig и отличается от значения по умолчанию, оно имеет приоритет над этим полем.
-
           Тип container runtime, используемый на узлах кластера (в NodeGroup'ах) по умолчанию.
+
+          **Устарел.** Используйте `defaultCRI` в ModuleConfig `node-manager`.
+
+          Если поле задано в ModuleConfig и отличается от значения по умолчанию, оно имеет приоритет над этим полем.
 
           Если используется значение `NotManaged`, то Deckhouse не будет управлять (устанавливать и настраивать) container runtime.
           В этом случае образы, используемые в NodeGroup'ах, должны содержать уже установленный container runtime.
@@ -88,7 +89,7 @@ apiVersions:
       encryptionAlgorithm:
         description: |
           **Устарело.** Используйте `encryptionAlgorithm` в ModuleConfig `control-plane-manager`.
-          
+
           Если поле задано в ModuleConfig, оно имеет приоритет над этим полем.
 
           Начиная с версии **1.31**, kubeadm использует указанный алгоритм асимметричного
