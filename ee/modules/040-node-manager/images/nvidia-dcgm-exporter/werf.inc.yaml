@@ -4,6 +4,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+fromCacheVersion: "2026-07-07"
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -24,6 +25,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
 fromImage: {{ .ModuleName }}/builder-cuda
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -69,6 +71,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /ldconf

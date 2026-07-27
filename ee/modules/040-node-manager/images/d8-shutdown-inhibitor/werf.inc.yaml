@@ -2,6 +2,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+fromCacheVersion: "2026-07-07"
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
@@ -19,6 +20,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/scratch" }}
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -41,6 +43,7 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/golang-alpine" }}
+fromCacheVersion: "2026-07-07"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
