@@ -361,7 +361,16 @@ func (r *renderer) falcoAuditRules(uids v1alpha2.IDRange, hasUIDs bool, gids v1a
 	if hasGIDs {
 		fmt.Fprintf(&cond, " and group.gid >= %d and group.gid <= %d", gids.Min, gids.Max)
 	}
-	fmt.Fprintf(&cond, " and k8s.ns.name=%s", r.name)
+	// Unlike SecurityPolicy and OperationPolicy, which reach every namespace of the project through
+	// a label selector, a Falco rule can only name namespaces: the drift detection would otherwise
+	// watch the main namespace and silently ignore the additional ones. Single-namespace projects
+	// keep the plain equality form, both for readability and to stay byte-identical to the legacy
+	// resourcesTemplate rendering.
+	if len(r.namespaces) > 1 {
+		fmt.Fprintf(&cond, " and k8s.ns.name in (%s)", strings.Join(r.namespaces, ", "))
+	} else {
+		fmt.Fprintf(&cond, " and k8s.ns.name=%s", r.name)
+	}
 
 	const desc = "Detect if an executable not belonging to the base image of a container is being executed. " +
 		"The drop and execute pattern can be observed very often after an attacker gained an initial foothold. " +
