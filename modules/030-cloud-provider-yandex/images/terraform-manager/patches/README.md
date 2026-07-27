@@ -2,4 +2,4 @@
 
 ## 001-go-mod.patch
 
-bump_packages_version.patch - bump packages version for fix cve
+Bump go.mod dependencies to fix known CVEs.

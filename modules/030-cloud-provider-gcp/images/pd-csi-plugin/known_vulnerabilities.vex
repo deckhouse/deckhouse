@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-20f50ba23ae7130fbdeef329a35e4daa6e7732a99031c07bc13eb8473d6e147b",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp небезопасен по дизайну и не рекомендуется к использованию. Образ gcp pd-csi-plugin не использует и не вызывает функциональность OpenPGP — данный код недостижим в артефакте, поэтому уязвимость не эксплуатируется.",
+      "timestamp": "2026-07-24T09:07:47.427596Z"
+    }
+  ],
+  "timestamp": "2026-07-24T09:07:47Z"
+}
