@@ -42,8 +42,8 @@ import (
 )
 
 const (
-	deckhouseClusterConfigurationConfig = "d8-cluster-configuration"
-	k8sAutomaticVersion                 = "Automatic"
+	deckhouseClusterKubernetesConfigMap = "d8-cluster-kubernetes"
+	k8sAutomaticUpdateMode              = "Automatic"
 	reqCheckerServiceName               = "requirements-checker"
 	MigratedModulesRequirementFieldName = "migratedModules"
 )
@@ -222,35 +222,38 @@ func (c *kubernetesVersionCheck) Verify(_ context.Context, dr *v1alpha1.Deckhous
 }
 
 func (c *kubernetesVersionCheck) isKubernetesVersionAutomatic() bool {
-	return c.clusterKubernetesVersion == k8sAutomaticVersion
+	return c.clusterKubernetesVersion == k8sAutomaticUpdateMode
 }
 
-type clusterConf struct {
-	KubernetesVersion string `json:"kubernetesVersion"`
+type clusterKubernetesSpec struct {
+	UpdateMode string `json:"updateMode"`
 }
 
+// initClusterKubernetesVersion reads updateMode from ConfigMap kube-system/d8-cluster-kubernetes.
+// That ConfigMap is written by control-plane-manager's sync_desired_kubernetes_version hook from
+// global.discovery.kubernetesVersionIsAutomatic — Values are not visible to deckhouse-controller.
 func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Context) error {
-	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterConfigurationConfig}
-	secret := new(corev1.Secret)
-	if err := c.k8sclient.Get(ctx, key, secret); err != nil {
-		// the secret does not exist in managed cluster
+	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterKubernetesConfigMap}
+	cm := new(corev1.ConfigMap)
+	if err := c.k8sclient.Get(ctx, key, cm); err != nil {
+		// the ConfigMap does not exist yet (or on managed clusters without control-plane-manager)
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to get the 'd8-cluster-configuration' secret: %w", err)
+		return fmt.Errorf("failed to get the %q ConfigMap: %w", deckhouseClusterKubernetesConfigMap, err)
 	}
 
-	clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		return fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
+	specRaw, ok := cm.Data["spec"]
+	if !ok || specRaw == "" {
+		return nil
 	}
 
-	conf := new(clusterConf)
-	if err := yaml.Unmarshal(clusterConfigurationRaw, conf); err != nil {
-		return fmt.Errorf("failed to unmarshal cluster configuration: %w", err)
+	spec := new(clusterKubernetesSpec)
+	if err := yaml.Unmarshal([]byte(specRaw), spec); err != nil {
+		return fmt.Errorf("failed to unmarshal %q ConfigMap spec: %w", deckhouseClusterKubernetesConfigMap, err)
 	}
 
-	c.clusterKubernetesVersion = conf.KubernetesVersion
+	c.clusterKubernetesVersion = spec.UpdateMode
 
 	return nil
 }

@@ -18,6 +18,10 @@ package hooks
 
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
@@ -26,15 +30,30 @@ import (
 // kube-system/d8-cluster-configuration Secret when it needs the raw, unresolved kubernetesVersion.
 const clusterConfigurationSecretSnapshot = "cluster_configuration_secret"
 
-// resolveDeclaredKubernetesVersion returns the operator-declared kubernetesVersion,
-// preferring the ModuleConfig control-plane-manager setting over ClusterConfiguration
-// when the ModuleConfig value is set and not "Automatic".
-func resolveDeclaredKubernetesVersion(input *go_hook.HookInput) string {
-	mcVersion := input.Values.Get("controlPlaneManager.kubernetesVersion").String()
-	if mcVersion != "" && mcVersion != "Automatic" {
-		return mcVersion
+// rawClusterConfiguration captures only the raw (possibly literal "Automatic") kubernetesVersion
+// field from the embedded ClusterConfiguration YAML — unlike
+// global.clusterConfiguration.kubernetesVersion in Values, which the global discovery hook has
+// already resolved to a concrete version by the time module hooks run.
+type rawClusterConfiguration struct {
+	KubernetesVersion string `json:"kubernetesVersion"`
+}
+
+// sdkvFilterRawClusterConfigurationVersion returns the unresolved kubernetesVersion from the
+// d8-cluster-configuration Secret. Shared by the migration alert (and any future requirement that
+// needs the literal "Automatic").
+func sdkvFilterRawClusterConfigurationVersion(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var secret corev1.Secret
+	if err := sdk.FromUnstructured(unstructured, &secret); err != nil {
+		return nil, err
 	}
-	return input.Values.Get("global.clusterConfiguration.kubernetesVersion").String()
+
+	var cc rawClusterConfiguration
+	if err := yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], &cc); err != nil {
+		// Malformed/absent ClusterConfiguration is unrelated — ignore.
+		return "", nil
+	}
+
+	return cc.KubernetesVersion, nil
 }
 
 // rawClusterConfigurationVersion returns the unresolved kubernetesVersion captured from the

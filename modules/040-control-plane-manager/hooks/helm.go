@@ -22,7 +22,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -35,15 +34,10 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/golang/protobuf/proto" // nolint: staticcheck
 	"helm.sh/helm/v3/pkg/releaseutil"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -137,53 +131,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "0 * * * *", // every hour
 		},
 	},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:              "kubernetesVersion",
-			ApiVersion:        "v1",
-			Kind:              "Secret",
-			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
-			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
-			FilterFunc:        applyClusterConfigurationYamlFilter,
-		},
-	},
-	// we don't need the startup hook, because this hook will start on synchronization
+	// kubernetesVersionIsAutomatic comes from global Values — no Secret binding needed.
 }, dependency.WithExternalDependencies(handleHelmReleases))
-
-func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, err
-	}
-
-	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
-	}
-
-	kubernetesVersion, err := getKubernetesVersion(ccYaml)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetesVersion, err
-}
-
-func getKubernetesVersion(data []byte) (string, error) {
-	if err := validation.ValidateData([]string{}, &data); err != nil {
-		if !errors.Is(err, validation.ErrSchemaNotFound) {
-			return "", err
-		}
-	}
-	var cfg struct {
-		KubernetesVersion string `yaml:"kubernetesVersion"`
-	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return "", fmt.Errorf("unmarshal YAML: %w", err)
-	}
-	return cfg.KubernetesVersion, nil
-}
 
 func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
@@ -195,18 +144,8 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
-	var isAutomaticK8s bool
-	var kubernetesVersion string
-	kubernetesVersionSnapshots := input.Snapshots.Get("kubernetesVersion")
-	if len(kubernetesVersionSnapshots) > 0 {
-		err := kubernetesVersionSnapshots[0].UnmarshalTo(&kubernetesVersion)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal 'kubernetesVersion': %w", err)
-		}
-	}
-
-	if kubernetesVersion == "Automatic" {
-		isAutomaticK8s = true
+	isAutomaticK8s := input.Values.Get("global.discovery.kubernetesVersionIsAutomatic").Bool()
+	if isAutomaticK8s {
 		requirements.SaveValue(K8sVersionsWithDeprecations, "initial")
 	}
 

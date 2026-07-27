@@ -21,16 +21,27 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
+)
+
+const (
+	controlPlaneManagerModuleConfigSnapshot = "controlPlaneManagerModuleConfig"
+	clusterKubernetesConfigMapSnapshot      = "clusterKubernetesConfigMap"
+
+	defaultVersionDriftMetricGroup = "D8ControlPlaneDefaultVersionDrift"
+	defaultVersionDriftMetricName  = "d8_control_plane_default_version_drift"
 )
 
 type ClusterConfigurationYaml struct {
@@ -56,6 +67,33 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	return cc, nil
 }
 
+// applyControlPlaneManagerKubernetesVersionFilter returns the raw kubernetesVersion from
+// ModuleConfig/control-plane-manager settings, or "" when unset.
+func applyControlPlaneManagerKubernetesVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	version, _, err := unstructured.NestedString(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
+	if err != nil {
+		return "", fmt.Errorf("nested string kubernetesVersion: %w", err)
+	}
+	return version, nil
+}
+
+// applyClusterKubernetesCurrentVersionFilter returns status.currentVersion from
+// ConfigMap kube-system/d8-cluster-kubernetes (update-observer bookkeeping), or "" when absent.
+func applyClusterKubernetesCurrentVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	cm := &v1.ConfigMap{}
+	if err := sdk.FromUnstructured(obj, cm); err != nil {
+		return "", fmt.Errorf("from unstructured: %w", err)
+	}
+
+	var status struct {
+		CurrentVersion string `json:"currentVersion"`
+	}
+	if err := yaml.Unmarshal([]byte(cm.Data["status"]), &status); err != nil {
+		return "", nil
+	}
+	return status.CurrentVersion, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -66,10 +104,41 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
 			FilterFunc:        applyClusterConfigurationYamlFilter,
 		},
+		{
+			// Events on this ModuleConfig must re-run the hook immediately so targetKubernetesVersion
+			// updates as soon as an operator patches kubernetesVersion — do not set ExecuteHookOnEvents: false
+			// (unlike enable_cni.go, which only needs a one-shot read).
+			Name:       controlPlaneManagerModuleConfigSnapshot,
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ModuleConfig",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"control-plane-manager"},
+			},
+			FilterFunc: applyControlPlaneManagerKubernetesVersionFilter,
+		},
+		{
+			Name:       clusterKubernetesConfigMapSnapshot,
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}},
+			},
+			NameSelector: &types.NameSelector{MatchNames: []string{"d8-cluster-kubernetes"}},
+			FilterFunc:   applyClusterKubernetesCurrentVersionFilter,
+		},
 	},
 }, clusterConfiguration)
 
 func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire(defaultVersionDriftMetricGroup)
+
+	mcVersion := ""
+	if mcSnaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, controlPlaneManagerModuleConfigSnapshot); err == nil && len(mcSnaps) > 0 {
+		mcVersion = mcSnaps[0]
+	}
+
+	ccRawVersion := ""
+
 	currentConfig, err := sdkobjectpatch.UnmarshalToStruct[ClusterConfigurationYaml](input.Snapshots, "clusterConfiguration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
@@ -98,7 +167,11 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		if err != nil {
 			return err
 		}
+		ccRawVersion = kubernetesVersionFromMetaConfig
 
+		// Keep substituting Automatic → Default into global.clusterConfiguration for backward
+		// compatibility during the ClusterConfiguration.kubernetesVersion deprecation window.
+		// Declared target lives in global.discovery.targetKubernetesVersion instead.
 		if kubernetesVersionFromMetaConfig == "Automatic" {
 			b, _ := json.Marshal(hooks.DefaultKubernetesVersion)
 			metaConfig.ClusterConfig["kubernetesVersion"] = b
@@ -130,7 +203,59 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
+	target, isAutomatic := resolveTargetKubernetesVersion(mcVersion, ccRawVersion, hooks.DefaultKubernetesVersion)
+	input.Values.Set("global.discovery.targetKubernetesVersion", target)
+	input.Values.Set("global.discovery.kubernetesVersionIsAutomatic", isAutomatic)
+
+	// Soft drift signal only: always publish the honest target above. In Automatic mode, if that
+	// target sits more than one minor below the running control plane, raise an alert — do not
+	// suppress the value (effective_kubernetes_version / get_crds throttle the actual rollout).
+	if isAutomatic {
+		currentVersion := ""
+		if cmSnaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, clusterKubernetesConfigMapSnapshot); err == nil && len(cmSnaps) > 0 {
+			currentVersion = cmSnaps[0]
+		}
+		if currentVersion != "" {
+			if drifted, err := isMoreThanOneMinorBelow(target, currentVersion); err == nil && drifted {
+				input.MetricsCollector.Set(defaultVersionDriftMetricName, 1, map[string]string{}, metrics.WithGroup(defaultVersionDriftMetricGroup))
+			}
+		}
+	}
+
 	return nil
+}
+
+// resolveTargetKubernetesVersion returns the operator-declared Kubernetes version and whether the
+// cluster is in Automatic mode (nowhere pinned). Preference: pinned ModuleConfig → pinned
+// ClusterConfiguration → Deckhouse default.
+func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string) (string, bool) {
+	if isPinnedKubernetesVersion(mcVersion) {
+		return mcVersion, false
+	}
+	if isPinnedKubernetesVersion(ccVersion) {
+		return ccVersion, false
+	}
+	return defaultVersion, true
+}
+
+func isPinnedKubernetesVersion(version string) bool {
+	return version != "" && version != "Automatic"
+}
+
+// isMoreThanOneMinorBelow reports whether candidate is more than 1 minor version below current.
+func isMoreThanOneMinorBelow(candidate, current string) (bool, error) {
+	candidateV, err := semver.NewVersion(candidate)
+	if err != nil {
+		return false, err
+	}
+	currentV, err := semver.NewVersion(current)
+	if err != nil {
+		return false, err
+	}
+	if candidateV.Major() != currentV.Major() {
+		return candidateV.Major() < currentV.Major(), nil
+	}
+	return candidateV.Minor() < currentV.Minor()-1, nil
 }
 
 func maxNodesAmountMetric(input *go_hook.HookInput, podSubnetCIDR json.RawMessage, podSubnetNodeCIDRPrefix json.RawMessage) error {

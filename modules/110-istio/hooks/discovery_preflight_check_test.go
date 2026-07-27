@@ -17,31 +17,12 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
-	"encoding/base64"
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-const clusterConfigurationYaml = `---
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-kubernetesVersion: "%s"
-podSubnetCIDR: "10.111.0.0/16"
-podSubnetNodeCIDRPrefix: "24"
-serviceSubnetCIDR: "10.222.0.0/16"
-cloud:
-  provider: OpenStack
-`
 
 var _ = Describe("Istio hooks :: discovery_preflight_check ::", func() {
 	initValues := `
@@ -52,18 +33,10 @@ istio:
 `
 	f := HookExecutionConfigInit(initValues, "")
 
-	Context("Cluster configuration secret with Automatic kubernetesVersion", func() {
+	Context("kubernetesVersionIsAutomatic is true", func() {
 		BeforeEach(func() {
-			ccYaml := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(clusterConfigurationYaml, "Automatic")))
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  cluster-configuration.yaml: ` + ccYaml))
+			f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -82,18 +55,10 @@ data:
 		})
 	})
 
-	Context("Cluster configuration secret with fixed kubernetesVersion", func() {
+	Context("kubernetesVersionIsAutomatic is false", func() {
 		BeforeEach(func() {
-			ccYaml := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(clusterConfigurationYaml, "1.32")))
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  cluster-configuration.yaml: ` + ccYaml))
+			f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", false)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -106,48 +71,13 @@ data:
 		})
 	})
 
-	Context("Cluster configuration secret is read directly when snapshot is empty", func() {
+	Context("kubernetesVersionIsAutomatic is unset", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-
-			secret := &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      clusterConfigurationSecretName,
-					Namespace: clusterConfigurationSecretNamespace,
-				},
-				Data: map[string][]byte{
-					"cluster-configuration.yaml": []byte(fmt.Sprintf(clusterConfigurationYaml, "Automatic")),
-				},
-			}
-			_, err := dependency.TestDC.MustGetK8sClient().
-				CoreV1().
-				Secrets(clusterConfigurationSecretNamespace).
-				Create(context.TODO(), secret, metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
-		It("Should detect Automatic from secret instead of global discovery", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			isAutomatic, exists := requirements.GetValue(isK8sVersionAutomaticKey)
-			Expect(exists).To(BeTrue())
-			Expect(isAutomatic).To(BeEquivalentTo(true))
-		})
-	})
-
-	Context("No cluster configuration secret", func() {
-		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.RunHook()
-		})
-
-		It("Should fallback to global discovery kubernetes version", func() {
+		It("Should treat missing flag as not automatic", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			isAutomatic, exists := requirements.GetValue(isK8sVersionAutomaticKey)

@@ -172,9 +172,8 @@ def get_cluster_configuration_secret_data(ctx: DotMap):
 
 
 def resolve_effective_version(mc_kubernetes_version: Optional[str], ctx: DotMap) -> Optional[str]:
-    # Mirrors resolveDeclaredKubernetesVersion in
-    # modules/040-control-plane-manager/hooks/kubernetes_version_source.go: the ModuleConfig
-    # setting wins when present and not "Automatic", otherwise fall back to ClusterConfiguration.
+    # Mirrors global-hooks/discovery/cluster_configuration.go resolveTargetKubernetesVersion:
+    # ModuleConfig wins when pinned, otherwise fall back to ClusterConfiguration.
     if mc_kubernetes_version and mc_kubernetes_version != "Automatic":
         return mc_kubernetes_version
 

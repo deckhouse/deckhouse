@@ -154,6 +154,21 @@ properties:
         description: |
           Effective (minimal from each control plane node) k8s version
         x-examples: [ "1.34.2" ]
+      targetKubernetesVersion:
+        type: string
+        description: |
+          Operator-declared target Kubernetes version: ModuleConfig control-plane-manager
+          kubernetesVersion if pinned, else ClusterConfiguration.kubernetesVersion if pinned,
+          else the Deckhouse default. This is the declared goal, not the effective (throttled)
+          version control-plane-manager and node-manager converge to.
+        x-examples: [ "1.35", "1.34" ]
+      kubernetesVersionIsAutomatic:
+        type: boolean
+        default: false
+        description: |
+          True when kubernetesVersion is not pinned in ModuleConfig control-plane-manager nor in
+          ClusterConfiguration — the cluster tracks the Deckhouse default.
+        x-examples: [ true, false ]
       extensionAPIServerAuthenticationRequestheaderClientCA:
         type: string
         description: |
