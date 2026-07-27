@@ -100,6 +100,26 @@ BYPASS_GROUPS = {
 BINDING_EDIT = "rbacv2-system-resource-edit.deckhouse.io"
 BINDING_EXEC = "rbacv2-system-resource-exec.deckhouse.io"
 
+# The same bypass as BYPASS_GROUPS, expressed for the apiserver instead of the hook body. Both
+# webhooks are fail-closed, and the exec one matches CONNECT on every pod in the cluster: the target
+# pod's marker lives on the Pod, while the reviewed object is a PodExecOptions, so no CEL expression
+# can pre-filter it the way `only-marked-objects` filters the edit webhook. With the bypass evaluated
+# only inside the hook, an unavailable webhook-handler would block exec cluster-wide — including exec
+# into the webhook-handler pod needed to diagnose it. Evaluating it in matchConditions keeps
+# break-glass access (system:masters) and the kubelet working regardless of handler health, and keeps
+# node and system traffic off the handler entirely. The hook keeps its own check: matchConditions are
+# a pre-filter, not the authority.
+# One condition per group rather than a single exists() over a list literal: the plain `in` membership
+# test is the form the Kubernetes admission documentation guarantees, and a CEL expression that fails
+# to compile invalidates the whole ValidatingWebhookConfiguration (see the `only-marked-objects` note
+# below). The apiserver always populates userInfo.groups for both authenticated and anonymous
+# requests, so the access needs no guard.
+_EXCLUDE_BYPASS_GROUPS = "\n".join(
+    f"""  - name: exclude-group-{group.replace(":", "-")}
+    expression: '!("{group}" in request.userInfo.groups)'"""
+    for group in sorted(BYPASS_GROUPS)
+)
+
 # Superadmin status and the exec target pod are resolved with on-demand LIVE reads — no informers and
 # no snapshots. The protected events are rare (a non-superadmin editing a system-labeled object, or
 # exec into a system pod), so a live read per event is cheap, keeps the webhook-handler free of any
@@ -134,6 +154,7 @@ kubernetesValidating:
     expression: '"system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username'
   - name: exclude-multitenancy-manager
     expression: '"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" != request.userInfo.username'
+{_EXCLUDE_BYPASS_GROUPS}
   # Only forward requests for objects that actually carry the markings, so the (intentionally broad)
   # rule below does not put every namespaced UPDATE/DELETE through the hook. Guarded with has()/in to
   # never error (which would otherwise fail the request under a Fail matchConditions policy).
@@ -164,6 +185,7 @@ kubernetesValidating:
     expression: '"system:apiserver" != request.userInfo.username'
   - name: exclude-deckhouse
     expression: '"system:serviceaccount:d8-system:deckhouse" != request.userInfo.username'
+{_EXCLUDE_BYPASS_GROUPS}
   rules:
   - apiGroups:   [""]
     apiVersions: ["*"]

@@ -266,5 +266,20 @@ class TestSystemResourceExec(unittest.TestCase):
         tests.assert_validation_allowed(self, out, None)
 
 
+class TestWebhookConfig(unittest.TestCase):
+    """Both webhooks are fail-closed and the exec one matches every pod in the cluster, so the
+    break-glass bypass has to be evaluated by the apiserver: an unavailable webhook-handler must not
+    be able to block exec for cluster-admins trying to diagnose it."""
+
+    def test_bypass_groups_are_excluded_by_match_conditions(self):
+        for webhook in system_resources.CONFIG.split("- name: rbacv2-")[1:]:
+            for group in system_resources.BYPASS_GROUPS:
+                self.assertIn(
+                    f'!("{group}" in request.userInfo.groups)',
+                    webhook,
+                    f"{group} must be filtered out before the request reaches the handler",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
