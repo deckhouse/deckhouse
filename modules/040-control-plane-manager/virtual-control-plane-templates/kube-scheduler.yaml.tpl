@@ -41,7 +41,7 @@ spec:
       volumes:
       - name: pki
         secret:
-          secretName: d8-pki-virtual
+          secretName: ${PKI_SECRET_NAME}
       - name: kubeconfig
         secret:
-          secretName: d8-kubeconfig-virtual
+          secretName: ${KUBECONFIG_SECRET_NAME}

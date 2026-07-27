@@ -100,7 +100,8 @@ spec:
         && (
           request.userInfo.username == "system:serviceaccount:kube-system:namespace-controller"
           || (
-            request.resource.resource == "controlplaneoperations"
+            (request.resource.resource == "controlplaneoperations"
+              || request.resource.resource == "controlplanenodes")
             && (
               request.userInfo.username == "system:kube-controller-manager"
               || request.userInfo.username == "system:serviceaccount:kube-system:generic-garbage-collector"

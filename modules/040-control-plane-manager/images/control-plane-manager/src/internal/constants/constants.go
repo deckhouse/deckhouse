@@ -17,6 +17,7 @@ limitations under the License.
 package constants
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -43,12 +44,17 @@ const (
 	VirtualConfigurationController            = "virtual-control-plane-configuration-controller"
 	VirtualControlPlaneNodeController         = "virtual-control-plane-node-controller"
 	VirtualControlPlaneApproverControllerName = "virtual_control_plane_approver_controller"
-	VirtualControlPlaneNamespacePrefix        = "vcp-"
 	VirtualControlPlaneConfigSecretName       = "d8-virtual-control-plane-config"
 	VirtualRenderedConfigSecretName           = "d8-vcp-config-virtual"
 	VirtualPKISecretName                      = "d8-pki-virtual"
 	VirtualKubeconfigSecretName               = "d8-kubeconfig-virtual"
 	VirtualAdminKubeconfigSecretName          = "d8-admin-kubeconfig-virtual"
+	VirtualAPIServerServiceName               = "kube-apiserver"
+	VirtualKonnectivityEgressConfigMapName    = "konnectivity-egress"
+	VirtualKonnectivityServerServiceName      = "konnectivity-server"
+	VirtualKonnectivityAgentCPSecretName      = "konnectivity-agent-cp"
+	VirtualDatastoreName                      = "d8-datastore-virtual"
+	VirtualDatastoreCredsSecretName           = "d8-datastore-creds-virtual"
 	VirtualControlPlaneNodeOrdinalLabelKey    = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
 	VirtualControlPlaneScopeLabelKey          = "control-plane.deckhouse.io/virtual-control-plane"
 	VirtualJoinScriptSecretName               = "d8-vcp-join-script"
@@ -58,8 +64,8 @@ const (
 	// DefaultTenantPodSubnetCIDR must stay in sync with cluster-pool-ipv4-cidr in cilium-vcp.yaml.tpl.
 	DefaultTenantPodSubnetCIDR = "10.244.0.0/16"
 	// DefaultTenantClusterDNS is the 10th address of DefaultTenantServiceSubnetCIDR.
-	DefaultTenantClusterDNS = "10.96.0.10"
-	VirtualExposeDomainSuffix                 = "vcp.local"
+	DefaultTenantClusterDNS   = "10.96.0.10"
+	VirtualExposeDomainSuffix = "vcp.local"
 
 	RegistryPackagesProxyPort          int32 = 4219
 	RegistryPackagesProxyBootstrapPort int32 = 4282
@@ -148,4 +154,13 @@ func SignatureEnabled() bool {
 // ToRelativePath returns path without leading slash for using in tmp directory sync
 func ToRelativePath(absolutePath string) string {
 	return strings.TrimPrefix(absolutePath, "/")
+}
+
+// VirtualResourceName returns a per-VCP unique object name so multiple VirtualControlPlanes
+// can coexist in one Namespace without colliding on hardcoded resource names.
+func VirtualResourceName(base, vcpName string) string {
+	if vcpName == "" {
+		return base
+	}
+	return fmt.Sprintf("%s-%s", base, vcpName)
 }
