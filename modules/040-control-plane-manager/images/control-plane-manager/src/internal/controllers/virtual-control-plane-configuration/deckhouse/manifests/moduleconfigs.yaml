@@ -8,3 +8,12 @@ spec:
   version: 1
   settings:
     bundle: Minimal
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: kube-dns
+  labels:
+    heritage: deckhouse
+spec:
+  enabled: true

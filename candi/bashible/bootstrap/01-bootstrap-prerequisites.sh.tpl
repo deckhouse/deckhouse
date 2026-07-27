@@ -25,7 +25,13 @@ set -Eeo pipefail
 {{ template "bb-discover-node-name" $ }}` $lib) $ctx }}
 export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="{{ .clusterUUID | default "" }}"
 export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="{{ .clusterMasterRPPBootstrapAddresses | join " " }}"
-{{ if gt (len .clusterMasterKubeAPIEndpoints) 0 }}
+{{- /* direct: reach registry-packages-proxy straight over its addresses+token, bypassing the
+  kube-apiserver-proxy discovery path. Required for nested cluster whose RPP lives in the parent behind an LB
+  when RPP is not an in-cluster pod reachable */}}
+{{ if get $packagesProxy "direct" }}
+export PACKAGES_PROXY_TOKEN="{{ get $packagesProxy "token" | default "passthrough" }}"
+export PACKAGES_PROXY_ADDRESSES="{{ .clusterMasterRPPAddresses | join "," }}"
+{{ else if gt (len .clusterMasterKubeAPIEndpoints) 0 }}
 export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="{{ .clusterMasterKubeAPIEndpoints | join "," }}"
 {{ else }}
 export PACKAGES_PROXY_TOKEN="{{ get $packagesProxy "token" | default "passthrough" }}"
