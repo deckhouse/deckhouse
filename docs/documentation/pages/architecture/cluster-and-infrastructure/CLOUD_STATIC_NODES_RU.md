@@ -31,16 +31,40 @@ Bashible — это ключевой компонент подсистемы Clu
 
 1. **Bashible-api-server** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), развернутый на master-узлах. Генерирует bashible-скрипты из шаблонов, хранящихся в кастомных ресурсах. При обращении к kube-apiserver за ресурсами, содержащими бандлы bashible, kube-apiserver перенаправляет запрос в bashible-api-server и возвращает сформированный результат. Подробнее с описанием работы bashible и bashible-api-server можно ознакомиться в [соответствующем разделе документации](bashible.html).
 
-2. **Capi-controller-manager** (Deployment) — основные контроллеры из проекта [Kubernetes Cluster API](https://github.com/kubernetes-sigs/cluster-api). Cluster API является расширением Kubernetes, которое дает возможность управлять кластерами как кастомными ресурсами внутри другого Kubernetes-кластера. Под capi-controller-manager состоит из следующих контейнеров:
+1. **Node-controller** (Deployment) — контроллер, управляющий жизненным циклом кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup). Node-controller выполняет следующие операции:
+   
+   * управляет жизненным циклом кастомного ресурса [NodeGroup](/modules/node-manager/cr.html#nodegroup);
+   * реализует вебхуки для валидации кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) через механику [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/);
+   * реализует вебхуки для конверсии кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [Instance](/modules/node-manager/cr.html#instance);
+   * выполняет очистку лейблов и тейнтов ресурса Node, которые остаются после первого запуска [bashible](bashible.html) для инициализации узла;
+   * обеспечивает перевод узла кластера [в режим обслуживания (draining a node)](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/);
+   * применяет лейблы, тейнты и аннотации из секции [`spec.nodeTemplate`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate) кастомного ресурса NodeGroup ко всем принадлежащим к нему ресурсам Node;
+   * вычисляет и обновляет субресурс `status` кастомных ресурсов NodeGroup на основании агрегированной информации, полученной из соответствующих ресурсов Node и инфраструктурных кастомныех ресурсов;
+   * устанавливает атрибут `spec.providerID = "static://"` для ресурсов Node типа Static при его отсутствии;
+   * управляет жизненным циклом обновления узлов: одобрение обновления, обработка прерываний в работе узлов, перевод узла кластера [в режим обслуживания (draining a node)](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/) и очистка после успешного обновления.
+   
+   Под node-controller состоит из следующих контейнеров:
+
+   * **node-controller** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
+
+1. **Node-group-exporter** (Deployment) — компонент, экспортирующий метрики ресурса NodeGroup в формате Prometheus, содержащие информацию о количестве узлов в каждой группе узлов: общее количество, количество узлов в статусе `Ready`, количество узлов в ошибке, минимальное и максимальное количество узлов в группе и т.д.
+
+   Под node-group-exporter состоит из следующих контейнеров:
+
+   * **node-group-exporter** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам экспортера.
+
+1. **Capi-controller-manager** (Deployment) — основные контроллеры из проекта [Kubernetes Cluster API](https://github.com/kubernetes-sigs/cluster-api). Cluster API является расширением Kubernetes, которое дает возможность управлять кластерами как кастомными ресурсами внутри другого Kubernetes-кластера. Под capi-controller-manager состоит из следующих контейнеров:
 
    * **control-plane-manager** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
 
-3. **Caps-controller-manager** (Deployment) — CAPI Provider Static (CAPS), реализация провайдера декларативного управления статическими узлами (серверами bare metal или виртуальными машинами) для проекта [Cluster API Kubernetes](https://github.com/kubernetes-sigs/cluster-api). Работает как дополнение к capi-controller-manager.
+1. **Caps-controller-manager** (Deployment) — CAPI Provider Static (CAPS), реализация провайдера декларативного управления статическими узлами (серверами bare metal или виртуальными машинами) для проекта [Cluster API Kubernetes](https://github.com/kubernetes-sigs/cluster-api). Работает как дополнение к capi-controller-manager.
 
    CAPS представляет собой дополнительный слой абстракции над существующим функционалом DKP по автоматической настройке и очистке статических узлов с помощью скриптов, генерируемых для каждой группы узлов. Компонент не привязан к конкретному облаку. Подробнее про работу CAPS можно почитать в [документации модуля `node-manager`](/modules/node-manager/#работа-со-статическими-узлами).
 
-4. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
+1. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
 
 ## Взаимодействия модуля
 
@@ -49,14 +73,14 @@ Bashible — это ключевой компонент подсистемы Clu
 1. **Kube-apiserver**:
 
    * работа с кастомными ресурсами Cluster API;
-   * работа с ресурсами Node;
+   * работа с ресурсами Node и NodeGroup;
    * авторизация запросов на метрики.
 
-2. Файлы на узлах:
+1. Файлы на узлах:
 
    * `/dev/watchdog` — отправляет сигнал в Watchdog для сброса сторожевого таймера.
 
-3. Инфраструктура:
+1. Инфраструктура:
 
     * управление статическими узлами (ограниченно, без заказа узлов).
 
@@ -64,10 +88,11 @@ Bashible — это ключевой компонент подсистемы Clu
 
 1. **Kube-apiserver**:
 
+   * выполняет validating- и conversion-вебхуки node-controller;
    * выполняет mutating- и validating-вебхуки capi-controller-manager;
    * пересылает в bashible-api-server запросы на ресурсы bashible.
 
-2. **Prometheus-main** — сбор метрик компонентов модуля `node-manager`.
+1. **Prometheus-main** — сбор метрик компонентов модуля `node-manager`.
 
 ## Особенности архитектуры, специфичные для CloudStatic-узлов
 
@@ -77,9 +102,9 @@ Bashible — это ключевой компонент подсистемы Clu
    * вручную с последующей передачей узла под автоматическое управление CAPS;
    * автоматически, с помощью CAPS.
 
-2. **Capi-controller-manager** — компонент, обеспечивающий жизненный цикл самого кластера и его узлов. Не заказывает узлы в облаке самостоятельно, работает с кастомными ресурсами более высокого уровня, не привязанного к инфраструктуре. Генерирует инфраструктурные кастомные ресурсы, оставляя всю работу для инфраструктурного провайдера (CAPS).
-3. **Caps-controller-manager** — компонент, управляющий статическими узлами (ограниченно, без заказа узлов).
-4. **Csi-driver** — используется для заказа дисков в облачной инфраструктуре.
-5. **Cloud-controller-manager** — используется для заказа балансировщиков и прочих инфраструктурных ресурсов согласно своей спецификации.
-6. **Infrastructure-provider** конкретного облака не требуется, его роль выполняет caps-controller-manager.
-7. Автоматическое масштабирование узлов не поддерживается.
+1. **Capi-controller-manager** — компонент, обеспечивающий жизненный цикл самого кластера и его узлов. Не заказывает узлы в облаке самостоятельно, работает с кастомными ресурсами более высокого уровня, не привязанного к инфраструктуре. Генерирует инфраструктурные кастомные ресурсы, оставляя всю работу для инфраструктурного провайдера (CAPS).
+1. **Caps-controller-manager** — компонент, управляющий статическими узлами (ограниченно, без заказа узлов).
+1. **Csi-driver** — используется для заказа дисков в облачной инфраструктуре.
+1. **Cloud-controller-manager** — используется для заказа балансировщиков и прочих инфраструктурных ресурсов согласно своей спецификации.
+1. **Infrastructure-provider** конкретного облака не требуется, его роль выполняет caps-controller-manager.
+1. Автоматическое масштабирование узлов не поддерживается.
