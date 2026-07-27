@@ -44,8 +44,6 @@ tests:
     TESTS_TIMEOUT: 15m
     CGO_ENABLED: "1"
   script:
-    - ls /deckhouse #debug
-    - pwd #debug
     - |
       set -euo pipefail
       git config --global --add safe.directory "${CI_PROJECT_DIR}" # возможно убрать?
