@@ -9,6 +9,12 @@ region: {{ $providerClusterConfiguration.region | b64enc | quote }}
 zones: {{ $providerClusterConfiguration.zones | toJson | b64enc | quote }}
 instanceClassKind: {{ b64enc "VsphereInstanceClass" | quote }}
 machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}
+capiClusterKind: {{ b64enc "VSphereCluster" | quote }}
+capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
+capiClusterName: {{ b64enc "vsphere" | quote }}
+capiMachineTemplateKind: {{ b64enc "VSphereMachineTemplate" | quote }}
+capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
+capiMachineDeploymentSpecPatch: {{ tpl ($context.Files.Get "capi/machine-deployment-spec-patch.yaml") $context | b64enc | quote }}
 {{- $vsphereValues := dict }}
 {{- $mainNetwork := "" }}
 {{- if and $providerDiscoveryData $providerDiscoveryData.instances }}

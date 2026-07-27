@@ -37,6 +37,7 @@ data:
 {{- $_ := set $tpl_context "huaweicloud" $context.Values.nodeManager.internal.cloudProvider.huaweicloud }}
 {{- $_ := set $tpl_context "openstack" $context.Values.nodeManager.internal.cloudProvider.openstack }}
 {{- $_ := set $tpl_context "dvp" $context.Values.nodeManager.internal.cloudProvider.dvp }}
+{{- $_ := set $tpl_context "vsphere" $context.Values.nodeManager.internal.cloudProvider.vsphere }}
 ---
 {{- $f := $context.Files.Get (printf "capi/%s/cluster.yaml" $context.Values.nodeManager.internal.cloudProvider.type)}}
 {{ tpl ($f) $tpl_context }}
