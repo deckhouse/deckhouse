@@ -25,9 +25,9 @@
           {{- $_ := set $ExcludedModulesDict (printf "%s" $exludeModuleName) "true" }}
         {{- end }}
       {{- end }}
-      {{- if $edition.AvailableModules }}
+      {{- if $edition.availableModules }}
         {{- $HasAvailableModules = true }}
-        {{- range $_, $availableModuleName := $edition.AvailableModules }}
+        {{- range $_, $availableModuleName := $edition.availableModules }}
           {{- $_ := set $AvailableModulesDict (printf "%s" $availableModuleName) "true" }}
         {{- end }}
       {{- end }}

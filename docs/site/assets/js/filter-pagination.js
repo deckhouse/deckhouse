@@ -6,7 +6,6 @@ $(document).ready(function () {
   const articles = document.querySelectorAll('.button-tile');
   const moreButton = document.querySelector('.tile__pagination');
   const filterCheckboxes = document.querySelector('.filter__checkboxes--tags');
-  const resetButton = document.querySelector('.reset-check');
   const itemsPerPage = 12;
   let filteredArticles = [];
   let count = 0;
@@ -54,12 +53,6 @@ $(document).ready(function () {
     })
 
     initializeArticlePagination(filtered);
-
-    if (checkboxesChecked.length > 0) {
-      resetButton.classList.add('active');
-    } else {
-      resetButton.classList.remove('active');
-    }
   }
 
   function getTags() {
@@ -99,12 +92,4 @@ $(document).ready(function () {
   createFilters();
   initializeArticlePagination(Array.from(articles));
   moreButton.addEventListener('click', showItems);
-
-  resetButton.addEventListener('click', () => {
-    const checkboxes = filterCheckboxes.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-      checkbox.checked = false;
-    });
-    filterArticles();
-  })
 })

@@ -1,4 +1,4 @@
-{{- if eq (include "is_bgp_pool_exists" .) "true" }}
+{{- if .Values.metallb.internal.addressPools }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

@@ -18,6 +18,7 @@ package controlplaneoperation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -31,6 +32,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -80,6 +82,10 @@ func newMockRequeue(calls *[]execCall, name controlplanev1alpha1.StepName, after
 
 func newMockCompleteWithMessage(calls *[]execCall, name controlplanev1alpha1.StepName, message string) Step {
 	return &mockCommand{name: name, result: StepResult{Outcome: OutcomeCompleted, Message: message}, calls: calls}
+}
+
+func newMockAbandon(calls *[]execCall, name controlplanev1alpha1.StepName, message string) Step {
+	return &mockCommand{name: name, result: StepResult{Outcome: OutcomeAbandoned, Message: message}, calls: calls}
 }
 
 // helpers
@@ -177,7 +183,9 @@ func (s *ControllerTestSuite) SetupSuite() {
 	s.ctx = context.Background()
 }
 
-func (s *ControllerTestSuite) newReconciler(cmds map[controlplanev1alpha1.StepName]Step, objs ...client.Object) *Reconciler {
+// newTestReconciler builds a Reconciler backed by a fake client seeded with objs. A nil cmds
+// falls back to the real step registry; tests that mock individual steps pass their own.
+func newTestReconciler(cmds map[controlplanev1alpha1.StepName]Step, objs ...client.Object) *Reconciler {
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(objs...).
@@ -233,7 +241,7 @@ func (s *ControllerTestSuite) TestReconcileNotApproved() {
 	s.Run("not approved operation is skipped", func() {
 		op := testOperation(controlplanev1alpha1.OperationComponentKubeScheduler,
 			[]controlplanev1alpha1.StepName{controlplanev1alpha1.StepSyncManifests}, false)
-		r := s.newReconciler(nil, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(nil, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -271,7 +279,7 @@ func (s *ControllerTestSuite) TestReconcileInitialConditionsPreserveExisting() {
 			},
 		}
 
-		r := s.newReconciler(nil, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(nil, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -301,7 +309,7 @@ func (s *ControllerTestSuite) TestReconcileAlreadyCompleted() {
 		op.Status.Conditions = []metav1.Condition{
 			{Type: controlplanev1alpha1.CPOConditionCompleted, Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonOperationCompleted, LastTransitionTime: metav1.Now()},
 		}
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -319,7 +327,7 @@ func (s *ControllerTestSuite) TestReconcileAlreadyFailed() {
 		op.Status.Conditions = []metav1.Condition{
 			{Type: controlplanev1alpha1.CPOConditionCompleted, Status: metav1.ConditionFalse, Reason: controlplanev1alpha1.CPOReasonOperationFailed, Message: "boom", LastTransitionTime: metav1.Now()},
 		}
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -335,12 +343,75 @@ func (s *ControllerTestSuite) TestReconcileAlreadyFailed() {
 	})
 }
 
+func (s *ControllerTestSuite) TestReconcileStepAbandonStopsPipeline() {
+	s.Run("abandon outcome marks operation terminal and skips remaining steps", func() {
+		var calls []execCall
+		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentEtcd,
+			newMockAbandon(&calls, controlplanev1alpha1.StepDefragEtcd, "etcd pod not present"),
+			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
+		)
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
+
+		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
+		require.NoError(s.T(), err)
+		require.Equal(s.T(), reconcile.Result{}, result)
+
+		require.Len(s.T(), calls, 1, "pipeline must stop after the abandoning step")
+		require.Equal(s.T(), controlplanev1alpha1.StepDefragEtcd, calls[0].name)
+
+		got := s.getOp(r, "test-op")
+		completed := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), completed)
+		require.Equal(s.T(), metav1.ConditionFalse, completed.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationAbandoned, completed.Reason)
+		require.True(s.T(), got.IsTerminal(), "abandoned operation must be terminal so it releases the approval slot")
+	})
+}
+
+func (s *ControllerTestSuite) TestReconcileStepAbandonPatchFailureIsRetried() {
+	s.Run("abandon patch failure is surfaced as an error instead of silently stopping", func() {
+		var calls []execCall
+		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentEtcd,
+			newMockAbandon(&calls, controlplanev1alpha1.StepDefragEtcd, "etcd pod not present"),
+			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
+		)
+
+		// Only the patch persisting the Abandoned condition must fail; earlier ones must go
+		// through, otherwise this test fails for the wrong reason.
+		patchStatusErr := errors.New("injected status patch failure")
+		c := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(op, testCPMSecret(), testPKISecret()).
+			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
+			WithInterceptorFuncs(interceptor.Funcs{
+				SubResourcePatch: func(ctx context.Context, cli client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+					if cpo, ok := obj.(*controlplanev1alpha1.ControlPlaneOperation); ok && subResourceName == "status" {
+						if cond := meta.FindStatusCondition(cpo.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted); cond != nil && cond.Reason == controlplanev1alpha1.CPOReasonOperationAbandoned {
+							return patchStatusErr
+						}
+					}
+					return cli.SubResource(subResourceName).Patch(ctx, obj, patch, opts...)
+				},
+			}).
+			Build()
+		r := &Reconciler{client: c, log: log.NewNop(), node: NodeIdentity{Name: testNodeName}, steps: cmds}
+
+		_, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
+		require.Error(s.T(), err, "a failed abandon patch must be surfaced so controller-runtime retries reconciliation")
+		require.ErrorIs(s.T(), err, patchStatusErr)
+
+		got := s.getOp(r, "test-op")
+		require.False(s.T(), got.IsTerminal(),
+			"operation must not read as terminal on the server when the abandon patch never landed, otherwise the approval slot leaks forever")
+	})
+}
+
 func (s *ControllerTestSuite) TestReconcileChecksumMismatch() {
 	s.Run("checksum mismatch abandons operation", func() {
 		op := testOperation(controlplanev1alpha1.OperationComponentKubeScheduler,
 			[]controlplanev1alpha1.StepName{controlplanev1alpha1.StepSyncManifests}, true)
 		op.Spec.DesiredConfigChecksum = "stale-checksum"
-		r := s.newReconciler(nil, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(nil, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -364,7 +435,7 @@ func (s *ControllerTestSuite) TestReconcileObserveOnlyNoSecrets() {
 		op.Spec.DesiredPKIChecksum = ""
 		op.Spec.DesiredCAChecksum = ""
 		// No secrets in cluster — CertObserve should not need them
-		r := s.newReconciler(cmds, op)
+		r := newTestReconciler(cmds, op)
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -382,7 +453,7 @@ func (s *ControllerTestSuite) TestPipelineAllCommandsExecuteInOrder() {
 			newMockOK(&calls, controlplanev1alpha1.StepSyncManifests),
 			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -415,7 +486,7 @@ func (s *ControllerTestSuite) TestPipelineSkipsCompletedCommands() {
 		op.Status.Conditions = []metav1.Condition{
 			{Type: controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncCA), Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonStepCompleted, LastTransitionTime: metav1.Now()},
 		}
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -440,7 +511,7 @@ func (s *ControllerTestSuite) TestPipelineSkipsMultipleCompletedCommands() {
 			{Type: controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncCA), Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonStepCompleted, LastTransitionTime: metav1.Now()},
 			{Type: controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncManifests), Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonStepCompleted, LastTransitionTime: metav1.Now()},
 		}
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -460,7 +531,7 @@ func (s *ControllerTestSuite) TestPipelineErrorStopsPipeline() {
 			newMockError(&calls, controlplanev1alpha1.StepSyncManifests, cmdErr),
 			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		_, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.Error(s.T(), err)
@@ -495,7 +566,7 @@ func (s *ControllerTestSuite) TestPipelineRequeueStopsPipeline() {
 			newMockRequeue(&calls, controlplanev1alpha1.StepSyncManifests, 5*time.Second),
 			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -521,7 +592,7 @@ func (s *ControllerTestSuite) TestPipelineSingleCommand() {
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
 			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -545,7 +616,7 @@ func (s *ControllerTestSuite) TestConditionsAfterSuccessfulPipeline() {
 			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
 			newMockOK(&calls, controlplanev1alpha1.StepSyncManifests),
 		)
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		_, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
@@ -578,7 +649,7 @@ func (s *ControllerTestSuite) TestConditionsAfterError() {
 			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
 			newMockError(&calls, controlplanev1alpha1.StepSyncManifests, fmt.Errorf("write failed")),
 		)
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		_, _ = r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 
@@ -610,7 +681,7 @@ func (s *ControllerTestSuite) TestConditionsAfterRequeue() {
 			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
 			newMockRequeue(&calls, controlplanev1alpha1.StepWaitPodReady, 5*time.Second),
 		)
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		_, _ = r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 
@@ -652,7 +723,7 @@ func (s *ControllerTestSuite) TestPipelineKeepsCommandCompletedMessage() {
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
 			newMockCompleteWithMessage(&calls, controlplanev1alpha1.StepSyncCA, controlplanev1alpha1.CPOStepResultRenewed),
 		)
-		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+		r := newTestReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
 		_, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)

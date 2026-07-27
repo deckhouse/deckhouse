@@ -45,6 +45,7 @@ import (
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -54,7 +55,6 @@ import (
 // (waiting for new "go-containerregistry" version)
 
 const (
-	d8SystemNS         = "d8-system"
 	caKey              = "ca"
 	registryModuleName = "registry"
 )
@@ -197,8 +197,8 @@ func newKubeClient() (*kclient.KubernetesClient, error) {
 }
 
 func modifyPullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient, newSecretData map[string]string) (*v1.Secret, error) {
-	secretClient := kubeCl.KubeClient.CoreV1().Secrets(d8SystemNS)
-	deckhouseRegSecret, err := secretClient.Get(ctx, "deckhouse-registry", metav1.GetOptions{})
+	secretClient := kubeCl.KubeClient.CoreV1().Secrets(app.NamespaceDeckhouse)
+	deckhouseRegSecret, err := secretClient.Get(ctx, app.SecretRegistry, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}
@@ -210,7 +210,7 @@ func modifyPullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient, new
 }
 
 func updateImagePullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient, newSecret *v1.Secret) error {
-	secretClient := kubeCl.KubeClient.CoreV1().Secrets(d8SystemNS)
+	secretClient := kubeCl.KubeClient.CoreV1().Secrets(app.NamespaceDeckhouse)
 
 	updateOpts := metav1.UpdateOptions{FieldValidation: metav1.FieldValidationStrict}
 	if _, err := secretClient.Update(ctx, newSecret, updateOpts); err != nil {
@@ -272,8 +272,8 @@ func getCAContent(caFile string) (string, error) {
 }
 
 func deckhouseDeployment(ctx context.Context, kubeCl *kclient.KubernetesClient) (*appsv1.Deployment, error) {
-	deployClient := kubeCl.KubeClient.AppsV1().Deployments(d8SystemNS)
-	deploy, err := deployClient.Get(ctx, "deckhouse", metav1.GetOptions{})
+	deployClient := kubeCl.KubeClient.AppsV1().Deployments(app.NamespaceDeckhouse)
+	deploy, err := deployClient.Get(ctx, app.DeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}

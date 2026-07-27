@@ -145,30 +145,6 @@ func TestReconcile_NodeWithoutLabel_Noop(t *testing.T) {
 	}
 }
 
-func TestReconcile_NodeWithOnlyBashibleTaint_SetsTaintsToNil(t *testing.T) {
-	node := &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "node-1",
-			Labels: map[string]string{
-				bashibleFirstRunFinishedLabel: "",
-			},
-		},
-		Spec: corev1.NodeSpec{
-			Taints: []corev1.Taint{
-				{Key: bashibleUninitializedTaintKey, Effect: corev1.TaintEffectNoSchedule},
-			},
-		},
-	}
-
-	r := newReconciler(t, node)
-	reconcile(t, r, "node-1")
-
-	updated := getNode(t, r, "node-1")
-	if len(updated.Spec.Taints) != 0 {
-		t.Fatalf("expected taints to be empty, got %+v", updated.Spec.Taints)
-	}
-}
-
 func TestReconcile_NodeNotFound_NoError(t *testing.T) {
 	r := newReconciler(t)
 	reconcile(t, r, "nonexistent")

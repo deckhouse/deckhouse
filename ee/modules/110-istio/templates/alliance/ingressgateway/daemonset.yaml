@@ -46,6 +46,9 @@ spec:
     metadata:
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+        {{- with $.Values.istio.alliance.ingressGateway.gatewayPodAnnotations }}
+        {{- . | toYaml | nindent 8 }}
+        {{- end }}
       labels:
         app: ingressgateway
         sidecar.istio.io/inject: "false"
@@ -175,6 +178,7 @@ spec:
           timeoutSeconds: 3
           failureThreshold: 30
         securityContext:
+          allowPrivilegeEscalation: false
           runAsGroup: 1337
           runAsNonRoot: true
           runAsUser: 1337

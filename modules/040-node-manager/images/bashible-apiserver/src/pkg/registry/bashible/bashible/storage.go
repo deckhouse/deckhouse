@@ -31,30 +31,39 @@ import (
 	"bashible-apiserver/pkg/util"
 )
 
-const templateName = "bashible.sh.tpl"
+const (
+	templateName        = "bashible.sh.tpl"
+	cleanupTemplateName = "cleanup_static_node.sh.tpl"
+)
 
 // NewStorage returns storage object that will work against API services.
 func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, error) {
 	templatePath := path.Join(rootDir, "bashible", templateName)
+	cleanupTemplatePath := path.Join(rootDir, "bashible", cleanupTemplateName)
 
 	tplContent, err := os.ReadFile(templatePath)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read template: %v", err)
+		return nil, fmt.Errorf("cannot read template %q: %v", templatePath, err)
+	}
+
+	cleanupTplContent, err := os.ReadFile(cleanupTemplatePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read cleanup template %q: %v", cleanupTemplatePath, err)
 	}
 
 	storage := &Storage{
-		templateContent: tplContent,
-		templateName:    templateName,
-		bashibleContext: bashibleContext,
+		templateContent:        tplContent,
+		cleanupTemplateContent: cleanupTplContent,
+		bashibleContext:        bashibleContext,
 	}
 
 	return storage, nil
 }
 
 type Storage struct {
-	templateContent []byte
-	templateName    string
-	bashibleContext template.Context
+	templateContent        []byte
+	cleanupTemplateContent []byte
+	bashibleContext        template.Context
 }
 
 // Render renders single script content by name
@@ -71,12 +80,17 @@ func (s Storage) Render(name string) (runtime.Object, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot render template: %v", err)
 	}
+	cleanup, err := template.RenderTemplate(cleanupTemplateName, s.cleanupTemplateContent, data)
+	if err != nil {
+		return nil, fmt.Errorf("cannot render cleanup template: %v", err)
+	}
 
 	obj := bashible.Bashible{}
 	obj.ObjectMeta.Name = ngName
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
 	obj.Data = map[string]string{}
 	obj.Data[r.FileName] = r.Content.String()
+	obj.Data[cleanup.FileName] = cleanup.Content.String()
 
 	util.SetConfigurationChecksumAnnotation(s.bashibleContext, ngName, &obj.ObjectMeta)
 

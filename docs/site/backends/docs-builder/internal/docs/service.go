@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -47,6 +48,12 @@ type Service struct {
 	destDir              string
 	isReady              atomic.Bool
 	channelMappingEditor *channelMappingEditor
+
+	// buildMu serializes Build() calls: baseDir is a shared, on-disk Hugo
+	// working tree, and hugo.Build() gives every call its own in-memory
+	// site model, so concurrent builds both corrupt each other's output
+	// files and multiply memory use per concurrent call.
+	buildMu sync.Mutex
 
 	logger  *log.Logger
 	metrics *metricsstorage.MetricStorage

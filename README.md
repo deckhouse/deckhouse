@@ -55,8 +55,4 @@ If anything works in an unexpected manner or you have any questions, feel free t
 
 # Online community
 
-In addition to common GitHub features, here are some other online resources related to Deckhouse Kubernetes Platform:
-
-* [Twitter](https://twitter.com/deckhouseio) to stay informed about everything happening around Deckhouse Kubernetes Platform;
-* [Telegram chat](https://t.me/deckhouse) to discuss (there's a dedicated [Telegram chat in Russian](https://t.me/deckhouse_ru) as well);
-* [Deckhouse Kubernetes Platform blog](https://blog.deckhouse.io/) to read the latest articles about Deckhouse Kubernetes Platform.
+Besides using the standard GitHub features to contribute and collaborate, you can also join our Telegram chats. These are a great place to ask questions, discuss Deckhouse Kubernetes Platform and our other products, as well as connect with the user community and the Deckhouse engineering team. The chats are available in [English](https://t.me/deckhouse) and [Russian](https://t.me/deckhouse_ru). 

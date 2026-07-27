@@ -15,9 +15,7 @@ spec:
     repo: registry.example.com/test
     scheme: https
   scanInterval: 6h0m0s
-status:
-  lastNewVersions: 0
-  partialScanAvailable: false
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation

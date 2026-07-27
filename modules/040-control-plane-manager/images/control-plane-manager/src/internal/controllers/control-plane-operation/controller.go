@@ -27,7 +27,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
@@ -83,16 +81,18 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	}
 	// Inject Reconciler-level deps into steps that need them.
 	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
+	r.steps[controlplanev1alpha1.StepDefragEtcd].(*defragEtcdStep).defragEtcd = r.defragEtcd
+
+	if constants.SignatureEnabled() {
+		kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
+		if err != nil {
+			return fmt.Errorf("cannot create kube client for signature renewer: %w", err)
+		}
+		r.steps[controlplanev1alpha1.StepRenewSignature].(*renewSignatureStep).kubeClient = kubeClient
+	}
 
 	// harden admin kubeconfig perms and align root kubeconfig symlink during controller startup.
 	r.enforceNodePolicy(r.log)
-
-	// todo reconcile normal way not in start controller
-	// todo refact to use controller runtime client
-	// instead of client-go
-	if err := r.renewSignatureKeysIfNeed(mgr.GetConfig()); err != nil {
-		return err
-	}
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{
@@ -230,20 +230,6 @@ func (r *Reconciler) enforceNodePolicy(logger *log.Logger) {
 	}
 }
 
-// TODO Move to normal reconciler, not on start only
-func (r *Reconciler) renewSignatureKeysIfNeed(kubeConfig *rest.Config) error {
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return fmt.Errorf("cannot create kube client for etcd key signature renewer: %w", err)
-	}
-
-	if err := getEtcdKeySignatureRenewer().Renew(kubeClient); err != nil {
-		return fmt.Errorf("cannot renew signature keys for etcd key: %w", err)
-	}
-
-	return nil
-}
-
 func (r *Reconciler) ensureOperationStartedAt(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, now time.Time) error {
 	if op.Annotations != nil && op.Annotations[constants.OperationStartedAtAnnotationKey] != "" {
 		return nil
@@ -342,12 +328,12 @@ func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOpe
 		if err != nil || !manifestMatches {
 			return manifestMatches, err
 		}
-		peerURL := etcd.GetPeerURL(r.node.AdvertiseIP)
-		memberExists, err := checkEtcdMemberExists(r.node.Name, peerURL, constants.KubernetesPkiPath, r.node.KubeconfigDir)
+		cls, err := classifyEtcdState(r.node, constants.KubernetesPkiPath, r.node.KubeconfigDir)
 		if err != nil {
 			return false, err
 		}
-		return memberExists, nil
+		// The join is committed only when our member is a voting member (not a learner) with a bootstrapped data dir. A learner/interrupted/fresh/orphan state re-runs join+promote.
+		return cls.state == etcdJoined && !cls.isLearner, nil
 	default:
 		return false, nil
 	}

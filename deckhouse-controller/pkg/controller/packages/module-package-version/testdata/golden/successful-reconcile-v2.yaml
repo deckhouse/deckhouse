@@ -29,6 +29,11 @@ status:
       - Fixed a bug
     description:
       en: Test module
+    disableOptions:
+      confirmation: true
+      messages:
+        en: EN disable message
+        ru: RU disable message
     stage: GA
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -42,6 +47,4 @@ spec:
     dockerCfg: test-docker-cfg
     repo: registry.example.com/test
     scheme: https
-status:
-  lastNewVersions: 0
-  partialScanAvailable: false
+status: {}

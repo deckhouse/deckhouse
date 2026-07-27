@@ -15,7 +15,6 @@
 package deckhouse
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -24,16 +23,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestDeckhouseInstall(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "1.54.1")
@@ -43,7 +40,6 @@ func TestDeckhouseInstall(t *testing.T) {
 		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
-	log.InitLogger("json", false)
 	fakeClient := client.NewFakeKubernetesClient()
 
 	tests := []struct {
@@ -106,7 +102,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), "deckhouse-registry", metav1.GetOptions{})
+				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(t.Context(), "deckhouse-registry", metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
@@ -122,7 +118,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"With bashible cfg",
 			func() error {
-				err := registry_mocks.CreatePKISecret(context.TODO(), fakeClient)
+				err := registry_mocks.CreatePKISecret(t.Context(), fakeClient)
 				if err != nil {
 					return err
 				}
@@ -137,7 +133,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), "registry-bashible-config", metav1.GetOptions{})
+				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(t.Context(), "registry-bashible-config", metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
@@ -163,7 +159,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				_, err = fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), "registry-bashible-config", metav1.GetOptions{})
+				_, err = fakeClient.CoreV1().Secrets("d8-system").Get(t.Context(), "registry-bashible-config", metav1.GetOptions{})
 				if err != nil && !errors.IsNotFound(err) {
 					return err
 				}
@@ -210,7 +206,7 @@ func TestDeckhouseInstall(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithDevBranch(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -236,7 +232,7 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 }
 
 func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -257,9 +253,9 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc1.SetName("global")
-	mc1.Spec.Enabled = ptr.To(true)
+	mc1.Spec.Enabled = new(true)
 	mc1.Spec.Version = 1
-	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
+	mc1.Spec.Settings = config.SettingsValues(map[string]any{
 		"ha": true,
 	})
 
@@ -276,18 +272,18 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 
 	require.NoError(t, err)
 
-	mc, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "global", metav1.GetOptions{})
+	mc, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).Get(t.Context(), "global", metav1.GetOptions{})
 	require.NoError(t, err)
 
 	require.NotNil(t, mc)
 
 	// should be not found for unlock deckhouse queue
-	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
+	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(t.Context(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
 	require.True(t, errors.IsNotFound(err))
 }
 
 func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -308,9 +304,9 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc1.SetName("global")
-	mc1.Spec.Enabled = ptr.To(true)
+	mc1.Spec.Enabled = new(true)
 	mc1.Spec.Version = 1
-	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
+	mc1.Spec.Settings = config.SettingsValues(map[string]any{
 		"ha": true,
 	})
 
@@ -321,9 +317,9 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc2.SetName("deckhouse")
-	mc2.Spec.Enabled = ptr.To(true)
+	mc2.Spec.Enabled = new(true)
 	mc2.Spec.Version = 1
-	mc2.Spec.Settings = config.SettingsValues(map[string]interface{}{
+	mc2.Spec.Settings = config.SettingsValues(map[string]any{
 		"bundle": "Minimal",
 	})
 
@@ -340,18 +336,18 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 
 	require.NoError(t, err)
 
-	mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+	mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err)
 
 	require.Len(t, mcs.Items, 2)
 
 	// should be not found for unlock deckhouse queue
-	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
+	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(t.Context(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
 	require.True(t, errors.IsNotFound(err))
 }
 
 func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
 	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
@@ -367,7 +363,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mc := createMC("deckhouse", map[string]interface{}{
+			mc := createMC("deckhouse", map[string]any{
 				"bundle":         "Minimal",
 				"logLevel":       "Debug",
 				"releaseChannel": "Alpha",
@@ -389,12 +385,12 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			require.Len(t, res.PostBootstrapMCTasks, 1)
 			require.Equal(t, res.PostBootstrapMCTasks[0].Title, "Set release channel to deckhouse module config")
 
-			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 			require.NoError(t, err)
 
 			require.Len(t, mcs.Items, 1)
 
-			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]interface{})["settings"], "releaseChannel")
+			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]any)["settings"], "releaseChannel")
 		})
 	})
 
@@ -404,11 +400,11 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mc := createMC("global", map[string]interface{}{
+			mc := createMC("global", map[string]any{
 				"highAvailability": true,
-				"modules": map[string]interface{}{
-					"https": map[string]interface{}{
-						"customCertificate": map[string]interface{}{
+				"modules": map[string]any{
+					"https": map[string]any{
+						"customCertificate": map[string]any{
 							"secretName": "secret",
 						},
 					},
@@ -432,12 +428,12 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			require.Len(t, res.PostBootstrapMCTasks, 0)
 			require.Equal(t, res.WithResourcesMCTasks[0].Title, "Set https setting to global module config")
 
-			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 			require.NoError(t, err)
 
 			require.Len(t, mcs.Items, 1)
 
-			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]interface{})["settings"].(map[string]interface{})["modules"], "https")
+			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]any)["settings"].(map[string]any)["modules"], "https")
 		})
 	})
 
@@ -447,7 +443,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mc := createMC("prometheus", map[string]interface{}{
+			mc := createMC("prometheus", map[string]any{
 				"highAvailability": true,
 			})
 
@@ -466,7 +462,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			require.Len(t, res.WithResourcesMCTasks, 0)
 			require.Len(t, res.PostBootstrapMCTasks, 0)
 
-			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 			require.NoError(t, err)
 
 			require.Len(t, mcs.Items, 1)
@@ -479,17 +475,17 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mcDeckhouse := createMC("deckhouse", map[string]interface{}{
+			mcDeckhouse := createMC("deckhouse", map[string]any{
 				"bundle":         "Minimal",
 				"logLevel":       "Debug",
 				"releaseChannel": "Alpha",
 			})
 
-			mcGlobal := createMC("global", map[string]interface{}{
+			mcGlobal := createMC("global", map[string]any{
 				"highAvailability": true,
-				"modules": map[string]interface{}{
-					"https": map[string]interface{}{
-						"customCertificate": map[string]interface{}{
+				"modules": map[string]any{
+					"https": map[string]any{
+						"customCertificate": map[string]any{
 							"secretName": "secret",
 						},
 					},
@@ -513,10 +509,45 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			require.Equal(t, res.PostBootstrapMCTasks[0].Title, "Set release channel to deckhouse module config")
 			require.Equal(t, res.WithResourcesMCTasks[0].Title, "Set https setting to global module config")
 
-			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
+			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(t.Context(), metav1.ListOptions{})
 			require.NoError(t, err)
 
 			require.Len(t, mcs.Items, 2)
 		})
 	})
+}
+
+// When a cluster UUID is provided, the d8-cluster-uuid ConfigMap must be
+// created. It is applied serially, ahead of the parallel manifest fan-out (so it
+// lands before the deckhouse Deployment): node-manager renders the node bootstrap
+// script from global.discovery.clusterUUID, and an empty UUID makes CAPS-adopted
+// nodes stall the whole StaticInstanceBootstrapTimeout (~20m) on a 404 from
+// registry-packages-proxy. This guards against the extraction regressing that task.
+func TestDeckhouseInstallCreatesClusterUUIDConfigMap(t *testing.T) {
+	ctx := t.Context()
+	require.NoError(t, os.Setenv("DHCTL_TEST", "yes"))
+	require.NoError(t, os.Setenv("DHCTL_TEST_VERSION_TAG", "1.54.1"))
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
+	}()
+
+	fakeClient := client.NewFakeKubernetesClient()
+
+	const clusterUUID = "3c179956-30ee-4b90-bc14-71a7bc73ab6d"
+
+	_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
+		UUID: clusterUUID,
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithModeUnmanaged(),
+			registry_mocks.WithLegacyMode(),
+		),
+	}, func() error {
+		return nil
+	})
+	require.NoError(t, err)
+
+	cm, err := fakeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-uuid", metav1.GetOptions{})
+	require.NoError(t, err, "d8-cluster-uuid ConfigMap must be created when UUID is set")
+	require.Equal(t, clusterUUID, cm.Data["cluster-uuid"])
 }

@@ -77,6 +77,7 @@ spec:
                     dockerCfg:
                       type: string
                       description: Container registry access token in Base64. If using anonymous access to the container registry, do not fill in this field.
+                      x-kubernetes-sensitive-data: true
                     ca:
                       type: string
                       description: |

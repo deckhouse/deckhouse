@@ -68,7 +68,7 @@ func writeCert(pkiDir, name string, cert *x509.Certificate) error {
 		return fmt.Errorf("couldn't create directory %q: %w", filepath.Dir(certificatePath), err)
 	}
 
-	return writeFileAtomically(certificatePath, pkiutil.EncodeCertificate(cert), 0o600)
+	return pkiutil.WriteFileAtomically(certificatePath, pkiutil.EncodeCertificate(cert), 0o600)
 }
 
 func writeKey(pkiDir, name string, key crypto.Signer) error {
@@ -83,7 +83,7 @@ func writeKey(pkiDir, name string, key crypto.Signer) error {
 		return fmt.Errorf("unable to marshal private key to PEM: %w", err)
 	}
 
-	return writeFileAtomically(privateKeyPath, encoded, 0o600)
+	return pkiutil.WriteFileAtomically(privateKeyPath, encoded, 0o600)
 }
 
 // writeSAPublicKey encodes the public part of key in PKIX PEM format and writes it to sa.pub.
@@ -100,49 +100,9 @@ func writeSAPublicKey(pkiDir string, key crypto.Signer) error {
 		Bytes: pubKeyDER,
 	})
 
-	if err := writeFileAtomically(filepath.Join(pkiDir, "sa.pub"), publicKeyPEM, 0o600); err != nil {
+	if err := pkiutil.WriteFileAtomically(filepath.Join(pkiDir, "sa.pub"), publicKeyPEM, 0o600); err != nil {
 		return fmt.Errorf("unable to write SA public key: %w", err)
 	}
 
 	return nil
-}
-
-// writeFileAtomically writes data to dst atomically using a write-fsync-rename sequence:
-//  1. A temp file is created in the same directory as dst (same filesystem, so rename is atomic).
-//  2. Data is written and fsynced to ensure it reaches disk before the rename.
-//  3. The temp file is renamed to dst, which is an atomic operation on POSIX systems.
-//
-// This guarantees that dst is never left in a partially written state,
-// even if the process crashes mid-write.
-func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
-	dstDir := filepath.Dir(dst)
-	base := filepath.Base(dst)
-
-	tmpFile, err := os.CreateTemp(dstDir, "."+base+".tmp-*")
-	if err != nil {
-		return fmt.Errorf("couldn't create temp file in %q: %w", dstDir, err)
-	}
-
-	tmpPath := tmpFile.Name()
-	defer func() { _ = os.Remove(tmpPath) }()
-
-	if _, err := tmpFile.Write(data); err != nil {
-		_ = tmpFile.Close()
-		return fmt.Errorf("couldn't write to temp file: %w", err)
-	}
-
-	if err := tmpFile.Sync(); err != nil {
-		_ = tmpFile.Close()
-		return fmt.Errorf("couldn't sync temp file: %w", err)
-	}
-
-	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("couldn't close temp file: %w", err)
-	}
-
-	if err := os.Chmod(tmpPath, perm); err != nil {
-		return fmt.Errorf("couldn't chmod temp file: %w", err)
-	}
-
-	return os.Rename(tmpPath, dst)
 }

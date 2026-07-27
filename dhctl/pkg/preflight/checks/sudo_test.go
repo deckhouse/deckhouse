@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"errors"
 	"os/exec"
 	"testing"
@@ -26,61 +25,145 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/mocks"
 )
 
-func TestChecker_CheckSudoIsAllowedForUser(t *testing.T) {
+func TestCheckSudo(t *testing.T) {
 	tests := []struct {
-		name          string
-		setupMock     func(*mocks.MockNodeInterface, *mocks.MockCommand)
+		name      string
+		setupMock func(
+			*mocks.MockNodeInterface,
+			*mocks.MockCommand,
+			*mocks.MockCommand,
+		)
 		expectedError string
 	}{
 		{
-			name: "sudo allowed successfully",
-			setupMock: func(mni *mocks.MockNodeInterface, mc *mocks.MockCommand) {
-				mc.On("Sudo", mock.Anything)
-				mc.On("Run", mock.Anything).Return(nil)
-				mni.On("Command", "echo", []string(nil)).Return(mc)
+			name: "sudo installed and allowed",
+			setupMock: func(
+				mni *mocks.MockNodeInterface,
+				checkInstalledCmd *mocks.MockCommand,
+				sudoCmd *mocks.MockCommand,
+			) {
+				mni.On(
+					"Command",
+					"command",
+					[]string{"-v", "sudo"},
+				).Return(checkInstalledCmd)
+
+				checkInstalledCmd.
+					On("Run", mock.Anything).
+					Return(nil)
+
+				mni.On(
+					"Command",
+					"true",
+					[]string(nil),
+				).Return(sudoCmd)
+
+				sudoCmd.On("Sudo", mock.Anything)
+				sudoCmd.
+					On("Run", mock.Anything).
+					Return(nil)
 			},
 		},
 		{
-			name: "sudo not allowed - exit error",
-			setupMock: func(mni *mocks.MockNodeInterface, mc *mocks.MockCommand) {
-				// Create ExitError with exit code != 255 to test "sudo not allowed" path
-				// Note: &exec.ExitError{} has exit code 0 by default, which != 255
-				exitErr := &exec.ExitError{}
-				mc.On("Sudo", mock.Anything)
-				mc.On("Run", mock.Anything).Return(exitErr)
-				mni.On("Command", "echo", []string(nil)).Return(mc)
+			name: "sudo is not installed",
+			setupMock: func(
+				mni *mocks.MockNodeInterface,
+				checkInstalledCmd *mocks.MockCommand,
+				_ *mocks.MockCommand,
+			) {
+				mni.On(
+					"Command",
+					"command",
+					[]string{"-v", "sudo"},
+				).Return(checkInstalledCmd)
+
+				checkInstalledCmd.
+					On("Run", mock.Anything).
+					Return(errors.New("exit status 127"))
 			},
-			expectedError: "Provided SSH user is not allowed to sudo",
+			expectedError: `required command "sudo" is not installed`,
+		},
+		{
+			name: "sudo is not allowed",
+			setupMock: func(
+				mni *mocks.MockNodeInterface,
+				checkInstalledCmd *mocks.MockCommand,
+				sudoCmd *mocks.MockCommand,
+			) {
+				mni.On(
+					"Command",
+					"command",
+					[]string{"-v", "sudo"},
+				).Return(checkInstalledCmd)
+
+				checkInstalledCmd.
+					On("Run", mock.Anything).
+					Return(nil)
+
+				mni.On(
+					"Command",
+					"true",
+					[]string(nil),
+				).Return(sudoCmd)
+
+				exitErr := &exec.ExitError{}
+
+				sudoCmd.On("Sudo", mock.Anything)
+				sudoCmd.
+					On("Run", mock.Anything).
+					Return(exitErr)
+			},
+			expectedError: "provided SSH user is not allowed to sudo",
 		},
 		{
 			name: "unexpected error during sudo check",
-			setupMock: func(mni *mocks.MockNodeInterface, mc *mocks.MockCommand) {
-				// Use a regular error (not ExitError) to test the unexpected error path
-				mc.On("Sudo", mock.Anything)
-				mc.On("Run", mock.Anything).Return(errors.New("connection timeout"))
-				mni.On("Command", "echo", []string(nil)).Return(mc)
+			setupMock: func(
+				mni *mocks.MockNodeInterface,
+				checkInstalledCmd *mocks.MockCommand,
+				sudoCmd *mocks.MockCommand,
+			) {
+				mni.On(
+					"Command",
+					"command",
+					[]string{"-v", "sudo"},
+				).Return(checkInstalledCmd)
+
+				checkInstalledCmd.
+					On("Run", mock.Anything).
+					Return(nil)
+
+				mni.On(
+					"Command",
+					"true",
+					[]string(nil),
+				).Return(sudoCmd)
+
+				sudoCmd.On("Sudo", mock.Anything)
+				sudoCmd.
+					On("Run", mock.Anything).
+					Return(errors.New("connection timeout"))
+
+				sudoCmd.
+					On("StderrBytes").
+					Return([]byte("timeout"))
 			},
-			expectedError: "Unexpected error when checking sudoers permissions for SSH user:",
-		},
-		{
-			name: "generic error during sudo check",
-			setupMock: func(mni *mocks.MockNodeInterface, mc *mocks.MockCommand) {
-				mc.On("Sudo", mock.Anything)
-				mc.On("Run", mock.Anything).Return(errors.New("network error"))
-				mni.On("Command", "echo", []string(nil)).Return(mc)
-			},
-			expectedError: "Unexpected error when checking sudoers permissions for SSH user:",
+			expectedError: "unexpected error when checking sudo permissions for SSH user:",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockNode := &mocks.MockNodeInterface{}
-			mockCmd := &mocks.MockCommand{}
-			tt.setupMock(mockNode, mockCmd)
+			mockCheckInstalledCmd := &mocks.MockCommand{}
+			mockSudoCmd := &mocks.MockCommand{}
 
-			check := SudoAllowedCheck{NodeInterface: mockNode}
-			err := check.Run(context.Background())
+			tt.setupMock(
+				mockNode,
+				mockCheckInstalledCmd,
+				mockSudoCmd,
+			)
+
+			err := checkSudo(t.Context(), mockNode)
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)
@@ -90,81 +173,8 @@ func TestChecker_CheckSudoIsAllowedForUser(t *testing.T) {
 			}
 
 			mockNode.AssertExpectations(t)
-			mockCmd.AssertExpectations(t)
-		})
-	}
-}
-
-type mockProcessState struct {
-	exitCode int
-}
-
-func (m *mockProcessState) ExitCode() int {
-	return m.exitCode
-}
-
-func (m *mockProcessState) String() string {
-	return ""
-}
-
-func (m *mockProcessState) Success() bool {
-	return m.exitCode == 0
-}
-
-func (m *mockProcessState) Sys() interface{} {
-	return nil
-}
-
-func (m *mockProcessState) SysUsage() interface{} {
-	return nil
-}
-
-func TestCallSudo(t *testing.T) {
-	tests := []struct {
-		name          string
-		setupMock     func(*mocks.MockNodeInterface, *mocks.MockCommand)
-		expectedError string
-	}{
-		{
-			name: "sudo successful",
-			setupMock: func(mni *mocks.MockNodeInterface, mc *mocks.MockCommand) {
-				mc.On("Sudo", mock.Anything)
-				mc.On("Run", mock.Anything).Return(nil)
-				mni.On("Command", "echo", []string(nil)).Return(mc)
-			},
-		},
-		{
-			name: "sudo not allowed",
-			setupMock: func(mni *mocks.MockNodeInterface, mc *mocks.MockCommand) {
-				// Create ExitError with exit code != 255 to test "sudo not allowed" path
-				// Note: &exec.ExitError{} has exit code 0 by default, which != 255
-				exitErr := &exec.ExitError{}
-				mc.On("Sudo", mock.Anything)
-				mc.On("Run", mock.Anything).Return(exitErr)
-				mni.On("Command", "echo", []string(nil)).Return(mc)
-			},
-			expectedError: "Provided SSH user is not allowed to sudo",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockNode := &mocks.MockNodeInterface{}
-			mockCmd := &mocks.MockCommand{}
-			tt.setupMock(mockNode, mockCmd)
-
-			check := SudoAllowedCheck{NodeInterface: mockNode}
-			err := check.Run(context.Background())
-
-			if tt.expectedError != "" {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-			} else {
-				assert.NoError(t, err)
-			}
-
-			mockNode.AssertExpectations(t)
-			mockCmd.AssertExpectations(t)
+			mockCheckInstalledCmd.AssertExpectations(t)
+			mockSudoCmd.AssertExpectations(t)
 		})
 	}
 }

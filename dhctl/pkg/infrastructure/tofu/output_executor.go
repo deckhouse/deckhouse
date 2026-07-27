@@ -19,10 +19,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/name212/govalue"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type OutputExecutorParams struct {
@@ -31,22 +28,15 @@ type OutputExecutorParams struct {
 
 type OutputExecutor struct {
 	params OutputExecutorParams
-
-	logger log.Logger
 }
 
-func NewOutputExecutor(params OutputExecutorParams, logger log.Logger) (*OutputExecutor, error) {
+func NewOutputExecutor(params OutputExecutorParams) (*OutputExecutor, error) {
 	if err := params.validateRunParams(); err != nil {
 		return nil, err
 	}
 
-	if govalue.IsNil(logger) {
-		logger = log.GetDefaultLogger()
-	}
-
 	return &OutputExecutor{
 		params: params,
-		logger: logger,
 	}, nil
 }
 

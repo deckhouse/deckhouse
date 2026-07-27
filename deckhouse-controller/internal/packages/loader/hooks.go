@@ -26,7 +26,6 @@ import (
 	"sort"
 	"strings"
 
-	aoapp "github.com/flant/addon-operator/pkg/app"
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonsdk "github.com/flant/addon-operator/sdk"
@@ -36,6 +35,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -202,7 +202,7 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 
 			hook := kind.NewApplicationBatchHook(nestedHookName,
 				hookPath, namespace, name, kind.BatchHookReadyKey,
-				aoapp.DebugKeepTmpFiles, aoapp.LogProxyHookJSON, hookLogger)
+				app.DebugKeepTmpFiles(), app.LogProxyHookJSON(), hookLogger)
 
 			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
@@ -222,7 +222,7 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 
 			hook := kind.NewApplicationBatchHook(nestedHookName,
 				hookPath, namespace, name, key,
-				aoapp.DebugKeepTmpFiles, aoapp.LogProxyHookJSON, hookLogger)
+				app.DebugKeepTmpFiles(), app.LogProxyHookJSON(), hookLogger)
 
 			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
@@ -276,7 +276,7 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 
 			hook := kind.NewBatchHook(nestedHookName,
 				hookPath, name, kind.BatchHookReadyKey,
-				aoapp.DebugKeepTmpFiles, aoapp.LogProxyHookJSON, hookLogger)
+				app.DebugKeepTmpFiles(), app.LogProxyHookJSON(), hookLogger)
 
 			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
@@ -296,7 +296,7 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 
 			hook := kind.NewBatchHook(nestedHookName,
 				hookPath, name, key,
-				aoapp.DebugKeepTmpFiles, aoapp.LogProxyHookJSON, hookLogger)
+				app.DebugKeepTmpFiles(), app.LogProxyHookJSON(), hookLogger)
 
 			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}

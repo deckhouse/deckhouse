@@ -15,7 +15,6 @@
 package deckhouse
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const testModuleConfigCRD = `apiVersion: apiextensions.k8s.io/v1
@@ -56,8 +54,7 @@ var crdGVR = schema.GroupVersionResource{
 }
 
 func TestEnsureModuleConfigCRD(t *testing.T) {
-	ctx := context.Background()
-	log.InitLogger("json", false)
+	ctx := t.Context()
 
 	t.Run("creates CRD with heritage label from existing file", func(t *testing.T) {
 		crdPath := filepath.Join(t.TempDir(), "module-config.yaml")

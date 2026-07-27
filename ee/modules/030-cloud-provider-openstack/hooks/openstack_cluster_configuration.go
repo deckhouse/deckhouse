@@ -18,6 +18,28 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
+func shouldUseAPIServerFloatingIP(cfg v1.OpenstackProviderClusterConfiguration) bool {
+	switch cfg.Layout {
+	case "Standard":
+		bastion := cfg.Standard.Bastion
+		hasBastionInstanceClass := bastion.InstanceClass.FlavorName != "" || bastion.InstanceClass.ImageName != ""
+
+		return bastion.Zone == "" && bastion.VolumeType == "" && !hasBastionInstanceClass
+	case "StandardWithNoRouter":
+		return false
+	case "Simple":
+		return false
+	case "SimpleWithInternalNetwork":
+		if cfg.SimpleWithInternalNetwork.MasterWithExternalFloatingIP != nil {
+			return *cfg.SimpleWithInternalNetwork.MasterWithExternalFloatingIP
+		}
+
+		return true
+	default:
+		return true
+	}
+}
+
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, _ bool) error {
 	if len(input.Snapshots.Get("provider_cluster_configuration")) == 0 {
 		input.Values.Set("cloudProviderOpenstack.internal.hybridMode", true)
@@ -74,10 +96,12 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderOpenstack.internal.instances", discoveryData.Instances)
 	input.Values.Set("cloudProviderOpenstack.internal.podNetworkMode", discoveryData.PodNetworkMode)
 	input.Values.Set("cloudProviderOpenstack.internal.loadBalancer", discoveryData.LoadBalancer)
+	input.Values.Set("cloudProviderOpenstack.internal.layout", providerClusterConfiguration.Layout)
+	input.Values.Set("cloudProviderOpenstack.internal.apiServerFloatingIP", shouldUseAPIServerFloatingIP(providerClusterConfiguration))
 	input.Values.Set("cloudProviderOpenstack.internal.tags", providerClusterConfiguration.Tags)
 
 	return nil
-}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger())))
+}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigValidatorProvider()))
 
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
 	b, err := json.Marshal(in)

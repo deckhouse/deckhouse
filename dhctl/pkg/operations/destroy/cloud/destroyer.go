@@ -17,12 +17,12 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 )
@@ -32,9 +32,9 @@ type ClusterInfraDestroyer interface {
 }
 
 type DestroyerParams struct {
-	LoggerProvider log.LoggerProvider
-	KubeProvider   kube.ClientProviderWithCleanup
-	State          *State
+	Logger       *slog.Logger
+	KubeProvider kube.ClientProviderWithCleanup
+	State        *State
 
 	StateLoader  controller.StateLoader
 	ClusterInfra ClusterInfraDestroyer
@@ -58,15 +58,15 @@ func NewDestroyer(params *DestroyerParams) *Destroyer {
 }
 
 func (d *Destroyer) Prepare(ctx context.Context) error {
-	logger := log.SafeProvideLogger(d.params.LoggerProvider)
+	logger := d.params.Logger
 
 	if d.params.CommanderMode {
-		logger.LogDebugLn("Locking converge skipped for commander")
+		logger.DebugContext(ctx, "Locking converge skipped for commander")
 		return nil
 	}
 
 	if d.params.SkipResources {
-		logger.LogDebugLn("Locking converge skipped because resources should skip")
+		logger.DebugContext(ctx, "Locking converge skipped because resources should skip")
 		return nil
 	}
 
@@ -76,7 +76,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 	}
 
 	if locked {
-		logger.LogDebugLn("Locking converge skipped because locked in previous run")
+		logger.DebugContext(ctx, "Locking converge skipped because locked in previous run")
 		return nil
 	}
 
@@ -90,7 +90,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 		return err
 	}
 
-	logger.LogDebugLn("Converge was locked successfully and write to state")
+	logger.DebugContext(ctx, "Converge was locked successfully and write to state")
 
 	return nil
 }

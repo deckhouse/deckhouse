@@ -27,7 +27,7 @@ import (
 func TestRequestsCounter(t *testing.T) {
 	numCurrentTasks := 2
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	// cancel context so that counter clean up runs only one time
 	cancel()

@@ -29,8 +29,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -52,7 +53,7 @@ type logLine struct {
 	Component string    `json:"operator.component,omitempty"`
 	TaskID    string    `json:"task.id,omitempty"`
 	Source    string    `json:"source,omitempty"`
-	Time      time.Time `json:"time,omitempty"`
+	Time      time.Time `json:"time"`
 }
 
 func (l *logLine) String() string {
@@ -188,8 +189,7 @@ func (d *LogPrinter) printErrorsForTask(ctx context.Context, taskID string, erro
 
 	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(100)}
 	if !d.lastErrorTime.IsZero() {
-		t := metav1.NewTime(d.lastErrorTime)
-		logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &t}
+		logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: new(metav1.NewTime(d.lastErrorTime))}
 	}
 	// kubelet certificate on master can be changed before finish Deckhouse installation
 	// and dhctl can not get logs from Deckhouse pod
@@ -202,14 +202,14 @@ func (d *LogPrinter) printErrorsForTask(ctx context.Context, taskID string, erro
 		request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
 		result, lastErr = request.DoRaw(ctx)
 		if lastErr != nil {
-			log.DebugF("printErrorsForTask: %s\n %s", lastErr.Error(), string(result))
+			dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("printErrorsForTask: %s\n %s", lastErr.Error(), string(result)), "\n"))
 			return ErrRequestFailed
 		}
 
 		return nil
 	})
 	if err != nil {
-		log.DebugLn(lastErr)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprint(lastErr))
 		return
 	}
 
@@ -236,7 +236,7 @@ func (d *LogPrinter) printErrorsForTask(ctx context.Context, taskID string, erro
 
 		if line.Level == "error" || line.Output == "stderr" {
 			d.deckhouseErrors = append(d.deckhouseErrors, line.String())
-			log.DebugF("Error during Deckhouse converge: %s", line.String())
+			dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Error during Deckhouse converge: %s", line.String()), "\n"))
 		}
 		return true
 	})
@@ -252,7 +252,7 @@ func (d *LogPrinter) printLogsByLine(ctx context.Context, content []byte) {
 		}
 
 		if isModuleSuccess(line) {
-			log.InfoF("\tModule %q ran successfully\n", line.Module)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("\tModule %q ran successfully", line.Module))
 			_, span := telemetry.StartSpan(ctx, "deckhouse-module."+line.Module)
 			span.SetAttributes(otattribute.String("module", line.Module))
 			span.End()
@@ -260,7 +260,7 @@ func (d *LogPrinter) printLogsByLine(ctx context.Context, content []byte) {
 		}
 
 		if !d.stopOutputNoMoreConvergeTasks && isConvergeDone(line) {
-			log.InfoLn("No more converge tasks found in Deckhouse queue.")
+			dhlog.FromContext(ctx).InfoContext(ctx, "No more converge tasks found in Deckhouse queue.")
 			d.stopOutputNoMoreConvergeTasks = true
 			return true
 		}
@@ -280,8 +280,8 @@ func (d *LogPrinter) GetPod(ctx context.Context) error {
 		return fmt.Errorf("%s", message)
 	}
 
-	log.InfoLn(message)
-	log.InfoLn("Running pod found! Checking logs...")
+	dhlog.FromContext(ctx).InfoContext(ctx, message)
+	dhlog.FromContext(ctx).InfoContext(ctx, "Running pod found! Checking logs...")
 
 	d.deckhousePod = pod
 	return nil
@@ -294,7 +294,7 @@ func (d *LogPrinter) checkDeckhousePodReady(ctx context.Context) (bool, error) {
 
 	runningPod, err := d.kubeCl.CoreV1().Pods("d8-system").Get(ctx, d.deckhousePod.Name, metav1.GetOptions{})
 	if err != nil {
-		log.DebugF("checkDeckhousePodReady: %s\n", err.Error())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("checkDeckhousePodReady: %s", err.Error()))
 		return false, ErrRequestFailed
 	}
 
@@ -308,7 +308,7 @@ func (d *LogPrinter) checkDeckhousePodReady(ctx context.Context) (bool, error) {
 			continue
 		}
 		ready = false
-		log.DebugF("Pod %s is not ready: %s = %s\n", d.deckhousePod.Name, condition.Type, condition.Status)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Pod %s is not ready: %s = %s", d.deckhousePod.Name, condition.Type, condition.Status))
 	}
 
 	return ready, nil
@@ -333,7 +333,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.ErrorLn(strings.Join(d.deckhouseErrors, "\n"))
+			dhlog.FromContext(ctx).ErrorContext(ctx, strings.Join(d.deckhouseErrors, "\n"))
 			return false, ErrTimedOut
 		default:
 			ready, err := d.checkDeckhousePodReady(ctx)
@@ -347,17 +347,16 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 			request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
 			result, err := request.DoRaw(ctx)
 			if err != nil {
-				log.DebugF("Print: %s\n %s", err.Error(), string(result))
+				dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Print: %s\n %s", err.Error(), string(result)), "\n"))
 				return false, ErrRequestFailed
 			}
 
 			d.printLogsByLine(ctx, result)
 
 			time.Sleep(time.Second)
-			currentTime := metav1.NewTime(time.Now())
 			logOptions = corev1.PodLogOptions{
 				Container: "deckhouse",
-				SinceTime: &currentTime,
+				SinceTime: new(metav1.NewTime(time.Now())),
 				// see above
 				InsecureSkipTLSVerifyBackend: true,
 			}
@@ -366,6 +365,5 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 }
 
 func int64Pointer(i int) *int64 {
-	r := int64(i)
-	return &r
+	return new(int64(i))
 }

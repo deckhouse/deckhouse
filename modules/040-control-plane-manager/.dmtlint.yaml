@@ -1,13 +1,25 @@
 linters-settings:
+  no-cyrillic:
+    exclude-rules:
+      files:
+        - hooks/audit_policy.go # Contain Russian descriptions of audit rules
   openapi:
     exclude-rules:
       enum:
         # Real Kubernetes ClusterRole names (lowercase by RBAC conventions),
         # set by reconcile_kubeadm_cluster_admins_binding hook; cannot be capitalized.
         - "properties.internal.properties.kubeadmClusterAdminsTargetRoleName"
+        # Cryptographic algorithm names use technical format (RSA-2048, ECDSA-P256), not CamelCase.
+        - "properties.encryptionAlgorithm"
   container:
     exclude-rules:
+      controller-security-context:
+        - kind: DaemonSet
+          name: control-plane-proxy
       resources:
+        - kind: DaemonSet
+          name: control-plane-proxy
+          container: kube-rbac-proxy
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-etcd
@@ -21,6 +33,8 @@ linters-settings:
           name: d8-control-plane-manager
           container: image-holder-kube-apiserver
       security-context:
+        - kind: DaemonSet
+          name: control-plane-proxy
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-etcd

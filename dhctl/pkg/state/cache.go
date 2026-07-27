@@ -20,10 +20,10 @@ const TombstoneKey = ".tombstone"
 
 type Cache interface {
 	Save(context.Context, string, []byte) error
-	SaveStruct(context.Context, string, interface{}) error
+	SaveStruct(context.Context, string, any) error
 
 	Load(context.Context, string) ([]byte, error)
-	LoadStruct(context.Context, string, interface{}) error
+	LoadStruct(context.Context, string, any) error
 
 	Delete(context.Context, string)
 	Clean(ctx context.Context)

@@ -121,10 +121,10 @@ func (s *inSecretStateStore) SetState(convergeCtx *Context, state *State) error 
 
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "%s"`, stateSecretName),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.SecretConvergeState(stateBytes)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			c, cancel := convergeCtx.WithTimeout(10 * time.Second)
 			defer cancel()
 
@@ -135,7 +135,7 @@ func (s *inSecretStateStore) SetState(convergeCtx *Context, state *State) error 
 
 			return nil
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			c, cancel := convergeCtx.WithTimeout(10 * time.Second)
 			defer cancel()
 

@@ -17,11 +17,19 @@ package values
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
+	"github.com/ettle/strcase"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag/conv"
+	"google.golang.org/protobuf/types/known/structpb"
+
+	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
 // Storage manages package values with layering, patching, and schema validation.
@@ -46,6 +54,11 @@ type Storage struct {
 	// These are stored separately before merging with static and openapi values
 	settings addonutils.Values
 
+	// grantDefaults are runtime-resolved defaults for fields tagged with
+	// x-deckhouse-grantable-resource. They are injected by the grantDefaultsTransformer
+	// between the schema defaults and user config layers.
+	grantDefaults []GrantDefault
+
 	// resultValues is the final merged result of all value sources
 	// This is what hooks and templates see
 	resultValues addonutils.Values
@@ -68,7 +81,7 @@ func NewStorage(name string, staticValues addonutils.Values, settingsBytes, valu
 	}
 
 	s := &Storage{
-		name:          addonutils.ModuleNameToValuesKey(name),
+		name:          strcase.ToCamel(name),
 		staticValues:  staticValues,
 		schemaStorage: schemaStorage,
 	}
@@ -78,6 +91,27 @@ func NewStorage(name string, staticValues addonutils.Values, settingsBytes, valu
 	}
 
 	return s, nil
+}
+
+// GrantRefs returns the x-deckhouse-grantable-resource references declared in the
+// settings schema. Returns nil when no settings schema or no such references exist.
+func (s *Storage) GrantRefs() ([]schema.GrantRef, error) {
+	return s.schemaStorage.GrantRefs()
+}
+
+// SetGrantDefaults stores the runtime-resolved grant defaults for subsequent
+// injection via the grantDefaultsTransformer in GetSettings() and calculateResultValues().
+func (s *Storage) SetGrantDefaults(defaults []GrantDefault) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.grantDefaults = defaults
+}
+
+// grantDefaultsTransformer returns a transformer that applies grant defaults
+// to empty settings fields. Caller must hold s.mu.
+func (s *Storage) grantDefaultsTransformer() transformer {
+	return &applyGrantDefaults{defaults: s.grantDefaults}
 }
 
 // GetValuesChecksum returns a checksum of the final merged values.
@@ -118,7 +152,8 @@ func (s *Storage) GetSettings() addonutils.Values {
 		settings = addonutils.Values{}
 	}
 
-	return s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
+	settings = s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
+	return s.grantDefaultsTransformer().Transform(settings)
 }
 
 // ApplySettingsDefaults returns a copy of the provided values with defaults
@@ -131,7 +166,8 @@ func (s *Storage) ApplySettingsDefaults(settings addonutils.Values) addonutils.V
 		settings = addonutils.Values{}
 	}
 
-	return s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
+	settings = s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
+	return s.grantDefaultsTransformer().Transform(settings)
 }
 
 // ValidateSettings validates values against the config OpenAPI schema.
@@ -196,8 +232,37 @@ func (s *Storage) ApplyValuesPatch(patch addonutils.ValuesPatch) error {
 	return s.calculateResultValues()
 }
 
+// ApplyValuesPatchWithLegacyRoot applies a patch after unwrapping the legacy package-name root.
+func (s *Storage) ApplyValuesPatchWithLegacyRoot(patch addonutils.ValuesPatch) error {
+	return s.ApplyValuesPatch(unwrapValuesPatchRoot(patch, s.name))
+}
+
+// unwrapValuesPatchRoot maps legacy /<package>/ paths onto the flat values document.
+func unwrapValuesPatchRoot(patch addonutils.ValuesPatch, root string) addonutils.ValuesPatch {
+	prefix := "/" + strings.NewReplacer("~", "~0", "/", "~1").Replace(root)
+	operations := make([]*sdkutils.ValuesPatchOperation, len(patch.Operations))
+
+	for i, operation := range patch.Operations {
+		if operation == nil {
+			continue
+		}
+
+		normalized := *operation
+		switch {
+		case normalized.Path == prefix:
+			normalized.Path = ""
+		case strings.HasPrefix(normalized.Path, prefix+"/"):
+			normalized.Path = strings.TrimPrefix(normalized.Path, prefix)
+		}
+
+		operations[i] = &normalized
+	}
+
+	return addonutils.ValuesPatch{Operations: operations}
+}
+
 // calculateResultValues merges all value layers and applies patches.
-// Layer order: static -> config schema defaults -> user config -> values schema defaults -> patches
+// Layer order: static -> config schema defaults -> grant defaults -> user config -> values schema defaults -> patches
 func (s *Storage) calculateResultValues() error {
 	merged := mergeLayers(
 		addonutils.Values{},
@@ -206,6 +271,9 @@ func (s *Storage) calculateResultValues() error {
 
 		// from openapi config spec
 		s.openapiDefaultsTransformer(schema.TypeSettings),
+
+		// runtime-resolved grant defaults for x-deckhouse-grantable-resource fields
+		s.grantDefaultsTransformer(),
 
 		// from package settings
 		s.settings,
@@ -273,4 +341,65 @@ func (s *Storage) validateSettings(values addonutils.Values) error {
 	}
 
 	return s.schemaStorage.ValidateTransition(schema.TypeSettings, s.name, validatableValues, oldValidatable)
+}
+
+// InjectRegistryValue sets the registry value in the static values
+// TODO(ipaqsa): get rid of it after migration to module v2
+func (s *Storage) InjectRegistryValue(registry registry.Remote) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// inject spec to values schema
+	s.injectRegistrySpec(schema.TypeSettings)
+	// inject spec to helm schema
+	s.injectRegistrySpec(schema.TypeHelm)
+
+	if s.staticValues == nil {
+		s.staticValues = addonutils.Values{}
+	}
+
+	s.staticValues["registry"] = &structpb.Struct{
+		Fields: map[string]*structpb.Value{
+			"base":      {Kind: &structpb.Value_StringValue{StringValue: registry.Repository}},
+			"dockercfg": {Kind: &structpb.Value_StringValue{StringValue: registry.DockerConfig}},
+			"scheme":    {Kind: &structpb.Value_StringValue{StringValue: registry.Scheme}},
+			"ca":        {Kind: &structpb.Value_StringValue{StringValue: registry.CA}},
+		},
+	}
+
+	_ = s.calculateResultValues()
+}
+
+// injectRegistrySpec mutates the module schema to add a strict-typed "registry" field
+func (s *Storage) injectRegistrySpec(schemaType schema.Type) {
+	scheme := s.schemaStorage.GetSchema(schemaType)
+	if scheme == nil {
+		return
+	}
+
+	if len(scheme.Properties) == 0 {
+		scheme.Properties = make(map[string]spec.Schema)
+	}
+
+	scheme.Properties["registry"] = spec.Schema{
+		SchemaProps: spec.SchemaProps{
+			Type:                 spec.StringOrArray{"object"},
+			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
+			Properties: map[string]spec.Schema{
+				"base": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}, MinLength: conv.Pointer[int64](1)},
+				},
+				"dockercfg": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
+				},
+				"scheme": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
+				},
+				"ca": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
+				},
+			},
+			Required: []string{"base", "scheme"},
+		},
+	}
 }

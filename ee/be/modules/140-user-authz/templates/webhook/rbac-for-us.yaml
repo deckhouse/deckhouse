@@ -19,6 +19,12 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs: ["get", "list", "watch"]
+# Needed for the CAR-independent RBAC grants check: requests allowed by
+# RoleBindings or by ClusterRoleBindings not generated from a
+# ClusterAuthorizationRule must not be denied by the webhook.
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

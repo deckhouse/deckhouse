@@ -32,6 +32,8 @@ Control plane management functions:
   * Prioritizing nodes based on their state (network load, storage subsystem health, etc.).
   * Dividing nodes into zones, etc.
 
+* **Periodic etcd defragmentation**. In clusters with three or more etcd members, this feature is enabled by default. For more details, see the [`control-plane-manager` module documentation](/modules/control-plane-manager/configuration.html#parameters-etcd-defrag).
+
 For detailed configuration options and usage examples, refer to the [`control-plane-manager` module documentation](/modules/control-plane-manager/).
 
 ### Module architecture
@@ -45,7 +47,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`control-plane-manager`](/modules/control-plane-manager/) module and its interactions with other platform components are shown in the following diagram:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![control-plane-manager module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.png)
 
 ## Module components
@@ -109,18 +110,16 @@ The following external components interact with the module:
 
 ## Cluster control plane monitoring
 
-Control plane monitoring is provided by the [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) module, which ensures secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
+The module provides control plane monitoring, ensuring secure metrics collection and providing a basic set of monitoring rules for the following cluster components:
 
 * **kube-apiserver**
 * **kube-controller-manager**
 * **kube-scheduler**
 * **etcd**
 
-For configuration details, refer to the [`monitoring-kubernetes-control-plane` module documentation](/modules/monitoring-kubernetes-control-plane/).
+### Control plane metrics collection components
 
-### Components of the monitoring-kubernetes-control-plane module
-
-The module consists of a single component:
+A single component is responsible for control plane metrics collection:
 
 1. **control-plane-proxy** (DaemonSet): Runs on all master nodes and includes a single container:
 
@@ -140,8 +139,8 @@ Control-plane-proxy interacts with the following components:
 
 **Prometheus-main** interacts with **control-plane-proxy** to collect control plane component metrics.
 
-The interaction between the `monitoring-kubernetes-control-plane` module and the cluster control plane is shown in the architecture diagram of the `control-plane-manager` module above.
+The interaction between the control-plane-proxy component and the cluster control plane is shown in the module's architecture diagram above.
 
 ### Metrics collection from kube-apiserver
 
-Metrics from **kube-apiserver** are collected directly by **prometheus-main**. The [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) module adds the corresponding metric collection rules to the **prometheus-main** configuration.
+Metrics from **kube-apiserver** are collected directly by **prometheus-main**. The `control-plane-manager` module adds the corresponding metric collection rules to the **prometheus-main** configuration.

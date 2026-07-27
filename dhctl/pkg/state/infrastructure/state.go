@@ -29,13 +29,15 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -123,7 +125,7 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 			}
 
 			if _, ok := nodeState.Labels[global.InfrastructureStateBackupLabelKey]; ok {
-				log.DebugF("Found backup state secret %s for node: %s. Skipping.\n", secretName, name)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found backup state secret %s for node: %s. Skipping.", secretName, name))
 				continue
 			}
 
@@ -274,7 +276,6 @@ func SaveNodeInfrastructureState(
 	kubeCl *client.KubernetesClient,
 	nodeName, nodeGroup string,
 	tfState, settings []byte,
-	logger log.Logger,
 ) error {
 	if len(tfState) == 0 {
 		return ErrNoInfrastructureState
@@ -282,17 +283,17 @@ func SaveNodeInfrastructureState(
 
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.SecretWithNodeInfrastructureState(nodeName, nodeGroup, tfState, settings)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
@@ -301,7 +302,6 @@ func SaveNodeInfrastructureState(
 		},
 	}
 	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 450, 1*time.Second).
-		WithLogger(logger).
 		RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
 }
 
@@ -310,10 +310,10 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		return ErrNoInfrastructureState
 	}
 
-	getInfrastructureStateManifest := func() interface{} {
+	getInfrastructureStateManifest := func() any {
 		return manifests.SecretWithNodeInfrastructureState(nodeName, global.MasterNodeGroupName, tfState, nil)
 	}
-	getDevicePathManifest := func() interface{} {
+	getDevicePathManifest := func() any {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)
 	}
 
@@ -321,14 +321,14 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getInfrastructureStateManifest,
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
@@ -339,14 +339,14 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		{
 			Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 			Manifest: getDevicePathManifest,
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				data, err := json.Marshal(manifest.(*v1.Secret))
 				if err != nil {
 					return err
@@ -379,22 +379,28 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		)
 }
 
-func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, outputs *infrastructure.PipelineOutputs) error {
+// SaveClusterInfrastructureState persists the terraform pipeline outputs.
+// Discovery data is routed by metaConfig:
+//   - legacy provider config (PCC present) → patch d8-provider-cluster-configuration;
+//   - mc-flow (cloud-provider-<name> ModuleConfig present) → write
+//     d8-candi-cloud-provider-discovery-data into d8-cloud-provider-<name>;
+//   - mid-migration (both present) → both are written; mc-flow data wins on read.
+func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, outputs *infrastructure.PipelineOutputs) error {
 	if outputs == nil || len(outputs.InfrastructureState) == 0 {
 		return ErrNoInfrastructureState
 	}
 
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-cluster-terraform-state"`,
-		Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(outputs.InfrastructureState) },
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		Manifest: func() any { return manifests.SecretWithInfrastructureState(outputs.InfrastructureState) },
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
@@ -414,16 +420,36 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		return err
 	}
 
+	if metaConfig.HasLegacyProviderConfig() {
+		if err := saveLegacyProviderDiscoveryData(ctx, kubeCl, outputs.CloudDiscovery); err != nil {
+			return err
+		}
+	}
+
+	if metaConfig.HasProviderModuleConfig() {
+		if err := saveCandiCloudProviderDiscoveryData(ctx, kubeCl, metaConfig.ProviderName, outputs.CloudDiscovery); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// saveLegacyProviderDiscoveryData merge-patches cloud-provider-discovery-data.json
+// into the legacy d8-provider-cluster-configuration Secret. The Secret is owned
+// by the bootstrap pipeline and carries other keys, so this is a Patch rather
+// than a Create-or-Update. A missing Secret is tolerated: the cluster has
+// migrated to mc-flow and the Secret is gone.
+func saveLegacyProviderDiscoveryData(ctx context.Context, kubeCl *client.KubernetesClient, discoveryData []byte) error {
 	patch, err := json.Marshal(map[string]interface{}{
 		"data": map[string]interface{}{
-			"cloud-provider-discovery-data.json": outputs.CloudDiscovery,
+			"cloud-provider-discovery-data.json": discoveryData,
 		},
 	})
 	if err != nil {
 		return err
 	}
-
-	return retry.NewLoop("Update cloud discovery data", 450, 1*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Update cloud discovery data", 45, 10*time.Second).RunContext(ctx, func() error {
 		_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
 			ctx,
 			"d8-provider-cluster-configuration",
@@ -431,8 +457,68 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 			patch,
 			metav1.PatchOptions{},
 		)
+		if k8errors.IsNotFound(err) {
+			dhlog.FromContext(ctx).WarnContext(ctx, "Skipping cloud discovery data update: legacy Secret d8-provider-cluster-configuration not present (mc-flow cluster)")
+			return nil
+		}
 		return err
 	})
+}
+
+// saveCandiCloudProviderDiscoveryData writes discovery data into
+// d8-candi-cloud-provider-discovery-data in the provider's
+// d8-cloud-provider-<name> namespace. The namespace is created if missing — the
+// cloud-provider module's helm chart will adopt and label it later.
+func saveCandiCloudProviderDiscoveryData(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, discoveryData []byte) error {
+	if providerName == "" {
+		return nil
+	}
+	namespace := config.CloudProviderNamespace(providerName)
+
+	if err := ensureNamespace(ctx, kubeCl, namespace); err != nil {
+		return err
+	}
+
+	task := actions.ManifestTask{
+		Name: fmt.Sprintf(`Secret %q`, namespace+"/d8-candi-cloud-provider-discovery-data"),
+		Manifest: func() interface{} {
+			return manifests.SecretWithCandiCloudProviderDiscoveryData(namespace, discoveryData)
+		},
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets(namespace).
+				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
+			return err
+		},
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets(namespace).
+				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+
+			return err
+		},
+	}
+	return retry.NewLoop("Save candi cloud-provider discovery data", 45, 10*time.Second).
+		RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
+}
+
+func ensureNamespace(ctx context.Context, kubeCl *client.KubernetesClient, name string) error {
+	return retry.NewLoop(fmt.Sprintf("Ensure Namespace %q", name), 45, 10*time.Second).
+		RunContext(ctx, func() error {
+			// Get first: the in-cluster converger is only allowed to read this
+			// namespace (the provider module owns its creation), so a blind
+			// Create would fail with Forbidden even though the namespace exists.
+			if _, err := kubeCl.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{}); err == nil {
+				return nil
+			}
+			ns := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
+			_, err := kubeCl.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+			if err == nil || k8errors.IsAlreadyExists(err) {
+				return nil
+			}
+			return err
+		})
 }
 
 func DeleteInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, secretName string) error {

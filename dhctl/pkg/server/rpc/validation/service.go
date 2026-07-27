@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 )
@@ -26,12 +27,14 @@ import (
 type Service struct {
 	pb.UnimplementedValidationServer
 
-	schemaStore *config.SchemaStore
+	schemaStore   *config.SchemaStore
+	globalOptions *options.GlobalOptions
 }
 
-func New(schemaStore *config.SchemaStore) *Service {
+func New(schemaStore *config.SchemaStore, globalOptions *options.GlobalOptions) *Service {
 	return &Service{
-		schemaStore: schemaStore,
+		schemaStore:   schemaStore,
+		globalOptions: globalOptions,
 	}
 }
 

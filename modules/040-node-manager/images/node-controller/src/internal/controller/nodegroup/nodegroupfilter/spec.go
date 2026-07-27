@@ -17,12 +17,13 @@ limitations under the License.
 package nodegroupfilter
 
 import (
+	"encoding/json"
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
-	nm "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/pkg/schema"
 )
 
 type NodeType string
@@ -30,7 +31,8 @@ type NodeType string
 type NodeGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NodeGroupSpec `json:"spec"`
+	Spec              NodeGroupSpec   `json:"spec"`
+	Status            NodeGroupStatus `json:"status,omitempty"`
 }
 
 type NodeGroupSpec struct {
@@ -46,7 +48,7 @@ type NodeGroupSpec struct {
 
 	CloudInstances CloudInstances `json:"cloudInstances,omitempty"`
 
-	NodeTemplate nm.NodeTemplate `json:"nodeTemplate,omitempty"`
+	NodeTemplate NodeTemplate `json:"nodeTemplate,omitempty"`
 
 	Chaos Chaos `json:"chaos,omitempty"`
 
@@ -57,6 +59,16 @@ type NodeGroupSpec struct {
 	Update Update `json:"update,omitempty"`
 
 	Kubelet Kubelet `json:"kubelet,omitempty"`
+
+	Fencing Fencing `json:"fencing,omitempty"`
+}
+
+type NodeTemplate struct {
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	Labels map[string]string `json:"labels"`
+
+	Taints []corev1.Taint `json:"taints,omitempty"`
 }
 
 type GPU struct {
@@ -175,12 +187,12 @@ type Update struct {
 }
 
 type AutomaticDisruptions struct {
-	DrainBeforeApproval *bool          `json:"drainBeforeApproval,omitempty"`
-	Windows             update.Windows `json:"windows,omitempty"`
+	DrainBeforeApproval *bool   `json:"drainBeforeApproval,omitempty"`
+	Windows             Windows `json:"windows,omitempty"`
 }
 
 type RollingUpdateDisruptions struct {
-	Windows update.Windows `json:"windows,omitempty"`
+	Windows Windows `json:"windows,omitempty"`
 }
 
 type Kubelet struct {
@@ -191,6 +203,8 @@ type Kubelet struct {
 	ContainerLogMaxSize string `json:"containerLogMaxSize,omitempty"`
 
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
+
+	SeccompDefault bool `json:"seccompDefault,omitempty"`
 
 	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
 
@@ -224,4 +238,115 @@ type KubeletMemorySwap struct {
 
 type KubeletLimitedSwap struct {
 	Size string `json:"size"`
+}
+
+type Windows []Window
+
+type Window struct {
+	From string   `json:"from"`
+	To   string   `json:"to"`
+	Days []string `json:"days"`
+}
+
+type Fencing struct {
+	Mode     string           `json:"mode,omitempty"`
+	Watchdog *FencingWatchdog `json:"watchdog,omitempty"`
+}
+
+type FencingWatchdog struct {
+	Timeout int64 `json:"timeout,omitempty"`
+}
+
+func (f *FencingWatchdog) UnmarshalJSON(data []byte) error {
+	type Alias struct {
+		Timeout string `json:"timeout,omitempty"`
+	}
+
+	var aux Alias
+
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
+		return err
+	}
+
+	duration, err := time.ParseDuration(aux.Timeout)
+	if err != nil {
+		return err
+	}
+
+	f.Timeout = int64(duration.Seconds())
+
+	return nil
+}
+
+type NodeGroupEngine string
+
+type NodeGroupStatus struct {
+	Engine NodeGroupEngine `json:"engine,omitempty"`
+
+	Ready int32 `json:"ready,omitempty"`
+
+	Nodes int32 `json:"nodes,omitempty"`
+
+	Instances int32 `json:"instances,omitempty"`
+
+	Desired int32 `json:"desired,omitempty"`
+
+	Min int32 `json:"min,omitempty"`
+
+	Max int32 `json:"max,omitempty"`
+
+	UpToDate int32 `json:"upToDate,omitempty"`
+
+	Standby int32 `json:"standby,omitempty"`
+
+	Error string `json:"error,omitempty"`
+
+	LastMachineFailures []MachineFailure `json:"lastMachineFailures,omitempty"`
+
+	ConditionSummary ConditionSummary `json:"conditionSummary,omitempty"`
+
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+
+	Conditions []NodeGroupCondition `json:"conditions,omitempty"`
+}
+
+type MachineFailure struct {
+	Name string `json:"name,omitempty"`
+
+	ProviderID string `json:"providerID,omitempty"`
+
+	OwnerRef string `json:"ownerRef,omitempty"`
+
+	LastOperation MachineOperation `json:"lastOperation,omitempty"`
+}
+
+type MachineOperation struct {
+	Description string `json:"description,omitempty"`
+
+	LastUpdateTime string `json:"lastUpdateTime,omitempty"`
+
+	State string `json:"state,omitempty"`
+
+	Type string `json:"type,omitempty"`
+}
+
+type ConditionSummary struct {
+	StatusMessage string `json:"statusMessage,omitempty"`
+
+	Ready string `json:"ready,omitempty"`
+}
+
+type NodeGroupConditionType string
+
+type ConditionStatus string
+
+type NodeGroupCondition struct {
+	Type NodeGroupConditionType `json:"type"`
+
+	Status ConditionStatus `json:"status"`
+
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+
+	Message string `json:"message,omitempty"`
 }

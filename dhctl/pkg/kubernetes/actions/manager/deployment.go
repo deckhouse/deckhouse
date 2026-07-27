@@ -24,9 +24,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -57,7 +58,7 @@ func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.Ku
 	}
 
 	if !hasDeployment {
-		log.InfoF("Deployment %s/%s does not exist. Skip restarting.\n", global.D8SystemNamespace, deploymentName)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Deployment %s/%s does not exist. Skip restarting.", global.D8SystemNamespace, deploymentName))
 		return nil
 	}
 
@@ -67,11 +68,11 @@ func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.Ku
 			if err != nil {
 				return err
 			}
-			patch, err := json.Marshal(map[string]interface{}{
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"metadata": map[string]interface{}{
-							"annotations": map[string]interface{}{
+			patch, err := json.Marshal(map[string]any{
+				"spec": map[string]any{
+					"template": map[string]any{
+						"metadata": map[string]any{
+							"annotations": map[string]any{
 								"dhctl.deckhouse.io/restart-infra-deployment": time.Now().Format(time.RFC3339),
 							},
 						},

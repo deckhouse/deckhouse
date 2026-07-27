@@ -109,6 +109,10 @@ linters-settings:
           name: d8:node-manager:caps-controller-manager-leader-election-role
         - kind: RoleBinding
           name: d8:node-manager:caps-controller-manager-leader-election-role
+        - kind: Role
+          name: d8:node-manager:integrity-controller-leader-election-role
+        - kind: RoleBinding
+          name: d8:node-manager:integrity-controller-leader-election-role
         - kind: ServiceAccount
           name: nvidia-device-plugin
         - kind: ServiceAccount
@@ -143,6 +147,10 @@ linters-settings:
           - images/caps-controller-manager/src/bin/controller-gen
           - images/bashible-apiserver/src/hack/update-codegen.sh
           - images/bashible-apiserver/src/hack/kube_codegen.sh
+          - images/node-controller/src/api/machine.sapcloud.io/v1alpha1/register.go
+          - images/node-controller/src/api/machine.sapcloud.io/v1alpha1/shared_types.go
+          - images/node-controller/src/api/machine.sapcloud.io/v1alpha1/doc.go
+          - images/node-controller/src/api/machine.sapcloud.io/v1alpha1/machine_types.go
   openapi:
     exclude-rules:
       enum:

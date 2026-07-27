@@ -1,0 +1,17 @@
+version: "3"
+
+includes:
+  fencing-agent-deployment:
+    taskfile: ./tests/fencing-agent-deployment/Taskfile.yml
+    dir: ./tests/fencing-agent-deployment
+
+tasks:
+  run:
+    desc: Run all fencing agent e2e tests
+    cmds:
+      - task: fencing-agent-deployment:run
+
+  dry-run:
+    desc: Dry-Run all fencing agent e2e tests
+    cmds:
+      - task: fencing-agent-deployment:dry-run

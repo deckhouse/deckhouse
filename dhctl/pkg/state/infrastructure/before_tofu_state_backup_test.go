@@ -25,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -137,7 +136,7 @@ type: Opaque`
 )
 
 func createSecret(t *testing.T, fakeClient *client.KubernetesClient, content string) *corev1.Secret {
-	s, err := fakeClient.CoreV1().Secrets("d8-system").Create(context.TODO(), yamlToSecret(content), metav1.CreateOptions{})
+	s, err := fakeClient.CoreV1().Secrets("d8-system").Create(t.Context(), yamlToSecret(content), metav1.CreateOptions{})
 
 	require.NoError(t, err)
 	require.NotNil(t, s)
@@ -146,13 +145,13 @@ func createSecret(t *testing.T, fakeClient *client.KubernetesClient, content str
 }
 
 func assertSecretDidNotChanged(t *testing.T, fakeClient *client.KubernetesClient, secret *corev1.Secret, name string) {
-	afterBackupSecret, err := fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), name, metav1.GetOptions{})
+	afterBackupSecret, err := fakeClient.CoreV1().Secrets("d8-system").Get(t.Context(), name, metav1.GetOptions{})
 	require.NoError(t, err)
 	require.Equal(t, secret, afterBackupSecret)
 }
 
 func getBackupSecret(t *testing.T, fakeClient *client.KubernetesClient, name string) *corev1.Secret {
-	backupSecret, err := fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), name, metav1.GetOptions{})
+	backupSecret, err := fakeClient.CoreV1().Secrets("d8-system").Get(t.Context(), name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	return backupSecret
@@ -186,9 +185,9 @@ func TestBackupStates(t *testing.T) {
 	masterSecret := createSecret(t, fakeClient, master)
 	nodeSecret := createSecret(t, fakeClient, node)
 
-	backuper := NewTofuMigrationStateBackuper(provider, log.GetDefaultLogger())
+	backuper := NewTofuMigrationStateBackuper(provider)
 
-	err := backuper.BackupStates(context.TODO())
+	err := backuper.BackupStates(t.Context())
 	require.NoError(t, err)
 
 	// check that after backup old secrets did not affect
@@ -235,12 +234,12 @@ func TestBackupStatesForCommander(t *testing.T) {
 	saveCacheState(t, c, "fake-nmit-delete-12-03-master-0.tfstate", "secret")
 	saveCacheState(t, c, "fake-nmit-delete-12-03-khm-0.tfstate", "secret")
 
-	backuper := NewTofuMigrationStateBackuper(provider, log.GetDefaultLogger()).WithCommanderMode(&TofuBackupCommanderMode{
+	backuper := NewTofuMigrationStateBackuper(provider).WithCommanderMode(&TofuBackupCommanderMode{
 		Cache:      c,
 		MetaConfig: &config.MetaConfig{ClusterPrefix: "fake"},
 	})
 
-	err := backuper.BackupStates(context.TODO())
+	err := backuper.BackupStates(t.Context())
 	require.NoError(t, err)
 
 	assertCacheState(t, c, "base-infrastructure.tfstate", "secret")
@@ -270,12 +269,12 @@ func TestSkipBackupStatesForCommander(t *testing.T) {
 	saveCacheState(t, c, "tf-fake-nmit-delete-12-03-master-0.terraform.backup", "secret1")
 	saveCacheState(t, c, "tf-fake-nmit-delete-12-03-khm-0.terraform.backup", "secret1")
 
-	backuper := NewTofuMigrationStateBackuper(provider, log.GetDefaultLogger()).WithCommanderMode(&TofuBackupCommanderMode{
+	backuper := NewTofuMigrationStateBackuper(provider).WithCommanderMode(&TofuBackupCommanderMode{
 		Cache:      c,
 		MetaConfig: &config.MetaConfig{ClusterPrefix: "fake"},
 	})
 
-	err := backuper.BackupStates(context.TODO())
+	err := backuper.BackupStates(t.Context())
 	require.NoError(t, err)
 
 	assertCacheState(t, c, "base-infrastructure.tfstate", "secret")
@@ -301,9 +300,9 @@ func TestSkipBackupStatesIfBackupExist(t *testing.T) {
 	masterBackupSecret := createSecret(t, fakeClient, backupMaster)
 	nodeBackupSecret := createSecret(t, fakeClient, backupNode)
 
-	backuper := NewTofuMigrationStateBackuper(provider, log.GetDefaultLogger())
+	backuper := NewTofuMigrationStateBackuper(provider)
 
-	err := backuper.BackupStates(context.TODO())
+	err := backuper.BackupStates(t.Context())
 	require.NoError(t, err)
 
 	// check that after backup old secrets did not affect

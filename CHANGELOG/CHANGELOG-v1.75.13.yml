@@ -1,0 +1,12 @@
+deckhouse:
+  fixes:
+    - summary: >-
+        Fix nil pointer panic in resource and namespace informers by using each informer's own logger
+        instead of the possibly-nil Monitor.Logger.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21231
+user-authn:
+  fixes:
+    - summary: >-
+        Preserve Dex Password fields (notably groups) when resetting password, locking or unlocking a
+        user, so users are no longer locked out after these operations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21260

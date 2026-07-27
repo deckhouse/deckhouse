@@ -1,0 +1,6 @@
+version: '3'
+
+includes:
+  e2e:
+    taskfile: e2e/Taskfile.yaml
+    dir: e2e

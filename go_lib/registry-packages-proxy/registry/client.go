@@ -18,6 +18,7 @@ import (
 	"context"
 	"io"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -34,7 +35,12 @@ type Client interface {
 	GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, string, io.ReadCloser, error)
 	// ResolveTag returns the manifest digest of an image identified by repository path and tag.
 	// The returned digest is suitable for passing as the `digest` argument to GetPackage.
-	ResolveTag(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string) (string, error)
+	// When platform is non-nil and the tag is a multi-platform image index, the digest of the
+	// matching per-platform child manifest is returned.
+	ResolveTag(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string, platform *v1.Platform) (string, error)
 	// ListTags returns all tags available for an image identified by repository path.
 	ListTags(ctx context.Context, log log.Logger, config *ClientConfig, path string) ([]string, error)
+	// GetRawManifest returns the raw manifest bytes (and its media type) of an image
+	// identified by repository path and ref (tag or digest), without pulling its layers.
+	GetRawManifest(ctx context.Context, log log.Logger, config *ClientConfig, path string, ref string) ([]byte, string, error)
 }

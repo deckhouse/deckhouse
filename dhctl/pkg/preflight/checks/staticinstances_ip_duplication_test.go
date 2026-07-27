@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -128,7 +127,7 @@ spec:
     name: credentials
 `,
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "Duplicate address")
 			},
 		},
@@ -139,7 +138,7 @@ spec:
 				MetaConfig: tt.fields.metaConfig,
 			}
 
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			tt.wantErr(t, err, "StaticInstancesIPDuplicationCheck.Run()")
 		})

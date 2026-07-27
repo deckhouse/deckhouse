@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -52,7 +52,7 @@ type Installer struct {
 }
 
 func NewInstaller(registry *registry.Service, logger *log.Logger) *Installer {
-	downloaded := d8env.GetDownloadedModulesDir()
+	downloaded := app.DownloadedModulesDir()
 
 	return &Installer{
 		downloaded: downloaded,
@@ -132,6 +132,96 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	}
 
 	logger.Debug("module installed")
+
+	return nil
+}
+
+// Stage creates an erofs module image on the filesystem WITHOUT mounting it
+// (no device mapper, no mount). The image ends up at
+// /deckhouse/downloaded/<module>/<version>.erofs but the module is not exposed to
+// the operator, so an embedded copy of the same name keeps serving the module.
+// The image is mounted later (by Install/Restore) once the embedded copy is gone.
+func (i *Installer) Stage(ctx context.Context, module, version, tempModulePath string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "Stage")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("path", tempModulePath))
+
+	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
+
+	logger.Debug("stage module without mount")
+
+	// /deckhouse/downloaded/<module>
+	modulePath := filepath.Join(i.downloaded, module)
+	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
+	}
+
+	// <version>.erofs
+	image := fmt.Sprintf("%s.erofs", version)
+	// /deckhouse/downloaded/<module>/<version>.erofs
+	imagePath := filepath.Join(modulePath, image)
+
+	logger.Debug("create erofs image", slog.String("path", imagePath))
+	if err := verity.CreateImage(ctx, tempModulePath, imagePath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("create image from the temp path '%s': %w", tempModulePath, err)
+	}
+
+	logger.Debug("module staged")
+
+	return nil
+}
+
+// StageFromRegistry ensures the erofs module image is present on the filesystem
+// WITHOUT mounting it (no device mapper, no mount). Mirrors Restore but skips
+// activation.
+func (i *Installer) StageFromRegistry(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "StageFromRegistry")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("source", ms.GetName()))
+
+	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
+	logger.Debug("stage module from registry without mount")
+
+	// /deckhouse/downloaded/<module>
+	modulePath := filepath.Join(i.downloaded, module)
+	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
+	}
+
+	// <version>.erofs
+	image := fmt.Sprintf("%s.erofs", version)
+	// /deckhouse/downloaded/<module>/<version>.erofs
+	imagePath := filepath.Join(modulePath, image)
+
+	// image already present on the filesystem - nothing to do
+	if err := i.verifyModule(ctx, module, version, ""); err == nil {
+		logger.Debug("erofs image already present, skip staging", slog.String("path", imagePath))
+		return nil
+	}
+
+	img, err := i.registry.GetImageReader(ctx, registry.BuildRemote(ms), module, version)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("download module image: %w", err)
+	}
+	defer img.Close()
+
+	logger.Debug("create erofs image from module image", slog.String("path", imagePath))
+	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("extract module image to erofs: %w", err)
+	}
+
+	logger.Debug("module staged")
 
 	return nil
 }

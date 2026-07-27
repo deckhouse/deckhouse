@@ -34,5 +34,5 @@ terraform {
 
 func GetVersionContent(settings settings.ProviderSettings, version string) []byte {
 	source := settings.Namespace() + "/" + settings.Type()
-	return []byte(fmt.Sprintf(template, settings.Type(), source, version))
+	return fmt.Appendf(nil, template, settings.Type(), source, version)
 }

@@ -19,9 +19,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -47,15 +48,15 @@ func NewNodesController(ctx context.Context, clusterMetaConfig *config.MetaConfi
 }
 
 func getNgMetaConfig(ctx context.Context, clusterMetaConfig *config.MetaConfig, settings []byte) (*config.MetaConfig, error) {
-	// we use dummy preparator because metaConfig was prepared early
-	cfg, err := clusterMetaConfig.DeepCopy().Prepare(ctx, config.DummyPreparatorProvider())
+	// we use dummy validator because metaConfig was prepared early
+	cfg, err := clusterMetaConfig.DeepCopy().Prepare(ctx, config.DummyValidatorProvider())
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare copied config: %v", err)
 	}
 	if settings != nil {
 		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
 		if err != nil {
-			log.ErrorLn(err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 		} else {
 			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
 		}
@@ -72,7 +73,7 @@ func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, nam
 
 	nodeIndex, err := config.GetIndexFromNodeName(name)
 	if err != nil {
-		log.ErrorF("can't extract index from infrastructure state secret (%v), skipping %s\n", err, name)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, name))
 		return nil
 	}
 

@@ -8,7 +8,7 @@ lang: ru
 StorageClass хранилища DVCR можно сменить только пересозданием PVC. При этом теряются все ранее загруженные в DVCR образы, то есть существующие ресурсы [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) и [VirtualImage](/modules/virtualization/cr.html#virtualimage) фактически перестают соответствовать данным в хранилище.
 {% endalert %}
 
-Поле [`spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) в ModuleConfig модуля `virtualization` задаёт класс хранения тома хранилища образов виртуальных машин (DVCR). Пока в неймспейсе `d8-virtualization` существует PVC этого тома, изменить поле через API нельзя.
+Поле [`spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) в ModuleConfig модуля `virtualization` задаёт класс хранения тома хранилища образов виртуальных машин (DVCR). Пока в неймспейсе `d8-virtualization` существует PVC этого тома, изменить поле через API нельзя.
 
 У уже созданного PVC в Kubernetes нельзя сменить `storageClassName`, штатного переноса данных DVCR между классами хранения нет.
 

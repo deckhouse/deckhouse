@@ -69,17 +69,17 @@ func CheckShouldUpdateCommanderUUID(ctx context.Context, kubeCl *client.Kubernet
 func ConstructManagedByCommanderConfigMapTask(ctx context.Context, commanderUUID uuid.UUID, kubeCl *client.KubernetesClient) actions.ManifestTask {
 	return actions.ManifestTask{
 		Name: `ConfigMap "d8-commander-uuid"`,
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.CommanderUUIDConfigMap(commanderUUID.String())
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).
 				Create(ctx, manifest.(*v1.ConfigMap), metav1.CreateOptions{})
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			existingCm, err := kubeCl.
 				CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).
 				Get(ctx, manifests.CommanderUUIDCm, metav1.GetOptions{})

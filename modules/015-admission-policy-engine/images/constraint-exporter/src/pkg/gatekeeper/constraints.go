@@ -18,12 +18,12 @@ package gatekeeper
 
 import (
 	"context"
+	"log/slog"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -118,7 +118,7 @@ func GetConstraints(cClient controllerClient.Client, client *kubernetes.Clientse
 
 				err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.UnstructuredContent(), &constraint)
 				if err != nil {
-					klog.Error(err)
+					slog.Error("decode constraint failed", "kind", item.GetKind(), "name", item.GetName(), "error", err)
 					continue
 				}
 

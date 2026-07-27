@@ -19,8 +19,8 @@ Horizontal scaling in DKP can be based on any available metrics, such as:
 1. [DKP object metric](hpa.html#scaling-based-on-object-metrics) (Ingress, Service) or pod-based metrics (sum or average across all pods of a controller).
    - Enables scaling based on metrics attached to DKP objects (e.g., Ingress, Service), or metrics aggregated from pods (sum or average per controller). Resources like ServiceMetric and IngressMetric are used for this.
 
-1. [Any other metrics, including external data](hpa.html#scaling-based-on-external-data) (e.g., Amazon SQS metrics, cloud load balancers, SaaS services, etc.).
-   - Useful when the metric source is outside the cluster (e.g., Amazon SQS, cloud Load Balancer, SaaS services). Configured using the [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) resource.
+1. [Any other metrics, including external data](hpa.html#scaling-based-on-external-data) (such as Amazon SQS metrics, cloud load balancers, SaaS services, etc.).
+   - Useful when the metric source is outside the cluster. Metric calculation rules are configured using the [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) resource (for cluster-wide metrics) and the [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) resource (for namespaced metrics) and require enabling the [`observability`](/modules/observability/) module.
 
 ## HPA recommendations
 

@@ -178,16 +178,17 @@ spec:
   #...
   settings:
     virtualImages:
-      allowedStorageClassNames:
-      - sc-1
-      - sc-2
+      allowedStorageClassSelector:
+        matchNames:
+        - sc-1
+        - sc-2
       defaultStorageClassName: sc-1
 ```
 
 Здесь:
 
-- `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualImage, которые можно явно указать в спецификации ресурса;
-- `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualImage, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
+- `matchNames` (опционально) — список допустимых StorageClass для создания [VirtualImage](/modules/virtualization/cr.html#virtualimage), которые можно явно указать в спецификации ресурса;
+- `defaultStorageClassName` (опционально) — StorageClass, используемый по умолчанию при создании [VirtualImage](/modules/virtualization/cr.html#virtualimage), если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
 
 ### Настройки классов хранения для дисков
 
@@ -200,16 +201,17 @@ spec:
   #...
   settings:
     virtualDisks:
-      allowedStorageClassNames:
-      - sc-1
-      - sc-2
+      allowedStorageClassSelector:
+        matchNames:
+          - sc-1
+          - sc-2
       defaultStorageClassName: sc-1
 ```
 
 Здесь:
 
-- `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualDisk, которые можно явно указать в спецификации ресурса;
-- `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualDisk, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
+- `matchNames` (опционально) — список допустимых StorageClass для создания [VirtualImage](/modules/virtualization/cr.html#virtualimage), которые можно явно указать в спецификации ресурса;
+- `defaultStorageClassName` (опционально) — StorageClass, используемый по умолчанию при создании [VirtualImage](/modules/virtualization/cr.html#virtualimage), если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
 
 ### Настройка аудита событий безопасности
 

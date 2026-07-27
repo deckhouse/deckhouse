@@ -5,7 +5,6 @@ global:
       mode: Disabled
 
 nodeManager:
-  earlyOomEnabled: true
   internal:
     nodeGroups:
       - nodeType: CloudEphemeral

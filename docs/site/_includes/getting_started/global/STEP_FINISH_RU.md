@@ -26,7 +26,30 @@
 
 Откройте веб-интерфейс управления кластером, нажав на кнопку «Подключиться и открыть» в строке с созданным кластером на главном экране.
 
-<img src="/images/gs/installer/open-console.png" alt="Как выглядит кнопка «Подключиться и открыть»..." style="width: 100%;">
+{%- if page.platform_code == 'yandex' or page.platform_code == "bm" %}
+<img src="/images/gs/installer/ya-open-console.png" alt="Как выглядит кнопка «Подключиться и открыть»..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'dvp-provider' %}
+<img src="/images/gs/installer/dvp-open-console.png" alt="Как выглядит кнопка «Подключиться и открыть»..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'openstack' %}
+<img src="/images/gs/installer/openstack-open-console.png" alt="Как выглядит кнопка «Подключиться и открыть»..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'openstack_selectel' %}
+<img src="/images/gs/installer/selectel-open-console.png" alt="Как выглядит кнопка «Подключиться и открыть»..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'openstack_vk' %}
+<img src="/images/gs/installer/vk-open-console.png" alt="Как выглядит кнопка «Подключиться и открыть»..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'vsphere' %}
+<img src="/images/gs/installer/vsphere-open-console.png" alt="Как выглядит кнопка «Подключиться и открыть»..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'vcd' %}
+<img src="/images/gs/installer/vcd-open-console.png" alt="Как выглядит кнопка «Подключиться и открыть»..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'zvirt' %}
+<img src="/images/gs/installer/zvirt-open-console.png" alt="Как выглядит кнопка «Подключиться и открыть»..." style="width: 100%;">
+{%- endif %}
 
 В этом же окне откроется веб-интерфейс управления установленным кластером DKP.
 

@@ -102,7 +102,8 @@ spec:
                     or until the lock is manually lifted by an administrator.
 
                     Administrative actions on the account (lock, unlock, forced password reset, 2FA reset)
-                    are performed via the [UserOperation](#useroperation) resource. When an administrator
+                    are performed via the [UserOperation](#useroperation) resource. Self-service password
+                    reset by the user is also performed via UserOperation (`initiatorType: self`). When an administrator
                     locks the account or initiates a forced password reset, all of the user's active sessions
                     (Dex `OfflineSessions` and `RefreshToken` objects) are deleted, so the user is forced
                     to re-authenticate; for a forced password reset they are presented with a password change
@@ -232,7 +233,8 @@ spec:
                     or until the lock is manually lifted by an administrator.
 
                     Administrative actions on the account (lock, unlock, forced password reset, 2FA reset)
-                    are performed via the [UserOperation](#useroperation) resource. When an administrator
+                    are performed via the [UserOperation](#useroperation) resource. Self-service password
+                    reset by the user is also performed via UserOperation (`initiatorType: self`). When an administrator
                     locks the account or initiates a forced password reset, all of the user's active sessions
                     (Dex `OfflineSessions` and `RefreshToken` objects) are deleted, so the user is forced
                     to re-authenticate; for a forced password reset they are presented with a password change

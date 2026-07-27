@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func ParseBashibleConfig(paths []string, specPath string) (map[string]interface{}, error) {
+func ParseBashibleConfig(paths []string, specPath string) (map[string]any, error) {
 	fileContent := ""
 	for _, path := range paths {
 		content, err := os.ReadFile(path)
@@ -44,7 +44,7 @@ func ParseBashibleConfig(paths []string, specPath string) (map[string]interface{
 		return nil, fmt.Errorf("config validation: %v", err)
 	}
 
-	var data map[string]interface{}
+	var data map[string]any
 	if err = yaml.Unmarshal(fileContentBytes, &data); err != nil {
 		return nil, fmt.Errorf("config unmarshal: %v", err)
 	}

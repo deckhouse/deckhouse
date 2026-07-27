@@ -7,8 +7,10 @@ package registry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -21,6 +23,14 @@ import (
 
 	"permission-browser-apiserver/pkg/apis/authorization/v1alpha1"
 	"permission-browser-apiserver/pkg/resolver"
+)
+
+const (
+	// maxBulkSARRequests bounds per-request CPU work independently from the
+	// generic apiserver's byte-size limit. Existing console clients submit one
+	// request containing a comparatively small permission matrix.
+	maxBulkSARRequests       = 10_000
+	nonSelfReviewSubresource = "nonself"
 )
 
 // GetStorage returns the storage map for the authorization API group (legacy, without namespace resolver)
@@ -78,23 +88,41 @@ func (s *BulkSARStorage) GetSingularName() string {
 func (s *BulkSARStorage) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
 	bsar, ok := obj.(*v1alpha1.BulkSubjectAccessReview)
 	if !ok {
-		return nil, fmt.Errorf("object is not a BulkSubjectAccessReview")
+		return nil, apierrors.NewBadRequest("object is not a BulkSubjectAccessReview")
+	}
+
+	if createValidation != nil {
+		if err := createValidation(ctx, obj); err != nil {
+			return nil, err
+		}
+	}
+	if len(bsar.Spec.Requests) > maxBulkSARRequests {
+		return nil, apierrors.NewBadRequest(
+			fmt.Sprintf("spec.requests must contain no more than %d items", maxBulkSARRequests),
+		)
 	}
 
 	// Get the authenticated user from context
 	userInfo, ok := request.UserFrom(ctx)
 	if !ok {
-		return nil, fmt.Errorf("no user info in context")
+		// The generic apiserver always populates the user; its absence is a
+		// server-side invariant violation, not a client input error.
+		return nil, apierrors.NewInternalError(fmt.Errorf("no user info in context"))
 	}
 
 	// Resolve subject: if spec.user is set, use non-self mode; otherwise use self mode
 	var subjectUser string
+	var subjectUID string
 	var subjectGroups []string
 	var subjectExtra map[string][]string
 
 	if bsar.Spec.User != "" {
+		if err := s.authorizeNonSelfReview(ctx, userInfo); err != nil {
+			return nil, err
+		}
 		// Non-self mode: use the provided subject
 		subjectUser = bsar.Spec.User
+		subjectUID = bsar.Spec.UID
 		subjectGroups = bsar.Spec.Groups
 		subjectExtra = make(map[string][]string)
 		for k, v := range bsar.Spec.Extra {
@@ -104,6 +132,7 @@ func (s *BulkSARStorage) Create(ctx context.Context, obj runtime.Object, createV
 	} else {
 		// Self mode: use the authenticated user
 		subjectUser = userInfo.GetName()
+		subjectUID = userInfo.GetUID()
 		subjectGroups = userInfo.GetGroups()
 		subjectExtra = userInfo.GetExtra()
 		klog.V(4).Infof("Self mode: checking access for user=%s, groups=%v", subjectUser, subjectGroups)
@@ -113,7 +142,11 @@ func (s *BulkSARStorage) Create(ctx context.Context, obj runtime.Object, createV
 	results := make([]v1alpha1.SubjectAccessReviewResult, len(bsar.Spec.Requests))
 
 	for i, req := range bsar.Spec.Requests {
-		attrs := s.buildAttributes(subjectUser, subjectGroups, subjectExtra, &req)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
+		attrs := s.buildAttributes(subjectUser, subjectUID, subjectGroups, subjectExtra, &req)
 		decision, reason, err := s.authorizer.Authorize(ctx, attrs)
 
 		result := v1alpha1.SubjectAccessReviewResult{}
@@ -144,11 +177,48 @@ func (s *BulkSARStorage) Create(ctx context.Context, obj runtime.Object, createV
 	return bsar, nil
 }
 
+func (s *BulkSARStorage) authorizeNonSelfReview(ctx context.Context, caller user.Info) error {
+	attrs := &accessAttributes{
+		user: caller,
+		resourceAttributes: &v1alpha1.ResourceAttributes{
+			Verb:        "create",
+			Group:       v1alpha1.GroupName,
+			Version:     v1alpha1.SchemeGroupVersion.Version,
+			Resource:    "bulksubjectaccessreviews",
+			Subresource: nonSelfReviewSubresource,
+		},
+	}
+
+	decision, reason, err := s.authorizer.Authorize(ctx, attrs)
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("authorize non-self BulkSubjectAccessReview: %w", err))
+	}
+	if decision == authorizer.DecisionAllow {
+		return nil
+	}
+	if reason == "" {
+		reason = "non-self BulkSubjectAccessReview is not allowed"
+	}
+
+	return apierrors.NewForbidden(
+		v1alpha1.Resource("bulksubjectaccessreviews/"+nonSelfReviewSubresource),
+		"",
+		errors.New(reason),
+	)
+}
+
 // buildAttributes creates authorization.Attributes from the request
-func (s *BulkSARStorage) buildAttributes(userName string, groups []string, extra map[string][]string, req *v1alpha1.SubjectAccessReviewRequest) authorizer.Attributes {
+func (s *BulkSARStorage) buildAttributes(
+	userName string,
+	uid string,
+	groups []string,
+	extra map[string][]string,
+	req *v1alpha1.SubjectAccessReviewRequest,
+) authorizer.Attributes {
 	return &accessAttributes{
 		user: &userInfo{
 			name:   userName,
+			uid:    uid,
 			groups: groups,
 			extra:  extra,
 		},

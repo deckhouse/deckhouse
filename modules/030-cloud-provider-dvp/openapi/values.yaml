@@ -6,10 +6,45 @@ properties:
     type: object
     default: {}
     properties:
+      validationWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
       cniSecretData:
         type: string
         x-examples:
         - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lsWllURUZPSW4wPQo="
+      loadBalancer:
+        type: object
+        default: {}
+        properties:
+          disabled:
+            type: boolean
+            default: false
+            description: |
+              Disables the LoadBalancer functionality of the cloud controller manager.
+
+              Set to `true` by the disable-lb ConfigMap hook when the ConfigMap is present,
+              which excludes the `service-lb-controller` from the cloud controller manager.
+
+              > If Services of type `LoadBalancer` have already been created and you disable the LoadBalancer
+              functionality, the cloud controller manager will stop reconciling them. All management of these Services
+              (creating, updating and deleting the underlying load balancers) becomes fully manual.
+            x-examples:
+            - true
       providerClusterConfiguration:
         type: object
         additionalProperties: false
@@ -471,7 +506,7 @@ properties:
                 type: string
                 description: |
                   Control rules for network traffic to and from workloads running in the Project resource.
-                
+
                   * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
                   * `NotRestricted`: Neither network policies nor any additional network restrictions are applied.
 
@@ -546,3 +581,17 @@ properties:
         type: string
         description: |
           The name of the default storage class discovered from the parent DVP cluster.
+      credentialSecrets:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          properties:
+            authScheme:
+              type: string
+            identity:
+              type: string
+            secret:
+              type: string
+          required: [authScheme, secret]

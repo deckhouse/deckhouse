@@ -1,0 +1,53 @@
+diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_controller.go
+index 00000000..00000000 100644
+--- a/controllers/vcdcluster_controller.go
++++ b/controllers/vcdcluster_controller.go
+@@ -1215,6 +1215,23 @@ func (r *VCDClusterReconciler) reconcileNormal(ctx context.Context, cluster *clu
+ 	return ctrl.Result{}, nil
+ }
+ 
++// isLoadBalancerDeleteIgnorableError returns true when LB cleanup can be skipped during cluster deletion.
++// VCD tenants (e.g. NO_RDE clusters) may lack rights to read/delete LB virtual services; cluster teardown
++// should not block on orphaned LB objects.
++func isLoadBalancerDeleteIgnorableError(err error) bool {
++	if err == nil {
++		return false
++	}
++	if errors.Is(err, govcd.ErrorEntityNotFound) {
++		return true
++	}
++	errMsg := strings.ToLower(err.Error())
++	return strings.Contains(errMsg, "403") ||
++		strings.Contains(errMsg, "forbidden") ||
++		strings.Contains(errMsg, "404") ||
++		strings.Contains(errMsg, "not found")
++}
++
+ func (r *VCDClusterReconciler) reconcileDelete(ctx context.Context,
+ 	vcdCluster *infrav1.VCDCluster) (ctrl.Result, error) {
+ 
+@@ -1291,13 +1308,18 @@ func (r *VCDClusterReconciler) reconcileDelete(ctx context.Context,
+ 			},
+ 		}, oneArm, resourcesAllocated)
+ 	if err != nil {
+-		err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.LoadBalancerError, "", virtualServiceNamePrefix, fmt.Sprintf("%v", err))
+-		if err1 != nil {
+-			log.Error(err1, "failed to add LoadBalancerError into RDE", "rdeID", vcdCluster.Status.InfraId)
++		if isLoadBalancerDeleteIgnorableError(err) {
++			log.Info("Ignoring load balancer deletion error and continuing cluster deletion",
++				"cluster", vcdCluster.Name, "virtualService", virtualServiceNamePrefix, "error", err)
++		} else {
++			err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.LoadBalancerError, "", virtualServiceNamePrefix, fmt.Sprintf("%v", err))
++			if err1 != nil {
++				log.Error(err1, "failed to add LoadBalancerError into RDE", "rdeID", vcdCluster.Status.InfraId)
++			}
++			return ctrl.Result{}, errors.Wrapf(err,
++				"Error occurred during cluster [%s] deletion; unable to delete the load balancer [%s]: [%v]",
++				vcdCluster.Name, virtualServiceNamePrefix, err)
+ 		}
+-		return ctrl.Result{}, errors.Wrapf(err,
+-			"Error occurred during cluster [%s] deletion; unable to delete the load balancer [%s]: [%v]",
+-			vcdCluster.Name, virtualServiceNamePrefix, err)
+ 	}
+ 	log.Info("Deleted the load balancer components (virtual service, lb pool, dnat rule) of the cluster",
+ 		"virtual service", virtualServiceNamePrefix, "lb pool", lbPoolNamePrefix)

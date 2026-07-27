@@ -54,6 +54,12 @@ For more information on configuring inter-cluster communication, refer to [Inter
 
 ## Network policies
 
-[Network policies](./policy/configuration.html) in DKP define rules that regulate traffic flow between pods, nodes, namespaces, and external systems.
-Network policies ensure pod isolation, protect against internal cluster attacks,
-and provide control over access to external services as well as incoming and outgoing connections.
+[Network policies](./policy/configuration.html) in DKP describe rules that regulate interactions between objects within the cluster and define ingress and egress traffic for those objects. They isolate pods, protect against internal cluster attacks, and control access to external services and filter incoming and outgoing connections.
+
+The section includes the following pages:
+
+- [Kubernetes NetworkPolicy](./policy/kubernetes_networkpolicy.html) — isolation model, selectors, default policies, API limitations.
+- [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](./policy/cilium_networkpolicy.html) — Cilium extensions, entities, L7 rules, FQDN rules, audit mode.
+- [Host firewall on nodes](./policy/host_firewall.html) — protecting nodes with CiliumClusterwideNetworkPolicy and `nodeSelector`.
+- [Common policy examples](./policy/examples.html) — recipes for typical tasks.
+- [Diagnostics and observability](./policy/troubleshooting.html) — verifying and debugging policies.

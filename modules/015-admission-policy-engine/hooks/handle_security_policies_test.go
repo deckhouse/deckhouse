@@ -309,6 +309,11 @@ spec:
 		}
 
 		runAndGet := func(yaml string) gjson.Result {
+			// Reset state to force the reliable Run() initialization path instead of
+			// ChangeState(), which uses a timing-based event synchronization
+			// (time.Sleep + async STOP_EVENTS) that can race on loaded CI runners and
+			// produce empty snapshots. Each call gets a fresh BindingContextController.
+			f.IsKubeStateInited = false
 			f.BindingContexts.Set(f.KubeStateSet(yaml))
 			f.RunHook()
 			Expect(f).To(ExecuteSuccessfully())
@@ -445,10 +450,15 @@ spec:
 		}
 
 		It("should preserve slice tri-state semantics in Values", func() {
+			// All omit snippets are identical (empty string), so run the hook once
+			// and reuse the result for every case to avoid redundant fake-cluster
+			// initializations and hook executions.
+			By("omit: all fields omitted (shared)")
+			omitResult := runAndGet(securityPolicyYAML(""))
+
 			for _, tc := range cases {
 				By("omit: " + tc.name)
-				o := runAndGet(securityPolicyYAML(tc.omitSnippet))
-				Expect(o.Get(tc.path).Exists()).To(BeFalse())
+				Expect(omitResult.Get(tc.path).Exists()).To(BeFalse())
 
 				By("empty: " + tc.name)
 				e := runAndGet(securityPolicyYAML(tc.emptySnippet))

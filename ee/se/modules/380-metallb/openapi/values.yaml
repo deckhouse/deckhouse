@@ -97,6 +97,48 @@ properties:
       migrationOfOldFashionedLBsAdoptionComplete:
         type: boolean
         default: false
+      bgpPeers:
+        type: array
+        default: []
+        items:
+          type: object
+          additionalProperties: true
+      bgpAdvertisements:
+        type: array
+        default: []
+        items:
+          type: object
+          additionalProperties: true
+      addressPools:
+        type: array
+        default: []
+        items:
+          type: object
+          additionalProperties: true
+      speakerNodeAffinity:
+        type: object
+        default: {}
+        additionalProperties: true
+      bfdProfiles:
+        type: array
+        default: []
+        items:
+          type: object
+          additionalProperties: true
+      secretsToCopy:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            namespace:
+              type: string
+            data:
+              type: object
+              additionalProperties:
+                type: string
 x-examples:
   - internal:
       l2lbservices:

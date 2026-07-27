@@ -21,7 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -48,7 +49,7 @@ func (e *PostBootstrapScriptExecutor) WithTimeout(timeout time.Duration) *PostBo
 }
 
 func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
-	return log.ProcessCtx(ctx, "bootstrap", "Execute post-bootstrap script", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Execute post-bootstrap script", func(ctx context.Context) error {
 		resultToSetState, err := e.run(ctx)
 		if err != nil {
 			msg := fmt.Sprintf("Post-bootstrap script failed: %v", err)
@@ -56,7 +57,7 @@ func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
 		}
 
 		if err := e.state.SavePostBootstrapScriptResult(ctx, resultToSetState); err != nil {
-			log.ErrorF("Failed to save post-bootstrap script result: %v", err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Failed to save post-bootstrap script result: %v", err))
 		}
 
 		return nil
@@ -102,7 +103,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	script := sshClient.UploadScript(e.path)
 	script.WithTimeout(e.timeout)
 	script.WithStdoutHandler(func(s string) {
-		log.InfoLn(s)
+		dhlog.FromContext(ctx).InfoContext(ctx, s)
 	})
 	script.WithEnvs(envs)
 	script.Sudo()

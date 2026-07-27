@@ -1,0 +1,8 @@
+[extend]
+useDefault = false
+path = "gitleaks.base.toml"
+
+[allowlist]
+regexes = [
+  'kubernetesCni162'
+]

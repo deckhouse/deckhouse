@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"time"
 
 	storagev1 "k8s.io/api/storage/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,10 +27,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	cloudprovider "k8s.io/cloud-provider"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	"github.com/deckhouse/virtualization/api/core/v1alpha2/vdcondition"
 )
 
 const (
@@ -59,7 +60,7 @@ func (d *DiskService) ListDisksByName(ctx context.Context, diskName string) (*v1
 
 	if err := d.client.List(ctx, &virtualDiskList, opts); err != nil {
 		if k8serrors.IsNotFound(err) {
-			return nil, cloudprovider.DiskNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -77,10 +78,8 @@ func (d *DiskService) CreateDisk(ctx context.Context, clusterUUID, vmHostname, d
 			Name:      diskName,
 			Namespace: d.namespace,
 			Labels: map[string]string{
-				"deckhouse.io/managed-by":       "deckhouse",
-				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
-				"dvp.deckhouse.io/hostname":     vmHostname,
-				diskNameLabel:                   diskName,
+				"deckhouse.io/managed-by": "deckhouse",
+				diskNameLabel:             diskName,
 			},
 			OwnerReferences: ownerRefs,
 		},
@@ -164,18 +163,6 @@ func (d *DiskService) CreateDiskFromDataSource(
 		return nil, err
 	}
 
-	sc, err := d.GetStorageClass(ctx, diskStorageClass)
-	if err != nil {
-		return nil, err
-	}
-
-	if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode != storagev1.VolumeBindingWaitForFirstConsumer {
-		err = d.WaitDiskCreation(ctx, diskName)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return newDisk, nil
 }
 
@@ -189,11 +176,15 @@ func (d *DiskService) GetDiskByName(ctx context.Context, diskName string) (*v1al
 		return nil, fmt.Errorf("found more than one disk with the name %s, please contanct the DVP admin to check the name duplication", diskName)
 	}
 	if len(disks.Items) == 0 {
-		return nil, cloudprovider.DiskNotFound
+		return nil, ErrNotFound
 	}
 
 	return &disks.Items[0], nil
 }
+
+const (
+	DefaultDiskDeletionTimeout = 5 * time.Minute
+)
 
 func (d *DiskService) RemoveDiskByName(ctx context.Context, diskName string) error {
 	disk, err := d.GetDiskByName(ctx, diskName)
@@ -201,17 +192,13 @@ func (d *DiskService) RemoveDiskByName(ctx context.Context, diskName string) err
 		return err
 	}
 
-	err = d.client.Delete(ctx, disk)
-	if err != nil {
+	if err = d.client.Delete(ctx, disk); err != nil {
 		return err
 	}
 
-	err = d.WaitDiskDeletion(ctx, diskName)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	deleteCtx, cancel := context.WithTimeout(ctx, DefaultDiskDeletionTimeout)
+	defer cancel()
+	return d.WaitDiskDeletion(deleteCtx, diskName)
 }
 
 func (d *DiskService) ResizeDisk(ctx context.Context, diskName string, newSize string) error {
@@ -259,7 +246,7 @@ func (d *DiskService) GetStorageClassList(ctx context.Context) (*storagev1.Stora
 	storageClassList, err := d.clientset.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			return nil, cloudprovider.DiskNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -270,7 +257,7 @@ func (d *DiskService) GetStorageClass(ctx context.Context, name string) (*storag
 	storageClass, err := d.clientset.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			return nil, cloudprovider.DiskNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -284,8 +271,48 @@ func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) erro
 			return false, fmt.Errorf("expected a VirtualMachineDisk but got a %T", obj)
 		}
 
-		return vmd.Status.Phase == v1alpha2.DiskReady, nil
+		if vmd.Status.Phase == v1alpha2.DiskReady || vmd.Status.Phase == v1alpha2.DiskWaitForFirstConsumer {
+			return true, nil
+		}
+
+		if err := TerminalDiskError(vmd); err != nil {
+			return false, err
+		}
+
+		return false, nil
 	})
+}
+
+func isTerminalDiskErrorReason(reason vdcondition.ReadyReason) bool {
+	switch reason {
+	case vdcondition.ProvisioningFailed,
+		vdcondition.QuotaExceeded,
+		vdcondition.ImagePullFailed,
+		vdcondition.DatasourceIsNotFound,
+		vdcondition.StorageClassIsNotReady,
+		vdcondition.Lost:
+		return true
+	}
+	return false
+}
+
+// TerminalDiskError returns a non-nil error if the VirtualDisk is in a terminal failure state,
+// nil if the disk is healthy or still provisioning.
+func TerminalDiskError(vmd *v1alpha2.VirtualDisk) error {
+	for _, cond := range vmd.Status.Conditions {
+		if cond.Type == vdcondition.ReadyType.String() && cond.Status == metav1.ConditionFalse {
+			if isTerminalDiskErrorReason(vdcondition.ReadyReason(cond.Reason)) {
+				if cond.Reason == vdcondition.QuotaExceeded.String() {
+					return fmt.Errorf("%w: %s", ErrQuotaExceeded, cond.Message)
+				}
+				return fmt.Errorf("%s: %s", cond.Reason, cond.Message)
+			}
+		}
+	}
+	if vmd.Status.Phase == v1alpha2.DiskFailed {
+		return fmt.Errorf("disk %q is in Failed phase", vmd.Name)
+	}
+	return nil
 }
 
 func (d *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) error {

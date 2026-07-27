@@ -1,9 +1,6 @@
 {% assign revision=include.revision %}
 
 Use a container image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/<SSH_PRIVATE_KEY_FILE>` from the personal computer of the user performing the installation is used){% endif %}.
-{% if page.platform_code == 'bm-private' %}
-Log in on the **personal computer** to the container image registry you specified in the previous step.
-{%- endif %}
 
 Run the installer on the **personal computer**.
 
@@ -29,7 +26,7 @@ Run the installer on the **personal computer**.
 <!-- Linux or macOS install, BE, SE, SE+, EE -->
 Log in on the **personal computer** to the container image registry:
 ```shell
-echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
+echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.io{% endif %}
 ```
 
 Run a container with the installer:
@@ -50,7 +47,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <!-- Windows install, BE, SE, SE+, EE -->
 Log in on the **personal computer** to the container image registry by providing the license key as a password:
 ```text
-docker login -u license-token registry.deckhouse.io
+docker login -u license-token {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.io{% endif %}
 ```
 
 Run a container with the installer:

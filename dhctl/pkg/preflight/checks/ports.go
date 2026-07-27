@@ -58,7 +58,7 @@ func (c PortsCheck) Run(ctx context.Context) error {
 }
 
 func checkAvailabilityPorts(ctx context.Context, nodeInterface libcon.Interface, globalOptions *options.GlobalOptions) error {
-	file, err := template.RenderAndSavePreflightCheckPortsScript(globalOptions)
+	file, err := template.RenderAndSavePreflightCheckPortsScript(ctx, globalOptions)
 	if err != nil {
 		return err
 	}
@@ -71,8 +71,7 @@ func checkAvailabilityPorts(ctx context.Context, nodeInterface libcon.Interface,
 			return fmt.Errorf("required ports check failed: %s", outMsg)
 		}
 
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			return fmt.Errorf("required ports check failed: %w, %s", err, string(ee.Stderr))
 		}
 		return fmt.Errorf("Could not execute a script to check if all necessary ports are open on the node: %w", err)

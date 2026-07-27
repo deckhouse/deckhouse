@@ -17,11 +17,12 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type kubeClientProvider struct {
@@ -50,13 +51,13 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
 	err := p.kubeProvider.Cleanup(ctx)
 	if err != nil {
-		log.WarnF("failed to clean up kube provider: %v", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to clean up kube provider: %v", err), "\n"))
 	}
 
 	if stopSSH {
 		err := p.sshProvider.Cleanup(ctx)
 		if err != nil {
-			log.WarnF("failed to clean up ssh provider: %v", err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to clean up ssh provider: %v", err))
 		}
 	}
 }

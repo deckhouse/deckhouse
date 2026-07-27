@@ -228,9 +228,9 @@
 {{- $hasTargetAvailableModules := false -}}
 {{- range $_, $edition := $context.Editions }}
   {{- if eq $context.Env $edition.name }}
-    {{- if $edition.AvailableModules }}
+    {{- if $edition.availableModules }}
       {{- $hasTargetAvailableModules = true }}
-      {{- range $_, $moduleName := $edition.AvailableModules }}
+      {{- range $_, $moduleName := $edition.availableModules }}
         {{- $_ := set $targetAvailableModules $moduleName true }}
       {{- end }}
     {{- end }}
@@ -249,6 +249,11 @@
       {{- if and $hasTargetAvailableModules (not (hasKey $targetAvailableModules $providerModuleName)) }}
         {{- continue }}
       {{- end }}
+
+        {{- /* external providers are downloaded by dhctl at runtime, not baked into the installer; keep in sync with tools/build.go */ -}}
+        {{- if has $providerModuleName (list "cloud-provider-dvp") }}
+          {{- continue }}
+        {{- end }}
 
         {{- if not $tf.useOpentofu  }}
           {{- continue }}
@@ -288,9 +293,9 @@
 {{- $hasTargetAvailableModules := false -}}
 {{- range $_, $edition := $context.Editions }}
   {{- if eq $context.Env $edition.name }}
-    {{- if $edition.AvailableModules }}
+    {{- if $edition.availableModules }}
       {{- $hasTargetAvailableModules = true }}
-      {{- range $_, $moduleName := $edition.AvailableModules }}
+      {{- range $_, $moduleName := $edition.availableModules }}
         {{- $_ := set $targetAvailableModules $moduleName true }}
       {{- end }}
     {{- end }}

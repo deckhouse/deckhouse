@@ -343,6 +343,10 @@ type KubeletSpec struct {
 	// +optional
 	ContainerLogMaxFiles *int32 `json:"containerLogMaxFiles,omitempty"`
 
+	// SeccompDefault enables RuntimeDefault seccomp profile by default
+	// +optional
+	SeccompDefault *bool `json:"seccompDefault,omitempty"`
+
 	// ResourceReservation specifies resource reservation settings
 	// +optional
 	ResourceReservation *ResourceReservationSpec `json:"resourceReservation,omitempty"`

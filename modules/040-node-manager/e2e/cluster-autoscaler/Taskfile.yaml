@@ -22,3 +22,26 @@ includes:
   ca-scale-from-zero-node-label-dvp:
     taskfile: ./tests/ca-scale-from-zero-node-label-dvp/Taskfile.yml
     dir: ./tests/ca-scale-from-zero-node-label-dvp
+
+tasks:
+  run:
+    desc: Run all cluster autoscaler e2e tests
+    cmds:
+      - task: ca-scale-from-zero-dvp:run
+      - task: ca-scale-from-zero-yandex:run
+      - task: ca-priority-fallback-dvp:run
+      - task: ca-priority-fallback-yandex:run
+      - task: ca-safe-to-evict-dvp:run
+      - task: ca-safe-to-evict-yandex:run
+      - task: ca-scale-from-zero-node-label-dvp:run
+
+  dry-run:
+    desc: Dry-Run all cluster autoscaler e2e tests
+    cmds:
+      - task: ca-scale-from-zero-dvp:dry-run
+      - task: ca-scale-from-zero-yandex:dry-run
+      - task: ca-priority-fallback-dvp:dry-run
+      - task: ca-priority-fallback-yandex:dry-run
+      - task: ca-safe-to-evict-dvp:dry-run
+      - task: ca-safe-to-evict-yandex:dry-run
+      - task: ca-scale-from-zero-node-label-dvp:dry-run

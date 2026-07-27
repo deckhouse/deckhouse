@@ -167,16 +167,10 @@ featureSections:
     editions:
       dvp-ee: supported
       dvp-cse: supported
-      dkp-ce: partly
+      dkp-ce: supported
       dkp-se-plus: supported
       dkp-ee: supported
       dkp-cse-pro: supported
-    restriction_message:
-      dkp-ce:
-        en: |
-          Read-only mode
-        ru: |
-          В режиме только для чтения
   - title:
       ru: Веб-интерфейс пользователя
       en: User web interface
@@ -197,6 +191,27 @@ featureSections:
       dkp-se-plus: supported
       dkp-ee: supported
       dkp-cse-pro: supported
+  - title:
+      ru: Групповые операции с ВМ через веб-интерфейс
+      en: Group VM operations via web interface
+    editions:
+      dvp-ee: supported
+      dvp-cse: planned
+      dkp-ce: supported
+      dkp-se-plus: supported
+      dkp-ee: supported
+      dkp-cse-pro: planned
+    restriction_message:
+      dvp-cse:
+        en: |
+          Planned
+        ru: |
+          Планируется к включению
+      dkp-cse-pro:
+        en: |
+          Planned
+        ru: |
+          Планируется к включению
 - title:
     ru: Запуск пользовательских нагрузок
     en: Running user workloads
@@ -293,6 +308,27 @@ featureSections:
       dkp-se-plus: supported
       dkp-ee: supported
       dkp-cse-pro: supported
+  - title:
+      ru: Подключение дисков и образов к ВМ без перезагрузки
+      en: Attaching disks and images to VMs without reboot
+    editions:
+      dvp-ee: supported
+      dvp-cse: planned
+      dkp-ce: supported
+      dkp-se-plus: supported
+      dkp-ee: supported
+      dkp-cse-pro: planned
+    restriction_message:
+      dvp-cse:
+        en: |
+          Planned
+        ru: |
+          Планируется к включению
+      dkp-cse-pro:
+        en: |
+          Planned
+        ru: |
+          Планируется к включению
   - title:
       ru: Добавление и изменение размеров дисков ВМ без перезагрузки
       en: Adding and resizing VM disks without reboot
@@ -621,6 +657,27 @@ featureSections:
         ru: |
           Планируется к включению
   - title:
+      ru: Подключение дополнительных сетевых интерфейсов к ВМ без перезагрузки
+      en: Hot-plugging additional network interfaces to VMs
+    editions:
+      dvp-ee: supported
+      dvp-cse: planned
+      dkp-ce: not_supported
+      dkp-se-plus: not_supported
+      dkp-ee: supported
+      dkp-cse-pro: planned
+    restriction_message:
+      dvp-cse:
+        en: |
+          Planned
+        ru: |
+          Планируется к включению
+      dkp-cse-pro:
+        en: |
+          Planned
+        ru: |
+          Планируется к включению
+  - title:
       ru: Общие VLAN-сети для ВМ в кластере
       en: Shared VLAN networks for VMs in a cluster
     editions:
@@ -887,6 +944,27 @@ featureSections:
       dkp-se-plus: supported
       dkp-ee: supported
       dkp-cse-pro: supported
+  - title:
+      ru: Запуск системных компонентов ВМ без root-привилегий (rootless)
+      en: Running VM system components without root privileges (rootless)
+    editions:
+      dvp-ee: supported
+      dvp-cse: planned
+      dkp-ce: supported
+      dkp-se-plus: supported
+      dkp-ee: supported
+      dkp-cse-pro: planned
+    restriction_message:
+      dvp-cse:
+        en: |
+          Planned
+        ru: |
+          Планируется к включению
+      dkp-cse-pro:
+        en: |
+          Planned
+        ru: |
+          Планируется к включению
   - title:
       ru: Миграция ВМ с шифрованием (Data in Transit encryption)
       en: VM migration with encryption (Data in Transit encryption)

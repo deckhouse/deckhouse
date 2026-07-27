@@ -147,6 +147,7 @@ func (ng *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 			RootDir:              ng.Spec.Kubelet.RootDir,
 			ContainerLogMaxSize:  ng.Spec.Kubelet.ContainerLogMaxSize,
 			ContainerLogMaxFiles: ng.Spec.Kubelet.ContainerLogMaxFiles,
+			SeccompDefault:       ng.Spec.Kubelet.SeccompDefault,
 		}
 	}
 
@@ -292,6 +293,7 @@ func (ng *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 			RootDir:              src.Spec.Kubelet.RootDir,
 			ContainerLogMaxSize:  src.Spec.Kubelet.ContainerLogMaxSize,
 			ContainerLogMaxFiles: src.Spec.Kubelet.ContainerLogMaxFiles,
+			SeccompDefault:       src.Spec.Kubelet.SeccompDefault,
 		}
 	}
 

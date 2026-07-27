@@ -1,3 +1,4 @@
+{{- $dexVersion := include "get_oss_version_by_id" (list "dex" $ ) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -22,7 +23,7 @@ final: false
 git:
   - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
     to: /src
-    tag: v{{ include "get_oss_version_by_id" (list "dex" $ ) }}
+    tag: v{{ $dexVersion }}
     stageDependencies:
       install:
         - '**/*.go'
@@ -69,8 +70,9 @@ secrets:
 shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export LDFLAGS='-s -w -extldflags=-static -X main.version={{ $dexVersion }}'
     - cd /src
     - |
-      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -ldflags "-extldflags -static" -tags netgo -o dex ./cmd/dex`) | indent 6 }}
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "${LDFLAGS}" -tags netgo -o dex ./cmd/dex`) | indent 6 }}
     - chown 64535:64535 dex
     - chmod 0700 dex

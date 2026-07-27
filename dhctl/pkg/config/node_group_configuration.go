@@ -19,17 +19,22 @@ import (
 	"fmt"
 	"strings"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	dhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const InternalBootstrapNodeGroupConfigurationName = "d8-early-node-bootstrap-internal.sh"
 
 func ParseInternalBootstrapNodeGroupConfiguration(ctx context.Context, resourcesYAML string) (*deckhousev1alpha1.NodeGroupConfiguration, error) {
 	docs := dhctlyaml.SplitYAML(resourcesYAML)
+
+	logCtx := ctx
+	if logCtx == nil {
+		logCtx = context.Background()
+	}
 
 	for _, doc := range docs {
 		if ctx != nil {
@@ -44,7 +49,7 @@ func ParseInternalBootstrapNodeGroupConfiguration(ctx context.Context, resources
 
 		index, err := yamlvalidation.ParseIndex(strings.NewReader(doc), yamlvalidation.ParseIndexWithoutCheckValid())
 		if err != nil {
-			log.DebugF("Skipping NodeGroupConfiguration probe for doc: %v\n", err)
+			dhlog.FromContext(logCtx).DebugContext(logCtx, fmt.Sprintf("Skipping NodeGroupConfiguration probe for doc: %v", err))
 			continue
 		}
 

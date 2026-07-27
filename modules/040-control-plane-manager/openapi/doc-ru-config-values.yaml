@@ -199,6 +199,23 @@ properties:
           значений в журнале аудита.
 
           > **Внимание.** После включения этот параметр нельзя отключить.
+  encryptionAlgorithm:
+    description: |
+      Алгоритм асимметричного шифрования, используемый при генерации ключей и сертификатов для следующих компонентов control-plane:
+
+      - `apiserver`;
+      - `apiserver-kubelet-client`;
+      - `apiserver-etcd-client`;
+      - `front-proxy-client`;
+      - `etcd-server`;
+      - `etcd-peer`;
+      - `etcd-healthcheck-client`.
+
+      Сертификаты для перечисленных выше компонентов будут перевыпущены с выбранным алгоритмом и длиной ключа.
+
+      Если параметр не задан, используется значение из `ClusterConfiguration.encryptionAlgorithm` (по умолчанию `RSA-2048`).
+
+      > **Внимание.** При перевыпуске сертификатов корневой сертификат (**CA**) не ротируется. Корневой сертификат создаётся с выбранным алгоритмом только при первичном бутстрапе кластера.
   rootKubeconfigSymlink:
     description: |
       Поддерживать ли символическую ссылку `/root/.kube/config` на `/etc/kubernetes/admin.conf` на узлах control-plane.
@@ -225,6 +242,22 @@ properties:
           hostPath:
             description: |
               Путь для хранения резервных копий etcd на master-узлах.
+      defrag:
+        description: |
+          Параметры дефрагментации etcd.
+        properties:
+          enabled:
+            description: |
+              Включение периодической дефрагментации etcd.
+
+              По умолчанию `true`, если в кластере три и более членов etcd (мастер-узлов ≥ 3 или мастер-узлов = 2 при наличии etcd-арбитра); в остальных случаях — `false`.
+              Явно заданное значение всегда имеет приоритет над вычисленным по умолчанию.
+
+              > **Внимание.** Включение дефрагментации в кластере с одним master-узлом приведёт к кратковременной
+              > недоступности control plane на время выполнения дефрагментации.
+          cronSchedule:
+            description: |
+              Расписание дефрагментации etcd в формате cron (UTC).
       maxDbSize:
         description: |
           [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) параметр.

@@ -20,7 +20,6 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![csi-yadro-tatlin-unified module architecture](../../../images/architecture/storage/c4-l2-csi-yadro-tatlin-unified.png)
 
 ## Module components
@@ -39,7 +38,7 @@ The module consists of the following components:
     * **controller**: Main container.
     * **webhook**: Sidecar container implementing a webhook server for StorageClass resource validation.
 
-1. **CSI driver (yadro-tatlin-unified)**: CSI driver implementation for the `csi-tatlinunified.yadro.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to the [CSI driver documentation page](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+1. **CSI driver (yadro-tatlin-unified)**: CSI driver implementation for the `csi-tatlinunified.yadro.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to the [CSI driver documentation page](../csi-drivers/csi-driver.html).
 
 1. **Scheduler-extender**: A single-container component that acts as an extender for kube-scheduler. It implements scheduling logic specific to pods using volumes from TATLIN.UNIFIED storage systems. During scheduling, node selectors defined in the YadroTatlinUnifiedStorageConnection custom resource under the [`controlPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-controlplane) and [`dataPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-dataplane) parameters are taken into account.
 

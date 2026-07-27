@@ -27,9 +27,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -72,7 +73,7 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 
 		// all ControlPlaneNodes are ready
 		if err == nil {
-			log.InfoLn(msg)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint(msg))
 			return nil
 		}
 
@@ -82,7 +83,7 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 		}
 
 		// some other error occurred
-		log.DebugF("Error while checking control-plane nodes readiness: %v\n", err)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking control-plane nodes readiness: %v", err))
 		return ErrControlPlaneIsNotReady
 	})
 }
@@ -122,7 +123,7 @@ func checkControlPlaneNodesReady(ctx context.Context, kubeClient client.KubeClie
 		conditions, err := getControlPlaneNodeConditions(ctx, kubeClient, node.Name)
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
-				log.DebugF("Error while getting control-plane node %s readiness: %v\n", node.Name, err)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while getting control-plane node %s readiness: %v", node.Name, err))
 			}
 			appendControlPlaneNodeReadinessMessage(&msg, node.Name, nil, err)
 			continue

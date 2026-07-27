@@ -36,7 +36,7 @@ func RegisterController(name string, obj client.Object, r Reconciler) {
 	entries = append(entries, entry{name: name, obj: obj, reconciler: r})
 }
 
-func SetupAll(mgr ctrl.Manager, disabledControllers string, defaultMaxConcurrent int, perControllerMaxConcurrent map[string]int) error {
+func SetupAll(mgr ctrl.Manager, c client.Client, disabledControllers string, defaultMaxConcurrent int, perControllerMaxConcurrent map[string]int) error {
 	setupLog := ctrl.Log.WithName("setup")
 
 	disabled := make(map[string]bool)
@@ -70,7 +70,7 @@ func SetupAll(mgr ctrl.Manager, disabledControllers string, defaultMaxConcurrent
 			maxConcurrent = v
 		}
 
-		if err := setupController(mgr, e.name, e.obj, e.reconciler, maxConcurrent); err != nil {
+		if err := setupController(mgr, c, e.name, e.obj, e.reconciler, maxConcurrent); err != nil {
 			return fmt.Errorf("setting up controller %s: %w", e.name, err)
 		}
 		setupLog.Info("controller enabled", "controller", e.name, "maxConcurrentReconciles", maxConcurrent)

@@ -91,7 +91,36 @@ spec:
     namespace: kube-system
     sectionName: api
   rules:
-  # /healthz, /livez and /readyz are intentionally not published until HTTPRoute can return a direct 403.
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /healthz
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: network.deckhouse.io
+        kind: HTTPRouteFilter
+        name: return-403
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /livez
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: network.deckhouse.io
+        kind: HTTPRouteFilter
+        name: return-403
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /readyz
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: network.deckhouse.io
+        kind: HTTPRouteFilter
+        name: return-403
   - backendRefs:
     - group: ""
       kind: Service

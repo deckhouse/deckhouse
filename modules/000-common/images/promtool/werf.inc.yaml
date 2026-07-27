@@ -1,0 +1,60 @@
+{{- $prometheusVersion := "v2.55.1" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $prometheusVersion }} $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus.git /src/prometheus
+  - cd /src/prometheus
+  - git apply /patches/*.patch --verbose
+  - rm -rf /src/prometheus/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/golang-1.25" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/prometheus
+  to: /src
+  before: install
+- image: common/promu-artifact
+  add: /src/promu
+  to: /bin/promu
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - |
+    while IFS=':' read -r key value; do
+      if [[ -n $key && -n $value ]]; then
+        key_clean=$(echo "$key" | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
+        value_clean=$(echo "$value" | sed 's/^ *//g')
+        export "PROMETHEUS_${key_clean}=${value_clean}"
+      fi
+    done < <(/bin/promu info)
+    export LDFLAGS="-X github.com/prometheus/common/version.Version=${PROMETHEUS_VERSION} \
+      -X github.com/prometheus/common/version.Revision=${PROMETHEUS_REVISION} \
+      -X github.com/prometheus/common/version.Branch=HEAD \
+      -X github.com/prometheus/common/version.BuildUser=root@unknown \
+      -extldflags '-static'"
+  - go build -tags "netgo,stringlabels" -ldflags="${LDFLAGS}" -o /promtool ./cmd/promtool
+  - chown 64535:64535 /promtool
+  - chmod 0700 /promtool

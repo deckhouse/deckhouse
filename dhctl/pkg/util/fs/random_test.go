@@ -22,7 +22,7 @@ const selectionSize = 10000
 
 func TestRandomTmpFileName(t *testing.T) {
 	set := make(map[string]bool, selectionSize) // Use a map as a set
-	for i := 0; i < selectionSize; i++ {
+	for range selectionSize {
 		set[RandomTmpFileName()] = true
 	}
 	difference := selectionSize - len(set)
@@ -34,7 +34,7 @@ func TestRandomTmpFileName(t *testing.T) {
 // technically, this one has already being tested as part of TestRandomTmpFileName
 func TestRandomNumberSuffix(t *testing.T) {
 	set := make(map[string]bool, selectionSize) // Use a map as a set
-	for i := 0; i < selectionSize; i++ {
+	for range selectionSize {
 		set[RandomNumberSuffix("dhctl-tst-touch")] = true
 	}
 	difference := selectionSize - len(set)

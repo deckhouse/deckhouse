@@ -27,10 +27,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -61,8 +62,7 @@ func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) 
 	nodegroups := make([]*v1.NodeGroup, 0)
 	var errs error
 	for _, n := range ngs {
-		nn := n
-		ng, err := entity.UnstructuredToNodeGroup(&nn)
+		ng, err := entity.UnstructuredToNodeGroup(new(n))
 		if err != nil {
 			errs = multierr.Append(errs, err)
 			continue
@@ -101,9 +101,8 @@ func (n *kubeNgGetter) MachineFailedEvents(ctx context.Context) ([]eventsv1.Even
 }
 
 type clusterIsBootstrapCheck struct {
-	ngGetter       nodeGroupGetter
-	loggerProvider log.LoggerProvider
-	kubeProvider   kubernetes.KubeClientProviderWithCtx
+	ngGetter     nodeGroupGetter
+	kubeProvider kubernetes.KubeClientProviderWithCtx
 
 	startCheckTime time.Time
 	attempts       int32
@@ -111,9 +110,8 @@ type clusterIsBootstrapCheck struct {
 
 func newClusterIsBootstrapCheck(ngGetter nodeGroupGetter, params constructorParams) *clusterIsBootstrapCheck {
 	return &clusterIsBootstrapCheck{
-		ngGetter:       ngGetter,
-		kubeProvider:   params.kubeProvider,
-		loggerProvider: params.loggerProvider,
+		ngGetter:     ngGetter,
+		kubeProvider: params.kubeProvider,
 
 		startCheckTime: time.Now().Add(1 * time.Minute),
 		// start from 1 for prevent output table at first time because
@@ -189,7 +187,8 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) string {
 	}
 
 	fs := "%-30s %-8s %-8s %-9s %-8s %-17s\n"
-	out := fmt.Sprintf(fs, "NAME", "READY", "NODES", "INSTANCES", "DESIRED", "STATUS")
+	var out strings.Builder
+	fmt.Fprintf(&out, fs, "NAME", "READY", "NODES", "INSTANCES", "DESIRED", "STATUS")
 	for _, ng := range ngs {
 		stat := ng.Status
 		o := fmt.Sprintf(fs,
@@ -199,23 +198,21 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) string {
 			fmt.Sprint(stat.Instances),
 			fmt.Sprint(stat.Desired),
 			stat.Error)
-		out += o
+		out.WriteString(o)
 	}
 
-	return strings.TrimSuffix(out, "\n")
+	return strings.TrimSuffix(out.String(), "\n")
 }
 
 func (n *clusterIsBootstrapCheck) outputMachineFailures(ctx context.Context) {
-	logger := n.loggerProvider()
-
 	if time.Now().Before(n.startCheckTime) {
-		logger.LogDebugF("Waiting 1 minute for stabilizing node group events\n")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Waiting 1 minute for stabilizing node group events")
 		return
 	}
 
 	events, err := n.lastEvents(ctx, 1*time.Minute)
 	if err != nil {
-		logger.LogDebugF("Error while getting last events: %v", err)
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Error while getting last events: %v", err), "\n"))
 		return
 	}
 
@@ -223,9 +220,9 @@ func (n *clusterIsBootstrapCheck) outputMachineFailures(ctx context.Context) {
 		return
 	}
 
-	logger.LogErrorF("\nMachine Failures:\n")
+	dhlog.FromContext(ctx).ErrorContext(ctx, "\nMachine Failures:")
 	for _, e := range events {
-		logger.LogErrorF("\t%s\n", e.Note)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("\t%s", e.Note))
 	}
 }
 
@@ -242,15 +239,13 @@ func (n *clusterIsBootstrapCheck) Single() bool {
 }
 
 func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
-	logger := n.loggerProvider()
-
 	defer func() {
 		n.attempts++
 	}()
 
 	ok, err := n.hasBootstrappedCM(ctx)
 	if err != nil {
-		logger.LogDebugF("Error while checking cluster state: %v\n", err)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking cluster state: %v", err))
 		return false, nil
 	}
 
@@ -259,8 +254,8 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	if len(n.outputNodeGroups(ctx)) > 0 {
-		_ = logger.LogProcessCtx(ctx, "Create Resources", "NodeGroups status", func(ctx context.Context) error {
-			logger.LogInfoLn(n.outputNodeGroups(ctx))
+		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "NodeGroups status", func(ctx context.Context) error {
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint(n.outputNodeGroups(ctx)))
 			return nil
 		})
 	}
@@ -270,12 +265,10 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func tryToGetClusterIsBootstrappedChecker(r *template.Resource, params constructorParams) (Checker, error) {
-	logger := params.loggerProvider()
-
+func tryToGetClusterIsBootstrappedChecker(ctx context.Context, r *template.Resource, params constructorParams) (Checker, error) {
 	if r.GVK.Kind != "NodeGroup" || r.GVK.Group != "deckhouse.io" || r.GVK.Version != "v1" {
-		logger.LogDebugF("tryToGetClusterIsBootstrappedChecker: skip GVK (%s %s %s)",
-			r.GVK.Version, r.GVK.Group, r.GVK.Kind)
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("tryToGetClusterIsBootstrappedChecker: skip GVK (%s %s %s)",
+			r.GVK.Version, r.GVK.Group, r.GVK.Kind), "\n"))
 		return nil, nil
 	}
 
@@ -285,22 +278,22 @@ func tryToGetClusterIsBootstrappedChecker(r *template.Resource, params construct
 	}
 
 	if ng.Spec.NodeType != "CloudEphemeral" {
-		logger.LogDebugF("Skip nodegroup %s, because type %s is not supported", ng.GetName(), ng.Spec.NodeType)
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Skip nodegroup %s, because type %s is not supported", ng.GetName(), ng.Spec.NodeType), "\n"))
 		return nil, nil
 	}
 
 	if ng.Spec.CloudInstances.MinPerZone == nil || ng.Spec.CloudInstances.MaxPerZone == nil {
-		logger.LogDebugF("Skip nodegroup %s, because type min and max per zone is not set", ng.GetName())
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Skip nodegroup %s, because type min and max per zone is not set", ng.GetName()), "\n"))
 		return nil, nil
 	}
 
 	if *ng.Spec.CloudInstances.MinPerZone < 0 || *ng.Spec.CloudInstances.MaxPerZone < 1 {
-		logger.LogDebugF("Skip nodegroup %s, because type min (%d) and max (%d) per zone is incorrect",
-			ng.GetName(), *ng.Spec.CloudInstances.MinPerZone, *ng.Spec.CloudInstances.MaxPerZone)
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Skip nodegroup %s, because type min (%d) and max (%d) per zone is incorrect",
+			ng.GetName(), *ng.Spec.CloudInstances.MinPerZone, *ng.Spec.CloudInstances.MaxPerZone), "\n"))
 		return nil, nil
 	}
 
-	logger.LogDebugF("Got readiness checker for nodegroup %s\n", ng.GetName())
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Got readiness checker for nodegroup %s", ng.GetName()))
 
 	ngGetter := &kubeNgGetter{kubeProvider: params.kubeProvider}
 	return newClusterIsBootstrapCheck(ngGetter, params), nil

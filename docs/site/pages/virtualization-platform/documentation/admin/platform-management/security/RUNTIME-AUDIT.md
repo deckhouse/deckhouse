@@ -213,7 +213,7 @@ Example conversion result:
 ## Log collection and alerts
 
 DVP exports security audit events as Prometheus metrics,
-allowing you to set up alerts via the [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) resource.
+allowing you to set up log collection and alerts via resources of the [`log-shipper`](/modules/log-shipper/) and [`observability`](/modules/observability/) modules.
 This makes it possible to:
 
 - Connect an external log storage (for example, Loki or Elasticsearch).
@@ -249,13 +249,21 @@ spec:
 
 ### Configuring critical event alerts
 
-To create alerts for critical events,
-create a [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) object following the example:
+To create alerts for critical events:
+
+1. Make sure the [`observability`](/modules/observability/) module is enabled.
+1. Create a ClusterObservabilityMetricsRulesGroup or ObservabilityMetricsRulesGroup resource:
+
+   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup): Intended for cluster-wide rules applied to system namespaces.
+   - [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup): Intended for rules that operate within a specific namespace.
+
+Configuration example:
+
 {% raw %}
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: CustomPrometheusRules
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterObservabilityMetricsRulesGroup
 metadata:
   name: falco-critical-alerts
 spec:
@@ -266,11 +274,11 @@ spec:
       for: 1m
       annotations:
         description: |
-          There is a suspicious activity on a node {{ $labels.node }}. 
-          Check you events journal for more details.
-        summary: Falco detects a critical security incident
+          There is a suspicious activity on a node {{ $labels.node }}.
+          Check your events journal for more details.
+        summary: Falco detected a critical security incident.
       expr: |
-        sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
+        sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
 ```
 
 {% endraw %}

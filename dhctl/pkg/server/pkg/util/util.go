@@ -62,12 +62,9 @@ func PortToString(p *int32) string {
 
 func PortToInt(p *int32) *int {
 	if p == nil {
-		port := 22
-		return &port
+		return new(22)
 	}
-	port := *p
-	portInt := int(port)
-	return &portInt
+	return new(int(*p))
 }
 
 func StringToBytes(data string) []byte {

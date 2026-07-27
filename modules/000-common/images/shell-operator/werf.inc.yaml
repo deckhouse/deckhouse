@@ -1,6 +1,7 @@
 {{- $shellOperatorVersion := "v1.17.5"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
+final: false
 from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact

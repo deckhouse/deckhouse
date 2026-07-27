@@ -1,0 +1,17 @@
+{{- if and
+  (include "istioSupportsAmbient" .)
+  (.Values.istio.ambient.enabled)
+}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: waypoint-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "waypoint-controller")) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: waypoint-controller
+{{- end }}

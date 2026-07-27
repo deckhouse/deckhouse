@@ -367,6 +367,9 @@ type Kubelet struct {
 	// Default: '4'
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
 
+	// Use RuntimeDefault seccomp profile for workloads without explicitly defined seccompProfile.
+	SeccompDefault bool `json:"seccompDefault,omitempty"`
+
 	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
 
 	TopologyManager KubeletTopologyManager `json:"topologyManager"`
@@ -438,7 +441,9 @@ type KubeletLimitedSwap struct {
 
 func (k Kubelet) IsEmpty() bool {
 	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 &&
-		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil && k.MemorySwap == nil && k.MemorySwap.Swappiness == nil
+		!k.SeccompDefault &&
+		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil &&
+		(k.MemorySwap == nil || (k.MemorySwap.SwapBehavior == "" && k.MemorySwap.LimitedSwap == nil && k.MemorySwap.Swappiness == nil))
 }
 
 type Fencing struct {

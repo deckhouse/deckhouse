@@ -24,6 +24,19 @@ const (
 	StaticClusterType = "Static"
 )
 
+// ProviderRequiresClusterConfig reports whether the given cloud provider must
+// have a <Provider>ClusterConfiguration section. Derived from the environment
+// instead of a hardcoded provider list, so dhctl needs no knowledge of new
+// providers: a provider whose schemas ship in the image's candi (in-tree)
+// follows the legacy contract, anything else (external OCI-bundle providers,
+// e.g. DVP) may be configured via ModuleConfig alone. The section's content is
+// enforced by the provider's own OpenAPI schema (required: [layout,
+// masterNodeGroup, ...]), and where candi is absent that schema is absent too,
+// so such a section could not have been parsed in the first place.
+func ProviderRequiresClusterConfig(providerName string) bool {
+	return ProviderBundledInCandi(providerName, nil)
+}
+
 type SchemaIndex struct {
 	Kind    string `json:"kind"`
 	Version string `json:"apiVersion"`
@@ -43,8 +56,8 @@ type OpenAPISchema struct {
 }
 
 type OpenAPISchemaVersion struct {
-	Version string      `json:"apiVersion"`
-	Schema  interface{} `json:"openAPISpec"`
+	Version string `json:"apiVersion"`
+	Schema  any    `json:"openAPISpec"`
 }
 
 type ClusterConfigCloudSpec struct {
@@ -57,21 +70,21 @@ type MasterNodeGroupSpec struct {
 }
 
 type TerraNodeGroupSpec struct {
-	Replicas     int                    `json:"replicas"`
-	Name         string                 `json:"name"`
-	NodeTemplate map[string]interface{} `json:"nodeTemplate"`
+	Replicas     int            `json:"replicas"`
+	Name         string         `json:"name"`
+	NodeTemplate map[string]any `json:"nodeTemplate"`
 }
 
 type DeckhouseClusterConfig struct {
-	ReleaseChannel    string                 `json:"releaseChannel,omitempty"` // Deprecated
-	DevBranch         string                 `json:"devBranch,omitempty"`
-	Bundle            string                 `json:"bundle,omitempty"`   // Deprecated
-	LogLevel          string                 `json:"logLevel,omitempty"` // Deprecated
-	ImagesRepo        string                 `json:"imagesRepo"`
-	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
-	RegistryCA        string                 `json:"registryCA,omitempty"`
-	RegistryScheme    string                 `json:"registryScheme,omitempty"`
-	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
+	ReleaseChannel    string         `json:"releaseChannel,omitempty"` // Deprecated
+	DevBranch         string         `json:"devBranch,omitempty"`
+	Bundle            string         `json:"bundle,omitempty"`   // Deprecated
+	LogLevel          string         `json:"logLevel,omitempty"` // Deprecated
+	ImagesRepo        string         `json:"imagesRepo"`
+	RegistryDockerCfg string         `json:"registryDockerCfg,omitempty"`
+	RegistryCA        string         `json:"registryCA,omitempty"`
+	RegistryScheme    string         `json:"registryScheme,omitempty"`
+	ConfigOverrides   map[string]any `json:"configOverrides"` // Deprecated
 }
 
 type ByClusterType[T any] interface {

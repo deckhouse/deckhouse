@@ -1,8 +1,27 @@
+{{- /*
+  System/module writers are excluded at the apiserver level (CEL matchConditions, evaluated BEFORE any
+  network call to the webhook backend). All of these webhooks are backed by the multitenancy-manager
+  pod with the default failurePolicy: Fail; if that backend is denying, slow or unreachable, an
+  admission call for a resource a module's Helm release applies (e.g. the deckhouse-controller creating
+  a namespace) would fail and addon-operator would retry it forever, locking the module's queue.
+  Excluding system writers makes that impossible regardless of backend health, while ordinary users are
+  still validated. Mirrors the same exclusion on the cluster-objects grant webhooks.
+*/ -}}
+{{- $excludeSystemWriters := `matchConditions:
+- name: exclude-system-writers
+  expression: >-
+    request.userInfo.username != "system:apiserver"
+    && request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
+    && request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
+    && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:masters" || g == "system:nodes")` }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: d8-multitenancy-manager-webhook
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=multitenancy-manager,namespace=d8-multitenancy-manager
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=multitenancy-manager,namespace=d8-multitenancy-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-webhook")) | nindent 2 }}
 webhooks:
   - name: projects.multitenancy-webhook.deckhouse.io
@@ -20,6 +39,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
+    {{- $excludeSystemWriters | nindent 4 }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
@@ -44,6 +64,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
+    {{- $excludeSystemWriters | nindent 4 }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
@@ -67,6 +88,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
+    {{- $excludeSystemWriters | nindent 4 }}
     sideEffects: None
     clientConfig:
       caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}

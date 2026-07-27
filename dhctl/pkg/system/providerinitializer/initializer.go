@@ -27,8 +27,8 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
@@ -46,7 +46,7 @@ type SSHProviderInitializer struct {
 	baseProviderSettings *settings.BaseProviders
 	config               *sshconfig.ConnectionConfig
 
-	hostsProvider func() ([]sshconfig.Host, error)
+	hostsProvider func(ctx context.Context) ([]sshconfig.Host, error)
 
 	mut sync.Mutex
 }
@@ -55,12 +55,12 @@ func NewSSHProviderInitializer(baseProviderSettings *settings.BaseProviders, con
 	initializer := &SSHProviderInitializer{
 		baseProviderSettings: baseProviderSettings,
 		config:               config,
-		hostsProvider: func() ([]sshconfig.Host, error) {
+		hostsProvider: func(ctx context.Context) ([]sshconfig.Host, error) {
 			c := cache.Global()
 			if c == nil {
 				return nil, fmt.Errorf("global cache is not initialized yet")
 			}
-			return state.GetMasterHosts(context.Background(), c)
+			return state.GetMasterHosts(ctx, c)
 		},
 	}
 
@@ -75,7 +75,7 @@ func NewSSHProviderInitializer(baseProviderSettings *settings.BaseProviders, con
 	return initializer
 }
 
-func (i *SSHProviderInitializer) Reinitialize(ctx context.Context, logger log.Logger, baseProviderSettings *settings.BaseProviders, config *sshconfig.ConnectionConfig) {
+func (i *SSHProviderInitializer) Reinitialize(ctx context.Context, baseProviderSettings *settings.BaseProviders, config *sshconfig.ConnectionConfig) {
 	if i == nil {
 		return
 	}
@@ -84,8 +84,8 @@ func (i *SSHProviderInitializer) Reinitialize(ctx context.Context, logger log.Lo
 	defer i.mut.Unlock()
 
 	if govalue.NotNil(i.provider) {
-		if err := i.provider.Cleanup(ctx); err != nil && logger != nil {
-			logger.LogWarnF("failed to cleanup ssh provider: %v\n", err)
+		if err := i.provider.Cleanup(ctx); err != nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to cleanup ssh provider: %v", err))
 		}
 	}
 
@@ -97,7 +97,7 @@ func (i *SSHProviderInitializer) Reinitialize(ctx context.Context, logger log.Lo
 	i.hostsProvider = other.hostsProvider
 }
 
-func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (libcon.SSHProvider, error) {
+func (i *SSHProviderInitializer) GetSSHProvider(ctx context.Context) (libcon.SSHProvider, error) {
 	if i == nil {
 		return nil, nil
 	}
@@ -109,7 +109,7 @@ func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (libcon.SSHPr
 		return i.provider, nil
 	}
 
-	lateHosts, err := i.hostsProvider()
+	lateHosts, err := i.hostsProvider(ctx)
 	if err == nil && len(lateHosts) > 0 {
 		i.config.Hosts = lateHosts
 		opts := provider.SSHClientWithStartAfterCreate(true)
@@ -169,7 +169,7 @@ func (i *SSHProviderInitializer) IsLegacyMode() bool {
 	return i.config.Config.ForceLegacy
 }
 
-func (i *SSHProviderInitializer) CheckHosts() bool {
+func (i *SSHProviderInitializer) CheckHosts(ctx context.Context) bool {
 	if i == nil {
 		return false
 	}
@@ -180,7 +180,7 @@ func (i *SSHProviderInitializer) CheckHosts() bool {
 		}
 	}
 
-	lateHosts, err := i.hostsProvider()
+	lateHosts, err := i.hostsProvider(ctx)
 	if err != nil {
 		return false
 	}

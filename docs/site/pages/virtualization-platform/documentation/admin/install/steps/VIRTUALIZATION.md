@@ -177,16 +177,17 @@ spec:
   #...
   settings:
     virtualImages:
-      allowedStorageClassNames:
-      - sc-1
-      - sc-2
+      allowedStorageClassSelector:
+        matchNames:
+          - sc-1
+          - sc-2
       defaultStorageClassName: sc-1
 ```
 
 Where:
 
-- `allowedStorageClassNames` (optional): A list of the allowed StorageClasses for creating a VirtualImage that can be explicitly specified in the resource specification.
-- `defaultStorageClassName` (optional): The StorageClass used by default when creating a VirtualImage if the `.spec.persistentVolumeClaim.storageClassName` parameter is not set.
+- `matchNames` (optional): List of the allowed StorageClasses for creating a [VirtualImage](/modules/virtualization/cr.html#virtualimage) that can be explicitly specified in the resource specification.
+- `defaultStorageClassName` (optional): StorageClass used by default when creating a [VirtualImage](/modules/virtualization/cr.html#virtualimage) if the `.spec.persistentVolumeClaim.storageClassName` parameter is not set.
 
 ### Storage class settings for disks
 
@@ -199,16 +200,17 @@ spec:
   #...
   settings:
     virtualDisks:
-      allowedStorageClassNames:
-      - sc-1
-      - sc-2
+      allowedStorageClassSelector:
+        matchNames:
+          - sc-1
+          - sc-2
       defaultStorageClassName: sc-1
 ```
 
 Where:
 
-- `allowedStorageClassNames` (optional): A list of the allowed StorageClass for creating a VirtualDisk that can be explicitly specified in the resource specification.
-- `defaultStorageClassName` (optional): The StorageClass used by default when creating a VirtualDisk if the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified.
+- `matchNames` (optional): List of the allowed StorageClasses for creating a [VirtualImage](/modules/virtualization/cr.html#virtualimage) that can be explicitly specified in the resource specification.
+- `defaultStorageClassName` (optional): StorageClass used by default when creating a [VirtualImage](/modules/virtualization/cr.html#virtualimage) if the `.spec.persistentVolumeClaim.storageClassName` parameter is not set.
 
 ### Security event audit configuration
 

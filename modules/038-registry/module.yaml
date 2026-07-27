@@ -3,9 +3,7 @@ critical: true
 weight: 38
 stage: Preview
 subsystems:
-  - deckhouse
   - infrastructure
-  - kubernetes
 namespace: d8-system
 disable:
   confirmation: true

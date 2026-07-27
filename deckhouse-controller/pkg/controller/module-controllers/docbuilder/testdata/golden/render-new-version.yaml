@@ -15,7 +15,6 @@ status:
   - address: http://10-222-222-22.d8-system.pod.cluster.local:8081
     checksum: dfg
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: ""
     type: Rendered
     version: v1.1.1
   result: Rendered

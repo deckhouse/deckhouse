@@ -1,0 +1,106 @@
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- if not (get $versionInfo "supportsOperator") }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
+  {{- $telemetryAPI := $.Values.istio.telemetryAPI | default dict }}
+  {{- $globalVersionInfo := get $.Values.istio.internal.versionMap $.Values.istio.internal.globalVersion }}
+  {{- $operatorFreeControlPlane := not (get $globalVersionInfo "supportsOperator") }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot")) | nindent 2 }}
+data:
+  meshNetworks: |-
+    networks:
+    {{- if $.Values.istio.multicluster.enabled }}
+    {{- range $multicluster := $.Values.istio.internal.multiclusters }}
+    {{- if $multicluster.enableIngressGateway }}
+      {{ $multicluster.networkName }}:
+        endpoints:
+        - fromRegistry: {{ $multicluster.name }}
+        gateways:
+        {{- range $ingressGateway := $multicluster.ingressGateways }}
+        - address: {{ $ingressGateway.address }}
+          port: {{ $ingressGateway.port }}
+        {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- else }}
+      {}
+    {{- end }}
+  mesh: |-
+    rootNamespace: d8-{{ $.Chart.Name }}
+    trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+    {{- if or $telemetryAPI.enabled $operatorFreeControlPlane }}
+    defaultProviders:
+      metrics:
+      - prometheus
+    {{- end }}
+    extensionProviders:
+    - envoyFileAccessLog:
+        path: /dev/stdout
+        logFormat:
+        {{- if eq $.Values.istio.dataPlane.accessLog.type "Text" }}
+          text: {{ $.Values.istio.dataPlane.accessLog.textFormat | toJson }}
+        {{- else if eq $.Values.istio.dataPlane.accessLog.type "JSON" }}
+          labels:
+          {{- range $key, $value := $.Values.istio.dataPlane.accessLog.jsonLabels }}
+            {{ $key }}: {{ $value | toJson }}
+          {{- end }}
+        {{- end }}
+      name: d8-main
+    {{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled }}
+    {{- include "istioTracingProvider" $ | nindent 4 }}
+    {{- end }}
+{{- include "istioUserExtensionProviders" $ | nindent 4 }}
+    discoverySelectors:
+    - matchExpressions:
+      - {key: "heritage", operator: NotIn, values: [upmeter]}
+      - {key: "module", operator: NotIn, values: [upmeter]}
+    outboundTrafficPolicy:
+    {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
+      mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}
+    defaultConfig:
+      meshId: d8-istio-mesh
+      discoveryAddress: istiod-{{ $revision }}.d8-{{ $.Chart.Name }}.svc:15012
+      proxyMetadata:
+        CLOUD_PLATFORM: {{ include "istioCloudPlatform" $ }}
+        ISTIO_META_DNS_AUTO_ALLOCATE: "true"
+        ISTIO_META_DNS_CAPTURE: "true"
+        {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
+        ISTIO_META_ENABLE_HBONE: "true"
+        {{- end }}
+        ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
+        PROXY_CONFIG_XDS_AGENT: "true"
+      holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
+    {{- if and $.Values.istio.tracing.enabled (not $telemetryAPI.enabled) }}
+    {{- with $.Values.istio.tracing.collector.zipkin }}
+    {{- with .address }}
+      tracing:
+        sampling: {{ $.Values.istio.tracing.sampling }}
+        zipkin:
+          address: {{ . | quote }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
+    caCertificates:
+    {{- range $federation := $.Values.istio.internal.federations }}
+    {{- with $federation.rootCA }}
+    - pem: {{ . | quote }}
+      trustDomains:
+        - {{ $federation.trustDomain }}
+    {{- end }}
+    {{- end }}
+    {{- range $multicluster := $.Values.istio.internal.multiclusters }}
+    {{- with $multicluster.rootCA }}
+    - pem: {{ . | quote }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

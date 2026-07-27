@@ -318,7 +318,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception/nginx: allow-writable-container
+                  security.deckhouse.io/security-policy-exception.container.nginx: allow-writable-container
                 name: allowed-by-container-exception-writable
               spec:
                 containers:
@@ -357,7 +357,7 @@ spec:
               metadata:
                 labels:
                   security.deckhouse.io/security-policy-exception: allow-writable-root-filesystem
-                  security.deckhouse.io/security-policy-exception/nginx: empty-spec
+                  security.deckhouse.io/security-policy-exception.container.nginx: empty-spec
                 name: disallowed-by-container-label-over-global-valid
               spec:
                 containers:

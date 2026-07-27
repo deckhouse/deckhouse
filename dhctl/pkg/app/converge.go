@@ -35,6 +35,12 @@ func DefineConvergeExporterFlags(cmd *kingpin.CmdClause, o *options.ConvergeOpti
 		DurationVar(&o.CheckInterval)
 }
 
+func DefineConvergeFlags(cmd *kingpin.CmdClause, o *options.ConvergeOptions) {
+	cmd.Flag("converge-destructive-auto-approve", "Destructive changes are auto-approved, only for test and dev purposes, use carefully!").
+		Envar(configEnvName("DESTRUCTIVE_APPROVED")).
+		BoolVar(&o.DestructiveApproved)
+}
+
 // DefineOutputFlag registers --output / -o for the check-style commands.
 func DefineOutputFlag(cmd *kingpin.CmdClause, o *options.ConvergeOptions) {
 	cmd.Flag("output", "Output format").

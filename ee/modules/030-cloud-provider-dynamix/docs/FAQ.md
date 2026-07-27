@@ -1,14 +1,23 @@
 ---
 title: "Cloud provider — Basis Dynamix: FAQ"
 ---
-### How to configure an INTERNAL LoadBalancer?
 
-To configure an **INTERNAL** LoadBalancer, add the following annotation to your Service manifest:
+## How to configure a LoadBalancer?
 
-- `dynamix.cpi.flant.com/internal-network-name: <internal_name>`
+o configure a Service of the LoadBalancer type, add the following annotations to the Service manifest:
 
-### How to configure an EXTERNAL LoadBalancer?
+```yaml
+metadata:
+  annotations:
+    dynamix.cpi.flant.com/internal-network-name: <internal_name>
+    dynamix.cpi.flant.com/external-network-name: <external_name>
+```
 
-To configure an **EXTERNAL** LoadBalancer, add the following annotation to your Service manifest:
+Both annotations are required:
 
-- `dynamix.cpi.flant.com/external-network-name: <external_name>`
+- `dynamix.cpi.flant.com/internal-network-name` — the name of the internal network in Basis Dynamix
+- `dynamix.cpi.flant.com/external-network-name` — the name of the external network in Basis Dynamix
+
+The terms "internal network" and "external network" are used in the context of Basis Dynamix. The external network does not have to be public and may use private IP addresses.
+
+If one of the annotations is not specified, cloud-controller-manager will fail to process the Service.

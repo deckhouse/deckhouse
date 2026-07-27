@@ -39,75 +39,131 @@ const (
 	etcdMemberListTimeout = 10 * time.Second
 )
 
-// etcdNeedsJoin checks if the etcd member needs to join the cluster:
-//
-//	member in cluster (by name or peer URL) -> no join needed
-//	/var/lib/etcd/member does not exist and not in cluster -> fresh node, needs join
-//	data dir exists but not in cluster -> orphan, needs join (cleanup)
+type etcdJoinState int
+
+const (
+	// etcdJoined: our member is registered and local etcd has bootstrapped. etcd ignores --initial-cluster on restart, so a plain manifest sync + idempotent promote is safe.
+	etcdJoined etcdJoinState = iota
+	// etcdNeedsJoin: our member must (re)run the idempotent join flow, the only path that writes a manifest with the full --initial-cluster.
+	// Covers both a fresh node and an interrupted join (member added but local etcd never bootstrapped); both lead to the same idempotent JoinCluster.
+	// The data dir is NOT wiped: an interrupted-join etcd may already be starting.
+	etcdNeedsJoin
+	// etcdOrphan: our member is not registered but a stale local data dir exists. Wipe it and rejoin fresh.
+	etcdOrphan
+)
+
+type etcdMemberInfo struct {
+	Name      string
+	PeerURLs  []string
+	IsLearner bool
+}
+
+type etcdClassification struct {
+	state     etcdJoinState
+	isLearner bool
+}
+
+// classifyEtcd is the pure decision given the current members, whether the local data dir exists, and this node identity (name + peer URL).
+// The peer URL is the strongest identity signal; the node name is a compatibility fallback.
+func classifyEtcd(members []etcdMemberInfo, dataDirPresent bool, nodeName, peerURL string) etcdClassification {
+	var ourMember *etcdMemberInfo
+	var memberByName *etcdMemberInfo
+	for i := range members {
+		m := &members[i]
+		if memberHasPeerURL(m, peerURL) {
+			ourMember = m
+			break
+		}
+		if memberByName == nil && nodeName != "" && m.Name == nodeName {
+			memberByName = m
+		}
+	}
+	if ourMember == nil {
+		ourMember = memberByName
+	}
+
+	switch {
+	case ourMember != nil && dataDirPresent:
+		return etcdClassification{state: etcdJoined, isLearner: ourMember.IsLearner}
+	case ourMember != nil:
+		return etcdClassification{state: etcdNeedsJoin, isLearner: ourMember.IsLearner} // interrupted join
+	case dataDirPresent:
+		return etcdClassification{state: etcdOrphan}
+	default:
+		return etcdClassification{state: etcdNeedsJoin} // fresh
+	}
+}
+
+func memberHasPeerURL(m *etcdMemberInfo, peerURL string) bool {
+	for _, u := range m.PeerURLs {
+		if u == peerURL {
+			return true
+		}
+	}
+	return false
+}
+
+// classifyEtcdState fetches the membership snapshot and data-dir state, then runs the pure classifier.
 //
 // must ensure admin.conf exists before calling (for ensureAdminKubeconfig).
-func etcdNeedsJoin(node NodeIdentity, pkiDir, kubeconfigDir string) (bool, error) {
-	peerURL := etcd.GetPeerURL(node.AdvertiseIP)
-	exists, err := checkEtcdMemberExists(node.Name, peerURL, pkiDir, kubeconfigDir)
+func classifyEtcdState(node NodeIdentity, pkiDir, kubeconfigDir string) (etcdClassification, error) {
+	members, err := snapshotEtcdMembers(pkiDir, kubeconfigDir)
 	if err != nil {
-		return false, fmt.Errorf("check etcd membership: %w", err)
+		return etcdClassification{}, err
 	}
-	if exists {
-		return false, nil
-	}
-	_, err = os.Stat(etcdDataDir)
-	if os.IsNotExist(err) {
-		return true, nil
-	}
+	dataDirPresent, err := etcdDataDirExists()
 	if err != nil {
-		return false, fmt.Errorf("stat etcd data dir: %w", err)
+		return etcdClassification{}, fmt.Errorf("stat etcd data dir: %w", err)
 	}
-
-	// Data dir exists but member not in cluster - orphan node, needs rejoin
-	return true, nil
+	return classifyEtcd(members, dataDirPresent, node.Name, etcd.GetPeerURL(node.AdvertiseIP)), nil
 }
 
-// cleanupEtcdDataDir removes stale etcd data directory for orphaned nodes.
-func cleanupEtcdDataDir() error {
-	return os.RemoveAll(etcdDataDir)
-}
-
-// checkEtcdMemberExists connects to the etcd cluster and checks by name first, if name is empty (learner not yet started), falls back to peer URL match
-func checkEtcdMemberExists(nodeName, peerURL, pkiDir, kubeconfigDir string) (bool, error) {
+// snapshotEtcdMembers returns the current etcd membership as plain etcdMemberInfo values.
+func snapshotEtcdMembers(pkiDir, kubeconfigDir string) ([]etcdMemberInfo, error) {
 	adminConfPath := filepath.Join(kubeconfigDir, "admin.conf")
 	kubeClient, err := etcdclient.ClientSetFromFile(adminConfPath)
 	if err != nil {
-		return false, fmt.Errorf("create k8s client from admin.conf: %w", err)
+		return nil, fmt.Errorf("create k8s client from admin.conf: %w", err)
 	}
-
 	etcdCli, err := etcdclient.New(kubeClient, pkiDir)
 	if err != nil {
-		return false, fmt.Errorf("create etcd client: %w", err)
+		return nil, fmt.Errorf("create etcd client: %w", err)
 	}
 	defer etcdCli.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), etcdMemberListTimeout)
 	defer cancel()
-
 	resp, err := etcdCli.Raw().MemberList(ctx)
 	if err != nil {
-		return false, fmt.Errorf("etcd member list: %w", err)
+		return nil, fmt.Errorf("etcd member list: %w", err)
 	}
 
+	members := make([]etcdMemberInfo, 0, len(resp.Members))
 	for _, m := range resp.Members {
-		if m.Name == nodeName {
-			return true, nil
-		}
-		if peerURL != "" {
-			for _, u := range m.PeerURLs {
-				if u == peerURL {
-					return true, nil
-				}
-			}
-		}
+		members = append(members, etcdMemberInfo{
+			Name:      m.Name,
+			PeerURLs:  m.PeerURLs,
+			IsLearner: m.IsLearner,
+		})
 	}
+	return members, nil
+}
 
-	return false, nil
+// etcdDataDirExists reports whether the local etcd data directory is present, meaning etcd has bootstrapped its storage at least once (and ignores --initial-cluster on restart).
+func etcdDataDirExists() (bool, error) {
+	_, err := os.Stat(etcdDataDir)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+// cleanupEtcdDataDir removes stale etcd data directory for orphaned nodes.
+func cleanupEtcdDataDir() error {
+	return os.RemoveAll(etcdDataDir)
 }
 
 // ensureAdminKubeconfig creates admin.conf if it does not exist.
@@ -139,7 +195,8 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir, 
 	return err
 }
 
-// reconcileEtcdJoin handles etcd join for a fresh or orphaned node.
+// reconcileEtcdJoin runs the idempotent etcd join flow (etcd.JoinCluster).
+// It does NOT touch the data dir: any stale-data cleanup is the caller's responsibility, done only for the explicitly classified etcdOrphan state (see joinEtcdClusterStep).
 // Precondition: caller must ensure admin.conf exists - see joinEtcdClusterStep.
 func reconcileEtcdJoin(
 	node NodeIdentity,
@@ -148,15 +205,6 @@ func reconcileEtcdJoin(
 	annotations checksumAnnotations,
 	logger *log.Logger,
 ) error {
-	// Cleanup stale etcd data dir if it exists (orphaned node case)
-	if _, err := os.Stat(etcdDataDir); err == nil {
-		logger.Info("etcd join: cleaning up stale etcd data dir")
-		if err := cleanupEtcdDataDir(); err != nil {
-			logger.Error("failed to cleanup etcd data dir", log.Err(err))
-			return fmt.Errorf("cleanup etcd data dir: %w", err)
-		}
-	}
-
 	logger.Info("etcd join: preparing manifest")
 	manifest, err := prepareManifestWithOverrides(component, secretData, annotations, node)
 	if err != nil {

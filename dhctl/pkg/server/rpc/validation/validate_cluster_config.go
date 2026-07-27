@@ -54,27 +54,33 @@ func (s *Service) ValidateClusterConfig(
 
 //nolint:musttag
 func (s *Service) ValidateProviderSpecificClusterConfig(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.ValidateProviderSpecificClusterConfigRequest,
 ) (*pb.ValidateProviderSpecificClusterConfigResponse, error) {
-	var errResponse string
-
 	var clusterConfig config.ClusterConfig
-	err := json.Unmarshal([]byte(request.ClusterConfig), &clusterConfig)
-	if err != nil {
+	if err := json.Unmarshal([]byte(request.ClusterConfig), &clusterConfig); err != nil {
 		return nil, status.Errorf(codes.Internal, "unmarshalling cluster Config: %s", err)
 	}
 
-	err = config.ValidateProviderSpecificClusterConfiguration(
+	// In-tree providers ship their schemas in the image's candi and are always
+	// validated here. An external provider (e.g. DVP) validates against a schema
+	// that lives in its OCI bundle, which this stateless request cannot fetch
+	// (no cluster, no registry); skip it — the actual operation revalidates
+	// after reading the registry from the target cluster.
+	provider := clusterConfig.Cloud.Provider
+	if provider != "" && !config.ProviderBundledInCandi(provider, s.globalOptions) {
+		return &pb.ValidateProviderSpecificClusterConfigResponse{}, nil
+	}
+
+	validationErr := config.ValidateProviderSpecificClusterConfiguration(
 		request.Config, clusterConfig, s.schemaStore,
 		optionsFromRequest(request.Opts)...,
 	)
-	if err != nil {
-		if errResponse, err = errorToResponse(err); err != nil {
-			return nil, status.Errorf(codes.Internal, "%s", err)
-		}
-	}
 
+	errResponse, err := errorToResponse(validationErr)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%s", err)
+	}
 	return &pb.ValidateProviderSpecificClusterConfigResponse{Err: errResponse}, nil
 }
 

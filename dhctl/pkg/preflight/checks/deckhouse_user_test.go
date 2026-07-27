@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"errors"
 	"os/exec"
 	"testing"
@@ -73,7 +72,7 @@ func TestChecker_CheckDeckhouseUser(t *testing.T) {
 			tt.setupMock(mockNode, mockScript)
 
 			check := DeckhouseUserCheck{NodeInterface: mockNode}
-			err := check.Run(context.Background())
+			err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

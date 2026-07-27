@@ -90,6 +90,11 @@ const testPackageYAML = `name: test-package
 descriptions:
   en: Test package
   ru: Ru Test package
+disable:
+  confirmation: true
+  messages:
+    ru: "RU disable message"
+    en: "EN disable message"
 category: Test
 stage: Preview
 type: Application

@@ -651,7 +651,7 @@ spec:
 - Отсутствует cgroup v2;
 - Недоступна файловая система EROFS.
 
-Лейбл `node.deckhouse.io/containerd-config=custom` выставляется, если на узле присутствуют файлы с расширением `.toml` в директориях `conf.d` или `conf2.d`. В этом случае следует удалить такие файлы (если это не повлечёт критичных последствий для работы контейнеров) и удалить соответствующие NGC, с помощью которых они могли быть добавлены.
+Лейбл `node.deckhouse.io/containerd-config=custom` выставляется, если на узле присутствуют файлы с расширением `.toml` в директориях `/etc/containerd/conf.d/` (если на узлах кластера используется CRI containerd v1) или `/etc/containerd/conf2.d/` (если на узлах кластера используется CRI containerd v2). В этом случае следует удалить такие файлы (если это не повлечёт критичных последствий для работы контейнеров) и удалить соответствующие ресурсы NodeGroupConfiguration (NGC), с помощью которых они могли быть добавлены.
 
 Если используется [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/), причиной невозможности смены CRI может быть NGC `containerd-dvcr-config.sh`. Если платформа виртуализации уже установлена и работает, этот NGC можно удалить.
 
@@ -768,11 +768,20 @@ for node in $(d8 k get nodes -l node-role.kubernetes.io/<Название NodeGr
 Добавление кастомных настроек вызывает перезапуск сервиса containerd.
 {% endalert %}
 
-Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
+Bashible на узлах объединяет конфигурацию containerd для DKP с конфигурацией из файла:
+
+- `/etc/containerd/conf.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v1;
+- `/etc/containerd/conf2.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v2.
 
 {% alert level="warning" %}
 Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`, но их работу придётся обеспечивать самостоятельно. Также, лучше изменением конфигурации не затрагивать master-узлы (nodeGroup `master`).
 {% endalert %}
+
+Далее приведены примеры конфигурации ресурсов NodeGroupConfiguration, добавляющих кастомный конфигурационный файл для соответствующей версии containerd.
+
+{% tabs containerd_version %}
+{% tab "Для containerd v1" %}
+{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -808,6 +817,52 @@ spec:
     - "worker"
   weight: 31
 ```
+
+{% endraw %}
+{% endtab %}
+{% tab "Для containerd v2" %}
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-option-config.sh
+spec:
+  bundles:
+    - '*'
+  content: |
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    mkdir -p /etc/containerd/conf2.d
+    bb-sync-file /etc/containerd/conf2.d/runtimeclass.toml - << "EOF"
+    [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm]
+      runtime_type = "io.containerd.runc.v2"
+      [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm.options]
+        BinaryName = ""
+        SystemdCgroup = true
+        ShmSize = 17179869184
+    EOF
+  nodeGroups:
+    - "worker"
+  weight: 31
+```
+
+{% endraw %}
+{% endtab %}
+{% endtabs %}
 
 ### Как добавить конфигурацию для дополнительного registry?
 
@@ -1487,6 +1542,58 @@ metadata:
 Некоторые операции по изменению конфигурации узлов могут потребовать перезагрузки.
 
 Перезагрузка узла может потребоваться при изменении некоторых настроек sysctl, например, при изменении параметра `kernel.yama.ptrace_scope` (изменяется при использовании команды `astra-ptrace-lock enable/disable` в Astra Linux).
+
+## Как включить задержку выключения или перезагрузки узла, пока на нём работают критичные поды?
+
+{% alert level="info" %}
+Доступно в редакции **EE**.
+{% endalert %}
+
+{% alert level="warning" %}
+Для принятия решения о блокировке выключения DKP дополнительно опрашивает NodeGroup. Если текущий узел принадлежит к группе `master` и является единственным master-узлом в кластере, блокировка выключения для него применена не будет.
+{% endalert %}
+
+Чтобы включить механизм задержки перезагрузки или выключения узла (далее просто «выключение узла»), добавьте на под лейбл `pod.deckhouse.io/inhibit-node-shutdown` (для Deployment укажите лейбл в шаблоне пода).
+
+Пример манифеста пода с лейблом `pod.deckhouse.io/inhibit-node-shutdown`:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-stateful-app
+  labels:
+    app: my-stateful-app
+    pod.deckhouse.io/inhibit-node-shutdown: "true"
+spec:
+  containers:
+    - name: app
+      image: my-registry/my-app:1.0.0
+```
+
+{% alert level="warning" %}
+Блокировка срабатывает только для подов с лейблом `pod.deckhouse.io/inhibit-node-shutdown` в фазе `Running` на узле. Поды без лейбла kubelet выключает по обычному сценарию graceful shutdown.
+{% endalert %}
+
+### Поиск подов, блокирующих выключение, и диагностика на узле
+
+Для поиска подов, из-за которых блокируется выключение узла, используйте команду:
+
+```shell
+d8 k get po -A -l pod.deckhouse.io/inhibit-node-shutdown -o wide
+```
+
+Для просмотра состояния `GracefulShutdownPostpone` на узле используйте команду:
+
+```shell
+d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
+```
+
+Возможные значения поля `reason`:
+
+- `WaitingForShutdownSignal` — на узле работает механизм блокировки выключения, но блокировка ещё не началась;
+- `PodsWithLabelAreRunningOnNode` — выключение заблокировано, поскольку на узле ещё работают поды с лейблом `pod.deckhouse.io/inhibit-node-shutdown`;
+- `NoRunningPodsWithLabel` — блокировка снята, выключение может быть продолжено.
 
 ## Как механизм fencing обрабатывает разные типы узлов?
 

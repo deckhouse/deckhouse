@@ -1,0 +1,17 @@
+version: '3'
+
+includes:
+  descheduler:
+    taskfile: descheduler/Taskfile.yaml
+    dir: descheduler
+
+tasks:
+  run:
+    desc: Run all descheduler e2e tests
+    cmds:
+      - task: descheduler:run
+
+  dry-run:
+    desc: Run all descheduler e2e tests
+    cmds:
+      - task: descheduler:dry-run

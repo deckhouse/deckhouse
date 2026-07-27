@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type RunnerInterface interface {
@@ -37,6 +36,5 @@ type RunnerInterface interface {
 	GetStep() Step
 	GetChangesInPlan() int
 	GetPlanDestructiveChanges() *plan.DestructiveChanges
-	GetLogger() log.Logger
 	HasVMDestruction() bool
 }

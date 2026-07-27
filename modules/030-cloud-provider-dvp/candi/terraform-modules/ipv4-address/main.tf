@@ -20,7 +20,7 @@ resource "kubernetes_manifest" "ipv4_address" {
     "metadata" = {
       "name"      = local.ip_address_name
       "namespace" = var.namespace
-      "labels"      = local.ipv4_address_labels
+      "labels"    = local.ipv4_address_labels
     }
     "spec" = {
       "staticIP" = local.ipv4_address
@@ -52,9 +52,9 @@ resource "kubernetes_resource_ready_v1" "ipv4_address" {
   # and we skip this case for simplify code and developer of new resource
   # believes this case is valid for re-testing readiness
   api_version = kubernetes_manifest.ipv4_address[0].object.apiVersion
-  kind = kubernetes_manifest.ipv4_address[0].object.kind
-  name = kubernetes_manifest.ipv4_address[0].object.metadata.name
-  namespace = kubernetes_manifest.ipv4_address[0].object.metadata.namespace
+  kind        = kubernetes_manifest.ipv4_address[0].object.kind
+  name        = kubernetes_manifest.ipv4_address[0].object.metadata.name
+  namespace   = kubernetes_manifest.ipv4_address[0].object.metadata.namespace
 
   # all next attributes can be changed without recreate kubernetes_resource_ready_v1
   # in this case readiness check will not start

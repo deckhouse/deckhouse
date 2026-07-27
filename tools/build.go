@@ -47,6 +47,15 @@ const (
 
 var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`)
 
+// externalCloudProviders are shipped as external OCI bundles that dhctl
+// downloads at runtime (bootstrap and the in-cluster terraform-manager pods,
+// which run the same dhctl). Their candi/terraform-modules must NOT be baked
+// into installer, candi or terraform-manager images. Keep in sync with the
+// external-provider list in .werf/defines/installer.tmpl.
+var externalCloudProviders = map[string]struct{}{
+	"dvp": {},
+}
+
 var workDir = cwd()
 
 var testsExcludes = []string{
@@ -150,10 +159,6 @@ func writeSections(settings writeSettings) {
 	}
 	addNewFileEntry := func(file string) {
 		if strings.Contains(file, "ee/modules/000-common") {
-			return
-		}
-		// remove 098_upd_tfadm.sh.tpl in CSE
-		if strings.Contains(file, "/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl") && settings.Edition == "CSE" {
 			return
 		}
 		// remove /ee/modules/040-node-manager/templates/nvidia-gpu in CSE
@@ -296,6 +301,11 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 		}
 
 		cloudProviderName := extractCloudProviderName(file)
+
+		// External providers are downloaded by dhctl at runtime, not baked.
+		if _, external := externalCloudProviders[cloudProviderName]; external {
+			return
+		}
 
 		addEntries = append(addEntries, addEntry{
 			Add:               strings.TrimPrefix(candiPath, workDir),
@@ -491,7 +501,8 @@ type edition struct {
 	ModulesDir       string         `yaml:"modulesDir,omitempty"`
 	BuildIncludes    *buildIncludes `yaml:"buildIncludes,omitempty"`
 	ExcludeModules   []string       `yaml:"excludeModules,omitempty"`
-	AvailableModules []string       `yaml:"AvailableModules,omitempty"`
+	AvailableModules []string       `yaml:"availableModules,omitempty"`
+	ExcludeEditions  []string       `yaml:"excludeEditions,omitempty"`
 }
 
 type editions struct {
@@ -564,6 +575,7 @@ func (e *executor) executeEdition(editionName string) {
 
 	modulesDict := make(map[string]string)
 	availableModules := make(map[string]struct{})
+	excludedEditions := make(map[string]struct{})
 	for _, ed := range e.Editions {
 		if ed.Name != editionName {
 			continue
@@ -571,10 +583,16 @@ func (e *executor) executeEdition(editionName string) {
 		for _, moduleName := range ed.AvailableModules {
 			availableModules[moduleName] = struct{}{}
 		}
+		for _, excludedEditionName := range ed.ExcludeEditions {
+			excludedEditions[excludedEditionName] = struct{}{}
+		}
 		break
 	}
 
 	for _, ed := range e.Editions {
+		if _, ok := excludedEditions[ed.Name]; ok {
+			continue
+		}
 		// get moduleName => path dict
 		searchDir := filepath.Join(workDir, ed.ModulesDir)
 		entries, err := os.ReadDir(searchDir)
@@ -651,6 +669,7 @@ func (e *executor) executeEdition(editionName string) {
 		writeSettingsExcludeFileName.Prefix = prefix
 		writeSettingsExcludeFileName.Dir = "modules"
 		writeSettingsExcludeFileName.ExcludePaths = defaultModulesExcludes
+		writeSettingsExcludeFileName.StageDependencies = stageDependenciesSetup
 
 		writeSettingStageDeps.Prefix = prefix
 		writeSettingStageDeps.Dir = "modules"

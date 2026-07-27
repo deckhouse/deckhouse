@@ -372,7 +372,7 @@ spec:
         merge:
           metadata:
             labels:
-              security.deckhouse.io/security-policy-exception/nginx: allow-unmasked-container
+              security.deckhouse.io/security-policy-exception.container.nginx: allow-unmasked-container
             name: allowed-by-container-exception-unmasked
           spec:
             containers:

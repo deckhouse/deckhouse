@@ -140,6 +140,9 @@ memory: 10Mi
 {{- if hasKey .Values.controlPlaneManager.internal "allowedFeatureGates" }}
 {{- $_ := set $tpl_context "allowedFeatureGates" .Values.controlPlaneManager.internal.allowedFeatureGates }}
 {{- end }}
+{{- if .Values.controlPlaneManager.encryptionAlgorithm }}
+  {{- $_ := set $tpl_context "encryptionAlgorithm" .Values.controlPlaneManager.encryptionAlgorithm }}
+{{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
 {{- /*
@@ -155,7 +158,9 @@ in modules/040-control-plane-manager/images/control-plane-manager/src/internal/c
   {{- if hasKey $tpl_context.apiserver "certSANs" }}
 cert-sans: {{ $tpl_context.apiserver.certSANs | join "," | b64enc }}
   {{- end }}
-  {{- if $tpl_context.clusterConfiguration.encryptionAlgorithm }}
+  {{- if and $tpl_context.encryptionAlgorithm (ne $tpl_context.encryptionAlgorithm "RSA-2048") }}
+encryption-algorithm: {{ $tpl_context.encryptionAlgorithm | b64enc }}
+  {{- else if $tpl_context.clusterConfiguration.encryptionAlgorithm }}
 encryption-algorithm: {{ $tpl_context.clusterConfiguration.encryptionAlgorithm | b64enc }}
   {{- end }}
   {{- if $tpl_context.apiserver.oidcCA }}

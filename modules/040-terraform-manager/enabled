@@ -17,8 +17,6 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  enabled::disable_module_if_cluster_is_not_bootstraped
-
   if ! kubectl -n kube-system get secret d8-provider-cluster-configuration >/dev/null 2>&1 ; then
     echo "false" > "$MODULE_ENABLED_RESULT"
     echo "secret 'kube-system/d8-provider-cluster-configuration' is not present" > "$MODULE_ENABLED_REASON"

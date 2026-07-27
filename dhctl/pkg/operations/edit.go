@@ -15,14 +15,18 @@
 package operations
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"os/exec"
 
 	"sigs.k8s.io/yaml"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
 // EditOptions bundles the values Edit/SecretEdit used to read from the
@@ -33,9 +37,41 @@ type EditOptions struct {
 	Editor      string
 	TmpDir      string
 	SanityCheck bool
+	// OnAbsent runs when the edited Secret does not exist, before SecretEdit
+	// falls back to creating it. Returning an error refuses the edit — a
+	// missing Secret is sometimes not an invitation to create one (see
+	// RejectLegacyProviderEditOnMcFlow).
+	OnAbsent func(ctx context.Context, kubeCl *client.KubernetesClient) error
 }
 
-func Edit(data []byte, globalOptions *options.GlobalOptions, opts EditOptions) ([]byte, error) {
+// OnAbsentFor returns the guard for the Secret being edited, or nil when a
+// missing Secret is genuinely fine to create.
+func OnAbsentFor(secret string) func(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	if secret == config.LegacyProviderClusterConfigSecret {
+		return RejectLegacyProviderEditOnMcFlow
+	}
+	return nil
+}
+
+// RejectLegacyProviderEditOnMcFlow refuses to create the legacy
+// d8-provider-cluster-configuration Secret on a cluster that is configured
+// through the cloud-provider ModuleConfig: writing it would fork the provider
+// configuration into two sources of truth.
+func RejectLegacyProviderEditOnMcFlow(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	usesMC, err := config.ClusterUsesProviderModuleConfig(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+	if usesMC {
+		return fmt.Errorf(
+			"this cluster is configured via the cloud-provider ModuleConfig (mc-flow), not the legacy %q Secret; "+
+				"edit the cloud-provider-<name> ModuleConfig, NodeGroups and instance classes instead",
+			config.LegacyProviderClusterConfigSecret)
+	}
+	return nil
+}
+
+func Edit(ctx context.Context, data []byte, globalOptions *options.GlobalOptions, opts EditOptions) ([]byte, error) {
 	schemaStore := config.NewSchemaStore(globalOptions)
 
 	editor := opts.Editor
@@ -48,13 +84,13 @@ func Edit(data []byte, globalOptions *options.GlobalOptions, opts EditOptions) (
 
 	tmpFile, err := os.CreateTemp(opts.TmpDir, "dhctl-editor.*.yaml")
 	if err != nil {
-		log.ErrorF("can't save cluster configuration: %s\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't save cluster configuration: %s", err))
 		return nil, err
 	}
 
 	err = os.WriteFile(tmpFile.Name(), data, 0o600)
 	if err != nil {
-		log.ErrorF("can't write cluster configuration to the file %s: %s\n", tmpFile.Name(), err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't write cluster configuration to the file %s: %s", tmpFile.Name(), err))
 		return nil, err
 	}
 

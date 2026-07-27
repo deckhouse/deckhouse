@@ -19,17 +19,30 @@ import (
 	"fmt"
 	"log/slog"
 
+	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	shkubetypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	taskhookrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/hookrun"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 )
 
+// hookProvider is a loaded package — an application or the global module — that
+// supplies the hooks the kube/schedule event router triggers: the router asks it
+// for the hooks bound to an event and builds a hookrun task for each match.
+type hookProvider interface {
+	GetName() string
+	GetValuesChecksum() string
+	HooksInitialized() bool
+	RunHookByName(ctx context.Context, hook string, bctx []bctx.BindingContext) error
+	GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook
+}
+
 // BuildKubeTasks converts a Kubernetes event into executable tasks for all matching hooks.
 //
-// For each package:
+// For each package (applications and the global module):
 //  1. Find hooks that are bound to Kubernetes events
 //  2. Check if the hook can handle this specific event (filtering)
 //  3. Generate tasks for matching hooks using the provided builder
@@ -43,40 +56,56 @@ func (r *Runtime) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 	defer r.mu.RUnlock()
 
 	for _, app := range r.apps {
-		for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
-			hookCtrl := hook.GetHookController()
-
-			// Check if this hook's binding criteria match the incoming event
-			// (e.g., resource type, namespace, labels, event type)
-			if !hookCtrl.CanHandleKubeEvent(kubeEvent) {
-				r.logger.Debug("skip kube hook",
-					slog.String("hook", hook.GetName()),
-					slog.String("name", app.GetName()),
-					slog.String("monitor", kubeEvent.MonitorId),
-					slog.String("event", kubeEvent.String()))
-				continue
-			}
-
-			// Process the event and generate tasks via the builder callback
-			hookCtrl.HandleKubeEvent(ctx, kubeEvent, func(info hookcontroller.BindingExecutionInfo) {
-				r.logger.Debug("create task by kube event",
-					slog.String("hook", hook.GetName()),
-					slog.String("name", app.GetName()),
-					slog.String("event", kubeEvent.String()))
-
-				queueName := fmt.Sprintf("%s/%s", app.GetName(), info.QueueName)
-				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
-				res[queueName] = append(res[queueName], t)
-			})
-		}
+		r.routeKubeEvent(ctx, app, kubeEvent, res)
 	}
+	for _, module := range r.modules {
+		r.routeKubeEvent(ctx, module, kubeEvent, res)
+	}
+	r.routeKubeEvent(ctx, r.global, kubeEvent, res)
 
 	return res
 }
 
+// routeKubeEvent appends a hookrun task to res for every Kubernetes hook of src
+// that matches the event.
+func (r *Runtime) routeKubeEvent(ctx context.Context, src hookProvider, kubeEvent shkubetypes.KubeEvent, res map[string][]queue.Task) {
+	// Until the hook controllers are built there is nothing to match events against;
+	// skip the source rather than dereference a nil controller.
+	if !src.HooksInitialized() {
+		return
+	}
+
+	for _, hook := range src.GetHooksByBinding(shtypes.OnKubernetesEvent) {
+		hookCtrl := hook.GetHookController()
+
+		// Check if this hook's binding criteria match the incoming event
+		// (e.g., resource type, namespace, labels, event type)
+		if !hookCtrl.CanHandleKubeEvent(kubeEvent) {
+			r.logger.Debug("skip kube hook",
+				slog.String("hook", hook.GetName()),
+				slog.String("name", src.GetName()),
+				slog.String("monitor", kubeEvent.MonitorId),
+				slog.String("event", kubeEvent.String()))
+			continue
+		}
+
+		// Process the event and generate tasks via the builder callback
+		hookCtrl.HandleKubeEvent(ctx, kubeEvent, func(info hookcontroller.BindingExecutionInfo) {
+			r.logger.Debug("create task by kube event",
+				slog.String("hook", hook.GetName()),
+				slog.String("name", src.GetName()),
+				slog.String("event", kubeEvent.String()))
+
+			queueName := fmt.Sprintf("%s/%s", src.GetName(), info.QueueName)
+			t := taskhookrun.NewTask(src, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
+			res[queueName] = append(res[queueName], t)
+		})
+	}
+}
+
 // BuildScheduleTasks converts a schedule (cron) event into executable tasks for all matching hooks.
 //
-// For each package:
+// For each package (applications and the global module):
 //  1. Find hooks that are bound to schedule events
 //  2. Check if the hook's schedule matches the triggered crontab
 //  3. Generate tasks for matching hooks using the provided builder
@@ -89,33 +118,49 @@ func (r *Runtime) BuildScheduleTasks(ctx context.Context, crontab string) map[st
 	defer r.mu.RUnlock()
 
 	for _, app := range r.apps {
-		for _, hook := range app.GetHooksByBinding(shtypes.Schedule) {
-			hookCtrl := hook.GetHookController()
-
-			// Check if this hook's cron schedule matches the triggered event
-			if !hookCtrl.CanHandleScheduleEvent(crontab) {
-				r.logger.Debug("skip schedule hook",
-					slog.String("hook", hook.GetName()),
-					slog.String("name", app.GetName()),
-					slog.String("crontab", crontab))
-				continue
-			}
-
-			// Process the schedule event and generate tasks via the builder callback
-			hookCtrl.HandleScheduleEvent(ctx, crontab, func(info hookcontroller.BindingExecutionInfo) {
-				r.logger.Debug("create task by schedule event",
-					slog.String("hook", hook.GetName()),
-					slog.String("name", app.GetName()),
-					slog.String("event", crontab))
-
-				// queue = <name>/<queue>
-				queueName := fmt.Sprintf("%s/%s", app.GetName(), info.QueueName)
-				t := taskhookrun.NewTask(app, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
-
-				res[queueName] = append(res[queueName], t)
-			})
-		}
+		r.routeScheduleEvent(ctx, app, crontab, res)
 	}
+	for _, module := range r.modules {
+		r.routeScheduleEvent(ctx, module, crontab, res)
+	}
+	r.routeScheduleEvent(ctx, r.global, crontab, res)
 
 	return res
+}
+
+// routeScheduleEvent appends a hookrun task to res for every schedule hook of src
+// whose crontab matches.
+func (r *Runtime) routeScheduleEvent(ctx context.Context, src hookProvider, crontab string, res map[string][]queue.Task) {
+	// Until the hook controllers are built there is nothing to match events against;
+	// skip the source rather than dereference a nil controller.
+	if !src.HooksInitialized() {
+		return
+	}
+
+	for _, hook := range src.GetHooksByBinding(shtypes.Schedule) {
+		hookCtrl := hook.GetHookController()
+
+		// Check if this hook's cron schedule matches the triggered event
+		if !hookCtrl.CanHandleScheduleEvent(crontab) {
+			r.logger.Debug("skip schedule hook",
+				slog.String("hook", hook.GetName()),
+				slog.String("name", src.GetName()),
+				slog.String("crontab", crontab))
+			continue
+		}
+
+		// Process the schedule event and generate tasks via the builder callback
+		hookCtrl.HandleScheduleEvent(ctx, crontab, func(info hookcontroller.BindingExecutionInfo) {
+			r.logger.Debug("create task by schedule event",
+				slog.String("hook", hook.GetName()),
+				slog.String("name", src.GetName()),
+				slog.String("event", crontab))
+
+			// queue = <name>/<queue>
+			queueName := fmt.Sprintf("%s/%s", src.GetName(), info.QueueName)
+			t := taskhookrun.NewTask(src, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
+
+			res[queueName] = append(res[queueName], t)
+		})
+	}
 }

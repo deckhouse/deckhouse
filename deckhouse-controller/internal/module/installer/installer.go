@@ -28,8 +28,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -37,6 +37,7 @@ type Installer struct {
 	registry *registry.Service
 
 	downloaded string
+	embedded   string
 	installer  installer
 }
 
@@ -44,12 +45,20 @@ type installer interface {
 	Restore(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
 	Install(ctx context.Context, module, version, tempModulePath string) error
 	Uninstall(ctx context.Context, module string) error
+	// Stage materializes a module on the filesystem from a temp dir without
+	// activating it (no symlink/mount). Used to pre-download a module while an
+	// embedded copy of the same name is still serving it.
+	Stage(ctx context.Context, module, version, tempModulePath string) error
+	// StageFromRegistry materializes a module on the filesystem from the registry
+	// without activating it (no symlink/mount).
+	StageFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
 }
 
 func New(dc dependency.Container, logger *log.Logger) *Installer {
 	i := new(Installer)
 
-	i.downloaded = d8env.GetDownloadedModulesDir()
+	i.downloaded = app.DownloadedModulesDir()
+	i.embedded = app.EmbeddedModulesDir
 	i.registry = registry.NewService(dc, logger)
 	i.installer = symlink.NewInstaller(i.registry, logger)
 
@@ -112,6 +121,59 @@ func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource,
 
 func (i *Installer) Install(ctx context.Context, module, version, tempModulePath string) error {
 	return i.installer.Install(ctx, module, version, tempModulePath)
+}
+
+// Stage materializes a module on the filesystem from a temp dir without activating
+// it (no symlink/mount), so an embedded copy of the same name keeps serving the
+// module until Deckhouse drops the embedded copy on upgrade.
+func (i *Installer) Stage(ctx context.Context, module, version, tempModulePath string) error {
+	return i.installer.Stage(ctx, module, version, tempModulePath)
+}
+
+// StageFromRegistry materializes a module on the filesystem from the registry
+// without activating it (no symlink/mount).
+func (i *Installer) StageFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error {
+	return i.installer.StageFromRegistry(ctx, source, module, version)
+}
+
+// IsEmbeddedPresent reports whether an embedded copy of the module is shipped on
+// the filesystem. While it is present, the module search path resolves the module
+// to its embedded copy, so a downloaded module of the same name must not be
+// activated (only staged).
+//
+// Embedded modules are shipped with an optional weight prefix in their directory
+// name (e.g. 040-node-manager), while module holds the bare name (node-manager),
+// so the lookup must strip the prefix instead of stat'ing the bare name directly.
+func (i *Installer) IsEmbeddedPresent(module string) bool {
+	if i.embedded == "" {
+		return false
+	}
+
+	entries, err := os.ReadDir(i.embedded)
+	if err != nil {
+		// no embedded modules dir (or it is unreadable) - nothing is embedded
+		return false
+	}
+
+	// Match an optional weight prefix: 040-node-manager -> node-manager.
+	weightPattern := regexp.MustCompile(`^(?:[0-9]+-)?(.+)$`)
+	for _, entry := range entries {
+		// embedded modules are plain directories, but tolerate symlinks too
+		if !entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
+			continue
+		}
+
+		name := entry.Name()
+		if matches := weightPattern.FindStringSubmatch(name); len(matches) > 1 {
+			name = matches[1]
+		}
+
+		if name == module {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (i *Installer) Uninstall(ctx context.Context, module string) error {

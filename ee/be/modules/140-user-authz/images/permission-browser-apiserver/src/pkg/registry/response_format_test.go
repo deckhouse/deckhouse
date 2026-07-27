@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -207,19 +208,26 @@ func TestResponseFormat_EvaluationError(t *testing.T) {
 // TestResponseFormat_SelfModeUsesCallerIdentity verifies that self-mode uses caller identity
 func TestResponseFormat_SelfModeUsesCallerIdentity(t *testing.T) {
 	var capturedUser string
+	var capturedUID string
+	var capturedGroups []string
 	mock := &captureUserAuthorizer{capture: func(u user.Info) {
 		capturedUser = u.GetName()
+		capturedUID = u.GetUID()
+		capturedGroups = u.GetGroups()
 	}}
 
 	storage := NewBulkSARStorage(mock)
 	ctx := request.WithUser(context.Background(), &user.DefaultInfo{
 		Name:   "alice@example.com",
+		UID:    "alice-uid",
 		Groups: []string{"developers"},
 	})
 
 	// Self-mode: user not specified in spec
 	bsar := &v1alpha1.BulkSubjectAccessReview{
 		Spec: v1alpha1.BulkSubjectAccessReviewSpec{
+			UID:    "spoofed-uid",
+			Groups: []string{"system:masters"},
 			Requests: []v1alpha1.SubjectAccessReviewRequest{
 				{ResourceAttributes: &v1alpha1.ResourceAttributes{Verb: "get", Resource: "pods"}},
 			},
@@ -230,14 +238,18 @@ func TestResponseFormat_SelfModeUsesCallerIdentity(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "alice@example.com", capturedUser, "self-mode should use caller identity")
+	assert.Equal(t, "alice-uid", capturedUID, "self-mode should preserve caller UID")
+	assert.Equal(t, []string{"developers"}, capturedGroups, "self-mode should ignore groups supplied in spec")
 }
 
 // TestResponseFormat_NonSelfModeUsesSpecUser verifies that non-self mode uses user from spec
 func TestResponseFormat_NonSelfModeUsesSpecUser(t *testing.T) {
 	var capturedUser string
+	var capturedUID string
 	var capturedGroups []string
 	mock := &captureUserAuthorizer{capture: func(u user.Info) {
 		capturedUser = u.GetName()
+		capturedUID = u.GetUID()
 		capturedGroups = u.GetGroups()
 	}}
 
@@ -251,6 +263,7 @@ func TestResponseFormat_NonSelfModeUsesSpecUser(t *testing.T) {
 	bsar := &v1alpha1.BulkSubjectAccessReview{
 		Spec: v1alpha1.BulkSubjectAccessReviewSpec{
 			User:   "bob@example.com",
+			UID:    "bob-uid",
 			Groups: []string{"developers", "team-a"},
 			Requests: []v1alpha1.SubjectAccessReviewRequest{
 				{ResourceAttributes: &v1alpha1.ResourceAttributes{Verb: "get", Resource: "pods"}},
@@ -262,6 +275,7 @@ func TestResponseFormat_NonSelfModeUsesSpecUser(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "bob@example.com", capturedUser, "non-self mode should use spec.user")
+	assert.Equal(t, "bob-uid", capturedUID, "non-self mode should use spec.uid")
 	assert.Equal(t, []string{"developers", "team-a"}, capturedGroups, "non-self mode should use spec.groups")
 }
 
@@ -297,6 +311,20 @@ func TestResponseFormat_LargeRequest(t *testing.T) {
 	for i, r := range resp.Status.Results {
 		assert.True(t, r.Allowed, "result %d should be allowed", i)
 	}
+}
+
+func TestResponseFormat_TooManyRequestsIsRejected(t *testing.T) {
+	mock := &staticDecisionAuthorizer{decision: authorizer.DecisionAllow}
+	storage := NewBulkSARStorage(mock)
+	ctx := request.WithUser(context.Background(), &user.DefaultInfo{Name: "test"})
+	requests := make([]v1alpha1.SubjectAccessReviewRequest, maxBulkSARRequests+1)
+
+	_, err := storage.Create(ctx, &v1alpha1.BulkSubjectAccessReview{
+		Spec: v1alpha1.BulkSubjectAccessReviewSpec{Requests: requests},
+	}, nil, &metav1.CreateOptions{})
+
+	require.Error(t, err)
+	assert.True(t, apierrors.IsBadRequest(err))
 }
 
 // TestResponseFormat_EmptyRequests verifies processing of empty request list

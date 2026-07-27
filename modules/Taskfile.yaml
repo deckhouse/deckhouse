@@ -1,0 +1,24 @@
+version: "3"
+
+includes:
+  040-node-manager:
+    taskfile: 040-node-manager/Taskfile.yaml
+    dir: 040-node-manager
+    optional: true
+  400-descheduler:
+    taskfile: 400-descheduler/Taskfile.yaml
+    dir: 400-descheduler
+    optional: true
+
+tasks:
+  e2e:run:
+    desc: Run all modules e2e tests
+    cmds:
+      - task: 040-node-manager:e2e:run
+      - task: 400-descheduler:e2e:run
+
+  e2e:dry-run:
+    desc: Dry-Run all modules e2e tests
+    cmds:
+      - task: 040-node-manager:e2e:dry-run
+      - task: 400-descheduler:e2e:dry-run

@@ -3,7 +3,7 @@ cpu: 10m
 memory: 50Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -82,18 +82,21 @@ spec:
         volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /images-digests
+            name: images-digests
+            readOnly: true
         env:
         - name: DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER
           value: "true"
         - name: DHCTL_CLI_ALLOWED_COMMANDS
           value: "terraform converge-exporter check"
+        - name: DHCTL_IMAGES_DIGESTS_FILE
+          value: /images-digests/images_digests.json
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "exporter_resources" . | nindent 12 }}
-{{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -139,9 +142,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
-{{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
+        - name: images-digests
+          configMap:
+            name: terraform-manager-images-digests

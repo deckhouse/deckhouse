@@ -45,6 +45,8 @@ import (
 
 const etcdTimeout = 2 * time.Second
 
+var ErrNoMemberIDForPeerURL = errors.New("no etcd member id found for peer URL")
+
 // Interface describes the etcd client surface used by controlplane code.
 // It allows tests to stub promotion-related flows without a real clientv3 connection.
 type Interface interface {
@@ -53,6 +55,9 @@ type Interface interface {
 	WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error)
 	MemberAddAsLearner(ctx context.Context, peerAddrs string) (*clientv3.MemberAddResponse, error)
 	MemberPromote(ctx context.Context, id uint64) (*clientv3.MemberPromoteResponse, error)
+	GetMemberID(ctx context.Context, peerURL string) (uint64, error)
+	CheckClusterHealthy(ctx context.Context, timeout time.Duration) error
+	Defragment(ctx context.Context, endpoint string) error
 	Raw() *clientv3.Client
 	Close() error
 }
@@ -162,14 +167,7 @@ func (c *Client) MemberAddAsLearner(ctx context.Context, peerAddrs string) (*cli
 				lastError = err
 				return false, nil
 			}
-			found := false
-			for _, member := range listResp.Members {
-				if member.GetPeerURLs()[0] == peerAddrs {
-					found = true
-					break
-				}
-			}
-			if found {
+			if _, ok := findMemberIDByPeerURL(listResp.Members, peerAddrs); ok {
 				logger.Info("The peer URL for the added etcd member already exists. Skipping etcd member addition", slog.String("peerAddrs", peerAddrs))
 				resp = &clientv3.MemberAddResponse{Members: listResp.Members}
 				return true, nil
@@ -202,6 +200,36 @@ func (c *Client) MemberAddAsLearner(ctx context.Context, peerAddrs string) (*cli
 	}
 
 	return resp, nil
+}
+
+func findMemberIDByPeerURL(members []*etcdserverpb.Member, peerURL string) (uint64, bool) {
+	for _, m := range members {
+		for _, u := range m.GetPeerURLs() {
+			if u == peerURL {
+				return m.GetID(), true
+			}
+		}
+	}
+	return 0, false
+}
+
+// GetMemberID returns the ID of the etcd member that advertises peerURL among any of its peer URLs.
+// It queries the membership API directly instead of relying on a MemberAdd response, so it works on retries when the member already exists.
+func (c *Client) GetMemberID(ctx context.Context, peerURL string) (uint64, error) {
+	cli, err := c.newEtcdClient(c.Endpoints())
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = cli.Close() }()
+
+	resp, err := cli.Raw().MemberList(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if id, ok := findMemberIDByPeerURL(resp.Members, peerURL); ok {
+		return id, nil
+	}
+	return 0, ErrNoMemberIDForPeerURL
 }
 
 // MemberPromote is the extension point for extra promotion logic around clientv3.
@@ -247,7 +275,17 @@ func (c *Client) MemberPromote(ctx context.Context, id uint64) (*clientv3.Member
 	defer func() { _ = cli.Close() }()
 
 	err = wait.PollUntilContextTimeout(ctx, constants.EtcdAPICallRetryInterval, constants.EtcdAPICallTimeout,
-		true, func(_ context.Context) (bool, error) {
+		true, func(pollCtx context.Context) (bool, error) {
+			isLearner, _, err := c.getMemberStatus(pollCtx, id)
+			if err != nil {
+				lastError = err
+				return false, nil
+			}
+			if !isLearner {
+				logger.Info("member already promoted, nothing to do", slog.Any("memberID", learnerIDUint))
+				return true, nil
+			}
+
 			ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
 			defer cancel()
 
@@ -414,6 +452,32 @@ func (c *Client) getClusterStatus() (map[string]*clientv3.StatusResponse, error)
 		clusterStatus[ep] = resp
 	}
 	return clusterStatus, nil
+}
+
+// CheckClusterHealthy verifies that every known etcd member is reachable,
+// has an elected leader, and reports no internal errors.
+// Each member status call is bounded by the given timeout.
+func (c *Client) CheckClusterHealthy(ctx context.Context, timeout time.Duration) error {
+	for _, ep := range c.Endpoints() {
+		statusCtx, cancel := context.WithTimeout(ctx, timeout)
+		resp, err := c.Status(statusCtx, ep)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("member %s unreachable: %w", ep, err)
+		}
+		if resp.Leader == 0 {
+			return fmt.Errorf("member %s has no leader (cluster has no quorum)", ep)
+		}
+		if len(resp.Errors) > 0 {
+			return fmt.Errorf("member %s reported errors: %v", ep, resp.Errors)
+		}
+	}
+	return nil
+}
+
+func (c *Client) Defragment(ctx context.Context, endpoint string) error {
+	_, err := c.client.Defragment(ctx, endpoint)
+	return err
 }
 
 func (c *Client) WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error) {

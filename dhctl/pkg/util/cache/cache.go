@@ -22,7 +22,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
@@ -51,16 +52,16 @@ func NewStateCache(dir string) (*StateCache, error) {
 }
 
 // NewStateCacheWithInitialState creates new cache instance in specified directory with initial state
-func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (*StateCache, error) {
+func NewStateCacheWithInitialState(ctx context.Context, dir string, initialState map[string][]byte) (*StateCache, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("Can't create cache directory: %w", err)
 	}
 
 	// Check for tombstone BEFORE cleaning the directory
 	tombstonePath := filepath.Join(dir, state.TombstoneKey)
-	log.InfoF("Checking for tombstone file before cleaning: %s\n", tombstonePath)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Checking for tombstone file before cleaning: %s", tombstonePath))
 	if _, err := os.Stat(tombstonePath); err == nil {
-		log.InfoF("Tombstone file found at %s - the cluster was already bootstrapped\n", tombstonePath)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Tombstone file found at %s - the cluster was already bootstrapped", tombstonePath))
 		return nil, fmt.Errorf("The cluster was already bootstrapped")
 	}
 
@@ -93,13 +94,13 @@ func (s *StateCache) Save(ctx context.Context, name string, content []byte) erro
 		return err
 	}
 
-	log.DebugF("Saved infrastructure state in cache: %s\n", path)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Saved infrastructure state in cache: %s", path))
 
 	return nil
 }
 
 // SaveStruct saves go struct into the cache as a blob
-func (s *StateCache) SaveStruct(ctx context.Context, name string, v interface{}) error {
+func (s *StateCache) SaveStruct(ctx context.Context, name string, v any) error {
 	b := new(bytes.Buffer)
 	err := gob.NewEncoder(b).Encode(v)
 	if err != nil {
@@ -121,13 +122,13 @@ func (s *StateCache) InCache(ctx context.Context, name string) (bool, error) {
 func (s *StateCache) Clean(ctx context.Context) {
 	_ = os.RemoveAll(s.dir)
 	if err := os.MkdirAll(s.dir, 0o755); err != nil {
-		log.ErrorF("Failed to recreate cache directory %s: %v\n", s.dir, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Failed to recreate cache directory %s: %v", s.dir, err))
 		return
 	}
 
 	_, err := os.Create(filepath.Join(s.dir, state.TombstoneKey))
 	if err != nil {
-		log.WarnF("Can't mark the cache as exhausted: %s ...\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't mark the cache as exhausted: %s ...", err))
 	}
 }
 
@@ -146,14 +147,14 @@ func (s *StateCache) CleanWithExceptions(ctx context.Context, excludeKeys ...str
 		return nil
 	})
 	if err != nil {
-		log.WarnF("Can't get keys to remove: %s ...\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't get keys to remove: %s ...", err))
 		return
 	}
 
 	// yes first write tombstone that is idempotent
 	_, err = os.Create(filepath.Join(s.dir, state.TombstoneKey))
 	if err != nil {
-		log.WarnF("Can't mark the cache as exhausted: %s ...\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't mark the cache as exhausted: %s ...", err))
 	}
 
 	for _, key := range keysToRemove {
@@ -166,7 +167,7 @@ func (s *StateCache) Delete(ctx context.Context, name string) {
 	ok, _ := s.InCache(ctx, name)
 	if ok {
 		if err := os.Remove(path); err != nil {
-			log.ErrorF("Failed to delete cache file %s: %v\n", path, err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Failed to delete cache file %s: %v", path, err))
 		}
 	}
 }
@@ -176,7 +177,7 @@ func (s *StateCache) Load(ctx context.Context, name string) ([]byte, error) {
 }
 
 // LoadStruct loads go struct from the cache
-func (s *StateCache) LoadStruct(ctx context.Context, name string, v interface{}) error {
+func (s *StateCache) LoadStruct(ctx context.Context, name string, v any) error {
 	d, err := s.Load(ctx, name)
 	if err != nil {
 		return fmt.Errorf("can't load struct for key %s: %v", name, err)
@@ -225,18 +226,18 @@ func (s *StateCache) Dir() string {
 // DummyCache is a cache implementation which saves nothing and nowhere
 type DummyCache struct{}
 
-func (d *DummyCache) Save(ctx context.Context, n string, c []byte) error            { return nil }
-func (d *DummyCache) SaveStruct(ctx context.Context, n string, v interface{}) error { return nil }
-func (d *DummyCache) InCache(ctx context.Context, n string) (bool, error)           { return false, nil }
-func (d *DummyCache) Clean(ctx context.Context)                                     {}
-func (d *DummyCache) CleanWithExceptions(ctx context.Context, e ...string)          {}
-func (d *DummyCache) Delete(ctx context.Context, n string)                          {}
-func (d *DummyCache) Load(ctx context.Context, n string) ([]byte, error)            { return nil, nil }
-func (d *DummyCache) LoadStruct(ctx context.Context, n string, v interface{}) error { return nil }
-func (d *DummyCache) GetPath(n string) string                                       { return "" }
-func (d *DummyCache) Iterate(context.Context, func(string, []byte) error) error     { return nil }
-func (d *DummyCache) NeedIntermediateSave() bool                                    { return false }
-func (d *DummyCache) Dir() string                                                   { return "" }
+func (d *DummyCache) Save(ctx context.Context, n string, c []byte) error        { return nil }
+func (d *DummyCache) SaveStruct(ctx context.Context, n string, v any) error     { return nil }
+func (d *DummyCache) InCache(ctx context.Context, n string) (bool, error)       { return false, nil }
+func (d *DummyCache) Clean(ctx context.Context)                                 {}
+func (d *DummyCache) CleanWithExceptions(ctx context.Context, e ...string)      {}
+func (d *DummyCache) Delete(ctx context.Context, n string)                      {}
+func (d *DummyCache) Load(ctx context.Context, n string) ([]byte, error)        { return nil, nil }
+func (d *DummyCache) LoadStruct(ctx context.Context, n string, v any) error     { return nil }
+func (d *DummyCache) GetPath(n string) string                                   { return "" }
+func (d *DummyCache) Iterate(context.Context, func(string, []byte) error) error { return nil }
+func (d *DummyCache) NeedIntermediateSave() bool                                { return false }
+func (d *DummyCache) Dir() string                                               { return "" }
 
 type TestCache struct {
 	Store map[string][]byte
@@ -280,7 +281,7 @@ func (d *TestCache) Load(ctx context.Context, n string) ([]byte, error) {
 	return d.Store[n], nil
 }
 
-func (d *TestCache) LoadStruct(ctx context.Context, n string, v interface{}) error {
+func (d *TestCache) LoadStruct(ctx context.Context, n string, v any) error {
 	data, err := d.Load(ctx, n)
 	if err != nil {
 		return fmt.Errorf("can't load struct for key %s: %v", n, err)
@@ -289,7 +290,7 @@ func (d *TestCache) LoadStruct(ctx context.Context, n string, v interface{}) err
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(v)
 }
 
-func (d *TestCache) SaveStruct(ctx context.Context, n string, v interface{}) error {
+func (d *TestCache) SaveStruct(ctx context.Context, n string, v any) error {
 	b := new(bytes.Buffer)
 	err := gob.NewEncoder(b).Encode(v)
 	if err != nil {

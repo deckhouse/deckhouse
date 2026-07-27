@@ -22,6 +22,9 @@ import (
 
 const (
 	DownloadedModulesDir = "DOWNLOADED_MODULES_DIR"
+	EmbeddedModulesDir   = "EMBEDDED_MODULES_DIR"
+
+	defaultEmbeddedModulesDir = "/deckhouse/modules"
 )
 
 func GetDownloadedModulesDir() string {
@@ -30,4 +33,15 @@ func GetDownloadedModulesDir() string {
 		return value
 	}
 	return os.Getenv("EXTERNAL_MODULES_DIR")
+}
+
+// GetEmbeddedModulesDir returns the directory where embedded (built-in) modules
+// are shipped within the Deckhouse image. It is the first entry of the module
+// search path, so a module present here always wins over a downloaded one.
+func GetEmbeddedModulesDir() string {
+	value := os.Getenv(EmbeddedModulesDir)
+	if len(value) != 0 {
+		return value
+	}
+	return defaultEmbeddedModulesDir
 }

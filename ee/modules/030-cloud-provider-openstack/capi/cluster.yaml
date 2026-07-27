@@ -1,0 +1,93 @@
+{{- define "openstack_clouds_yaml" }}
+{{- $providerClusterConfiguration := . }}
+clouds:
+  openstack:
+    auth:
+      auth_url: {{ $providerClusterConfiguration.connection.authURL | quote }}
+      username: {{ $providerClusterConfiguration.connection.username | quote }}
+      password: {{ $providerClusterConfiguration.connection.password | quote }}
+    {{- if $providerClusterConfiguration.connection.tenantName }}
+      project_name: {{ $providerClusterConfiguration.connection.tenantName | quote }}
+    {{- end }}
+    {{- if $providerClusterConfiguration.connection.tenantID }}
+      project_id: {{ $providerClusterConfiguration.connection.tenantID | quote }}
+    {{- end }}
+      user_domain_name: {{ $providerClusterConfiguration.connection.domainName | quote }}
+      project_domain_name: {{ $providerClusterConfiguration.connection.domainName | quote }}
+    region_name: {{ $providerClusterConfiguration.connection.region | quote }}
+    identity_api_version: 3
+{{- end }}
+
+{{- $providerClusterConfiguration := .openstack | required "internal.providerClusterConfiguration is required" }}
+{{- $clusterName := .clusterName | required "clusterName is required" }}
+{{- $apiServerFloatingIP := true }}
+{{- if hasKey $providerClusterConfiguration "apiServerFloatingIP" }}
+  {{- $apiServerFloatingIP = $providerClusterConfiguration.apiServerFloatingIP }}
+{{- end }}
+{{- $controlPlaneEndpoint := dict }}
+{{- $clusterMasterEndpoints := .Values.nodeManager.internal.clusterMasterEndpoints | default (list) }}
+{{- if and (not $apiServerFloatingIP) (gt (len $clusterMasterEndpoints) 0) }}
+  {{- $firstEndpoint := first $clusterMasterEndpoints }}
+  {{- $_ := set $controlPlaneEndpoint "host" (index $firstEndpoint "address") }}
+  {{- $_ := set $controlPlaneEndpoint "port" (index $firstEndpoint "kubeApiPort") }}
+{{- end }}
+{{- $clusterMasterAddresses := .Values.nodeManager.internal.clusterMasterAddresses | default (list) }}
+{{- if and (not $apiServerFloatingIP) (eq (len $controlPlaneEndpoint) 0) (gt (len $clusterMasterAddresses) 0) }}
+  {{- $hostPort := splitList ":" (first $clusterMasterAddresses) }}
+  {{- if gt (len $hostPort) 1 }}
+    {{- $_ := set $controlPlaneEndpoint "host" (first $hostPort) }}
+    {{- $_ := set $controlPlaneEndpoint "port" (atoi (last $hostPort)) }}
+  {{- end }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-user-credentials
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capo-controller-manager")) | nindent 2 }}
+type: Opaque
+data:
+{{- if hasKey $providerClusterConfiguration.connection "caCert" }}
+  {{- if $providerClusterConfiguration.connection.caCert }}
+  cacert: {{ $providerClusterConfiguration.connection.caCert | b64enc | quote }}
+  {{- end }}
+{{- end }}
+  clouds.yaml: {{ include "openstack_clouds_yaml" $providerClusterConfiguration | b64enc | quote }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OpenStackCluster
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capo-controller-manager")) | nindent 2 }}
+  namespace: d8-cloud-instance-manager
+  name: {{ $clusterName | quote }}
+spec:
+  apiServerLoadBalancer:
+    enabled: false
+{{- if not $apiServerFloatingIP }}
+  disableAPIServerFloatingIP: true
+  {{- if and (hasKey $controlPlaneEndpoint "host") (hasKey $controlPlaneEndpoint "port") }}
+  controlPlaneEndpoint:
+    host: {{ $controlPlaneEndpoint.host | quote }}
+    port: {{ $controlPlaneEndpoint.port }}
+  {{- end }}
+{{- end }}
+  network:
+     filter:
+      name: {{ first $providerClusterConfiguration.internalNetworkNames }}
+{{- if hasKey $providerClusterConfiguration "externalNetworkNames" }}
+  {{- if gt (len $providerClusterConfiguration.externalNetworkNames) 0 }}
+  externalNetwork:
+    filter:
+      name: {{ first $providerClusterConfiguration.externalNetworkNames }}
+  {{- else }}
+  disableExternalNetwork: true
+  {{- end }}
+{{- else }}
+  disableExternalNetwork: true
+{{- end }}
+#  externalNetwork:
+#    id: ${OPENSTACK_EXTERNAL_NETWORK_ID}
+  identityRef:
+    cloudName: openstack
+    name: capi-user-credentials

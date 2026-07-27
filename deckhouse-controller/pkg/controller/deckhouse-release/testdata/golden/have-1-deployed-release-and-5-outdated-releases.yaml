@@ -9,7 +9,6 @@ spec:
   version: v1.27.0
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -23,7 +22,6 @@ spec:
   version: v1.27.1
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -37,7 +35,6 @@ spec:
   version: v1.27.2
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -51,7 +48,6 @@ spec:
   version: v1.27.3
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -65,7 +61,6 @@ spec:
   version: v1.27.4
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -79,6 +74,5 @@ spec:
   version: v1.28.0
 status:
   approved: false
-  message: ""
   phase: Deployed
   transitionTime: null

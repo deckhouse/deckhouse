@@ -76,6 +76,12 @@ type componentFieldMap struct {
 	pkiChecksumDependsOn []string
 }
 
+// pkiChecksumExcludedKeys are d8-pki keys that are not included in the pkiChecksum calculation.
+var pkiChecksumExcludedKeys = map[string]struct{}{
+	"signature-private": {},
+	"signature-public":  {},
+}
+
 // ExtraFileKeysForPodComponent returns secret keys for extra files mounted with the static pod
 // (extra-file-* subset of componentChecksumDeps). Unknown podComponent yields nil.
 func ExtraFileKeysForPodComponent(podComponent string) []string {
@@ -143,10 +149,18 @@ func collectDependencyData(secretData map[string][]byte, component string) ([]st
 	return sortedKeysFromSlice(fieldMap.configChecksumDependsOn, secretData), nil
 }
 
-// PKIChecksum calculates the total checksum of all the keys of the pki secret based only on the values in the secret.
+// PKIChecksum calculates the total checksum of all the keys (except pkiChecksumExcludedKeys) of the pki secret based only on the values in the secret.
 // Keys names are ignored for the checksum calculation.
 func PKIChecksum(pkiSecretData map[string][]byte) (string, error) {
-	return hashKeys(pkiSecretData, sortedKeysFromMap(pkiSecretData)), nil
+	all := sortedKeysFromMap(pkiSecretData)
+	keys := make([]string, 0, len(all))
+	for _, k := range all {
+		if _, skip := pkiChecksumExcludedKeys[k]; skip {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	return hashKeys(pkiSecretData, keys), nil
 }
 
 // ComponentPKIChecksum calculates the pkiChecksum for a component based on certSANs and encryption-algorithm keys.

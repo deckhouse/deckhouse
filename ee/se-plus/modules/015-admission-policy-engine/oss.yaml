@@ -1,0 +1,7 @@
+- name: Ratify
+  link: https://github.com/notaryproject/ratify
+  description: Is a verification engine as a binary executable and on Kubernetes which enables verification of artifact security metadata and admits for deployment only those that comply with policies you create.
+  logo: https://github.com/notaryproject/ratify/blob/main/assets/logo.svg
+  license: Apache License 2.0
+  id: ratify
+  version: 1.4.1

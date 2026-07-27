@@ -49,13 +49,14 @@
 <div id="tab-mac-content-container" class="tabs__container tabs__container--descr active" markdown="1">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
   <p>Выполните команду:</p>
-  <p><b>Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">инструкцией</a></b></p>
+  <p><b>Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">инструкцией</a></b>.</p>
 {% capture command %}
 ```bash
 docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
+<p>Откройте <a href="http://localhost:8080">http://localhost:8080</a>.</p>
 </div>
 <div id="tab-mac-content-trdl" class="tabs__container tabs__container--descr" markdown="1">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
@@ -84,6 +85,14 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 {{ command | markdownify }}
 <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 1 ea)</code> перед каждым использованием установщика, добавьте строку <code>source $(trdl use -d d8-installer 1 ea)</code> в RC-файл вашей командной оболочки.</p>
 </li>
+<li>
+  Запустите установщик командой <code>d8install -b</code>.
+  <div markdown="1">
+  {% alert level="warning" %}
+    Если браузер автоматически не запустился, перейдите по ссылке <a href="http://localhost:8080">http://localhost:8080</a>.
+  {% endalert %}
+  </div>
+</li>
   </ol>
 </div>
 <div id="tab-mac-content-file" class="tabs__container tabs__container--descr" markdown="1">
@@ -101,6 +110,11 @@ xattr -c d8install
 ```
 {% endcapture %}
 {{ command | markdownify }}
+  <div markdown="1">
+  {% alert level="warning" %}
+    Если браузер автоматически не запустился, перейдите по ссылке <a href="http://localhost:8080">http://localhost:8080</a>.
+  {% endalert %}
+  </div>
 </div>
 </div>
   </div>
@@ -128,13 +142,14 @@ xattr -c d8install
   </ul>
 <div id="tab-linux-content-container" class="tabs__container tabs__container--descr active" markdown="1">
   <p>Выполните команду:</p>
-  <p><b>Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">инструкцией</a></b></p>
+  <p><b>Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">инструкцией</a>.</b></p>
 {% capture command %}
 ```bash
 docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
+  <p>Откройте <a href="http://localhost:8080">http://localhost:8080</a>.</p>
 </div>
 <div id="tab-linux-content-trdl" class="tabs__container tabs__container--descr" markdown="1">
   <p>Начиная с версии 0.5.0 установщик можно установить на вашу машину с помощью <a href="https://ru.trdl.dev/">trdl</a>.</p>
@@ -162,6 +177,14 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 {{ command | markdownify }}
 <p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 1 ea)</code> перед каждым использованием установщика, добавьте строку <code>source $(trdl use -d d8-installer 1 ea)</code> в RC-файл вашей командной оболочки.</p>
 </li>
+<li>
+  Запустите установщик командой <code>d8install -b</code>.
+  <div markdown="1">
+  {% alert level="warning" %}
+    Если браузер автоматически не запустился, перейдите по ссылке <a href="http://localhost:8080">http://localhost:8080</a>.
+  {% endalert %}
+  </div>
+</li>
   </ol>
 </div>
 <div id="tab-linux-content-file" class="tabs__container tabs__container--descr" markdown="1">
@@ -174,6 +197,11 @@ chmod +x d8install
 ```
 {% endcapture %}
 {{ command | markdownify }}
+  <div markdown="1">
+  {% alert level="warning" %}
+    Если браузер автоматически не запустился, перейдите по ссылке <a href="http://localhost:8080">http://localhost:8080</a>.
+  {% endalert %}
+  </div>
 </div>
 </div>
   </div>
@@ -195,9 +223,9 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
 ```
 {% endcapture %}
 {{ command | markdownify }}
+<p>Откройте <a href="http://localhost:8080">http://localhost:8080</a>.</p>
   </div>
   </div>
 </li>
-<li>Откройте <a href="http://localhost:8080">http://localhost:8080</a></li>
 </ol>
 </div>

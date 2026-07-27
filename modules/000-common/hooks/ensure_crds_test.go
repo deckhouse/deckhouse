@@ -38,6 +38,7 @@ spec:
     kind: TestCrd
     plural: testcrds
     singular: testcrd
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1alpha1
@@ -50,20 +51,16 @@ spec:
               a:
                 description: a
                 type: string
+                x-description: a
               b:
                 type: string
+                x-doc-default: b
             type: object
         required:
         - spec
         type: object
     served: true
     storage: true
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: null
-  storedVersions: null
 `
 		existInClusterCRD = `
 apiVersion: apiextensions.k8s.io/v1
@@ -136,6 +133,7 @@ spec:
     kind: TestCrd
     plural: testcrds
     singular: testcrd
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1alpha1
@@ -148,20 +146,16 @@ spec:
               a:
                 description: a
                 type: string
+                x-description: a
               b:
                 type: string
+                x-doc-default: b
             type: object
         required:
         - spec
         type: object
     served: true
     storage: true
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: null
-  storedVersions: null
 `
 	)
 

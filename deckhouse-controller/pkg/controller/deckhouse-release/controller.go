@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	aoapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	"go.opentelemetry.io/otel"
@@ -41,6 +40,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	appsv1ac "k8s.io/client-go/applyconfigurations/apps/v1"
+	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -58,16 +59,17 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
-	deckhouseNamespace          = "d8-system"
-	deckhouseDeployment         = "deckhouse"
-	deckhouseRegistrySecretName = "deckhouse-registry"
-
 	controllerName = "d8-deckhouse-release-controller"
+
+	// fieldOwner identifies this controller as the server-side apply field manager
+	// that owns the deckhouse Deployment container image during a release bump.
+	fieldOwner = "deckhouse-release-controller"
 )
 
 const defaultCheckInterval = 15 * time.Second
@@ -227,7 +229,7 @@ func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) error {
 
 func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string {
 	var secret corev1.Secret
-	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
+	key := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.SecretDiscovery}
 	err := r.client.Get(ctx, key, &secret)
 	if err != nil {
 		r.logger.Warn("read clusterUUID from secret", slog.Any("namespaced_name", key), log.Err(err))
@@ -861,7 +863,7 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 var ErrDeploymentContainerIsNotFound = errors.New("deployment container is not found")
 
 func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
-	key := client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDeployment}
+	key := client.ObjectKey{Namespace: app.NamespaceDeckhouse, Name: app.DeploymentName}
 
 	depl := new(appsv1.Deployment)
 
@@ -924,16 +926,27 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 		return nil
 	}
 
-	patch := client.MergeFrom(depl.DeepCopy())
-
 	if len(depl.Spec.Template.Spec.Containers) == 0 {
 		return ErrDeploymentContainerIsNotFound
 	}
-	depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
 
-	err = r.client.Patch(ctx, depl, patch)
+	containerName := depl.Spec.Template.Spec.Containers[0].Name
+	image := r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
+
+	// Server-side apply a minimal configuration that owns only the release
+	// container image, so this field manager never fights over fields it does
+	// not set (replicas, other containers, values injected by other actors).
+	applyConfig := appsv1ac.Deployment(depl.Name, depl.Namespace).
+		WithSpec(appsv1ac.DeploymentSpec().
+			WithTemplate(corev1ac.PodTemplateSpec().
+				WithSpec(corev1ac.PodSpec().
+					WithContainers(corev1ac.Container().
+						WithName(containerName).
+						WithImage(image)))))
+
+	err = r.client.Apply(ctx, applyConfig, client.FieldOwner(fieldOwner), client.ForceOwnership)
 	if err != nil {
-		return fmt.Errorf("patch deployment %s: %w", depl.Name, err)
+		return fmt.Errorf("apply deployment %s: %w", depl.Name, err)
 	}
 
 	return nil
@@ -944,7 +957,7 @@ func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) 
 	err := r.client.List(
 		ctx,
 		&pods,
-		client.InNamespace("d8-system"),
+		client.InNamespace(app.NamespaceDeckhouse),
 		client.MatchingLabels{"app": "deckhouse", "leader": "true"},
 	)
 	if err != nil {
@@ -1074,7 +1087,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: leaderPod.Namespace,
-				Name:      "deckhouse",
+				Name:      app.DeploymentName,
 			},
 		},
 		client.RawPatch(types.MergePatchType, jsonPatch),
@@ -1090,7 +1103,7 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*ut
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "getRegistrySecret")
 	defer span.End()
 
-	key := types.NamespacedName{Namespace: deckhouseNamespace, Name: deckhouseRegistrySecretName}
+	key := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.SecretRegistry}
 
 	secret := new(corev1.Secret)
 
@@ -1108,7 +1121,7 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*ut
 }
 
 func (r *deckhouseReleaseReconciler) isDeckhousePodReady(ctx context.Context) bool {
-	deckhousePodIP := aoapp.ListenAddress
+	deckhousePodIP := app.ListenAddress()
 
 	url := fmt.Sprintf("http://%s:4222/readyz", deckhousePodIP)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

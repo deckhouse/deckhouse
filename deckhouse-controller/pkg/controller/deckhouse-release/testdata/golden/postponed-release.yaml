@@ -9,7 +9,6 @@ spec:
   version: v1.25.0
 status:
   approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---

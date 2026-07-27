@@ -23,14 +23,21 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
+)
+
+const (
+	minVersionValuesKey        = "istio:minimalVersion"
+	installedVersionsValuesKey = "istio:installedVersions"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -108,6 +115,30 @@ func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependen
 
 	input.Values.Set("istio.internal.globalVersion", globalVersion)
 	input.Values.Set("istio.internal.versionsToInstall", versionsToInstall)
+
+	if len(versionsToInstall) == 0 {
+		requirements.RemoveValue(minVersionValuesKey)
+		requirements.RemoveValue(installedVersionsValuesKey)
+	} else {
+		var minVersion *semver.Version
+		installedVersions := make([]string, 0, len(versionsToInstall))
+		for _, version := range versionsToInstall {
+			versionSemver, err := semver.NewVersion(version)
+			if err != nil {
+				return err
+			}
+			majorMinor := fmt.Sprintf("%d.%d", versionSemver.Major(), versionSemver.Minor())
+			if !lib.Contains(installedVersions, majorMinor) {
+				installedVersions = append(installedVersions, majorMinor)
+			}
+			if minVersion == nil || versionSemver.LessThan(minVersion) {
+				minVersion = versionSemver
+			}
+		}
+		sort.Strings(installedVersions)
+		requirements.SaveValue(installedVersionsValuesKey, installedVersions)
+		requirements.SaveValue(minVersionValuesKey, fmt.Sprintf("%d.%d", minVersion.Major(), minVersion.Minor()))
+	}
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 	for _, ver := range versionsToInstall {

@@ -1,0 +1,46 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет топологию маршрутизации: с каких узлов, каким BGP-пирам и какие пулы адресов анонсировать.
+          properties:
+            spec:
+              properties:
+                nodeSelector:
+                  description: |-
+                    Позволяет ограничить список узлов, с которых будет происходить анонс адресов.
+
+                    Задается в виде набора лейблов для фильтрации узлов.
+                mode:
+                  description: |-
+                    Режим работы маршрутизации (поддерживается только `BGP`).
+                bgp:
+                  description: |-
+                    Настройки маршрутизации BGP.
+                  properties:
+                    peerNames:
+                      description: |-
+                        Список имен ресурсов MetalLoadBalancerBGPPeer, которым будут анонсироваться маршруты.
+                advertisements:
+                  description: |-
+                    Список анонсируемых пулов IP-адресов и настройки их анонса.
+                  items:
+                    properties:
+                      poolNames:
+                        description: |-
+                          Список имен пулов (MetalLoadBalancerPool), адреса из которых будут анонсированы.
+                      bgp:
+                        description: |-
+                          Специфичные настройки BGP-анонса.
+                        properties:
+                          communities:
+                            description: |-
+                              Список BGP communities, которые будут прикреплены к анонсируемым маршрутам.
+                          localPref:
+                            description: |-
+                              Значение атрибута Local Preference.
+                          aggregationLength:
+                            description: |-
+                              Маска подсети для агрегации маршрутов.

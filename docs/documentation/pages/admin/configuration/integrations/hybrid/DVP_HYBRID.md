@@ -34,6 +34,12 @@ Before you begin, make sure that the following requirements are met:
 [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) parameters use resources from the DVP cluster: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk, and StorageClass from DVP, not from the target DKP cluster.
 {% endalert %}
 
+{% alert level="warning" %}
+Make sure there are no StorageClass resources in the static DKP cluster whose names match the names of StorageClass resources in the DVP cluster.
+
+When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass resources are automatically synchronized from DVP to the DKP cluster. If a StorageClass with the same name already exists in the static cluster, a resource conflict may occur, causing the module installation or upgrade to fail.
+{% endalert %}
+
 ## Adding automatically created nodes
 
 1. On the administrator's machine where access to the DVP cluster is configured, prepare a kubeconfig for the `cloud-provider-dvp` module to access the DVP API.

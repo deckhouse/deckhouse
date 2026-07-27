@@ -75,8 +75,23 @@ func RunDocChangesValidation(info *DiffInfo) (exitCode int) {
 
 var possibleDocRootsRe = regexp.MustCompile(`modules/[^/]+/docs/|docs/(site|documentation)/pages/`)
 var excludedDocPathsRe = regexp.MustCompile(`docs/site/pages/(stronghold|code|virtualization-platform)`)
-var docsDirAllowedFileRe = regexp.MustCompile(`modules/[^/]+/docs/(CLUSTER_CONFIGURATION|CONFIGURATION|CR|ISTIO-CR|FAQ|README|USAGE|EXAMPLES|ADVANCED_USAGE)(_RU)?.md`)
-var docsDirFileRe = regexp.MustCompile(`/docs/[^/]+.md`)
+var (
+	allowedDocFileNames = []string{
+		"CLUSTER_CONFIGURATION",
+		"CONFIGURATION",
+		"CR",
+		"ISTIO-CR",
+		"FAQ",
+		"README",
+		"USAGE",
+		"EXAMPLES",
+		"ADVANCED_USAGE",
+		"AUDIT-RULES",
+	}
+
+	docsDirAllowedFileRe = regexp.MustCompile(fmt.Sprintf(`modules/[^/]+/docs/(%s)(_RU)?.md`, strings.Join(allowedDocFileNames, "|")))
+	docsDirFileRe        = regexp.MustCompile(`/docs/[^/]+.md`)
+)
 
 func checkDocFile(fName string, diffInfo *DiffInfo) (msg Message) {
 	if !possibleDocRootsRe.MatchString(fName) {
@@ -92,18 +107,11 @@ func checkDocFile(fName string, diffInfo *DiffInfo) (msg Message) {
 		return NewError(
 			fName,
 			"name is not allowed",
-			`Rename this file or move it, for example, into 'internal' folder.
+			fmt.Sprintf(`Rename this file or move it, for example, into 'internal' folder.
 Only following file names are allowed in the module '/docs/' directory:
-    CLUSTER_CONFIGURATION.md
-    CONFIGURATION.md
-    CR.md
-    ISTIO-CR.md
-    FAQ.md
-    README.md
-    USAGE.md
-    EXAMPLES.md
-		ADVANCED_USAGE.md
+		  %s
 (also their Russian versions ended with '_RU.md')`,
+				strings.Join(allowedDocFileNames, "\n    ")),
 		)
 	}
 

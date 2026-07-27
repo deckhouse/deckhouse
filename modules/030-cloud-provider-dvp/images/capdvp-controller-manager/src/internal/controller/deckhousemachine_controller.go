@@ -19,6 +19,7 @@ package controller
 
 import (
 	"context"
+	"crypto/sha1" //nolint:gosec
 	"errors"
 	"fmt"
 	"strings"
@@ -60,6 +61,8 @@ const (
 	OrphanedVMAnnotation = "dvp.deckhouse.io/orphaned-vm"
 	// OrphanedVMTimestampAnnotation records when VM became orphaned
 	OrphanedVMTimestampAnnotation = "dvp.deckhouse.io/orphaned-vm-timestamp"
+	// OrphanedDiskAnnotationPrefix is the prefix for annotations marking timed-out disk deletions
+	OrphanedDiskAnnotationPrefix = "dvp.deckhouse.io/orphaned-disk-"
 )
 
 type ownedResourceCreator struct {
@@ -284,7 +287,7 @@ func (r *DeckhouseMachineReconciler) reconcileVMPhase(
 ) (ctrl.Result, error) {
 	switch vm.Status.Phase {
 	case v1alpha2.MachineRunning:
-		return r.handleVMRunning(logger, dvpMachine, vm)
+		return r.handleVMRunning(ctx, logger, dvpMachine, vm)
 	case v1alpha2.MachineStopped:
 		return r.handleVMStopped(ctx, logger, dvpMachine, vm)
 	case v1alpha2.MachineDegraded:
@@ -295,6 +298,7 @@ func (r *DeckhouseMachineReconciler) reconcileVMPhase(
 }
 
 func (r *DeckhouseMachineReconciler) handleVMRunning(
+	ctx context.Context,
 	logger logr.Logger,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 	vm *v1alpha2.VirtualMachine,
@@ -324,6 +328,11 @@ func (r *DeckhouseMachineReconciler) handleVMRunning(
 	// 		return ctrl.Result{}, fmt.Errorf("delete cloud-init secret %q: %w", cloudInitSecretName, err)
 	// 	}
 	// }
+
+	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
+	if err := r.DVP.ComputeService.EnsureCloudInitSecretImmutable(ctx, cloudInitSecretName); err != nil {
+		return ctrl.Result{}, fmt.Errorf("ensure cloud-init secret immutable %q: %w", cloudInitSecretName, err)
+	}
 
 	logger.Info("Reconciled DeckhouseMachine successfully")
 	return ctrl.Result{}, nil
@@ -418,6 +427,37 @@ func (r *DeckhouseMachineReconciler) handleVMNotReady(
 	// The other states are normal (for example, migration or shutdown) but we don't want to proceed until it's up
 	// due to potential conflict or unexpected actions
 	dvpMachine.Status.Initialization.Provisioned = ptr.To(false)
+
+	diskNames := make([]string, 0, 1+len(dvpMachine.Spec.AdditionalDisks))
+	diskNames = append(diskNames, dvpMachine.Name+"-boot")
+	for i := range dvpMachine.Spec.AdditionalDisks {
+		diskNames = append(diskNames, fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i))
+	}
+
+	for _, diskName := range diskNames {
+		disk, err := r.DVP.DiskService.GetDiskByName(ctx, diskName)
+		if err != nil {
+			if !errors.Is(err, dvpapi.ErrNotFound) {
+				logger.V(1).Info("cannot fetch VM disk to probe for terminal error", "disk", diskName, "error", err)
+			}
+			continue
+		}
+		termErr := dvpapi.TerminalDiskError(disk)
+		if termErr == nil {
+			continue
+		}
+		msg := fmt.Sprintf("disk %q provisioning failed: %v", diskName, termErr)
+		dvpMachine.Status.FailureReason = ptr.To(string(capierrors.CreateMachineError))
+		dvpMachine.Status.FailureMessage = ptr.To(msg)
+		conditions.Set(dvpMachine, metav1.Condition{
+			Type:               string(infrastructurev1a1.VMReadyCondition),
+			Status:             metav1.ConditionFalse,
+			Reason:             infrastructurev1a1.BootDiskProvisioningFailedReason,
+			Message:            msg,
+			LastTransitionTime: metav1.Now(),
+		})
+		return ctrl.Result{}, nil
+	}
 
 	resourceStatus := r.collectOwnedResourcesStatus(ctx, dvpMachine)
 	message := fmt.Sprintf("VM is not ready, state is %s", vm.Status.Phase)
@@ -557,12 +597,40 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	for _, disk := range disksToDelete {
 		logger.Info("Removing VirtualDisk", "disk_name", disk)
 		if err = r.DVP.DiskService.RemoveDiskByName(ctx, disk); err != nil {
+			if errors.Is(err, dvpapi.ErrNotFound) {
+				logger.Info("VirtualDisk already gone, skipping", "disk_name", disk)
+				continue
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				logger.Error(err, "VirtualDisk deletion timed out, marking as orphaned and continuing",
+					"disk_name", disk,
+				)
+				if dvpMachine.Annotations == nil {
+					dvpMachine.Annotations = make(map[string]string)
+				}
+				h := sha1.Sum([]byte(disk)) //nolint:gosec
+				key := fmt.Sprintf("%s%x", OrphanedDiskAnnotationPrefix, h[:8])
+				dvpMachine.Annotations[key] = disk
+				continue
+			}
 			merr = multierror.Append(merr, fmt.Errorf("delete VirtualDisk %s: %w", disk, err))
 		}
 	}
 
 	if err = merr.ErrorOrNil(); err != nil {
 		return ctrl.Result{}, fmt.Errorf("delete VirtualDisks: %w", err)
+	}
+
+	var orphanedDisks []string
+	for k, v := range dvpMachine.Annotations {
+		if strings.HasPrefix(k, OrphanedDiskAnnotationPrefix) {
+			orphanedDisks = append(orphanedDisks, v)
+		}
+	}
+	if len(orphanedDisks) > 0 {
+		logger.Info("VirtualDisks timed out and were not deleted — manual cleanup required in parent DVP cluster",
+			"orphaned_disks", orphanedDisks,
+		)
 	}
 
 	controllerutil.RemoveFinalizer(dvpMachine, infrastructurev1a1.MachineFinalizer)
@@ -1155,7 +1223,7 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 ) (bool, error) {
 	disk, err := r.DVP.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
-		if errors.Is(err, cloudprovider.DiskNotFound) {
+		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.DiskNotFound) {
 			if required {
 				return false, fmt.Errorf("disk %q not found", diskName)
 			}
@@ -1206,7 +1274,7 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 		return true, nil
 	case diskSCStepApplyPatch:
 		if _, err := r.DVP.DiskService.GetStorageClass(ctx, desiredStorageClass); err != nil {
-			if errors.Is(err, cloudprovider.DiskNotFound) {
+			if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.DiskNotFound) {
 				return false, fmt.Errorf("storage class %q not found", desiredStorageClass)
 			}
 			return false, err

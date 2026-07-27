@@ -27,9 +27,9 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libcon_config "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type providerOptions struct {
@@ -76,7 +76,7 @@ func WithKubeConfig(kubeConfig, kubeConfigContext string, inCluster bool) Provid
 
 func GetSSHProviderInitializer(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	baseProviderSettings := settings.NewBaseProviders(params)
-	return getProviderInitializer(baseProviderSettings, opts...)
+	return getProviderInitializer(ctx, baseProviderSettings, opts...)
 }
 
 // func to initialize both SSHProviderInitializer and KubeProvider
@@ -84,7 +84,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	options := newProviderOptions(opts...)
 	baseProviderSettings := settings.NewBaseProviders(params)
 
-	sshProviderInitializer, err := getProviderInitializer(baseProviderSettings, opts...)
+	sshProviderInitializer, err := getProviderInitializer(ctx, baseProviderSettings, opts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -95,7 +95,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	}
 
 	if options.requireKubeProvider && cfg.OverSSH() {
-		if sshProviderInitializer == nil || !sshProviderInitializer.CheckHosts() {
+		if sshProviderInitializer == nil || !sshProviderInitializer.CheckHosts(ctx) {
 			return sshProviderInitializer, nil, ErrSSHHostRequiredForKubernetesConnection
 		}
 	}
@@ -134,7 +134,7 @@ func resolveKubeConfig(baseProviderSettings *settings.BaseProviders, options *pr
 	return flags.ExtractConfig()
 }
 
-func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
+func getProviderInitializer(ctx context.Context, baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	options := newProviderOptions(opts...)
 
 	var config *libcon_config.ConnectionConfig
@@ -152,16 +152,21 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 	} else {
 		// loggerProvider should be forced to non-interactive to ask for password, because our wrapper hides all Info* and Warn* output
 		sett := baseProviderSettings.Clone()
-		loggerProvider := log.NonInteractiveLoggerProvider()
-		sett.WithLogger(loggerProvider)
-		parser := libcon_config.NewFlagsParser(sett)
+		sett.WithLogger(dhlog.FromContext(ctx))
+		parser := libcon_config.NewFlagsParser(ctx, sett)
 		parser.WithEnvsPrefix(global.SSHEnvsPrefix)
-		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
-		flags, err := parser.InitFlags(fset)
+
+		flags, err := parser.InitFlags(
+			flag.NewFlagSet("my-set", flag.ExitOnError),
+		)
 		if err != nil {
 			return nil, fmt.Errorf("init flags: %w", err)
 		}
-		config, err = flags.ExtractConfig(os.Args[1:])
+
+		config, err = flags.ExtractConfig(
+			os.Args[1:],
+			libcon_config.ParseWithRequiredSSHHost(false),
+		)
 		if err != nil {
 			if strings.Contains(err.Error(), "Failed to read private keys from flags") && options.kubeFlagsDefined {
 				return nil, nil

@@ -30,7 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -56,7 +56,7 @@ type Installer struct {
 //	/deckhouse/downloaded/<module>/     - Actual module files
 //	/deckhouse/downloaded/modules/<version> -> symlink to actual module
 func NewInstaller(registry *registry.Service, logger *log.Logger) *Installer {
-	downloaded := d8env.GetDownloadedModulesDir()
+	downloaded := app.DownloadedModulesDir()
 
 	return &Installer{
 		downloaded: downloaded,
@@ -95,15 +95,10 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	// /deckhouse/downloaded/<module>/<version>
 	versionPath := filepath.Join(modulePath, version)
 
-	// Remove old version if exists (for atomic update)
-	if _, err := os.Stat(versionPath); err == nil {
-		if err = os.RemoveAll(versionPath); err != nil {
-			return fmt.Errorf("delete old version '%s': %w", versionPath, err)
-		}
-	}
-
-	// Copy module files to permanent location
-	if err := cp.Copy(tempModulePath, versionPath); err != nil {
+	// Copy module files to permanent location atomically, so an interrupted copy
+	// never leaves a partial version directory that a later restore would trust as
+	// complete and expose through the module symlink.
+	if err := atomicCopyDir(tempModulePath, versionPath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("copy module '%s': %w", modulePath, err)
 	}
@@ -123,6 +118,80 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	if err := os.Symlink(versionPath, symlinkPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create symlink '%s': %w", symlinkPoint, err)
+	}
+
+	return nil
+}
+
+// Stage copies a module from temp location to permanent storage WITHOUT creating
+// the symlink. The files end up at /deckhouse/downloaded/<module>/<version>/ but
+// the module is not exposed to the operator, so an embedded copy of the same name
+// keeps serving the module. The symlink is created later (by Install/Restore) once
+// the embedded copy is gone.
+func (i *Installer) Stage(ctx context.Context, module, version, tempModulePath string) error {
+	_, span := otel.Tracer(tracerName).Start(ctx, "Stage")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("path", tempModulePath))
+
+	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
+
+	logger.Debug("stage module without symlink")
+
+	// Create permanent module directory: /deckhouse/downloaded/<module>
+	modulePath := filepath.Join(i.downloaded, module)
+	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
+	}
+
+	// /deckhouse/downloaded/<module>/<version>
+	versionPath := filepath.Join(modulePath, version)
+
+	// Copy module files to permanent location atomically and without creating the
+	// symlink, so an interrupted copy never leaves a partial version directory that
+	// a later restore would trust as complete.
+	if err := atomicCopyDir(tempModulePath, versionPath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("copy module '%s': %w", modulePath, err)
+	}
+
+	return nil
+}
+
+// StageFromRegistry downloads a module from the registry to permanent storage
+// WITHOUT creating the symlink. Mirrors Restore but skips activation.
+func (i *Installer) StageFromRegistry(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "StageFromRegistry")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("source", ms.GetName()))
+
+	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
+	logger.Debug("stage module from registry without symlink")
+
+	// Create permanent module directory: /deckhouse/downloaded/<module>
+	modulePath := filepath.Join(i.downloaded, module)
+	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
+	}
+
+	// /deckhouse/downloaded/<module>/<version>
+	versionPath := filepath.Join(modulePath, version)
+
+	// Re-download when the version is missing or incomplete (e.g. an empty directory
+	// left by an interrupted download), instead of trusting bare existence, which
+	// would keep a broken module in place across restarts.
+	if !moduleComplete(versionPath) {
+		if err := i.registry.Download(ctx, registry.BuildRemote(ms), versionPath, module, version); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return fmt.Errorf("download module '%s': %w", module, err)
+		}
 	}
 
 	return nil
@@ -220,9 +289,11 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	// This allows multiple versions to coexist before symlink switch
 	versionPath := filepath.Join(modulePath, version)
 
-	// Check if module version already exists
-	if _, err := os.Stat(versionPath); err != nil {
-		if err = i.registry.Download(ctx, registry.BuildRemote(ms), versionPath, module, version); err != nil {
+	// Re-download when the version is missing or incomplete (e.g. an empty directory
+	// left by an interrupted download), instead of trusting bare existence, which
+	// would keep a broken module in place across restarts.
+	if !moduleComplete(versionPath) {
+		if err := i.registry.Download(ctx, registry.BuildRemote(ms), versionPath, module, version); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("download module '%s': %w", module, err) // Propagate download error
 		}
@@ -235,4 +306,43 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	}
 
 	return nil
+}
+
+// atomicCopyDir copies the contents of src into a temporary sibling of dst on the
+// same filesystem and then renames it onto dst. Because the rename is the only
+// operation that publishes dst, an interrupted copy leaves dst either untouched or
+// absent, never a partially written directory.
+func atomicCopyDir(src, dst string) error {
+	scratch, err := os.MkdirTemp(filepath.Dir(dst), "."+filepath.Base(dst)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("create scratch dir: %w", err)
+	}
+	defer os.RemoveAll(scratch)
+
+	if err = cp.Copy(src, scratch); err != nil {
+		return fmt.Errorf("copy '%s': %w", src, err)
+	}
+
+	// os.Rename needs an empty or absent target, so drop any stale directory first.
+	if err = os.RemoveAll(dst); err != nil {
+		return fmt.Errorf("remove stale '%s': %w", dst, err)
+	}
+	if err = os.Rename(scratch, dst); err != nil {
+		return fmt.Errorf("rename '%s' to '%s': %w", scratch, dst, err)
+	}
+
+	return nil
+}
+
+// moduleComplete reports whether the module version directory holds a materialized
+// module. An interrupted download leaves an empty directory; a bare existence check
+// treats that as present and keeps the broken module in place, so an empty or
+// unreadable directory is reported as incomplete and re-downloaded.
+func moduleComplete(versionPath string) bool {
+	entries, err := os.ReadDir(versionPath)
+	if err != nil {
+		return false
+	}
+
+	return len(entries) > 0
 }

@@ -15,6 +15,8 @@
 package global
 
 import (
+	"maps"
+
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 )
 
@@ -24,6 +26,7 @@ type Info struct {
 	Path    string            `json:"path" yaml:"path"`
 	Values  addonutils.Values `json:"values,omitempty" yaml:"values,omitempty"`
 	Hooks   []string          `json:"hooks,omitempty" yaml:"hooks,omitempty"`
+	Dynamic map[string]bool   `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
 }
 
 func (m *Module) GetInfo() Info {
@@ -32,11 +35,19 @@ func (m *Module) GetInfo() Info {
 		hooks[idx] = hook.GetName()
 	}
 
+	m.dynamicMu.RLock()
+	defer m.dynamicMu.RUnlock()
+
+	dynamic := make(map[string]bool, len(m.dynamicEnabled))
+	maps.Copy(dynamic, m.dynamicEnabled)
+	maps.Copy(dynamic, m.configEnabled)
+
 	return Info{
 		Name:    m.name,
 		Running: m.running.Load(),
 		Path:    m.path,
 		Values:  m.values.GetValues(),
 		Hooks:   hooks,
+		Dynamic: dynamic,
 	}
 }

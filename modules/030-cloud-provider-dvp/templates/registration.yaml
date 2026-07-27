@@ -1,7 +1,6 @@
 {{- $providerID := "dvp" }}
 {{- define "registration_values" }}
 {{- $context := index . 0 }}
-{{- $providerClusterConfiguration := $context.Values.cloudProviderDvp.internal.providerClusterConfiguration }}
 type: {{ b64enc "dvp" | quote }}
 # DVP does not contain meaning regions and zones
 # but out machinery use them. we use default as region and as one zone
@@ -21,8 +20,12 @@ capiClusterName: {{ b64enc "dvp" | quote }}
 capiMachineTemplateKind: {{ b64enc "DeckhouseMachineTemplate" | quote }}
 capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
 capiMachineTemplateAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
-{{- with $providerClusterConfiguration.sshPublicKey }}
-sshPublicKey: {{ . | b64enc | quote }}
+{{- $sshPublicKey := "" }}
+{{- if $context.Values.cloudProviderDvp.nodes.parameters.sshPublicKey }}
+{{- $sshPublicKey = $context.Values.cloudProviderDvp.nodes.parameters.sshPublicKey }}
+{{- end }}
+{{- if $sshPublicKey }}
+sshPublicKey: {{ $sshPublicKey | b64enc | quote }}
 {{- end }}
 
 {{- $dvpValues := dict }}

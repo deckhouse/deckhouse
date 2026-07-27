@@ -20,11 +20,19 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+// webhookDecisionTimeout hard-bounds how long a single admission decision may take. The handlers read
+// from the API on the hot path; without an internal bound a slow read would hold the request until the
+// webhook's 10s deadline and, with failurePolicy: Fail, let addon-operator pile up retries into a
+// multi-minute queue lock. A short, terminal bound guarantees the webhook always answers quickly — it
+// can never become the thing that locks a queue.
+const webhookDecisionTimeout = 3 * time.Second
 
 // decodeReview reads and decodes an AdmissionReview from a JSON request body.
 func decodeReview(r *http.Request, review *admissionv1.AdmissionReview) error {

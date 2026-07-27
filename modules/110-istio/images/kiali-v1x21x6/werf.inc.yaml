@@ -6,12 +6,13 @@
 # Based on https://github.com/kiali/kiali/blob/v1.81.0/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2407202601
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
   to: /opt/kiali/kiali
   before: install
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-kiali-frontend-build-artifact
   add: /src/kial-frontend-assets/static
   to: /opt/kiali/console
   before: install
@@ -24,7 +25,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine-1.25" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -37,8 +38,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
+  - pm install git binutils
   setup:
   - cd /src/kiali/
   - echo {{ $kialiVersion }} > version
@@ -48,3 +48,4 @@ shell:
   - go build -o /src/kiali/out/kiali /src/kiali/
   - strip /src/kiali/out/kiali
   - chmod 0755 /src/kiali/out/kiali
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

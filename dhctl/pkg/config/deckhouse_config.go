@@ -1,18 +1,16 @@
-/*
-Copyright 2023 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package config
 
@@ -26,14 +24,16 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/uuid"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 const (
 	DefaultBundle   = "Default"
+	MinimalBundle   = "Minimal"
 	DefaultLogLevel = "Info"
 )
 
@@ -50,6 +50,7 @@ type DeckhouseInstaller struct {
 	InfrastructureState      []byte
 	NodesInfrastructureState map[string][]byte
 	CloudDiscovery           []byte
+	ProviderName             string
 	ModuleConfigs            []*ModuleConfig
 
 	// ModuleConfigCRDPath is the path to the ModuleConfig CRD manifest shipped
@@ -73,47 +74,72 @@ type DeckhouseInstaller struct {
 	CommanderUUID uuid.UUID
 }
 
-func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
-	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
-		return tag
+// HasProviderModuleConfig reports whether the installer carries a
+// cloud-provider-<name> ModuleConfig (the mc-flow provider format). Mirrors
+// MetaConfig.HasProviderModuleConfig.
+func (c *DeckhouseInstaller) HasProviderModuleConfig() bool {
+	if c == nil || c.ProviderName == "" {
+		return false
 	}
+	target := CloudProviderModuleName(c.ProviderName)
+	for _, mc := range c.ModuleConfigs {
+		if mc.Name == target {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *DeckhouseInstaller) GetImageTag(ctx context.Context, forceVersionTag bool) (string, error) {
+	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
+		return tag, nil
+	}
+
 	tag := c.DevBranch
 	if forceVersionTag {
-		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer(c.VersionFilePath, c.DownloadDir)
+		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer(ctx, c.VersionFilePath, c.DownloadDir)
 		if foundValidTag {
 			tag = versionTag
 		}
 	}
 
 	if tag == "" {
-		panic("You are probably using a development image. Please use devBranch")
+		return "", fmt.Errorf("cannot determine Deckhouse image tag: you are probably using a development image, please set devBranch")
 	}
-	return tag
+	return tag, nil
 }
 
-func (c *DeckhouseInstaller) GetInclusterImage(forceVersionTag bool) string {
-	tag := c.GetImageTag(forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().InClusterImagesRepo, tag)
+func (c *DeckhouseInstaller) GetInclusterImage(ctx context.Context, forceVersionTag bool) (string, error) {
+	tag, err := c.GetImageTag(ctx, forceVersionTag)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().InClusterImagesRepo, tag), nil
 }
 
-func (c *DeckhouseInstaller) GetRemoteImage(forceVersionTag bool) string {
-	tag := c.GetImageTag(forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag)
+func (c *DeckhouseInstaller) GetRemoteImage(ctx context.Context, forceVersionTag bool) (string, error) {
+	tag, err := c.GetImageTag(ctx, forceVersionTag)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag), nil
 }
 
 // ReadVersionTagFromInstallerContainer reads the installer image version tag.
 // versionFile is the absolute path to the embedded version file; downloadDir
 // is the directory where the deckhouse image is unpacked (used as a fallback
 // location for the version file).
-func ReadVersionTagFromInstallerContainer(versionFile, downloadDir string) (string, bool) {
+func ReadVersionTagFromInstallerContainer(ctx context.Context, versionFile, downloadDir string) (string, bool) {
 	rawFile, err := os.ReadFile(versionFile)
 	if err != nil {
 		rawFile, err = os.ReadFile(filepath.Join(downloadDir, "deckhouse", "version"))
 		if err != nil {
-			log.WarnF(
+			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf(
 				"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
 				versionFile, err,
-			)
+			), "\n"))
 			return "", false
 		}
 	}
@@ -226,6 +252,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		ProviderClusterConfig: providerClusterConfig,
 		StaticClusterConfig:   staticClusterConfig,
 		ClusterConfig:         clusterConfig,
+		ProviderName:          metaConfig.ProviderName,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
 		ModuleConfigCRDPath:   moduleConfigCRDPath,
 		InstallerVersion:      metaConfig.InstallerVersion,

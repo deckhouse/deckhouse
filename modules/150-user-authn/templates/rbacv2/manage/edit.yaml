@@ -28,9 +28,18 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - dexproviderchecks
   - useroperations
   verbs:
   - create
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexproviderchecks
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - deckhouse.io
   resourceNames:

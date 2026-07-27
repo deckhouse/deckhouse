@@ -27,11 +27,11 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -69,7 +69,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
 		h.oldMasterIPForSSH = ""
-		log.InfoF("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.\n", h.nodeToDestroy)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.", h.nodeToDestroy))
 		return false, nil
 	}
 
@@ -80,7 +80,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.nodeToDestroy, h.commanderMode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.getter, h.nodeToDestroy, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
@@ -100,7 +100,7 @@ func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrast
 
 	cl, err := h.sshProvider.Client(ctx)
 	if err != nil {
-		log.DebugLn("Node interface is not ssh")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Node interface is not ssh")
 		return nil
 	}
 
@@ -115,7 +115,7 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, commanderMode bool) error {
+func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, commanderMode bool) error {
 	err := removeLabelsFromNode(ctx, kubeCl, nodeName, []string{
 		"node-role.kubernetes.io/control-plane",
 		"node-role.kubernetes.io/master",
@@ -125,7 +125,7 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 		return fmt.Errorf("failed to remove labels from node '%s': %v", nodeName, err)
 	}
 
-	err = waitEtcdHasNoMember(ctx, kubeCl.KubeClient.(libcon.KubeClient), nodeName)
+	err = waitEtcdHasNoMember(ctx, kubeGetter, nodeName)
 	if err != nil {
 		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
 	}
@@ -143,7 +143,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 		node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.InfoF("Node '%s' has been deleted. Skipping\n", nodeName)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node '%s' has been deleted. Skipping", nodeName))
 				return nil
 			}
 			return err
@@ -151,7 +151,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 
 		nodeLabels := node.GetLabels()
 
-		patchOperations := make([]map[string]interface{}, 0, len(labels))
+		patchOperations := make([]map[string]any, 0, len(labels))
 
 		for _, label := range labels {
 			// Check if the label exists on the node before trying to remove it
@@ -160,7 +160,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 				continue
 			}
 
-			patchOperations = append(patchOperations, map[string]interface{}{
+			patchOperations = append(patchOperations, map[string]any{
 				"op": "remove",
 				// JSON patch requires slashes to be escaped with ~1
 				"path": fmt.Sprintf("/metadata/labels/%s", strings.ReplaceAll(label, "/", "~1")),

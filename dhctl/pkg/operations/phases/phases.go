@@ -135,6 +135,7 @@ const (
 	InstallKubernetesSubPhaseBundlePreparation     OperationSubPhase = "BashibleBundlePrepartion"
 	InstallKubernetesSubPhaseRegistryPackagesProxy OperationSubPhase = "RegistryPackagesProxy"
 	InstallKubernetesSubPhaseNodePreparation       OperationSubPhase = "NodePreparation"
+	InstallKubernetesSubPhaseModulesPreparation    OperationSubPhase = "ModulesPreparation"
 	InstallKubernetesSubPhaseExecuteBashibleBundle OperationSubPhase = "ExecuteBashibleBundle"
 )
 

@@ -388,9 +388,7 @@ spec:
     bpfLBMode: SNAT
     debugLogging: true
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())
@@ -438,9 +436,7 @@ spec:
     createNodeRoutes: true
     bpfLBMode: SNAT
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())
@@ -488,9 +484,7 @@ spec:
     createNodeRoutes: true
     bpfLBMode: SNAT
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())
@@ -802,9 +796,7 @@ spec:
     tunnelMode: Disabled
     masqueradeMode: Netfilter
   version: 1
-status:
-  message: ""
-  version: ""
+status: {}
 `))
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())

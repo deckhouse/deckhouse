@@ -1,3 +1,22 @@
+{{- $clusterAutoscalerJobs := list -}}
+{{- if not (include "cluster_autoscaler_split_mode" .) -}}
+  {{- $clusterAutoscalerJobs = append $clusterAutoscalerJobs "cluster-autoscaler" -}}
+{{- else -}}
+  {{- if include "cluster_autoscaler_capi_enabled" . -}}
+    {{- $clusterAutoscalerJobs = append $clusterAutoscalerJobs "cluster-autoscaler" -}}
+  {{- end -}}
+  {{- if include "cluster_autoscaler_mcm_enabled" . -}}
+    {{- $clusterAutoscalerJobs = append $clusterAutoscalerJobs "cluster-autoscaler-mcm" -}}
+  {{- end -}}
+{{- end -}}
+{{- $clusterAutoscalerJobsRegex := join "|" $clusterAutoscalerJobs -}}
+{{- $clusterAutoscalerTargetDownExpr := printf `max by (job) (up{job=~"%s", namespace="d8-cloud-instance-manager"} == 0)` $clusterAutoscalerJobsRegex -}}
+{{- $clusterAutoscalerTargetAbsentExprs := list -}}
+{{- range $job := $clusterAutoscalerJobs -}}
+  {{- $clusterAutoscalerTargetAbsentExprs = append $clusterAutoscalerTargetAbsentExprs (printf `absent(up{job="%s", namespace="d8-cloud-instance-manager"} == 1)` $job) -}}
+{{- end -}}
+{{- $clusterAutoscalerTargetAbsentExpr := join " or " $clusterAutoscalerTargetAbsentExprs -}}
+
 - name: d8.cluster-autoscaler.availability
   rules:
   - alert: D8ClusterAutoscalerManagerPodIsNotReady
@@ -47,7 +66,7 @@
         ```
 
   - alert: D8ClusterAutoscalerTargetDown
-    expr: max by (job) (up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 0)
+    expr: {{ $clusterAutoscalerTargetDownExpr | quote }}
     for: 5m
     labels:
       severity_level: "8"
@@ -64,7 +83,7 @@
       summary: Prometheus is unable to scrape cluster-autoscaler's metrics.
 
   - alert: D8ClusterAutoscalerTargetAbsent
-    expr: absent(up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 1)
+    expr: {{ $clusterAutoscalerTargetAbsentExpr | quote }}
     for: 5m
     labels:
       severity_level: "8"
@@ -87,19 +106,19 @@
         1. Check availability and status of cluster-autoscaler Pods:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get pods -l 'app in (cluster-autoscaler,cluster-autoscaler-mcm)'
            ```
 
         2. Verify that the cluster-autoscaler Deployment exists:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get deploy -l 'app in (cluster-autoscaler,cluster-autoscaler-mcm)'
            ```
 
         3. Check the Deployment's status:
 
            ```bash
-           d8 k -n d8-cloud-instance-manager describe deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager describe deploy <deployment-name>
            ```
 
 - name: d8.cluster-autoscaler.malfunctioning

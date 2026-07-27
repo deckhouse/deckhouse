@@ -152,6 +152,10 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
+    if (pre.classList.contains('mermaid')) {
+      return;
+    }
+
     if (pre.querySelector('code.language-tree')) {
       pre.dataset.codeblockInitialized = 'true';
       return;

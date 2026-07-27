@@ -20,24 +20,26 @@ import (
 	"syscall"
 
 	envmgr "github.com/flant/addon-operator/pkg/module_manager/environment_manager"
+
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 func getChrootObjectDescriptors() []envmgr.ObjectDescriptor {
 	return []envmgr.ObjectDescriptor{
 		{
-			Source:            "/deckhouse/python_lib",
+			Source:            app.PathPythonLib,
 			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
 			Type:              envmgr.Mount,
 			TargetEnvironment: envmgr.ShellHookEnvironment,
 		},
 		{
-			Source:            "/deckhouse/candi",
+			Source:            app.PathCandi,
 			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
 			Type:              envmgr.Mount,
 			TargetEnvironment: envmgr.ShellHookEnvironment,
 		},
 		{
-			Source:            "/deckhouse/helm_lib",
+			Source:            app.PathHelmLib,
 			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
 			Type:              envmgr.Mount,
 			TargetEnvironment: envmgr.ShellHookEnvironment,
@@ -74,13 +76,13 @@ func getChrootObjectDescriptors() []envmgr.ObjectDescriptor {
 			TargetEnvironment: envmgr.EnabledScriptEnvironment,
 		},
 		{
-			Source:            "/deckhouse/shell_lib",
+			Source:            app.PathShellLib,
 			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
 			Type:              envmgr.Mount,
 			TargetEnvironment: envmgr.EnabledScriptEnvironment,
 		},
 		{
-			Source:            "/deckhouse/shell-operator",
+			Source:            app.PathShellOperator,
 			Flags:             syscall.MS_BIND | syscall.MS_RDONLY,
 			Type:              envmgr.Mount,
 			TargetEnvironment: envmgr.EnabledScriptEnvironment,
@@ -91,7 +93,7 @@ func getChrootObjectDescriptors() []envmgr.ObjectDescriptor {
 			TargetEnvironment: envmgr.EnabledScriptEnvironment,
 		},
 		{
-			Source:            "/deckhouse/shell_lib.sh",
+			Source:            app.PathShellLibScript,
 			Type:              envmgr.File,
 			TargetEnvironment: envmgr.EnabledScriptEnvironment,
 		},

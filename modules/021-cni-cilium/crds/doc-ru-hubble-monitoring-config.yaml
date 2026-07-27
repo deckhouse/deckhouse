@@ -17,7 +17,10 @@ spec:
                     Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/metrics/#monitoring-metrics).
                   properties:
                     enabled:
-                      description: Включает экспорт расширенных метрик с агентов Cilium.
+                      description: |
+                        Включает экспорт расширенных метрик с агентов Cilium.
+
+                        > Все экспортируемые метрики имеют префикс `hubble_*`.
                     collectors:
                       description: |
                         Список расширенных метрик Hubble для экспорта.
@@ -55,7 +58,7 @@ spec:
                       description: |
                         Включает ведение журналов событий для агентов Cilium.
 
-                        Файл журнала расположен на файловой системе узла по пути `/var/log/cilium/hubble/flow.log`.
+                        > Файл журнала расположен на файловой системе узла по пути `/var/log/cilium/hubble/flow.log`.
                     allowFilterList:
                       description: >
                         Определяет фильтры, которые управляют тем, какие события экспортируются в лог.

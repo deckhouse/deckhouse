@@ -30,6 +30,28 @@ Example of DKP authentication interface with username and password input:
 
 ![Example login/password interface](../../images/user/access/authentication/web-auth-example2.png)
 
+## Changing and resetting a local user's password
+
+If [local authentication](../../admin/configuration/access/authentication/local.html) is configured in the cluster, a user can change or reset their password on their own.
+
+### Password change required by policy or administrator
+
+During login, DKP may redirect a local user to the password change form if:
+
+- The password complexity does not meet the [configured policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy).
+- The password has expired according to the [configured policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy).
+- An administrator initiated a forced password change.
+
+The form requires the current password, a new password, and confirmation. The new password must comply with the cluster password policy.
+
+### Self-service password reset
+
+A local user can reset their password in the DKP authentication interface. The operation is performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource with `initiatorType: self`.
+
+Self-service reset is available only for local accounts. If you sign in through LDAP, GitHub, or another external provider, contact the administrator of that system.
+
+After a password reset, active sessions are terminated and you must sign in again with the new password.
+
 ## Enabling Authentication in a Web Application
 
 > To enable authentication in an application, authentication must first be configured at the Deckhouse Kubernetes Platform level.
@@ -66,6 +88,7 @@ To enable authentication for an application deployed in DKP, follow these steps:
      # Domain name of your application. Requests to this domain will be redirected to Dex for authentication.
      applicationDomain: "app-name.kube.my-domain.com"
      # Whether to send an `Authorization: Bearer` header to the application. Useful with NGINX's auth_request.
+     # If sendAuthorizationHeader is set to true, add the Authorization header to to nginx.ingress.kubernetes.io/auth-response-headers annotation of the application's Ingress.
      sendAuthorizationHeader: false
      # Name of the Secret containing the TLS certificate.
      applicationIngressCertificateSecretName: "ingress-tls"
@@ -110,6 +133,15 @@ To enable authentication for an application deployed in DKP, follow these steps:
           nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
           nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
         ```
+
+{% alert level="warning" %}
+When setting `sendAuthorizationHeader: true`, list all necessary headers in the `nginx.ingress.kubernetes.io/auth-response-headers` annotation of the Ingress, since the `Authorization` header is not transmitted by default:
+
+```yaml
+nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+```
+
+{% endalert %}
 
 ### Authentication for applications with OIDC support
 
