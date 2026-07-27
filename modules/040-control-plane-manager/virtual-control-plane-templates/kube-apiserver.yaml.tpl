@@ -40,6 +40,7 @@ spec:
         - --tls-private-key-file=/pki/apiserver.key
         - --kubelet-client-certificate=/pki/apiserver-kubelet-client.crt
         - --kubelet-client-key=/pki/apiserver-kubelet-client.key
+        - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
         - --service-account-key-file=/pki/sa.pub
         - --service-account-signing-key-file=/pki/sa.key
         - --service-account-issuer=https://kubernetes.default.svc.${CLUSTER_DOMAIN}
