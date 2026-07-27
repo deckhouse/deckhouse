@@ -5,6 +5,7 @@
 # Based on https://github.com/istio/istio/blob/1.21.6/operator/docker/Dockerfile.operator
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2407202601
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/operator/out/operator
@@ -77,3 +78,4 @@ shell:
   - cd /src/operator && git apply --verbose /patches/002-istio-operato-cni_status_restrict.patch
   - cd /src/operator && git apply --verbose /patches/003-istio-init-readonly-rootfs.patch
 ---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

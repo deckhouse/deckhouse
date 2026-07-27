@@ -14,6 +14,7 @@
 #      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2407202601
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -360,3 +361,4 @@ shell:
   - git apply --verbose /patches/*.patch
   - mkdir /src/llvm/third-party/benchmark && touch /src/llvm/third-party/benchmark/placeholder.txt
 ---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

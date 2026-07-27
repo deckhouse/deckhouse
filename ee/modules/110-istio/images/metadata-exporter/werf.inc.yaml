@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2407202601
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/metadata-exporter
@@ -56,3 +57,4 @@ git:
 shell:
   install:
   - cd /src
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

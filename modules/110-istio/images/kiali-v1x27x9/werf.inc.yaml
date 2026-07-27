@@ -7,6 +7,7 @@
 # Based on https://github.com/kiali/kiali/blob/v2.12.0/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2407202601
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
@@ -52,3 +53,4 @@ shell:
   - strip /src/kiali/out/kiali
   - chmod 0755 /src/kiali/out/kiali
 {{- end }}
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
