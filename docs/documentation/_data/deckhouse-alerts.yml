@@ -2924,6 +2924,35 @@ alerts:
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
       markupFormat: markdown
+    - name: D8UserAuthzLegacyRBACv2CustomRoleFound
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The ClusterRole `{{ $labels.name }}` is a custom role or capability created with the legacy experimental RBACv2 scheme. Such roles have a `custom:*` name and use either the `rbac.deckhouse.io/kind: manage` or `use` labels, or aggregation selectors based on these labels.
+
+        In DKP 1.78, the role model changes the labels that drive aggregation. Legacy custom roles get **no compatibility aliases** and will stop aggregating permissions entirely after the upgrade.
+
+        Until every such role is migrated, the upgrade to DKP 1.78 is blocked by the `legacyRBACv2CustomRolesCount` release requirement.
+
+        Migrate the role to the new scheme:
+
+        - Rename it using the `d8:custom:` name prefix.
+        - Replace the labels with the `rbac.deckhouse.io/kind: custom-role` or `custom-capability` label.
+        - Update aggregation selectors to use the new labels.
+
+        For migration instructions, refer to the [corresponding section](https://deckhouse.io/modules/user-authz/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178) in the `user-authz` module FAQ.
+
+        List all legacy custom roles:
+
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | startswith("custom:")) and ((.metadata.labels["rbac.deckhouse.io/kind"] // "" | IN("manage", "use")) or ([.aggregationRule.clusterRoleSelectors[]?.matchLabels["rbac.deckhouse.io/kind"] // ""] | any(IN("manage", "use"))))) | .metadata.name'
+        ```
+      summary: |
+        A legacy RBACv2 custom role is present in the cluster.
+      severity: "7"
+      markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
       moduleUrl: 140-user-authz
