@@ -66,12 +66,11 @@ is_kernel_erofs_cve_vulnerable() {
     (( build >= 1010 )) && return 1
   fi
 
-  # Exception for Oracle Linux UEK kernels only: base version stays 6.12.0 while the fix is backported. 
-  # CVE fixed starting kernel-uek 6.12.0-101.33.4.3.el10uek (ELSA-2025-20480 https://linux.oracle.com/errata/ELSA-2025-20480.html).
-  if [[ "$full_kv" == *.el10uek || "$full_kv" == *.el10uek.* ]]; then
-    local rel="${full_kv%.el10uek*}"
-    rel="${rel/-/.}"
-    version_ge "$rel" "6.12.0.101.33.4.3" && return 1
+  # Exception for Oracle Linux UEK8 kernels (el9uek/el10uek) only: base version stays 6.12.0 while the fix is backported.
+  # CVE fixed starting kernel-uek 6.12.0-101.33.4.3 (ELSA-2025-20480 https://linux.oracle.com/errata/ELSA-2025-20480.html).
+  # Anchoring on 6.12.0 keeps 5.15-based UEK7 (el9uek) out of this branch.
+  if [[ "$full_kv" =~ ^6\.12\.0-([0-9.]+)\.el(9|10)uek ]]; then
+    version_ge "6.12.0.${BASH_REMATCH[1]}" "6.12.0.101.33.4.3" && return 1
     return 0
   fi
 
