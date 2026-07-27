@@ -1,0 +1,30 @@
+{{- $options := dict -}}
+{{- $ic := .nodeGroup.instanceClass -}}
+{{- $_ := set $options "numCPUs" (int $ic.numCPUs) -}}
+{{- $_ := set $options "memoryMiB" (add $ic.memory (mod $ic.memory 4)) -}}
+{{- $_ := set $options "rootDiskSize" (int ($ic.rootDiskSize | default 20)) -}}
+{{- if $ic.template }}
+  {{- $_ := set $options "template" $ic.template -}}
+{{- end }}
+{{- if $ic.datastore }}
+  {{- $_ := set $options "datastore" $ic.datastore -}}
+{{- end }}
+{{- if $ic.mainNetwork }}
+  {{- $_ := set $options "mainNetwork" $ic.mainNetwork -}}
+{{- end }}
+{{- if $ic.additionalNetworks }}
+  {{- $_ := set $options "additionalNetworks" $ic.additionalNetworks -}}
+{{- end }}
+{{- if $ic.resourcePool }}
+  {{- $_ := set $options "resourcePool" $ic.resourcePool -}}
+{{- end }}
+{{- if hasKey $ic "disableTimesync" }}
+  {{- $_ := set $options "disableTimesync" $ic.disableTimesync -}}
+{{- end }}
+{{- if $ic.runtimeOptions }}
+  {{- $_ := set $options "runtimeOptions" $ic.runtimeOptions -}}
+{{- end }}
+{{- if index .nodeGroup "manualRolloutID" -}}
+  {{- $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
+{{- end -}}
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

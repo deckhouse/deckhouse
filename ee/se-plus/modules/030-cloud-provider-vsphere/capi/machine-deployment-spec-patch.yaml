@@ -1,0 +1,3 @@
+template:
+  spec:
+    failureDomain: ${zone}
