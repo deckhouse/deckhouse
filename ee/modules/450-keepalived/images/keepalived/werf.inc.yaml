@@ -74,13 +74,11 @@ import:
   to: /
   before: install
   includePaths:
-  - lib64/ld-linux-x86-64.so.2
-  - lib64/lib*.so*
   - usr/bin/python3*
-  - usr/lib64/python3*
   - usr/lib/python3*
-  - usr/lib64/lib*.so*
   - usr/lib/lib*.so*
+  - usr/lib/ld-linux-x86-64.so.2
+  - lib64
   excludePaths:
   - usr/lib/python*/site-packages/pip-25.3*
   - usr/lib64/python*/site-packages/pip-25.3*
