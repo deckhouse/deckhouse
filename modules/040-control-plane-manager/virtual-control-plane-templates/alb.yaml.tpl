@@ -187,7 +187,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
-  name: vcp-${VCP_NAME}-packages
+  name: vcp-${NAMESPACE}-${VCP_NAME}-packages
   namespace: d8-cloud-instance-manager
   labels:
     heritage: deckhouse

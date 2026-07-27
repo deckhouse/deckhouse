@@ -49,7 +49,14 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log.FromContext(ctx).Info("Reconcile started")
 
 	nodeList := &controlplanev1alpha1.ControlPlaneNodeList{}
-	if err := r.client.List(ctx, nodeList, client.InNamespace(request.Namespace)); err != nil {
+	if err := r.client.List(
+		ctx,
+		nodeList,
+		client.InNamespace(request.Namespace),
+		client.MatchingLabels{
+			constants.VirtualControlPlaneScopeLabelKey: request.Name,
+		},
+	); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -60,7 +67,14 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	operations := &controlplanev1alpha1.ControlPlaneOperationList{}
-	if err := r.client.List(ctx, operations, client.InNamespace(request.Namespace)); err != nil {
+	if err := r.client.List(
+		ctx,
+		operations,
+		client.InNamespace(request.Namespace),
+		client.MatchingLabels{
+			constants.VirtualControlPlaneScopeLabelKey: request.Name,
+		},
+	); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to list virtual control plane operations: %w", err)
 	}
 	if len(operations.Items) == 0 {
