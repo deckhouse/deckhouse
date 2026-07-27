@@ -29,7 +29,7 @@ import (
 
 // masterNodeYAML / autotuneStateYAML are defined in autotune_resources_requests_test.go (same package).
 
-var _ = Describe("Module hooks :: control-plane-manager :: autotune_resources_repopulate", func() {
+var _ = Describe("Module hooks :: control-plane-manager :: resources_repopulate_autotune", func() {
 	f := HookExecutionConfigInit(
 		`{"controlPlaneManager":{"internal":{"resourcesRequests":{"milliCpuControlPlane":2000,"memoryControlPlane":4294967296}}},"global":{"enabledModules":["prometheus-metrics-adapter"]}}`,
 		`{}`,
