@@ -34,7 +34,7 @@
       # --- signing (same roles/paths as GitHub build; JWT from GitLab id_token) ---
       export VAULT_ADDR="${VAULT_ADDR:-https://seguro.flant.com}"
       export WERF_VAULT_AUTH_JWT="${VAULT_ID_TOKEN}"
-      export WERF_VAULT_AUTH_PATH="${WERF_VAULT_AUTH_PATH:-github}"
+      export WERF_VAULT_AUTH_PATH="${WERF_VAULT_AUTH_PATH:-fox}"
       if [[ "${BUILD_MODE}" == "release" ]]; then
         export WERF_SIGN_KEY="hashivault://dh-prod-v01"
         export TRANSIT_SECRET_ENGINE_PATH="prod-int-signer"
@@ -76,7 +76,7 @@
       fi
 
       if [[ -n "${WERF_VAULT_AUTH_JWT}" ]]; then
-        echo "Received Vault JWT (length=${#WERF_VAULT_AUTH_JWT})"
+        echo "Received Vault JWT: ${#WERF_VAULT_AUTH_JWT}" #debug
       else
         echo "Vault JWT empty" >&2
         exit 1
