@@ -89,6 +89,10 @@ EOF
 # dedicated top-level spec.administrators and spec.quota fields.
 #   parameters.administrators[].subject -> administrators[].kind
 #   parameters.resourceQuota.{requests,limits}.* -> quota."requests.*"/"limits.*"
+#   parameters.resourceQuota.<other>       -> quota."<other>"
+# spec.quota is a flat ResourceQuota.spec.hard map, so it also holds keys that have no requests/limits
+# nesting ("pods", "count/deployments.apps"). Those are carried over verbatim; nested objects are
+# skipped because they have no flat representation.
 function __on_conversion::v1alpha2_to_v1alpha3() {
   if converted=$(context::jq -rc '.review.request.objects//[] | map(
      if .apiVersion == "deckhouse.io/v1alpha2" then
@@ -101,6 +105,10 @@ function __on_conversion::v1alpha2_to_v1alpha3() {
           .spec.quota = (
             (($rq.requests // {}) | to_entries | map({key: ("requests." + .key), value: (.value | tostring)}))
             + (($rq.limits // {}) | to_entries | map({key: ("limits." + .key), value: (.value | tostring)}))
+            + ($rq | to_entries
+                   | map(select(.key != "requests" and .key != "limits"
+                                and ((.value | type) != "object") and ((.value | type) != "array")))
+                   | map({key: .key, value: (.value | tostring)}))
             | from_entries
           )
         else . end) |
@@ -120,6 +128,11 @@ EOF
 
 # v1alpha3 -> v1alpha2 pushes administrators and quota back into spec.parameters so that older
 # clients reading v1alpha2 keep seeing the legacy layout.
+# Only a "requests."/"limits." prefix means nesting; the remainder of the key is kept intact so that
+# "requests.nvidia.com/gpu" lands under requests as "nvidia.com/gpu". Every other key ("pods",
+# "count/deployments.apps") stays flat next to requests/limits instead of being dropped or split at an
+# arbitrary dot — the conversion has to round-trip, since a v1alpha2 client that reads and writes the
+# project back would otherwise erase those quota entries from storage.
 function __on_conversion::v1alpha3_to_v1alpha2() {
   if converted=$(context::jq -rc '.review.request.objects//[] | map(
      if .apiVersion == "deckhouse.io/v1alpha3" then
@@ -132,9 +145,11 @@ function __on_conversion::v1alpha3_to_v1alpha2() {
             reduce (.spec.quota | to_entries[]) as $e (
               {};
               ($e.key | split(".")) as $p |
-              if ($p | length) == 2 then
-                .[$p[0]] = ((.[$p[0]] // {}) + {($p[1]): $e.value})
-              else . end
+              if ($p | length) > 1 and ($p[0] == "requests" or $p[0] == "limits") then
+                .[$p[0]] = ((.[$p[0]] // {}) + {($p[1:] | join(".")): $e.value})
+              else
+                .[$e.key] = $e.value
+              end
             )
           )})
         else . end) |
