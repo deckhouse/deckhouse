@@ -109,12 +109,6 @@ type Service struct {
 
 // NewService creates a new nelm service for managing Helm releases.
 func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
-	timeout, err := timeoutFromEnv()
-	if err != nil {
-		logger.Warn("invalid PACKAGE_NELM_TIMEOUT, using default",
-			slog.Duration("default", defaultPackageNelmTimeout), log.Err(err))
-	}
-
 	nelmClient := nelm.New(logger,
 		nelm.WithResourcesLabels(map[string]string{
 			"heritage": "deckhouse",
@@ -122,7 +116,7 @@ func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status 
 		nelm.WithReleaseAnnotations(map[string]string{
 			managedByAnnotation: managedByAnnotationValue,
 		}),
-		nelm.WithTimeout(timeout),
+		nelm.WithTimeout(resolveTimeout()),
 	)
 
 	return &Service{
@@ -547,17 +541,13 @@ func (s *Service) isHelmChart(path string) (bool, error) {
 	return false, nil
 }
 
-// timeoutFromEnv reads PACKAGE_NELM_TIMEOUT (a Go duration such as "30m"). An empty
-// value yields defaultPackageNelmTimeout; a malformed value yields the same default
-// together with the parse error so the caller can report it.
-func timeoutFromEnv() (time.Duration, error) {
-	raw, ok := os.LookupEnv(envPackageNelmTimeout)
-	if !ok || raw == "" {
-		return defaultPackageNelmTimeout, nil
+// resolveTimeout returns the nelm release-operation timeout: the PACKAGE_NELM_TIMEOUT
+// value (a Go duration such as "30m") when it is set and valid, otherwise
+// defaultPackageNelmTimeout.
+func resolveTimeout() time.Duration {
+	if d, err := time.ParseDuration(os.Getenv(envPackageNelmTimeout)); err == nil {
+		return d
 	}
-	timeout, err := time.ParseDuration(raw)
-	if err != nil {
-		return defaultPackageNelmTimeout, err
-	}
-	return timeout, nil
+
+	return defaultPackageNelmTimeout
 }
