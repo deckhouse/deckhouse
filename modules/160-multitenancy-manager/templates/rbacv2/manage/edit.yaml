@@ -23,6 +23,11 @@ rules:
   - projects
   - projecttemplates
   - clusterprojectrolebindings
+  # Counterpart of the view capability: granting access inside a project and
+  # adding namespaces to it are project operations a platform operator performs
+  # too, not only the project's own administrator.
+  - projectrolebindings
+  - projectnamespaces
   verbs:
   - create
   - update
