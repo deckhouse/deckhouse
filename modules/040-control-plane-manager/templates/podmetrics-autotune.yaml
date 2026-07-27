@@ -6,8 +6,10 @@
   static pods have a single real container (exclude the POD sandbox).
 
   DEBUG: lookback window = 7m (prod 7d). Must stay in sync with
-  hooks/autotune_resources_requests.go comments.
+  hooks/resources_requests_autotune.go comments.
   DEBUG PromQL: rate[1m] / subquery step 1m (prod rate[5m] / step 5m).
+  Memory uses the same subquery form as cpu so short series after a pod
+  restart still resolve (plain avg_over_time[window] is flakier).
 */}}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -36,7 +38,7 @@ spec:
   query: |
     sum(
       avg_over_time(
-        container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7m]
+        container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7m:1m]
       )
     ) by (<<.GroupBy>>)
 {{- end }}

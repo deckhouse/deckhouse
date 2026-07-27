@@ -89,6 +89,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 
 	BeforeEach(func() {
 		usage = map[string]map[string]float64{}
+		f.ValuesDelete("controlPlaneManager.resourcesRequests")
 		fetchComponentUsage = func(_ context.Context, _ dependency.Container, component, resourceName string) (float64, bool, error) {
 			if byRes, ok := usage[component]; ok {
 				if v, ok := byRes[resourceName]; ok {
@@ -242,6 +243,43 @@ etcd:
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
 			Expect(st.CPU).To(BeNil())
 			Expect(st.Memory).To(BeNil())
+		})
+	})
+
+	Context("Schedule: first memory commit", func() {
+		BeforeEach(func() {
+			usage[componentKubeApiserver] = map[string]float64{
+				resourceCPU:    0.25,
+				resourceMemory: 256 * 1024 * 1024,
+			}
+			f.KubeStateSet(masterNodeYAML())
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.RunHook()
+		})
+
+		It("commits milliCPU and memoryBytes together", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256 * 1024 * 1024)))
+		})
+	})
+
+	Context("Schedule: empty-string memory override does not skip memory autotune", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("controlPlaneManager.resourcesRequests", []byte("memory: \"\"\n"))
+			usage[componentKubeApiserver] = map[string]float64{
+				resourceCPU:    0.25,
+				resourceMemory: 256 * 1024 * 1024,
+			}
+			f.KubeStateSet(masterNodeYAML())
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.RunHook()
+		})
+
+		It("commits memoryBytes despite empty memory key", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256 * 1024 * 1024)))
 		})
 	})
 
