@@ -17,7 +17,7 @@ package controlplane
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
+	"sync"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -26,7 +26,9 @@ import (
 type SSHChecker struct {
 	sshProvider      libcon.SSHProvider
 	nodesExternalIPs map[string]string
-	debugRetries     atomic.Int32
+
+	mu      sync.Mutex
+	clients map[string]libcon.SSHClient
 }
 
 func NewSSHChecker(
@@ -36,6 +38,7 @@ func NewSSHChecker(
 	return &SSHChecker{
 		sshProvider:      sshProvider,
 		nodesExternalIPs: nodesExternalIPs,
+		clients:          make(map[string]libcon.SSHClient),
 	}
 }
 
@@ -52,20 +55,65 @@ func (c *SSHChecker) IsReady(ctx context.Context, nodeName string) (bool, error)
 		)
 	}
 
-	sourceClient, err := c.sshProvider.Client(ctx)
+	client, err := c.clientForNode(ctx, nodeName, address)
 	if err != nil {
+		return false, fmt.Errorf("SSH checker: %w", err)
+	}
+
+	cmd := client.Command("true")
+	if err := cmd.Run(ctx); err != nil {
 		return false, fmt.Errorf(
-			"SSH checker: failed to get source SSH client: %w",
+			"SSH checker: command failed on node %s: %w; stderr: %s",
+			nodeName,
 			err,
+			string(cmd.StderrBytes()),
 		)
 	}
+
+	return true, nil
+}
+
+func (c *SSHChecker) Name() string {
+	return "SSH access is available"
+}
+
+func (c *SSHChecker) clientForNode(
+	ctx context.Context,
+	nodeName string,
+	address string,
+) (libcon.SSHClient, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if client := c.clients[nodeName]; client != nil {
+		if !client.IsStopped() {
+			fmt.Printf(
+				"SSH checker: reusing client for node %s, total clients: %d\n",
+				nodeName,
+				len(c.clients),
+			)
+			return client, nil
+		}
+
+		fmt.Printf(
+			"SSH checker: client for node %s is stopped, recreating\n",
+			nodeName,
+		)
+
+		delete(c.clients, nodeName)
+	}
+
+	sourceClient, err := c.sshProvider.Client(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get source SSH client: %w", err)
+	}
 	if sourceClient == nil {
-		return false, fmt.Errorf("SSH checker: source SSH client is nil")
+		return nil, fmt.Errorf("source SSH client is nil")
 	}
 
 	sourceSession := sourceClient.Session()
 	if sourceSession == nil {
-		return false, fmt.Errorf("SSH checker: source SSH session is nil")
+		return nil, fmt.Errorf("source SSH session is nil")
 	}
 
 	checkSession := sourceSession.Copy()
@@ -76,46 +124,29 @@ func (c *SSHChecker) IsReady(ctx context.Context, nodeName string) (bool, error)
 		},
 	})
 
-	checkClient, err := c.sshProvider.NewStandaloneClient(
+	client, err := c.sshProvider.NewStandaloneClient(
 		ctx,
 		checkSession,
 		sourceClient.PrivateKeys(),
 	)
+
+	fmt.Printf("Creating standalone SSH client for node %s", nodeName)
+
 	if err != nil {
-		return false, fmt.Errorf(
-			"SSH checker: failed to create standalone client for node %s: %w",
-			nodeName,
-			err,
-		)
-	}
-	defer checkClient.Stop()
-
-	if err := checkClient.Start(ctx); err != nil {
-		return false, fmt.Errorf(
-			"SSH checker: failed to connect to node %s: %w",
+		return nil, fmt.Errorf(
+			"create standalone client for node %s: %w",
 			nodeName,
 			err,
 		)
 	}
 
-	cmd := checkClient.Command("true")
-	if err := cmd.Run(ctx); err != nil {
-		return false, fmt.Errorf(
-			"SSH checker: command failed on node %s: %w; stderr: %s",
-			nodeName,
-			err,
-			string(cmd.StderrBytes()),
-		)
-	}
+	c.clients[nodeName] = client
 
-	attempt := c.debugRetries.Add(1)
-	if attempt <= 3 {
-		return false, fmt.Errorf("SSH checker: forced retry #%d", attempt)
-	}
+	fmt.Printf(
+		"SSH checker: created client for node %s, total clients: %d\n",
+		nodeName,
+		len(c.clients),
+	)
 
-	return true, nil
-}
-
-func (c *SSHChecker) Name() string {
-	return "SSH access is available"
+	return client, nil
 }
