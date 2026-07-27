@@ -39,11 +39,30 @@
   "ciliumOperator" "quay.io/cilium/operator-generic:v1.19.3"
   "bashibleApiserver" (printf "%s@%s" $reg (get $nmDig "bashibleApiserver"))
 }}
-{{- $imagesTable := dict 
-  "versioned" $versioned 
-  "fixed" $fixed 
-  "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed) 
+{{- $imagesTable := dict
+  "versioned" $versioned
+  "fixed" $fixed
+  "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed)
 }}
+{{- $bctx := dict }}
+{{- $_ := set $bctx "Files" .Files }}
+{{- $_ := set $bctx "Template" .Template }}
+{{- $_ := set $bctx "runType" "VCPBootstrap" }}
+{{- $_ := set $bctx "nodeGroup" (dict "name" "worker" "nodeType" "Static") }}
+{{- $_ := set $bctx "mingetB64" (.Files.Get "candi/bashible/bootstrap/minget" | b64enc) }}
+{{- $_ := set $bctx "images" (dict "registrypackages" $rp) }}
+{{- $_ := set $bctx "clusterUUID" (.Values.global.discovery.clusterUUID | default "") }}
+{{- $_ := set $bctx "packagesProxy" (dict "direct" true "token" "${VCP_RPP_TOKEN}") }}
+{{- $_ := set $bctx "clusterMasterKubeAPIEndpoints" (list "${VCP_API_HOST}:6443") }}
+{{- $_ := set $bctx "clusterMasterRPPAddresses" (list "${VCP_PKG_HOST}:443") }}
+{{- /* minget (plaintext :80 bootstrap fetch of rpp-get) parses a numeric IP, not a hostname — give it the ALB VIP. The TLS :443 path below keeps the SNI hostname. */}}
+{{- $_ := set $bctx "clusterMasterRPPBootstrapAddresses" (list "${VCP_ALB_VIP}:80") }}
+{{- $lib := .Files.Get "candi/bashible/lib.sh.tpl" }}
+{{- $prereq := tpl (.Files.Get "candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl") $bctx | trimAll "\n" }}
+{{- $prereq = regexReplaceAll "^#!/bin/bash\nset -Eeo pipefail\n" $prereq "" }}
+{{- $getPhase2 := tpl (printf "%s\n{{ template \"get-phase2\" $ }}" $lib) $bctx }}
+{{- $glueHead := .Files.Get "virtual-control-plane-templates/_bootstrap.sh" }}
+{{- $bootstrapPhase1 := list $glueHead $prereq $getPhase2 "get_phase2 | bash" | join "\n" }}
 ---
 apiVersion: v1
 kind: Secret
@@ -75,6 +94,7 @@ data:
   {{ base $path }}: {{ $.Files.Get $path | b64enc }}
   {{- end }}
   images: {{ $imagesTable | toYaml | b64enc }}
+  bootstrap.sh.tpl: {{ $bootstrapPhase1 | b64enc }}
 ---
 apiVersion: v1
 kind: ServiceAccount

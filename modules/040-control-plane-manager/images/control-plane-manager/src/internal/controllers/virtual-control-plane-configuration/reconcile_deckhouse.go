@@ -97,7 +97,7 @@ func (r *reconciler) reconcileDeckhouse(
 		return reconcile.Result{}, fmt.Errorf("reconcile tenant cluster uuid: %w", err)
 	}
 
-	// 5. Tenant: kube-dns Service with the fixed cluster DNS address, so
+	// 5. Tenant: d8-kube-dns Service with the fixed cluster DNS address, so
 	//    global discovery works before any DNS module is deployed.
 	if err := reconcileTenantKubeDNSService(ctx, tc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile tenant kube-dns service: %w", err)
@@ -322,10 +322,15 @@ func reconcileTenantKubeDNSService(ctx context.Context, tc client.Client) error 
 func buildTargetTenantKubeDNSService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kube-dns",
+			Name:      "d8-kube-dns",
 			Namespace: constants.KubeSystemNamespace,
 			Labels: map[string]string{
-				"k8s-app": "kube-dns",
+				"k8s-app":                      "kube-dns",
+				"app.kubernetes.io/managed-by": "Helm",
+			},
+			Annotations: map[string]string{
+				"meta.helm.sh/release-name":      "kube-dns",
+				"meta.helm.sh/release-namespace": deckhouseSystemNamespace,
 			},
 		},
 		Spec: corev1.ServiceSpec{
