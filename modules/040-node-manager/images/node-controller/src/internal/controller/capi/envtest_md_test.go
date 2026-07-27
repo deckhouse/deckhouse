@@ -169,11 +169,21 @@ var _ = Describe("CAPI MachineDeployment rendering", func() {
 
 		By("pinning a legacy, checksum-style bootstrap secret name on the existing MD")
 		const legacyName = "cap-adopt-legacychecksum"
-		md := &capiv1beta2.MachineDeployment{}
-		Expect(k8sClient.Get(suiteCtx, mdKey, md)).To(Succeed())
-		patched := md.DeepCopy()
-		patched.Spec.Template.Spec.Bootstrap.DataSecretName = ptr(legacyName)
-		Expect(k8sClient.Patch(suiteCtx, patched, client.MergeFrom(md))).To(Succeed())
+		// The reconcile that created this MachineDeployment may still be in flight, holding the
+		// computed name it read before the pin; its apply would overwrite the pin and the
+		// assertion below would then be measuring that race instead of adoption. Re-pin until it
+		// sticks — once no apply is in flight, the value stays and the loop ends.
+		Eventually(func(g Gomega) string {
+			md := &capiv1beta2.MachineDeployment{}
+			g.Expect(k8sClient.Get(suiteCtx, mdKey, md)).To(Succeed())
+			if name := md.Spec.Template.Spec.Bootstrap.DataSecretName; name != nil && *name == legacyName {
+				return *name
+			}
+			patched := md.DeepCopy()
+			patched.Spec.Template.Spec.Bootstrap.DataSecretName = ptr(legacyName)
+			g.Expect(k8sClient.Patch(suiteCtx, patched, client.MergeFrom(md))).To(Succeed())
+			return ""
+		}, 20*time.Second, 500*time.Millisecond).Should(Equal(legacyName))
 
 		By("forcing a reconcile that re-applies the MachineDeployment")
 		fresh := &deckhousev1.NodeGroup{}
