@@ -25,18 +25,26 @@ If you need to configure a module because, say, you have a bare metal cluster an
 
 ## List of required OpenStack services
 
-A list of OpenStack services required for Deckhouse Kubernetes Platform to work in OpenStack:
+A list of services required for Deckhouse Kubernetes Platform to work in OpenStack:
 
-| Service                           | API Version |
-|:----------------------------------|:-----------:|
-| Identity (Keystone)               | v3          |
-| Compute (Nova)                    | v2          |
-| Network (Neutron)                 | v2          |
-| Block Storage (Cinder)            | v3          |
-| Load Balancing (Octavia) *        | v2          |
+| Service                      |                         API Version                      |
+| :------------------------- | :--------------------------------------------------------: |
+| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
+| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
+| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
 
 \* If you need to order a Load Balancer.
 
+{% alert level="info" %}
+For Compute and Block Storage, the supported microversion depends on the installed OpenStack release. For Block Storage, microversion `3.0` is the minimum version and is used by default.
+{% endalert %}
+
 To ensure proper integration and functionality, the OpenStack user associated with the Deckhouse Kubernetes Platform should be granted the "member" role. This role assignment is essential to provide the necessary permissions for interacting with the listed services and managing resources within the OpenStack environment.
+
+{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
+API endpoints and ports are listed in the [official documentation](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+{% endif %}
 
 {% include module-settings.liquid %}
