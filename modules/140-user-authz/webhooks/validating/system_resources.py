@@ -45,10 +45,14 @@
 # request namespace. Two tiers are recognised:
 #
 #   * superadmin — the built-in d8:namespace:superadmin / d8:project:superadmin / d8:system:superadmin
-#     roles. Passes the system-resource protection, but not the heritage one.
+#     roles.
 #   * cluster administrator — Kubernetes' own `cluster-admin`, the legacy `user-authz:super-admin`
 #     (what a ClusterAuthorizationRule with `accessLevel: SuperAdmin` binds to), or membership in a
-#     cluster-admin/system group. Passes everything.
+#     cluster-admin/system group.
+#
+# Both tiers pass the system-resource and exec protections. Neither passes the heritage one: a
+# template-owned object belongs to the multitenancy-manager controller, and only cluster components
+# (namespace teardown, garbage collection) are exempt from it.
 #
 # Known limitations: only the roles listed below are recognised — a custom role that aggregates the
 # superadmin lineage is not detected; group membership is matched by name as presented in
@@ -88,10 +92,11 @@ SUPERADMIN_ROLES = {
 # Kubernetes' own `cluster-admin`, and `user-authz:super-admin` from the legacy role model, which a
 # ClusterAuthorizationRule with `accessLevel: SuperAdmin` binds its subjects to. Both already grant
 # `*` on `*`, so protecting anything from them is decorative — they can drop this webhook outright —
-# and they need break-glass access for the same reason system:masters does. They therefore bypass the
-# heritage protection too, which a scoped superadmin does not. Matching on the role name rather than
-# on the binding means it does not matter how the grant was made: a rule-generated binding, a
-# hand-written ClusterRoleBinding and a namespace-scoped RoleBinding all resolve the same way.
+# and they need break-glass access for the same reason system:masters does. Matching on the role name
+# rather than on the binding means it does not matter how the grant was made: a rule-generated
+# binding, a hand-written ClusterRoleBinding and a namespace-scoped RoleBinding all resolve the same
+# way. Note that this tier is about the system-resource and exec protections only — heritage objects
+# stay off limits (see validate_edit).
 CLUSTER_ADMIN_ROLES = {
     "cluster-admin",
     "user-authz:super-admin",
@@ -107,14 +112,24 @@ PRIVILEGED_USERS = {
     "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager",
 }
 
-# Cluster-admin and cluster-component groups. Members bypass protection: a true cluster-admin
-# (super-admin.conf / system:masters, and the cluster-administrator groups conventionally mapped
-# through the authentication provider) and system controllers must keep break-glass access and must
-# be able to reconcile heritage objects, mirroring 160/.../webhooks/protect.go's systemBypassGroups.
+# Groups whose members skip this webhook entirely, both here and in the matchConditions below:
+# cluster administrators (super-admin.conf / system:masters, plus the administrator groups
+# conventionally mapped through the authentication provider) and cluster components, which must keep
+# break-glass access and must be able to reconcile and garbage-collect objects. The cluster-component
+# entries mirror 160/.../webhooks/protect.go's systemBypassGroups.
+# This skip does not open up heritage objects to an administrator: the multitenancy-manager
+# ValidatingAdmissionPolicy, which is a native policy and evaluates independently of this webhook,
+# exempts the cluster components only and denies everyone else, the administrator groups included.
 BYPASS_GROUPS = {
+    # Cluster administrators. system:masters comes from super-admin.conf and kubeadm:cluster-admins
+    # from admin.conf; superadmins and system:sudousers are the groups an authentication provider
+    # maps administrators onto. The first three are the same set the EE authorizer treats as
+    # privileged (ee/.../authorizer/multitenancy/engine.go) — the two lists are meant to agree.
     "system:masters",
+    "kubeadm:cluster-admins",
+    "superadmins",
     "system:sudousers",
-    "cluster:admins",
+    # Cluster components.
     "system:nodes",
     "system:serviceaccounts:kube-system",
     "system:serviceaccounts:d8-system",
@@ -367,14 +382,11 @@ def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
     name = meta.get("name") or request.name or ""
     namespace = meta.get("namespace") or request.namespace or ""
 
-    roles = privileged_roles(username, groups, namespace)
-
-    # A cluster administrator passes everything, heritage objects included.
-    if roles & CLUSTER_ADMIN_ROLES:
-        return None
-
-    # heritage protection wins: ProjectTemplate-owned objects are controller-managed and must not be
-    # mutated by users — not even by a project superadmin.
+    # heritage protection wins: ProjectTemplate-owned objects belong to the multitenancy-manager
+    # controller and must not be mutated by users — not by a project superadmin and not by a cluster
+    # administrator either. The multitenancy-manager ValidatingAdmissionPolicy enforces the same rule
+    # and allows nobody but the controller, so this branch stays aligned with it: a bypass here would
+    # only produce a confusing second opinion on a request that policy denies anyway.
     if is_heritage:
         return (
             f'{kind} "{name}" is managed by the multitenancy-manager controller '
@@ -383,8 +395,8 @@ def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
             "Project instead."
         )
 
-    # system-resource protection: editable only by superadmin.
-    if is_system and not roles:
+    # system-resource protection: editable only by a superadmin or a cluster administrator.
+    if is_system and not privileged_roles(username, groups, namespace):
         return (
             f'{kind} "{name}" is a Deckhouse system resource '
             f'(label {SYSTEM_RESOURCE_LABEL}={SYSTEM_RESOURCE_VALUE}) placed in this '
