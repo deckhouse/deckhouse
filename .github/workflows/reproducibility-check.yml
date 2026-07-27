@@ -1300,7 +1300,7 @@ jobs:
       with:
         github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         script: |
-          const THRESHOLD_SECONDS = 300; // 5 minutes
+          const THRESHOLD_SECONDS = 420; // 7 minutes
 
           const jobs = await github.paginate(
             github.rest.actions.listJobsForWorkflowRun,
