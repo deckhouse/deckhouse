@@ -132,6 +132,16 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 
 	switch review.Operation {
 	case kwhmodel.OperationDelete:
+		if cfg.Name == controlPlaneManagerModuleName {
+			deletedSettings, extractErr := v.extractSettingsFromModuleConfig(cfg)
+			if extractErr != nil {
+				deletedSettings = nil
+			}
+			// newSettings empty: deleting the ModuleConfig clears any kubernetesVersion override.
+			if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, nil, deletedSettings); res != nil || err != nil {
+				return res, err
+			}
+		}
 		return v.validateDelete(ctx, cfg)
 
 	case kwhmodel.OperationConnect, kwhmodel.OperationUnknown:
@@ -419,13 +429,19 @@ func (v *moduleConfigValidator) extractOldSettings(oldObjectRaw []byte) (map[str
 		return nil, fmt.Errorf("unmarshal old ModuleConfig: %w", err)
 	}
 
-	if oldConfig.Spec.Version == 0 || oldConfig.Spec.Settings == nil {
+	return v.extractSettingsFromModuleConfig(oldConfig)
+}
+
+// extractSettingsFromModuleConfig returns settings in the latest-version form, or nil when
+// the object has no version/settings (same skip semantics as extractOldSettings).
+func (v *moduleConfigValidator) extractSettingsFromModuleConfig(cfg *v1alpha1.ModuleConfig) (map[string]interface{}, error) {
+	if cfg == nil || cfg.Spec.Version == 0 || cfg.Spec.Settings == nil {
 		return nil, nil
 	}
 
-	settings, err := v.configValidator.ExtractLatestSettings(oldConfig)
+	settings, err := v.configValidator.ExtractLatestSettings(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("extract old settings: %w", err)
+		return nil, fmt.Errorf("extract settings: %w", err)
 	}
 
 	return settings, nil

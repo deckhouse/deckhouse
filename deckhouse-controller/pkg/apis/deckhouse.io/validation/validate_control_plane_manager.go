@@ -18,6 +18,8 @@ package validation
 
 import (
 	"context"
+	"fmt"
+	"slices"
 
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	v1 "k8s.io/api/core/v1"
@@ -28,76 +30,142 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+const (
+	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
+	clusterConfigurationSecretName = "d8-cluster-configuration"
+	clusterConfigurationSecretNS   = "kube-system"
+	clusterConfigurationDataKey    = "cluster-configuration.yaml"
+	clusterKubernetesStatusDataKey = "status"
+)
+
+// clusterKubernetesStatus is the subset of ConfigMap d8-cluster-kubernetes data.status
+// needed for admission. Written by update-observer.
+type clusterKubernetesStatus struct {
+	AvailableVersions []string `yaml:"availableVersions"`
+}
+
 // validateControlPlaneManagerKubernetesVersion guards ModuleConfig control-plane-manager's
-// kubernetesVersion setting against the same downgrade rules already enforced for
-// ClusterConfiguration.kubernetesVersion (see validateKubernetesVersionDowngrade in
-// validate_cluster_configuration.go), and validates an explicit version against module
-// compatibility requirements (see validateKubernetesVersion).
+// kubernetesVersion against membership in status.availableVersions from ConfigMap
+// kube-system/d8-cluster-kubernetes (the set update-observer publishes as Supported[maxUsed-1:]).
+// Explicit versions are also checked against module compatibility (validateKubernetesVersion).
 //
-// If the new settings don't set kubernetesVersion, the effective value defers to
-// ClusterConfiguration, whose own admission webhook already guards edits made there.
+// Automatic / unset values are not subject to membership. Removing a prior ModuleConfig pin
+// (or deleting the ModuleConfig) resolves the future effective version via ClusterConfiguration
+// and applies the same membership check, so a stale CC pin cannot silently become the target.
 //
-// Known gap: *removing* an existing ModuleConfig override is not guarded. The new value is empty,
-// so this returns early, while the effective version silently falls back to whatever
-// ClusterConfiguration still holds — potentially a stale pin several minors below what the cluster
-// runs. Deleting the ModuleConfig outright is likewise unguarded: that path is handled by
-// validateDelete and never reaches this function.
+// Fail-open on missing/empty ConfigMap status, empty availableVersions, or read errors: the
+// ModuleConfig webhook runs with failurePolicy: Fail, and a transient outage must not lock out edits.
 func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	ctx context.Context, newSettings, oldSettings map[string]interface{},
 ) (*kwhvalidating.ValidatorResult, error) {
-	newVersion, _ := newSettings["kubernetesVersion"].(string)
-	if newVersion == "" {
-		return nil, nil
-	}
+	newVersion := settingsKubernetesVersion(newSettings)
+	oldVersion := settingsKubernetesVersion(oldSettings)
 
-	secret := &v1.Secret{}
-	if err := v.client.Get(ctx, client.ObjectKey{Name: "d8-cluster-configuration", Namespace: "kube-system"}, secret); err != nil {
-		// Fail open, deliberately. The ModuleConfig webhook runs with failurePolicy: Fail, so
-		// returning an error here would reject every edit of ModuleConfig control-plane-manager for
-		// as long as this read keeps failing — a transient API outage would lock out the very
-		// config an operator needs to fix things. A missing Secret (dry-run, cluster not
-		// bootstrapped yet) is an expected state; anything else is unexpected and worth a log line.
-		if !apierrors.IsNotFound(err) {
-			log.Warn("skipping the kubernetesVersion downgrade guard: cannot read the d8-cluster-configuration secret", log.Err(err))
-		}
-
-		return nil, nil
-	}
-
-	// validateKubernetesVersion/validateKubernetesVersionDowngrade are shared with the
-	// ClusterConfiguration webhook (clusterConfigurationHandler), where they're chained as
-	// kwhvalidating.Validators: they always return a non-nil result, Valid=true on success. That
-	// differs from validateCommon's "nil,nil means allow" convention, so results are translated
-	// below instead of being propagated directly.
-	if newVersion != "Automatic" {
-		res, err := validateKubernetesVersion(newVersion, v.moduleManager)
-		if err != nil {
-			return nil, err
-		}
-		if res != nil && !res.Valid {
-			return res, nil
-		}
-	}
-
-	oldVersion, _ := oldSettings["kubernetesVersion"].(string)
-	if oldVersion == "" {
-		cc := new(clusterConfig)
-		if err := yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], cc); err != nil {
-			// Malformed/absent ClusterConfiguration is unrelated to this check — don't block on it.
+	var effective string
+	switch {
+	case isPinnedKubernetesVersion(newVersion):
+		effective = newVersion
+	case isPinnedKubernetesVersion(oldVersion):
+		// Clearing or deleting an override: effective falls back to CC, then Automatic.
+		ccVersion, ok := v.readRawClusterConfigurationVersion(ctx)
+		if !ok {
 			return nil, nil
 		}
-		oldVersion = cc.KubernetesVersion
-	}
-	if oldVersion == "" {
+		if !isPinnedKubernetesVersion(ccVersion) {
+			return nil, nil
+		}
+		effective = ccVersion
+	default:
+		// Automatic / unset without clearing a prior pin (HV-06, HV-07).
 		return nil, nil
 	}
 
-	res, err := validateKubernetesVersionDowngrade(oldVersion, newVersion, kubernetesVersionBaselineFromSecret(secret))
+	// validateKubernetesVersion is shared with the ClusterConfiguration webhook, where it is
+	// chained as a kwhvalidating.Validator: always non-nil result, Valid=true on success. That
+	// differs from validateCommon's "nil,nil means allow" convention, so results are translated.
+	res, err := validateKubernetesVersion(effective, v.moduleManager)
 	if err != nil {
 		return nil, err
 	}
 	if res != nil && !res.Valid {
 		return res, nil
 	}
+
+	available, ok := v.readAvailableKubernetesVersions(ctx)
+	if !ok || len(available) == 0 {
+		return nil, nil
+	}
+
+	if !slices.Contains(available, effective) {
+		return rejectResult(fmt.Sprintf(
+			"kubernetesVersion %q is not in the cluster's availableVersions %v; "+
+				"downgrading more than one minor below the highest version the cluster has ever run is forbidden",
+			effective, available,
+		))
+	}
 	return nil, nil
+}
+
+func settingsKubernetesVersion(settings map[string]interface{}) string {
+	if settings == nil {
+		return ""
+	}
+	version, _ := settings["kubernetesVersion"].(string)
+	return version
+}
+
+func isPinnedKubernetesVersion(version string) bool {
+	return version != "" && version != "Automatic"
+}
+
+// readAvailableKubernetesVersions returns status.availableVersions from
+// kube-system/d8-cluster-kubernetes. ok=false means fail-open (missing/empty/error).
+func (v *moduleConfigValidator) readAvailableKubernetesVersions(ctx context.Context) (versions []string, ok bool) {
+	cm := &v1.ConfigMap{}
+	if err := v.client.Get(ctx, client.ObjectKey{
+		Name:      clusterKubernetesConfigMapName,
+		Namespace: clusterConfigurationSecretNS,
+	}, cm); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Warn("skipping the kubernetesVersion availableVersions guard: cannot read the d8-cluster-kubernetes ConfigMap", log.Err(err))
+		}
+		return nil, false
+	}
+
+	raw, found := cm.Data[clusterKubernetesStatusDataKey]
+	if !found || raw == "" {
+		return nil, false
+	}
+
+	status := new(clusterKubernetesStatus)
+	if err := yaml.Unmarshal([]byte(raw), status); err != nil {
+		log.Warn("skipping the kubernetesVersion availableVersions guard: cannot parse d8-cluster-kubernetes status", log.Err(err))
+		return nil, false
+	}
+	if len(status.AvailableVersions) == 0 {
+		return nil, false
+	}
+	return status.AvailableVersions, true
+}
+
+// readRawClusterConfigurationVersion returns the literal kubernetesVersion from the
+// d8-cluster-configuration Secret. Used only when resolving fallback after clearing an MC pin.
+// ok=false means fail-open.
+func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.Context) (version string, ok bool) {
+	secret := &v1.Secret{}
+	if err := v.client.Get(ctx, client.ObjectKey{
+		Name:      clusterConfigurationSecretName,
+		Namespace: clusterConfigurationSecretNS,
+	}, secret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Warn("skipping the kubernetesVersion fallback guard: cannot read the d8-cluster-configuration secret", log.Err(err))
+		}
+		return "", false
+	}
+
+	cc := new(clusterConfig)
+	if err := yaml.Unmarshal(secret.Data[clusterConfigurationDataKey], cc); err != nil {
+		return "", false
+	}
+	return cc.KubernetesVersion, true
 }

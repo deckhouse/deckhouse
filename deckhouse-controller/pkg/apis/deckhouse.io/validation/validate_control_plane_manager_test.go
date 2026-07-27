@@ -17,12 +17,15 @@ limitations under the License.
 package validation
 
 import (
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -44,17 +47,37 @@ func newControlPlaneManagerConfig(kubernetesVersion string) *v1alpha1.ModuleConf
 	return cfg
 }
 
-func newClusterConfigurationSecret(kubernetesVersion, maxUsedControlPlaneKubernetesVersion string) *corev1.Secret {
-	yaml := "apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nkubernetesVersion: \"" + kubernetesVersion + "\"\n"
-	data := map[string][]byte{
-		"cluster-configuration.yaml": []byte(yaml),
-	}
-	if maxUsedControlPlaneKubernetesVersion != "" {
-		data["maxUsedControlPlaneKubernetesVersion"] = []byte(maxUsedControlPlaneKubernetesVersion)
-	}
+// newControlPlaneManagerConfigDisabled is like newControlPlaneManagerConfig but with
+// enabled=false so DELETE skips the confirmation guard and reaches the version check.
+func newControlPlaneManagerConfigDisabled(kubernetesVersion string) *v1alpha1.ModuleConfig {
+	cfg := newControlPlaneManagerConfig(kubernetesVersion)
+	cfg.Spec.Enabled = boolPtr(false)
+	return cfg
+}
+
+func newClusterConfigurationSecret(kubernetesVersion string) *corev1.Secret {
+	raw := "apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nkubernetesVersion: \"" + kubernetesVersion + "\"\n"
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: "kube-system"},
-		Data:       data,
+		Data: map[string][]byte{
+			"cluster-configuration.yaml": []byte(raw),
+		},
+	}
+}
+
+func newClusterKubernetesConfigMap(available []string) *corev1.ConfigMap {
+	var status strings.Builder
+	status.WriteString("availableVersions:\n")
+	for _, v := range available {
+		status.WriteString("  - \"")
+		status.WriteString(v)
+		status.WriteString("\"\n")
+	}
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-kubernetes", Namespace: "kube-system"},
+		Data: map[string]string{
+			"status": status.String(),
+		},
 	}
 }
 
@@ -76,12 +99,19 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		return storage, manager
 	}
 
-	t.Run("no kubernetesVersion in new settings — not guarded", func(t *testing.T) {
+	defaultAvailable := []string{"1.33", "1.34", "1.35", "1.36"}
+
+	withObjs := func(t *testing.T, objs ...client.Object) http.Handler {
+		t.Helper()
 		storage, manager := buildHandler(t)
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
-		secret := newClusterConfigurationSecret("1.35", "1.35")
 		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
-		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, moduleCR, secret)
+		all := append([]client.Object{moduleCR}, objs...)
+		return newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, all...)
+	}
+
+	t.Run("HV-07: no kubernetesVersion in new settings — allowed", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
 
 		newCfg := newControlPlaneManagerConfig("")
 		oldCfg := newControlPlaneManagerConfig("")
@@ -91,66 +121,89 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	t.Run("upgrade from ClusterConfiguration baseline is allowed", func(t *testing.T) {
-		storage, manager := buildHandler(t)
-		dependencyExtender := moduledependency.NewIExtenderMock(t)
-		secret := newClusterConfigurationSecret("1.33", "1.33")
-		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
-		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, moduleCR, secret)
+	t.Run("HV-06: Automatic is allowed without membership check", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap([]string{"1.34", "1.35"}))
 
-		newCfg := newControlPlaneManagerConfig("1.35")
-		oldCfg := newControlPlaneManagerConfig("") // no prior MC override — falls back to CC
+		newCfg := newControlPlaneManagerConfig("Automatic")
+		oldCfg := newControlPlaneManagerConfig("")
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
 		resp := callHandler(t, handler, review)
 		assert.True(t, resp.Allowed)
 	})
 
-	t.Run("downgrade more than 1 minor below ClusterConfiguration baseline is rejected", func(t *testing.T) {
-		storage, manager := buildHandler(t)
-		dependencyExtender := moduledependency.NewIExtenderMock(t)
-		secret := newClusterConfigurationSecret("1.35", "1.35")
-		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
-		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, moduleCR, secret)
+	t.Run("HV-05: upgrade to a version in availableVersions is allowed", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
+
+		newCfg := newControlPlaneManagerConfig("1.35")
+		oldCfg := newControlPlaneManagerConfig("1.33")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
+	})
+
+	t.Run("HV-03/HV-04: version at maxUsed-1 is allowed", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
 
 		newCfg := newControlPlaneManagerConfig("1.33")
+		oldCfg := newControlPlaneManagerConfig("1.34")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
+	})
+
+	t.Run("HV-02: version below availableVersions is rejected", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
+
+		newCfg := newControlPlaneManagerConfig("1.32")
 		oldCfg := newControlPlaneManagerConfig("")
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
 		resp := callHandler(t, handler, review)
 		require.False(t, resp.Allowed)
 		require.NotNil(t, resp.Result)
-		assert.Contains(t, resp.Result.Message, "can not downgrade kubernetes version")
+		assert.Contains(t, resp.Result.Message, "not in the cluster's availableVersions")
 	})
 
-	t.Run("downgrade more than 1 minor below a prior explicit MC version is rejected even if ClusterConfiguration is stale", func(t *testing.T) {
-		storage, manager := buildHandler(t)
-		dependencyExtender := moduledependency.NewIExtenderMock(t)
-		// ClusterConfiguration is stale/lower than what the cluster actually runs;
-		// maxUsedControlPlaneKubernetesVersion (written by effective_kubernetes_version.go)
-		// reflects the real floor.
-		secret := newClusterConfigurationSecret("1.30", "1.36")
-		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
-		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, moduleCR, secret)
+	t.Run("HV-08: version below maxUsed-1 is rejected", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}))
 
-		newCfg := newControlPlaneManagerConfig("1.33")
-		oldCfg := newControlPlaneManagerConfig("1.36")
+		newCfg := newControlPlaneManagerConfig("1.32")
+		oldCfg := newControlPlaneManagerConfig("1.35")
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
 		resp := callHandler(t, handler, review)
 		require.False(t, resp.Allowed)
 		require.NotNil(t, resp.Result)
-		assert.Contains(t, resp.Result.Message, "can not downgrade kubernetes version")
+		assert.Contains(t, resp.Result.Message, "not in the cluster's availableVersions")
 	})
 
-	t.Run("downgrade within 1 minor is allowed", func(t *testing.T) {
-		storage, manager := buildHandler(t)
-		dependencyExtender := moduledependency.NewIExtenderMock(t)
-		secret := newClusterConfigurationSecret("1.35", "1.35")
-		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
-		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, moduleCR, secret)
+	t.Run("п.2: clearing MC override falls back to stale CC pin and is rejected", func(t *testing.T) {
+		handler := withObjs(t,
+			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecret("1.32"),
+		)
 
-		newCfg := newControlPlaneManagerConfig("1.34")
+		newCfg := newControlPlaneManagerConfig("")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "not in the cluster's availableVersions")
+		assert.Contains(t, resp.Result.Message, "1.32")
+	})
+
+	t.Run("п.2: clearing MC override to Automatic CC is allowed", func(t *testing.T) {
+		handler := withObjs(t,
+			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecret("Automatic"),
+		)
+
+		newCfg := newControlPlaneManagerConfig("")
 		oldCfg := newControlPlaneManagerConfig("1.35")
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
@@ -158,14 +211,70 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	t.Run("no d8-cluster-configuration secret yet — not guarded", func(t *testing.T) {
+	t.Run("п.2: setting Automatic while clearing a pin falls back to CC", func(t *testing.T) {
+		handler := withObjs(t,
+			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecret("1.32"),
+		)
+
+		newCfg := newControlPlaneManagerConfig("Automatic")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "1.32")
+	})
+
+	t.Run("DELETE with pinned version falls back to stale CC and is rejected", func(t *testing.T) {
 		storage, manager := buildHandler(t)
+		// Module must not be treated as enabled so confirmation does not fire first.
+		manager.enabled[moduleName] = false
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
 		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
-		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, moduleCR)
+		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator,
+			moduleCR,
+			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecret("1.32"),
+		)
 
-		newCfg := newControlPlaneManagerConfig("1.33")
+		oldCfg := newControlPlaneManagerConfigDisabled("1.35")
+		review := newModuleConfigAdmissionReview("DELETE", nil, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "not in the cluster's availableVersions")
+	})
+
+	t.Run("fail-open: no ConfigMap — allowed", func(t *testing.T) {
+		handler := withObjs(t)
+
+		newCfg := newControlPlaneManagerConfig("1.32")
 		oldCfg := newControlPlaneManagerConfig("")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
+	})
+
+	t.Run("fail-open: empty availableVersions — allowed", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap(nil))
+
+		newCfg := newControlPlaneManagerConfig("1.32")
+		oldCfg := newControlPlaneManagerConfig("")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
+	})
+
+	t.Run("fail-open: clearing override with no Secret — allowed", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
+
+		newCfg := newControlPlaneManagerConfig("")
+		oldCfg := newControlPlaneManagerConfig("1.35")
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
 		resp := callHandler(t, handler, review)
