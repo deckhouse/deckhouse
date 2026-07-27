@@ -234,7 +234,7 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 	b := new(bytes.Buffer)
 
 	r.logger.Debug("Getting module's documentation locally", slog.String("module_name", moduleName))
-	fetchModuleErr := r.getDocumentationFromModuleDir(md.Spec.Path, b)
+	fetchModuleErr := r.getDocumentationFromModuleOrDownloadedDir(md.Spec.Path, b)
 
 	var rendered int
 	now := metav1.NewTime(r.dc.GetClock().Now().UTC())
@@ -264,7 +264,6 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 		}
 
 		if fetchModuleErr != nil {
-			r.logger.Error("Failed to fetch documentation from module directory", slog.String("module_name", moduleName), slog.String("address", addr), slog.String("path", md.Spec.Path), log.Err(fetchModuleErr))
 			cond.Type = v1alpha1.TypeError
 			cond.Message = fmt.Sprintf("Error occurred while fetching the documentation: %s. Please fix the module's docs or restart the Deckhouse to restore the module", fetchModuleErr)
 			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
@@ -344,12 +343,34 @@ func (r *reconciler) getDocsBuilderAddresses(ctx context.Context) ([]string, err
 	return addresses, nil
 }
 
+// If the documentation is not present in the module directory, try to get it from the downloaded directory.
+func (r *reconciler) getDocumentationFromModuleOrDownloadedDir(modulePath string, buf *bytes.Buffer) error {
+	err := r.getDocumentationFromModuleDir(modulePath, buf)
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		return r.getDocumentationFromDownloadedDir(modulePath, buf)
+	}
+	return err
+}
+
 func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes.Buffer) error {
 	// modulePath is now in format "/modules/<module>" (e.g., "/modules/stronghold")
 	// Remove leading slash and join with downloadedModulesDir to get full path
 	cleanPath := strings.TrimPrefix(modulePath, "/")
 	moduleDir := filepath.Join(r.downloadedModulesDir, cleanPath)
 
+	return r.getDocumentationFromDir(moduleDir, buf)
+}
+
+func (r *reconciler) getDocumentationFromDownloadedDir(modulePath string, buf *bytes.Buffer) error {
+	// modulePath is now in format "/<module>" (e.g., "/stronghold")
+	// Remove leading slash and join with downloadedModulesDir to get full path
+	cleanPath := strings.TrimPrefix(modulePath, "/")
+	moduleDir := filepath.Join(r.downloadedModulesDir, cleanPath)
+
+	return r.getDocumentationFromDir(moduleDir, buf)
+}
+
+func (r *reconciler) getDocumentationFromDir(moduleDir string, buf *bytes.Buffer) error {
 	dir, err := os.Stat(moduleDir)
 	if err != nil {
 		return fmt.Errorf("stat: %w", err)
