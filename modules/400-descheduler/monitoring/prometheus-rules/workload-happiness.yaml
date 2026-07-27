@@ -1,4 +1,4 @@
-- name: descheduler.drs-lens.happiness
+- name: descheduler.workload-happiness.happiness
   rules:
   - record: descheduler:replicaset_workload
     expr: |
@@ -241,7 +241,7 @@
     labels: { bucket: unhappy }
     expr: descheduler:workload_happiness_score < 60
 
-- name: descheduler.drs-lens.balance
+- name: descheduler.workload-happiness.balance
   rules:
   - record: descheduler:node_pod_allocation_ratio
     expr: |
