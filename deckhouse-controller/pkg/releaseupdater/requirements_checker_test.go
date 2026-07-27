@@ -18,6 +18,7 @@ package releaseupdater
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -194,4 +196,86 @@ func assertGaugeSet(t *testing.T, storage *metricstorage.MetricStorage, metricNa
 	}
 
 	assert.Equalf(t, want, set, "metric %s set=%v, want %v", metricName, set, want)
+}
+
+func TestKubernetesVersionCheck_AutomaticDetection(t *testing.T) {
+	clusterConfigSecret := func(version string) *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: deckhouseClusterConfigurationSecret, Namespace: "kube-system"},
+			Data: map[string][]byte{
+				"cluster-configuration.yaml": []byte(fmt.Sprintf("kubernetesVersion: %q\n", version)),
+			},
+		}
+	}
+	clusterKubernetesCM := func(updateMode string) *corev1.ConfigMap {
+		return &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: deckhouseClusterKubernetesConfigMap, Namespace: "kube-system"},
+			Data: map[string]string{
+				"spec": fmt.Sprintf("desiredVersion: \"1.34\"\nupdateMode: %s\n", updateMode),
+			},
+		}
+	}
+	controlPlaneMC := func(version string) *v1alpha1.ModuleConfig {
+		settings := &v1alpha1.MappedFields{}
+		require.NoError(t, settings.UnmarshalJSON([]byte(fmt.Sprintf(`{"kubernetesVersion":%q}`, version))))
+		return &v1alpha1.ModuleConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: controlPlaneManagerModuleConfigName},
+			Spec:       v1alpha1.ModuleConfigSpec{Enabled: ptr.To(true), Version: 1, Settings: settings},
+		}
+	}
+
+	tests := []struct {
+		name          string
+		objects       []client.Object
+		wantAutomatic bool
+	}{
+		{
+			name:          "ConfigMap updateMode Automatic wins",
+			objects:       []client.Object{clusterKubernetesCM("Automatic"), clusterConfigSecret("1.33")},
+			wantAutomatic: true,
+		},
+		{
+			name:          "ConfigMap updateMode Manual wins over Automatic CC",
+			objects:       []client.Object{clusterKubernetesCM("Manual"), clusterConfigSecret("Automatic")},
+			wantAutomatic: false,
+		},
+		{
+			name:          "no ConfigMap, CC Automatic → Automatic (closes pre-sync window)",
+			objects:       []client.Object{clusterConfigSecret("Automatic")},
+			wantAutomatic: true,
+		},
+		{
+			name:          "no ConfigMap, CC pin → not Automatic",
+			objects:       []client.Object{clusterConfigSecret("1.34")},
+			wantAutomatic: false,
+		},
+		{
+			name:          "no ConfigMap, MC pin wins over Automatic CC",
+			objects:       []client.Object{controlPlaneMC("1.35"), clusterConfigSecret("Automatic")},
+			wantAutomatic: false,
+		},
+		{
+			name:          "no ConfigMap, MC Automatic + CC Automatic → Automatic",
+			objects:       []client.Object{controlPlaneMC("Automatic"), clusterConfigSecret("Automatic")},
+			wantAutomatic: true,
+		},
+		{
+			name:          "nothing present (managed cluster) → not Automatic, fail-open",
+			objects:       nil,
+			wantAutomatic: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			require.NoError(t, v1alpha1.AddToScheme(scheme))
+			require.NoError(t, corev1.AddToScheme(scheme))
+
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
+			check, err := newKubernetesVersionCheck(fakeClient, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantAutomatic, check.isKubernetesVersionAutomatic())
+		})
+	}
 }

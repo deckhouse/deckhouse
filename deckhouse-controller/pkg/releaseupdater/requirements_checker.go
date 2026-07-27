@@ -43,6 +43,8 @@ import (
 
 const (
 	deckhouseClusterKubernetesConfigMap = "d8-cluster-kubernetes"
+	deckhouseClusterConfigurationSecret = "d8-cluster-configuration"
+	controlPlaneManagerModuleConfigName = "control-plane-manager"
 	k8sAutomaticUpdateMode              = "Automatic"
 	reqCheckerServiceName               = "requirements-checker"
 	MigratedModulesRequirementFieldName = "migratedModules"
@@ -229,33 +231,116 @@ type clusterKubernetesSpec struct {
 	UpdateMode string `json:"updateMode"`
 }
 
-// initClusterKubernetesVersion reads updateMode from ConfigMap kube-system/d8-cluster-kubernetes.
-// That ConfigMap is written by control-plane-manager's sync_desired_kubernetes_version hook from
-// global.discovery.kubernetesVersionIsAutomatic — Values are not visible to deckhouse-controller.
+type clusterConfKubernetesVersion struct {
+	KubernetesVersion string `json:"kubernetesVersion"`
+}
+
+// initClusterKubernetesVersion prefers updateMode from ConfigMap kube-system/d8-cluster-kubernetes
+// (written by control-plane-manager from global.discovery.kubernetesVersionIsAutomatic). Values are
+// not visible to deckhouse-controller.
+//
+// When the ConfigMap is missing or has no updateMode yet — the short window before the first
+// OnBeforeHelm sync — fall back to the same MC/CC pin check the global resolver uses, so an
+// Automatic cluster does not silently skip autoK8sVersion. Managed clusters without either
+// source stay non-Automatic (fail-open), matching the pre-migration Secret-NotFound behaviour.
 func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Context) error {
+	if mode, found, err := c.readUpdateModeFromConfigMap(ctx); err != nil {
+		return err
+	} else if found {
+		c.clusterKubernetesVersion = mode
+		return nil
+	}
+
+	automatic, err := c.isAutomaticFromModuleAndClusterConfig(ctx)
+	if err != nil {
+		return err
+	}
+	if automatic {
+		c.clusterKubernetesVersion = k8sAutomaticUpdateMode
+	}
+	return nil
+}
+
+func (c *kubernetesVersionCheck) readUpdateModeFromConfigMap(ctx context.Context) (mode string, found bool, err error) {
 	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterKubernetesConfigMap}
 	cm := new(corev1.ConfigMap)
 	if err := c.k8sclient.Get(ctx, key, cm); err != nil {
-		// the ConfigMap does not exist yet (or on managed clusters without control-plane-manager)
 		if apierrors.IsNotFound(err) {
-			return nil
+			return "", false, nil
 		}
-		return fmt.Errorf("failed to get the %q ConfigMap: %w", deckhouseClusterKubernetesConfigMap, err)
+		return "", false, fmt.Errorf("failed to get the %q ConfigMap: %w", deckhouseClusterKubernetesConfigMap, err)
 	}
 
 	specRaw, ok := cm.Data["spec"]
 	if !ok || specRaw == "" {
-		return nil
+		return "", false, nil
 	}
 
 	spec := new(clusterKubernetesSpec)
 	if err := yaml.Unmarshal([]byte(specRaw), spec); err != nil {
-		return fmt.Errorf("failed to unmarshal %q ConfigMap spec: %w", deckhouseClusterKubernetesConfigMap, err)
+		return "", false, fmt.Errorf("failed to unmarshal %q ConfigMap spec: %w", deckhouseClusterKubernetesConfigMap, err)
 	}
+	if spec.UpdateMode == "" {
+		return "", false, nil
+	}
+	return spec.UpdateMode, true, nil
+}
 
-	c.clusterKubernetesVersion = spec.UpdateMode
+func (c *kubernetesVersionCheck) isAutomaticFromModuleAndClusterConfig(ctx context.Context) (bool, error) {
+	mcVersion, mcFound, err := c.readModuleConfigKubernetesVersion(ctx)
+	if err != nil {
+		return false, err
+	}
+	ccVersion, ccFound, err := c.readClusterConfigurationKubernetesVersion(ctx)
+	if err != nil {
+		return false, err
+	}
+	// Neither source exists — managed cluster / not bootstrapped yet. Keep the historical
+	// Secret-NotFound fail-open: do not treat as Automatic, so autoK8sVersion is not enforced.
+	if !mcFound && !ccFound {
+		return false, nil
+	}
+	// Mirror global-hooks resolveTargetKubernetesVersion: Automatic iff nowhere pinned.
+	return !isPinnedKubernetesVersion(mcVersion) && !isPinnedKubernetesVersion(ccVersion), nil
+}
 
-	return nil
+func (c *kubernetesVersionCheck) readModuleConfigKubernetesVersion(ctx context.Context) (version string, found bool, err error) {
+	mc := new(v1alpha1.ModuleConfig)
+	if err := c.k8sclient.Get(ctx, client.ObjectKey{Name: controlPlaneManagerModuleConfigName}, mc); err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("failed to get ModuleConfig %q: %w", controlPlaneManagerModuleConfigName, err)
+	}
+	if mc.Spec.Settings == nil {
+		return "", true, nil
+	}
+	version, _ = mc.Spec.Settings.GetMap()["kubernetesVersion"].(string)
+	return version, true, nil
+}
+
+func (c *kubernetesVersionCheck) readClusterConfigurationKubernetesVersion(ctx context.Context) (version string, found bool, err error) {
+	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterConfigurationSecret}
+	secret := new(corev1.Secret)
+	if err := c.k8sclient.Get(ctx, key, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("failed to get the %q secret: %w", deckhouseClusterConfigurationSecret, err)
+	}
+	raw, ok := secret.Data["cluster-configuration.yaml"]
+	if !ok {
+		return "", true, nil
+	}
+	conf := new(clusterConfKubernetesVersion)
+	if err := yaml.Unmarshal(raw, conf); err != nil {
+		return "", false, fmt.Errorf("failed to unmarshal cluster configuration: %w", err)
+	}
+	return conf.KubernetesVersion, true, nil
+}
+
+func isPinnedKubernetesVersion(version string) bool {
+	return version != "" && version != k8sAutomaticUpdateMode
 }
 
 type deckhouseRequirementsCheck struct {
