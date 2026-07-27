@@ -87,18 +87,8 @@ func (c *SSHChecker) clientForNode(
 
 	if client := c.clients[nodeName]; client != nil {
 		if !client.IsStopped() {
-			fmt.Printf(
-				"SSH checker: reusing client for node %s, total clients: %d\n",
-				nodeName,
-				len(c.clients),
-			)
 			return client, nil
 		}
-
-		fmt.Printf(
-			"SSH checker: client for node %s is stopped, recreating\n",
-			nodeName,
-		)
 
 		delete(c.clients, nodeName)
 	}
@@ -130,8 +120,6 @@ func (c *SSHChecker) clientForNode(
 		sourceClient.PrivateKeys(),
 	)
 
-	fmt.Printf("Creating standalone SSH client for node %s", nodeName)
-
 	if err != nil {
 		return nil, fmt.Errorf(
 			"create standalone client for node %s: %w",
@@ -141,12 +129,6 @@ func (c *SSHChecker) clientForNode(
 	}
 
 	c.clients[nodeName] = client
-
-	fmt.Printf(
-		"SSH checker: created client for node %s, total clients: %d\n",
-		nodeName,
-		len(c.clients),
-	)
 
 	return client, nil
 }
