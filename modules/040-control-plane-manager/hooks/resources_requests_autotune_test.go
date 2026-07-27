@@ -58,7 +58,7 @@ func masterNodeYAML() string {
 	}})
 }
 
-var _ = Describe("Module hooks :: control-plane-manager :: autotune_resources_requests :: decide", func() {
+var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune :: decide", func() {
 	now := time.Date(2026, 7, 23, 12, 0, 0, 0, time.UTC)
 
 	DescribeTable("asymmetric deadband + cooldown",
@@ -79,7 +79,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: autotune_resources_re
 	)
 })
 
-var _ = Describe("Module hooks :: control-plane-manager :: autotune_resources_requests", func() {
+var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune", func() {
 	f := HookExecutionConfigInit(
 		`{"controlPlaneManager":{"internal":{"resourcesRequests":{"milliCpuControlPlane":2000,"memoryControlPlane":4294967296}}},"global":{"enabledModules":["prometheus-metrics-adapter"]}}`,
 		`{}`,
