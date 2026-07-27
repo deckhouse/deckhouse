@@ -1,0 +1,120 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: capv-validating-webhook
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capv-controller-manager,namespace=d8-cloud-provider-vsphere
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=capv-controller-manager-webhook-service,namespace=d8-cloud-provider-vsphere
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capv-controller-manager")) | nindent 2 }}
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-vsphereclustertemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.vsphereclustertemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vsphereclustertemplates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-vspherefailuredomain
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.vspherefailuredomain.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vspherefailuredomains
+  sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-vspheremachine
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.vspheremachine.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vspheremachines
+  sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-vspheremachinetemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.vspheremachinetemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vspheremachinetemplates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    caBundle: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+    service:
+      name: capv-controller-manager-webhook-service
+      namespace: d8-cloud-provider-vsphere
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-vspherevm
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.vspherevm.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - vspherevms
+  sideEffects: None

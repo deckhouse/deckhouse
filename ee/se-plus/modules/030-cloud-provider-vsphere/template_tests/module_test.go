@@ -86,6 +86,10 @@ const hybridGlobalValues = `
 
 const moduleValuesA = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -124,6 +128,10 @@ const moduleValuesA = `
 
 const moduleValuesB = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -159,6 +167,10 @@ const moduleValuesB = `
 
 const moduleValuesC = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -203,6 +215,10 @@ const moduleValuesC = `
 
 const moduleValuesD = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -249,6 +265,10 @@ const moduleValuesD = `
 
 const moduleValuesDCClusterFirst = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: aaa-dscluster
         datastoreType: DatastoreCluster
@@ -284,6 +304,10 @@ const moduleValuesDCClusterFirst = `
 
 const moduleValuesHybrid = `
     internal:
+      capvControllerManagerWebhookCert:
+        ca: mycapvca
+        crt: mycapvcrt
+        key: mycapvkey
       storageClasses:
       - name: mydsname1
         datastoreType: Datastore
@@ -599,6 +623,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			}
 			digests := images["digests"].(map[string]interface{})
 			digests["cloudProviderVsphere"] = map[string]interface{}{
+				"capvControllerManager":     "sha256:capvdigest",
 				"cloudControllerManager131": "sha256:ccm131digest",
 				"cloudDataDiscoverer":       "sha256:cdddigest",
 				"vsphereCsiPlugin131":       "sha256:csiplugin131digest",
@@ -692,6 +717,7 @@ labels:
 			}
 			digests := images["digests"].(map[string]interface{})
 			digests["cloudProviderVsphere"] = map[string]interface{}{
+				"capvControllerManager":     "sha256:capvdigest",
 				"cloudControllerManager131": "sha256:ccm131digest",
 				"cloudDataDiscoverer":       "sha256:cdddigest",
 				"vsphereCsiPlugin131":       "sha256:csiplugin131digest",
@@ -730,6 +756,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			}
 			digests := images["digests"].(map[string]interface{})
 			digests["cloudProviderVsphere"] = map[string]interface{}{
+				"capvControllerManager":     "sha256:capvdigest",
 				"cloudControllerManager131": "sha256:ccm131digest",
 				"cloudDataDiscoverer":       "sha256:cdddigest",
 				"vsphereCsiPlugin131":       "sha256:csiplugin131digest",
@@ -812,6 +839,7 @@ nodes:
 			}
 			digests := images["digests"].(map[string]interface{})
 			digests["cloudProviderVsphere"] = map[string]interface{}{
+				"capvControllerManager":     "sha256:capvdigest",
 				"cloudControllerManager131": "sha256:ccm131digest",
 				"cloudDataDiscoverer":       "sha256:cdddigest",
 				"vsphereCsiPlugin131":       "sha256:csiplugin131digest",

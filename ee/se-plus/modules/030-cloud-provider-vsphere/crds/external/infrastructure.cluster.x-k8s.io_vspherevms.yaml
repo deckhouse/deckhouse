@@ -1,0 +1,1874 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: vspherevms.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: VSphereVM
+    listKind: VSphereVMList
+    plural: vspherevms
+    singular: vspherevm
+  scope: Namespaced
+  versions:
+  - deprecated: true
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        description: |-
+          VSphereVM is the Schema for the vspherevms API
+
+          Deprecated: This type will be removed in one of the next releases.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereVMSpec defines the desired state of VSphereVM.
+            properties:
+              biosUUID:
+                description: |-
+                  BiosUUID is the VM's BIOS UUID that is assigned at runtime after
+                  the VM has been created.
+                  This field is required at runtime for other controllers that read
+                  this CRD as unstructured data.
+                type: string
+              bootstrapRef:
+                description: |-
+                  BootstrapRef is a reference to a bootstrap provider-specific resource
+                  that holds configuration details.
+                  This field is optional in case no bootstrap data is required to create
+                  a VM.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              cloneMode:
+                description: |-
+                  CloneMode specifies the type of clone operation.
+                  The LinkedClone mode is only support for templates that have at least
+                  one snapshot. If the template has no snapshots, then CloneMode defaults
+                  to FullClone.
+                  When LinkedClone mode is enabled the DiskGiB field is ignored as it is
+                  not possible to expand disks of linked clones.
+                  Defaults to LinkedClone, but fails gracefully to FullClone if the source
+                  of the clone operation has no snapshots.
+                type: string
+              customVMXKeys:
+                additionalProperties:
+                  type: string
+                description: |-
+                  CustomVMXKeys is a dictionary of advanced VMX options that can be set on VM
+                  Defaults to empty map
+                type: object
+              datacenter:
+                description: |-
+                  Datacenter is the name or inventory path of the datacenter in which the
+                  virtual machine is created/located.
+                type: string
+              datastore:
+                description: |-
+                  Datastore is the name or inventory path of the datastore in which the
+                  virtual machine is created/located.
+                type: string
+              diskGiB:
+                description: |-
+                  DiskGiB is the size of a virtual machine's disk, in GiB.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int32
+                type: integer
+              folder:
+                description: |-
+                  Folder is the name or inventory path of the folder in which the
+                  virtual machine is created/located.
+                type: string
+              memoryMiB:
+                description: |-
+                  MemoryMiB is the size of a virtual machine's memory, in MiB.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int64
+                type: integer
+              network:
+                description: Network is the network configuration for this machine's
+                  VM.
+                properties:
+                  devices:
+                    description: |
+                      Devices is the list of network devices used by the virtual machine.
+                    items:
+                      description: |-
+                        NetworkDeviceSpec defines the network configuration for a virtual machine's
+                        network device.
+                      properties:
+                        deviceName:
+                          description: |-
+                            DeviceName may be used to explicitly assign a name to the network device
+                            as it exists in the guest operating system.
+                          type: string
+                        dhcp4:
+                          description: |-
+                            DHCP4 is a flag that indicates whether or not to use DHCP for IPv4
+                            on this device.
+                            If true then IPAddrs should not contain any IPv4 addresses.
+                          type: boolean
+                        dhcp6:
+                          description: |-
+                            DHCP6 is a flag that indicates whether or not to use DHCP for IPv6
+                            on this device.
+                            If true then IPAddrs should not contain any IPv6 addresses.
+                          type: boolean
+                        gateway4:
+                          description: |-
+                            Gateway4 is the IPv4 gateway used by this device.
+                            Required when DHCP4 is false.
+                          type: string
+                        gateway6:
+                          description: |-
+                            Gateway4 is the IPv4 gateway used by this device.
+                            Required when DHCP6 is false.
+                          type: string
+                        ipAddrs:
+                          description: |-
+                            IPAddrs is a list of one or more IPv4 and/or IPv6 addresses to assign
+                            to this device. IP addresses must also specify the segment length in
+                            CIDR notation.
+                            Required when DHCP4 and DHCP6 are both false.
+                          items:
+                            type: string
+                          type: array
+                        macAddr:
+                          description: |-
+                            MACAddr is the MAC address used by this device.
+                            It is generally a good idea to omit this field and allow a MAC address
+                            to be generated.
+                            Please note that this value must use the VMware OUI to work with the
+                            in-tree vSphere cloud provider.
+                          type: string
+                        mtu:
+                          description: MTU is the device’s Maximum Transmission Unit
+                            size in bytes.
+                          format: int64
+                          type: integer
+                        nameservers:
+                          description: |-
+                            Nameservers is a list of IPv4 and/or IPv6 addresses used as DNS
+                            nameservers.
+                            Please note that Linux allows only three nameservers (https://linux.die.net/man/5/resolv.conf).
+                          items:
+                            type: string
+                          type: array
+                        networkName:
+                          description: |-
+                            NetworkName is the name of the vSphere network to which the device
+                            will be connected.
+                          type: string
+                        routes:
+                          description: Routes is a list of optional, static routes
+                            applied to the device.
+                          items:
+                            description: NetworkRouteSpec defines a static network
+                              route.
+                            properties:
+                              metric:
+                                description: Metric is the weight/priority of the
+                                  route.
+                                format: int32
+                                type: integer
+                              to:
+                                description: To is an IPv4 or IPv6 address.
+                                type: string
+                              via:
+                                description: Via is an IPv4 or IPv6 address.
+                                type: string
+                            required:
+                            - metric
+                            - to
+                            - via
+                            type: object
+                          type: array
+                        searchDomains:
+                          description: |-
+                            SearchDomains is a list of search domains used when resolving IP
+                            addresses with DNS.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - networkName
+                      type: object
+                    type: array
+                  preferredAPIServerCidr:
+                    description: |-
+                      PreferredAPIServeCIDR is the preferred CIDR for the Kubernetes API
+                      server endpoint on this machine
+                    type: string
+                  routes:
+                    description: |-
+                      Routes is a list of optional, static routes applied to the virtual
+                      machine.
+                    items:
+                      description: NetworkRouteSpec defines a static network route.
+                      properties:
+                        metric:
+                          description: Metric is the weight/priority of the route.
+                          format: int32
+                          type: integer
+                        to:
+                          description: To is an IPv4 or IPv6 address.
+                          type: string
+                        via:
+                          description: Via is an IPv4 or IPv6 address.
+                          type: string
+                      required:
+                      - metric
+                      - to
+                      - via
+                      type: object
+                    type: array
+                required:
+                - devices
+                type: object
+              numCPUs:
+                description: |-
+                  NumCPUs is the number of virtual processors in a virtual machine.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int32
+                type: integer
+              numCoresPerSocket:
+                description: |-
+                  NumCPUs is the number of cores among which to distribute CPUs in this
+                  virtual machine.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int32
+                type: integer
+              resourcePool:
+                description: |-
+                  ResourcePool is the name or inventory path of the resource pool in which
+                  the virtual machine is created/located.
+                type: string
+              server:
+                description: |-
+                  Server is the IP address or FQDN of the vSphere server on which
+                  the virtual machine is created/located.
+                type: string
+              snapshot:
+                description: |-
+                  Snapshot is the name of the snapshot from which to create a linked clone.
+                  This field is ignored if LinkedClone is not enabled.
+                  Defaults to the source's current snapshot.
+                type: string
+              storagePolicyName:
+                description: |-
+                  StoragePolicyName of the storage policy to use with this
+                  Virtual Machine
+                type: string
+              template:
+                description: |-
+                  Template is the name or inventory path of the template used to clone
+                  the virtual machine.
+                minLength: 1
+                type: string
+              thumbprint:
+                description: |-
+                  Thumbprint is the colon-separated SHA-1 checksum of the given vCenter server's host certificate
+                  When this is set to empty, this VirtualMachine would be created
+                  without TLS certificate validation of the communication between Cluster API Provider vSphere
+                  and the VMware vCenter server.
+                type: string
+            required:
+            - network
+            - template
+            type: object
+          status:
+            description: VSphereVMStatus defines the observed state of VSphereVM
+            properties:
+              addresses:
+                description: |-
+                  Addresses is a list of the VM's IP addresses.
+                  This field is required at runtime for other controllers that read
+                  this CRD as unstructured data.
+                items:
+                  type: string
+                type: array
+              cloneMode:
+                description: |-
+                  CloneMode is the type of clone operation used to clone this VM. Since
+                  LinkedMode is the default but fails gracefully if the source of the
+                  clone has no snapshots, this field may be used to determine the actual
+                  type of clone operation used to create this VM.
+                type: string
+              conditions:
+                description: Conditions defines current service state of the VSphereVM.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: |-
+                  FailureMessage will be set in the event that there is a terminal problem
+                  reconciling the vspherevm and will contain a more verbose string suitable
+                  for logging and human consumption.
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the vm.
+
+                  Any transient errors that occur during the reconciliation of vspherevms
+                  can be added as events to the vspherevm object and/or logged in the
+                  controller's output.
+                type: string
+              failureReason:
+                description: |-
+                  FailureReason will be set in the event that there is a terminal problem
+                  reconciling the vspherevm and will contain a succinct value suitable
+                  for vm interpretation.
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the vm.
+
+                  Any transient errors that occur during the reconciliation of vspherevms
+                  can be added as events to the vspherevm object and/or logged in the
+                  controller's output.
+                type: string
+              network:
+                description: |-
+                  Network returns the network status for each of the machine's configured
+                  network interfaces.
+                items:
+                  description: NetworkStatus provides information about one of a VM's
+                    networks.
+                  properties:
+                    connected:
+                      description: |-
+                        Connected is a flag that indicates whether this network is currently
+                        connected to the VM.
+                      type: boolean
+                    ipAddrs:
+                      description: IPAddrs is one or more IP addresses reported by
+                        vm-tools.
+                      items:
+                        type: string
+                      type: array
+                    macAddr:
+                      description: MACAddr is the MAC address of the network device.
+                      type: string
+                    networkName:
+                      description: NetworkName is the name of the network.
+                      type: string
+                  required:
+                  - macAddr
+                  type: object
+                type: array
+              ready:
+                description: |-
+                  Ready is true when the provider resource is ready.
+                  This field is required at runtime for other controllers that read
+                  this CRD as unstructured data.
+                type: boolean
+              retryAfter:
+                description: RetryAfter tracks the time we can retry queueing a task
+                format: date-time
+                type: string
+              snapshot:
+                description: |-
+                  Snapshot is the name of the snapshot from which the VM was cloned if
+                  LinkedMode is enabled.
+                type: string
+              taskRef:
+                description: |-
+                  TaskRef is a managed object reference to a Task related to the machine.
+                  This value is set automatically at runtime and should not be set or
+                  modified by users.
+                type: string
+            type: object
+        type: object
+    served: false
+    storage: false
+    subresources:
+      status: {}
+  - deprecated: true
+    name: v1alpha4
+    schema:
+      openAPIV3Schema:
+        description: |-
+          VSphereVM is the Schema for the vspherevms API
+
+          Deprecated: This type will be removed in one of the next releases.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereVMSpec defines the desired state of VSphereVM.
+            properties:
+              biosUUID:
+                description: |-
+                  BiosUUID is the VM's BIOS UUID that is assigned at runtime after
+                  the VM has been created.
+                  This field is required at runtime for other controllers that read
+                  this CRD as unstructured data.
+                type: string
+              bootstrapRef:
+                description: |-
+                  BootstrapRef is a reference to a bootstrap provider-specific resource
+                  that holds configuration details.
+                  This field is optional in case no bootstrap data is required to create
+                  a VM.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              cloneMode:
+                description: |-
+                  CloneMode specifies the type of clone operation.
+                  The LinkedClone mode is only support for templates that have at least
+                  one snapshot. If the template has no snapshots, then CloneMode defaults
+                  to FullClone.
+                  When LinkedClone mode is enabled the DiskGiB field is ignored as it is
+                  not possible to expand disks of linked clones.
+                  Defaults to LinkedClone, but fails gracefully to FullClone if the source
+                  of the clone operation has no snapshots.
+                type: string
+              customVMXKeys:
+                additionalProperties:
+                  type: string
+                description: |-
+                  CustomVMXKeys is a dictionary of advanced VMX options that can be set on VM
+                  Defaults to empty map
+                type: object
+              datacenter:
+                description: |-
+                  Datacenter is the name or inventory path of the datacenter in which the
+                  virtual machine is created/located.
+                type: string
+              datastore:
+                description: |-
+                  Datastore is the name or inventory path of the datastore in which the
+                  virtual machine is created/located.
+                type: string
+              diskGiB:
+                description: |-
+                  DiskGiB is the size of a virtual machine's disk, in GiB.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int32
+                type: integer
+              folder:
+                description: |-
+                  Folder is the name or inventory path of the folder in which the
+                  virtual machine is created/located.
+                type: string
+              memoryMiB:
+                description: |-
+                  MemoryMiB is the size of a virtual machine's memory, in MiB.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int64
+                type: integer
+              network:
+                description: Network is the network configuration for this machine's
+                  VM.
+                properties:
+                  devices:
+                    description: |
+                      Devices is the list of network devices used by the virtual machine.
+                    items:
+                      description: |-
+                        NetworkDeviceSpec defines the network configuration for a virtual machine's
+                        network device.
+                      properties:
+                        deviceName:
+                          description: |-
+                            DeviceName may be used to explicitly assign a name to the network device
+                            as it exists in the guest operating system.
+                          type: string
+                        dhcp4:
+                          description: |-
+                            DHCP4 is a flag that indicates whether or not to use DHCP for IPv4
+                            on this device.
+                            If true then IPAddrs should not contain any IPv4 addresses.
+                          type: boolean
+                        dhcp6:
+                          description: |-
+                            DHCP6 is a flag that indicates whether or not to use DHCP for IPv6
+                            on this device.
+                            If true then IPAddrs should not contain any IPv6 addresses.
+                          type: boolean
+                        gateway4:
+                          description: |-
+                            Gateway4 is the IPv4 gateway used by this device.
+                            Required when DHCP4 is false.
+                          type: string
+                        gateway6:
+                          description: |-
+                            Gateway4 is the IPv4 gateway used by this device.
+                            Required when DHCP6 is false.
+                          type: string
+                        ipAddrs:
+                          description: |-
+                            IPAddrs is a list of one or more IPv4 and/or IPv6 addresses to assign
+                            to this device. IP addresses must also specify the segment length in
+                            CIDR notation.
+                            Required when DHCP4 and DHCP6 are both false.
+                          items:
+                            type: string
+                          type: array
+                        macAddr:
+                          description: |-
+                            MACAddr is the MAC address used by this device.
+                            It is generally a good idea to omit this field and allow a MAC address
+                            to be generated.
+                            Please note that this value must use the VMware OUI to work with the
+                            in-tree vSphere cloud provider.
+                          type: string
+                        mtu:
+                          description: MTU is the device’s Maximum Transmission Unit
+                            size in bytes.
+                          format: int64
+                          type: integer
+                        nameservers:
+                          description: |-
+                            Nameservers is a list of IPv4 and/or IPv6 addresses used as DNS
+                            nameservers.
+                            Please note that Linux allows only three nameservers (https://linux.die.net/man/5/resolv.conf).
+                          items:
+                            type: string
+                          type: array
+                        networkName:
+                          description: |-
+                            NetworkName is the name of the vSphere network to which the device
+                            will be connected.
+                          type: string
+                        routes:
+                          description: Routes is a list of optional, static routes
+                            applied to the device.
+                          items:
+                            description: NetworkRouteSpec defines a static network
+                              route.
+                            properties:
+                              metric:
+                                description: Metric is the weight/priority of the
+                                  route.
+                                format: int32
+                                type: integer
+                              to:
+                                description: To is an IPv4 or IPv6 address.
+                                type: string
+                              via:
+                                description: Via is an IPv4 or IPv6 address.
+                                type: string
+                            required:
+                            - metric
+                            - to
+                            - via
+                            type: object
+                          type: array
+                        searchDomains:
+                          description: |-
+                            SearchDomains is a list of search domains used when resolving IP
+                            addresses with DNS.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - networkName
+                      type: object
+                    type: array
+                  preferredAPIServerCidr:
+                    description: |-
+                      PreferredAPIServeCIDR is the preferred CIDR for the Kubernetes API
+                      server endpoint on this machine
+                    type: string
+                  routes:
+                    description: |-
+                      Routes is a list of optional, static routes applied to the virtual
+                      machine.
+                    items:
+                      description: NetworkRouteSpec defines a static network route.
+                      properties:
+                        metric:
+                          description: Metric is the weight/priority of the route.
+                          format: int32
+                          type: integer
+                        to:
+                          description: To is an IPv4 or IPv6 address.
+                          type: string
+                        via:
+                          description: Via is an IPv4 or IPv6 address.
+                          type: string
+                      required:
+                      - metric
+                      - to
+                      - via
+                      type: object
+                    type: array
+                required:
+                - devices
+                type: object
+              numCPUs:
+                description: |-
+                  NumCPUs is the number of virtual processors in a virtual machine.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int32
+                type: integer
+              numCoresPerSocket:
+                description: |-
+                  NumCPUs is the number of cores among which to distribute CPUs in this
+                  virtual machine.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int32
+                type: integer
+              resourcePool:
+                description: |-
+                  ResourcePool is the name or inventory path of the resource pool in which
+                  the virtual machine is created/located.
+                type: string
+              server:
+                description: |-
+                  Server is the IP address or FQDN of the vSphere server on which
+                  the virtual machine is created/located.
+                type: string
+              snapshot:
+                description: |-
+                  Snapshot is the name of the snapshot from which to create a linked clone.
+                  This field is ignored if LinkedClone is not enabled.
+                  Defaults to the source's current snapshot.
+                type: string
+              storagePolicyName:
+                description: |-
+                  StoragePolicyName of the storage policy to use with this
+                  Virtual Machine
+                type: string
+              template:
+                description: |-
+                  Template is the name or inventory path of the template used to clone
+                  the virtual machine.
+                minLength: 1
+                type: string
+              thumbprint:
+                description: |-
+                  Thumbprint is the colon-separated SHA-1 checksum of the given vCenter server's host certificate
+                  When this is set to empty, this VirtualMachine would be created
+                  without TLS certificate validation of the communication between Cluster API Provider vSphere
+                  and the VMware vCenter server.
+                type: string
+            required:
+            - network
+            - template
+            type: object
+          status:
+            description: VSphereVMStatus defines the observed state of VSphereVM
+            properties:
+              addresses:
+                description: |-
+                  Addresses is a list of the VM's IP addresses.
+                  This field is required at runtime for other controllers that read
+                  this CRD as unstructured data.
+                items:
+                  type: string
+                type: array
+              cloneMode:
+                description: |-
+                  CloneMode is the type of clone operation used to clone this VM. Since
+                  LinkedMode is the default but fails gracefully if the source of the
+                  clone has no snapshots, this field may be used to determine the actual
+                  type of clone operation used to create this VM.
+                type: string
+              conditions:
+                description: Conditions defines current service state of the VSphereVM.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: |-
+                  FailureMessage will be set in the event that there is a terminal problem
+                  reconciling the vspherevm and will contain a more verbose string suitable
+                  for logging and human consumption.
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the vm.
+
+                  Any transient errors that occur during the reconciliation of vspherevms
+                  can be added as events to the vspherevm object and/or logged in the
+                  controller's output.
+                type: string
+              failureReason:
+                description: |-
+                  FailureReason will be set in the event that there is a terminal problem
+                  reconciling the vspherevm and will contain a succinct value suitable
+                  for vm interpretation.
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the vm.
+
+                  Any transient errors that occur during the reconciliation of vspherevms
+                  can be added as events to the vspherevm object and/or logged in the
+                  controller's output.
+                type: string
+              network:
+                description: |-
+                  Network returns the network status for each of the machine's configured
+                  network interfaces.
+                items:
+                  description: NetworkStatus provides information about one of a VM's
+                    networks.
+                  properties:
+                    connected:
+                      description: |-
+                        Connected is a flag that indicates whether this network is currently
+                        connected to the VM.
+                      type: boolean
+                    ipAddrs:
+                      description: IPAddrs is one or more IP addresses reported by
+                        vm-tools.
+                      items:
+                        type: string
+                      type: array
+                    macAddr:
+                      description: MACAddr is the MAC address of the network device.
+                      type: string
+                    networkName:
+                      description: NetworkName is the name of the network.
+                      type: string
+                  required:
+                  - macAddr
+                  type: object
+                type: array
+              ready:
+                description: |-
+                  Ready is true when the provider resource is ready.
+                  This field is required at runtime for other controllers that read
+                  this CRD as unstructured data.
+                type: boolean
+              retryAfter:
+                description: RetryAfter tracks the time we can retry queueing a task
+                format: date-time
+                type: string
+              snapshot:
+                description: |-
+                  Snapshot is the name of the snapshot from which the VM was cloned if
+                  LinkedMode is enabled.
+                type: string
+              taskRef:
+                description: |-
+                  TaskRef is a managed object reference to a Task related to the machine.
+                  This value is set automatically at runtime and should not be set or
+                  modified by users.
+                type: string
+            type: object
+        type: object
+    served: false
+    storage: false
+    subresources:
+      status: {}
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: VSphereVM is the Schema for the vspherevms API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereVMSpec defines the desired state of VSphereVM.
+            properties:
+              additionalDisksGiB:
+                description: |-
+                  AdditionalDisksGiB holds the sizes of additional disks of the virtual machine, in GiB
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                items:
+                  format: int32
+                  type: integer
+                type: array
+              biosUUID:
+                description: |-
+                  BiosUUID is the VM's BIOS UUID that is assigned at runtime after
+                  the VM has been created.
+                  This field is required at runtime for other controllers that read
+                  this CRD as unstructured data.
+                type: string
+              bootstrapRef:
+                description: |-
+                  BootstrapRef is a reference to a bootstrap provider-specific resource
+                  that holds configuration details.
+                  This field is optional in case no bootstrap data is required to create
+                  a VM.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              cloneMode:
+                description: |-
+                  CloneMode specifies the type of clone operation.
+                  The LinkedClone mode is only support for templates that have at least
+                  one snapshot. If the template has no snapshots, then CloneMode defaults
+                  to FullClone.
+                  When LinkedClone mode is enabled the DiskGiB field is ignored as it is
+                  not possible to expand disks of linked clones.
+                  Defaults to LinkedClone, but fails gracefully to FullClone if the source
+                  of the clone operation has no snapshots.
+                type: string
+              customVMXKeys:
+                additionalProperties:
+                  type: string
+                description: |-
+                  CustomVMXKeys is a dictionary of advanced VMX options that can be set on VM
+                  Defaults to empty map
+                type: object
+              dataDisks:
+                description: DataDisks are additional disks to add to the VM that
+                  are not part of the VM's OVA template.
+                items:
+                  description: VSphereDisk is an additional disk to add to the VM
+                    that is not part of the VM OVA template.
+                  properties:
+                    name:
+                      description: |-
+                        Name is used to identify the disk definition. Name is required and needs to be unique so that it can be used to
+                        clearly identify purpose of the disk.
+                      type: string
+                    provisioningMode:
+                      description: |-
+                        ProvisioningMode specifies the provisioning type to be used by this vSphere data disk.
+                        If not set, the setting will be provided by the default storage policy.
+                      enum:
+                      - Thin
+                      - Thick
+                      - EagerlyZeroed
+                      type: string
+                    sizeGiB:
+                      description: SizeGiB is the size of the disk in GiB.
+                      format: int32
+                      type: integer
+                  required:
+                  - name
+                  - sizeGiB
+                  type: object
+                maxItems: 29
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              datacenter:
+                description: |-
+                  Datacenter is the name, inventory path, managed object reference or the managed
+                  object ID of the datacenter in which the virtual machine is created/located.
+                  Defaults to * which selects the default datacenter.
+                type: string
+              datastore:
+                description: |-
+                  Datastore is the name, inventory path, managed object reference or the managed
+                  object ID of the datastore in which the virtual machine is created/located.
+                type: string
+              diskGiB:
+                description: |-
+                  DiskGiB is the size of a virtual machine's disk, in GiB.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int32
+                type: integer
+              folder:
+                description: |-
+                  Folder is the name, inventory path, managed object reference or the managed
+                  object ID of the folder in which the virtual machine is created/located.
+                type: string
+              guestSoftPowerOffTimeout:
+                description: |-
+                  GuestSoftPowerOffTimeout sets the wait timeout for shutdown in the VM guest.
+                  The VM will be powered off forcibly after the timeout if the VM is still
+                  up and running when the PowerOffMode is set to trySoft.
+
+                  This parameter only applies when the PowerOffMode is set to trySoft.
+
+                  If omitted, the timeout defaults to 5 minutes.
+                type: string
+              hardwareVersion:
+                description: |-
+                  HardwareVersion is the hardware version of the virtual machine.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                  Check the compatibility with the ESXi version before setting the value.
+                type: string
+              memoryMiB:
+                description: |-
+                  MemoryMiB is the size of a virtual machine's memory, in MiB.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int64
+                type: integer
+              network:
+                description: Network is the network configuration for this machine's
+                  VM.
+                properties:
+                  devices:
+                    description: |
+                      Devices is the list of network devices used by the virtual machine.
+                    items:
+                      description: |-
+                        NetworkDeviceSpec defines the network configuration for a virtual machine's
+                        network device.
+                      properties:
+                        addressesFromPools:
+                          description: |-
+                            AddressesFromPools is a list of IPAddressPools that should be assigned
+                            to IPAddressClaims. The machine's cloud-init metadata will be populated
+                            with IPAddresses fulfilled by an IPAM provider.
+                          items:
+                            description: |-
+                              TypedLocalObjectReference contains enough information to let you locate the
+                              typed referenced object inside the same namespace.
+                            properties:
+                              apiGroup:
+                                description: |-
+                                  APIGroup is the group for the resource being referenced.
+                                  If APIGroup is not specified, the specified Kind must be in the core API group.
+                                  For any other third-party types, APIGroup is required.
+                                type: string
+                              kind:
+                                description: Kind is the type of resource being referenced
+                                type: string
+                              name:
+                                description: Name is the name of resource being referenced
+                                type: string
+                            required:
+                            - kind
+                            - name
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          type: array
+                        deviceName:
+                          description: |-
+                            DeviceName may be used to explicitly assign a name to the network device
+                            as it exists in the guest operating system.
+                          type: string
+                        dhcp4:
+                          description: |-
+                            DHCP4 is a flag that indicates whether or not to use DHCP for IPv4
+                            on this device.
+                            If true then IPAddrs should not contain any IPv4 addresses.
+                          type: boolean
+                        dhcp4Overrides:
+                          description: |-
+                            DHCP4Overrides allows for the control over several DHCP behaviors.
+                            Overrides will only be applied when the corresponding DHCP flag is set.
+                            Only configured values will be sent, omitted values will default to
+                            distribution defaults.
+                            Dependent on support in the network stack for your distribution.
+                            For more information see the netplan reference (https://netplan.io/reference#dhcp-overrides)
+                          properties:
+                            hostname:
+                              description: |-
+                                Hostname is the name which will be sent to the DHCP server instead of
+                                the machine's hostname.
+                              type: string
+                            routeMetric:
+                              description: |-
+                                RouteMetric is used to prioritize routes for devices. A lower metric for
+                                an interface will have a higher priority.
+                              type: integer
+                            sendHostname:
+                              description: |-
+                                SendHostname when `true`, the hostname of the machine will be sent to the
+                                DHCP server.
+                              type: boolean
+                            useDNS:
+                              description: |-
+                                UseDNS when `true`, the DNS servers in the DHCP server will be used and
+                                take precedence.
+                              type: boolean
+                            useDomains:
+                              description: |-
+                                UseDomains can take the values `true`, `false`, or `route`. When `true`,
+                                the domain name from the DHCP server will be used as the DNS search
+                                domain for this device. When `route`, the domain name from the DHCP
+                                response will be used for routing DNS only, not for searching.
+                              type: string
+                            useHostname:
+                              description: |-
+                                UseHostname when `true`, the hostname from the DHCP server will be set
+                                as the transient hostname of the machine.
+                              type: boolean
+                            useMTU:
+                              description: |-
+                                UseMTU when `true`, the MTU from the DHCP server will be set as the
+                                MTU of the device.
+                              type: boolean
+                            useNTP:
+                              description: |-
+                                UseNTP when `true`, the NTP servers from the DHCP server will be used
+                                by systemd-timesyncd and take precedence.
+                              type: boolean
+                            useRoutes:
+                              description: |-
+                                UseRoutes when `true`, the routes from the DHCP server will be installed
+                                in the routing table.
+                              type: string
+                          type: object
+                        dhcp6:
+                          description: |-
+                            DHCP6 is a flag that indicates whether or not to use DHCP for IPv6
+                            on this device.
+                            If true then IPAddrs should not contain any IPv6 addresses.
+                          type: boolean
+                        dhcp6Overrides:
+                          description: |-
+                            DHCP6Overrides allows for the control over several DHCP behaviors.
+                            Overrides will only be applied when the corresponding DHCP flag is set.
+                            Only configured values will be sent, omitted values will default to
+                            distribution defaults.
+                            Dependent on support in the network stack for your distribution.
+                            For more information see the netplan reference (https://netplan.io/reference#dhcp-overrides)
+                          properties:
+                            hostname:
+                              description: |-
+                                Hostname is the name which will be sent to the DHCP server instead of
+                                the machine's hostname.
+                              type: string
+                            routeMetric:
+                              description: |-
+                                RouteMetric is used to prioritize routes for devices. A lower metric for
+                                an interface will have a higher priority.
+                              type: integer
+                            sendHostname:
+                              description: |-
+                                SendHostname when `true`, the hostname of the machine will be sent to the
+                                DHCP server.
+                              type: boolean
+                            useDNS:
+                              description: |-
+                                UseDNS when `true`, the DNS servers in the DHCP server will be used and
+                                take precedence.
+                              type: boolean
+                            useDomains:
+                              description: |-
+                                UseDomains can take the values `true`, `false`, or `route`. When `true`,
+                                the domain name from the DHCP server will be used as the DNS search
+                                domain for this device. When `route`, the domain name from the DHCP
+                                response will be used for routing DNS only, not for searching.
+                              type: string
+                            useHostname:
+                              description: |-
+                                UseHostname when `true`, the hostname from the DHCP server will be set
+                                as the transient hostname of the machine.
+                              type: boolean
+                            useMTU:
+                              description: |-
+                                UseMTU when `true`, the MTU from the DHCP server will be set as the
+                                MTU of the device.
+                              type: boolean
+                            useNTP:
+                              description: |-
+                                UseNTP when `true`, the NTP servers from the DHCP server will be used
+                                by systemd-timesyncd and take precedence.
+                              type: boolean
+                            useRoutes:
+                              description: |-
+                                UseRoutes when `true`, the routes from the DHCP server will be installed
+                                in the routing table.
+                              type: string
+                          type: object
+                        gateway4:
+                          description: |-
+                            Gateway4 is the IPv4 gateway used by this device.
+                            Required when DHCP4 is false.
+                          type: string
+                        gateway6:
+                          description: Gateway4 is the IPv4 gateway used by this device.
+                          type: string
+                        ipAddrs:
+                          description: |-
+                            IPAddrs is a list of one or more IPv4 and/or IPv6 addresses to assign
+                            to this device. IP addresses must also specify the segment length in
+                            CIDR notation.
+                            Required when DHCP4, DHCP6 and SkipIPAllocation are false.
+                          items:
+                            type: string
+                          type: array
+                        macAddr:
+                          description: |-
+                            MACAddr is the MAC address used by this device.
+                            It is generally a good idea to omit this field and allow a MAC address
+                            to be generated.
+                            Please note that this value must use the VMware OUI to work with the
+                            in-tree vSphere cloud provider.
+                          type: string
+                        mtu:
+                          description: MTU is the device’s Maximum Transmission Unit
+                            size in bytes.
+                          format: int64
+                          type: integer
+                        nameservers:
+                          description: |-
+                            Nameservers is a list of IPv4 and/or IPv6 addresses used as DNS
+                            nameservers.
+                            Please note that Linux allows only three nameservers (https://linux.die.net/man/5/resolv.conf).
+                          items:
+                            type: string
+                          type: array
+                        networkName:
+                          description: |-
+                            NetworkName is the name, managed object reference or the managed
+                            object ID of the vSphere network to which the device will be connected.
+                          type: string
+                        routes:
+                          description: Routes is a list of optional, static routes
+                            applied to the device.
+                          items:
+                            description: NetworkRouteSpec defines a static network
+                              route.
+                            properties:
+                              metric:
+                                description: Metric is the weight/priority of the
+                                  route.
+                                format: int32
+                                type: integer
+                              to:
+                                description: To is an IPv4 or IPv6 address.
+                                type: string
+                              via:
+                                description: Via is an IPv4 or IPv6 address.
+                                type: string
+                            required:
+                            - metric
+                            - to
+                            - via
+                            type: object
+                          type: array
+                        searchDomains:
+                          description: |-
+                            SearchDomains is a list of search domains used when resolving IP
+                            addresses with DNS.
+                          items:
+                            type: string
+                          type: array
+                        skipIPAllocation:
+                          description: |-
+                            SkipIPAllocation allows the device to not have IP address or DHCP configured.
+                            This is suitable for devices for which IP allocation is handled externally, eg. using Multus CNI.
+                            If true, CAPV will not verify IP address allocation.
+                          type: boolean
+                      required:
+                      - networkName
+                      type: object
+                    type: array
+                  preferredAPIServerCidr:
+                    description: |-
+                      PreferredAPIServeCIDR is the preferred CIDR for the Kubernetes API
+                      server endpoint on this machine
+
+                      Deprecated: This field is going to be removed in a future release.
+                    type: string
+                  routes:
+                    description: |-
+                      Routes is a list of optional, static routes applied to the virtual
+                      machine.
+                    items:
+                      description: NetworkRouteSpec defines a static network route.
+                      properties:
+                        metric:
+                          description: Metric is the weight/priority of the route.
+                          format: int32
+                          type: integer
+                        to:
+                          description: To is an IPv4 or IPv6 address.
+                          type: string
+                        via:
+                          description: Via is an IPv4 or IPv6 address.
+                          type: string
+                      required:
+                      - metric
+                      - to
+                      - via
+                      type: object
+                    type: array
+                required:
+                - devices
+                type: object
+              numCPUs:
+                description: |-
+                  NumCPUs is the number of virtual processors in a virtual machine.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int32
+                type: integer
+              numCoresPerSocket:
+                description: |-
+                  NumCoresPerSocket is the number of cores among which to distribute CPUs in this
+                  virtual machine.
+                  Defaults to the eponymous property value in the template from which the
+                  virtual machine is cloned.
+                format: int32
+                type: integer
+              os:
+                description: |-
+                  OS is the Operating System of the virtual machine
+                  Defaults to Linux
+                type: string
+              pciDevices:
+                description: PciDevices is the list of pci devices used by the virtual
+                  machine.
+                items:
+                  description: PCIDeviceSpec defines virtual machine's PCI configuration.
+                  properties:
+                    customLabel:
+                      description: |-
+                        CustomLabel is the hardware label of a virtual machine's PCI device.
+                        Defaults to the eponymous property value in the template from which the
+                        virtual machine is cloned.
+                      type: string
+                    deviceId:
+                      description: |-
+                        DeviceID is the device ID of a virtual machine's PCI, in integer.
+                        Defaults to the eponymous property value in the template from which the
+                        virtual machine is cloned.
+                        Mutually exclusive with VGPUProfile as VGPUProfile and DeviceID + VendorID
+                        are two independent ways to define PCI devices.
+                      format: int32
+                      type: integer
+                    vGPUProfile:
+                      description: |-
+                        VGPUProfile is the profile name of a virtual machine's vGPU, in string.
+                        Defaults to the eponymous property value in the template from which the
+                        virtual machine is cloned.
+                        Mutually exclusive with DeviceID and VendorID as VGPUProfile and DeviceID + VendorID
+                        are two independent ways to define PCI devices.
+                      type: string
+                    vendorId:
+                      description: |-
+                        VendorId is the vendor ID of a virtual machine's PCI, in integer.
+                        Defaults to the eponymous property value in the template from which the
+                        virtual machine is cloned.
+                        Mutually exclusive with VGPUProfile as VGPUProfile and DeviceID + VendorID
+                        are two independent ways to define PCI devices.
+                      format: int32
+                      type: integer
+                  type: object
+                type: array
+              powerOffMode:
+                default: hard
+                description: |-
+                  PowerOffMode describes the desired behavior when powering off a VM.
+
+                  There are three, supported power off modes: hard, soft, and
+                  trySoft. The first mode, hard, is the equivalent of a physical
+                  system's power cord being ripped from the wall. The soft mode
+                  requires the VM's guest to have VM Tools installed and attempts to
+                  gracefully shut down the VM. Its variant, trySoft, first attempts
+                  a graceful shutdown, and if that fails or the VM is not in a powered off
+                  state after reaching the GuestSoftPowerOffTimeout, the VM is halted.
+
+                  If omitted, the mode defaults to hard.
+                enum:
+                - hard
+                - soft
+                - trySoft
+                type: string
+              resourcePool:
+                description: |-
+                  ResourcePool is the name, inventory path, managed object reference or the managed
+                  object ID in which the virtual machine is created/located.
+                type: string
+              resources:
+                description: |-
+                  resources is the definition of the VM's cpu and memory
+                  reservations, limits and shares.
+                minProperties: 1
+                properties:
+                  limits:
+                    description: |-
+                      limits is the definition of the VM's cpu (in hertz, rounded up to the nearest MHz)
+                      and memory (in bytes, rounded up to the nearest MiB) limits
+                    minProperties: 1
+                    properties:
+                      cpu:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: cpu is the definition of the cpu quantity for
+                          the given VM hardware policy
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      memory:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: memory is the definition of the memory quantity
+                          for the given VM hardware policy
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                    type: object
+                  requests:
+                    description: |-
+                      requests is the definition of the VM's cpu (in hertz, rounded up to the nearest MHz)
+                      and memory (in bytes, rounded up to the nearest MiB) reservations
+                    minProperties: 1
+                    properties:
+                      cpu:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: cpu is the definition of the cpu quantity for
+                          the given VM hardware policy
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      memory:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: memory is the definition of the memory quantity
+                          for the given VM hardware policy
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                    type: object
+                  shares:
+                    description: shares is the definition of the VM's cpu and memory
+                      shares
+                    minProperties: 1
+                    properties:
+                      cpu:
+                        description: cpu is the number of spu shares to assign to
+                          the VM
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      memory:
+                        description: memory is the number of memory shares to assign
+                          to the VM
+                        format: int32
+                        minimum: 1
+                        type: integer
+                    type: object
+                type: object
+              server:
+                description: |-
+                  Server is the IP address or FQDN of the vSphere server on which
+                  the virtual machine is created/located.
+                type: string
+              snapshot:
+                description: |-
+                  Snapshot is the name of the snapshot from which to create a linked clone.
+                  This field is ignored if LinkedClone is not enabled.
+                  Defaults to the source's current snapshot.
+                type: string
+              storagePolicyName:
+                description: |-
+                  StoragePolicyName of the storage policy to use with this
+                  Virtual Machine
+                type: string
+              tagIDs:
+                description: |-
+                  TagIDs is an optional set of tags to add to an instance. Specified tagIDs
+                  must use URN-notation instead of display names.
+                items:
+                  type: string
+                type: array
+              template:
+                description: |-
+                  Template is the name, inventory path, managed object reference or the managed
+                  object ID of the template used to clone the virtual machine.
+                minLength: 1
+                type: string
+              thumbprint:
+                description: |-
+                  Thumbprint is the colon-separated SHA-1 checksum of the given vCenter server's host certificate
+                  When this is set to empty, this VirtualMachine would be created
+                  without TLS certificate validation of the communication between Cluster API Provider vSphere
+                  and the VMware vCenter server.
+                type: string
+            required:
+            - network
+            - template
+            type: object
+          status:
+            description: VSphereVMStatus defines the observed state of VSphereVM.
+            properties:
+              addresses:
+                description: |-
+                  Addresses is a list of the VM's IP addresses.
+                  This field is required at runtime for other controllers that read
+                  this CRD as unstructured data.
+                items:
+                  type: string
+                type: array
+              cloneMode:
+                description: |-
+                  CloneMode is the type of clone operation used to clone this VM. Since
+                  LinkedMode is the default but fails gracefully if the source of the
+                  clone has no snapshots, this field may be used to determine the actual
+                  type of clone operation used to create this VM.
+                type: string
+              conditions:
+                description: Conditions defines current service state of the VSphereVM.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This field may be empty.
+                      maxLength: 10240
+                      minLength: 1
+                      type: string
+                    reason:
+                      description: |-
+                        reason is the reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may be empty.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                    severity:
+                      description: |-
+                        severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      maxLength: 32
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: |-
+                  FailureMessage will be set in the event that there is a terminal problem
+                  reconciling the vspherevm and will contain a more verbose string suitable
+                  for logging and human consumption.
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the vm.
+
+                  Any transient errors that occur during the reconciliation of vspherevms
+                  can be added as events to the vspherevm object and/or logged in the
+                  controller's output.
+                type: string
+              failureReason:
+                description: |-
+                  FailureReason will be set in the event that there is a terminal problem
+                  reconciling the vspherevm and will contain a succinct value suitable
+                  for vm interpretation.
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the vm.
+
+                  Any transient errors that occur during the reconciliation of vspherevms
+                  can be added as events to the vspherevm object and/or logged in the
+                  controller's output.
+                type: string
+              host:
+                description: |-
+                  Host describes the hostname or IP address of the infrastructure host
+                  that the VSphereVM is residing on.
+                type: string
+              moduleUUID:
+                description: |-
+                  ModuleUUID is the unique identifier for the vCenter cluster module construct
+                  which is used to configure anti-affinity. Objects with the same ModuleUUID
+                  will be anti-affined, meaning that the vCenter DRS will best effort schedule
+                  the VMs on separate hosts.
+                type: string
+              network:
+                description: |-
+                  Network returns the network status for each of the machine's configured
+                  network interfaces.
+                items:
+                  description: NetworkStatus provides information about one of a VM's
+                    networks.
+                  properties:
+                    connected:
+                      description: |-
+                        Connected is a flag that indicates whether this network is currently
+                        connected to the VM.
+                      type: boolean
+                    ipAddrs:
+                      description: IPAddrs is one or more IP addresses reported by
+                        vm-tools.
+                      items:
+                        type: string
+                      type: array
+                    macAddr:
+                      description: MACAddr is the MAC address of the network device.
+                      type: string
+                    networkName:
+                      description: NetworkName is the name of the network.
+                      type: string
+                  required:
+                  - macAddr
+                  type: object
+                type: array
+              ready:
+                description: |-
+                  Ready is true when the provider resource is ready.
+                  This field is required at runtime for other controllers that read
+                  this CRD as unstructured data.
+                type: boolean
+              retryAfter:
+                description: RetryAfter tracks the time we can retry queueing a task
+                format: date-time
+                type: string
+              snapshot:
+                description: |-
+                  Snapshot is the name of the snapshot from which the VM was cloned if
+                  LinkedMode is enabled.
+                type: string
+              taskRef:
+                description: |-
+                  TaskRef is a managed object reference to a Task related to the machine.
+                  This value is set automatically at runtime and should not be set or
+                  modified by users.
+                type: string
+              v1beta2:
+                description: v1beta2 groups all the fields that will be added or modified
+                  in VSphereVM's status with the V1Beta2 version.
+                properties:
+                  conditions:
+                    description: |-
+                      conditions represents the observations of a VSphereVM's current state.
+                      Known condition types are Ready, VirtualMachineProvisioned, VCenterAvailable and IPAddressClaimsFulfilled,
+                      GuestSoftPowerOffSucceeded, PCIDevicesDetached and Paused.
+                    items:
+                      description: Condition contains details for one aspect of the
+                        current state of this API Resource.
+                      properties:
+                        lastTransitionTime:
+                          description: |-
+                            lastTransitionTime is the last time the condition transitioned from one status to another.
+                            This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                          format: date-time
+                          type: string
+                        message:
+                          description: |-
+                            message is a human readable message indicating details about the transition.
+                            This may be an empty string.
+                          maxLength: 32768
+                          type: string
+                        observedGeneration:
+                          description: |-
+                            observedGeneration represents the .metadata.generation that the condition was set based upon.
+                            For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                            with respect to the current state of the instance.
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        reason:
+                          description: |-
+                            reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                            Producers of specific condition types may define expected values and meanings for this field,
+                            and whether the values are considered a guaranteed API.
+                            The value should be a CamelCase string.
+                            This field may not be empty.
+                          maxLength: 1024
+                          minLength: 1
+                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                          type: string
+                        status:
+                          description: status of the condition, one of True, False,
+                            Unknown.
+                          enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                          type: string
+                        type:
+                          description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                          maxLength: 316
+                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                          type: string
+                      required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                      type: object
+                    maxItems: 32
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
+                type: object
+              vmRef:
+                description: |-
+                  VMRef is the VM's Managed Object Reference on vSphere. It can be used by consumers
+                  to programatically get this VM representation on vSphere in case of the need to retrieve informations.
+                  This field is set once the machine is created and should not be changed
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
