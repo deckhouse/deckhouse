@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package resolver
 
 import (
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -102,6 +103,67 @@ func (c *ResourceScopeCache) HasNamespacedResourceMatching(apiGroups, resources 
 	}
 
 	return false
+}
+
+// GroupResource is a discovered resource identified by its API group and name.
+// Name may carry a subresource ("pods/log"), mirroring discovery output.
+type GroupResource struct {
+	Group      string
+	Resource   string
+	Namespaced bool
+}
+
+// ResourcesMatching returns the discovered resources matched by the RBAC
+// apiGroups and resources fields of a single PolicyRule.
+//
+// It is the expansion counterpart of HasNamespacedResourceMatching: instead of
+// answering "does anything match", it enumerates what matches, so a wildcard
+// rule can be turned into concrete rows. Matching uses the same semantics as
+// Kubernetes RBAC, including "*/subresource" rules.
+//
+// Subresources are only returned when the rule names them explicitly (either
+// as "resource/subresource" or "*/subresource"): a bare "*" resources rule
+// grants top-level resources, and listing every subresource of the cluster
+// would bury the meaningful rows.
+//
+// The result is sorted for deterministic output.
+func (c *ResourceScopeCache) ResourcesMatching(apiGroups, resources []string) []GroupResource {
+	wantsSubresources := false
+	for _, ruleResource := range resources {
+		if strings.Contains(ruleResource, "/") {
+			wantsSubresources = true
+			break
+		}
+	}
+
+	c.mu.RLock()
+	matched := make([]GroupResource, 0, len(c.scopeMap))
+	for key, namespaced := range c.scopeMap {
+		group, resource, ok := strings.Cut(key, "/")
+		if !ok {
+			continue
+		}
+		if !wantsSubresources && strings.Contains(resource, "/") {
+			continue
+		}
+		if !matchesAPIGroup(apiGroups, group) {
+			continue
+		}
+		if !matchesResource(resources, resource) {
+			continue
+		}
+		matched = append(matched, GroupResource{Group: group, Resource: resource, Namespaced: namespaced})
+	}
+	c.mu.RUnlock()
+
+	slices.SortFunc(matched, func(a, b GroupResource) int {
+		if cmp := strings.Compare(a.Group, b.Group); cmp != 0 {
+			return cmp
+		}
+		return strings.Compare(a.Resource, b.Resource)
+	})
+
+	return matched
 }
 
 func matchesAPIGroup(ruleGroups []string, group string) bool {
