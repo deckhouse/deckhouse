@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -48,6 +49,9 @@ const (
 	instanceTypesCatalogName = "for-cluster-autoscaler"
 	instanceClassGroup       = "deckhouse.io"
 	instanceClassVersion     = "v1alpha1"
+
+	apiserverPodNamespace  = "kube-system"
+	apiserverVersionAnnKey = "control-plane-manager.deckhouse.io/kubernetes-version"
 )
 
 func (s *Service) readCloudProviderData(ctx context.Context) map[string]interface{} {
@@ -129,23 +133,41 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 	return target, cfg.DefaultCRI
 }
 
+// readControlPlaneMinVersion returns the lowest version among the running kube-apiservers,
+// taken from the annotation control-plane-manager stamps on their static pod manifests
+// (candi/control-plane/kube-apiserver.yaml.tpl) and reads back itself
+// (040-control-plane-manager/hooks/effective_kubernetes_version.go:147).
+//
+// It must be the apiserver version, never the kubelet version of the control-plane Nodes:
+// the clamp it feeds decides which kubelet package bashible installs, master NodeGroup
+// included, so clamping by kubelet would make the value bound itself. control-plane-manager
+// in turn refuses to advance the control plane past the node kubelets, so the two would
+// wedge each other and no Kubernetes minor upgrade could ever complete. The apiserver
+// legitimately leads kubelet by one minor, which is exactly what this clamp allows.
 func (s *Service) readControlPlaneMinVersion(ctx context.Context) *semver.Version {
-	nodeList := &corev1.NodeList{}
-	if err := s.Client.List(ctx, nodeList, client.MatchingLabels{"node-role.kubernetes.io/control-plane": ""}); err != nil {
+	pods := &corev1.PodList{}
+	if err := s.Client.List(ctx, pods,
+		client.InNamespace(apiserverPodNamespace),
+		client.MatchingLabels{"component": "kube-apiserver", "tier": "control-plane"},
+	); err != nil {
 		return nil
 	}
 
-	var min *semver.Version
-	for i := range nodeList.Items {
-		ver, err := semver.NewVersion(nodeList.Items[i].Status.NodeInfo.KubeletVersion)
+	var minVer *semver.Version
+	for i := range pods.Items {
+		raw, ok := pods.Items[i].GetAnnotations()[apiserverVersionAnnKey]
+		if !ok {
+			continue
+		}
+		ver, err := semver.NewVersion(raw)
 		if err != nil {
 			continue
 		}
-		if min == nil || min.GreaterThan(ver) {
-			min = ver
+		if minVer == nil || minVer.GreaterThan(ver) {
+			minVer = ver
 		}
 	}
-	return min
+	return minVer
 }
 
 func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string]interface{}) []string {
@@ -184,6 +206,11 @@ func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string
 	case string:
 		add(v)
 	}
+	// Sorted because the result is published verbatim in the bashible context blob: the
+	// MachineDeployment List comes back in cache map-iteration order, so an unsorted slice
+	// would differ on every pass and rewrite the context Secret (and rebuild every bashible
+	// step) for no reason. get_crds does the same via set.Slice().
+	sort.Strings(zones)
 	return zones
 }
 

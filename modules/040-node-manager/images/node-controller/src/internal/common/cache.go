@@ -46,13 +46,15 @@ func CacheOptions() (cache.Options, client.Options) {
 		"cluster.x-k8s.io/provider": "cluster-api",
 	})
 
-	// Only apps whose Secrets are actually read: the bashible context Secret and its inputs.
-	// A label with no reader still costs a watch and, worse, wakes the context assembly on
-	// every change of an unrelated Secret.
+	// capi-controller-manager is here for the watch, not for a read: capi-webhook-tls carries
+	// that label, and crdmigration re-stamps the CAPI CRDs' conversion caBundle on its events
+	// (crdmigration/controller.go:112). The Secret itself is read live via APIReader, so
+	// grepping for cached reads does not show this consumer — dropping the label silently
+	// leaves the caBundle stale until the next node-controller restart.
 	machineNSSecretReq, _ := labels.NewRequirement(
 		"app",
 		selection.In,
-		[]string{"bashible-apiserver", "node-controller", "registry-packages-proxy"},
+		[]string{"bashible-apiserver", "node-controller", "capi-controller-manager", "registry-packages-proxy"},
 	)
 	machineNSSecretSelector := labels.NewSelector().Add(*machineNSSecretReq)
 
@@ -166,7 +168,7 @@ func stripNodeHeavyFields(obj interface{}) {
 		return
 	}
 	node.Status.Images = nil
-	node.Status.NodeInfo = corev1.NodeSystemInfo{KubeletVersion: node.Status.NodeInfo.KubeletVersion}
+	node.Status.NodeInfo = corev1.NodeSystemInfo{}
 	node.Status.Addresses = nil
 	node.Status.Capacity = nil
 	node.Status.Allocatable = nil
