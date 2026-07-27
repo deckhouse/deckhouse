@@ -177,18 +177,29 @@ func TestReleaseChainToTargetComplete(t *testing.T) {
 			want: true,
 		},
 		{
-			// NB: mirrors the fetcher's from-to leniency - a parseable from-to rule on
-			// the higher release bridges the gap even when its [from,to) window does not
-			// actually cover the deployed version (isUpdatingSequenceWithFromTo returns
-			// nil on no-match). Kept consistent on purpose so the guard closes exactly
-			// when the fetch would no-op; see the note in the review.
-			name:   "from-to rule present bridges regardless of window",
+			// a from-to window that does not cover the deployed version does NOT bridge
+			// the gap: the release updater refuses the jump (deployed < from), so the
+			// chain must be reported incomplete and the intermediate releases fetched
+			name:   "from-to window does not cover deployed - not bridged",
 			target: "v1.55.1",
 			releases: []*v1alpha1.ModuleRelease{
 				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
 				moduleReleaseFromTo("1.55.1", v1alpha1.ModuleReleasePhasePending, "1.53", "1.55"),
 			},
-			want: true,
+			want: false,
+		},
+		{
+			// the reported incident: a from-to whose "to" (2.0) overshoots the release's
+			// own minor (1.55). The release updater ignores such a rule (release
+			// major.minor != to), so the source controller must too - report the chain
+			// incomplete and fetch the missing 1.53/1.54 instead of freezing
+			name:   "from-to to overshoots release minor - not bridged",
+			target: "v1.55.1",
+			releases: []*v1alpha1.ModuleRelease{
+				moduleRelease("1.52.0", v1alpha1.ModuleReleasePhaseDeployed),
+				moduleReleaseFromTo("1.55.1", v1alpha1.ModuleReleasePhasePending, "1.40", "2.0"),
+			},
+			want: false,
 		},
 		{
 			name:   "one intermediate minor missing",
