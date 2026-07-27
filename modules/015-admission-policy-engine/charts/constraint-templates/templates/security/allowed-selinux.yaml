@@ -68,6 +68,8 @@ spec:
               import data.lib.common.has_field
               import data.lib.common.input_containers
               import data.lib.common.pod_spec
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_for_container
               import data.lib.exception.resolve_spe_from_labels
@@ -76,8 +78,8 @@ spec:
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 has_field(pod_spec.securityContext, "seLinuxOptions")
-                labels := object.get(input.review.object.metadata, "labels", {})
-                spe := resolve_spe_from_labels(labels, input.review.object.metadata.namespace)
+                labels := object_labels
+                spe := resolve_spe_from_labels(labels, object_namespace)
                 spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "seLinuxOptions", "allowedValues"])
                 result := check_partial_match_in_list(
                   pod_spec.securityContext.seLinuxOptions,
@@ -96,8 +98,8 @@ spec:
                 not input.review.operation == "DELETE"
                 c := input_security_context[_]
                 has_field(c.securityContext, "seLinuxOptions")
-                labels := object.get(input.review.object.metadata, "labels", {})
-                spe := resolve_spe_for_container(c, labels, input.review.object.metadata.namespace)
+                labels := object_labels
+                spe := resolve_spe_for_container(c, labels, object_namespace)
                 spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "seLinuxOptions", "allowedValues"])
                 result := check_partial_match_in_list(
                   c.securityContext.seLinuxOptions,
