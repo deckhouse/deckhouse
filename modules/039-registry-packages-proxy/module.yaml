@@ -8,3 +8,14 @@ descriptions:
   en: Provides an in-cluster HTTP proxy service for accessing packages from container registries.
   ru: Предоставляет сервис HTTP-прокси внутри кластера для доступа к пакетам из хранилищ образов контейнеров.
 stage: General Availability
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+    cse:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
