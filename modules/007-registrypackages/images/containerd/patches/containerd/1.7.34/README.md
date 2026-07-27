@@ -1,7 +1,7 @@
 # Patches
 
 ## 000-gomod.patch
-Fixed [CVE-2026-35469](https://github.com/deckhouse/deckhouse/pull/19791)
+Use Go 1.26.5 to cover Stdlib v1.25.11 CVE-2026-39822
 
 ## 002-hosts-rewrite.patch
 Adds ability to rewrite path (repository) part for mirror defined in containerd [host](https://github.com/containerd/containerd/blob/v1.7.24/docs/hosts.md) configuration.
