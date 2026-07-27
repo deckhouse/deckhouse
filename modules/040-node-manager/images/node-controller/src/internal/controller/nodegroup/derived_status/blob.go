@@ -25,7 +25,6 @@ import (
 )
 
 var nodeGroupForValuesKeys = []string{
-	"nodeType",
 	"cri",
 	"gpu",
 	"staticInstances",
@@ -56,7 +55,7 @@ func BuildNodeGroupBlob(in BlobInput, r Result) map[string]interface{} {
 		if !ok {
 			continue
 		}
-		if key != "nodeType" && isEmptyBlobValue(val) {
+		if isEmptyBlobValue(val) {
 			continue
 		}
 		blob[key] = val

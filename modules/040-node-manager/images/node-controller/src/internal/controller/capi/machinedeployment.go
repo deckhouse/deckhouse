@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -308,8 +307,7 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 }
 
 // buildStaticMD renders the cluster.x-k8s.io/v1beta2 MachineDeployment for a
-// Static/CloudStatic NodeGroup. Extracted so the live reconcileStaticMD and the
-// rendered-cutover reconcileStaticMDRendered build byte-identical objects.
+// Static/CloudStatic NodeGroup.
 func buildStaticMD(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
 	var replicas int32
 	if ng.Spec.StaticInstances.Count != nil {
@@ -377,7 +375,6 @@ type cloudProviderConfig struct {
 	capiMachineTemplateKind        string
 	capiMachineTemplateAPIVersion  string
 	capiMachineDeploymentSpecPatch string
-	zones                          []string
 }
 
 func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Context) (*cloudProviderConfig, error) {
@@ -399,9 +396,6 @@ func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Contex
 	}
 	if cfg.capiMachineTemplateAPIVersion == "" {
 		cfg.capiMachineTemplateAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
-	}
-	if raw := secret.Data["zones"]; len(raw) > 0 {
-		_ = json.Unmarshal(raw, &cfg.zones)
 	}
 	return cfg, nil
 }

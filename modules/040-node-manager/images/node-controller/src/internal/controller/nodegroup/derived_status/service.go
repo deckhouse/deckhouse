@@ -80,7 +80,7 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	logger := log.FromContext(ctx)
 
 	result := Result{
-		Engine:           s.computeEngine(ng, cloudProvider),
+		Engine:           ComputeEngine(ng, cloudProvider),
 		SerializedLabels: serializeLabels(ng),
 		SerializedTaints: serializeTaints(ng),
 	}
@@ -134,8 +134,7 @@ func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, clou
 	instanceClassSpec, err := s.readInstanceClassSpec(ctx, kind, name)
 	if err != nil || instanceClassSpec == nil {
 		if err != nil {
-			// TEMP dev observability: Info (was V(1)) while stabilising the path.
-			logger.Info("instance class not found, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name, "error", err.Error())
+			logger.V(1).Info("instance class not found, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name, "error", err.Error())
 		}
 		return
 	}

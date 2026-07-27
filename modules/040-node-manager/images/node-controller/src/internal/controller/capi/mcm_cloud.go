@@ -321,7 +321,7 @@ func setNodeGroupLabel(obj *unstructured.Unstructured, ngName string) {
 func (r *MachineDeploymentReconciler) mcmDesiredReplicas(ctx context.Context, mdName string, minReplicas, maxReplicas int32) (int64, error) {
 	existing := newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment")
 	// Read spec.replicas LIVE (APIReader), not from the informer cache — see the identical
-	// reasoning in capiDesiredReplicas. MCM is the more dangerous of the two engines here:
+	// reasoning in readExistingCAPIMachineDeployment. MCM is the more dangerous of the two engines here:
 	// it has no mutating webhook to re-default the field, so a stale cached read that stomps
 	// a fresh autoscaler value has no safety net. A live GET keeps the read-modify-write
 	// window at microseconds.

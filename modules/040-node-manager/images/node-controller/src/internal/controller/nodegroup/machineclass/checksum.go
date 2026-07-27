@@ -22,7 +22,7 @@ import (
 	"text/template"
 )
 
-func BuildChecksumElement(instanceClass map[string]interface{}, manualRolloutID string) map[string]interface{} {
+func buildChecksumElement(instanceClass map[string]interface{}, manualRolloutID string) map[string]interface{} {
 	return map[string]interface{}{
 		"instanceClass":   instanceClass,
 		"manualRolloutID": manualRolloutID,

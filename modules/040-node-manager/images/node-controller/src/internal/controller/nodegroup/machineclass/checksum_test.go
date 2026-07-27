@@ -127,7 +127,7 @@ func TestRenderChecksum_AWSDefaultDiskSizeExcluded(t *testing.T) {
 	assert.Equal(t, b, a, "default diskSizeGb=20 is excluded, so checksum must not change")
 }
 
-func TestBuildChecksumElement_OnlyInstanceClassAndRolloutMatter(t *testing.T) {
+func TestChecksumDependsOnlyOnInstanceClassAndRollout(t *testing.T) {
 	awsTmpl, err := os.ReadFile(awsChecksumTemplatePath)
 	require.NoError(t, err)
 	yandexTmpl, err := os.ReadFile(yandexCAPIChecksumTemplatePath)
@@ -162,7 +162,7 @@ func TestBuildChecksumElement_OnlyInstanceClassAndRolloutMatter(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			minimal := BuildChecksumElement(tc.ic, "rollout-9")
+			minimal := buildChecksumElement(tc.ic, "rollout-9")
 
 			full := map[string]interface{}{
 				"instanceClass":     tc.ic,

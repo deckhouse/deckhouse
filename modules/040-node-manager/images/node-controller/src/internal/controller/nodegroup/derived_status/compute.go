@@ -51,10 +51,6 @@ var epochTimestampAccessor = func() int64 {
 	return time.Now().Unix()
 }
 
-func (s *Service) computeEngine(ng *v1.NodeGroup, cloudProvider map[string]interface{}) string {
-	return ComputeEngine(ng, cloudProvider)
-}
-
 // ComputeEngine resolves the machine engine for a NodeGroup: status.engine is the pin when
 // already set; otherwise it is derived from the cloud-provider capabilities and the use-mcm
 // annotation. Exposed so the MachineDeployment controller can act on a freshly created

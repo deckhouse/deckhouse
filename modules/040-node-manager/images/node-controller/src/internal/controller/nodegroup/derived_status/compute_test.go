@@ -141,8 +141,7 @@ func TestComputeEngine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			s := &Service{}
-			assert.Equal(t, tc.want, s.computeEngine(tc.ng, tc.cloudProvider))
+			assert.Equal(t, tc.want, ComputeEngine(tc.ng, tc.cloudProvider))
 		})
 	}
 }

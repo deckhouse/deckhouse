@@ -23,11 +23,12 @@ import (
 	"text/template"
 )
 
-func genFuncMap() template.FuncMap {
+// machineClassFuncMap is stateless, so it is built once instead of on every render.
+var machineClassFuncMap = func() template.FuncMap {
 	f := FuncMap()
 	f["include"] = renderInclude
 	return f
-}
+}()
 
 func renderInclude(name string, data interface{}) (string, error) {
 	switch name {
@@ -69,7 +70,7 @@ func renderModuleLabels(data interface{}) (string, error) {
 }
 
 func RenderMachineClass(templateContent []byte, ctx map[string]interface{}) ([]byte, error) {
-	t, err := template.New("machine-class.yaml").Funcs(genFuncMap()).Parse(string(templateContent))
+	t, err := template.New("machine-class.yaml").Funcs(machineClassFuncMap).Parse(string(templateContent))
 	if err != nil {
 		return nil, fmt.Errorf("parse machine-class template: %w", err)
 	}

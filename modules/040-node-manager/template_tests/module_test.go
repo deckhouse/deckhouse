@@ -84,10 +84,6 @@ internal:
     ca: string
     key: string
     crt: string
-  allowedBundles:
-    - "ubuntu-lts"
-    - "centos"
-    - "debian"
 `
 
 const nodeManagerAWS = `
