@@ -35,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
-	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 )
 
@@ -314,34 +313,60 @@ func (r *reconciler) releaseChainToTargetComplete(ctx context.Context, moduleNam
 // isSequentialReleasePair reports whether an update may proceed directly from the
 // lower release to the higher one, without any release in between: either the versions
 // are naturally adjacent (isUpdatingSequence) or the higher release declares a from-to
-// transition rule (UpdateSpec) that covers the lower version. This is the single rule
-// used both to decide whether the in-cluster chain is complete
+// transition rule that targets the higher release itself and admits the lower version.
+// This is the single rule used both to decide whether the in-cluster chain is complete
 // (releaseChainToTargetComplete) and to pick the starting point of the step-by-step
 // fetch (ensureReleases), so the two never disagree about what counts as a gap.
+//
+// The from-to rule matches the one the release updater enforces before it deploys a
+// jump (releaseupdater.getFirstCompliantRelease): a constraint bridges the gap only when
+// it points at this very release (its major.minor equals "to") and covers the lower
+// version (lower is within [from, to)). Keeping the two sides identical is what stops
+// the source controller from reporting a chain complete that the updater then refuses to
+// walk - the mismatch that left a module stuck in Pending with a from-to whose "to"
+// overshoots the release's own minor.
 func isSequentialReleasePair(lower, higher *v1alpha1.ModuleRelease) bool {
-	if isUpdatingSequence(lower.GetVersion(), higher.GetVersion()) {
+	lowerVersion, higherVersion := lower.GetVersion(), higher.GetVersion()
+	if isUpdatingSequence(lowerVersion, higherVersion) {
 		return true
 	}
 
 	// the from-to rule is declared on the constrained (higher/"to") release
 	spec := higher.GetUpdateSpec()
-	if spec == nil || len(spec.Versions) == 0 {
+	if spec == nil {
 		return false
 	}
 
-	return isUpdatingSequenceWithFromTo(lower.GetVersion(), updateConstraintsToVersions(spec.Versions)) == nil
-}
-
-// updateConstraintsToVersions adapts the in-cluster from-to constraints stored on a
-// ModuleRelease to the shape consumed by isUpdatingSequenceWithFromTo, which is also
-// fed the same rules coming from freshly downloaded module definitions in the fetcher.
-func updateConstraintsToVersions(constraints []v1alpha1.UpdateConstraint) []moduletypes.ModuleUpdateVersion {
-	out := make([]moduletypes.ModuleUpdateVersion, len(constraints))
-	for i, c := range constraints {
-		out[i] = moduletypes.ModuleUpdateVersion{From: c.From, To: c.To}
+	for _, constraint := range spec.Versions {
+		if fromToBridges(lowerVersion, higherVersion, constraint) {
+			return true
+		}
 	}
 
-	return out
+	return false
+}
+
+// fromToBridges reports whether a single from-to constraint lets an update jump directly
+// onto the higher release from the lower version. It mirrors the release updater: the
+// constraint must target the higher release itself (higher major.minor equals the "to"
+// major.minor) and the lower version must fall in the half-open window [from, to). A
+// constraint that only parses but matches neither - a "to" pointing past the higher
+// release, or a window that does not cover the lower version - does not bridge.
+func fromToBridges(lower, higher *semver.Version, constraint v1alpha1.UpdateConstraint) bool {
+	to, err := semver.NewVersion(constraint.To)
+	if err != nil {
+		return false
+	}
+	if higher.Major() != to.Major() || higher.Minor() != to.Minor() {
+		return false
+	}
+
+	from, err := semver.NewVersion(constraint.From)
+	if err != nil {
+		return false
+	}
+
+	return lower.Compare(from) >= 0 && lower.Compare(to) < 0
 }
 
 // getConfiguredModuleSource returns the source explicitly selected by the operator
