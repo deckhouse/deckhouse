@@ -350,7 +350,7 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 				Data: tt.secretData,
 			}
 
-			result, err := validateKubernetesVersionDowngrade(tt.oldVersion, tt.newVersion, secret)
+			result, err := validateKubernetesVersionDowngrade(tt.oldVersion, tt.newVersion, kubernetesVersionBaselineFromSecret(secret))
 
 			if tt.expectError {
 				if err == nil {
@@ -395,7 +395,7 @@ func TestValidateKubernetesVersionDowngradeIntegration(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			result, err := validateKubernetesVersionDowngrade(tc.oldVersion, tc.newVersion, secret)
+			result, err := validateKubernetesVersionDowngrade(tc.oldVersion, tc.newVersion, kubernetesVersionBaselineFromSecret(secret))
 			if err != nil {
 				t.Errorf("unexpected error for %s -> %s: %v", tc.oldVersion, tc.newVersion, err)
 				continue

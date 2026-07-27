@@ -82,7 +82,7 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		return nil, nil
 	}
 
-	res, err := validateKubernetesVersionDowngrade(oldVersion, newVersion, secret)
+	res, err := validateKubernetesVersionDowngrade(oldVersion, newVersion, kubernetesVersionBaselineFromSecret(secret))
 	if err != nil {
 		return nil, err
 	}
