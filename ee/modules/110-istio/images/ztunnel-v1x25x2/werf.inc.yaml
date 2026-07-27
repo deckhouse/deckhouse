@@ -2,7 +2,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-fromCacheVersion: 2307202601
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/ztunnel/bin/ztunnel
