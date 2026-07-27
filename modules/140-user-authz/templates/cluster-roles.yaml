@@ -380,6 +380,19 @@
   - nodes
   verbs:
 {{- include "user_authz_verbs" "p" }}
+# Permission browser queries. The nonself subresources are what makes a review
+# about somebody else possible: they disclose another subject's permissions, so
+# they are gated separately, and a cluster administrator is their audience.
+- apiGroups:
+  - authorization.deckhouse.io
+  resources:
+  - bulksubjectaccessreviews
+  - bulksubjectaccessreviews/nonself
+  - subjectaccessreports
+  - subjectaccessreports/nonself
+  - whocans
+  verbs:
+  - create
 {{- end }}
 
 {{- define "user_authz_super_admin_rules" }}
