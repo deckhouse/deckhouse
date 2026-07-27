@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/google/uuid"
@@ -48,6 +49,15 @@ const (
 	// managedByAnnotation marks a release as owned by this service.
 	managedByAnnotation      = "packages.deckhouse.io/managed-by"
 	managedByAnnotationValue = "deckhouse"
+)
+
+const (
+	// envPackageNelmTimeout sets the timeout for every nelm release operation on the
+	// packages path. Its value is a Go duration (for example "30m") and is set on the
+	// Deckhouse deployment.
+	envPackageNelmTimeout = "PACKAGE_NELM_TIMEOUT"
+	// defaultPackageNelmTimeout applies when PACKAGE_NELM_TIMEOUT is unset or malformed.
+	defaultPackageNelmTimeout = 30 * time.Minute
 )
 
 const (
@@ -106,6 +116,7 @@ func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status 
 		nelm.WithReleaseAnnotations(map[string]string{
 			managedByAnnotation: managedByAnnotationValue,
 		}),
+		nelm.WithTimeout(packageNelmTimeout(logger)),
 	)
 
 	return &Service{
@@ -115,6 +126,29 @@ func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status 
 		monitorManager: drift.New(cache, nelmClient, callback, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
+}
+
+// packageNelmTimeout returns the timeout for every nelm release operation on the
+// packages path. It reads PACKAGE_NELM_TIMEOUT (a Go duration such as "30m") set on
+// the Deckhouse deployment; an unset or malformed value falls back to
+// defaultPackageNelmTimeout.
+func packageNelmTimeout(logger *log.Logger) time.Duration {
+	raw := os.Getenv(envPackageNelmTimeout)
+	if raw == "" {
+		return defaultPackageNelmTimeout
+	}
+
+	timeout, err := time.ParseDuration(raw)
+	if err != nil {
+		logger.Warn("invalid PACKAGE_NELM_TIMEOUT, using default",
+			slog.String("value", raw),
+			slog.Duration("default_timeout", defaultPackageNelmTimeout),
+			log.Err(err))
+
+		return defaultPackageNelmTimeout
+	}
+
+	return timeout
 }
 
 // HasMonitor checks if a release monitor exists for the given name.
