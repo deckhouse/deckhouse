@@ -1,0 +1,594 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: vspherefailuredomains.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: VSphereFailureDomain
+    listKind: VSphereFailureDomainList
+    plural: vspherefailuredomains
+    singular: vspherefailuredomain
+  scope: Cluster
+  versions:
+  - deprecated: true
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        description: |-
+          VSphereFailureDomain is the Schema for the vspherefailuredomains API
+
+          Deprecated: This type will be removed in one of the next releases.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereFailureDomainSpec defines the desired state of VSphereFailureDomain
+            properties:
+              region:
+                description: Region defines the name and type of a region
+                properties:
+                  autoConfigure:
+                    description: AutoConfigure tags the Type which is specified in
+                      the Topology
+                    type: boolean
+                  name:
+                    description: Name is the name of the tag that represents this
+                      failure domain
+                    type: string
+                  tagCategory:
+                    description: TagCategory is the category used for the tag
+                    type: string
+                  type:
+                    description: Type is the type of failure domain, the current values
+                      are "Datacenter", "ComputeCluster" and "HostGroup"
+                    enum:
+                    - Datacenter
+                    - ComputeCluster
+                    - HostGroup
+                    type: string
+                required:
+                - name
+                - tagCategory
+                - type
+                type: object
+              topology:
+                description: Topology is the what describes a given failure domain
+                  using vSphere constructs
+                properties:
+                  computeCluster:
+                    description: ComputeCluster as the failure domain
+                    type: string
+                  datacenter:
+                    description: |-
+                      The underlying infrastructure for this failure domain
+                      Datacenter as the failure domain
+                    type: string
+                  datastore:
+                    description: |-
+                      Datastore is the name or inventory path of the datastore in which the
+                      virtual machine is created/located.
+                    type: string
+                  hosts:
+                    description: Hosts has information required for placement of machines
+                      on VSphere hosts.
+                    properties:
+                      hostGroupName:
+                        description: HostGroupName is the name of the Host group
+                        type: string
+                      vmGroupName:
+                        description: VMGroupName is the name of the VM group
+                        type: string
+                    required:
+                    - hostGroupName
+                    - vmGroupName
+                    type: object
+                  networks:
+                    description: Networks is the list of networks within this failure
+                      domain
+                    items:
+                      type: string
+                    type: array
+                required:
+                - datacenter
+                type: object
+              zone:
+                description: Zone defines the name and type of a zone
+                properties:
+                  autoConfigure:
+                    description: AutoConfigure tags the Type which is specified in
+                      the Topology
+                    type: boolean
+                  name:
+                    description: Name is the name of the tag that represents this
+                      failure domain
+                    type: string
+                  tagCategory:
+                    description: TagCategory is the category used for the tag
+                    type: string
+                  type:
+                    description: Type is the type of failure domain, the current values
+                      are "Datacenter", "ComputeCluster" and "HostGroup"
+                    enum:
+                    - Datacenter
+                    - ComputeCluster
+                    - HostGroup
+                    type: string
+                required:
+                - name
+                - tagCategory
+                - type
+                type: object
+            required:
+            - region
+            - topology
+            - zone
+            type: object
+        type: object
+    served: false
+    storage: false
+  - deprecated: true
+    name: v1alpha4
+    schema:
+      openAPIV3Schema:
+        description: |-
+          VSphereFailureDomain is the Schema for the vspherefailuredomains API
+
+          Deprecated: This type will be removed in one of the next releases.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereFailureDomainSpec defines the desired state of VSphereFailureDomain
+            properties:
+              region:
+                description: Region defines the name and type of a region
+                properties:
+                  autoConfigure:
+                    description: AutoConfigure tags the Type which is specified in
+                      the Topology
+                    type: boolean
+                  name:
+                    description: Name is the name of the tag that represents this
+                      failure domain
+                    type: string
+                  tagCategory:
+                    description: TagCategory is the category used for the tag
+                    type: string
+                  type:
+                    description: Type is the type of failure domain, the current values
+                      are "Datacenter", "ComputeCluster" and "HostGroup"
+                    enum:
+                    - Datacenter
+                    - ComputeCluster
+                    - HostGroup
+                    type: string
+                required:
+                - name
+                - tagCategory
+                - type
+                type: object
+              topology:
+                description: Topology describes a given failure domain using vSphere
+                  constructs
+                properties:
+                  computeCluster:
+                    description: ComputeCluster as the failure domain
+                    type: string
+                  datacenter:
+                    description: |-
+                      The underlying infrastructure for this failure domain
+                      Datacenter as the failure domain
+                    type: string
+                  datastore:
+                    description: |-
+                      Datastore is the name or inventory path of the datastore in which the
+                      virtual machine is created/located.
+                    type: string
+                  hosts:
+                    description: Hosts has information required for placement of machines
+                      on VSphere hosts.
+                    properties:
+                      hostGroupName:
+                        description: HostGroupName is the name of the Host group
+                        type: string
+                      vmGroupName:
+                        description: VMGroupName is the name of the VM group
+                        type: string
+                    required:
+                    - hostGroupName
+                    - vmGroupName
+                    type: object
+                  networks:
+                    description: Networks is the list of networks within this failure
+                      domain
+                    items:
+                      type: string
+                    type: array
+                required:
+                - datacenter
+                type: object
+              zone:
+                description: Zone defines the name and type of a zone
+                properties:
+                  autoConfigure:
+                    description: AutoConfigure tags the Type which is specified in
+                      the Topology
+                    type: boolean
+                  name:
+                    description: Name is the name of the tag that represents this
+                      failure domain
+                    type: string
+                  tagCategory:
+                    description: TagCategory is the category used for the tag
+                    type: string
+                  type:
+                    description: Type is the type of failure domain, the current values
+                      are "Datacenter", "ComputeCluster" and "HostGroup"
+                    enum:
+                    - Datacenter
+                    - ComputeCluster
+                    - HostGroup
+                    type: string
+                required:
+                - name
+                - tagCategory
+                - type
+                type: object
+            required:
+            - region
+            - topology
+            - zone
+            type: object
+        type: object
+    served: false
+    storage: false
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: VSphereFailureDomain is the Schema for the vspherefailuredomains
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereFailureDomainSpec defines the desired state of VSphereFailureDomain.
+            properties:
+              region:
+                description: Region defines the name and type of a region
+                properties:
+                  autoConfigure:
+                    description: |-
+                      AutoConfigure tags the Type which is specified in the Topology
+
+                      Deprecated: This field is going to be removed in a future release.
+                    type: boolean
+                  name:
+                    description: Name is the name of the tag that represents this
+                      failure domain
+                    type: string
+                  tagCategory:
+                    description: TagCategory is the category used for the tag
+                    type: string
+                  type:
+                    description: Type is the type of failure domain, the current values
+                      are "Datacenter", "ComputeCluster" and "HostGroup"
+                    enum:
+                    - Datacenter
+                    - ComputeCluster
+                    - HostGroup
+                    type: string
+                required:
+                - name
+                - tagCategory
+                - type
+                type: object
+              topology:
+                description: Topology describes a given failure domain using vSphere
+                  constructs
+                properties:
+                  computeCluster:
+                    description: ComputeCluster as the failure domain
+                    type: string
+                  datacenter:
+                    description: Datacenter as the failure domain.
+                    type: string
+                  datastore:
+                    description: |-
+                      Datastore is the name or inventory path of the datastore in which the
+                      virtual machine is created/located.
+                    type: string
+                  hosts:
+                    description: Hosts has information required for placement of machines
+                      on VSphere hosts.
+                    properties:
+                      hostGroupName:
+                        description: HostGroupName is the name of the Host group
+                        type: string
+                      vmGroupName:
+                        description: VMGroupName is the name of the VM group
+                        type: string
+                    required:
+                    - hostGroupName
+                    - vmGroupName
+                    type: object
+                  networkConfigurations:
+                    description: NetworkConfigurations is a list of network configurations
+                      within this failure domain.
+                    items:
+                      description: |-
+                        NetworkConfiguration defines a network configuration that should be used when consuming
+                        a failure domain.
+                      properties:
+                        addressesFromPools:
+                          description: |-
+                            AddressesFromPools is a list of IPAddressPools that should be assigned
+                            to IPAddressClaims. The machine's cloud-init metadata will be populated
+                            with IPAddresses fulfilled by an IPAM provider.
+                          items:
+                            description: |-
+                              TypedLocalObjectReference contains enough information to let you locate the
+                              typed referenced object inside the same namespace.
+                            properties:
+                              apiGroup:
+                                description: |-
+                                  APIGroup is the group for the resource being referenced.
+                                  If APIGroup is not specified, the specified Kind must be in the core API group.
+                                  For any other third-party types, APIGroup is required.
+                                type: string
+                              kind:
+                                description: Kind is the type of resource being referenced
+                                type: string
+                              name:
+                                description: Name is the name of resource being referenced
+                                type: string
+                            required:
+                            - kind
+                            - name
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          type: array
+                        dhcp4:
+                          description: DHCP4 is a flag that indicates whether or not
+                            to use DHCP for IPv4.
+                          type: boolean
+                        dhcp4Overrides:
+                          description: |-
+                            DHCP4Overrides allows for the control over several DHCP behaviors.
+                            Overrides will only be applied when the corresponding DHCP flag is set.
+                            Only configured values will be sent, omitted values will default to
+                            distribution defaults.
+                            Dependent on support in the network stack for your distribution.
+                            For more information see the netplan reference (https://netplan.io/reference#dhcp-overrides)
+                          properties:
+                            hostname:
+                              description: |-
+                                Hostname is the name which will be sent to the DHCP server instead of
+                                the machine's hostname.
+                              type: string
+                            routeMetric:
+                              description: |-
+                                RouteMetric is used to prioritize routes for devices. A lower metric for
+                                an interface will have a higher priority.
+                              type: integer
+                            sendHostname:
+                              description: |-
+                                SendHostname when `true`, the hostname of the machine will be sent to the
+                                DHCP server.
+                              type: boolean
+                            useDNS:
+                              description: |-
+                                UseDNS when `true`, the DNS servers in the DHCP server will be used and
+                                take precedence.
+                              type: boolean
+                            useDomains:
+                              description: |-
+                                UseDomains can take the values `true`, `false`, or `route`. When `true`,
+                                the domain name from the DHCP server will be used as the DNS search
+                                domain for this device. When `route`, the domain name from the DHCP
+                                response will be used for routing DNS only, not for searching.
+                              type: string
+                            useHostname:
+                              description: |-
+                                UseHostname when `true`, the hostname from the DHCP server will be set
+                                as the transient hostname of the machine.
+                              type: boolean
+                            useMTU:
+                              description: |-
+                                UseMTU when `true`, the MTU from the DHCP server will be set as the
+                                MTU of the device.
+                              type: boolean
+                            useNTP:
+                              description: |-
+                                UseNTP when `true`, the NTP servers from the DHCP server will be used
+                                by systemd-timesyncd and take precedence.
+                              type: boolean
+                            useRoutes:
+                              description: |-
+                                UseRoutes when `true`, the routes from the DHCP server will be installed
+                                in the routing table.
+                              type: string
+                          type: object
+                        dhcp6:
+                          description: DHCP6 is a flag that indicates whether or not
+                            to use DHCP for IPv6.
+                          type: boolean
+                        dhcp6Overrides:
+                          description: |-
+                            DHCP6Overrides allows for the control over several DHCP behaviors.
+                            Overrides will only be applied when the corresponding DHCP flag is set.
+                            Only configured values will be sent, omitted values will default to
+                            distribution defaults.
+                            Dependent on support in the network stack for your distribution.
+                            For more information see the netplan reference (https://netplan.io/reference#dhcp-overrides)
+                          properties:
+                            hostname:
+                              description: |-
+                                Hostname is the name which will be sent to the DHCP server instead of
+                                the machine's hostname.
+                              type: string
+                            routeMetric:
+                              description: |-
+                                RouteMetric is used to prioritize routes for devices. A lower metric for
+                                an interface will have a higher priority.
+                              type: integer
+                            sendHostname:
+                              description: |-
+                                SendHostname when `true`, the hostname of the machine will be sent to the
+                                DHCP server.
+                              type: boolean
+                            useDNS:
+                              description: |-
+                                UseDNS when `true`, the DNS servers in the DHCP server will be used and
+                                take precedence.
+                              type: boolean
+                            useDomains:
+                              description: |-
+                                UseDomains can take the values `true`, `false`, or `route`. When `true`,
+                                the domain name from the DHCP server will be used as the DNS search
+                                domain for this device. When `route`, the domain name from the DHCP
+                                response will be used for routing DNS only, not for searching.
+                              type: string
+                            useHostname:
+                              description: |-
+                                UseHostname when `true`, the hostname from the DHCP server will be set
+                                as the transient hostname of the machine.
+                              type: boolean
+                            useMTU:
+                              description: |-
+                                UseMTU when `true`, the MTU from the DHCP server will be set as the
+                                MTU of the device.
+                              type: boolean
+                            useNTP:
+                              description: |-
+                                UseNTP when `true`, the NTP servers from the DHCP server will be used
+                                by systemd-timesyncd and take precedence.
+                              type: boolean
+                            useRoutes:
+                              description: |-
+                                UseRoutes when `true`, the routes from the DHCP server will be installed
+                                in the routing table.
+                              type: string
+                          type: object
+                        nameservers:
+                          description: |-
+                            Nameservers is a list of IPv4 and/or IPv6 addresses used as DNS
+                            nameservers.
+                            Please note that Linux allows only three nameservers (https://linux.die.net/man/5/resolv.conf).
+                          items:
+                            type: string
+                          type: array
+                        networkName:
+                          description: NetworkName is the network name for this machine's
+                            VM.
+                          type: string
+                        searchDomains:
+                          description: |-
+                            SearchDomains is a list of search domains used when resolving IP
+                            addresses with DNS.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - networkName
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - networkName
+                    x-kubernetes-list-type: map
+                  networks:
+                    description: Networks is the list of networks within this failure
+                      domain
+                    items:
+                      type: string
+                    type: array
+                required:
+                - datacenter
+                type: object
+              zone:
+                description: Zone defines the name and type of a zone
+                properties:
+                  autoConfigure:
+                    description: |-
+                      AutoConfigure tags the Type which is specified in the Topology
+
+                      Deprecated: This field is going to be removed in a future release.
+                    type: boolean
+                  name:
+                    description: Name is the name of the tag that represents this
+                      failure domain
+                    type: string
+                  tagCategory:
+                    description: TagCategory is the category used for the tag
+                    type: string
+                  type:
+                    description: Type is the type of failure domain, the current values
+                      are "Datacenter", "ComputeCluster" and "HostGroup"
+                    enum:
+                    - Datacenter
+                    - ComputeCluster
+                    - HostGroup
+                    type: string
+                required:
+                - name
+                - tagCategory
+                - type
+                type: object
+            required:
+            - region
+            - topology
+            - zone
+            type: object
+        type: object
+    served: true
+    storage: true
