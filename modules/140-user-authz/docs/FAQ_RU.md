@@ -485,7 +485,7 @@ d8 k annotate clusterrole d8:namespace:admin \
 
 ## Как узнать, у кого есть доступ к ресурсу?
 
-В Enterprise Edition при включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) доступен обратный запрос к авторизации — ресурс `WhoCan`. Он отвечает на вопрос «кто может выполнить действие X над ресурсом Y?» и возвращает список пользователей, групп и ServiceAccount'ов:
+При включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) доступен обратный запрос к авторизации — ресурс `WhoCan`. Он отвечает на вопрос «кто может выполнить действие X над ресурсом Y?» и возвращает список пользователей, групп и ServiceAccount'ов:
 
 ```shell
 d8 k create -o yaml -f - <<EOF
@@ -508,7 +508,7 @@ EOF
 
 ## Как узнать, что разрешено конкретному пользователю, группе или ServiceAccount'у?
 
-В Enterprise Edition при включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) доступен ресурс `SubjectAccessReport` — обратная сторона `WhoCan`. Он отвечает на вопрос «что разрешено этому субъекту» и сразу возвращает готовый отчёт: какие роли и через какие привязки выданы, какие действия и над какими ресурсами разрешены в кластере и в каждом пространстве имён, и откуда взялось каждое право.
+При включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) доступен ресурс `SubjectAccessReport` — обратная сторона `WhoCan`. Он отвечает на вопрос «что разрешено этому субъекту» и сразу возвращает готовый отчёт: какие роли и через какие привязки выданы, какие действия и над какими ресурсами разрешены в кластере и в каждом пространстве имён, и откуда взялось каждое право.
 
 ```shell
 d8 k create -o yaml -f - <<EOF
@@ -539,7 +539,7 @@ EOF
 
 ## Как пользователю увидеть список доступных ему пространств имён?
 
-В Enterprise Edition при включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) список пространств имён фильтруется автоматически: команда `d8 k get namespaces` возвращает пользователю только те пространства имён, к которым у него есть доступ — по любому из механизмов (привязки ролей, `ProjectRoleBinding`/`ClusterProjectRoleBinding`, `ClusterAuthorizationRule`/`AuthorizationRule`). Пользователь не видит чужих пространств имён и не может по списку узнать об их существовании.
+При включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) список пространств имён фильтруется автоматически: команда `d8 k get namespaces` возвращает пользователю только те пространства имён, к которым у него есть доступ — по любому из механизмов (привязки ролей, `ProjectRoleBinding`/`ClusterProjectRoleBinding`, `ClusterAuthorizationRule`/`AuthorizationRule`). Пользователь не видит чужих пространств имён и не может по списку узнать об их существовании.
 
 Тот же список отдаёт read-only ресурс `accessiblenamespaces` — его может запросить любой аутентифицированный пользователь **для самого себя**:
 
