@@ -16,13 +16,12 @@ spec:
         resources:   ["*"]
         scope: "*"
   matchConditions:
-    # Besides the system groups, the cluster-administrator groups are excluded: this policy is what
-    # actually enforces the heritage protection, so without them a cluster admin could not touch a
-    # template-owned object even though the user-authz system-resource webhook lets them through.
-    # Membership is all this policy can judge by — it cannot look up RoleBindings, so an admin who
-    # holds cluster-admin through a binding rather than a group is not recognised here.
+    # Only cluster components are excluded, and deliberately so: a template-owned object belongs to
+    # the project controller alone. Cluster administrators are exempt from the other protections
+    # around project namespaces (see the user-authz system-resource webhook) but not from this one —
+    # to change such an object, change the ProjectTemplate or the Project.
     - name: 'exclude-groups'
-      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system", "system:masters", "system:sudousers", "cluster:admins"].exists(e, (e in request.userInfo.groups)))'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-restartedAt'
