@@ -37,20 +37,32 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-python-artifact
 from: {{ index $.Images "builder/distroless" }}
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
 shell:
   beforeInstall:
-  - pm install python@3.12 gnu-glibc python-wheel -d /out
+  - pm install python@3.12 gnu-glibc python-wheel coreutils -d /out
+  install:
+  - export PATH="/out/usr/bin:${PATH}"
+  - export LD_LIBRARY_PATH="/out/lib64:/out/usr/lib64:/out/lib:/out/usr/lib:${LD_LIBRARY_PATH}"
+  - pip3 install -f file:///wheels --no-index --upgrade pip --prefix=/out/usr
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt --prefix=/out/usr
+  - rm -rf /out/usr/lib/python*/site-packages/pip-25.3* /out/usr/lib64/python*/site-packages/pip-25.3*
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}
 git:
 - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/prepare-config.py
   to: /prepare-config.py
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
-  to: /requirements.txt
-  stageDependencies:
-    install:
-    - '**/*'
 import:
 - image: {{ $.ModuleName }}/build-keepalived
   add: /opt/keepalived-static/usr/sbin/keepalived
@@ -64,13 +76,4 @@ import:
   add: /out
   to: /
   before: install
-- image: common/wheel-artifact
-  add: /wheels
-  to: /wheels
-  before: install
 {{- include "image mount points" . }}
-shell:
-  install:
-  - pip3 install -f file:///wheels --no-index --upgrade pip
-  - pip3 install -f file:///wheels --no-index -r /requirements.txt
-  - rm -rf /usr/lib/python*/site-packages/pip-25.3* /usr/lib64/python*/site-packages/pip-25.3* /wheels
