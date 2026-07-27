@@ -123,3 +123,29 @@ Key changes:
   ### 016-fix-error-template-buildid.patch
 
   Fix error template
+
+### 017-fix-upstream-refresh-token-rotation.patch
+
+This patch fixes broken token refresh with upstream providers that rotate refresh tokens, GitLab
+in particular. GitLab invalidates the previous refresh token as soon as it is used, while Dex keeps
+the upstream credentials in two places: the offline session shared by all clients of the user, which
+is updated on every rotation, and a private copy inside every refresh token, which is a snapshot
+taken at login time and never updated. Because the snapshot took precedence, the first refresh of a
+client failed as soon as another client of the same user had rotated the shared credential, and it
+kept failing forever, since a failed refresh does not clear the snapshot. Users had to re-login
+every `idTokenTTL`.
+
+Key changes:
+
+- The offline session is the source of connector data; the refresh token's own copy is only a
+  fallback for tokens issued before connector data was moved to offline sessions.
+- The connector is called at most once per request, so a storage that retries the refresh token
+  updater (the Kubernetes storage does that on resource conflicts) cannot spend an already rotated
+  upstream refresh token twice.
+- Connector data rotated upstream is persisted even when the request fails afterwards, so such a
+  failure stays a single failed request instead of breaking every further refresh of the user.
+- `updateOfflineSession` no longer dereferences a missing refresh token reference.
+- Regression tests for all three scenarios.
+
+Upstream is affected as well, including `master`: an upstream PR is to be opened on top of this
+patch.

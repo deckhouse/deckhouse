@@ -1,0 +1,467 @@
+diff --git a/server/refresh_upstream_rotation_test.go b/server/refresh_upstream_rotation_test.go
+new file mode 100644
+index 00000000..13ab101b
+--- /dev/null
++++ b/server/refresh_upstream_rotation_test.go
+@@ -0,0 +1,331 @@
++package server
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"path"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/storage"
++)
++
++// rotatingUpstream simulates an upstream IdP with single-use refresh tokens, like GitLab:
++// every successful refresh invalidates the presented token and issues a new one.
++type rotatingUpstream struct {
++	valid map[string]bool
++	seq   int
++	calls int
++}
++
++type upstreamConnectorData struct {
++	RefreshToken string `json:"refreshToken"`
++}
++
++func (u *rotatingUpstream) mint() []byte {
++	u.seq++
++	token := fmt.Sprintf("upstream-%d", u.seq)
++	u.valid[token] = true
++	data, _ := json.Marshal(upstreamConnectorData{RefreshToken: token})
++	return data
++}
++
++func (u *rotatingUpstream) Refresh(_ context.Context, _ connector.Scopes, ident connector.Identity) (connector.Identity, error) {
++	u.calls++
++
++	var data upstreamConnectorData
++	if err := json.Unmarshal(ident.ConnectorData, &data); err != nil {
++		return ident, fmt.Errorf("unmarshal connector data: %v", err)
++	}
++	if !u.valid[data.RefreshToken] {
++		return ident, fmt.Errorf("gitlab: failed to get refresh token: oauth2: %q", "invalid_grant")
++	}
++
++	delete(u.valid, data.RefreshToken)
++	ident.ConnectorData = u.mint()
++	return ident, nil
++}
++
++func (u *rotatingUpstream) LoginURL(connector.Scopes, string, string) (string, error) {
++	return "", nil
++}
++
++func (u *rotatingUpstream) HandleCallback(connector.Scopes, *http.Request) (connector.Identity, error) {
++	return connector.Identity{}, nil
++}
++
++func registerRotatingConnector(t *testing.T, s *Server, connID string, upstream *rotatingUpstream) {
++	t.Helper()
++
++	require.NoError(t, s.storage.CreateConnector(t.Context(), storage.Connector{
++		ID:              connID,
++		Type:            "mockCallback",
++		Name:            "GitLab",
++		ResourceVersion: "1",
++	}))
++
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	s.connectors[connID] = Connector{ResourceVersion: "1", Connector: upstream}
++}
++
++func registerClients(t *testing.T, s *Server, secret string, ids ...string) {
++	t.Helper()
++
++	for _, id := range ids {
++		require.NoError(t, s.storage.CreateClient(t.Context(), storage.Client{
++			ID:           id,
++			Secret:       secret,
++			RedirectURIs: []string{"https://example.com/callback"},
++			Name:         id,
++		}))
++	}
++}
++
++func createRefreshToken(t *testing.T, s *Server, connID, id, clientID string, connectorData []byte, now time.Time) {
++	t.Helper()
++
++	require.NoError(t, s.storage.CreateRefresh(t.Context(), storage.RefreshToken{
++		ID:          id,
++		Token:       "token-" + id,
++		ClientID:    clientID,
++		ConnectorID: connID,
++		Scopes:      []string{"openid", "email", "groups", "offline_access"},
++		Claims: storage.Claims{
++			UserID:        "1",
++			Username:      "jane",
++			Email:         "jane@example.com",
++			EmailVerified: true,
++		},
++		ConnectorData: connectorData,
++		CreatedAt:     now.Add(-time.Hour),
++		LastUsed:      now.Add(-time.Hour),
++	}))
++}
++
++func refreshTokenRequest(t *testing.T, s *Server, clientID, clientSecret, refreshID, refreshToken string) *httptest.ResponseRecorder {
++	t.Helper()
++
++	tokenData, err := internal.Marshal(&internal.RefreshToken{RefreshId: refreshID, Token: refreshToken})
++	require.NoError(t, err)
++
++	u, err := url.Parse(s.issuerURL.String())
++	require.NoError(t, err)
++	u.Path = path.Join(u.Path, "/token")
++
++	v := url.Values{}
++	v.Add("grant_type", "refresh_token")
++	v.Add("refresh_token", tokenData)
++
++	req, _ := http.NewRequest("POST", u.String(), bytes.NewBufferString(v.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	req.SetBasicAuth(clientID, clientSecret)
++
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	return rr
++}
++
++// TestUpstreamRotationSharedBetweenClients reproduces the situation reported by users of the
++// GitLab connector: a user has two OAuth2 clients (a DexAuthenticator-protected web application
++// and kubeconfig-generator) that share a single offline session. Both clients refresh their
++// tokens independently, but the upstream refresh token they rely on is single-use.
++func TestUpstreamRotationSharedBetweenClients(t *testing.T) {
++	const (
++		connID     = "gitlab"
++		webClient  = "webapp"
++		cliClient  = "kubeconfig-generator"
++		webRefresh = "web-refresh-id"
++		cliRefresh = "cli-refresh-id"
++	)
++
++	ctx := t.Context()
++	now := time.Now()
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RefreshTokenPolicy = &RefreshTokenPolicy{
++			rotateRefreshTokens: true,
++			reuseInterval:       2 * time.Minute,
++			now:                 func() time.Time { return now },
++		}
++		c.Now = func() time.Time { return now }
++	})
++	defer httpServer.Close()
++
++	upstream := &rotatingUpstream{valid: map[string]bool{}}
++	registerRotatingConnector(t, s, connID, upstream)
++	registerClients(t, s, "secret", webClient, cliClient)
++
++	// The web application logged in first, and has already refreshed at least once, so its
++	// per-token copy of the connector data has been cleared.
++	createRefreshToken(t, s, connID, webRefresh, webClient, nil, now)
++
++	// Then the user logged in with the CLI. That login stored a fresh upstream refresh token both
++	// in the shared offline session and as a private copy inside the new refresh token object.
++	cliLoginData := upstream.mint()
++	createRefreshToken(t, s, connID, cliRefresh, cliClient, cliLoginData, now)
++
++	require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID: "1",
++		ConnID: connID,
++		Refresh: map[string]*storage.RefreshTokenRef{
++			webClient: {ID: webRefresh, ClientID: webClient},
++			cliClient: {ID: cliRefresh, ClientID: cliClient},
++		},
++		ConnectorData: cliLoginData,
++	}))
++
++	// The web application refreshes first. It reads the shared offline session, so it spends the
++	// upstream refresh token that the CLI login has just obtained.
++	rr := refreshTokenRequest(t, s, webClient, "secret", webRefresh, "token-"+webRefresh)
++	require.Equal(t, http.StatusOK, rr.Code, "web application refresh must succeed: %s", rr.Body.String())
++
++	// The CLI must refresh against the rotated upstream refresh token from the offline session
++	// instead of the stale copy stored in its own refresh token.
++	rr = refreshTokenRequest(t, s, cliClient, "secret", cliRefresh, "token-"+cliRefresh)
++	require.Equal(t, http.StatusOK, rr.Code, "CLI refresh must not reuse the spent upstream refresh token: %s", rr.Body.String())
++
++	var resp struct {
++		RefreshToken string `json:"refresh_token"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
++	rotated := new(internal.RefreshToken)
++	require.NoError(t, internal.Unmarshal(resp.RefreshToken, rotated))
++
++	// And the next refresh keeps working, too.
++	rr = refreshTokenRequest(t, s, cliClient, "secret", rotated.RefreshId, rotated.Token)
++	require.Equal(t, http.StatusOK, rr.Code, "subsequent CLI refresh must keep working: %s", rr.Body.String())
++
++	requireSessionTokenValid(t, s, connID, upstream)
++}
++
++// TestUpstreamRotationRetriedUpdater covers storages that run the refresh token updater more than
++// once for a single request, like the Kubernetes storage does on resource conflicts: the upstream
++// provider must be contacted only once, because the presented refresh token is already spent by
++// the time the updater runs again.
++func TestUpstreamRotationRetriedUpdater(t *testing.T) {
++	const (
++		connID     = "gitlab"
++		clientID   = "kubeconfig-generator"
++		refreshID  = "cli-refresh-id"
++		upstreamRT = "upstream-1"
++	)
++
++	ctx := t.Context()
++	now := time.Now()
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.Storage = &retryingUpdaterStorage{Storage: c.Storage}
++		c.RefreshTokenPolicy = &RefreshTokenPolicy{
++			rotateRefreshTokens: true,
++			reuseInterval:       2 * time.Minute,
++			now:                 func() time.Time { return now },
++		}
++		c.Now = func() time.Time { return now }
++	})
++	defer httpServer.Close()
++
++	upstream := &rotatingUpstream{valid: map[string]bool{}}
++	registerRotatingConnector(t, s, connID, upstream)
++	registerClients(t, s, "secret", clientID)
++
++	connectorData := upstream.mint()
++	createRefreshToken(t, s, connID, refreshID, clientID, connectorData, now)
++	require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:        "1",
++		ConnID:        connID,
++		Refresh:       map[string]*storage.RefreshTokenRef{clientID: {ID: refreshID, ClientID: clientID}},
++		ConnectorData: connectorData,
++	}))
++
++	rr := refreshTokenRequest(t, s, clientID, "secret", refreshID, "token-"+refreshID)
++	require.Equal(t, http.StatusOK, rr.Code, "refresh must survive a retried updater: %s", rr.Body.String())
++	require.Equal(t, 1, upstream.calls, "the upstream provider must be contacted once per request")
++
++	requireSessionTokenValid(t, s, connID, upstream)
++}
++
++// TestUpstreamRotationKeptOnFailedUpdate asserts that an upstream refresh token rotated during a
++// request that fails afterwards is still persisted, so the failure stays a single failed request
++// instead of breaking every further refresh of the user.
++func TestUpstreamRotationKeptOnFailedUpdate(t *testing.T) {
++	const (
++		connID    = "gitlab"
++		clientID  = "kubeconfig-generator"
++		refreshID = "cli-refresh-id"
++	)
++
++	ctx := t.Context()
++	now := time.Now()
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RefreshTokenPolicy = &RefreshTokenPolicy{
++			rotateRefreshTokens: true,
++			reuseInterval:       2 * time.Minute,
++			now:                 func() time.Time { return now },
++		}
++		c.Now = func() time.Time { return now }
++	})
++	defer httpServer.Close()
++
++	upstream := &rotatingUpstream{valid: map[string]bool{}}
++	registerRotatingConnector(t, s, connID, upstream)
++	registerClients(t, s, "secret", clientID)
++
++	connectorData := upstream.mint()
++	createRefreshToken(t, s, connID, refreshID, clientID, connectorData, now)
++
++	// The offline session points at another refresh token of the same client, as it does after the
++	// user logged in again while an older token was still in use. Updating the session fails.
++	require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:        "1",
++		ConnID:        connID,
++		Refresh:       map[string]*storage.RefreshTokenRef{clientID: {ID: "other-refresh-id", ClientID: clientID}},
++		ConnectorData: connectorData,
++	}))
++
++	rr := refreshTokenRequest(t, s, clientID, "secret", refreshID, "token-"+refreshID)
++	require.Equal(t, http.StatusInternalServerError, rr.Code, "the request itself is expected to fail")
++
++	requireSessionTokenValid(t, s, connID, upstream)
++}
++
++// retryingUpdaterStorage runs the refresh token updater twice per call, discarding the result of the
++// first run, the way a storage retrying a conflicting write does.
++type retryingUpdaterStorage struct {
++	storage.Storage
++}
++
++func (r *retryingUpdaterStorage) UpdateRefreshToken(ctx context.Context, id string, updater func(old storage.RefreshToken) (storage.RefreshToken, error)) error {
++	discard := func(old storage.RefreshToken) (storage.RefreshToken, error) {
++		if _, err := updater(old); err != nil {
++			return old, err
++		}
++		return old, nil
++	}
++	if err := r.Storage.UpdateRefreshToken(ctx, id, discard); err != nil {
++		return err
++	}
++	return r.Storage.UpdateRefreshToken(ctx, id, updater)
++}
++
++func requireSessionTokenValid(t *testing.T, s *Server, connID string, upstream *rotatingUpstream) {
++	t.Helper()
++
++	session, err := s.storage.GetOfflineSessions(t.Context(), "1", connID)
++	require.NoError(t, err)
++
++	var current upstreamConnectorData
++	require.NoError(t, json.Unmarshal(session.ConnectorData, &current))
++	require.True(t, upstream.valid[current.RefreshToken],
++		"offline session must hold the upstream refresh token that is still valid upstream")
++}
+diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
+index de8d9b7b..f16f38d8 100644
+--- a/server/refreshhandlers.go
++++ b/server/refreshhandlers.go
+@@ -1,6 +1,7 @@
+ package server
+ 
+ import (
++	"bytes"
+ 	"context"
+ 	"errors"
+ 	"fmt"
+@@ -133,6 +134,13 @@ func (s *Server) getRefreshTokenFromStorage(ctx context.Context, clientID *strin
+ 	}
+ 
+ 	// Get Connector Data
++	//
++	// The offline session is the only place where connector data is kept up to date: upstream
++	// providers with refresh token rotation (GitLab, for example) invalidate the previous upstream
++	// refresh token on every use, and the rotated one is stored in the offline session shared by
++	// all clients of the user. The copy kept in the refresh token itself is a snapshot taken at
++	// login time, so it must only be used as a fallback for tokens issued before connector data
++	// was moved to offline sessions.
+ 	session, err := s.storage.GetOfflineSessions(ctx, refresh.Claims.UserID, refresh.ConnectorID)
+ 	switch {
+ 	case err != nil:
+@@ -140,11 +148,11 @@ func (s *Server) getRefreshTokenFromStorage(ctx context.Context, clientID *strin
+ 			s.logger.ErrorContext(ctx, "failed to get offline session", "err", err)
+ 			return nil, newInternalServerError()
+ 		}
+-	case len(refresh.ConnectorData) > 0:
+-		// Use the old connector data if it exists, should be deleted once used
+ 		refreshCtx.connectorData = refresh.ConnectorData
+-	default:
++	case len(session.ConnectorData) > 0:
+ 		refreshCtx.connectorData = session.ConnectorData
++	default:
++		refreshCtx.connectorData = refresh.ConnectorData
+ 	}
+ 
+ 	return &refreshCtx, nil
+@@ -207,11 +215,12 @@ func (s *Server) refreshWithConnector(ctx context.Context, rCtx *refreshContext,
+ // updateOfflineSession updates offline session in the storage
+ func (s *Server) updateOfflineSession(ctx context.Context, refresh *storage.RefreshToken, ident connector.Identity, lastUsed time.Time) *refreshError {
+ 	offlineSessionUpdater := func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
+-		if old.Refresh[refresh.ClientID].ID != refresh.ID {
++		ref, ok := old.Refresh[refresh.ClientID]
++		if !ok || ref.ID != refresh.ID {
+ 			return old, errors.New("refresh token invalid")
+ 		}
+ 
+-		old.Refresh[refresh.ClientID].LastUsed = lastUsed
++		ref.LastUsed = lastUsed
+ 		if len(ident.ConnectorData) > 0 {
+ 			old.ConnectorData = ident.ConnectorData
+ 		}
+@@ -236,6 +245,11 @@ func (s *Server) updateOfflineSession(ctx context.Context, refresh *storage.Refr
+ func (s *Server) updateRefreshToken(ctx context.Context, rCtx *refreshContext) (*internal.RefreshToken, connector.Identity, *refreshError) {
+ 	var rerr *refreshError
+ 
++	// Storage implementations may run the updater more than once, e.g. the Kubernetes storage
++	// retries it on resource conflicts. Refreshing upstream more than once per request would spend
++	// an already rotated upstream refresh token and break all further refreshes for the user.
++	connectorRefreshed := false
++
+ 	newToken := &internal.RefreshToken{
+ 		Token:     rCtx.requestToken.Token,
+ 		RefreshId: rCtx.requestToken.RefreshId,
+@@ -296,9 +310,12 @@ func (s *Server) updateRefreshToken(ctx context.Context, rCtx *refreshContext) (
+ 		// Call  only once if there is a request which is not in the reuse interval.
+ 		// This is required to avoid multiple calls to the external IdP for concurrent requests.
+ 		// Dex will call the connector's Refresh method only once if request is not in reuse interval.
+-		ident, rerr = s.refreshWithConnector(ctx, rCtx, ident)
+-		if rerr != nil {
+-			return old, rerr
++		if !connectorRefreshed {
++			ident, rerr = s.refreshWithConnector(ctx, rCtx, ident)
++			if rerr != nil {
++				return old, rerr
++			}
++			connectorRefreshed = true
+ 		}
+ 
+ 		// Update the claims of the refresh token.
+@@ -317,17 +334,45 @@ func (s *Server) updateRefreshToken(ctx context.Context, rCtx *refreshContext) (
+ 	err := s.storage.UpdateRefreshToken(ctx, rCtx.storageToken.ID, refreshTokenUpdater)
+ 	if err != nil {
+ 		s.logger.ErrorContext(ctx, "failed to update refresh token", "err", err)
++		s.saveRotatedConnectorData(ctx, rCtx, connectorRefreshed, ident)
+ 		return nil, ident, newInternalServerError()
+ 	}
+ 
+ 	rerr = s.updateOfflineSession(ctx, rCtx.storageToken, ident, lastUsed)
+ 	if rerr != nil {
++		s.saveRotatedConnectorData(ctx, rCtx, connectorRefreshed, ident)
+ 		return nil, ident, rerr
+ 	}
+ 
+ 	return newToken, ident, nil
+ }
+ 
++// saveRotatedConnectorData stores connector data of a refresh that failed after the connector has
++// already talked to the upstream provider.
++//
++// Providers that rotate refresh tokens invalidate the previous one as soon as it is used, so
++// dropping the rotated data would leave the offline session pointing at a spent credential and
++// every further refresh of every client of the user would fail until the next interactive login.
++func (s *Server) saveRotatedConnectorData(ctx context.Context, rCtx *refreshContext, connectorRefreshed bool, ident connector.Identity) {
++	if !connectorRefreshed || len(ident.ConnectorData) == 0 || bytes.Equal(ident.ConnectorData, rCtx.connectorData) {
++		return
++	}
++
++	// The request is already failing, so its context may be canceled at any moment. This write is
++	// what keeps the session usable, hence it gets a context of its own.
++	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
++	defer cancel()
++
++	err := s.storage.UpdateOfflineSessions(ctx, rCtx.storageToken.Claims.UserID, rCtx.storageToken.ConnectorID,
++		func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++			old.ConnectorData = ident.ConnectorData
++			return old, nil
++		})
++	if err != nil {
++		s.logger.ErrorContext(ctx, "failed to save rotated connector data", "err", err)
++	}
++}
++
+ // handleRefreshToken handles a refresh token request https://tools.ietf.org/html/rfc6749#section-6
+ // this method is the entrypoint for refresh tokens handling
+ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, client storage.Client) {
