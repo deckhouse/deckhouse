@@ -59,13 +59,23 @@ func (r *reconciler) reconcileALB(ctx context.Context, vcp *controlplanev1alpha1
 		return reconcile.Result{}, fmt.Errorf("config Secret missing %q", albManifestKey)
 	}
 
-	objects, err := parseManifestDocs(raw, constants.VirtualControlPlaneNamespacePrefix+vcp.Name)
+	objects, err := parseManifestDocs(raw, vcp.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	for _, target := range objects {
-		if err := applyObject(ctx, r.client, target, patchSpecData); err != nil {
+		// Cross-namespace objects (e.g. ReferenceGrant in d8-cloud-instance-manager) cannot be
+		// owned by a namespaced VirtualControlPlane; apply without controller ownerRef.
+		sameNS := target.GetNamespace() == "" || target.GetNamespace() == vcp.Namespace
+		mutate := patchSpecData
+		if sameNS {
+			if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+				return reconcile.Result{}, err
+			}
+			mutate = patchSpecDataAndOwnerRefs
+		}
+		if err := applyObject(ctx, r.client, target, mutate); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -94,12 +104,10 @@ func patchSpecData(current, target *unstructured.Unstructured) (client.Object, b
 // The externally-reachable address is read straight off the "d8-alb-<gw>-loadbalancer"
 // Service the ALB module provisions alongside the Gateway for that inlet type.
 func (r *reconciler) albVIP(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (string, error) {
-	namespace := vcpNamespace(vcp)
-
 	albi := &unstructured.Unstructured{}
 	albi.SetAPIVersion("network.deckhouse.io/v1alpha1")
 	albi.SetKind("ALBInstance")
-	if err := r.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: vcp.Name}, albi); err != nil {
+	if err := r.client.Get(ctx, client.ObjectKey{Namespace: vcp.Namespace, Name: vcp.Name}, albi); err != nil {
 		if apierrors.IsNotFound(err) {
 			return "", nil
 		}
@@ -111,7 +119,7 @@ func (r *reconciler) albVIP(ctx context.Context, vcp *controlplanev1alpha1.Virtu
 		gatewayName = vcp.Name // spec.gatewayName
 	}
 
-	lbService, err := r.getService(ctx, namespace, fmt.Sprintf("d8-alb-%s-loadbalancer", gatewayName))
+	lbService, err := r.getService(ctx, vcp.Namespace, fmt.Sprintf("d8-alb-%s-loadbalancer", gatewayName))
 	if apierrors.IsNotFound(err) {
 		return "", nil
 	}
