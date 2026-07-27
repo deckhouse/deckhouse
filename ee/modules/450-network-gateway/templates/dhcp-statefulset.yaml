@@ -59,6 +59,7 @@ spec:
         checksum/config: {{ .Values.networkGateway | toYaml | sha256sum }}
       labels:
         app: dhcp
+        security.deckhouse.io/security-policy-exception: dhcp
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
