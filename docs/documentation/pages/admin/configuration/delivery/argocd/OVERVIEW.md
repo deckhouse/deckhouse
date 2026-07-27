@@ -38,3 +38,13 @@ Additionally, the module provides:
 - high availability mode;
 - support for automatic image updates via Argo CD Image Updater;
 - access control for cluster resources.
+
+A typical administrator setup scenario:
+
+1. [Enable the `operator-argo` module and create an ArgoCD object](setup/).
+1. [Configure user authentication](authentication/).
+1. [Define the role-based access model](rbac/).
+1. Give users access to the Argo CD instance for application delivery (for more details, see the [Usage](../../../../user/delivery/argocd/) section).
+
+The design of the `operator-argo` module is described in the [Architecture](../../../../architecture/delivery/operator-argo.html) section.
+Module parameters and custom resources are documented in the [`operator-argo` module documentation](/modules/operator-argo/).
