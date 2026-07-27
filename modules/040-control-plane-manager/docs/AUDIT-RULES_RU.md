@@ -295,6 +295,7 @@ users:
   - system:serviceaccount:d8-cloud-provider-vcd:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-vcd:cloud-data-discoverer
   - system:serviceaccount:d8-cloud-provider-vcd:infra-controller-manager
+  - system:serviceaccount:d8-cloud-provider-vsphere:capv-controller-manager
   - system:serviceaccount:d8-cloud-provider-vsphere:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-vsphere:cloud-data-discoverer
   - system:serviceaccount:d8-cloud-provider-yandex:capy-controller-manager
@@ -777,6 +778,7 @@ rules:
       - system:serviceaccount:d8-cloud-provider-vcd:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-vcd:cloud-data-discoverer
       - system:serviceaccount:d8-cloud-provider-vcd:infra-controller-manager
+      - system:serviceaccount:d8-cloud-provider-vsphere:capv-controller-manager
       - system:serviceaccount:d8-cloud-provider-vsphere:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-vsphere:cloud-data-discoverer
       - system:serviceaccount:d8-cloud-provider-yandex:capy-controller-manager
