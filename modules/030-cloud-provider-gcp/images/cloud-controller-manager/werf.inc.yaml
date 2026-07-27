@@ -61,7 +61,6 @@ secrets:
 shell:
   install:
   - cd /src
-  - pm install git
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
