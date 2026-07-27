@@ -337,6 +337,31 @@ def _prepare_mc_validation_binding_context(
     return ctx
 
 
+def _with_old_object(ctx: DotMap, old_k8s_version, old_enabled_feature_gates) -> DotMap:
+    """Attach an oldObject, turning the request into a real UPDATE.
+
+    The cases above leave oldObject null, which stands for CREATE — there the webhook has nothing
+    to compare against and always runs the full check."""
+    old_settings = {}
+    if old_k8s_version is not None:
+        old_settings['kubernetesVersion'] = old_k8s_version
+    if old_enabled_feature_gates is not None:
+        old_settings['enabledFeatureGates'] = old_enabled_feature_gates
+
+    ctx.review.request.oldObject = DotMap({
+        "apiVersion": "deckhouse.io/v1",
+        "kind": "ModuleConfig",
+        "metadata": {
+            "name": "control-plane-manager"
+        },
+        "spec": {
+            "settings": old_settings
+        }
+    })
+
+    return ctx
+
+
 class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
     """Covers the ModuleConfig-triggered binding: kubernetesVersion changed via
     `kubectl edit mc control-plane-manager` never touches the d8-cluster-configuration
@@ -383,6 +408,41 @@ class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
         ctx = _prepare_mc_validation_binding_context('1.33.0', None)
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
+
+    def test_mc_unrelated_change_should_allow_even_with_deprecated_feature_gate(self):
+        """A ModuleConfig already carrying a deprecated feature gate must stay editable.
+
+        Without an old/new comparison the check re-runs on every edit, so changing an unrelated
+        setting would be rejected with a message about a kubernetesVersion nobody touched — and a
+        Deckhouse upgrade extending the deprecation table would put clusters in that state on its
+        own, with no user action at all."""
+        ctx = _prepare_mc_validation_binding_context('1.33.0', ['DynamicResourceAllocation'])
+        ctx.review.request.object.spec.settings.rootKubeconfigSymlink = False
+        ctx = _with_old_object(ctx, '1.33.0', ['DynamicResourceAllocation'])
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_mc_adding_deprecated_feature_gate_should_still_reject(self):
+        ctx = _prepare_mc_validation_binding_context('1.33.0', ['DynamicResourceAllocation'])
+        ctx = _with_old_object(ctx, '1.33.0', [])
+        out = hook.testrun(main, [ctx])
+        error_msg = (
+            "Cannot change Kubernetes version to 1.33.0:\n"
+            "The following feature gates are deprecated in this version or earlier: 'DynamicResourceAllocation'\n"
+            "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
+        )
+        tests.assert_validation_deny(self, out, error_msg)
+
+    def test_mc_changing_version_should_still_reject(self):
+        ctx = _prepare_mc_validation_binding_context('1.33.0', ['DynamicResourceAllocation'])
+        ctx = _with_old_object(ctx, '1.30.0', ['DynamicResourceAllocation'])
+        out = hook.testrun(main, [ctx])
+        error_msg = (
+            "Cannot change Kubernetes version to 1.33.0:\n"
+            "The following feature gates are deprecated in this version or earlier: 'DynamicResourceAllocation'\n"
+            "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
+        )
+        tests.assert_validation_deny(self, out, error_msg)
 
 
 if __name__ == '__main__':

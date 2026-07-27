@@ -17,6 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
+	"fmt"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -25,34 +29,73 @@ import (
 )
 
 var _ = Describe("Modules :: control-plane-manager :: hooks :: alert_migrate_kubernetes_version ::", func() {
+	const secretTemplate = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  cluster-configuration.yaml: <<PLACEHOLDER_B64>>
+`
+
+	// The Secret carries the raw ClusterConfiguration, so "Automatic" survives here — unlike in
+	// global.clusterConfiguration.kubernetesVersion, which the global discovery hook has already
+	// resolved to a concrete version by the time this hook runs. That distinction is the whole
+	// point of the Secret binding: without it every cluster looks like it pinned a version.
+	buildState := func(ccRawVersion string) string {
+		cc := fmt.Sprintf("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nkubernetesVersion: %q\n", ccRawVersion)
+		return strings.ReplaceAll(secretTemplate, "<<PLACEHOLDER_B64>>", base64.StdEncoding.EncodeToString([]byte(cc)))
+	}
+
 	f := HookExecutionConfigInit(`{"controlPlaneManager":{}}`, `{}`)
 
+	metricIsSet := func() bool {
+		for _, m := range f.MetricsCollector.CollectedMetrics() {
+			if m.Name == obsoleteKubernetesVersionMetricName {
+				Expect(*m.Value).To(Equal(1.0))
+				return true
+			}
+		}
+		return false
+	}
+
 	DescribeTable("D8ObsoleteKubernetesVersionInClusterConfiguration metric",
-		func(ccVersion, mcVersion string, expectSet bool) {
-			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", ccVersion)
-			if mcVersion == "" {
-				f.ValuesDelete("controlPlaneManager.kubernetesVersion")
-			} else {
+		func(ccRawVersion, mcVersion string, expectSet bool) {
+			f.ValuesSet("controlPlaneManager.kubernetesVersion", "")
+			if mcVersion != "" {
 				f.ValuesSet("controlPlaneManager.kubernetesVersion", mcVersion)
 			}
+			f.BindingContexts.Set(f.KubeStateSet(buildState(ccRawVersion)))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(metricIsSet()).To(Equal(expectSet))
+		},
+		// Nothing migrated yet: ClusterConfiguration still drives the version.
+		Entry("CC pins a version, MC unset — fires", "1.34", "", true),
+		Entry("CC pins a version, MC is Automatic — fires", "1.34", "Automatic", true),
+
+		// ModuleConfig wins, so ClusterConfiguration is no longer consulted.
+		Entry("CC pins a version, MC overrides it — does not fire", "1.34", "1.35", false),
+
+		// Nothing to migrate: dropping the ClusterConfiguration field would change nothing.
+		// This is the case the previous, Values-based implementation got wrong — it fired here,
+		// on the majority of real clusters, and its own runbook could not clear the alert.
+		Entry("CC is Automatic, MC unset — does not fire", "Automatic", "", false),
+		Entry("CC is Automatic, MC is Automatic — does not fire", "Automatic", "Automatic", false),
+		Entry("CC is Automatic, MC pins a version — does not fire", "Automatic", "1.35", false),
+	)
+
+	Context("ClusterConfiguration Secret is absent", func() {
+		It("does not fire — there is nothing to migrate from", func() {
+			f.ValuesSet("controlPlaneManager.kubernetesVersion", "")
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
-
-			var found bool
-			for _, m := range f.MetricsCollector.CollectedMetrics() {
-				if m.Name == "d8_obsolete_kubernetes_version_in_cluster_configuration" {
-					found = true
-					Expect(*m.Value).To(Equal(1.0))
-				}
-			}
-			Expect(found).To(Equal(expectSet))
-		},
-		Entry("CC has explicit version, MC unset — fires", "1.34", "", true),
-		Entry("CC has explicit version, MC is Automatic — fires", "1.34", "Automatic", true),
-		Entry("CC has explicit version, MC overrides it — does not fire", "1.34", "1.35", false),
-		Entry("CC is Automatic, MC unset — does not fire", "Automatic", "", false),
-		Entry("CC unset, MC unset — does not fire", "", "", false),
-	)
+			Expect(metricIsSet()).To(BeFalse())
+		})
+	})
 })

@@ -260,11 +260,31 @@ def validate_cluster_configuration_change(ctx: DotMap) -> Optional[str]:
     return build_deprecated_feature_gates_error(target_version, enabled_feature_gates)
 
 
+def get_guarded_settings(obj) -> tuple:
+    # The pair this webhook is about. Anything else in the ModuleConfig is none of its business.
+    if not obj:
+        return (None, None)
+
+    settings = obj.get('spec', {}).get('settings', {})
+
+    return (settings.get('kubernetesVersion'), settings.get('enabledFeatureGates'))
+
+
 def validate_module_config_change(ctx: DotMap) -> Optional[str]:
     req = ctx.review.request
 
     new_object = req.get('object')
     if not new_object:
+        return None
+
+    # Mirror the ClusterConfiguration branch above and bail out when nothing relevant changed.
+    # Without this the check re-runs on every edit of the ModuleConfig, so a config that already
+    # carries a deprecated feature gate becomes uneditable as a whole: changing an unrelated
+    # setting gets rejected with a message about a kubernetesVersion nobody touched. Worse, a
+    # Deckhouse upgrade that adds entries to the deprecation table would put existing clusters in
+    # that state without any user action. On CREATE there is no old object, so the check runs.
+    old_object = req.get('oldObject')
+    if old_object and get_guarded_settings(old_object) == get_guarded_settings(new_object):
         return None
 
     settings = new_object.get('spec', {}).get('settings', {})

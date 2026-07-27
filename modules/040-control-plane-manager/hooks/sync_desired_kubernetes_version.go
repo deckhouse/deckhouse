@@ -66,7 +66,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 15},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "cluster_configuration_secret",
+			Name:       clusterConfigurationSecretSnapshot,
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
@@ -165,10 +165,7 @@ func syncDesiredKubernetesVersion(_ context.Context, input *go_hook.HookInput) e
 
 	mcVersion := input.Values.Get("controlPlaneManager.kubernetesVersion").String()
 
-	ccRaw := ""
-	if snaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "cluster_configuration_secret"); err == nil && len(snaps) > 0 {
-		ccRaw = snaps[0]
-	}
+	ccRaw := rawClusterConfigurationVersion(input)
 
 	// The declared source is whichever of MC/CC is authoritative (MC wins if set at all, even to
 	// the literal "Automatic"); updateMode reflects whether that source is untracked ("Automatic"

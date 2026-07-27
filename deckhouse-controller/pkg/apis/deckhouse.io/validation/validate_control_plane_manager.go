@@ -18,13 +18,14 @@ package validation
 
 import (
 	"context"
-	"fmt"
 
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // validateControlPlaneManagerKubernetesVersion guards ModuleConfig control-plane-manager's
@@ -34,9 +35,13 @@ import (
 // compatibility requirements (see validateKubernetesVersion).
 //
 // If the new settings don't set kubernetesVersion, the effective value defers to
-// ClusterConfiguration, whose own admission webhook already guards edits made there. Known gap:
-// removing an existing MC override (falling back to ClusterConfiguration) is not itself guarded
-// here — see kube-versions-tech-debt.md.
+// ClusterConfiguration, whose own admission webhook already guards edits made there.
+//
+// Known gap: *removing* an existing ModuleConfig override is not guarded. The new value is empty,
+// so this returns early, while the effective version silently falls back to whatever
+// ClusterConfiguration still holds — potentially a stale pin several minors below what the cluster
+// runs. Deleting the ModuleConfig outright is likewise unguarded: that path is handled by
+// validateDelete and never reaches this function.
 func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	ctx context.Context, newSettings, oldSettings map[string]interface{},
 ) (*kwhvalidating.ValidatorResult, error) {
@@ -47,11 +52,16 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 
 	secret := &v1.Secret{}
 	if err := v.client.Get(ctx, client.ObjectKey{Name: "d8-cluster-configuration", Namespace: "kube-system"}, secret); err != nil {
-		if apierrors.IsNotFound(err) {
-			// No bootstrapped cluster Secret yet (e.g. dry-run/tests) — nothing to guard against.
-			return nil, nil
+		// Fail open, deliberately. The ModuleConfig webhook runs with failurePolicy: Fail, so
+		// returning an error here would reject every edit of ModuleConfig control-plane-manager for
+		// as long as this read keeps failing — a transient API outage would lock out the very
+		// config an operator needs to fix things. A missing Secret (dry-run, cluster not
+		// bootstrapped yet) is an expected state; anything else is unexpected and worth a log line.
+		if !apierrors.IsNotFound(err) {
+			log.Warn("skipping the kubernetesVersion downgrade guard: cannot read the d8-cluster-configuration secret", log.Err(err))
 		}
-		return nil, fmt.Errorf("get d8-cluster-configuration secret: %w", err)
+
+		return nil, nil
 	}
 
 	// validateKubernetesVersion/validateKubernetesVersionDowngrade are shared with the
