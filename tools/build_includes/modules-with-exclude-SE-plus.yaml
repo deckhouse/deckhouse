@@ -984,8 +984,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/se-plus/modules/040-node-manager/capi/zvirt
-  to: /deckhouse/modules/040-node-manager/capi/zvirt
+- add: /ee/se-plus/modules/040-node-manager/capi/vsphere
+  to: /deckhouse/modules/040-node-manager/capi/vsphere
   excludePaths:
     - docs
     - README.md
@@ -1003,14 +1003,22 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/se-plus/modules/040-node-manager/capi/vsphere
-  to: /deckhouse/modules/040-node-manager/capi/vsphere
+- add: /ee/se-plus/modules/040-node-manager/capi/zvirt
+  to: /deckhouse/modules/040-node-manager/capi/zvirt
   excludePaths:
     - docs
     - README.md
     - images
-    - webhooks
-    - crds
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
   stageDependencies:
     setup:
         - '**/*'
