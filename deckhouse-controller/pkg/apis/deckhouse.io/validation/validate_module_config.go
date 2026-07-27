@@ -133,12 +133,9 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 	switch review.Operation {
 	case kwhmodel.OperationDelete:
 		if cfg.Name == controlPlaneManagerModuleName {
-			deletedSettings, extractErr := v.extractSettingsFromModuleConfig(cfg)
-			if extractErr != nil {
-				deletedSettings = nil
-			}
-			// newSettings empty: deleting the ModuleConfig clears any kubernetesVersion override.
-			if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, nil, deletedSettings); res != nil || err != nil {
+			// Use raw settings (GetMap), not ExtractLatestSettings/validateCR: a conversion
+			// failure on an unrelated field must not hide an existing kubernetesVersion pin.
+			if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, nil, rawModuleConfigSettings(cfg)); res != nil || err != nil {
 				return res, err
 			}
 		}
@@ -156,7 +153,13 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		var extractErr error
 		oldSettings, extractErr = v.extractOldSettings(review.OldObjectRaw)
 		if extractErr != nil {
-			oldSettings = nil
+			// Same reason as DELETE: keep the kubernetesVersion clear-guard alive when conversion
+			// of the old object fails. CEL with raw settings is imperfect but better than
+			// silently dropping the old pin (nil would skip both CEL and the clear-guard).
+			oldConfig := new(v1alpha1.ModuleConfig)
+			if json.Unmarshal(review.OldObjectRaw, oldConfig) == nil {
+				oldSettings = rawModuleConfigSettings(oldConfig)
+			}
 		}
 
 		if res, err := v.validateUpdate(ctx, review, cfg, allowExperimental); res != nil || err != nil {

@@ -193,8 +193,23 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		resp := callHandler(t, handler, review)
 		require.False(t, resp.Allowed)
 		require.NotNil(t, resp.Result)
-		assert.Contains(t, resp.Result.Message, "not in the cluster's availableVersions")
+		assert.Contains(t, resp.Result.Message, "ClusterConfiguration.kubernetesVersion")
 		assert.Contains(t, resp.Result.Message, "1.32")
+		assert.Contains(t, resp.Result.Message, "not in the cluster's availableVersions")
+	})
+
+	t.Run("п.2: clearing MC override when CC is in availableVersions is allowed", func(t *testing.T) {
+		handler := withObjs(t,
+			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecret("1.34"),
+		)
+
+		newCfg := newControlPlaneManagerConfig("")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
 	})
 
 	t.Run("п.2: clearing MC override to Automatic CC is allowed", func(t *testing.T) {
@@ -224,7 +239,40 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		resp := callHandler(t, handler, review)
 		require.False(t, resp.Allowed)
 		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "ClusterConfiguration.kubernetesVersion")
 		assert.Contains(t, resp.Result.Message, "1.32")
+	})
+
+	t.Run("clear still rejected when old settings extract fails", func(t *testing.T) {
+		handler := withObjs(t,
+			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecret("1.32"),
+		)
+
+		newCfg := newControlPlaneManagerConfig("")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		// Unsupported version makes ExtractLatestSettings fail; the clear-guard must still
+		// see the raw kubernetesVersion pin via GetMap fallback.
+		oldCfg.Spec.Version = 99
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "ClusterConfiguration.kubernetesVersion")
+		assert.Contains(t, resp.Result.Message, "1.32")
+	})
+
+	t.Run("unchanged kubernetesVersion skips membership — other fields editable", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}))
+
+		// Pin 1.32 is outside availableVersions; an unrelated settings edit must still pass.
+		newCfg := newControlPlaneManagerConfig("1.32")
+		oldCfg := newControlPlaneManagerConfig("1.32")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
 	})
 
 	t.Run("DELETE with pinned version falls back to stale CC and is rejected", func(t *testing.T) {
@@ -245,7 +293,53 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		resp := callHandler(t, handler, review)
 		require.False(t, resp.Allowed)
 		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "ClusterConfiguration.kubernetesVersion")
 		assert.Contains(t, resp.Result.Message, "not in the cluster's availableVersions")
+	})
+
+	t.Run("DELETE with allow-disabling annotation still checks version fallback", func(t *testing.T) {
+		storage, manager := buildHandler(t)
+		manager.enabled[moduleName] = true
+		dependencyExtender := moduledependency.NewIExtenderMock(t)
+		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
+		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator,
+			moduleCR,
+			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecret("1.32"),
+		)
+
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		if oldCfg.Annotations == nil {
+			oldCfg.Annotations = map[string]string{}
+		}
+		oldCfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable] = "true"
+		review := newModuleConfigAdmissionReview("DELETE", nil, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "ClusterConfiguration.kubernetesVersion")
+	})
+
+	t.Run("DELETE still rejected when old settings extract would fail", func(t *testing.T) {
+		storage, manager := buildHandler(t)
+		manager.enabled[moduleName] = false
+		dependencyExtender := moduledependency.NewIExtenderMock(t)
+		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
+		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator,
+			moduleCR,
+			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecret("1.32"),
+		)
+
+		oldCfg := newControlPlaneManagerConfigDisabled("1.35")
+		oldCfg.Spec.Version = 99
+		review := newModuleConfigAdmissionReview("DELETE", nil, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "1.32")
 	})
 
 	t.Run("fail-open: no ConfigMap — allowed", func(t *testing.T) {

@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -53,6 +54,9 @@ type clusterKubernetesStatus struct {
 // (or deleting the ModuleConfig) resolves the future effective version via ClusterConfiguration
 // and applies the same membership check, so a stale CC pin cannot silently become the target.
 //
+// Unchanged kubernetesVersion skips the check so edits to unrelated settings are not blocked by an
+// orphaned pin that fell outside availableVersions after the ConfigMap appeared or Supported shrank.
+//
 // Fail-open on missing/empty ConfigMap status, empty availableVersions, or read errors: the
 // ModuleConfig webhook runs with failurePolicy: Fail, and a transient outage must not lock out edits.
 func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
@@ -61,7 +65,14 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	newVersion := settingsKubernetesVersion(newSettings)
 	oldVersion := settingsKubernetesVersion(oldSettings)
 
-	var effective string
+	if newVersion == oldVersion {
+		return nil, nil
+	}
+
+	var (
+		effective    string
+		fromFallback bool
+	)
 	switch {
 	case isPinnedKubernetesVersion(newVersion):
 		effective = newVersion
@@ -75,6 +86,7 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 			return nil, nil
 		}
 		effective = ccVersion
+		fromFallback = true
 	default:
 		// Automatic / unset without clearing a prior pin (HV-06, HV-07).
 		return nil, nil
@@ -97,6 +109,14 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	}
 
 	if !slices.Contains(available, effective) {
+		if fromFallback {
+			return rejectResult(fmt.Sprintf(
+				"clearing or deleting the ModuleConfig kubernetesVersion override would fall back to "+
+					"ClusterConfiguration.kubernetesVersion %q, which is not in the cluster's availableVersions %v; "+
+					"downgrading more than one minor below the highest version the cluster has ever run is forbidden",
+				effective, available,
+			))
+		}
 		return rejectResult(fmt.Sprintf(
 			"kubernetesVersion %q is not in the cluster's availableVersions %v; "+
 				"downgrading more than one minor below the highest version the cluster has ever run is forbidden",
@@ -116,6 +136,20 @@ func settingsKubernetesVersion(settings map[string]interface{}) string {
 
 func isPinnedKubernetesVersion(version string) bool {
 	return version != "" && version != "Automatic"
+}
+
+// rawModuleConfigSettings returns spec.settings as stored on the object, without schema
+// conversion or validateCR. Used for the kubernetesVersion clear/DELETE guard so a conversion
+// failure on an unrelated field cannot hide an existing pin.
+func rawModuleConfigSettings(cfg *v1alpha1.ModuleConfig) map[string]interface{} {
+	if cfg == nil || cfg.Spec.Settings == nil {
+		return nil
+	}
+	m := cfg.Spec.Settings.GetMap()
+	if len(m) == 0 {
+		return nil
+	}
+	return m
 }
 
 // readAvailableKubernetesVersions returns status.availableVersions from
