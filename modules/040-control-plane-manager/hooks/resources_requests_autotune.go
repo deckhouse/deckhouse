@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -216,6 +217,12 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 
 	cpuOverridden := isMeasurementOverridden(input, resourceCPU)
 	memoryOverridden := isMeasurementOverridden(input, resourceMemory)
+	if cpuOverridden {
+		input.Logger.Info("autotune: cpu measurement overridden by config, skipping cpu autotune")
+	}
+	if memoryOverridden {
+		input.Logger.Info("autotune: memory measurement overridden by config, skipping memory autotune")
+	}
 
 	if cpuOverridden && state.CPU != nil {
 		state.deleteMeasurement(resourceCPU)
@@ -264,12 +271,24 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		}
 
 		// Missing/failed metrics: do not mutate applied*; keep capacityBlocked as-is.
+		// Evaluate each measurement independently — do NOT use `stateDirty || evaluate...`
+		// or a successful cpu commit short-circuits and skips memory entirely.
 		if usageOK || len(recsCPU) > 0 || len(recsMem) > 0 {
 			if !cpuOverridden {
-				stateDirty = stateDirty || evaluateMeasurement(input, state, resourceCPU, recsCPU, budgetCPU, combinedCPU, now)
+				if len(recsCPU) == 0 {
+					input.Logger.Warn("autotune: no cpu usage datapoints from metrics API, leaving cpu state unchanged")
+				}
+				if evaluateMeasurement(input, state, resourceCPU, recsCPU, budgetCPU, combinedCPU, now) {
+					stateDirty = true
+				}
 			}
 			if !memoryOverridden {
-				stateDirty = stateDirty || evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMem, combinedMem, now)
+				if len(recsMem) == 0 {
+					input.Logger.Warn("autotune: no memory usage datapoints from metrics API, leaving memory state unchanged")
+				}
+				if evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMem, combinedMem, now) {
+					stateDirty = true
+				}
 			}
 		}
 	}
@@ -285,16 +304,30 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 }
 
 func isMeasurementOverridden(input *go_hook.HookInput, resourceName string) bool {
+	var paths []string
 	switch resourceName {
 	case resourceCPU:
-		return input.Values.Exists("controlPlaneManager.resourcesRequests.cpu") ||
-			input.Values.Exists("global.modules.resourcesRequests.controlPlane.cpu")
+		paths = []string{
+			"controlPlaneManager.resourcesRequests.cpu",
+			"global.modules.resourcesRequests.controlPlane.cpu",
+		}
 	case resourceMemory:
-		return input.Values.Exists("controlPlaneManager.resourcesRequests.memory") ||
-			input.Values.Exists("global.modules.resourcesRequests.controlPlane.memory")
+		paths = []string{
+			"controlPlaneManager.resourcesRequests.memory",
+			"global.modules.resourcesRequests.controlPlane.memory",
+		}
 	default:
 		return false
 	}
+	for _, path := range paths {
+		v := input.Values.Get(path)
+		// Exists alone is not enough: openapi/merge can leave an empty string
+		// after the user clears ModuleConfig, which would permanently skip autotune.
+		if v.Exists() && strings.TrimSpace(v.String()) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func repopulateComponents(input *go_hook.HookInput, state *autotuneState, cpuOverridden, memoryOverridden bool) {
@@ -582,12 +615,8 @@ func persistAutotuneState(input *go_hook.HookInput, state *autotuneState) error 
 // customMetricValueList is the subset of custom.metrics.k8s.io MetricValueList we need.
 type customMetricValueList struct {
 	Items []struct {
-		Value string `json:"value"`
+		Value resource.Quantity `json:"value"`
 	} `json:"items"`
-}
-
-func podMetricName(resourceName string) string {
-	return fmt.Sprintf("d8-cpm-autotune-%s", resourceName)
 }
 
 func fetchComponentUsageFromMetricsAPI(ctx context.Context, dc dependency.Container, component, resourceName string) (float64, bool, error) {
@@ -597,7 +626,7 @@ func fetchComponentUsageFromMetricsAPI(ctx context.Context, dc dependency.Contai
 	}
 
 	container := componentContainer[component]
-	metric := podMetricName(resourceName)
+	metric := fmt.Sprintf("d8-cpm-autotune-%s", resourceName)
 
 	pods, err := client.CoreV1().Pods(kubeSystemNS).List(ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("component=%s,tier=control-plane", container),
@@ -606,14 +635,14 @@ func fetchComponentUsageFromMetricsAPI(ctx context.Context, dc dependency.Contai
 		return 0, false, fmt.Errorf("list control-plane pods: %w", err)
 	}
 	if len(pods.Items) == 0 {
-		return 0, false, nil
+		return 0, false, fmt.Errorf("no pods matching component=%s,tier=control-plane", container)
 	}
 
 	var maxVal float64
 	found := false
 	var lastErr error
 	for i := range pods.Items {
-		v, ok, ferr := fetchPodMetric(ctx, client, pods.Items[i].Name, metric, resourceName)
+		v, ok, ferr := fetchPodMetric(ctx, client, pods.Items[i].Name, metric)
 		if ferr != nil {
 			lastErr = ferr
 			continue
@@ -632,7 +661,7 @@ func fetchComponentUsageFromMetricsAPI(ctx context.Context, dc dependency.Contai
 	return maxVal, found, nil
 }
 
-func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric, resourceName string) (float64, bool, error) {
+func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric string) (float64, bool, error) {
 	path := fmt.Sprintf(
 		"/apis/custom.metrics.k8s.io/v1beta1/namespaces/%s/pods/%s/%s",
 		kubeSystemNS, podName, metric,
@@ -644,25 +673,23 @@ func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric, res
 
 	var list customMetricValueList
 	if err := json.Unmarshal(body, &list); err != nil {
-		return 0, false, fmt.Errorf("decode metrics response for %s: %w", podName, err)
+		snippet := string(body)
+		if len(snippet) > 256 {
+			snippet = snippet[:256] + "…"
+		}
+		return 0, false, fmt.Errorf("decode metrics response for %s: %w; body=%s", podName, err, snippet)
 	}
 	if len(list.Items) == 0 {
-		return 0, false, nil
+		// Empty list is a real miss (PromQL returned no series). Surface it so
+		// schedule logs show why memory/cpu was skipped instead of failing silently.
+		return 0, false, fmt.Errorf("GET %s: empty MetricValueList", path)
 	}
 
-	q, err := resource.ParseQuantity(list.Items[0].Value)
-	if err != nil {
-		return 0, false, nil
-	}
-	var v float64
-	switch resourceName {
-	case resourceCPU:
-		v = float64(q.MilliValue()) / 1000.0
-	case resourceMemory:
-		v = float64(q.Value())
-	}
-	if math.IsNaN(v) || v < 0 {
-		return 0, false, nil
+	// custom.metrics encodes samples as milli-quantities; AsApproximateFloat64
+	// yields the natural unit (cores for cpu, bytes for memory).
+	v := list.Items[0].Value.AsApproximateFloat64()
+	if math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 {
+		return 0, false, fmt.Errorf("GET %s: non-positive metric value %q", path, list.Items[0].Value.String())
 	}
 	return v, true, nil
 }
