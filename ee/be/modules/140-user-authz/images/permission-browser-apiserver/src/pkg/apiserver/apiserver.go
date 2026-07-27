@@ -18,6 +18,7 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/server/healthz"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -96,6 +97,7 @@ func (cfg *Config) Complete() CompletedConfig {
 // initResult holds the initialization results
 type initResult struct {
 	clientset       *kubernetes.Clientset
+	dynamicClient   dynamic.Interface
 	informerFactory informers.SharedInformerFactory
 	restConfig      *rest.Config
 }
@@ -117,6 +119,15 @@ func initInformers() (*initResult, error) {
 		return nil, err
 	}
 	result.clientset = clientset
+
+	// The Group/User resources of user-authn are CRDs, so they are read through
+	// the dynamic client: the module may be absent, and the report degrades to
+	// "no groups resolved" rather than failing.
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	result.dynamicClient = dynamicClient
 
 	// Create shared informer factory with 30 minute resync
 	result.informerFactory = informers.NewSharedInformerFactory(clientset, 30*time.Minute)
@@ -194,7 +205,7 @@ func startInformers(ctx context.Context, informerFactory informers.SharedInforme
 // (project) admins; per-namespace disclosure scoping cannot be expressed on a
 // cluster-scoped resource and would require a redesign. See the chart comment in
 // templates/permission-browser-apiserver/rbac-for-us.yaml.
-func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver, whoCan registry.WhoCanResolver) error {
+func registerAPIGroup(server *genericapiserver.GenericAPIServer, storages registry.Storages) error {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(
 		authorization.GroupName,
 		Scheme,
@@ -202,10 +213,7 @@ func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer
 		Codecs,
 	)
 
-	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorage(auth, whoCan)
-	if nsResolver != nil {
-		apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorageWithResolver(auth, nsResolver, whoCan)
-	}
+	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorage(storages)
 
 	return server.InstallAPIGroup(&apiGroupInfo)
 }
@@ -272,6 +280,7 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 
 	// Create namespace resolver for AccessibleNamespace API
 	var nsResolver *resolver.NamespaceResolver
+	var subjectAccess *resolver.SubjectAccessResolver
 	if initRes.informerFactory != nil {
 		rbacInformers := initRes.informerFactory.Rbac().V1()
 		nsResolver = resolver.NewNamespaceResolver(
@@ -284,10 +293,31 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 			mtEngine,
 		)
 		klog.Info("Namespace resolver initialized for AccessibleNamespace API")
+
+		subjectAccess = resolver.NewSubjectAccessResolver(
+			rbacInformers.Roles().Lister(),
+			rbacInformers.RoleBindings().Lister(),
+			rbacInformers.ClusterRoles().Lister(),
+			rbacInformers.ClusterRoleBindings().Lister(),
+			scopeCache,
+			mtEngine,
+			resolver.NewGroupCatalog(initRes.dynamicClient),
+		)
+		klog.Info("Subject access resolver initialized for SubjectAccessReport API")
 	}
 
 	// Register API group
-	if err := registerAPIGroup(genericServer, compositeAuth, nsResolver, rbacAuth); err != nil {
+	storages := registry.Storages{
+		Authorizer:        compositeAuth,
+		NamespaceResolver: nsResolver,
+		WhoCan:            rbacAuth,
+	}
+	// A typed nil in the interface would register a storage that panics on use.
+	if subjectAccess != nil {
+		storages.SubjectAccess = subjectAccess
+	}
+
+	if err := registerAPIGroup(genericServer, storages); err != nil {
 		cancel()
 		return nil, err
 	}

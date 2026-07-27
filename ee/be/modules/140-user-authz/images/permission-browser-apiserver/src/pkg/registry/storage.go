@@ -33,29 +33,37 @@ const (
 	nonSelfReviewSubresource = "nonself"
 )
 
-// GetStorage returns the storage map for the authorization API group (legacy, without namespace resolver).
-// whoCan may be nil, in which case the WhoCan resource is not registered.
-func GetStorage(auth authorizer.Authorizer, whoCan WhoCanResolver) map[string]rest.Storage {
-	storage := map[string]rest.Storage{
-		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
-	}
-	if whoCan != nil {
-		storage["whocans"] = NewWhoCanStorage(whoCan)
-	}
-	return storage
+// Storages collects the backends the API group is built from. Every field
+// except Authorizer is optional: a resource whose backend is missing is simply
+// not registered, which is how the server degrades when a dependency (the
+// multi-tenancy engine, discovery, the informer factory) is unavailable.
+type Storages struct {
+	// Authorizer decides forward access checks and gates the non-self reviews.
+	Authorizer authorizer.Authorizer
+	// NamespaceResolver backs the AccessibleNamespace resource.
+	NamespaceResolver *resolver.NamespaceResolver
+	// WhoCan backs the reverse-RBAC WhoCan resource.
+	WhoCan WhoCanResolver
+	// SubjectAccess backs the SubjectAccessReport resource.
+	SubjectAccess SubjectAccessReporter
 }
 
-// GetStorageWithResolver returns the storage map including the AccessibleNamespace and WhoCan resources.
-// This requires a NamespaceResolver for resolving user-accessible namespaces.
-// whoCan may be nil, in which case the WhoCan resource is not registered.
-func GetStorageWithResolver(auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver, whoCan WhoCanResolver) map[string]rest.Storage {
+// GetStorage returns the storage map for the authorization API group.
+func GetStorage(storages Storages) map[string]rest.Storage {
 	storage := map[string]rest.Storage{
-		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
-		"accessiblenamespaces":     NewAccessibleNamespaceStorage(nsResolver),
+		"bulksubjectaccessreviews": NewBulkSARStorage(storages.Authorizer),
 	}
-	if whoCan != nil {
-		storage["whocans"] = NewWhoCanStorage(whoCan)
+
+	if storages.NamespaceResolver != nil {
+		storage["accessiblenamespaces"] = NewAccessibleNamespaceStorage(storages.NamespaceResolver)
 	}
+	if storages.WhoCan != nil {
+		storage["whocans"] = NewWhoCanStorage(storages.WhoCan)
+	}
+	if storages.SubjectAccess != nil {
+		storage[subjectAccessResource] = NewSubjectAccessStorage(storages.SubjectAccess, storages.Authorizer)
+	}
+
 	return storage
 }
 
