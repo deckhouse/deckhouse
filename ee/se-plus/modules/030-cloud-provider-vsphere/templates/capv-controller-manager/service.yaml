@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: capv-controller-manager-webhook-service
+  namespace: d8-cloud-provider-vsphere
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capv-controller-manager")) | nindent 2 }}
+spec:
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: webhook-server
+  selector:
+    app: "capv-controller-manager"
