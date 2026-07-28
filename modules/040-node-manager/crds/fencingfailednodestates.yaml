@@ -83,12 +83,14 @@ spec:
                     name:
                       type: string
                       description: |
-                        Name of the built-in SLA profile. It must match the `metadata.name` of a built-in `FencingSLAProfile`, which is why it is lower-case.
+                        Name of the built-in SLA profile. Only built-in profiles are allowed, so the value is restricted to their names.
+
+                        The matching `FencingSLAProfile` object is named in lower case, because a Kubernetes object name cannot contain capital letters. The profile is resolved by lower-casing this value.
                       enum:
-                        - critical
-                        - medium
-                        - moderate
-                        - slow
+                        - Critical
+                        - Medium
+                        - Moderate
+                        - Slow
             status:
               type: object
               description: |

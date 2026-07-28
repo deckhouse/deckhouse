@@ -4,7 +4,6 @@ metadata:
   name: fencingslaprofiles.node-manager.deckhouse.io
   labels:
     heritage: deckhouse
-    module: node-manager
 spec:
   group: node-manager.deckhouse.io
   scope: Cluster
@@ -49,7 +48,9 @@ spec:
 
             Profiles are cluster-scoped configuration objects. They carry no runtime state, so the resource has no `status` and no status subresource.
 
-            The built-in profiles `critical`, `medium`, `moderate` and `slow` are shipped by the `node-manager` module. In the first version a NodeGroup can only reference a built-in profile by name, and `FencingFailedNodeState.spec.profileRef.name` is validated against those names.
+            The built-in profiles `critical`, `medium`, `moderate` and `slow` are shipped by the `node-manager` module. In the first version only built-in profiles can be referenced, and `FencingFailedNodeState.spec.profileRef.name` is restricted to them by an enum.
+
+            Profile names are referenced in the API in capitalized form (`Critical`, `Medium`, `Moderate`, `Slow`), while the objects themselves are named in lower case, because a Kubernetes object name cannot contain capital letters. A reference is resolved by lower-casing it.
           required:
             - spec
           properties:
