@@ -22,14 +22,15 @@ import (
 )
 
 // ProfileName selects the SLA timings a NodeGroup is fenced under.
-// +kubebuilder:validation:Enum=Critical;Medium;Moderate;Slow
+// It matches the metadata.name of a built-in FencingSLAProfile, hence lower-case.
+// +kubebuilder:validation:Enum=critical;medium;moderate;slow
 type ProfileName string
 
 const (
-	ProfileCritical ProfileName = "Critical"
-	ProfileMedium   ProfileName = "Medium"
-	ProfileModerate ProfileName = "Moderate"
-	ProfileSlow     ProfileName = "Slow"
+	ProfileCritical ProfileName = "critical"
+	ProfileMedium   ProfileName = "medium"
+	ProfileModerate ProfileName = "moderate"
+	ProfileSlow     ProfileName = "slow"
 )
 
 // ProfileNames returns every valid profile, strictest first.

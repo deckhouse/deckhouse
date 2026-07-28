@@ -1,0 +1,230 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: fencingslaprofiles.node-manager.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: node-manager.deckhouse.io
+  scope: Cluster
+  names:
+    plural: fencingslaprofiles
+    singular: fencingslaprofile
+    kind: FencingSLAProfile
+    shortNames:
+      - fsp
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: Goal
+          type: string
+          jsonPath: .spec.reactionGoal
+        - name: Detection
+          type: string
+          jsonPath: .spec.detectionWindowTarget
+        - name: Probe
+          type: string
+          jsonPath: .spec.memberlist.probeInterval
+        - name: FallbackTTL
+          type: string
+          jsonPath: .spec.fallback.ttl
+        - name: EvacuationDelay
+          type: string
+          jsonPath: .spec.evacuation.delay
+        - name: Rejoin
+          type: string
+          jsonPath: .spec.rejoin.interval
+        - name: Watchdog
+          type: string
+          jsonPath: .spec.watchdog.timeout
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            SLA profile for fencing. A profile is a named, reusable set of timing parameters that control how fast a failed node is detected, how long a fallback heartbeat protects the node from a false eviction, how long the controller waits before evacuating pods, and how the watchdog behaves.
+
+            Profiles are cluster-scoped configuration objects. They carry no runtime state, so the resource has no `status` and no status subresource.
+
+            The built-in profiles `critical`, `medium`, `moderate` and `slow` are shipped by the `node-manager` module. In the first version a NodeGroup can only reference a built-in profile by name, and `FencingFailedNodeState.spec.profileRef.name` is validated against those names.
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              description: |
+                Timing parameters of the profile.
+              required:
+                - reactionGoal
+                - detectionWindowTarget
+                - memberlist
+                - fallback
+                - rejoin
+                - evacuation
+                - watchdog
+              x-kubernetes-validations:
+                - rule: duration(self.memberlist.probeTimeout) < duration(self.memberlist.probeInterval)
+                  message: memberlist.probeTimeout must be less than memberlist.probeInterval.
+                - rule: duration(self.fallback.heartbeat) < duration(self.fallback.ttl)
+                  message: fallback.heartbeat must be less than fallback.ttl.
+                - rule: duration(self.fallback.kubernetesAPITimeout) < duration(self.fallback.ttl)
+                  message: fallback.kubernetesAPITimeout must be less than fallback.ttl.
+                - rule: duration(self.rejoin.interval) <= duration(self.rejoin.maxInterval)
+                  message: rejoin.interval must be less than or equal to rejoin.maxInterval.
+                - rule: duration(self.watchdog.feedInterval) < duration(self.watchdog.timeout)
+                  message: watchdog.feedInterval must be less than watchdog.timeout.
+              properties:
+                reactionGoal:
+                  type: string
+                  description: |
+                    Human-readable full reaction goal, for example `2-3s` or `30s`. Used for documentation and printer columns only, not parsed as a duration.
+                detectionWindowTarget:
+                  type: string
+                  description: |
+                    Human-readable memberlist detection target, for example `0.8-1.2s`. Used for documentation and to sanity-check calculations, not parsed as a duration.
+                memberlist:
+                  type: object
+                  description: |
+                    memberlist and Lifeguard parameters that control peer probing, suspicion and gossip.
+                  required:
+                    - probeInterval
+                    - probeTimeout
+                    - suspicionMult
+                    - suspicionMaxTimeoutMult
+                    - indirectChecks
+                    - awarenessMaxMultiplier
+                    - gossipInterval
+                    - retransmitMult
+                    - gossipToTheDeadTime
+                  properties:
+                    probeInterval:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        How often peer nodes are actively probed. Shorter interval means faster detection but linearly higher probe traffic.
+                    probeTimeout:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        How long to wait for a probe response. Must be less than `probeInterval` and above the p99 network RTT.
+                    suspicionMult:
+                      type: integer
+                      format: int32
+                      minimum: 1
+                      description: |
+                        Multiplier of the Lifeguard/memberlist suspicion window before a peer is marked dead.
+                    suspicionMaxTimeoutMult:
+                      type: integer
+                      format: int32
+                      minimum: 1
+                      description: |
+                        Upper bound of the suspicion timer when confirmations are missing.
+                    indirectChecks:
+                      type: integer
+                      format: int32
+                      minimum: 1
+                      description: |
+                        Number of indirect checks performed when direct connectivity to a peer is in doubt.
+                    awarenessMaxMultiplier:
+                      type: integer
+                      format: int32
+                      minimum: 1
+                      description: |
+                        Maximum slowdown of the probe interval for a locally degraded agent (Lifeguard awareness).
+                    gossipInterval:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        Interval at which gossip events are disseminated.
+                    retransmitMult:
+                      type: integer
+                      format: int32
+                      minimum: 1
+                      description: |
+                        Retransmit multiplier for gossip broadcasts: `retransmitMult * ceil(log10(N + 1))`.
+                    gossipToTheDeadTime:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        How long a dead node still receives gossip, giving it a chance to refute after recovery.
+                fallback:
+                  type: object
+                  description: |
+                    Fallback heartbeat parameters used by a node that lost gossip quorum but still reaches the Kubernetes API.
+                  required:
+                    - heartbeat
+                    - ttl
+                    - kubernetesAPITimeout
+                  properties:
+                    heartbeat:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        How often an isolated node that still sees the Kubernetes API writes a fallback heartbeat. Must be noticeably less than `ttl`.
+                    ttl:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        Freshness window of a fallback heartbeat. While the last heartbeat is newer than this TTL, evacuation is not allowed.
+                    kubernetesAPITimeout:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        Timeout of the Kubernetes API probe on the fallback path. Must be less than `ttl` so the API check does not block the decision.
+                rejoin:
+                  type: object
+                  description: |
+                    Parameters of the rejoin loop that repeats `memberlist.Join(seedList)` after quorum loss or a long network partition.
+                  required:
+                    - interval
+                    - maxInterval
+                  properties:
+                    interval:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        Initial interval between rejoin attempts. Backoff resets to this value after a successful rejoin.
+                    maxInterval:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        Upper bound of the exponential backoff between rejoin attempts. Must be greater than or equal to `interval`.
+                evacuation:
+                  type: object
+                  description: |
+                    Evacuation parameters used by the fencing controller.
+                  required:
+                    - delay
+                  properties:
+                    delay:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        Delay before pods are deleted after a fast-path failure, counted from `status.failed.detectedAt`.
+                watchdog:
+                  type: object
+                  description: |
+                    Watchdog parameters used as a safety net on the node.
+                  required:
+                    - feedInterval
+                    - timeout
+                  properties:
+                    feedInterval:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        How often the watchdog is fed and quorum/fallback is re-checked. Must be less than `timeout`, usually one quarter to one tenth of it.
+                    timeout:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      description: |
+                        Time until the watchdog panics the node after feeding stops.

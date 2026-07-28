@@ -83,12 +83,12 @@ spec:
                     name:
                       type: string
                       description: |
-                        Name of the SLA profile.
+                        Name of the built-in SLA profile. It must match the `metadata.name` of a built-in `FencingSLAProfile`, which is why it is lower-case.
                       enum:
-                        - Critical
-                        - Medium
-                        - Moderate
-                        - Slow
+                        - critical
+                        - medium
+                        - moderate
+                        - slow
             status:
               type: object
               description: |
