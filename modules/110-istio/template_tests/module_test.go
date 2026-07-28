@@ -64,6 +64,7 @@ discovery:
 `
 
 const istioValues = `
+    registry: {}
     internal:
       globalVersion: "1.21.6"
       versionMap:

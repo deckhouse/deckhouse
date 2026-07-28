@@ -130,6 +130,7 @@ defaults:
       toc: false
       layout: guide
       searchBageEnabled: false
+      allowPDFDownload: true
   - scope:
       path: "pages/code"
     values:

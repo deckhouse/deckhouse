@@ -37,6 +37,9 @@ dvp-cse: DVP CSE
 dkp-cse-pro: DKP CSE Pro
 
 common:
+  pdf_download:
+    en: Download page as PDF
+    ru: Скачать страницу в PDF
   of:
     en: of
     ru: ""

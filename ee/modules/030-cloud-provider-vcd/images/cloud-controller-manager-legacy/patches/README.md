@@ -26,14 +26,7 @@ Changes:
 
 ### 003-go-mod.patch
 
-Files:
-
-- go.mod
-- go.sum
-
-Changes:
-
-- Update go-vcloud-director SDK: v2.14.0-rc.3 → v2.21.0 (required for patch 005 which uses QueryCatalogRecords method introduced in v2.21.0)
+Bump go.mod dependencies to fix known CVEs.
 
 ### 004-klog.patch
 

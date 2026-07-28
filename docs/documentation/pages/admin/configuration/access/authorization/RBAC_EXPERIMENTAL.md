@@ -45,8 +45,8 @@ The roles created by the module fall into two categories:
 - [Use roles](#use-roles) — for granting permissions to users (for example, application developers) *within a specific namespace*.
 - [Manage roles](#manage-roles) — for granting administrator permissions.
 
-{% alert level="warning" %}
-Pay attention to the specifics of configuring combined access and shared use of RoleBinding and ClusterAuthorizationRule (CAR) for the same user when multitenancy mode is enabled in the cluster (parameter [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). For more details, see the [`user-authz`](/modules/user-authz/#rolebinding-car) module documentation.
+{% alert level="info" %}
+If multitenancy mode is enabled in the cluster (via [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), RoleBinding and ClusterAuthorizationRule can be used together for the same user. For details, refer to the `user-authz` module [documentation](/modules/user-authz/#using-clusterauthorizationrule-and-authorizationrule-together-with-rbac).
 {% endalert %}
 
 ## Use roles

@@ -1,5 +1,5 @@
-{{- $version := "v0.7.2" }}
-{{- $version_common := "v0.7.1" }}
+{{- $version := "v0.7.3" }}
+{{- $version_common := "v0.8.1" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -75,3 +75,5 @@ shell:
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
   - chown 64535:64535 /discoverer
   - chmod 0755 /discoverer
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

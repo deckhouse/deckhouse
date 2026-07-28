@@ -93,3 +93,5 @@ imageSpec:
     workingDir: "/"
     user: "root:root"
     cmd: ["/bin/bash"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

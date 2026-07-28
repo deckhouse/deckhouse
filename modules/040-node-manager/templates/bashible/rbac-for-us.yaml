@@ -11,11 +11,6 @@ rules:
   - bashible-bashbooster
   - node-users
   - registry-packages-proxy-token
-{{- range $bundle := $.Values.nodeManager.internal.allowedBundles }}
-  {{- range $.Values.nodeManager.internal.nodeGroups }}
-  - bashible-{{ .name }}-{{ $bundle }}
-  {{- end }}
-{{- end }}
   resources:
   - secrets
   verbs:

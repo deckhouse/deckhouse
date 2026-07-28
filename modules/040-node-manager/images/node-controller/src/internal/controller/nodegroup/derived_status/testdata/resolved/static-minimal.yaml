@@ -1,0 +1,10 @@
+cri:
+  type: Containerd
+engine: None
+kubernetesVersion: "1.32"
+manualRolloutID: ""
+name: static-minimal
+nodeType: Static
+serializedLabels: node-role.kubernetes.io/static-minimal=,node.deckhouse.io/group=static-minimal,node.deckhouse.io/type=Static
+serializedTaints: ""
+updateEpoch: "1000"
