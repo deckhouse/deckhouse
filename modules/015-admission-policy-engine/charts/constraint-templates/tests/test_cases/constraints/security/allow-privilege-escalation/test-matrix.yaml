@@ -438,3 +438,89 @@ spec:
                         name: init
                         securityContext:
                           allowPrivilegeEscalation: true
+        - name: controller-disallowed-no-exception
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-no-exception
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          allowPrivilegeEscalation: true
+        - name: controller-allowed-by-spe-on-pod-template
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-privilege-escalation-true
+                spec:
+                  securityContext:
+                    allowPrivilegeEscalation:
+                      allowedValue: true
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-allowed-by-spe-on-pod-template
+              spec:
+                template:
+                  metadata:
+                    labels:
+                      security.deckhouse.io/security-policy-exception: allow-privilege-escalation-true
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          allowPrivilegeEscalation: true
+        - name: controller-allowed-by-spe-on-top-level-metadata
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-privilege-escalation-true
+                spec:
+                  securityContext:
+                    allowPrivilegeEscalation:
+                      allowedValue: true
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-privilege-escalation-true
+                name: controller-allowed-by-spe-on-top-level-metadata
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          allowPrivilegeEscalation: true

@@ -71,6 +71,7 @@ spec:
               import data.lib.common.pod_spec
               import data.lib.common.object_labels
               import data.lib.common.object_namespace
+              import data.lib.common.effective_metadata
               import data.lib.resolve_value.resolve_from_sources
 
               apparmor_translation := {
@@ -88,7 +89,7 @@ spec:
                   {"type": "pod_field", "path": ["spec", "securityContext", "appArmorProfile", "type"]}
                 ]
                 normalized_obj := {
-                  "metadata": object.get(input.review.object, "metadata", {}),
+                  "metadata": effective_metadata,
                   "spec": pod_spec,
                 }
                 raw_profile := resolve_from_sources(normalized_obj, container, sources)
