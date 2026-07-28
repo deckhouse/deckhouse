@@ -1432,10 +1432,10 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: D8IstioConfigAnalysisError
-      sourceFile: modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
       moduleUrl: 110-istio
       module: istio
-      edition: ce
+      edition: ee
       description: |
         The Istio configuration analyzer found an error in revision `{{$labels.revision}}`.
 
@@ -1449,10 +1449,10 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: D8IstioConfigAnalysisWarning
-      sourceFile: modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
       moduleUrl: 110-istio
       module: istio
-      edition: ce
+      edition: ee
       description: |
         The Istio configuration analyzer found a warning in revision `{{$labels.revision}}`.
 

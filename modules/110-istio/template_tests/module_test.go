@@ -384,6 +384,18 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x27")
 			Expect(podMonitor.Exists()).To(BeTrue())
 		})
+
+		It("does not render istio config analyzer when configAnalysis is disabled", func() {
+			f.ValuesSet("istio.configAnalysis.enabled", false)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x27")
+			Expect(deployment.Exists()).To(BeFalse())
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x27")
+			Expect(podMonitor.Exists()).To(BeFalse())
+		})
 	})
 
 	Context("Istio config analyzer for control plane 1.25", func() {

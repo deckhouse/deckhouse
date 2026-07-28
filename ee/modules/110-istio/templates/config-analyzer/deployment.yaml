@@ -3,6 +3,7 @@ cpu: 50m
 memory: 128Mi
 {{- end }}
 
+{{- if .Values.istio.configAnalysis.enabled }}
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- if has $version (list "1.21" "1.25" "1.27") }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
@@ -151,4 +152,5 @@ spec:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
   {{- end }}
+{{- end }}
 {{- end }}

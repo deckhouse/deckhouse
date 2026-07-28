@@ -1,3 +1,4 @@
+{{- if .Values.istio.configAnalysis.enabled }}
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
   {{- range $version := .Values.istio.internal.versionsToInstall }}
     {{- if has $version (list "1.21" "1.25" "1.27") }}
@@ -45,4 +46,5 @@ spec:
       action: keep
     {{- end }}
   {{- end }}
+{{- end }}
 {{- end }}
