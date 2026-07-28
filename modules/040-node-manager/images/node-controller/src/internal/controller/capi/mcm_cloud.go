@@ -59,10 +59,11 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	region, _ := cloudProvider["region"].(string)
 
 	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
-	blob, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
+	element, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
 	if err != nil {
 		return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
 	}
+	blob := element.ToMap()
 	zones := blobZones(blob)
 	logger.Info("MCM reconcile decision", "nodeGroup", ng.Name, "validationErr", validationErr, "zones", zones, "machineClassKind", machineClassKind)
 	if validationErr != "" {

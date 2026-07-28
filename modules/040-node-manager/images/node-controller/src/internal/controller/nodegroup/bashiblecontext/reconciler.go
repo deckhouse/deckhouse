@@ -77,7 +77,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 			continue
 		}
 
-		elements = append(elements, element)
+		elements = append(elements, element.ToMap())
 	}
 
 	sort.Slice(elements, func(i, j int) bool {
@@ -89,6 +89,10 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 	return r.Context.WriteSecret(ctx, elements)
 }
 
+// readPriorNodeGroups returns the elements of the currently published context, keyed by
+// NodeGroup name. They stay raw parsed maps on purpose: the Secret may have been written by an
+// older node-controller, and an element shape this build does not model must survive the
+// last-good fallback unchanged.
 func (r *Reconciler) readPriorNodeGroups(ctx context.Context) map[string]map[string]interface{} {
 	out := map[string]map[string]interface{}{}
 

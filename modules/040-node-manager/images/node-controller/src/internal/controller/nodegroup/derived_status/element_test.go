@@ -129,13 +129,13 @@ func TestBuildElement_StaticWiresNameRolloutAndStatic(t *testing.T) {
 	element, errStr, err := s.BuildElement(context.Background(), ng, rawSpec)
 	require.NoError(t, err)
 	assert.Empty(t, errStr)
-	assert.Equal(t, "static1", element["name"])
-	assert.Equal(t, "test", element["manualRolloutID"])
-	assert.Equal(t, "Static", element["nodeType"])
+	assert.Equal(t, "static1", element.Name)
+	assert.Equal(t, "test", element.ManualRolloutID)
+	assert.Equal(t, v1.NodeTypeStatic, element.NodeType)
 	assert.Equal(t, map[string]interface{}{
 		"internalNetworkCIDRs": []interface{}{"172.18.200.0/24"},
-	}, element["static"])
-	assert.NotContains(t, element, "instanceClass", "static NG must not receive cloud overlays")
+	}, element.Static)
+	assert.NotContains(t, element.ToMap(), "instanceClass", "static NG must not receive cloud overlays")
 }
 
 func TestBuildElement_CloudKindMismatchErrors(t *testing.T) {
@@ -161,5 +161,5 @@ func TestBuildElement_CloudKindMismatchErrors(t *testing.T) {
 	element, errStr, err := s.BuildElement(context.Background(), ng, rawSpec)
 	require.NoError(t, err)
 	assert.Contains(t, errStr, "Invalid classReference.kind 'AWSInstanceClass'. Expected 'YandexInstanceClass'.")
-	assert.NotContains(t, element, "instanceClass", "failed check must drop cloud overlays")
+	assert.NotContains(t, element.ToMap(), "instanceClass", "failed check must drop cloud overlays")
 }

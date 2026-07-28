@@ -300,7 +300,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	cloudType, _ := cloudProvider["type"].(string)
 
 	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
-	blob, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
+	element, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
 	if err != nil {
 		return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
 	}
@@ -308,6 +308,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		logger.Info("skipping CAPI: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
 		return nil
 	}
+	blob := element.ToMap()
 	zones := blobZones(blob)
 	if len(zones) == 0 {
 		logger.V(1).Info("skipping CAPI: no zones")
