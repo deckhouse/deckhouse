@@ -398,25 +398,6 @@ func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string
 	return cfg.PodSubnetCIDR, nil
 }
 
-// blobZones extracts cloudInstances.zones from the blob element as a string slice.
-func blobZones(blob map[string]interface{}) []string {
-	ci := blobMap(blob, "cloudInstances")
-	switch raw := ci["zones"].(type) {
-	case []string:
-		return raw
-	case []interface{}:
-		zones := make([]string, 0, len(raw))
-		for _, z := range raw {
-			if s, ok := z.(string); ok {
-				zones = append(zones, s)
-			}
-		}
-		return zones
-	default:
-		return nil
-	}
-}
-
 // instanceClassSpot reports the provider spot flag; only aws acts on it.
 func instanceClassSpot(element derived_status.Element) bool {
 	instanceClass, _ := element.InstanceClass.(map[string]interface{})

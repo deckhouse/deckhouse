@@ -26,7 +26,7 @@ import (
 )
 
 func TestBuildNodeGroupBlob_SpecPassthrough(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeStatic,
 		RawSpec: map[string]interface{}{
@@ -55,7 +55,7 @@ func TestBuildNodeGroupBlob_SpecPassthrough(t *testing.T) {
 }
 
 func TestBuildNodeGroupBlob_CRITypeOverride(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -74,14 +74,14 @@ func TestBuildNodeGroupBlob_CRITypeOverride(t *testing.T) {
 func TestBuildNodeGroupBlob_StaticEmbedded(t *testing.T) {
 	static := map[string]interface{}{"internalNetworkCIDRs": []interface{}{"192.168.0.0/24"}}
 
-	staticNG := BuildNodeGroupBlob(BlobInput{
+	staticNG := buildNodeGroupBlob(BlobInput{
 		Name: "s", NodeType: v1.NodeTypeStatic,
 		RawSpec: map[string]interface{}{"nodeType": "Static"},
 		Static:  static,
 	}, Result{CRIType: "Containerd"})
 	assert.Equal(t, static, staticNG["static"], "static value embedded for Static NG")
 
-	cloudNG := BuildNodeGroupBlob(BlobInput{
+	cloudNG := buildNodeGroupBlob(BlobInput{
 		Name: "c", NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{"nodeType": "CloudEphemeral"},
 		Static:  static,
@@ -90,7 +90,7 @@ func TestBuildNodeGroupBlob_StaticEmbedded(t *testing.T) {
 }
 
 func TestBuildNodeGroupBlob_CloudProcessed(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "cloud",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -117,7 +117,7 @@ func TestBuildNodeGroupBlob_CloudProcessed(t *testing.T) {
 }
 
 func TestBuildNodeGroupBlob_CloudNotProcessed(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "cloud",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec:  map[string]interface{}{"nodeType": "CloudEphemeral"},
@@ -133,7 +133,7 @@ func TestBuildNodeGroupBlob_CloudNotProcessed(t *testing.T) {
 }
 
 func TestBuildNodeGroupBlob_FencingPassthrough(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeStatic,
 		RawSpec: map[string]interface{}{
@@ -162,7 +162,7 @@ func TestBuildNodeGroupBlob_FencingPassthrough(t *testing.T) {
 }
 
 func TestBuildNodeGroupBlob_SerializedTaints(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "test",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec:  map[string]interface{}{"nodeType": "CloudEphemeral"},
@@ -179,7 +179,7 @@ func TestBuildNodeGroupBlob_DoesNotMutateRawSpec(t *testing.T) {
 	rawCRI := map[string]interface{}{"type": "Docker"}
 	rawSpec := map[string]interface{}{"nodeType": "Static", "cri": rawCRI}
 
-	BuildNodeGroupBlob(BlobInput{
+	buildNodeGroupBlob(BlobInput{
 		Name: "w", NodeType: v1.NodeTypeStatic, RawSpec: rawSpec,
 	}, Result{CRIType: "Containerd"})
 

@@ -55,7 +55,7 @@ func bashibleNodeGroupChecksum(t *testing.T, blob map[string]interface{}) string
 
 func buildCloudBlob(t *testing.T, kubernetesVersion string, minPerZone, maxPerZone float64, zones []string) map[string]interface{} {
 	t.Helper()
-	return BuildNodeGroupBlob(BlobInput{
+	return buildNodeGroupBlob(BlobInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -103,7 +103,7 @@ func TestBashibleChecksum_MeaningfulFieldChanges(t *testing.T) {
 }
 
 func TestBashibleChecksum_GoldenParity(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{

@@ -92,7 +92,7 @@ func TestBuildNodeGroupBlob_ChecksumGoldens(t *testing.T) {
 			tmpl, err := os.ReadFile(tc.template)
 			require.NoError(t, err, "provider checksum template must exist")
 
-			got, err := machineclass.RenderChecksum(tmpl, BuildNodeGroupBlob(fixture.input, fixture.result), nil)
+			got, err := machineclass.RenderChecksum(tmpl, buildNodeGroupBlob(fixture.input, fixture.result), nil)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, got)
 		})

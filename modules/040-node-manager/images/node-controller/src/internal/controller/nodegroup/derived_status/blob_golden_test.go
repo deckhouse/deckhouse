@@ -50,7 +50,7 @@ func assertBlobMatchesGolden(t *testing.T, blob map[string]interface{}, goldenJS
 }
 
 func TestBuildNodeGroupBlob_Golden_CloudPermanent(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "cp1",
 		NodeType: v1.NodeTypeCloudPermanent,
 		RawSpec: map[string]interface{}{
@@ -86,7 +86,7 @@ func TestBuildNodeGroupBlob_Golden_CloudPermanent(t *testing.T) {
 }
 
 func TestBuildNodeGroupBlob_Golden_CloudEphemeralProcessed(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -136,7 +136,7 @@ func TestBuildNodeGroupBlob_Golden_CloudEphemeralProcessed(t *testing.T) {
 }
 
 func TestBuildNodeGroupBlob_Golden_EmptyZones(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -169,7 +169,7 @@ func TestBuildNodeGroupBlob_Golden_EmptyZones(t *testing.T) {
 }
 
 func TestBuildNodeGroupBlob_Golden_Static(t *testing.T) {
-	blob := BuildNodeGroupBlob(BlobInput{
+	blob := buildNodeGroupBlob(BlobInput{
 		Name:     "static1",
 		NodeType: v1.NodeTypeStatic,
 		RawSpec: map[string]interface{}{

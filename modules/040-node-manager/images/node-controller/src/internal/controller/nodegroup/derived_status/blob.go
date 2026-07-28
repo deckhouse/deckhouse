@@ -148,10 +148,6 @@ func (e Element) ToMap() map[string]interface{} {
 	return blob
 }
 
-func BuildNodeGroupBlob(in BlobInput, r Result) map[string]interface{} {
-	return BuildNodeGroupElement(in, r).ToMap()
-}
-
 func specPassthrough(rawSpec map[string]interface{}) map[string]interface{} {
 	spec := make(map[string]interface{}, len(nodeGroupForValuesKeys))
 	for _, key := range nodeGroupForValuesKeys {

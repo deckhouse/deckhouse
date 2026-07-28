@@ -26,39 +26,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
-func TestBlobZones(t *testing.T) {
-	t.Run("extracts zones", func(t *testing.T) {
-		blob := map[string]interface{}{
-			"cloudInstances": map[string]interface{}{
-				"zones": []interface{}{"eu-west-1a", "eu-west-1b"},
-			},
-		}
-		assert.Equal(t, []string{"eu-west-1a", "eu-west-1b"}, blobZones(blob))
-	})
-	t.Run("extracts zones stored as []string (real BuildNodeGroupBlob output)", func(t *testing.T) {
-		blob := map[string]interface{}{
-			"cloudInstances": map[string]interface{}{
-				"zones": []string{"ru-central1-a", "ru-central1-b"},
-			},
-		}
-		assert.Equal(t, []string{"ru-central1-a", "ru-central1-b"}, blobZones(blob))
-	})
-	t.Run("no cloudInstances", func(t *testing.T) {
-		assert.Nil(t, blobZones(map[string]interface{}{}))
-	})
-	t.Run("no zones key", func(t *testing.T) {
-		assert.Nil(t, blobZones(map[string]interface{}{"cloudInstances": map[string]interface{}{}}))
-	})
-	t.Run("skips non-string entries", func(t *testing.T) {
-		blob := map[string]interface{}{
-			"cloudInstances": map[string]interface{}{
-				"zones": []interface{}{"a", 5, "b"},
-			},
-		}
-		assert.Equal(t, []string{"a", "b"}, blobZones(blob))
-	})
-}
-
 func TestInstanceClassSpot(t *testing.T) {
 	t.Run("spot true", func(t *testing.T) {
 		element := derived_status.Element{InstanceClass: map[string]interface{}{"spot": true}}

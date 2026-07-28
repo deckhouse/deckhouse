@@ -46,6 +46,13 @@ func rawExtension(json string) *runtime.RawExtension {
 	return &runtime.RawExtension{Raw: []byte(json)}
 }
 
+// buildNodeGroupBlob is the published element of a NodeGroup, which is what most of these tests
+// assert on. Production code holds the Element and serializes it at the two boundaries that need
+// a map, so this shortcut lives here.
+func buildNodeGroupBlob(in BlobInput, r Result) map[string]interface{} {
+	return BuildNodeGroupElement(in, r).ToMap()
+}
+
 // Integral numbers arrive as int64 and fractional ones as float64: the raw spec comes from the
 // unstructured NodeGroup, not from encoding/json.
 func blobCorpus() []blobFixture {
@@ -424,7 +431,7 @@ func blobCorpus() []blobFixture {
 func TestBuildNodeGroupBlob_CorpusGoldens(t *testing.T) {
 	for _, fixture := range blobCorpus() {
 		t.Run(fixture.name, func(t *testing.T) {
-			assertBlobGolden(t, fixture.name, BuildNodeGroupBlob(fixture.input, fixture.result))
+			assertBlobGolden(t, fixture.name, buildNodeGroupBlob(fixture.input, fixture.result))
 		})
 	}
 }

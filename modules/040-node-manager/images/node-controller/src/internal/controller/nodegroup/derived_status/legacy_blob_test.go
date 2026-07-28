@@ -137,7 +137,7 @@ func TestBuildNodeGroupBlob_MatchesFrozenLegacy(t *testing.T) {
 		t.Run(fixture.name, func(t *testing.T) {
 			require.Equal(t,
 				legacyBuildNodeGroupBlob(fixture.input, fixture.result),
-				BuildNodeGroupBlob(fixture.input, fixture.result),
+				buildNodeGroupBlob(fixture.input, fixture.result),
 			)
 		})
 	}

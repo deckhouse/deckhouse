@@ -42,7 +42,7 @@ func TestBuildNodeGroupBlob_LegacyParityProperty(t *testing.T) {
 
 		require.Equalf(t,
 			legacyBuildNodeGroupBlob(in, result),
-			BuildNodeGroupBlob(in, result),
+			buildNodeGroupBlob(in, result),
 			"iteration %d\ninput: %#v\nresult: %#v", i, in, result,
 		)
 	}
