@@ -40,7 +40,7 @@ To configure pull mirroring of a repository, follow these steps:
 You can set up pull mirroring while importing a repository by URL, so that the project is created and immediately configured as a pull mirror of the source repository. This way, you do not need to configure mirroring separately after the import.
 
 {% alert level="info" %}
-Repository mirroring must be enabled for the instance by an administrator. In the "Admin area", go to "Settings" → "Repository" → "Repository mirroring" (the `mirror_available` setting). If mirroring is not enabled for the instance, the "Mirror repository" checkbox is shown but disabled (greyed out) and cannot be selected.
+Repository mirroring must be enabled for the instance by an administrator. In the "Admin area", go to "Settings" → "Repository" → "Repository mirroring" (the `mirror_available` setting). If mirroring is not enabled for the instance, the "Mirror repository" checkbox is shown but disabled (grayed out) and cannot be selected.
 {% endalert %}
 
 To import a repository by URL as a pull mirror, follow these steps:
