@@ -43,7 +43,6 @@ func (r *MachineDeploymentReconciler) applyCAPIMachineTemplate(
 	clusterUUID, podSubnet, zone, templateName, checksum string,
 ) error {
 	renderCtx := map[string]interface{}{
-		"Chart": map[string]interface{}{"Name": "node-manager"},
 		"Values": map[string]interface{}{
 			"global": map[string]interface{}{
 				"discovery": map[string]interface{}{

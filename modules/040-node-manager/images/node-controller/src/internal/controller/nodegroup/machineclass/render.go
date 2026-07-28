@@ -19,9 +19,18 @@ package machineclass
 import (
 	"bytes"
 	"fmt"
-	"sort"
+	"strings"
 	"text/template"
+
+	"sigs.k8s.io/yaml"
 )
+
+// moduleName is what helm_lib_module_labels took from .Chart.Name. node-controller is not helm,
+// and none of the templates it renders read .Chart, so the name is stated here once instead of
+// being round-tripped through a synthetic chart context.
+const moduleName = "node-manager"
+
+const moduleLabelsPartial = "helm_lib_module_labels"
 
 // machineClassFuncMap is stateless, so it is built once instead of on every render.
 var machineClassFuncMap = func() template.FuncMap {
@@ -31,42 +40,79 @@ var machineClassFuncMap = func() template.FuncMap {
 }()
 
 func renderInclude(name string, data interface{}) (string, error) {
-	switch name {
-	case "helm_lib_module_labels":
-		return renderModuleLabels(data)
-	default:
-		return "", fmt.Errorf("include %q: machine-class renderer only ports helm_lib_module_labels", name)
+	if name != moduleLabelsPartial {
+		return "", fmt.Errorf("include %q: machine-class renderer only ports %s", name, moduleLabelsPartial)
 	}
+	return renderModuleLabels(data)
 }
 
+// renderModuleLabels ports helm_lib_module_labels: it returns the `labels:` block the provider
+// templates pipe through nindent. The labels are load-bearing — the machine templates receive
+// `node-group` this way, and pruneStaleCAPI/deleteInfraMachineTemplates select on it.
+//
+// The block is produced by the YAML marshaller rather than assembled from strings, so quoting
+// and escaping cannot be got wrong: keys come out canonically ordered and a value like "true"
+// is quoted for us. That differs from helm byte-for-byte (helm emitted heritage/module first and
+// quoted every extra), which is harmless: the result is parsed into an object before it is
+// applied, and no checksum reads the labels.
 func renderModuleLabels(data interface{}) (string, error) {
-	args, ok := data.([]interface{})
-	if !ok || (len(args) != 1 && len(args) != 2) {
-		return "", fmt.Errorf("helm_lib_module_labels: supports only (list .) and (list . (dict ...)) forms")
+	labels, err := moduleLabels(data)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", moduleLabelsPartial, err)
 	}
-	ctx, ok := args[0].(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("helm_lib_module_labels: context is not a map[string]interface{}")
-	}
-	chart, _ := ctx["Chart"].(map[string]interface{})
-	name, _ := chart["Name"].(string)
-	out := "labels:\n  heritage: deckhouse\n  module: " + name
 
-	if len(args) == 2 {
-		extra, ok := args[1].(map[string]interface{})
-		if !ok {
-			return "", fmt.Errorf("helm_lib_module_labels: additional labels is not a map[string]interface{}")
-		}
-		keys := make([]string, 0, len(extra))
-		for k := range extra {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			out += fmt.Sprintf("\n  %s: %q", k, fmt.Sprintf("%v", extra[k]))
-		}
+	out, err := yaml.Marshal(map[string]map[string]string{"labels": labels})
+	if err != nil {
+		return "", fmt.Errorf("%s: marshal labels: %w", moduleLabelsPartial, err)
 	}
-	return out, nil
+	return strings.TrimSuffix(string(out), "\n"), nil
+}
+
+// moduleLabels validates the (list .) / (list . (dict ...)) call shapes and flattens them into
+// the label set. The template context itself carries nothing we need, so it is only checked for
+// shape.
+func moduleLabels(data interface{}) (map[string]string, error) {
+	args, ok := data.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("expected a list argument, got %T", data)
+	}
+	if len(args) != 1 && len(args) != 2 {
+		return nil, fmt.Errorf("supports only the (list .) and (list . (dict ...)) forms, got %d arguments", len(args))
+	}
+
+	labels := map[string]string{
+		"heritage": "deckhouse",
+		"module":   moduleName,
+	}
+	if len(args) == 1 {
+		return labels, nil
+	}
+
+	extra, ok := args[1].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("additional labels must be a dict, got %T", args[1])
+	}
+	for k, v := range extra {
+		value, err := labelValue(v)
+		if err != nil {
+			return nil, fmt.Errorf("label %q: %w", k, err)
+		}
+		labels[k] = value
+	}
+	return labels, nil
+}
+
+// labelValue renders a label value the way sprig's quote did — as a string — but refuses
+// anything that is not a scalar instead of writing Go's "map[a:b]" rendering into the object.
+func labelValue(v interface{}) (string, error) {
+	switch value := v.(type) {
+	case string:
+		return value, nil
+	case bool, int, int32, int64, float32, float64:
+		return fmt.Sprintf("%v", value), nil
+	default:
+		return "", fmt.Errorf("expected a scalar, got %T", v)
+	}
 }
 
 func RenderMachineClass(templateContent []byte, ctx map[string]interface{}) ([]byte, error) {

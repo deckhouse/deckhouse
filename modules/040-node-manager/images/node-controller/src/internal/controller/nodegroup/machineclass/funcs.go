@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"maps"
 	"strings"
 	"text/template"
@@ -43,8 +44,16 @@ func FuncMap() template.FuncMap {
 		"fromJson":      fromJSON,
 		"fromJsonArray": fromJSONArray,
 
-		"include": func(string, any) string { return "not implemented" },
-		"tpl":     func(string, any) any { return "not implemented" },
+		// Not ported. A template reaching one of these would otherwise get the placeholder
+		// string rendered into a MachineClass field and applied to the cluster; failing the
+		// render is the only safe answer. RenderMachineClass replaces "include" with the one
+		// partial it does port (helm_lib_module_labels).
+		"include": func(name string, _ any) (string, error) {
+			return "", fmt.Errorf("include %q is not available in the machine-class renderer", name)
+		},
+		"tpl": func(string, any) (any, error) {
+			return nil, errors.New("tpl is not available in the machine-class renderer")
+		},
 		// required mirrors helm: passes the value through, erroring only when
 		// absent. Templates pipe cloudProvider values through it then read fields.
 		"required": func(warn string, val any) (any, error) {
@@ -57,7 +66,7 @@ func FuncMap() template.FuncMap {
 			return val, nil
 		},
 		"lookup": func(string, string, string, string) (map[string]any, error) {
-			return map[string]any{}, nil
+			return nil, errors.New("lookup is not available in the machine-class renderer")
 		},
 	}
 
