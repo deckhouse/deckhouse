@@ -8,7 +8,7 @@ metadata:
     security.deckhouse.io: operation-policy
   annotations:
     metadata.gatekeeper.sh/title: "Max revision history limit"
-    metadata.gatekeeper.sh/version: 1.0.0
+    metadata.gatekeeper.sh/version: 1.1.0
     description: Check maximum limit for deployments / daemonsets revision history.
 spec:
   crd:

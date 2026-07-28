@@ -8,7 +8,7 @@ metadata:
     security.deckhouse.io: operation-policy
   annotations:
     metadata.gatekeeper.sh/title: "Disallow tags"
-    metadata.gatekeeper.sh/version: 1.0.0
+    metadata.gatekeeper.sh/version: 1.1.0
     description: >-
       Requires container images to have an image tag different from the ones in
       the specified list.
