@@ -87,7 +87,6 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
 		})
 	})
 
@@ -111,17 +110,10 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 `)
 			hec.HelmRender()
 		})
-		It("Should deploy basic auth proxy deployment and ingress", func() {
+		It("Should deploy basic auth proxy deployment", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Field(
-				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
-				Equal("1.1.1.1,192.168.0.0/24"))
-			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Field(
-				"spec.ingressClassName").String()).To(Equal("internal"))
-
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
 
 		})

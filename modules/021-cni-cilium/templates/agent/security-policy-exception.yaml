@@ -1,0 +1,146 @@
+{{- if (.Values.global.enabledModules | has "admission-policy-engine") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: agent
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "agent")) | nindent 2 }}
+spec:
+  securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          The mount-bpf-fs init container must run privileged to mount the BPF filesystem
+          at /sys/fs/bpf on the host, which is required for Cilium eBPF datapath operation.
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Privilege escalation is required together with privileged mode for mount-bpf-fs
+          to perform the host BPF filesystem mount.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Cilium agent and its init containers must run as root to manage host networking,
+          BPF maps, cgroup mounts and CNI binaries.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for datapath setup, nsenter into the host namespaces and
+          privileged host filesystem operations.
+    appArmorProfile:
+      allowedValues:
+        - unconfined
+      metadata:
+        description: |
+          Several Cilium init and agent containers need the unconfined AppArmor profile
+          to perform host mounts, sysctl overwrites and CNI binary installation.
+    seLinuxOptions:
+      allowedValues:
+        - level: s0
+          type: spc_t
+      metadata:
+        description: |
+          SELinux type spc_t is required for containers that interact with host namespaces
+          and privileged host resources.
+    capabilities:
+      allowedValues:
+        add:
+          - CHOWN
+          - KILL
+          - NET_ADMIN
+          - NET_RAW
+          - IPC_LOCK
+          - SYS_MODULE
+          - SYS_ADMIN
+          - SYS_RESOURCE
+          - PERFMON
+          - BPF
+          - DAC_OVERRIDE
+          - FOWNER
+          - SETGID
+          - SETUID
+          - SYS_CHROOT
+          - SYS_PTRACE
+        drop:
+          - ALL
+      metadata:
+        description: |
+          Elevated capabilities are required for eBPF datapath, routing/iptables management,
+          cgroup mounts via nsenter, and WireGuard/kernel module checks.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Cilium agent must run on the host network to program node networking and expose
+          health/metrics endpoints on the node.
+    hostPorts:
+      - port: 4241
+        protocol: TCP
+        metadata:
+          description: HTTPS metrics endpoint exposed through kube-rbac-proxy.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          hostPath volumes are required to access BPF maps, CNI paths, host procfs and
+          kernel modules on the node.
+    hostPath:
+      allowedValues:
+        - path: /proc/sys/net
+          readOnly: false
+          metadata:
+            description: Host network sysctl tree used by the Cilium agent.
+        - path: /proc/sys/kernel
+          readOnly: false
+          metadata:
+            description: Host kernel sysctl tree used by the Cilium agent.
+        - path: /var/run/cilium
+          readOnly: false
+          metadata:
+            description: Cilium runtime state directory on the host.
+        - path: /var/log/cilium/hubble
+          readOnly: false
+          metadata:
+            description: Hubble log directory on the host.
+        - path: /var/run/netns
+          readOnly: false
+          metadata:
+            description: Host network namespaces used by Cilium socket-LB and health endpoints.
+        - path: /sys/fs/bpf
+          readOnly: false
+          metadata:
+            description: BPF filesystem used for eBPF maps and programs.
+        - path: /proc
+          readOnly: false
+          metadata:
+            description: Host procfs used by nsenter for cgroup and sysctl operations.
+        - path: /run/cilium/cgroupv2
+          readOnly: false
+          metadata:
+            description: Cilium cgroup v2 mount point on the host.
+        - path: /opt/cni/bin
+          readOnly: false
+          metadata:
+            description: Host CNI binary directory where Cilium installs its plugin.
+        - path: /etc/cni/net.d
+          readOnly: false
+          metadata:
+            description: Host CNI configuration directory.
+        - path: /lib/modules
+          readOnly: true
+          metadata:
+            description: Host kernel modules used for iptables and related operations.
+        - path: /run/xtables.lock
+          readOnly: false
+          metadata:
+            description: Host xtables lock used to serialize iptables updates.
+{{- end }}

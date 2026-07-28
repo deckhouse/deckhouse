@@ -360,3 +360,4 @@ shell:
   - git apply --verbose /patches/*.patch
   - mkdir /src/llvm/third-party/benchmark && touch /src/llvm/third-party/benchmark/placeholder.txt
 ---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -45,3 +45,5 @@ shell:
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go
     - chown 64535:64535 /src/yandex-cloud-controller-manager
     - chmod 0755 /src/yandex-cloud-controller-manager
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

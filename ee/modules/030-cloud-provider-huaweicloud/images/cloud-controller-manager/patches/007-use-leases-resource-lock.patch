@@ -1,0 +1,26 @@
+diff --git a/pkg/cloudprovider/huaweicloud/huaweicloud.go b/pkg/cloudprovider/huaweicloud/huaweicloud.go
+index c55b00a..619f257 100644
+--- a/pkg/cloudprovider/huaweicloud/huaweicloud.go
++++ b/pkg/cloudprovider/huaweicloud/huaweicloud.go
+@@ -854,7 +854,7 @@ func leaderElection(id string, restConfig *rest.Config, recorder record.EventRec
+ 	renewDeadline := 50 * time.Second
+ 	retryPeriod := 30 * time.Second
+ 
+-	configmapLock, err := resourcelock.NewFromKubeconfig(resourcelock.ConfigMapsLeasesResourceLock,
++	configmapLock, err := resourcelock.NewFromKubeconfig(resourcelock.LeasesResourceLock,
+ 		kubeSystemNamespace,
+ 		leaseName,
+ 		resourcelock.ResourceLockConfig{
+diff --git a/cmd/cloud-controller-manager/cloud-controller-manager.go b/cmd/cloud-controller-manager/cloud-controller-manager.go
+index 48a0c0d..30a420c 100644
+--- a/cmd/cloud-controller-manager/cloud-controller-manager.go
++++ b/cmd/cloud-controller-manager/cloud-controller-manager.go
+@@ -52,7 +52,7 @@ func main() {
+ 	}
+ 
+ 	fss := cliflag.NamedFlagSets{}
+-	command := app.NewCloudControllerManagerCommand(ccmOptions, cloudInitializer, app.DefaultInitFuncConstructors, fss, wait.NeverStop)
++	command := app.NewCloudControllerManagerCommand(ccmOptions, cloudInitializer, app.DefaultInitFuncConstructors, map[string]string{}, fss, wait.NeverStop)
+ 
+ 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
+ 	// utilflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the

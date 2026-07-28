@@ -18,6 +18,7 @@ package etcd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -75,13 +76,51 @@ func JoinCluster(podManifest []byte, ip string, nodeName string, options ...opti
 
 	ctx, cancel := context.WithTimeout(context.Background(), constants.KubernetesAPICallTimeout)
 	defer cancel()
-	_, err = etcdClient.MemberPromote(ctx, clusterResponse.Member.ID)
+	id, err := etcdClient.GetMemberID(ctx, etcdPeerAddress)
 	if err != nil {
+		return err
+	}
+	if _, err = etcdClient.MemberPromote(ctx, id); err != nil {
 		return err
 	}
 
 	logger.Info("Waiting for the new etcd member to join the cluster", slog.Duration("timeout", constants.EtcdHealthyCheckInterval*constants.EtcdHealthyCheckRetries))
 	if _, err := etcdClient.WaitForClusterAvailable(constants.EtcdHealthyCheckRetries, constants.EtcdHealthyCheckInterval); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// PromoteMember promotes the etcd member with the given peer IP if it is still a learner.
+// No-op if the member is already a voting member (promotion is idempotent) or not present yet.
+func PromoteMember(peerIP string, options ...option) error {
+	opt := prepareOptions(options...)
+
+	kubeClient, err := client.NewKubernetesClient()
+	if err != nil {
+		return err
+	}
+
+	etcdClient, err := client.New(kubeClient, opt.CertificatesDir)
+	if err != nil {
+		return err
+	}
+	defer etcdClient.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), constants.KubernetesAPICallTimeout)
+	defer cancel()
+
+	id, err := etcdClient.GetMemberID(ctx, GetPeerURL(peerIP))
+	if err != nil {
+		if errors.Is(err, client.ErrNoMemberIDForPeerURL) {
+			return nil
+		}
+		return err
+	}
+
+	logger.Info("ensuring own etcd member is promoted", slog.Uint64("member_id", id), slog.String("peer_ip", peerIP))
+	if _, err := etcdClient.MemberPromote(ctx, id); err != nil {
 		return err
 	}
 

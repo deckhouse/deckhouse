@@ -3,7 +3,7 @@ title: "Модуль user-authz"
 description: "Авторизация и управление доступом пользователей к ресурсам кластера Deckhouse Kubernetes Platform."
 ---
 
-Модуль отвечает за генерацию объектов ролевой модели доступа, основанной на базе стандартного механизма RBAC Kubernetes. Модуль создает набор кластерных ролей (`ClusterRole`), подходящий для большинства задач по управлению доступом пользователей и групп.
+Модуль отвечает за генерацию объектов ролевой модели доступа, основанной на базе стандартного механизма RBAC Kubernetes. Модуль создает набор кластерных ролей (ClusterRole), подходящий для большинства задач по управлению доступом пользователей и групп.
 
 {% alert level="warning" %}
 С версии Deckhouse Kubernetes Platform v1.64 в модуле реализована экспериментальная модель ролевого доступа.
@@ -15,55 +15,53 @@ description: "Авторизация и управление доступом п
 
 ## Экспериментальная ролевая модель
 
-В отличие [от текущей ролевой модели](#текущая-ролевая-модель) DKP, экспериментальная ролевая модель не использует ресурсы `ClusterAuthorizationRule` и `AuthorizationRule`. Настройка прав доступа выполняется стандартным для RBAC Kubernetes способом: с помощью создания ресурсов `RoleBinding` или `ClusterRoleBinding`, с указанием в них одной из подготовленных модулем `user-authz` ролей.
+В отличие [от текущей ролевой модели](#текущая-ролевая-модель) DKP, экспериментальная ролевая модель не использует ресурсы ClusterAuthorizationRule и AuthorizationRule. Настройка прав доступа выполняется стандартным для RBAC Kubernetes способом: с помощью создания ресурсов RoleBinding или ClusterRoleBinding, с указанием в них одной из подготовленных модулем `user-authz` ролей.
 
-Модуль создаёт специальные агрегированные кластерные роли (`ClusterRole`). Используя эти роли в `RoleBinding` или `ClusterRoleBinding` можно решать следующие задачи:
+Модуль создаёт специальные агрегированные кластерные роли (ClusterRole). Используя эти роли в RoleBinding или ClusterRoleBinding можно решать следующие задачи:
 
 - Управлять доступом к модулям определённой [подсистеме](#подсистемы-ролевой-модели) применения.
 
-  Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, `cni-cilium`, `ingress-nginx`, `istio` и т. д.), можно использовать в `ClusterRoleBinding` роль `d8:manage:networking:manager`.
+  Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, `cni-cilium`, `ingress-nginx`, `istio` и т. д.), можно использовать в ClusterRoleBinding роль `d8:manage:networking:manager`.
 - Управлять доступом к *пользовательским* ресурсам модулей в рамках пространства имён.
 
-  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
+  Например, использование роли `d8:use:role:manager` в RoleBinding, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
 
 Роли, создаваемые модулем, делятся на два класса:
 
 - [Use-роли](#use-роли) — для назначения прав пользователям (например, разработчикам приложений) **в конкретном пространстве имён**.
 - [Manage-роли](#manage-роли) — для назначения прав администраторам.
 
-{: #rolebinding-car .anchored}
+### Совместное использование ClusterAuthorizationRule, AuthorizationRule и RBAC
 
-{% alert level="info" %}
-Особенности комбинированного доступа: совместное использование RoleBinding или ClusterRoleBinding с ClusterAuthorizationRule (CAR) и AuthorizationRule (AR) для одного и того же пользователя.
+Если в кластере включён режим мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), итоговые права пользователя представляют собой объединение прав, полученных из всех следующих источников:
 
-Если в кластере включён режим мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), итоговые права пользователя — это **объединение** всех действующих для него источников прав:
+- **права из ClusterAuthorizationRule** — применяются только внутри неймспейсов, разрешённых параметрами `limitNamespaces` или `namespaceSelector`;
+- **права из AuthorizationRule** — применяются внутри неймспейса, в котором создан ресурс AuthorizationRule;
+- **права из обычных RoleBinding** — применяются внутри неймспейса, в котором создан ресурс RoleBinding;
+- **права из обычных ClusterRoleBinding**, не созданных модулем `user-authz` — применяются во всём кластере.
 
-- уровень доступа из CAR — только внутри неймспейсов, разрешённых его параметрами `limitNamespaces` или `namespaceSelector`;
-- уровень доступа из AuthorizationRule — внутри неймспейса, в котором создан AuthorizationRule;
-- права из обычных RoleBinding — внутри их неймспейсов;
-- права из обычных ClusterRoleBinding (не созданных модулем `user-authz`) — во всём кластере.
+Ограничения по неймспейсам, заданные в ClusterAuthorizationRule, распространяются только на права, выданные этим ClusterAuthorizationRule. Они не отменяют права, выданные через RoleBinding, ClusterRoleBinding или AuthorizationRule в других неймспейсах. При этом права, предоставляемые ClusterAuthorizationRule, на эти неймспейсы не распространяются.
 
-Ограничения по неймспейсам в CAR ограничивают только права, выданные этим CAR. Они не отменяют права, выданные через RoleBinding, ClusterRoleBinding или AuthorizationRule в других неймспейсах; при этом уровень доступа CAR на эти неймспейсы не распространяется. Например, если у пользователя есть CAR с `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, и RoleBinding с ролью `view` в неймспейсе `ns-b`, пользователь получит права Editor в `ns-a` и права только на чтение в `ns-b`: RoleBinding не блокируется ограничениями CAR, а уровень Editor из CAR не «протекает» в `ns-b`.
+Например, если у пользователя есть ClusterAuthorizationRule с уровнем доступа `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, а также RoleBinding с ролью `view` в неймспейсе `ns-b`, то он получит права уровня `Editor` в неймспейсе `ns-a` и права только на чтение в неймспейсе `ns-b`. Права, предоставленные через RoleBinding, не ограничиваются ClusterAuthorizationRule, а уровень доступа `Editor`, заданный ClusterAuthorizationRule, не распространяется на неймспейс `ns-b`.
 
-В более старых версиях DKP вебхук модуля `user-authz` отклонял все запросы в неймспейсы, не указанные в CAR пользователя, даже при наличии RoleBinding на эти неймспейсы. Это ограничение снято: RoleBinding и CAR можно использовать для одного пользователя совместно.
-{% endalert %}
+Начиная с DKP 1.76.5, RoleBinding и ClusterAuthorizationRule можно использовать совместно для одного пользователя. В более ранних версиях DKP вебхук модуля `user-authz` отклонял все запросы в неймспейсы, не указанные в ClusterAuthorizationRule пользователя, даже при наличии соответствующих ресурсов RoleBinding.
 
 ### Use-роли
 
 {% alert level="warning" %}
-Use-роль можно использовать только в ресурсе `RoleBinding`.
+Use-роль можно использовать только в ресурсе RoleBinding.
 {% endalert %}
 
 Use-роли предназначены для назначения прав пользователю **в конкретном пространстве имён**. Под пользователями понимаются, например, разработчики, которые используют настроенный администратором кластер для развёртывания своих приложений. Таким пользователям не нужно управлять модулями DKP или кластером, но им нужно иметь возможность, например, создавать свои Ingress-ресурсы, настраивать аутентификацию приложений и сбор логов с приложений.
 
-Use-роль определяет права на доступ к namespaced-ресурсам модулей и стандартным namespaced-ресурсам Kubernetes (`Pod`, `Deployment`, `Secret`, `ConfigMap` и т. п.).
+Use-роль определяет права на доступ к namespaced-ресурсам модулей и стандартным namespaced-ресурсам Kubernetes (Pod, Deployment, Secret, ConfigMap и т. п.).
 
 Модуль создаёт следующие use-роли:
 
 - `d8:use:role:viewer` — позволяет в конкретном пространстве имён просматривать стандартные ресурсы Kubernetes, кроме секретов и ресурсов RBAC, а также выполнять аутентификацию в кластере;
 - `d8:use:role:user` — дополнительно к роли `d8:use:role:viewer` позволяет в конкретном пространстве имён просматривать секреты и ресурсы RBAC, подключаться к подам, удалять поды (но не создавать или изменять их), выполнять `kubectl port-forward` и `kubectl proxy`, изменять количество реплик контроллеров;
-- `d8:use:role:manager` — дополнительно к роли `d8:use:role:user` позволяет в конкретном пространстве имён управлять ресурсами модулей (например, `Certificate`, `PodLoggingConfig` и т. п.) и стандартными namespaced-ресурсами Kubernetes (`Pod`, `ConfigMap`, `CronJob` и т. п.);
-- `d8:use:role:admin` — дополнительно к роли `d8:use:role:manager` позволяет в конкретном пространстве имён управлять ресурсами `ResourceQuota`, `ServiceAccount`, `Role`, `RoleBinding`, `NetworkPolicy`.
+- `d8:use:role:manager` — дополнительно к роли `d8:use:role:user` позволяет в конкретном пространстве имён управлять ресурсами модулей (например, Certificate, PodLoggingConfig и т. п.) и стандартными namespaced-ресурсами Kubernetes (Pod, ConfigMap, CronJob и т. п.);
+- `d8:use:role:admin` — дополнительно к роли `d8:use:role:manager` позволяет в конкретном пространстве имён управлять ресурсами ResourceQuota, ServiceAccount, Role, RoleBinding, NetworkPolicy.
 
 ### Manage-роли
 
@@ -78,7 +76,7 @@ Manage-роли предназначены для назначения прав 
 Manage-роль определяет права на доступ:
 
 - к cluster-wide-ресурсам Kubernetes;
-- к управлению модулями DKP (ресурсы `moduleConfig`) в рамках [подсистемы](#подсистемы-ролевой-модели) роли, или всеми модулями DKP для роли `d8:manage:all:*`;
+- к управлению модулями DKP (ресурсы ModuleConfig) в рамках [подсистемы](#подсистемы-ролевой-модели) роли, или всеми модулями DKP для роли `d8:manage:all:*`;
 - к управлению cluster-wide-ресурсами модулей DKP в рамках [подсистемы](#подсистемы-ролевой-модели) роли или всеми ресурсами модулей DKP для роли `d8:manage:all:*`;
 - к системным пространствам имён (начинающимся с `d8-` или `kube-`), в которых работают модули [подсистемы](#подсистемы-ролевой-модели) роли, или ко всем системным пространствам имён для роли `d8:manage:all:*`.
   
@@ -89,20 +87,20 @@ Manage-роль определяет права на доступ:
 
   Примеры manage-ролей:
   
-  - `d8:manage:all:viewer` — доступ на просмотр конфигурации всех модулей DKP (ресурсы `moduleConfig`), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) во всех системных пространствах имён (начинающихся с `d8-` или `kube-`);
-  - `d8:manage:all:manager` — аналогично роли `d8:manage:all:viewer`, только доступ на уровне `admin`, т. е. просмотр/создание/изменение/удаление конфигурации всех модулей DKP (ресурсы `moduleConfig`), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes во всех системных пространствах имён (начинающихся с `d8-` или `kube-`);
-  - `d8:manage:observability:viewer` — доступ на просмотр конфигурации модулей DKP (ресурсы `moduleConfig`) из подсистемы `observability`, их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) в системных пространствах имён `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
+  - `d8:manage:all:viewer` — доступ на просмотр конфигурации всех модулей DKP (ресурсы ModuleConfig), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) во всех системных пространствах имён (начинающихся с `d8-` или `kube-`);
+  - `d8:manage:all:manager` — аналогично роли `d8:manage:all:viewer`, только доступ на уровне `admin`, т. е. просмотр/создание/изменение/удаление конфигурации всех модулей DKP (ресурсы ModuleConfig), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes во всех системных пространствах имён (начинающихся с `d8-` или `kube-`);
+  - `d8:manage:observability:viewer` — доступ на просмотр конфигурации модулей DKP (ресурсы ModuleConfig) из подсистемы `observability`, их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) в системных пространствах имён `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
 
 Модуль предоставляет два уровня доступа для администратора:
 
-- `viewer` — позволяет просматривать стандартные ресурсы Kubernetes, конфигурацию модулей (ресурсы `moduleConfig`), cluster-wide-ресурсы модулей и namespaced-ресурсы модулей в пространстве имен модуля;
-- `manager` — дополнительно к роли `viewer` позволяет управлять стандартными ресурсами Kubernetes, конфигурацией модулей (ресурсы `moduleConfig`), cluster-wide-ресурсами модулей и namespaced-ресурсами модулей в пространстве имен модуля;
+- `viewer` — позволяет просматривать стандартные ресурсы Kubernetes, конфигурацию модулей (ресурсы ModuleConfig), cluster-wide-ресурсы модулей и namespaced-ресурсы модулей в пространстве имен модуля;
+- `manager` — дополнительно к роли `viewer` позволяет управлять стандартными ресурсами Kubernetes, конфигурацией модулей (ресурсы ModuleConfig), cluster-wide-ресурсами модулей и namespaced-ресурсами модулей в пространстве имен модуля;
 
 ### Подсистемы ролевой модели
 
 Каждый модуль DKP принадлежит определённой подсистеме. Для каждой подсистемы существует набор ролей с разными уровнями доступа. Роли обновляются автоматически при включении или отключении модуля.
 
-Например, для подсистемы `networking` существуют следующие manage-роли, которые можно использовать в `ClusterRoleBinding`:
+Например, для подсистемы `networking` существуют следующие manage-роли, которые можно использовать в ClusterRoleBinding:
 
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
@@ -161,25 +159,25 @@ Capabilities (роли-кирпичики `d8:manage:permission:*` и `d8:use:ca
 
 - Модуль реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
 - Настройка прав доступа происходит с помощью [ресурсов](cr.html).
-- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-allowscale)).
-- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-portforwarding)).
-- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
+- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-allowscale)).
+- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-portforwarding)).
+- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 В модуле, кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
 
 - `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
 - `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать секреты, а также удалять поды (что обеспечивает возможность перезагрузки);
 - `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
-- `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-- `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором `cluster-wide`-объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т. д). Роль для работы оператора кластера;
-- `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными `cluster-wide`-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера. **Важно**, что `ClusterAdmin`, поскольку он уполномочен редактировать `ClusterRoleBindings`, может **сам себе расширить полномочия**;
+- `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например ReplicaSet, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
+- `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов, которые могут понадобиться для прикладных задач (ClusterXXXMetric, KeepalivedInstance, DaemonSet и т. д). Роль для работы оператора кластера;
+- `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например MachineSets, Machines, OpenstackInstanceClasses и т. п., а также ClusterAuthorizationRule, ClusterRoleBindings и ClusterRole). Роль для работы администратора кластера. **Важно**, что `ClusterAdmin`, поскольку он уполномочен редактировать ClusterRoleBindings, может **сам себе расширить полномочия**;
 - `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` продолжат работать.
 
 {% alert level="warning" %}
 Режим multi-tenancy (авторизация по пространству имён) в данный момент реализован по временной схеме и **не гарантирует безопасность!**
 {% endalert %}
 
-В случае, если в [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule)-ресурсе используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
+В случае, если в [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)-ресурсе используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
 
 Если вебхук, который реализовывает систему авторизации, по какой-то причине будет недоступен, опции `allowAccessToSystemNamespaces`, `namespaceSelector` и `limitNamespaces` в custom resource перестанут применяться и пользователи будут иметь доступ во все пространства имён. После восстановления доступности вебхука опции продолжат работать.
 

@@ -27,7 +27,9 @@ import (
 	"github.com/pkg/errors"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -67,6 +69,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(createRBACForKubeAPIServerProxy))
 
+// issueKubeAPIProxyCertificate is a seam over tls_certificate.IssueCertificate so the
+// certificate-generation path can be exercised in unit tests without a CSR signer.
+var issueKubeAPIProxyCertificate = tls_certificate.IssueCertificate
+
 func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	const (
 		roleName             = "node-manager:kubernetes-api-proxy"
@@ -83,25 +89,23 @@ func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput
 		return fmt.Errorf("cannot unmarshal kubernetes-api-proxy-discovery-cert from snapshots: %v", err)
 	}
 
-	var needToGenerate = false
-	if len(certs) == 0 {
-		needToGenerate = true
-	} else {
+	if len(certs) > 0 {
 		cert, err := certificate.ParseCertificate(certs[0].Cert)
 		if err != nil {
 			return fmt.Errorf("cannot parse kubernetes-api-proxy-discovery-cert from snapshots: %v", err)
 		}
 
-		if time.Until(cert.NotAfter) < certOutdatedDuration {
-			needToGenerate = true
+		if time.Until(cert.NotAfter) >= certOutdatedDuration {
+			// The certificate already exists and is still valid. Always republish it into the
+			// module values so apiserverProxyCerts stays present in the bashible context and the
+			// configuration checksum stays stable, then stop.
+			setKubeAPIProxyDiscoveryCertValues(input, certs[0].Cert, certs[0].Key)
+			return nil
 		}
 	}
 
-	if !needToGenerate {
-		return nil
-	}
-
-	cert, err := tls_certificate.IssueCertificate(input, dc, tls_certificate.OrderCertificateRequest{
+	// There is no certificate yet, or the existing one is about to expire: issue a new one.
+	cert, err := issueKubeAPIProxyCertificate(input, dc, tls_certificate.OrderCertificateRequest{
 		CommonName: userName,
 		Groups: []string{
 			roleName,
@@ -115,8 +119,51 @@ func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput
 		return errors.Wrap(err, "failed to issue certificate")
 	}
 
-	input.Values.Set("nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt", cert.Certificate)
-	input.Values.Set("nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key", cert.Key)
+	setKubeAPIProxyDiscoveryCertValues(input, cert.Certificate, cert.Key)
+
+	// Persist the certificate into a Secret so the next reconcile finds it in the snapshot and
+	// does not regenerate it. Without this the snapshot is always empty, a fresh certificate is
+	// minted on every run, apiserverProxyCerts changes every time, and the bashible configuration
+	// checksum flaps — forcing endless node rollouts.
+	if err := saveKubeAPIProxyDiscoveryCertSecret(input, cert.Certificate, cert.Key); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setKubeAPIProxyDiscoveryCertValues(input *go_hook.HookInput, crt, key string) {
+	input.Values.Set("nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt", crt)
+	input.Values.Set("nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key", key)
+}
+
+func saveKubeAPIProxyDiscoveryCertSecret(input *go_hook.HookInput, crt, key string) error {
+	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kubernetes-api-proxy-discovery-cert",
+			Namespace: "kube-system",
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"module":   "node-manager",
+			},
+		},
+		Data: map[string][]byte{
+			"crt": []byte(crt),
+			"key": []byte(key),
+		},
+		Type: v1.SecretTypeOpaque,
+	}
+
+	secretUnstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(secret)
+	if err != nil {
+		return errors.Wrap(err, "failed to convert kubernetes-api-proxy-discovery-cert secret to unstructured")
+	}
+
+	input.PatchCollector.CreateOrUpdate(secretUnstructured)
 
 	return nil
 }

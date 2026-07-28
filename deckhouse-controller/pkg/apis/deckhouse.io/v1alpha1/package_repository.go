@@ -63,6 +63,7 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)."
 // +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)."
 
+// +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: PackageRepository, metadata: {name: example}, spec: {registry: {ca: <PEM-encoded CA certificate>, dockerCfg: <base64 encoded credentials>, login: admin, password: <password>, repo: registry.example.io/packages, scheme: https}, scanInterval: 5m}}
 // PackageRepository is a source of packages for Deckhouse Kubernetes Platform.
 type PackageRepository struct {
 	metav1.TypeMeta `json:",inline"`

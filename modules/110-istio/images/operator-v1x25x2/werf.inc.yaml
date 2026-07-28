@@ -76,3 +76,4 @@ shell:
   - cd /src/operator && git apply --verbose /patches/001-istio-go-mod.patch
   - cd /src/operator && git apply --verbose /patches/002-istio-operato-cni_status_restrict.patch
 ---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
