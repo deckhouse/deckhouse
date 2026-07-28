@@ -84,16 +84,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const modalAttr = this.wrapper.dataset.modalWindow;
 
-      if (modalAttr == 'request_access') {
-        if (FormData.company) {
-          bitrixFields.fields['TITLE'] += FormData.company + ' - запрос бесплатного триала';
-        }
-      } else {
-        if (FormData.company) {
-          bitrixFields.fields['TITLE'] += FormData.company + ' - запрос ';
-        }
+      const formTypeLabels = {
+        'request_access': 'бесплатного триала',
+        'request_callback': 'обратного звонка',
+        'request_education': 'обучения',
+        'request_demo': 'демо',
+        'get_a_report': 'отчета',
+        'become_a_partner': 'партнерства'
+      };
 
-        bitrixFields.fields['TITLE'] += 'с сайта Deckhouse ';
+      const label = formTypeLabels[modalAttr] ? ' ' + formTypeLabels[modalAttr] : '';
+
+      if (FormData.company) {
+        bitrixFields.fields['TITLE'] = FormData.company + ' - запрос' + label + ' с сайта Deckhouse';
+      } else {
+        bitrixFields.fields['TITLE'] = 'Запрос' + label + ' с сайта Deckhouse';
       }
 
       if (FormData.name) {
