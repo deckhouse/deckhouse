@@ -73,8 +73,8 @@ Summary:
 
 {% capture take_care_of_the_internal_modules %}
 1. Определите список внутренних модулей, которые используются в кластере и не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
-
    <!REMOVE_FOR_CE>
+
    1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
 
       ```shell
@@ -130,9 +130,9 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_of_the_external_modules %}
-1. Определите список внешних модулей, запущенные с помощью `moduleSource/deckhouse`, которые не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
-
+1. Определите список внешних модулей, запущенных из `moduleSource/deckhouse`, которые не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
    <!REMOVE_FOR_CE>
+
    1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
 
       ```shell
@@ -141,7 +141,7 @@ Summary:
 
    <!/REMOVE_FOR_CE>
 
-   1. Получите список модулей, которые не поддерживаются в DKP $NEW_EDITION:
+   1. Получите список внешних модулей запущенных из `moduleSource/deckhouse` с результатом проверки их наличия в DKP новой редакции:
 
       ```shell
       d8-crane() {
@@ -169,14 +169,13 @@ Summary:
          [[ -z "$modules" ]] && return 0
          local registry_modules=$(d8-crane ls "$repo" 2>/dev/null)
 
-         echo "MODULE | IN LIST | IMAGE | RELEASE";
-         echo "-------|---------|-------|--------"
+         echo "Модуль | Наличие модуля | Наличие версии";
+         echo "-------|----------------|---------------"
 
-         echo "$modules" | while read m v; do
-            grep -qx "$m" <<< "$registry_modules" && l="✅" || l="❌"
-            d8-crane manifest "$repo/${m}:v${v}" &>/dev/null && i="✅" || i="❌"
-            d8-crane manifest "$repo/${m}/release:v${v}" &>/dev/null && r="✅" || r="❌"
-            echo "$m ($v) | $l | $i | $r"
+         echo "$modules" | while read module version; do
+            grep -qx "$module" <<< "$registry_modules" && list="✅" || list="❌"
+            d8-crane manifest "$repo/${module}/release:v${version}" &>/dev/null && release="✅" || release="❌"
+            echo "$module ($version) | $list | $release"
          done
       }
 
@@ -186,7 +185,7 @@ Summary:
       check_external_modules "registry.deckhouse.ru/deckhouse/$NEW_EDITION/modules"
       ```
 
-   1. Отключите модули из полученного списка, если это допустимо. Иначе, **прервите процесс переключения.**
+   1. Отключите модули которые не были найден в новой редакции, если это допустимо. Иначе, **прервите процесс переключения.**
 
 {% endcapture %}
 

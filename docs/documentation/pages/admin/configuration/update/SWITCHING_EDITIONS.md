@@ -70,8 +70,8 @@ You can find the edition and version currently used in the cluster on the main p
 
 {% capture take_care_of_the_internal_modules %}
 1. Determine the list of internal modules used in the cluster that are not supported in DKP new edition. To do this, follow these steps:
-
    <!REMOVE_FOR_CE>
+
    1. Set the environment variable with the license key for the edition you plan to switch to:
 
       ```shell
@@ -130,8 +130,8 @@ You can find the edition and version currently used in the cluster on the main p
 
 {% capture take_care_of_the_external_modules %}
 1. Determine the list of external modules launched via `moduleSource/deckhouse` that are not supported in DKP new edition. To do this, follow these steps:
-
    <!REMOVE_FOR_CE>
+
    1. Set the environment variable with the license key for the edition you plan to switch to:
 
       ```shell
@@ -140,7 +140,7 @@ You can find the edition and version currently used in the cluster on the main p
 
    <!/REMOVE_FOR_CE>
 
-   1. Get the list of modules not supported in DKP $NEW_EDITION:
+   1. Get the list of external modules launched via `moduleSource/deckhouse` with the result of checking their availability in DKP new edition:
 
       ```shell
       d8-crane() {
@@ -168,14 +168,13 @@ You can find the edition and version currently used in the cluster on the main p
          [[ -z "$modules" ]] && return 0
          local registry_modules=$(d8-crane ls "$repo" 2>/dev/null)
 
-         echo "MODULE | IN LIST | IMAGE | RELEASE";
-         echo "-------|---------|-------|--------"
+         echo "Module | In list | Release";
+         echo "-------|----------|--------"
 
-         echo "$modules" | while read m v; do
-            grep -qx "$m" <<< "$registry_modules" && l="✅" || l="❌"
-            d8-crane manifest "$repo/${m}:v${v}" &>/dev/null && i="✅" || i="❌"
-            d8-crane manifest "$repo/${m}/release:v${v}" &>/dev/null && r="✅" || r="❌"
-            echo "$m ($v) | $l | $i | $r"
+         echo "$modules" | while read module version; do
+            grep -qx "$module" <<< "$registry_modules" && list="✅" || list="❌"
+            d8-crane manifest "$repo/${module}/release:v${version}" &>/dev/null && release="✅" || release="❌"
+            echo "$module ($version) | $list | $release"
          done
       }
 
@@ -185,7 +184,7 @@ You can find the edition and version currently used in the cluster on the main p
       check_external_modules "registry.deckhouse.io/deckhouse/$NEW_EDITION/modules"
       ```
 
-   1. Disable the modules from the list if acceptable. Otherwise, **abort the switching process.**
+   1. Disable the modules that were not found in the new edition if acceptable. Otherwise, **abort the switching process.**
 {% endcapture %}
 
 {% capture take_care_of_the_queue %}
