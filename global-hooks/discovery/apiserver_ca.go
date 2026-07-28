@@ -19,24 +19,30 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 5},
-}, discoverApiserverCA)
+}, dependency.WithExternalDependencies(discoverApiserverCA))
 
-func discoverApiserverCA(_ context.Context, input *go_hook.HookInput) error {
-	caPath := "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-
-	content, err := os.ReadFile(caPath)
+func discoverApiserverCA(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	// Take the CA from the cluster the hooks actually talk to — the managed
+	// cluster when a kubeconfig is configured, the in-cluster service account
+	// otherwise — instead of always reading the pod's own service-account CA.
+	config, err := dc.GetClientConfig()
 	if err != nil {
-		return fmt.Errorf("cannot find kubernetes ca: %v, (not in pod?)", err)
+		return fmt.Errorf("get client config: %w", err)
 	}
 
-	input.Values.Set("global.discovery.kubernetesCA", string(content))
+	if len(config.CAData) == 0 {
+		return fmt.Errorf("kubernetes CA is empty")
+	}
+
+	input.Values.Set("global.discovery.kubernetesCA", string(config.CAData))
 	return nil
 }

@@ -34,10 +34,12 @@ import (
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/rest"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 )
@@ -56,6 +58,7 @@ const apiServerNs = "kube-system"
 // versionHTTPClient is used to validate that tls certificate DNS name contains kubernetes service cluster ip
 var (
 	versionHTTPClient d8http.Client
+	versionHTTPErr    error
 	once              sync.Once
 )
 
@@ -195,10 +198,6 @@ func getKubeVersionForServer(endpoint string, cl d8http.Client) (*semver.Version
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
-	err = d8http.SetKubeAuthToken(req)
-	if err != nil {
-		return nil, fmt.Errorf("set kube auth token: %w", err)
-	}
 
 	res, err := cl.Do(req)
 	if err != nil {
@@ -320,13 +319,29 @@ func k8sVersions(ctx context.Context, input *go_hook.HookInput) error {
 		if versionHTTPClient != nil {
 			return
 		}
-		contentCA, _ := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 
-		versionHTTPClient = d8http.NewClient(
-			d8http.WithTLSServerName("kubernetes.default.svc"),
-			d8http.WithAdditionalCACerts([][]byte{contentCA}),
-		)
+		// Build the version-check client from the same connection config the hooks
+		// use (managed cluster via kubeconfig, or in-cluster), so it trusts the
+		// right CA and authenticates with the right credentials. Certificates are
+		// issued for the kubernetes service name / cluster IP, but each apiserver
+		// endpoint is queried by address, so pin the expected TLS server name.
+		config, err := k8s.RESTConfig()
+		if err != nil {
+			versionHTTPErr = fmt.Errorf("rest config: %w", err)
+			return
+		}
+		config.TLSClientConfig.ServerName = "kubernetes.default.svc"
+
+		client, err := rest.HTTPClientFor(config)
+		if err != nil {
+			versionHTTPErr = fmt.Errorf("http client: %w", err)
+			return
+		}
+		versionHTTPClient = client
 	})
+	if versionHTTPClient == nil {
+		return fmt.Errorf("version http client: %w", versionHTTPErr)
+	}
 
 	versions := make([]string, 0)
 	var minVer *semver.Version
