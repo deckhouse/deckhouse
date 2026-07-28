@@ -105,4 +105,4 @@ The following external components interact with the module:
 
 1. **Prometheus-main**: Uses monitoring rules and metrics related to the upmeter module.
 
-1. **Сontroller nginx**: Forwards external user requests to the module web interface.
+1. **Controller nginx**: Forwards external user requests to the module web interface.
