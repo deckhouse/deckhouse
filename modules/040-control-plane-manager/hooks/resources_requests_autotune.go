@@ -209,6 +209,14 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		return nil
 	}
 
+	// Without prometheus + PMA there are no PodMetric series. Do not keep frozen
+	// per-component applied* values — fall back to the legacy combined-budget
+	// split from resources_requests_calculate.go.
+	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
+	if !enabledModules.Has("prometheus") || !enabledModules.Has("prometheus-metrics-adapter") {
+		return discardAutotuneForLegacy(input)
+	}
+
 	state, err := readAutotuneState(input)
 	if err != nil {
 		return err
@@ -233,17 +241,14 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		stateDirty = true
 	}
 
-	pmaEnabled := set.NewFromValues(input.Values, "global.enabledModules").Has("prometheus-metrics-adapter")
-
 	budgetCPU, budgetMem, _ := minMasterNodeBudget(nodes)
 	combinedCPU := input.Values.Get("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()
 	combinedMem := input.Values.Get("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()
 
-	// Schedule path: evaluate only when PMA is enabled. Without it keep applied
-	// state and re-emitted alert markers. Repopulate values exactly once at the
-	// end — a second Remove of `components` fails merge when Exists still sees
-	// the pre-patch snapshot.
-	if schedule && pmaEnabled {
+	// Schedule path: evaluate recommendations from metrics. Repopulate values
+	// exactly once at the end — a second Remove of `components` fails merge
+	// when Exists still sees the pre-patch snapshot.
+	if schedule {
 		now := dc.GetClock().Now().UTC()
 		usageOK := true
 		recsCPU := make(map[string]int64, len(controlPlaneComponents))
@@ -300,6 +305,19 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	if stateDirty {
 		return persistAutotuneState(input, state)
 	}
+	return nil
+}
+
+// discardAutotuneForLegacy clears per-component internal values and persistent
+// autotune state so templates use the fixed %-split of milliCpuControlPlane /
+// memoryControlPlane from the legacy calculate hook.
+func discardAutotuneForLegacy(input *go_hook.HookInput) error {
+	input.Logger.Info("autotune: prometheus or prometheus-metrics-adapter disabled, discarding autotune and falling back to legacy combined budget")
+	input.MetricsCollector.Expire(autotuneMetricGroup)
+	if input.Values.Exists("controlPlaneManager.internal.resourcesRequests.components") {
+		input.Values.Remove("controlPlaneManager.internal.resourcesRequests.components")
+	}
+	input.PatchCollector.Delete("v1", "ConfigMap", kubeSystemNS, autotuneStateCMName)
 	return nil
 }
 
