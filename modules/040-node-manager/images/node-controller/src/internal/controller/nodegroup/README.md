@@ -104,7 +104,7 @@ flowchart LR
     B -->|too soon| B2[requeue]
     B -->|go| C[ensure api-proxy certificate]
     C --> D[list every NodeGroup]
-    D --> E[derived_status.BuildElement<br/>per NodeGroup]
+    D --> E[derived_status.ResolveNodeGroup<br/>per NodeGroup]
     E --> F{valid?}
     F -->|yes| G[use the new element]
     F -->|no| H[keep the last good element<br/>from the published Secret]
@@ -132,14 +132,15 @@ may not be ready yet; the context is still published, just without the proxy cer
 The heart of the migration. For one NodeGroup it derives the values the old hook produced:
 engine (MCM, CAPI or none), effective Kubernetes version, CRI type, zones, node capacity, the
 resolved instance class, serialized labels and taints, and the update epoch. It also runs the
-validation checks and assembles the *element* — the per-NodeGroup document used both by the
-bashible context and by the MachineDeployment renderer.
+validation checks and assembles the `ResolvedNodeGroup` — the per-NodeGroup document used both
+by the bashible context and by the MachineDeployment renderer.
 
 Two entry points:
 
 - `ComputeWithCloudChecks` — derived values plus validation, used by `nodegroup-status`.
-- `BuildElement` — the same, wrapped into the element map, used by `bashible-context` and by
-  the `capi` controllers.
+- `ResolveNodeGroup` — the same, returned as a `ResolvedNodeGroup`, used by
+  `bashible-context` and by the `capi` controllers. Its `ToMap` is the only place that value
+  turns into the map the published context and the provider templates consume.
 
 The effective Kubernetes version is clamped so that nodes never run ahead of the control plane.
 The clamp reads the **kube-apiserver** version from the annotation control-plane-manager puts on

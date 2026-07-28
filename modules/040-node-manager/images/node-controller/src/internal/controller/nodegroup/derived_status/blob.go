@@ -47,10 +47,11 @@ type BlobInput struct {
 	CloudProcessed  bool
 }
 
-// Element is what node-controller derives per NodeGroup: the bashible context entry and the
-// render context of the provider machine-class templates. ToMap is the single place it becomes
-// the map those two consumers eat.
-type Element struct {
+// ResolvedNodeGroup is the NodeGroup with everything node-controller resolves on top of its
+// spec: the effective Kubernetes version, the CRI type, the zones, the engine and the instance
+// class. It is what the bashible context and the provider machine-class templates are built
+// from, and ToMap is the single place it becomes the map those two consumers eat.
+type ResolvedNodeGroup struct {
 	Name              string
 	NodeType          v1.NodeType
 	Engine            string
@@ -78,8 +79,8 @@ type Element struct {
 	NodeCapacity   interface{}
 }
 
-func BuildNodeGroupElement(in BlobInput, r Result) Element {
-	element := Element{
+func ResolveNodeGroup(in BlobInput, r Result) ResolvedNodeGroup {
+	resolved := ResolvedNodeGroup{
 		Name:              in.Name,
 		NodeType:          in.NodeType,
 		Engine:            r.Engine,
@@ -94,56 +95,56 @@ func BuildNodeGroupElement(in BlobInput, r Result) Element {
 	}
 
 	if in.NodeType == v1.NodeTypeStatic {
-		element.Static = in.Static
+		resolved.Static = in.Static
 	}
 
 	if in.CloudProcessed {
-		element.Zones = r.Zones
-		element.InstanceClass = rawExtensionToValue(r.InstanceClass)
-		element.NodeCapacity = rawExtensionToValue(r.NodeCapacity)
+		resolved.Zones = r.Zones
+		resolved.InstanceClass = rawExtensionToValue(r.InstanceClass)
+		resolved.NodeCapacity = rawExtensionToValue(r.NodeCapacity)
 	}
 
-	return element
+	return resolved
 }
 
-// ToMap serializes the element. Which keys it emits is data, not formatting: bashible-apiserver
-// hashes the parsed context into every node's configuration checksum, so a key published empty
-// must not become an absent key, and an absent one must not appear.
-func (e Element) ToMap() map[string]interface{} {
-	blob := make(map[string]interface{}, len(e.Spec)+12)
-	for key, val := range e.Spec {
+// ToMap serializes the resolved NodeGroup. Which keys it emits is data, not formatting:
+// bashible-apiserver hashes the parsed context into every node's configuration checksum, so a
+// key published empty must not become an absent key, and an absent one must not appear.
+func (r ResolvedNodeGroup) ToMap() map[string]interface{} {
+	blob := make(map[string]interface{}, len(r.Spec)+12)
+	for key, val := range r.Spec {
 		blob[key] = val
 	}
 
-	blob["nodeType"] = string(e.NodeType)
+	blob["nodeType"] = string(r.NodeType)
 
-	blob["name"] = e.Name
-	blob["manualRolloutID"] = e.ManualRolloutID
-	blob["engine"] = e.Engine
+	blob["name"] = r.Name
+	blob["manualRolloutID"] = r.ManualRolloutID
+	blob["engine"] = r.Engine
 
-	if len(e.Static) > 0 {
-		blob["static"] = e.Static
+	if len(r.Static) > 0 {
+		blob["static"] = r.Static
 	}
 
-	if e.CloudProcessed {
-		if e.NodeCapacity != nil {
-			blob["nodeCapacity"] = e.NodeCapacity
+	if r.CloudProcessed {
+		if r.NodeCapacity != nil {
+			blob["nodeCapacity"] = r.NodeCapacity
 		}
-		blob["instanceClass"] = e.InstanceClass
-		cloudInstances := copyMap(e.Spec["cloudInstances"])
-		cloudInstances["zones"] = e.Zones
+		blob["instanceClass"] = r.InstanceClass
+		cloudInstances := copyMap(r.Spec["cloudInstances"])
+		cloudInstances["zones"] = r.Zones
 		blob["cloudInstances"] = cloudInstances
 	}
 
-	blob["kubernetesVersion"] = e.KubernetesVersion
-	blob["serializedLabels"] = e.SerializedLabels
-	blob["serializedTaints"] = e.SerializedTaints
+	blob["kubernetesVersion"] = r.KubernetesVersion
+	blob["serializedLabels"] = r.SerializedLabels
+	blob["serializedTaints"] = r.SerializedTaints
 
-	cri := copyMap(e.Spec["cri"])
-	cri["type"] = e.CRIType
+	cri := copyMap(r.Spec["cri"])
+	cri["type"] = r.CRIType
 	blob["cri"] = cri
 
-	blob["updateEpoch"] = e.UpdateEpoch
+	blob["updateEpoch"] = r.UpdateEpoch
 
 	return blob
 }

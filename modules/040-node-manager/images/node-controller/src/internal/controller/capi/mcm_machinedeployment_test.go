@@ -26,11 +26,11 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
-func elementFromSpecJSON(t *testing.T, s string) derived_status.Element {
+func resolvedFromSpecJSON(t *testing.T, s string) derived_status.ResolvedNodeGroup {
 	t.Helper()
 	var spec map[string]interface{}
 	require.NoError(t, json.Unmarshal([]byte(s), &spec))
-	return derived_status.Element{Name: "worker", Spec: spec}
+	return derived_status.ResolvedNodeGroup{Name: "worker", Spec: spec}
 }
 
 func mdSpec(t *testing.T, md map[string]interface{}) map[string]interface{} {
@@ -47,9 +47,9 @@ func mdTemplateSpec(t *testing.T, md map[string]interface{}) map[string]interfac
 }
 
 func TestBuildMCMMachineDeployment_Defaults(t *testing.T) {
-	element := elementFromSpecJSON(t, `{}`)
+	resolved := resolvedFromSpecJSON(t, `{}`)
 	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
-		element:          element,
+		resolved:         resolved,
 		ngName:           "worker",
 		zone:             "eu-west-1a",
 		mdName:           "worker-abcdef01",
@@ -115,10 +115,10 @@ func TestBuildMCMMachineDeployment_Defaults(t *testing.T) {
 }
 
 func TestBuildMCMMachineDeployment_ScaleFromZero(t *testing.T) {
-	element := elementFromSpecJSON(t, `{}`)
-	element.NodeCapacity = map[string]interface{}{"cpu": "4", "memory": "8Gi"}
+	resolved := resolvedFromSpecJSON(t, `{}`)
+	resolved.NodeCapacity = map[string]interface{}{"cpu": "4", "memory": "8Gi"}
 	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
-		element:  element,
+		resolved: resolved,
 		ngName:   "worker",
 		zone:     "eu-west-1a",
 		mdName:   "worker-abcdef01",
@@ -136,16 +136,16 @@ func TestBuildMCMMachineDeployment_ScaleFromZero(t *testing.T) {
 
 // TestBuildMCMMachineDeployment_QuickShutdown covers the 5m/9 drain tier.
 func TestBuildMCMMachineDeployment_QuickShutdown(t *testing.T) {
-	element := elementFromSpecJSON(t, `{"cloudInstances":{"quickShutdown":true}}`)
-	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{element: element, ngName: "worker", zone: "z"})
+	resolved := resolvedFromSpecJSON(t, `{"cloudInstances":{"quickShutdown":true}}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
 	ts := mdTemplateSpec(t, md.Object)
 	assert.Equal(t, "5m", ts["drainTimeout"])
 	assert.Equal(t, int64(9), ts["maxEvictRetries"])
 }
 
 func TestBuildMCMMachineDeployment_NodeDrainTimeout(t *testing.T) {
-	element := elementFromSpecJSON(t, `{"nodeDrainTimeoutSecond":210}`)
-	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{element: element, ngName: "worker", zone: "z"})
+	resolved := resolvedFromSpecJSON(t, `{"nodeDrainTimeoutSecond":210}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
 	ts := mdTemplateSpec(t, md.Object)
 	assert.Equal(t, "210s", ts["drainTimeout"])
 	assert.Equal(t, int64(10), ts["maxEvictRetries"])
@@ -156,8 +156,8 @@ func TestBuildMCMMachineDeployment_NodeDrainTimeout(t *testing.T) {
 // 0 was falsy and kept the 600s/30 default. Rendering "0s" would delete nodes with no drain
 // grace at all and change spec.template, rolling the whole group on upgrade.
 func TestBuildMCMMachineDeployment_ZeroNodeDrainTimeout(t *testing.T) {
-	element := elementFromSpecJSON(t, `{"nodeDrainTimeoutSecond":0}`)
-	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{element: element, ngName: "worker", zone: "z"})
+	resolved := resolvedFromSpecJSON(t, `{"nodeDrainTimeoutSecond":0}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
 	ts := mdTemplateSpec(t, md.Object)
 	assert.Equal(t, "600s", ts["drainTimeout"])
 	assert.Equal(t, int64(30), ts["maxEvictRetries"])
@@ -167,8 +167,8 @@ func TestBuildMCMMachineDeployment_ZeroNodeDrainTimeout(t *testing.T) {
 // `maxSurgePerZone | default "1"`, so 0 (which the CRD allows) came out as 1. maxSurge 0 with
 // maxUnavailable 0 is a rollout that can never make progress.
 func TestBuildMCMMachineDeployment_ZeroMaxSurge(t *testing.T) {
-	element := elementFromSpecJSON(t, `{"cloudInstances":{"maxSurgePerZone":0,"maxUnavailablePerZone":0}}`)
-	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{element: element, ngName: "worker", zone: "z"})
+	resolved := resolvedFromSpecJSON(t, `{"cloudInstances":{"maxSurgePerZone":0,"maxUnavailablePerZone":0}}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
 	ru := mdSpec(t, md.Object)["strategy"].(map[string]interface{})["rollingUpdate"].(map[string]interface{})
 	assert.Equal(t, int64(1), ru["maxSurge"])
 	assert.Equal(t, int64(0), ru["maxUnavailable"])
@@ -176,15 +176,15 @@ func TestBuildMCMMachineDeployment_ZeroMaxSurge(t *testing.T) {
 
 // TestBuildMCMMachineDeployment_MaxSurgeUnavailable covers the per-zone overrides.
 func TestBuildMCMMachineDeployment_MaxSurgeUnavailable(t *testing.T) {
-	element := elementFromSpecJSON(t, `{"cloudInstances":{"maxSurgePerZone":3,"maxUnavailablePerZone":2}}`)
-	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{element: element, ngName: "worker", zone: "z"})
+	resolved := resolvedFromSpecJSON(t, `{"cloudInstances":{"maxSurgePerZone":3,"maxUnavailablePerZone":2}}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
 	ru := mdSpec(t, md.Object)["strategy"].(map[string]interface{})["rollingUpdate"].(map[string]interface{})
 	assert.Equal(t, int64(3), ru["maxSurge"])
 	assert.Equal(t, int64(2), ru["maxUnavailable"])
 }
 
 func TestBuildMCMMachineDeployment_NodeTemplate(t *testing.T) {
-	element := elementFromSpecJSON(t, `{
+	resolved := resolvedFromSpecJSON(t, `{
 		"nodeTemplate":{
 			"labels":{"custom/label":"v","node.deckhouse.io/type":"override-ignored-by-order"},
 			"annotations":{"custom/ann":"a"},
@@ -194,7 +194,7 @@ func TestBuildMCMMachineDeployment_NodeTemplate(t *testing.T) {
 			]
 		}
 	}`)
-	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{element: element, ngName: "worker", zone: "z"})
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
 	nt := mdTemplateSpec(t, md.Object)["nodeTemplate"].(map[string]interface{})
 	ntMeta := nt["metadata"].(map[string]interface{})
 
@@ -215,8 +215,8 @@ func TestBuildMCMMachineDeployment_NodeTemplate(t *testing.T) {
 
 // TestBuildMCMMachineDeployment_AWSSpot covers the creationTimeout 5m addition.
 func TestBuildMCMMachineDeployment_AWSSpot(t *testing.T) {
-	element := elementFromSpecJSON(t, `{}`)
-	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{element: element, ngName: "worker", zone: "z", awsSpot: true})
+	resolved := resolvedFromSpecJSON(t, `{}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z", awsSpot: true})
 	ts := mdTemplateSpec(t, md.Object)
 	assert.Equal(t, "5m", ts["creationTimeout"])
 }

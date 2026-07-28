@@ -32,7 +32,7 @@ import (
 // which rolls the MachineDeployment and recreates every VM in it.
 //
 // The sibling pins in machineclass/ feed the templates a hand-written instanceClass; these ones
-// start from BuildNodeGroupBlob, so they also cover how the element carries the value there —
+// start from buildNodeGroupBlob, so they also cover how the element carries the value there —
 // the Go type of a number included, since toYaml renders float64 and int64 differently.
 func TestBuildNodeGroupBlob_ChecksumGoldens(t *testing.T) {
 	const (

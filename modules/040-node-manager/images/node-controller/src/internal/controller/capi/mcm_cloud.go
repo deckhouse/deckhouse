@@ -59,11 +59,11 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	region, _ := cloudProvider["region"].(string)
 
 	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
-	element, validationErr, err := ds.BuildElement(ctx, ng, rawSpec)
+	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, rawSpec)
 	if err != nil {
-		return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
+		return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}
-	zones := element.Zones
+	zones := resolved.Zones
 	logger.Info("MCM reconcile decision", "nodeGroup", ng.Name, "validationErr", validationErr, "zones", zones, "machineClassKind", machineClassKind)
 	if validationErr != "" {
 		logger.Info("skipping MCM: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
@@ -98,15 +98,15 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	}
 
 	// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
-	// only, so the element is serialized here and nowhere else.
-	nodeGroupValues := element.ToMap()
+	// only, so the resolved NodeGroup is serialized here and nowhere else.
+	nodeGroupValues := resolved.ToMap()
 	checksum, err := machineclass.RenderChecksum(checksumTemplate, nodeGroupValues, cloudProvider)
 	if err != nil {
 		return fmt.Errorf("render checksum for NodeGroup %s: %w", ng.Name, err)
 	}
 
 	minReplicas, maxReplicas := getMinMax(ng)
-	awsSpot := cloudType == "aws" && instanceClassSpot(element)
+	awsSpot := cloudType == "aws" && instanceClassSpot(resolved)
 
 	desiredMDNames := make(map[string]struct{}, len(zones))
 	desiredClassNames := make(map[string]struct{}, len(zones))
@@ -158,7 +158,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		}
 
 		md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
-			element:          element,
+			resolved:         resolved,
 			ngName:           ng.Name,
 			zone:             zone,
 			mdName:           mdName,
@@ -399,8 +399,8 @@ func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string
 }
 
 // instanceClassSpot reports the provider spot flag; only aws acts on it.
-func instanceClassSpot(element derived_status.Element) bool {
-	instanceClass, _ := element.InstanceClass.(map[string]interface{})
+func instanceClassSpot(resolved derived_status.ResolvedNodeGroup) bool {
+	instanceClass, _ := resolved.InstanceClass.(map[string]interface{})
 	spot, _ := instanceClass["spot"].(bool)
 	return spot
 }

@@ -64,9 +64,9 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 			continue
 		}
 
-		element, errStr, err := r.DerivedStatus.BuildElement(ctx, ng, rawSpec)
+		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, rawSpec)
 		if err != nil {
-			return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
+			return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 		}
 
 		if errStr != "" {
@@ -77,7 +77,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 			continue
 		}
 
-		elements = append(elements, element.ToMap())
+		elements = append(elements, resolved.ToMap())
 	}
 
 	sort.Slice(elements, func(i, j int) bool {

@@ -25,7 +25,7 @@ import (
 )
 
 type mcmMachineDeploymentInput struct {
-	element          derived_status.Element
+	resolved         derived_status.ResolvedNodeGroup
 	ngName           string
 	zone             string
 	mdName           string // {prefix-}{ng.name}-{hash}
@@ -40,12 +40,12 @@ type mcmMachineDeploymentInput struct {
 func buildMCMMachineDeployment(in mcmMachineDeploymentInput) *unstructured.Unstructured {
 	// Everything below the resolved fields comes from the NodeGroup spec passthrough, which is
 	// raw unstructured data all the way to the node.
-	spec := in.element.Spec
+	spec := in.resolved.Spec
 
 	annotations := map[string]interface{}{
 		"zone": in.zone,
 	}
-	if nodeCapacity, _ := in.element.NodeCapacity.(map[string]interface{}); nodeCapacity != nil {
+	if nodeCapacity, _ := in.resolved.NodeCapacity.(map[string]interface{}); nodeCapacity != nil {
 		annotations["cluster-autoscaler.kubernetes.io/scale-from-zero"] = "true"
 		annotations["cluster-autoscaler.kubernetes.io/node-region"] = in.region
 		annotations["cluster-autoscaler.kubernetes.io/node-cpu"] = blobString(nodeCapacity, "cpu")

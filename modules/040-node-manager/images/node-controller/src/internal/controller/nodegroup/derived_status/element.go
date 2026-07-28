@@ -39,10 +39,10 @@ const (
 	staticConfigKey             = "static-cluster-configuration.yaml"
 )
 
-func (s *Service) BuildElement(ctx context.Context, ng *v1.NodeGroup, rawSpec map[string]interface{}) (Element, string, error) {
+func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, rawSpec map[string]interface{}) (ResolvedNodeGroup, string, error) {
 	result, check, err := s.ComputeWithCloudChecks(ctx, ng)
 	if err != nil {
-		return Element{}, "", err
+		return ResolvedNodeGroup{}, "", err
 	}
 
 	in := BlobInput{
@@ -56,7 +56,7 @@ func (s *Service) BuildElement(ctx context.Context, ng *v1.NodeGroup, rawSpec ma
 		in.Static = s.readStatic(ctx)
 	}
 
-	return BuildNodeGroupElement(in, result), check.Error, nil
+	return ResolveNodeGroup(in, result), check.Error, nil
 }
 
 func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}) (CloudCheckResult, error) {

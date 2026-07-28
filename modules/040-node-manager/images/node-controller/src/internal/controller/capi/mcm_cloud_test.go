@@ -28,22 +28,22 @@ import (
 
 func TestInstanceClassSpot(t *testing.T) {
 	t.Run("spot true", func(t *testing.T) {
-		element := derived_status.Element{InstanceClass: map[string]interface{}{"spot": true}}
-		assert.True(t, instanceClassSpot(element))
+		resolved := derived_status.ResolvedNodeGroup{InstanceClass: map[string]interface{}{"spot": true}}
+		assert.True(t, instanceClassSpot(resolved))
 	})
 	t.Run("spot false", func(t *testing.T) {
-		element := derived_status.Element{InstanceClass: map[string]interface{}{"spot": false}}
-		assert.False(t, instanceClassSpot(element))
+		resolved := derived_status.ResolvedNodeGroup{InstanceClass: map[string]interface{}{"spot": false}}
+		assert.False(t, instanceClassSpot(resolved))
 	})
 	t.Run("no spot key", func(t *testing.T) {
-		element := derived_status.Element{InstanceClass: map[string]interface{}{}}
-		assert.False(t, instanceClassSpot(element))
+		resolved := derived_status.ResolvedNodeGroup{InstanceClass: map[string]interface{}{}}
+		assert.False(t, instanceClassSpot(resolved))
 	})
 	t.Run("no instanceClass", func(t *testing.T) {
-		assert.False(t, instanceClassSpot(derived_status.Element{}))
+		assert.False(t, instanceClassSpot(derived_status.ResolvedNodeGroup{}))
 	})
 	t.Run("instanceClass resolved to null", func(t *testing.T) {
-		assert.False(t, instanceClassSpot(derived_status.Element{CloudProcessed: true, InstanceClass: nil}))
+		assert.False(t, instanceClassSpot(derived_status.ResolvedNodeGroup{CloudProcessed: true, InstanceClass: nil}))
 	})
 }
 
