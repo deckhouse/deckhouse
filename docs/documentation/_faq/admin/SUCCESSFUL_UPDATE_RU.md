@@ -3,6 +3,7 @@ title: Как понять, что обновление прошло успеш�
 subsystems:
   - deckhouse
 lang: ru
+editionsNotAvailable: [cse]
 ---
 
 Если [алерт `DeckhouseUpdating`](../reference/alerts.html#deckhouse-deckhouseupdating) перестал отображаться, это означает, что обновление завершено.

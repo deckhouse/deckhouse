@@ -109,23 +109,30 @@ defaults:
       # if the page has defined relative_links
       extractedLinksMax: 2
   - scope:
+      path: "pages/installing"
+    values:
+      editionsNotAvailable: [cse]
+  - scope:
       path: "pages/admin"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
   - scope:
       path: "pages/architecture"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
   - scope:
       path: "pages/user"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
   - scope:
       path: "pages/reference"
       sitemap_include: true

@@ -3,6 +3,7 @@ title: Как узнать, что для кластера доступна но
 subsystems:
   - deckhouse
 lang: ru
+editionsNotAvailable: [cse]
 ---
 
 Как только на установленном в кластере канале обновления появляется новая версия DKP:

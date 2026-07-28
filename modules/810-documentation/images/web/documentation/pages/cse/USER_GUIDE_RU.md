@@ -5,13 +5,15 @@ lang: ru
 decimalNumber: RU.86432418.00001-01 91 04-1
 ---
 
-{% raw %}
-
 <!-- markdownlint-disable MD024 -->
 <!-- markdownlint-disable MD036 -->
+{% unless site.mode == "module" %}
 <div style="text-align: right">
 <a href="pdf/user_guide.pdf" class="button button--outline">Скачать PDF</a>
 </div>
+{% endunless %}
+
+{% raw %}
 
 ## Список используемых обозначений и сокращений
 
