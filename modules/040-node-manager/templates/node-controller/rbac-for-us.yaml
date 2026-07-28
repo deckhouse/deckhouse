@@ -198,8 +198,7 @@ rules:
   - get
   - patch
   - update
-# ModuleConfig - read for validation (customTolerationKeys); create/update to seed the
-# global prefix during the cloud.prefix -> global ModuleConfig migration.
+# ModuleConfig - read for validation (customTolerationKeys) and prefix resolution.
 - apiGroups:
   - deckhouse.io
   resources:
@@ -208,7 +207,16 @@ rules:
   - get
   - list
   - watch
-  - create
+# ModuleConfig "global" - update/patch only, to seed the cluster prefix during the
+# cloud.prefix -> global ModuleConfig migration. Scoped to the global ModuleConfig
+# so node-controller cannot modify any other module's configuration.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - moduleconfigs
+  resourceNames:
+  - global
+  verbs:
   - update
   - patch
 # ConfigMaps - read for cluster configuration

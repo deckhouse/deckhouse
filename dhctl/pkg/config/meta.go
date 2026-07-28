@@ -1043,18 +1043,19 @@ func (m *MetaConfig) clusterConfigForInfrastructure() map[string]json.RawMessage
 	if m.ClusterType != CloudClusterType || m.ClusterPrefix == "" {
 		return m.ClusterConfig
 	}
-	rawCloud, ok := m.ClusterConfig["cloud"]
-	if !ok {
-		return m.ClusterConfig
-	}
+	// Start from the existing cloud section, or an empty one when it has already
+	// been dropped from ClusterConfiguration — the prefix must still reach the
+	// Terraform layouts either way, never silently empty.
 	cloud := map[string]json.RawMessage{}
-	if err := json.Unmarshal(rawCloud, &cloud); err != nil {
-		return m.ClusterConfig
-	}
-	if existing, ok := cloud["prefix"]; ok {
-		var p string
-		if json.Unmarshal(existing, &p) == nil && p == m.ClusterPrefix {
-			return m.ClusterConfig // already materialized, no copy needed
+	if rawCloud, ok := m.ClusterConfig["cloud"]; ok {
+		if err := json.Unmarshal(rawCloud, &cloud); err != nil {
+			return m.ClusterConfig
+		}
+		if existing, ok := cloud["prefix"]; ok {
+			var p string
+			if json.Unmarshal(existing, &p) == nil && p == m.ClusterPrefix {
+				return m.ClusterConfig // already materialized, no copy needed
+			}
 		}
 	}
 	prefixJSON, err := json.Marshal(m.ClusterPrefix)

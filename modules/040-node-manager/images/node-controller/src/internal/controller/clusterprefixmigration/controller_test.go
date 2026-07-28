@@ -31,10 +31,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
 var mcGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"}
+
+const (
+	clusterConfigSecretName      = "d8-cluster-configuration"
+	clusterConfigSecretNamespace = "kube-system"
+	clusterConfigSecretKey       = "cluster-configuration.yaml"
+)
 
 func testScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
@@ -53,15 +60,14 @@ func clusterConfigSecret(cloudPrefix string) *corev1.Secret {
 		y += "cloud:\n  provider: Yandex\n  prefix: " + cloudPrefix + "\n"
 	}
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: clusterConfigurationSecretName, Namespace: clusterConfigurationSecretNamespace},
-		Data:       map[string][]byte{clusterConfigurationSecretKey: []byte(y)},
+		ObjectMeta: metav1.ObjectMeta{Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace},
+		Data:       map[string][]byte{clusterConfigSecretKey: []byte(y)},
 	}
 }
 
 func globalMC(prefix string) *unstructured.Unstructured {
 	mc := newModuleConfig()
-	mc.SetName(globalModuleConfigName)
-	_ = unstructured.SetNestedField(mc.Object, int64(globalModuleConfigVersion), "spec", "version")
+	mc.SetName(clusterprefix.GlobalModuleConfigName)
 	if prefix != "" {
 		_ = unstructured.SetNestedField(mc.Object, prefix, "spec", "settings", "prefix")
 	}
@@ -71,7 +77,7 @@ func globalMC(prefix string) *unstructured.Unstructured {
 func mcPrefix(t *testing.T, cl client.Client) (string, bool) {
 	t.Helper()
 	mc := newModuleConfig()
-	err := cl.Get(context.Background(), types.NamespacedName{Name: globalModuleConfigName}, mc)
+	err := cl.Get(context.Background(), types.NamespacedName{Name: clusterprefix.GlobalModuleConfigName}, mc)
 	if apierrors.IsNotFound(err) {
 		return "", false
 	}
@@ -108,7 +114,7 @@ func TestSeed_RemovalStaysRemovedAfterSeed(t *testing.T) {
 
 	// Operator removes the prefix (e.g. preparing a downgrade).
 	mc := newModuleConfig()
-	if err := cl.Get(context.Background(), types.NamespacedName{Name: globalModuleConfigName}, mc); err != nil {
+	if err := cl.Get(context.Background(), types.NamespacedName{Name: clusterprefix.GlobalModuleConfigName}, mc); err != nil {
 		t.Fatalf("get: %v", err)
 	}
 	unstructured.RemoveNestedField(mc.Object, "spec", "settings", "prefix")
@@ -136,14 +142,12 @@ func TestSeed_PatchesExistingGlobalMC(t *testing.T) {
 	}
 }
 
-func TestSeed_CreatesGlobalMCWhenMissing(t *testing.T) {
+func TestSeed_DoesNotCreateGlobalMCWhenMissing(t *testing.T) {
+	// The controller must not create the global ModuleConfig (avoids guessing its
+	// config version); consumers fall back to cloud.prefix until it exists.
 	cl := runReconcile(t, clusterConfigSecret("lysov-test"))
-	got, exists := mcPrefix(t, cl)
-	if !exists {
-		t.Fatal("global MC should have been created")
-	}
-	if got != "lysov-test" {
-		t.Fatalf("prefix = %q, want lysov-test", got)
+	if _, exists := mcPrefix(t, cl); exists {
+		t.Fatal("global MC must not be created by the migration controller")
 	}
 }
 
