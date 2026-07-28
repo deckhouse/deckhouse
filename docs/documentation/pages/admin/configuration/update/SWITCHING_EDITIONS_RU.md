@@ -71,7 +71,7 @@ Summary:
 
 ### Определение возможности переключения на желаемую редакцию
 
-{% capture check_new_modules %}
+{% capture check_new_internal_modules %}
 
 ```shell
 (set -e
@@ -109,7 +109,7 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
 
 {% endcapture %}
 
-{% capture disable_modules %}
+{% capture disable_internal_modules %}
 1. Отключите модули из полученного списка, если это допустимо (функциональность модулей не используется, или вы готовы от нее отказаться). Иначе, **прервите процесс переключения.**
 
    Отключить модули из полученного списка можно в веб-интерфейсе DKP в разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», либо выполнив следующую команду:
@@ -136,13 +136,13 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
    1. Получите список модулей, которые не поддерживаются в DKP CE:
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "(?m)\n?<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "ce"
          | regex_replace: "^", "      "
       }}
 
-{{ disable_modules }}
+{{ disable_internal_modules }}
 {% endtab %}
 {% tab "На DKP BE/SE/SE+/EE" %}
 1. Определите список модулей, которые используются в кластере и не поддерживаются в DKP желаемой редакции. Для этого выполните следующие шаги:
@@ -159,7 +159,7 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
       {% tab "DKP BE" %}
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
          | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "be"
@@ -170,7 +170,7 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
       {% tab "DKP SE" %}
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
          | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "se"
@@ -181,7 +181,7 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
       {% tab "DKP SE+" %}
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
          | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "se-plus"
@@ -192,7 +192,7 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
       {% tab "DKP EE" %}
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
          | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "ee"
@@ -202,7 +202,7 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
       {% endtab %}
       {% endtabs %}
 
-{{ disable_modules }}
+{{ disable_internal_modules }}
 {% endtab %}
 {% tab "На DKP CSE" %}
 1. При переключении на DKP CSE возможна временная недоступность компонентов кластера.
@@ -239,7 +239,7 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
 
       {% assign new_edition="se-plus" %}
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
          | regex_replace: "<!/REMOVE_FOR_CE>", ""
          | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
@@ -247,7 +247,7 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
          | regex_replace: "^", "      "
       }}
 
-{{ disable_modules }}
+{{ disable_internal_modules }}
 {% endtab %}
 {% endtabs %}
 

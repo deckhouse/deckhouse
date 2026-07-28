@@ -68,7 +68,7 @@ You can find the edition and version currently used in the cluster on the main p
 
 ### Checking whether switching to the desired edition is possible
 
-{% capture check_new_modules %}
+{% capture check_new_internal_modules %}
 
 ```shell
 (set -e
@@ -108,7 +108,7 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
 
 {% endcapture %}
 
-{% capture disable_modules %}
+{% capture disable_internal_modules %}
 1. Disable the modules from the list if acceptable (the module functionality is not used, or you are ready to give it up). Otherwise, **abort the switching process.**
 
    You can disable the modules from the list in the DKP web interface under System → System Management → Deckhouse → Modules, or by running the following command:
@@ -135,13 +135,13 @@ What to consider before switching:
    1. Get the list of modules not supported in DKP CE:
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "(?m)\n?<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "ce"
          | regex_replace: "^", "      "
       }}
 
-{{ disable_modules }}
+{{ disable_internal_modules }}
 {% endtab %}
 {% tab "To DKP BE/SE/SE+/EE" %}
 1. Determine the list of modules used in the cluster that are not supported in the desired DKP edition. To do this, follow these steps:
@@ -158,7 +158,7 @@ What to consider before switching:
       {% tab "DKP BE" %}
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
          | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "be"
@@ -169,7 +169,7 @@ What to consider before switching:
       {% tab "DKP SE" %}
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
          | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "se"
@@ -180,7 +180,7 @@ What to consider before switching:
       {% tab "DKP SE+" %}
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
          | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "se-plus"
@@ -191,7 +191,7 @@ What to consider before switching:
       {% tab "DKP EE" %}
 
       {{
-         check_new_modules
+         check_new_internal_modules
          | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
          | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
          | regex_replace: "\$NEW_EDITION", "ee"
@@ -201,7 +201,7 @@ What to consider before switching:
       {% endtab %}
       {% endtabs %}
 
-{{ disable_modules }}
+{{ disable_internal_modules }}
 {% endtab %}
 {% endtabs %}
 
