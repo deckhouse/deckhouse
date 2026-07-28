@@ -911,3 +911,94 @@ spec:
                       type: RuntimeDefault
       exception: ''
       exceptionRef: ''
+    - name: controller-disallowed-no-exception
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.securityContext.seccompProfile.type
+        scenario: negative
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-disallowed-no-exception
+          spec:
+            template:
+              spec:
+                securityContext:
+                  seccompProfile:
+                    type: Unconfined
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
+    - name: controller-allowed-by-spe-on-pod-template
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.securityContext.seccompProfile.type
+        scenario: speMatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-seccomp-spe
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedValues:
+                - Unconfined
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-by-spe-on-pod-template
+          spec:
+            template:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-seccomp-spe
+              spec:
+                securityContext:
+                  seccompProfile:
+                    type: Unconfined
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
+    - name: controller-allowed-by-spe-on-top-level-metadata
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.securityContext.seccompProfile.type
+        scenario: speMatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-seccomp-spe-top
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedValues:
+                - Unconfined
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-seccomp-spe-top
+            name: controller-allowed-by-spe-on-top-level-metadata
+          spec:
+            template:
+              spec:
+                securityContext:
+                  seccompProfile:
+                    type: Unconfined
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''

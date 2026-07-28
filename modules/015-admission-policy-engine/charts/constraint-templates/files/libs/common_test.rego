@@ -128,3 +128,236 @@ test_get_exception_label_missing if {
   container := {"name": "app"}
   common.get_exception_label_from_labels(container, labels) == ""
 }
+
+# =============================================================================
+# SPE label resolution for controllers (object_labels, effective_labels)
+# =============================================================================
+
+# object_labels returns Pod's own labels for Pod kind
+
+test_object_labels_pod if {
+  result := common.object_labels with input as {
+    "review": {
+      "object": {
+        "kind": "Pod",
+        "metadata": {
+          "labels": {"security.deckhouse.io/security-policy-exception": "spe-pod"},
+          "namespace": "default"
+        }
+      }
+    }
+  }
+  result["security.deckhouse.io/security-policy-exception"] == "spe-pod"
+}
+
+# object_labels merges top-level and pod template labels for Deployment
+
+test_object_labels_deployment_merges if {
+  result := common.object_labels with input as {
+    "review": {
+      "object": {
+        "kind": "Deployment",
+        "metadata": {
+          "labels": {"app": "myapp", "security.deckhouse.io/security-policy-exception": "spe-top"},
+          "namespace": "default"
+        },
+        "spec": {
+          "template": {
+            "metadata": {
+              "labels": {"security.deckhouse.io/security-policy-exception.container.nginx": "spe-container"}
+            }
+          }
+        }
+      }
+    }
+  }
+  result["app"] == "myapp"
+  result["security.deckhouse.io/security-policy-exception"] == "spe-top"
+  result["security.deckhouse.io/security-policy-exception.container.nginx"] == "spe-container"
+}
+
+# object_labels: pod template labels take precedence over top-level labels
+
+test_object_labels_template_precedence if {
+  result := common.object_labels with input as {
+    "review": {
+      "object": {
+        "kind": "Deployment",
+        "metadata": {
+          "labels": {"security.deckhouse.io/security-policy-exception": "spe-top"},
+          "namespace": "default"
+        },
+        "spec": {
+          "template": {
+            "metadata": {
+              "labels": {"security.deckhouse.io/security-policy-exception": "spe-template"}
+            }
+          }
+        }
+      }
+    }
+  }
+  result["security.deckhouse.io/security-policy-exception"] == "spe-template"
+}
+
+# object_labels merges for CronJob with deep pod template path
+
+test_object_labels_cronjob_merges if {
+  result := common.object_labels with input as {
+    "review": {
+      "object": {
+        "kind": "CronJob",
+        "metadata": {
+          "labels": {"app": "cron"},
+          "namespace": "default"
+        },
+        "spec": {
+          "jobTemplate": {
+            "spec": {
+              "template": {
+                "metadata": {
+                  "labels": {"security.deckhouse.io/security-policy-exception": "spe-cron"}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  result["app"] == "cron"
+  result["security.deckhouse.io/security-policy-exception"] == "spe-cron"
+}
+
+# object_labels returns empty map when no labels present
+
+test_object_labels_empty if {
+  result := common.object_labels with input as {
+    "review": {
+      "object": {
+        "kind": "Pod",
+        "metadata": {"namespace": "default"}
+      }
+    }
+  }
+  count(result) == 0
+}
+
+# object_namespace returns the namespace from the review object
+
+test_object_namespace if {
+  result := common.object_namespace with input as {
+    "review": {
+      "object": {
+        "kind": "Pod",
+        "metadata": {"namespace": "my-namespace"}
+      }
+    }
+  }
+  result == "my-namespace"
+}
+
+# object_namespace returns empty string when namespace not set
+
+test_object_namespace_empty if {
+  result := common.object_namespace with input as {
+    "review": {
+      "object": {
+        "kind": "Pod",
+        "metadata": {}
+      }
+    }
+  }
+  result == ""
+}
+
+# effective_labels merges top-level and pod template labels for any object
+
+test_effective_labels_deployment if {
+  obj := {
+    "kind": "Deployment",
+    "metadata": {
+      "labels": {"app": "test"},
+      "namespace": "default"
+    },
+    "spec": {
+      "template": {
+        "metadata": {
+          "labels": {"security.deckhouse.io/security-policy-exception": "spe-dep"}
+        }
+      }
+    }
+  }
+  result := common.effective_labels(obj)
+  result["app"] == "test"
+  result["security.deckhouse.io/security-policy-exception"] == "spe-dep"
+}
+
+# effective_labels returns Pod's own labels (no pod template for Pod kind)
+
+test_effective_labels_pod if {
+  obj := {
+    "kind": "Pod",
+    "metadata": {
+      "labels": {"security.deckhouse.io/security-policy-exception": "spe-pod"},
+      "namespace": "default"
+    }
+  }
+  result := common.effective_labels(obj)
+  result["security.deckhouse.io/security-policy-exception"] == "spe-pod"
+  count(result) == 1
+}
+
+# effective_labels: pod template takes precedence
+
+test_effective_labels_template_precedence if {
+  obj := {
+    "kind": "StatefulSet",
+    "metadata": {
+      "labels": {"app": "sts", "security.deckhouse.io/security-policy-exception": "spe-top"},
+      "namespace": "default"
+    },
+    "spec": {
+      "template": {
+        "metadata": {
+          "labels": {"security.deckhouse.io/security-policy-exception": "spe-template"}
+        }
+      }
+    }
+  }
+  result := common.effective_labels(obj)
+  result["app"] == "sts"
+  result["security.deckhouse.io/security-policy-exception"] == "spe-template"
+}
+
+# merge_labels: override takes precedence over base
+
+test_merge_labels_override_precedence if {
+  base := {"a": "base-a", "b": "base-b"}
+  override := {"b": "override-b", "c": "override-c"}
+  result := common.merge_labels(base, override)
+  result["a"] == "base-a"
+  result["b"] == "override-b"
+  result["c"] == "override-c"
+}
+
+# merge_labels: works with empty base
+
+test_merge_labels_empty_base if {
+  result := common.merge_labels({}, {"key": "val"})
+  result["key"] == "val"
+}
+
+# merge_labels: works with empty override
+
+test_merge_labels_empty_override if {
+  result := common.merge_labels({"key": "val"}, {})
+  result["key"] == "val"
+}
+
+# merge_labels: works with both empty
+
+test_merge_labels_both_empty if {
+  result := common.merge_labels({}, {})
+  count(result) == 0
+}
