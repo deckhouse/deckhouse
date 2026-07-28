@@ -73,22 +73,37 @@ You can find the edition and version currently used in the cluster on the main p
 ```shell
 (set -e
 trap 'echo "Execution error"' ERR
+
+echo
+echo "Running the deckhouse pod of the new edition with the command 'sleep -- infinity'"
+
 <!REMOVE_FOR_CE>
 d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry.deckhouse.io --docker-username=license-token --docker-password=${LICENSE_TOKEN}
 <!/REMOVE_FOR_CE>
+
 DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
 d8 k run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
-<!REMOVE_FOR_CE>    --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \<!/REMOVE_FOR_CE>
-    --command sleep -- infinity
+<!REMOVE_FOR_CE>
+--overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
+<!/REMOVE_FOR_CE>
+--command sleep -- infinity
 d8 k wait --for=condition=ready pod/$NEW_EDITION-image --timeout=300s
+
+echo
+echo "Getting information about internal modules from the current and new edition"
+echo "Comparing internal modules of the current and new edition"
 NEW_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ |   grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
 USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-MODULES_TO_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_MODULES | tr ' ' '\n'))
-d8 k delete pod/$NEW_EDITION-image --wait=false
-d8 k delete secret/$NEW_EDITION-image-pull-secret
+MODULES_TO_DISABLE=$(echo "$USED_MODULES" | tr ' ' '\n' | grep -Fxv -f <(echo "$NEW_MODULES" | tr ' ' '\n') 2>&1) || { status=$?; [ $status -eq 1 ] && MODULES_TO_DISABLE="" || exit $status; }
+
 echo
 echo "Modules not supported in the desired edition (edition code - $NEW_EDITION, version - $DECKHOUSE_VERSION):"
-echo $MODULES_TO_DISABLE)
+echo MODULES_TO_DISABLE=\"$MODULES_TO_DISABLE\"
+
+echo
+echo "Deleting the deckhouse pod of the new edition"
+d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=true --ignore-not-found=true
+)
 ```
 
 {% endcapture %}
@@ -119,45 +134,17 @@ What to consider before switching:
 
    1. Get the list of modules not supported in DKP CE:
 
-      {{ check_new_modules | regex_replace: "(?m)\n<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\$NEW_EDITION", "ce" | regex_replace: "^", "      " }}
+      {{
+         check_new_modules
+         | regex_replace: "(?m)\n?<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "ce"
+         | regex_replace: "^", "      "
+      }}
 
 {{ disable_modules }}
 {% endtab %}
 {% tab "To DKP BE/SE/SE+/EE" %}
 1. Determine the list of modules used in the cluster that are not supported in the desired DKP edition. To do this, follow these steps:
-
-   1. Set the environment variable with the code of the desired edition:
-
-      {% tabs env-edition %}
-      {% tab "DKP BE" %}
-
-      ```shell
-      NEW_EDITION=be
-      ```
-
-      {% endtab %}
-      {% tab "DKP SE" %}
-
-      ```shell
-      NEW_EDITION=se
-      ```
-
-      {% endtab %}
-      {% tab "DKP SE+" %}
-
-      ```shell
-      NEW_EDITION=se-plus
-      ```
-
-      {% endtab %}
-      {% tab "DKP EE" %}
-
-      ```shell
-      NEW_EDITION=ee
-      ```
-
-      {% endtab %}
-      {% endtabs %}
 
    1. Set the environment variable with the license key for the edition you plan to switch to:
 
@@ -167,7 +154,52 @@ What to consider before switching:
 
    1. Get the list of modules not supported in the desired DKP edition:
 
-      {{ check_new_modules | regex_replace: "\n?<!REMOVE_FOR_CE>", "" | regex_replace: "<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "^", "      " }}
+      {% tabs env-edition %}
+      {% tab "DKP BE" %}
+
+      {{
+         check_new_modules
+         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
+         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "be"
+         | regex_replace: "^", "      "
+      }}
+
+      {% endtab %}
+      {% tab "DKP SE" %}
+
+      {{
+         check_new_modules
+         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
+         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "      "
+      }}
+
+      {% endtab %}
+      {% tab "DKP SE+" %}
+
+      {{
+         check_new_modules
+         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
+         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "se-plus"
+         | regex_replace: "^", "      "
+      }}
+
+      {% endtab %}
+      {% tab "DKP EE" %}
+
+      {{
+         check_new_modules
+         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
+         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "      "
+      }}
+
+      {% endtab %}
+      {% endtabs %}
 
 {{ disable_modules }}
 {% endtab %}

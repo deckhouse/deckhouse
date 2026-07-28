@@ -76,24 +76,35 @@ Summary:
 ```shell
 (set -e
 trap 'echo "Ошибка выполнения"' ERR
+
+echo
+echo "Запуск пода deckhouse новой редакции с командой 'sleep -- infinity'"
+
 <!REMOVE_FOR_CE>
-d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry.deckhouse.ru --docker-username=license-token --docker-password=${LICENSE_TOKEN}
+d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry-cse.deckhouse.ru --docker-username=license-token --docker-password=${LICENSE_TOKEN}
 <!/REMOVE_FOR_CE>
-<!REMOVE_FOR_CSE>
-DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-<!/REMOVE_FOR_CSE>
-d8 k run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
-<!REMOVE_FOR_CE>    --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \<!/REMOVE_FOR_CE>
-    --command sleep -- infinity
+
+d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
+<!REMOVE_FOR_CE>
+--overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
+<!/REMOVE_FOR_CE>
+--command sleep -- infinity
 d8 k wait --for=condition=ready pod/$NEW_EDITION-image --timeout=300s
+
+echo
+echo "Получение информации по внутренним модулям из текущей и новой редакции"
+echo "Сравнение внутренних модулей текущей и новой редакции"
 NEW_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ |   grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
 USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-MODULES_TO_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_MODULES | tr ' ' '\n'))
-d8 k delete pod/$NEW_EDITION-image --wait=false
-d8 k delete secret/$NEW_EDITION-image-pull-secret
+MODULES_TO_DISABLE=$(echo "$USED_MODULES" | tr ' ' '\n' | grep -Fxv -f <(echo "$NEW_MODULES" | tr ' ' '\n') 2>&1) || { status=$?; [ $status -eq 1 ] && MODULES_TO_DISABLE="" || exit $status; }
+
 echo
 echo "Модули, которые не поддерживаются в желаемой редакции (код редакции - $NEW_EDITION, версия - $DECKHOUSE_VERSION):"
-echo $MODULES_TO_DISABLE)
+echo MODULES_TO_DISABLE=\"$MODULES_TO_DISABLE\")
+
+echo
+echo "Удаление пода deckhouse новой редакции"
+d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=true --ignore-not-found=true
 ```
 
 {% endcapture %}
@@ -124,45 +135,17 @@ echo $MODULES_TO_DISABLE)
 
    1. Получите список модулей, которые не поддерживаются в DKP CE:
 
-      {{ check_new_modules | regex_replace: "NEW_EDITION=<КОД_РЕДАКЦИИ>\n", ""  | regex_replace: "(?m)\n?<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\$NEW_EDITION", "ce" | regex_replace: "<!REMOVE_FOR_CSE>", "" | regex_replace: "<!/REMOVE_FOR_CSE>\n?", "" | regex_replace: "^", "      " }}
+      {{
+         check_new_modules
+         | regex_replace: "(?m)\n?<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "ce"
+         | regex_replace: "^", "      "
+      }}
 
 {{ disable_modules }}
 {% endtab %}
 {% tab "На DKP BE/SE/SE+/EE" %}
 1. Определите список модулей, которые используются в кластере и не поддерживаются в DKP желаемой редакции. Для этого выполните следующие шаги:
-
-   1. Подготовьте переменную окружения с кодом желаемой редакции:
-
-      {% tabs env-edition %}
-      {% tab "DKP BE" %}
-
-      ```shell
-      NEW_EDITION=be
-      ```
-
-      {% endtab %}
-      {% tab "DKP SE" %}
-
-      ```shell
-      NEW_EDITION=se
-      ```
-
-      {% endtab %}
-      {% tab "DKP SE+" %}
-
-      ```shell
-      NEW_EDITION=se-plus
-      ```
-
-      {% endtab %}
-      {% tab "DKP EE" %}
-
-      ```shell
-      NEW_EDITION=ee
-      ```
-
-      {% endtab %}
-      {% endtabs %}
 
    1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
 
@@ -172,7 +155,52 @@ echo $MODULES_TO_DISABLE)
 
    1. Получите список модулей, которые не поддерживаются в DKP желаемой редакции:
 
-      {{ check_new_modules | regex_replace: "\n?<!REMOVE_FOR_CE>", "" | regex_replace: "<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\n?<!REMOVE_FOR_CSE>", "" | regex_replace: "<!/REMOVE_FOR_CSE>\n?", "" | regex_replace: "^", "      " }}
+      {% tabs env-edition %}
+      {% tab "DKP BE" %}
+
+      {{
+         check_new_modules
+         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
+         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "be"
+         | regex_replace: "^", "      "
+      }}
+
+      {% endtab %}
+      {% tab "DKP SE" %}
+
+      {{
+         check_new_modules
+         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
+         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "      "
+      }}
+
+      {% endtab %}
+      {% tab "DKP SE+" %}
+
+      {{
+         check_new_modules
+         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
+         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "se-plus"
+         | regex_replace: "^", "      "
+      }}
+
+      {% endtab %}
+      {% tab "DKP EE" %}
+
+      {{
+         check_new_modules
+         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
+         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
+         | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "      "
+      }}
+
+      {% endtab %}
+      {% endtabs %}
 
 {{ disable_modules }}
 {% endtab %}
@@ -207,16 +235,17 @@ echo $MODULES_TO_DISABLE)
       LICENSE_TOKEN=<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
       ```
 
-   1. Подготовьте переменную окружения с желаемой версией DKP CSE (например, `v1.73.0`):
-
-      ```shell
-      DECKHOUSE_VERSION=<ЖЕЛАЕМАЯ_ВЕРСИЯ_DKP_CSE>
-      ```
-
    1. Получите список модулей, которые не поддерживаются в DKP CSE:
 
       {% assign new_edition="se-plus" %}
-      {{ check_new_modules | regex_replace: "NEW_EDITION=<КОД_РЕДАКЦИИ>\n", "" | regex_replace: "\n?<!REMOVE_FOR_CE>", "" | regex_replace: "<!/REMOVE_FOR_CE>", "" | regex_replace: "(?m)\n?<!REMOVE_FOR_CSE>.+?<!/REMOVE_FOR_CSE>\n?", "" | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru" | regex_replace: "\$NEW_EDITION", "cse" | regex_replace: "^", "      " }}
+      {{
+         check_new_modules
+         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
+         | regex_replace: "<!/REMOVE_FOR_CE>", ""
+         | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+         | regex_replace: "\$NEW_EDITION", "cse"
+         | regex_replace: "^", "      "
+      }}
 
 {{ disable_modules }}
 {% endtab %}
