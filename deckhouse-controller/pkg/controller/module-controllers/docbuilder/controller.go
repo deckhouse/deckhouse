@@ -365,6 +365,7 @@ func (r *reconciler) getDocumentationFromDownloadedDir(modulePath string, versio
 	// modulePath is now in format "/<module>/<version>" (e.g., "/stronghold/v1.0.0")
 	// Remove leading slash and join with downloadedModulesDir to get full path
 	cleanPath := strings.TrimPrefix(modulePath, "/")
+	cleanPath = strings.TrimPrefix(cleanPath, "modules/")
 	moduleDir := filepath.Join(r.downloadedModulesDir, cleanPath, version)
 
 	return r.getDocumentationFromDir(moduleDir, buf)
