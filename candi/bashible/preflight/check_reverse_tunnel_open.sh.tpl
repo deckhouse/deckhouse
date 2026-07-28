@@ -15,29 +15,7 @@
 # limitations under the License.
 */}}
 
-{{- $python_discovery := .Files.Get "deckhouse/candi/bashible/check_python.sh.tpl" }}
-{{- tpl ( $python_discovery ) . | nindent 0 }}
+target='{{ .url }}'
+target="${target#http://}"
 
-check_python
-
-cat - <<EOF | $python_binary
-import ssl
-try:
-    from urllib.request import urlopen, Request
-except ImportError as e:
-    from urllib2 import urlopen, Request
-
-ssl._create_default_https_context = ssl._create_unverified_context
-request = Request('{{.url}}')
-res = False
-try:
-    response = urlopen(request, timeout=5)
-    res = True if response else False
-except Exception as err:
-    res = False
-
-exit(0) if res else exit(1)
-
-EOF
-
-
+minget "$target" --fail --timeout 5 >/dev/null
