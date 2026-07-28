@@ -176,3 +176,38 @@ func TestIsSuperadminRole(t *testing.T) {
 		})
 	}
 }
+
+func TestIsClusterAdminRole(t *testing.T) {
+	tests := []struct {
+		name     string
+		roleName string
+		expected bool
+	}{
+		{
+			name:     "kubernetes cluster-admin",
+			roleName: "cluster-admin",
+			expected: true,
+		},
+		{
+			name:     "legacy SuperAdmin access level",
+			roleName: "user-authz:super-admin",
+			expected: true,
+		},
+		{
+			name:     "legacy ClusterAdmin is one step below and does not count",
+			roleName: "user-authz:cluster-admin",
+			expected: false,
+		},
+		{
+			name:     "an ordinary role does not count",
+			roleName: "d8:namespace:admin",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, IsClusterAdminRole(tt.roleName))
+		})
+	}
+}
