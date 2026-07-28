@@ -44,10 +44,18 @@ const (
 	embeddedLoadWorkers = 8
 )
 
-// dummyModules are modules that should be skipped.
+// dummyModules are scaffolding/placeholder modules with no runtime logic.
+// Always skipped regardless of feature flags.
 var dummyModules = []string{
 	"000-common",
 	"007-registrypackages",
+}
+
+// pilotDummyModules are real modules temporarily excluded from the v2
+// scheduler until full integration lands. Only skipped when the package
+// system is enabled; otherwise they load normally and are served by
+// addon-operator.
+var pilotDummyModules = []string{
 	"040-node-manager", // TODO(pilot/module-settings): remove after scheduler integration
 }
 
@@ -115,7 +123,13 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 	g.SetLimit(embeddedLoadWorkers)
 
 	for _, entry := range entries {
-		if !entry.IsDir() || slices.Contains(dummyModules, entry.Name()) {
+		if !entry.IsDir() {
+			continue
+		}
+		if slices.Contains(dummyModules, entry.Name()) {
+			continue
+		}
+		if slices.Contains(pilotDummyModules, entry.Name()) && app.PackageSystemEnabled() {
 			continue
 		}
 

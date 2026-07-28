@@ -224,11 +224,13 @@ func (suite *ControllerTestSuite) TestV2ModuleConfigRouting() {
 		assert.Equal(suite.T(), 1, suite.drainHandlerEvents())
 	})
 
-	suite.Run("v2 path: global always routes through the runtime even when untracked", func() {
+	suite.Run("v2 path: global routes through the runtime AND addon-operator", func() {
 		suite.setupTestController("global-config.yaml")
 
 		// HasModule returns false: global is never tracked in r.modules, only
 		// the moduleConfig.Name == moduleGlobal check should route it to v2.
+		// Global always dual-dispatches: UpdateModulesSettings + HandleEvent
+		// (addon-operator needs GlobalKubeConfig for v1 module Helm rendering).
 		mockPkg := newMockPackageRuntime(false)
 		suite.r.packageRuntime = mockPkg
 		suite.r.packageSystemEnabled = true
@@ -239,7 +241,8 @@ func (suite *ControllerTestSuite) TestV2ModuleConfigRouting() {
 
 		require.Len(suite.T(), mockPkg.settingsCalls, 1)
 		assert.Equal(suite.T(), "global", mockPkg.settingsCalls[0].name)
-		assert.Equal(suite.T(), 0, suite.drainHandlerEvents())
+		// Global always reaches addon-operator (feeds GlobalKubeConfig).
+		assert.Equal(suite.T(), 1, suite.drainHandlerEvents())
 	})
 }
 
@@ -303,7 +306,7 @@ func (suite *ControllerTestSuite) TestDeleteModuleConfigRouting() {
 		assert.Equal(suite.T(), 1, suite.drainHandlerEvents())
 	})
 
-	suite.Run("v2 path: global always routes through the runtime even when untracked", func() {
+	suite.Run("v2 path: global delete routes through runtime AND addon-operator", func() {
 		suite.setupTestControllerRaw(deleteModuleConfigRaw("global"))
 
 		mockPkg := newMockPackageRuntime(false) // HasModule returns false
@@ -316,7 +319,8 @@ func (suite *ControllerTestSuite) TestDeleteModuleConfigRouting() {
 
 		require.Len(suite.T(), mockPkg.settingsCalls, 1)
 		assert.Equal(suite.T(), "global", mockPkg.settingsCalls[0].name)
-		assert.Equal(suite.T(), 0, suite.drainHandlerEvents())
+		// Global delete always reaches addon-operator (feeds GlobalKubeConfig).
+		assert.Equal(suite.T(), 1, suite.drainHandlerEvents())
 	})
 }
 
@@ -491,6 +495,10 @@ func (m *mockPackageRuntime) UpdateModulesSettings(name string, settingsVersion 
 
 func (m *mockPackageRuntime) HasModule(name string) bool {
 	return m.hasModuleResult
+}
+
+func (m *mockPackageRuntime) ValidateSettings(_ context.Context, _ string, _ int, _ utils.Values) error {
+	return nil // always valid in tests
 }
 
 func newMockPackageRuntime(hasModule bool) *mockPackageRuntime {

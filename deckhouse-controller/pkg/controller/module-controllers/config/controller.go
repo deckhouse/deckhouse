@@ -129,6 +129,9 @@ func RegisterController(
 type packageRuntime interface {
 	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, enabled *bool)
 	HasModule(name string) bool
+	// ValidateSettings validates module settings against the OpenAPI schema.
+	// Returns nil if valid, or an error describing the validation failure.
+	ValidateSettings(ctx context.Context, name string, settingsVersion int, settings addonutils.Values) error
 }
 
 type reconciler struct {
@@ -227,20 +230,44 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	// The v2 path is gated by the PackageSystemEnabled feature flag:
 	// when the flag is off, the scheduler goroutine is not started and
 	// settings must reach addon-operator for the v1 (Helm) path.
+	//
+	// global passes through the v2 branch even when HasModule is false
+	// (it is not tracked in r.modules), so the || moduleGlobal check
+	// routes it here.
+	v2Handled := false
 	if r.packageSystemEnabled && (r.packageRuntime.HasModule(moduleConfig.Name) || moduleConfig.Name == moduleGlobal) {
-		// v2 path: update settings in the package runtime and skip
-		// the addon-operator event to avoid double-application (G2).
-		r.logger.Debug("update v2 module settings", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
-		r.packageRuntime.UpdateModulesSettings(
-			moduleConfig.Name,
-			moduleConfig.Spec.Version,
-			addonutils.Values(moduleConfig.Spec.Settings.GetMap()),
-			moduleConfig.Spec.Enabled,
-		)
+		settings := addonutils.Values(moduleConfig.Spec.Settings.GetMap())
+
+		// Validate against the OpenAPI schema before handing off to the
+		// runtime. On failure, fall back to the v1 path — addon-operator
+		// will surface the error in ModuleConfig status.
+		if err := r.packageRuntime.ValidateSettings(ctx, moduleConfig.Name, moduleConfig.Spec.Version, settings); err != nil {
+			r.logger.Warn("v2 settings validation failed, falling back to v1", slog.String("name", moduleConfig.Name), log.Err(err))
+		} else {
+			r.logger.Debug("update v2 module settings", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
+			r.packageRuntime.UpdateModulesSettings(
+				moduleConfig.Name,
+				moduleConfig.Spec.Version,
+				settings,
+				moduleConfig.Spec.Enabled,
+			)
+			v2Handled = true
+		}
+	}
+
+	// System modules global and deckhouse must always reach addon-operator,
+	// regardless of v2 routing. global feeds GlobalKubeConfig consumed by
+	// every v1 module during Helm rendering; deckhouse feeds deckhouseConfigCh
+	// that drives syncDeckhouse (update windows, internal settings).
+	// Without this dual dispatch, enabling PackageSystemEnabled silently
+	// breaks all v1 modules and freezes deckhouse settings at startup.
+	if moduleConfig.Name == moduleGlobal || moduleConfig.Name == moduleDeckhouse {
+		r.logger.Debug("send event to operator (system module)", slog.String("name", moduleConfig.Name))
+		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	} else {
-		// v1 path: existing addon-operator event dispatch.
+		// Regular modules: exclusive v1/v2 fork (G2 — no double-application).
 		basicModule := r.moduleManager.GetModule(moduleConfig.Name)
-		if moduleConfig.Name == moduleGlobal || basicModule != nil {
+		if basicModule != nil && !v2Handled {
 			r.logger.Debug("send event to operator", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
 			r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 		}
@@ -461,8 +488,13 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		r.logger.Debug("reset v2 module settings on delete", slog.String("name", moduleConfig.Name))
 		disabled := false
 		r.packageRuntime.UpdateModulesSettings(moduleConfig.Name, 0, make(addonutils.Values), &disabled)
-	} else {
-		// v1 path: existing addon-operator event dispatch.
+	}
+
+	// System modules global and deckhouse must always reach addon-operator,
+	// regardless of v2 routing (same rationale as handleModuleConfig).
+	if moduleConfig.Name == moduleGlobal || moduleConfig.Name == moduleDeckhouse {
+		r.handler.HandleEvent(moduleConfig, config.EventDelete)
+	} else if !r.packageSystemEnabled || !r.packageRuntime.HasModule(moduleConfig.Name) {
 		r.handler.HandleEvent(moduleConfig, config.EventDelete)
 	}
 
