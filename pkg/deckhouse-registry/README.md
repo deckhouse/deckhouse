@@ -78,6 +78,39 @@ root, edition := dhregistry.SplitEdition(s) // or split a configured path yourse
 
 `NewForPath` cannot un-scope a client, so when it detects an edition the client is taken to be edition-scoped already. Use `New` with an explicitly root-scoped client when the edition-independent installer is needed.
 
+## A catalog without the root
+
+The root `Registry` assumes the Deckhouse layout: given an edition root, it scopes `modules`, `packages`, `security`, … beneath it. But a catalog can also stand on its own, at an arbitrary path with no edition root above it — a `ModuleSource` or a `PackageRepository` points `spec.registry.repo` straight at the catalog, wherever its author chose to publish it (`registry.example.io/external-modules`, `…/modules-source`, anything).
+
+For that, build the catalog directly with `NewCatalog`. It wraps whatever repository the client addresses and scopes nothing — the client's path *is* the catalog, its tags are the names it publishes:
+
+```go
+import (
+	"github.com/deckhouse/deckhouse/pkg/registry/client"
+
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/module"
+	"github.com/deckhouse/deckhouse/pkg/deckhouse-registry/service"
+)
+
+// A ModuleSource whose spec.registry.repo is registry.example.io/external-modules.
+cli := client.New("registry.example.io", client.WithAuth(auth)).WithSegment("external-modules")
+catalog := module.NewCatalog(service.NewBasicService(module.CatalogServiceName, cli, logger))
+
+names, err := catalog.List(ctx)                                            // module names, no /modules appended
+def, err := catalog.Module("stronghold").Releases().Definition(ctx, "alpha")
+```
+
+Packages are the same shape — `packages.NewCatalog` over a `PackageRepository` repo:
+
+```go
+cli := client.New("registry.example.io").WithSegment("acme", "charts")
+catalog := packages.NewCatalog(service.NewBasicService(packages.CatalogServiceName, cli, logger))
+
+pkg, err := catalog.Package("elma").Versions().Definition(ctx, "v1.0.1")
+```
+
+This is the very `*module.Catalog` / `*packages.Catalog` that `reg.Modules()` / `reg.Packages()` return; only the path it is rooted at differs. The segment is always supplied by whoever builds the catalog: the `Registry` scopes `<edition>/modules` onto its edition root, while a standalone catalog sits exactly where the client points. So a catalog at any depth works with no trimming and no `/modules` assumption — the constructor never invents a segment.
+
 ## Structure
 
 Every node of the tree embeds a `*BasicService` over exactly one OCI repository, and exposes `Path()`, `Ref(tag)`, `GetImage`, `GetDigest`, `GetManifest`, `GetImageConfig`, `Exists`, `ListTags` and `ListRepositories`. Because `Path` and `Ref` need no registry access, the tree doubles as a pure path builder.
@@ -197,7 +230,7 @@ d.Lookup("", "controller")
 
 Keys are lowerCamelCase at both levels — `controlPlaneManager`, `ingressNginx` — not the kebab-case a module is known by elsewhere, so `Lookup("control-plane-manager", …)` misses. Values are full `sha256:` digests.
 
-Only the six repositories above are `bundle.Service`; the rest of the tree is a plain `BasicService` with no `Digests` at all, so a release repository or catalog cannot be asked for digests by mistake. Each bundle is constructed with its own path (`bundle.ModulesPath`, `bundle.CandiPath`, `bundle.RootPath`), and reading the wrong one misses rather than silently succeeding.
+Only the six repositories above are `bundle.Service`; the rest of the tree is a plain `BasicService` with no `Digests` at all, so a release repository or catalog cannot be asked for digests by mistake. Each bundle is constructed with its own path (`bundle.ModulesImagesDigestsPath`, `bundle.CandiImagesDigestsPath`, `bundle.RootPath`), and reading the wrong one misses rather than silently succeeding.
 
 Reading a bundle means pulling and flattening a full image, which for the Deckhouse image is hundreds of megabytes.
 
