@@ -587,7 +587,7 @@ alerts:
 
         This can happen if the cluster was previously pinned to an explicit, newer version and later switched back to `Automatic`, while the installed Deckhouse release's default hasn't caught up.
 
-        To avoid an unattended downgrade, Deckhouse has **not** changed the cluster's version and will keep it as is until you act.
+        Deckhouse still publishes the lower default as the declared target (control-plane and kubelet converge toward it one minor at a time). Pin an explicit version if you want to keep the higher one.
 
         **To resolve this alert:**
 
@@ -603,7 +603,7 @@ alerts:
           d8 k patch mc control-plane-manager --type merge -p '{"spec":{"settings":{"kubernetesVersion":"<current version - 1 minor>"}}}'
           ```
       summary: |
-        Control plane Kubernetes version is more than 1 minor above the current Deckhouse default; automatic rollback is blocked.
+        Control plane Kubernetes version is more than 1 minor above the current Deckhouse default.
       severity: "5"
       markupFormat: markdown
     - name: D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig
