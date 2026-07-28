@@ -21,11 +21,13 @@
 //
 //	reg := dhregistry.New(client, dhregistry.WithEdition(dhregistry.FEEdition))
 //
-//	reg.Deckhouse().Releases().Version(ctx, "stable")
-//	reg.Modules().Module("stronghold").Releases().Metadata(ctx, "alpha")
-//	reg.Packages().Package("elma").Versions().Metadata(ctx, "v1.0.1")
+//	rel, err := reg.Modules().Module("stronghold").Releases().Fetch(ctx, "alpha")
+//	rel.Version()      // resolve the channel to a version
+//	rel.Definition()   // decoded module.yaml, from the same pull
 //	reg.Security().Image("trivy-db").GetImage(ctx, "2")
-//	reg.CLI().Plugins().Plugin("package").Versions().Metadata(ctx, "v1.0.1")
+//
+// A release or bundle image is pulled once by Fetch into a snapshot, which then
+// serves every field from memory — reading many fields costs one pull.
 //
 // Every node exposes Path and Ref, so the same tree also serves as a path
 // builder when no registry access is needed.

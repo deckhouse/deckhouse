@@ -72,21 +72,16 @@ func (s *Service) DigestsPath() string {
 	return s.digestsPath
 }
 
-// Digests reads images_digests.json out of the bundle image at tag, mapping
-// each image the bundle ships to its content-addressable digest.
-//
-// The shape follows from what the bundle contains. The Deckhouse image and the
-// installers carry the images of many modules, so their file is keyed by module
-// and the result is nested; a module or package image carries only its own, so
-// the result is flat. digests.Digests.IsNested says which, and the same call
-// handles both.
+// Fetch pulls the bundle image at tag once and returns a Bundle snapshot that
+// serves its images_digests.json from memory.
 //
 // Reading a bundle means pulling and flattening a full image, which for the
-// Deckhouse image is hundreds of megabytes.
-func (s *Service) Digests(ctx context.Context, tag string) (*digests.Digests, error) {
+// Deckhouse image is hundreds of megabytes — so pull once and read the result,
+// rather than per field.
+func (s *Service) Fetch(ctx context.Context, tag string) (*Bundle, error) {
 	entry := s.Entry(tag)
 
-	entry.Debug("Getting image digests", slog.String("file", s.digestsPath))
+	entry.Debug("Fetching bundle image", slog.String("file", s.digestsPath))
 
 	img, err := s.GetImage(ctx, tag)
 	if err != nil {
@@ -101,10 +96,33 @@ func (s *Service) Digests(ctx context.Context, tag string) (*digests.Digests, er
 		return nil, fmt.Errorf("digests of %s: %w", s.Ref(tag), err)
 	}
 
-	entry.Debug("Image digests retrieved",
+	entry.Debug("Bundle image fetched",
 		slog.Bool("nested", parsed.IsNested()),
 		slog.Int("images", parsed.Count()),
 	)
 
-	return parsed, nil
+	return &Bundle{ref: s.Ref(tag), digests: parsed}, nil
+}
+
+// Bundle is a bundle image read once. Its accessors serve the extracted
+// content from memory and never touch the registry.
+type Bundle struct {
+	ref     string
+	digests *digests.Digests
+}
+
+// Ref is the fully-qualified reference the snapshot was read from.
+func (b *Bundle) Ref() string {
+	return b.ref
+}
+
+// Digests is the decoded images_digests.json — every image the bundle ships
+// mapped to its content-addressable digest.
+//
+// The shape follows from what the bundle contains. The Deckhouse image and the
+// installers carry the images of many modules, so their file is keyed by module
+// and the result is nested; a module or package image carries only its own, so
+// the result is flat. digests.Digests.IsNested says which.
+func (b *Bundle) Digests() *digests.Digests {
+	return b.digests
 }

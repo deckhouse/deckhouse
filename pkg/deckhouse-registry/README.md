@@ -56,11 +56,11 @@ reg := dhregistry.New(root,
 	dhregistry.WithLogger(logger),
 )
 
-// Resolve a release channel to a concrete version.
-version, err := reg.Deckhouse().Releases().Version(ctx, "stable")
-
-// Read a module's release metadata.
-meta, err := reg.Modules().Module("stronghold").Releases().Metadata(ctx, "alpha")
+// Fetch a release image once, then read as many fields as you need from the
+// snapshot — no re-download per field.
+rel, err := reg.Modules().Module("stronghold").Releases().Fetch(ctx, "alpha")
+version, err := rel.Version()      // resolve the channel to a version
+def, err := rel.Definition()       // decoded module.yaml, from the same pull
 
 // Enumerate the module catalog.
 modules, err := reg.Modules().List(ctx)
@@ -97,7 +97,8 @@ cli := client.New("registry.example.io", client.WithAuth(auth)).WithSegment("ext
 catalog := module.NewCatalog(service.NewBasicService(module.CatalogServiceName, cli, logger))
 
 names, err := catalog.List(ctx)                                            // module names, no /modules appended
-def, err := catalog.Module("stronghold").Releases().Definition(ctx, "alpha")
+rel, err := catalog.Module("stronghold").Releases().Fetch(ctx, "alpha")
+def, err := rel.Definition()
 ```
 
 Packages are the same shape — `packages.NewCatalog` over a `PackageRepository` repo:
@@ -106,7 +107,8 @@ Packages are the same shape — `packages.NewCatalog` over a `PackageRepository`
 cli := client.New("registry.example.io").WithSegment("acme", "charts")
 catalog := packages.NewCatalog(service.NewBasicService(packages.CatalogServiceName, cli, logger))
 
-pkg, err := catalog.Package("elma").Versions().Definition(ctx, "v1.0.1")
+rel, err := catalog.Package("elma").Versions().Fetch(ctx, "v1.0.1")
+pkg, err := rel.Definition()
 ```
 
 This is the very `*module.Catalog` / `*packages.Catalog` that `reg.Modules()` / `reg.Packages()` return; only the path it is rooted at differs. The segment is always supplied by whoever builds the catalog: the `Registry` scopes `<edition>/modules` onto its edition root, while a standalone catalog sits exactly where the client points. So a catalog at any depth works with no trimming and no `/modules` assumption — the constructor never invents a segment.
@@ -155,52 +157,48 @@ reg.Modules().Ref("stronghold")       // registry.deckhouse.io/deckhouse/fe/modu
 
 A release image is a scratch image carrying only metadata. Every sub-tree publishes them, and their tags are either channel names (`alpha`, `beta`, `early-access`, `stable`, `rock-solid`, `lts`) or concrete versions — so one service answers both "what is on stable" and "what does v1.73.0 declare".
 
-What the image carries differs by kind, so each sub-tree has its own release type:
+`Fetch` pulls the release image once and returns a snapshot; every field is then served from memory, so reading the version, the manifest and the changelog costs one pull, not three. What the snapshot decodes differs by kind, so each sub-tree returns its own:
 
-| Service | Repository | version.json | Manifest |
-|---|---|---|---|
-| `deckhouse.ReleaseService` | `<edition>/release-channel` | rollout fields populated | none |
-| `module.ReleaseService` | `modules/<m>/release` | version + suspend only | `module.yaml` |
-| `packages.VersionService` | `packages/<p>/version` | version + suspend only | `package.yaml` |
+| Service | Repository | Fetch returns | version.json | Manifest |
+|---|---|---|---|---|
+| `deckhouse.ReleaseService` | `<edition>/release-channel` | `*deckhouse.Release` | rollout fields populated | none |
+| `module.ReleaseService` | `modules/<m>/release` | `*module.Release` | version + suspend only | `module.yaml` |
+| `packages.VersionService` | `packages/<p>/version` | `*packages.Release` | version + suspend only | `package.yaml` |
 
 ```go
-// Deckhouse release: version.json drives how the upgrade is staged.
-meta, err := reg.Deckhouse().Releases().Metadata(ctx, "stable")
+// Deckhouse release — version.json drives how the upgrade is staged.
+dh, err := reg.Deckhouse().Releases().Fetch(ctx, "stable")
+meta, err := dh.Metadata()
 meta.Version              // "v1.73.0"
 meta.Suspend              // must not be rolled out
 meta.Requirements         // {"k8s": ">= 1.27", ...}
 meta.Disruptions          // {"1.73": ["ingressNginx"]}
 meta.Canary["stable"]     // rollout waves and interval
 
-// Module release: same version.json getters, plus its manifest.
-rel := reg.Modules().Module("stronghold").Releases()
-version, err := rel.Version(ctx, "alpha")   // resolve a channel to a version
-def, err := rel.Definition(ctx, "alpha")    // decoded module.yaml
-def.Weight; def.Requirements.Deckhouse      // ">= 1.70"
+// Module release — one Fetch, then version and manifest from the snapshot.
+mod, err := reg.Modules().Module("stronghold").Releases().Fetch(ctx, "alpha")
+version, err := mod.Version()   // resolve a channel to a version
+def, err := mod.Definition()    // decoded module.yaml
+def.Weight; def.Requirements.Deckhouse   // ">= 1.70"
 
-// Package release: the v2 counterpart.
-pkg, err := reg.Packages().Package("elma").Versions().Definition(ctx, "v1.0.1")
-pkg.IsModule(); pkg.IsApplication()         // one schema, two package types
-pkg.Requirements.Deckhouse.Constraint       // ">= 1.70"
+// Package release — the v2 counterpart.
+pv, err := reg.Packages().Package("elma").Versions().Fetch(ctx, "v1.0.1")
+pkg, err := pv.Definition()
+pkg.IsModule(); pkg.IsApplication()      // one schema, two package types
+pkg.Requirements.Deckhouse.Constraint    // ">= 1.70"
 ```
 
 The two manifests are not two spellings of one schema, which is why `definition` keeps them apart. Requirements differ most: `module.yaml` states them as bare version ranges and a flat module map, `package.yaml` wraps each in a constraint object and splits module dependencies into mandatory/conditional/anyOf/noneOf buckets. Both are mapped as written.
 
 `definition` decodes and nothing more — validating requirement buckets, resolving semver constraints and projecting onto cluster resources stay with the consumer.
 
-Common to all three: `Metadata` (decoded version.json), `Version` (resolve a channel to a version), `Changelog` and `Channels`. A missing manifest or changelog gives `ErrFileNotFound` — older module releases legitimately ship none, and the manifest has to be read from the module image instead.
+Common to all three snapshots: `Metadata` (decoded version.json), `Version` (resolve a channel to a version), `Changelog`, and `File(name)` for a raw file the library does not decode. `Channels` lists a repository's channel tags and stays on the service — it needs no image. A missing manifest or changelog gives `ErrFileNotFound` — older module releases legitimately ship none, and the manifest has to be read from the module image instead.
 
-Every mapped file is returned decoded, never as bytes. Each result keeps the undecoded original on `Raw` for consumers applying their own schema, and `File`/`Files` read anything the library does not map.
-
-Each getter pulls the image again. When you need more than one file, `Files(ctx, tag, names...)` reads them in a single pass:
-
-```go
-files, err := rel.Files(ctx, "alpha", release.VersionFile, release.ModuleFile, release.ChangelogFile)
-```
+Every decoded result keeps the undecoded original on `Raw`, for consumers applying their own schema.
 
 ### Bundles and image digests
 
-A *bundle* is a full image — one shipping the artifact itself, as opposed to a release image or a scratch catalog entry. Six repositories hold them, and `bundle.Service` is the type they share: `Digests` reads `images_digests.json`, mapping every image the bundle contains to its digest.
+A *bundle* is a full image — one shipping the artifact itself, as opposed to a release image or a scratch catalog entry. Six repositories hold them, and `bundle.Service` is the type they share: `Fetch` pulls the image once and returns a `bundle.Bundle`, whose `Digests()` is the decoded `images_digests.json` — every image the bundle contains mapped to its digest.
 
 Neither the location nor the shape is uniform. Both were verified against the live registry at v1.76.6:
 
@@ -213,17 +211,19 @@ Neither the location nor the shape is uniform. Both were verified against the li
 | `Modules().Module(m)` | `modules/<m>` | `images_digests.json` | flat |
 | `Packages().Package(p)` | `packages/<p>` | `images_digests.json` | flat |
 
-The shape follows what the bundle contains, not what kind of bundle it is: an image carrying the images of many modules keys them by module, one carrying only its own does not. `Digests` detects which:
+The shape follows what the bundle contains, not what kind of bundle it is: an image carrying the images of many modules keys them by module, one carrying only its own does not. `Digests().IsNested()` says which:
 
 ```go
 // The Deckhouse image bundles every module of its edition, so it nests.
-d, err := reg.Deckhouse().Digests(ctx, "v1.73.0")
+b, err := reg.Deckhouse().Fetch(ctx, "v1.73.0")
+d := b.Digests()
 d.IsNested()                                // true
 d.Modules()                                 // ["ingressNginx", "userAuthn", ...]
 d.Lookup("ingressNginx", "controller")      // digest, ok
 
 // A module or package bundles only its own images, so it is flat.
-d, err = reg.Modules().Module("stronghold").Digests(ctx, "v1.0.1")
+b, err = reg.Modules().Module("stronghold").Fetch(ctx, "v1.0.1")
+d = b.Digests()
 d.Images                                    // {"controller": "sha256:...", ...}
 d.Lookup("", "controller")
 ```

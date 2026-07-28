@@ -136,7 +136,14 @@ func exampleRegistry() *dhregistry.Registry {
 func ExampleRegistry_Deckhouse() {
 	ctx := context.Background()
 
-	meta, err := exampleRegistry().Deckhouse().Releases().Metadata(ctx, "stable")
+	rel, err := exampleRegistry().Deckhouse().Releases().Fetch(ctx, "stable")
+	if err != nil {
+		fmt.Println("error:", err)
+
+		return
+	}
+
+	meta, err := rel.Metadata()
 	if err != nil {
 		fmt.Println("error:", err)
 
@@ -163,13 +170,14 @@ func ExampleRegistry_Deckhouse() {
 func ExampleRegistry_Deckhouse_digests() {
 	ctx := context.Background()
 
-	d, err := exampleRegistry().Deckhouse().Digests(ctx, "v1.73.0")
+	b, err := exampleRegistry().Deckhouse().Fetch(ctx, "v1.73.0")
 	if err != nil {
 		fmt.Println("error:", err)
 
 		return
 	}
 
+	d := b.Digests()
 	digest, ok := d.Lookup("ingressNginx", "controller")
 
 	fmt.Println("nested:", d.IsNested())
@@ -188,16 +196,21 @@ func ExampleRegistry_Deckhouse_digests() {
 func ExampleRegistry_Modules() {
 	ctx := context.Background()
 
-	releases := exampleRegistry().Modules().Module("stronghold").Releases()
-
-	version, err := releases.Version(ctx, "alpha")
+	rel, err := exampleRegistry().Modules().Module("stronghold").Releases().Fetch(ctx, "alpha")
 	if err != nil {
 		fmt.Println("error:", err)
 
 		return
 	}
 
-	def, err := releases.Definition(ctx, "alpha")
+	version, err := rel.Version()
+	if err != nil {
+		fmt.Println("error:", err)
+
+		return
+	}
+
+	def, err := rel.Definition()
 	if err != nil {
 		fmt.Println("error:", err)
 
@@ -225,13 +238,14 @@ func ExampleRegistry_Modules() {
 func ExampleRegistry_Modules_digests() {
 	ctx := context.Background()
 
-	d, err := exampleRegistry().Modules().Module("stronghold").Digests(ctx, "v1.0.1")
+	b, err := exampleRegistry().Modules().Module("stronghold").Fetch(ctx, "v1.0.1")
 	if err != nil {
 		fmt.Println("error:", err)
 
 		return
 	}
 
+	d := b.Digests()
 	fmt.Println("nested:    ", d.IsNested())
 	fmt.Println("controller:", d.Images["controller"])
 	fmt.Println("webhook:   ", d.Images["webhook"])
@@ -248,7 +262,14 @@ func ExampleRegistry_Modules_digests() {
 func ExampleRegistry_Packages() {
 	ctx := context.Background()
 
-	pkg, err := exampleRegistry().Packages().Package("elma").Versions().Definition(ctx, "v1.0.1")
+	rel, err := exampleRegistry().Packages().Package("elma").Versions().Fetch(ctx, "v1.0.1")
+	if err != nil {
+		fmt.Println("error:", err)
+
+		return
+	}
+
+	pkg, err := rel.Definition()
 	if err != nil {
 		fmt.Println("error:", err)
 
@@ -277,13 +298,14 @@ func ExampleRegistry_Packages() {
 func ExampleRegistry_Packages_digests() {
 	ctx := context.Background()
 
-	d, err := exampleRegistry().Packages().Package("elma").Digests(ctx, "v1.0.1")
+	b, err := exampleRegistry().Packages().Package("elma").Fetch(ctx, "v1.0.1")
 	if err != nil {
 		fmt.Println("error:", err)
 
 		return
 	}
 
+	d := b.Digests()
 	digest, ok := d.Lookup("", "controller")
 
 	fmt.Println("nested:", d.IsNested())

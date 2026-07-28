@@ -97,33 +97,64 @@ type VersionService struct {
 	*release.Service
 }
 
-// Metadata returns the decoded version.json of the package release image at
-// tag. A package release declares only its version, so there is nothing here
-// like the rollout controls a Deckhouse release carries.
-func (s *VersionService) Metadata(ctx context.Context, tag string) (*release.PackageVersion, error) {
-	return s.PackageVersion(ctx, tag)
-}
-
-// Definition returns the decoded package.yaml of the release image at tag —
-// the package manifest the release publishes. One schema covers both package
-// types; use IsModule and IsApplication to tell which this one describes.
-//
-// Returns release.ErrFileNotFound when the image carries no package.yaml: a
-// transitional release may still ship the legacy module.yaml, readable with
-// File(ctx, tag, definition.ModuleFile). For the raw bytes, use
-// File(ctx, tag, definition.PackageFile).
-func (s *VersionService) Definition(ctx context.Context, tag string) (*definition.Package, error) {
-	raw, err := s.File(ctx, tag, definition.PackageFile)
+// Fetch pulls the package release image at tag once and returns a snapshot that
+// serves its version and package.yaml from memory.
+func (s *VersionService) Fetch(ctx context.Context, tag string) (*Release, error) {
+	raw, err := s.Service.Fetch(ctx, tag)
 	if err != nil {
 		return nil, err
 	}
 
-	pkg, err := definition.ParsePackage(raw)
+	return &Release{raw: raw}, nil
+}
+
+// Release is a package release image read once. It is the package counterpart
+// of module.Release: same version.json, package.yaml instead of module.yaml.
+type Release struct {
+	raw *release.Release
+}
+
+// Metadata returns the decoded version.json. A package release declares only
+// its version, without the rollout controls a Deckhouse release carries.
+func (r *Release) Metadata() (*release.PackageVersion, error) {
+	return r.raw.PackageVersion()
+}
+
+// Version returns the version the release declares.
+func (r *Release) Version() (string, error) {
+	return r.raw.Version()
+}
+
+// Definition returns the decoded package.yaml — the package manifest the
+// release publishes. One schema covers both package types; use IsModule and
+// IsApplication to tell which this one describes.
+//
+// Returns release.ErrFileNotFound when the image carries no package.yaml: a
+// transitional release may still ship the legacy module.yaml, readable with
+// File(definition.ModuleFile).
+func (r *Release) Definition() (*definition.Package, error) {
+	rawYAML, ok := r.raw.File(definition.PackageFile)
+	if !ok {
+		return nil, fmt.Errorf("%w: %s has no %s", release.ErrFileNotFound, r.raw.Ref(), definition.PackageFile)
+	}
+
+	pkg, err := definition.ParsePackage(rawYAML)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", s.Ref(tag), err)
+		return nil, fmt.Errorf("%s: %w", r.raw.Ref(), err)
 	}
 
 	return pkg, nil
+}
+
+// Changelog returns the decoded changelog, or release.ErrFileNotFound when the
+// image carries none.
+func (r *Release) Changelog() (map[string]any, error) {
+	return r.raw.Changelog()
+}
+
+// File returns a raw file from the release image and whether it was present.
+func (r *Release) File(name string) ([]byte, bool) {
+	return r.raw.File(name)
 }
 
 type Service struct {

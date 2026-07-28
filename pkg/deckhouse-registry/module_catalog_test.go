@@ -67,7 +67,10 @@ func TestNewCatalogReads(t *testing.T) {
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"stronghold", "neuvector"}, names)
 
-	version, err := catalog.Module("stronghold").Releases().Version(t.Context(), "alpha")
+	rel, err := catalog.Module("stronghold").Releases().Fetch(t.Context(), "alpha")
+	require.NoError(t, err)
+
+	version, err := rel.Version()
 	require.NoError(t, err)
 	assert.Equal(t, "v1.0.1", version)
 }

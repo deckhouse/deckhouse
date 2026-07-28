@@ -60,10 +60,43 @@ type ReleaseService struct {
 	*release.Service
 }
 
-// Metadata returns the decoded version.json of the Deckhouse release image at
-// tag, including the rollout controls that only a Deckhouse release carries.
-func (s *ReleaseService) Metadata(ctx context.Context, tag string) (*release.DeckhouseVersion, error) {
-	return s.DeckhouseVersion(ctx, tag)
+// Fetch pulls the Deckhouse release image at tag once and returns a snapshot
+// that serves its metadata from memory.
+func (s *ReleaseService) Fetch(ctx context.Context, tag string) (*Release, error) {
+	raw, err := s.Service.Fetch(ctx, tag)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Release{raw: raw}, nil
+}
+
+// Release is a Deckhouse release image read once. Metadata decodes its
+// version.json under the Deckhouse schema, with the rollout controls only a
+// Deckhouse release carries.
+type Release struct {
+	raw *release.Release
+}
+
+// Metadata returns the decoded version.json.
+func (r *Release) Metadata() (*release.DeckhouseVersion, error) {
+	return r.raw.DeckhouseVersion()
+}
+
+// Version returns the version the release declares.
+func (r *Release) Version() (string, error) {
+	return r.raw.Version()
+}
+
+// Changelog returns the decoded changelog, or release.ErrFileNotFound when the
+// image carries none.
+func (r *Release) Changelog() (map[string]any, error) {
+	return r.raw.Changelog()
+}
+
+// File returns a raw file from the release image and whether it was present.
+func (r *Release) File(name string) ([]byte, bool) {
+	return r.raw.File(name)
 }
 
 type Service struct {

@@ -15,25 +15,21 @@
 // Package release reads release images — the lightweight scratch images that
 // carry only the metadata of the artifact they describe.
 //
-// Every sub-tree publishes releases, and every release image carries
-// version.json, so that much is shared here. What sits alongside it is not:
-// a module release ships module.yaml, a package release ships package.yaml,
-// and a Deckhouse release ships neither but fills in the rollout fields of
-// version.json (canary, disruptions, requirements). The getters for those live
-// on the sub-tree types that own them — module.ReleaseService.Definition and
-// packages.VersionService.Definition.
+// A release image is pulled once, by Service.Fetch, into a Release snapshot;
+// every field — version, changelog, the raw files — is then served from memory.
+// Nothing re-downloads, so reading five fields costs one pull, not five.
 //
-// Every file this package knows has a mapping, so the getters return decoded
-// values, never bytes. Each decoded result keeps the undecoded original where
-// a consumer needs its own schema, and File reads anything not mapped here.
-//
-// The segment a release repository hangs off differs too: release-channel for
-// Deckhouse, release for modules, version for packages and the CLI.
+// version.json is common to every release. What sits alongside it is not: a
+// module release ships module.yaml, a package release ships package.yaml, and a
+// Deckhouse release ships neither but fills in the rollout fields of
+// version.json (canary, disruptions, requirements). Which version.json schema
+// applies and which manifest is present is fixed by the sub-tree that owns the
+// release, so the typed accessors live on its snapshot — deckhouse.Release,
+// module.Release, packages.Release — each wrapping the Release returned here.
 package release
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -54,17 +50,13 @@ func New(svc *service.BasicService) *Service {
 	return &Service{BasicService: svc}
 }
 
-// Files pulls the release image at tag and returns the named metadata files.
-// Names are relative to the image root. A file the image does not carry is
-// simply absent from the result.
-//
-// Every getter below is a thin wrapper over this. Prefer calling it directly
-// when you need more than one file: each getter pulls the image again, and one
-// call reads them all in a single pass.
-func (s *Service) Files(ctx context.Context, tag string, names ...string) (map[string][]byte, error) {
+// Fetch pulls the release image at tag and extracts its files once. The
+// returned Release serves version, changelog and the raw files from memory —
+// read as many as you need without pulling again.
+func (s *Service) Fetch(ctx context.Context, tag string) (*Release, error) {
 	entry := s.Entry(tag)
 
-	entry.Debug("Reading release image files", slog.Any("files", names))
+	entry.Debug("Fetching release image")
 
 	img, err := s.GetImage(ctx, tag)
 	if err != nil {
@@ -74,148 +66,19 @@ func (s *Service) Files(ctx context.Context, tag string, names ...string) (map[s
 	rc := img.Extract()
 	defer rc.Close()
 
-	files, err := Read(rc, names...)
+	files, err := readAll(rc)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", s.Ref(tag), err)
 	}
 
-	entry.Debug("Release image files read", slog.Int("found", len(files)))
+	entry.Debug("Release image fetched", slog.Int("files", len(files)))
 
-	return files, nil
-}
-
-// File pulls the release image at tag and returns one metadata file, or
-// ErrFileNotFound when the image does not carry it.
-func (s *Service) File(ctx context.Context, tag, name string) ([]byte, error) {
-	files, err := s.Files(ctx, tag, name)
-	if err != nil {
-		return nil, err
-	}
-
-	raw, ok := files[name]
-	if !ok {
-		return nil, fmt.Errorf("%w: %s has no %s", ErrFileNotFound, s.Ref(tag), name)
-	}
-
-	return raw, nil
-}
-
-// versionJSON reads the raw version.json of the release image at tag. It stays
-// unexported: version.json has a mapping for each kind of release, so callers
-// get a decoded result rather than bytes. Raw is still on the result for
-// consumers applying their own schema.
-func (s *Service) versionJSON(ctx context.Context, tag string) ([]byte, error) {
-	raw, err := s.File(ctx, tag, VersionFile)
-	if err != nil {
-		if errors.Is(err, ErrFileNotFound) {
-			return nil, fmt.Errorf("%w: %s", ErrNoVersionMetadata, s.Ref(tag))
-		}
-
-		return nil, err
-	}
-
-	return raw, nil
-}
-
-// DeckhouseVersion reads and decodes version.json under the Deckhouse schema,
-// which carries the rollout controls. Reach it through
-// deckhouse.ReleaseService.Metadata, the only release repository it applies to.
-func (s *Service) DeckhouseVersion(ctx context.Context, tag string) (*DeckhouseVersion, error) {
-	raw, err := s.versionJSON(ctx, tag)
-	if err != nil {
-		return nil, err
-	}
-
-	version, err := ParseDeckhouseVersion(raw)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", s.Ref(tag), err)
-	}
-
-	return version, nil
-}
-
-// PackageVersion reads and decodes version.json under the module and package
-// schema, which declares only the version. Reach it through
-// module.ReleaseService.Metadata or packages.VersionService.Metadata.
-func (s *Service) PackageVersion(ctx context.Context, tag string) (*PackageVersion, error) {
-	raw, err := s.versionJSON(ctx, tag)
-	if err != nil {
-		return nil, err
-	}
-
-	version, err := ParsePackageVersion(raw)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", s.Ref(tag), err)
-	}
-
-	return version, nil
-}
-
-// Version returns the version a release image declares — the common case,
-// resolving a channel name to a concrete version.
-//
-// It reads only the version field, the one thing both version.json schemas
-// share, so it works on any release repository. For the rest, use the Metadata
-// of the sub-tree service, which knows which schema applies.
-func (s *Service) Version(ctx context.Context, tag string) (string, error) {
-	raw, err := s.versionJSON(ctx, tag)
-	if err != nil {
-		return "", err
-	}
-
-	version, err := parseCommonVersion(raw)
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", s.Ref(tag), err)
-	}
-
-	if version == "" {
-		return "", fmt.Errorf("%w: %s declares no version", ErrNoVersionMetadata, s.Ref(tag))
-	}
-
-	s.Entry(tag).Debug("Release version resolved", slog.String("version", version))
-
-	return version, nil
-}
-
-// changelogYAML reads the raw changelog of the release image at tag, trying
-// both spellings the build emits. It stays unexported: the changelog has a
-// mapping, so callers get a decoded result rather than bytes.
-func (s *Service) changelogYAML(ctx context.Context, tag string) ([]byte, error) {
-	files, err := s.Files(ctx, tag, ChangelogFile, ChangelogFileAlt)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, name := range []string{ChangelogFile, ChangelogFileAlt} {
-		if raw, ok := files[name]; ok {
-			return raw, nil
-		}
-	}
-
-	return nil, fmt.Errorf("%w: %s has no changelog", ErrFileNotFound, s.Ref(tag))
-}
-
-// Changelog returns the decoded changelog of the release image at tag.
-//
-// A changelog that fails to parse is reported as an error here, but callers
-// driving a rollout should treat it as non-fatal: a broken changelog never
-// blocks a release.
-func (s *Service) Changelog(ctx context.Context, tag string) (map[string]any, error) {
-	raw, err := s.changelogYAML(ctx, tag)
-	if err != nil {
-		return nil, err
-	}
-
-	changelog, err := ParseChangelog(raw)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", s.Ref(tag), err)
-	}
-
-	return changelog, nil
+	return &Release{ref: s.Ref(tag), files: files}, nil
 }
 
 // Channels returns the release channel names published in this repository —
-// the tags that are not concrete versions or digests.
+// the tags that are not concrete versions or digests. It lists tags and pulls
+// no image.
 func (s *Service) Channels(ctx context.Context) ([]string, error) {
 	tags, err := s.ListTags(ctx)
 	if err != nil {
@@ -231,4 +94,124 @@ func (s *Service) Channels(ctx context.Context) ([]string, error) {
 	}
 
 	return channels, nil
+}
+
+// Release is a release image read once. Its accessors serve the extracted
+// metadata from memory and never touch the registry.
+//
+// Both version.json decoders and the raw-file accessor are here; the sub-tree
+// snapshots (deckhouse.Release and friends) pick the decoder that matches their
+// kind and hide the rest.
+type Release struct {
+	ref   string
+	files map[string][]byte
+}
+
+// Ref is the fully-qualified reference the snapshot was read from.
+func (r *Release) Ref() string {
+	return r.ref
+}
+
+// File returns a raw file from the image and whether it was present. Names are
+// matched after the same normalization applied to the tar entries.
+func (r *Release) File(name string) ([]byte, bool) {
+	raw, ok := r.files[normalize(name)]
+
+	return raw, ok
+}
+
+// VersionJSON returns the raw version.json, or ErrNoVersionMetadata when the
+// image carries none.
+func (r *Release) VersionJSON() ([]byte, error) {
+	raw, ok := r.File(VersionFile)
+	if !ok || len(raw) == 0 {
+		return nil, fmt.Errorf("%w: %s", ErrNoVersionMetadata, r.ref)
+	}
+
+	return raw, nil
+}
+
+// Version returns the version the release declares — the one field both
+// version.json schemas share, so it works on any release.
+func (r *Release) Version() (string, error) {
+	raw, err := r.VersionJSON()
+	if err != nil {
+		return "", err
+	}
+
+	version, err := parseCommonVersion(raw)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", r.ref, err)
+	}
+
+	if version == "" {
+		return "", fmt.Errorf("%w: %s declares no version", ErrNoVersionMetadata, r.ref)
+	}
+
+	return version, nil
+}
+
+// DeckhouseVersion decodes version.json under the Deckhouse schema, which
+// carries the rollout controls. Reach it through deckhouse.Release.Metadata.
+func (r *Release) DeckhouseVersion() (*DeckhouseVersion, error) {
+	raw, err := r.VersionJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	version, err := ParseDeckhouseVersion(raw)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", r.ref, err)
+	}
+
+	return version, nil
+}
+
+// PackageVersion decodes version.json under the module and package schema,
+// which declares only the version. Reach it through module.Release.Metadata or
+// packages.Release.Metadata.
+func (r *Release) PackageVersion() (*PackageVersion, error) {
+	raw, err := r.VersionJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	version, err := ParsePackageVersion(raw)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", r.ref, err)
+	}
+
+	return version, nil
+}
+
+// ChangelogYAML returns the raw changelog, trying both spellings the build
+// emits, and whether one was present.
+func (r *Release) ChangelogYAML() ([]byte, bool) {
+	for _, name := range []string{ChangelogFile, ChangelogFileAlt} {
+		if raw, ok := r.File(name); ok {
+			return raw, true
+		}
+	}
+
+	return nil, false
+}
+
+// Changelog returns the decoded changelog, or ErrFileNotFound when the image
+// carries none.
+//
+// A changelog that fails to parse is an error here, but callers driving a
+// rollout should treat it as non-fatal: a broken changelog never blocks a
+// release.
+func (r *Release) Changelog() (map[string]any, error) {
+	raw, ok := r.ChangelogYAML()
+	if !ok {
+		return nil, fmt.Errorf("%w: %s has no changelog", ErrFileNotFound, r.ref)
+	}
+
+	changelog, err := ParseChangelog(raw)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", r.ref, err)
+	}
+
+	return changelog, nil
 }

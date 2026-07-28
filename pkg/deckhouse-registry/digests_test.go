@@ -46,9 +46,10 @@ func TestDigestsDeckhouseImage(t *testing.T) {
 	reg.MustAddImage("deckhouse/fe", "v1.73.0",
 		fake.NewImageBuilder().WithFile(bundle.ModulesImagesDigestsPath, nestedDigests).MustBuild())
 
-	got, err := newFakeRegistry(t, reg).Deckhouse().Digests(t.Context(), "v1.73.0")
+	b, err := newFakeRegistry(t, reg).Deckhouse().Fetch(t.Context(), "v1.73.0")
 	require.NoError(t, err)
 
+	got := b.Digests()
 	assert.Equal(t, bundle.ModulesImagesDigestsPath, got.Source)
 	assert.True(t, got.IsNested())
 	assert.ElementsMatch(t, []string{"ingressNginx", "userAuthn"}, got.Modules())
@@ -69,9 +70,10 @@ func TestDigestsModuleImage(t *testing.T) {
 	reg.MustAddImage("deckhouse/fe/modules/stronghold", "v1.0.1",
 		fake.NewImageBuilder().WithFile(bundle.RootPath, flatDigests).MustBuild())
 
-	got, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Digests(t.Context(), "v1.0.1")
+	b, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Fetch(t.Context(), "v1.0.1")
 	require.NoError(t, err)
 
+	got := b.Digests()
 	assert.Equal(t, bundle.RootPath, got.Source)
 	assert.False(t, got.IsNested())
 	assert.Nil(t, got.Modules())
@@ -89,9 +91,10 @@ func TestDigestsPackageImage(t *testing.T) {
 	reg.MustAddImage("deckhouse/fe/packages/elma", "v1.0.1",
 		fake.NewImageBuilder().WithFile(bundle.RootPath, flatDigests).MustBuild())
 
-	got, err := newFakeRegistry(t, reg).Packages().Package("elma").Digests(t.Context(), "v1.0.1")
+	b, err := newFakeRegistry(t, reg).Packages().Package("elma").Fetch(t.Context(), "v1.0.1")
 	require.NoError(t, err)
 
+	got := b.Digests()
 	assert.Equal(t, bundle.RootPath, got.Source)
 	assert.Equal(t, 2, got.Count())
 }
@@ -114,9 +117,10 @@ func TestDigestsInstallerImages(t *testing.T) {
 		"installer":          dhreg.Installer(),
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, err := svc.Digests(t.Context(), "v1.73.0")
+			b, err := svc.Fetch(t.Context(), "v1.73.0")
 			require.NoError(t, err)
 
+			got := b.Digests()
 			assert.Equal(t, bundle.CandiImagesDigestsPath, got.Source)
 			assert.True(t, got.IsNested())
 			assert.Equal(t, 3, got.Count())
@@ -130,7 +134,7 @@ func TestDigestsMissingFile(t *testing.T) {
 	reg.MustAddImage("deckhouse/fe/modules/stronghold", "v1.0.1",
 		fake.NewImageBuilder().WithFile("module.yaml", "name: stronghold\n").MustBuild())
 
-	_, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Digests(t.Context(), "v1.0.1")
+	_, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Fetch(t.Context(), "v1.0.1")
 	require.ErrorIs(t, err, dhregistry.ErrNoDigests)
 }
 
@@ -138,7 +142,7 @@ func TestDigestsMissingImage(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
 	reg.MustAddImage("deckhouse/fe/modules/stronghold", "v1.0.1", fake.NewImageBuilder().MustBuild())
 
-	_, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Digests(t.Context(), "v9.9.9")
+	_, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Fetch(t.Context(), "v9.9.9")
 	require.Error(t, err)
 	assert.True(t, dhregistry.IsNotFound(err), "expected a not-found error, got %v", err)
 }
@@ -167,6 +171,6 @@ func TestDigestsWrongPathMisses(t *testing.T) {
 	reg.MustAddImage("deckhouse/fe", "v1.73.0",
 		fake.NewImageBuilder().WithFile(bundle.RootPath, flatDigests).MustBuild())
 
-	_, err := newFakeRegistry(t, reg).Deckhouse().Digests(t.Context(), "v1.73.0")
+	_, err := newFakeRegistry(t, reg).Deckhouse().Fetch(t.Context(), "v1.73.0")
 	require.ErrorIs(t, err, dhregistry.ErrNoDigests)
 }

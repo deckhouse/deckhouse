@@ -201,22 +201,17 @@ func ParseChangelog(raw []byte) (map[string]any, error) {
 	return changelog, nil
 }
 
-// Read extracts the named files from a flattened release image tar. Names are
-// relative to the image root; a leading "/" or "./" is accepted and normalized
-// away. Files that are not present are simply absent from the result, so the
-// caller decides which are mandatory.
-//
-// The scan stops once every requested file has been seen.
-func Read(r io.Reader, names ...string) (map[string][]byte, error) {
-	wanted := make(map[string]struct{}, len(names))
-	for _, name := range names {
-		wanted[normalize(name)] = struct{}{}
-	}
-
-	files := make(map[string][]byte, len(names))
+// readAll extracts every regular file from a flattened release image tar into a
+// map keyed by normalized path. Release images are metadata-only, so reading
+// one whole is cheap; each file is still capped at maxBytes against a hostile
+// image. Reading everything, rather than a fixed set of names, lets the Release
+// snapshot serve any file a build emits — including spellings this package does
+// not enumerate.
+func readAll(r io.Reader) (map[string][]byte, error) {
+	files := make(map[string][]byte)
 	reader := tar.NewReader(r)
 
-	for len(files) < len(wanted) {
+	for {
 		hdr, err := reader.Next()
 		if errors.Is(err, io.EOF) {
 			return files, nil
@@ -226,10 +221,11 @@ func Read(r io.Reader, names ...string) (map[string][]byte, error) {
 			return nil, fmt.Errorf("read release image tar: %w", err)
 		}
 
-		name := normalize(hdr.Name)
-		if _, ok := wanted[name]; !ok {
+		if hdr.FileInfo().IsDir() {
 			continue
 		}
+
+		name := normalize(hdr.Name)
 
 		buf := bytes.NewBuffer(nil)
 
@@ -244,8 +240,6 @@ func Read(r io.Reader, names ...string) (map[string][]byte, error) {
 
 		files[name] = buf.Bytes()
 	}
-
-	return files, nil
 }
 
 // normalize makes a tar entry name comparable to a declared file name:

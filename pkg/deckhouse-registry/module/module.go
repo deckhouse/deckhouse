@@ -99,31 +99,62 @@ type ReleaseService struct {
 	*release.Service
 }
 
-// Metadata returns the decoded version.json of the module release image at
-// tag. A module release declares only its version, so there is nothing here
-// like the rollout controls a Deckhouse release carries.
-func (s *ReleaseService) Metadata(ctx context.Context, tag string) (*release.PackageVersion, error) {
-	return s.PackageVersion(ctx, tag)
-}
-
-// Definition returns the decoded module.yaml of the release image at tag — the
-// module manifest the release publishes.
-//
-// Returns release.ErrFileNotFound when the image carries no manifest, which
-// happens on older releases where it must be read from the module image
-// instead. For the raw bytes, use File(ctx, tag, definition.ModuleFile).
-func (s *ReleaseService) Definition(ctx context.Context, tag string) (*definition.Module, error) {
-	raw, err := s.File(ctx, tag, definition.ModuleFile)
+// Fetch pulls the module release image at tag once and returns a snapshot that
+// serves its version and module.yaml from memory.
+func (s *ReleaseService) Fetch(ctx context.Context, tag string) (*Release, error) {
+	raw, err := s.Service.Fetch(ctx, tag)
 	if err != nil {
 		return nil, err
 	}
 
-	module, err := definition.ParseModule(raw)
+	return &Release{raw: raw}, nil
+}
+
+// Release is a module release image read once.
+type Release struct {
+	raw *release.Release
+}
+
+// Metadata returns the decoded version.json. A module release declares only
+// its version, without the rollout controls a Deckhouse release carries.
+func (r *Release) Metadata() (*release.PackageVersion, error) {
+	return r.raw.PackageVersion()
+}
+
+// Version returns the version the release declares.
+func (r *Release) Version() (string, error) {
+	return r.raw.Version()
+}
+
+// Definition returns the decoded module.yaml — the module manifest the release
+// publishes.
+//
+// Returns release.ErrFileNotFound when the image carries no manifest, which
+// happens on older releases where it must be read from the module image
+// instead. For the raw bytes, use File(definition.ModuleFile).
+func (r *Release) Definition() (*definition.Module, error) {
+	rawYAML, ok := r.raw.File(definition.ModuleFile)
+	if !ok {
+		return nil, fmt.Errorf("%w: %s has no %s", release.ErrFileNotFound, r.raw.Ref(), definition.ModuleFile)
+	}
+
+	module, err := definition.ParseModule(rawYAML)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", s.Ref(tag), err)
+		return nil, fmt.Errorf("%s: %w", r.raw.Ref(), err)
 	}
 
 	return module, nil
+}
+
+// Changelog returns the decoded changelog, or release.ErrFileNotFound when the
+// image carries none.
+func (r *Release) Changelog() (map[string]any, error) {
+	return r.raw.Changelog()
+}
+
+// File returns a raw file from the release image and whether it was present.
+func (r *Release) File(name string) ([]byte, bool) {
+	return r.raw.File(name)
 }
 
 type Service struct {

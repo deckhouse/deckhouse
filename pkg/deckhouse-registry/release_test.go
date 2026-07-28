@@ -57,7 +57,8 @@ func newFakeRegistry(t *testing.T, reg *fake.Registry) *dhregistry.Registry {
 }
 
 // TestDeckhouseRelease covers the Deckhouse release image, whose version.json
-// carries the rollout fields.
+// carries the rollout fields. One Fetch serves both the metadata and the
+// changelog — no second pull.
 func TestDeckhouseRelease(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
 	reg.MustAddImage("deckhouse/fe/release-channel", "stable",
@@ -66,9 +67,10 @@ func TestDeckhouseRelease(t *testing.T) {
 			WithFile(release.ChangelogFile, changelogYAML).
 			MustBuild())
 
-	releases := newFakeRegistry(t, reg).Deckhouse().Releases()
+	rel, err := newFakeRegistry(t, reg).Deckhouse().Releases().Fetch(t.Context(), "stable")
+	require.NoError(t, err)
 
-	meta, err := releases.Metadata(t.Context(), "stable")
+	meta, err := rel.Metadata()
 	require.NoError(t, err)
 
 	assert.Equal(t, "v1.73.0", meta.Version)
@@ -84,13 +86,14 @@ func TestDeckhouseRelease(t *testing.T) {
 	// Raw is the escape hatch for consumers applying their own schema.
 	assert.JSONEq(t, deckhouseVersionJSON, string(meta.Raw))
 
-	changelog, err := releases.Changelog(t.Context(), "stable")
+	changelog, err := rel.Changelog()
 	require.NoError(t, err)
 	assert.Contains(t, changelog, "ingress-nginx")
 }
 
 // TestModuleRelease covers the module release image, which ships module.yaml
-// and leaves the rollout fields empty.
+// and leaves the rollout fields empty. Version, Metadata and Definition all
+// come from the one snapshot.
 func TestModuleRelease(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
 	reg.MustAddImage("deckhouse/fe/modules/stronghold/release", "alpha",
@@ -99,21 +102,22 @@ func TestModuleRelease(t *testing.T) {
 			WithFile(definition.ModuleFile, "name: stronghold\nweight: 910\n").
 			MustBuild())
 
-	releases := newFakeRegistry(t, reg).Modules().Module("stronghold").Releases()
+	rel, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Releases().Fetch(t.Context(), "alpha")
+	require.NoError(t, err)
 
-	version, err := releases.Version(t.Context(), "alpha")
+	version, err := rel.Version()
 	require.NoError(t, err)
 	assert.Equal(t, "v1.0.1", version)
 
 	// A module release's version.json declares only the version — the rollout
 	// controls of a Deckhouse release have no counterpart here, which is why
 	// the two map to different types.
-	meta, err := releases.Metadata(t.Context(), "alpha")
+	meta, err := rel.Metadata()
 	require.NoError(t, err)
 	assert.Equal(t, "v1.0.1", meta.Version)
 	assert.JSONEq(t, `{"version": "v1.0.1"}`, string(meta.Raw))
 
-	def, err := releases.Definition(t.Context(), "alpha")
+	def, err := rel.Definition()
 	require.NoError(t, err)
 	assert.Equal(t, "stronghold", def.Name)
 	assert.Equal(t, uint32(910), def.Weight)
@@ -129,13 +133,14 @@ func TestPackageRelease(t *testing.T) {
 			WithFile(definition.PackageFile, "name: elma\n").
 			MustBuild())
 
-	versions := newFakeRegistry(t, reg).Packages().Package("elma").Versions()
+	rel, err := newFakeRegistry(t, reg).Packages().Package("elma").Versions().Fetch(t.Context(), "v1.0.1")
+	require.NoError(t, err)
 
-	version, err := versions.Version(t.Context(), "v1.0.1")
+	version, err := rel.Version()
 	require.NoError(t, err)
 	assert.Equal(t, "v1.0.1", version)
 
-	def, err := versions.Definition(t.Context(), "v1.0.1")
+	def, err := rel.Definition()
 	require.NoError(t, err)
 	assert.Equal(t, "elma", def.Name)
 }
@@ -148,20 +153,21 @@ func TestReleaseDefinitionAbsent(t *testing.T) {
 	reg.MustAddImage("deckhouse/fe/modules/stronghold/release", "alpha",
 		fake.NewImageBuilder().WithFile(release.VersionFile, `{"version": "v1.0.1"}`).MustBuild())
 
-	releases := newFakeRegistry(t, reg).Modules().Module("stronghold").Releases()
+	rel, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Releases().Fetch(t.Context(), "alpha")
+	require.NoError(t, err)
 
-	_, err := releases.Definition(t.Context(), "alpha")
+	_, err = rel.Definition()
 	require.ErrorIs(t, err, dhregistry.ErrFileNotFound)
 
-	// The version is still readable.
-	version, err := releases.Version(t.Context(), "alpha")
+	// The version is still readable from the same snapshot.
+	version, err := rel.Version()
 	require.NoError(t, err)
 	assert.Equal(t, "v1.0.1", version)
 }
 
-// TestReleaseFiles covers reading several metadata files in a single image
-// pull, which is what callers needing more than one should use.
-func TestReleaseFiles(t *testing.T) {
+// TestReleaseFile covers the raw-file escape hatch on the snapshot: present
+// files come back, an absent one reports not-present rather than failing.
+func TestReleaseFile(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
 	reg.MustAddImage("deckhouse/fe/modules/stronghold/release", "alpha",
 		fake.NewImageBuilder().
@@ -169,17 +175,17 @@ func TestReleaseFiles(t *testing.T) {
 			WithFile(definition.ModuleFile, "name: stronghold\n").
 			MustBuild())
 
-	releases := newFakeRegistry(t, reg).Modules().Module("stronghold").Releases()
-
-	files, err := releases.Files(t.Context(), "alpha", release.VersionFile, definition.ModuleFile, release.ChangelogFile)
+	rel, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Releases().Fetch(t.Context(), "alpha")
 	require.NoError(t, err)
 
-	// Files that are present come back; the absent changelog simply is not
-	// there, rather than failing the whole read.
-	assert.Len(t, files, 2)
-	assert.Contains(t, files, release.VersionFile)
-	assert.Contains(t, files, definition.ModuleFile)
-	assert.NotContains(t, files, release.ChangelogFile)
+	_, ok := rel.File(release.VersionFile)
+	assert.True(t, ok)
+
+	_, ok = rel.File(definition.ModuleFile)
+	assert.True(t, ok)
+
+	_, ok = rel.File(release.ChangelogFile)
+	assert.False(t, ok)
 }
 
 func TestReleaseNoVersionMetadata(t *testing.T) {
@@ -187,9 +193,10 @@ func TestReleaseNoVersionMetadata(t *testing.T) {
 	reg.MustAddImage("deckhouse/fe/modules/stronghold/release", "alpha",
 		fake.NewImageBuilder().WithFile("unrelated.txt", "x").MustBuild())
 
-	releases := newFakeRegistry(t, reg).Modules().Module("stronghold").Releases()
+	rel, err := newFakeRegistry(t, reg).Modules().Module("stronghold").Releases().Fetch(t.Context(), "alpha")
+	require.NoError(t, err)
 
-	_, err := releases.Version(t.Context(), "alpha")
+	_, err = rel.Version()
 	require.ErrorIs(t, err, dhregistry.ErrNoVersionMetadata)
 }
 
@@ -198,7 +205,10 @@ func TestReleaseSuspend(t *testing.T) {
 	reg.MustAddImage("deckhouse/fe/release-channel", "alpha",
 		fake.NewImageBuilder().WithFile(release.VersionFile, `{"version":"v1.74.0","suspend":true}`).MustBuild())
 
-	meta, err := newFakeRegistry(t, reg).Deckhouse().Releases().Metadata(t.Context(), "alpha")
+	rel, err := newFakeRegistry(t, reg).Deckhouse().Releases().Fetch(t.Context(), "alpha")
+	require.NoError(t, err)
+
+	meta, err := rel.Metadata()
 	require.NoError(t, err)
 	assert.True(t, meta.Suspend)
 }
@@ -208,7 +218,7 @@ func TestReleaseNotFound(t *testing.T) {
 	reg.MustAddImage("deckhouse/fe/release-channel", "stable",
 		fake.NewImageBuilder().WithFile(release.VersionFile, `{"version":"v1.73.0"}`).MustBuild())
 
-	_, err := newFakeRegistry(t, reg).Deckhouse().Releases().Metadata(t.Context(), "rock-solid")
+	_, err := newFakeRegistry(t, reg).Deckhouse().Releases().Fetch(t.Context(), "rock-solid")
 	require.Error(t, err)
 	assert.True(t, dhregistry.IsNotFound(err), "expected a not-found error, got %v", err)
 }
@@ -273,7 +283,10 @@ func TestDurationUnmarshal(t *testing.T) {
 			WithFile(release.VersionFile, `{"version":"v1.73.0","canary":{"stable":{"interval":900000000000}}}`).
 			MustBuild())
 
-	meta, err := newFakeRegistry(t, reg).Deckhouse().Releases().Metadata(t.Context(), "stable")
+	rel, err := newFakeRegistry(t, reg).Deckhouse().Releases().Fetch(t.Context(), "stable")
+	require.NoError(t, err)
+
+	meta, err := rel.Metadata()
 	require.NoError(t, err)
 	assert.Equal(t, 15*time.Minute, meta.Canary["stable"].Interval)
 }
