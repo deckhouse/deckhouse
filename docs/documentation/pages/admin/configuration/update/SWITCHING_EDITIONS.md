@@ -111,11 +111,11 @@ You can find the edition and version currently used in the cluster on the main p
       echo
       echo "Modules not supported in the desired edition (edition code - $NEW_EDITION, version - $DECKHOUSE_VERSION):"
       echo MODULES_TO_DISABLE=\"$MODULES_TO_DISABLE\"
+      )
 
       echo
       echo "Deleting the deckhouse pod of the new edition"
       d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=true --ignore-not-found=true
-      )
       ```
 
    1. Disable the modules from the list if acceptable (the module functionality is not used, or you are ready to give it up). Otherwise, **abort the switching process.**

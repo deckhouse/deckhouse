@@ -93,10 +93,11 @@ Summary:
       echo "Запуск пода deckhouse новой редакции с командой 'sleep -- infinity'"
 
       <!REMOVE_FOR_CE>
-      d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry-cse.deckhouse.ru --docker-username=license-token --docker-password=${LICENSE_TOKEN}
+      d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry.deckhouse.ru --docker-username=license-token --docker-password=${LICENSE_TOKEN}
       <!/REMOVE_FOR_CE>
 
-      d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
+      DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+      d8 k run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
       <!REMOVE_FOR_CE>
       --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
       <!/REMOVE_FOR_CE>
@@ -112,7 +113,8 @@ Summary:
 
       echo
       echo "Модули, которые не поддерживаются в желаемой редакции (код редакции - $NEW_EDITION, версия - $DECKHOUSE_VERSION):"
-      echo MODULES_TO_DISABLE=\"$MODULES_TO_DISABLE\")
+      echo MODULES_TO_DISABLE=\"$MODULES_TO_DISABLE\"
+      )
 
       echo
       echo "Удаление пода deckhouse новой редакции"
