@@ -71,45 +71,54 @@ Summary:
 
 ### Определение возможности переключения на желаемую редакцию
 
-{% capture check_new_internal_modules %}
+{% capture take_care_of_the_internal_modules %}
+1. Определите список модулей, которые используются в кластере и не поддерживаются в DKP $NEW_EDITION. Для этого выполните следующие шаги:
 
-```shell
-(set -e
-trap 'echo "Ошибка выполнения"' ERR
+   <!REMOVE_FOR_CE>
+   1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
 
-echo
-echo "Запуск пода deckhouse новой редакции с командой 'sleep -- infinity'"
+      ```shell
+      LICENSE_TOKEN=<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
+      ```
 
-<!REMOVE_FOR_CE>
-d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry-cse.deckhouse.ru --docker-username=license-token --docker-password=${LICENSE_TOKEN}
-<!/REMOVE_FOR_CE>
+   <!/REMOVE_FOR_CE>
 
-d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
-<!REMOVE_FOR_CE>
---overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
-<!/REMOVE_FOR_CE>
---command sleep -- infinity
-d8 k wait --for=condition=ready pod/$NEW_EDITION-image --timeout=300s
+   1. Получите список модулей, которые не поддерживаются в DKP $NEW_EDITION:
 
-echo
-echo "Получение информации по внутренним модулям из текущей и новой редакции"
-echo "Сравнение внутренних модулей текущей и новой редакции"
-NEW_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ |   grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-MODULES_TO_DISABLE=$(echo "$USED_MODULES" | tr ' ' '\n' | grep -Fxv -f <(echo "$NEW_MODULES" | tr ' ' '\n') 2>&1) || { status=$?; [ $status -eq 1 ] && MODULES_TO_DISABLE="" || exit $status; }
+      ```shell
+      (set -e
+      trap 'echo "Ошибка выполнения"' ERR
 
-echo
-echo "Модули, которые не поддерживаются в желаемой редакции (код редакции - $NEW_EDITION, версия - $DECKHOUSE_VERSION):"
-echo MODULES_TO_DISABLE=\"$MODULES_TO_DISABLE\")
+      echo
+      echo "Запуск пода deckhouse новой редакции с командой 'sleep -- infinity'"
 
-echo
-echo "Удаление пода deckhouse новой редакции"
-d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=true --ignore-not-found=true
-```
+      <!REMOVE_FOR_CE>
+      d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry-cse.deckhouse.ru --docker-username=license-token --docker-password=${LICENSE_TOKEN}
+      <!/REMOVE_FOR_CE>
 
-{% endcapture %}
+      d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
+      <!REMOVE_FOR_CE>
+      --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
+      <!/REMOVE_FOR_CE>
+      --command sleep -- infinity
+      d8 k wait --for=condition=ready pod/$NEW_EDITION-image --timeout=300s
 
-{% capture disable_internal_modules %}
+      echo
+      echo "Получение информации по внутренним модулям из текущей и новой редакции"
+      echo "Сравнение внутренних модулей текущей и новой редакции"
+      NEW_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ |   grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+      USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+      MODULES_TO_DISABLE=$(echo "$USED_MODULES" | tr ' ' '\n' | grep -Fxv -f <(echo "$NEW_MODULES" | tr ' ' '\n') 2>&1) || { status=$?; [ $status -eq 1 ] && MODULES_TO_DISABLE="" || exit $status; }
+
+      echo
+      echo "Модули, которые не поддерживаются в желаемой редакции (код редакции - $NEW_EDITION, версия - $DECKHOUSE_VERSION):"
+      echo MODULES_TO_DISABLE=\"$MODULES_TO_DISABLE\")
+
+      echo
+      echo "Удаление пода deckhouse новой редакции"
+      d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=true --ignore-not-found=true
+      ```
+
 1. Отключите модули из полученного списка, если это допустимо (функциональность модулей не используется, или вы готовы от нее отказаться). Иначе, **прервите процесс переключения.**
 
    Отключить модули из полученного списка можно в веб-интерфейсе DKP в разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», либо выполнив следующую команду:
@@ -118,6 +127,9 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
    echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
+{% endcapture %}
+
+{% capture take_care_of_the_queue %}
 1. Убедитесь в выполнении всех задач в очередях DKP, прежде чем продолжить процесс переключения:
 
    {{ wait_queue | regex_replace: "^", "   " }}
@@ -131,88 +143,64 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
 
 {% tabs step1 %}
 {% tab "На DKP CE" %}
-1. Определите список модулей, которые используются в кластере и не поддерживаются в DKP CE. Для этого выполните следующие шаги:
 
-   1. Получите список модулей, которые не поддерживаются в DKP CE:
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "(?m)\n?<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "ce"
-         | regex_replace: "^", "      "
-      }}
-
-{{ disable_internal_modules }}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CSE>.+?<!/REMOVE_FOR_CSE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "ce"
+}}
+{{ take_care_of_the_queue }}
 {% endtab %}
-{% tab "На DKP BE/SE/SE+/EE" %}
-1. Определите список модулей, которые используются в кластере и не поддерживаются в DKP желаемой редакции. Для этого выполните следующие шаги:
 
-   1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
-
-      ```shell
-      LICENSE_TOKEN=<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
-      ```
-
-   1. Получите список модулей, которые не поддерживаются в DKP желаемой редакции:
-
-      {% tabs env-edition %}
-      {% tab "DKP BE" %}
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
-         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "be"
-         | regex_replace: "^", "      "
-      }}
-
-      {% endtab %}
-      {% tab "DKP SE" %}
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
-         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "se"
-         | regex_replace: "^", "      "
-      }}
-
-      {% endtab %}
-      {% tab "DKP SE+" %}
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
-         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "se-plus"
-         | regex_replace: "^", "      "
-      }}
-
-      {% endtab %}
-      {% tab "DKP EE" %}
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
-         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "ee"
-         | regex_replace: "^", "      "
-      }}
-
-      {% endtab %}
-      {% endtabs %}
-
-{{ disable_internal_modules }}
+{% tab "На DKP BE" %}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "be"
+}}
+{{ take_care_of_the_queue }}
 {% endtab %}
+
+{% tab "На DKP SE" %}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "se"
+}}
+{{ take_care_of_the_queue }}
+{% endtab %}
+
+{% tab "На DKP SE+" %}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "se-plus"
+}}
+{{ take_care_of_the_queue }}
+{% endtab %}
+
+{% tab "На DKP EE" %}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "ee"
+}}
+{{ take_care_of_the_queue }}
+{% endtab %}
+
 {% tab "На DKP CSE" %}
 1. При переключении на DKP CSE возможна временная недоступность компонентов кластера.
-1. Переключение на DKP CSE возможно только с DKP EE (Enterprise Edition). Переключение поддерживается только **между одинаковыми минорными версиями** DKP. Например, с DKP EE 1.67.x на DKP CSE 1.67.x.
+2. Переключение на DKP CSE возможно только с DKP EE (Enterprise Edition). Переключение поддерживается только **между одинаковыми минорными версиями** DKP. Например, с DKP EE 1.67.x на DKP CSE 1.67.x.
 
    При необходимости, выполните обновление DKP EE до соответствующей минорной версии и последней патч-версии.
 
    Актуальные патч-версии DKP CSE: `v1.58.2`, `v1.64.1`, `v1.67.4`, `v1.73.0`. Также, информацию о доступных версиях DKP CSE можно получить в разделе [Обновления DKP Certified Security Edition](https://deckhouse.ru/products/kubernetes-platform/certified-security-edition/updates/) на официальном сайте.
 
-1. Убедитесь, что версия Kubernetes, используемая в кластере, поддерживается в желаемой версии DKP CSE:
+3. Убедитесь, что версия Kubernetes, используемая в кластере, поддерживается в желаемой версии DKP CSE:
    - DKP CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27;
    - DKP CSE 1.67 поддерживает Kubernetes версий 1.27 и 1.29.
 
@@ -227,27 +215,14 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
    - Сохраните изменения. Узлы кластера начнут последовательно обновляться.
    - Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление считается завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
-1. Определите список модулей, которые используются в кластере и не поддерживаются в DKP CSE. Для этого выполните следующие шаги:
-
-   1. Подготовьте переменную окружения с лицензионным ключом:
-
-      ```shell
-      LICENSE_TOKEN=<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
-      ```
-
-   1. Получите список модулей, которые не поддерживаются в DKP CSE:
-
-      {% assign new_edition="se-plus" %}
-      {{
-         check_new_internal_modules
-         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
-         | regex_replace: "<!/REMOVE_FOR_CE>", ""
-         | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
-         | regex_replace: "\$NEW_EDITION", "cse"
-         | regex_replace: "^", "      "
-      }}
-
-{{ disable_internal_modules }}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+   | regex_replace: "\$NEW_EDITION", "cse"
+}}
+{{ take_care_of_the_queue }}
 {% endtab %}
 {% endtabs %}
 
