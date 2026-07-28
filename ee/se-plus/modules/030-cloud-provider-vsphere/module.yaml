@@ -8,3 +8,11 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-vsphere
 stage: General Availability
+accessibility:
+  editions:
+    se-plus:
+      available: true
+    ee:
+      available: true
+    fe:
+      available: true

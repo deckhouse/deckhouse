@@ -1,0 +1,61 @@
+{{- if (.Values.global.enabledModules | has "admission-policy-engine") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: node-local-dns
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | nindent 2 }}
+spec:
+  securityContext:
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          CoreDNS helper needs privilege escalation to manage iptables rules for node-local DNS
+          redirection on the host network namespace.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Containers that manipulate host iptables must run as root.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for iptables operations and binding privileged DNS ports.
+    capabilities:
+      allowedValues:
+        add:
+          - DAC_OVERRIDE
+          - NET_RAW
+          - NET_ADMIN
+          - NET_BIND_SERVICE
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_ADMIN/NET_RAW are required for iptables management; NET_BIND_SERVICE and DAC_OVERRIDE
+          are required for listening on DNS port 53 and accessing host lock files.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Without Cilium, node-local-dns runs in the host network to intercept DNS traffic on
+          the node-local address 169.254.20.10.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          hostPath is required to share the host xtables lock with other iptables users on the node.
+    hostPath:
+      allowedValues:
+        - path: /run/xtables.lock
+          readOnly: false
+          metadata:
+            description: Host xtables lock used to serialize iptables updates.
+{{- end }}

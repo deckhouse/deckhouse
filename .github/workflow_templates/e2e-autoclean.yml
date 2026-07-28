@@ -61,7 +61,6 @@ jobs:
         E2E_COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
       run: |
         python ${SCRIPT_DIR}/main.py --auto
-    {!{ tmpl.Exec "send_fail_report" . | strings.Indent 4 }!}
   e2e-ru-autoclean:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     name: Run
@@ -89,7 +88,6 @@ jobs:
         E2E_COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
       run: |
         python ${SCRIPT_DIR}/main.py --auto
-    {!{ tmpl.Exec "send_fail_report" . | strings.Indent 4 }!}
   e2e-en-pr-clean:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     env:

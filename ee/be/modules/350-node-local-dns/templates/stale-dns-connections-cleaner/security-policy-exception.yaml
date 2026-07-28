@@ -1,0 +1,37 @@
+{{- if and (.Values.global.enabledModules | has "admission-policy-engine") (.Values.global.enabledModules | has "cni-cilium") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: stale-dns-connections-cleaner
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "stale-dns-connections-cleaner")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          stale-dns-connections-cleaner must run as root to inspect and clean stale DNS conntrack entries.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required to manage host network connection tracking state.
+    capabilities:
+      allowedValues:
+        add:
+          - NET_ADMIN
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_ADMIN is required to delete stale DNS-related conntrack entries on the host.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          The cleaner must run on the host network to observe and purge node-local DNS connections.
+{{- end }}

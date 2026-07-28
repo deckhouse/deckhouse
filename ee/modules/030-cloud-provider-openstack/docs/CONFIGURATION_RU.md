@@ -25,21 +25,26 @@ title: "Cloud provider — OpenStack: настройки"
 
 ## Список необходимых сервисов OpenStack
 
-Список сервисов OpenStack, необходимых для работы Deckhouse Kubernetes Platform в OpenStack:
+Список сервисов, необходимых для работы Deckhouse Kubernetes Platform в OpenStack:
 
-| Сервис                           | Версия API |
-|:---------------------------------|:----------:|
-| Identity (Keystone)              | v3         |
-| Compute (Nova)                   | v2         |
-| Network (Neutron)                | v2         |
-| Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) *       | v2         |
+| Сервис                     |                         Версия API                         |
+| :------------------------- | :--------------------------------------------------------: |
+| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
+| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
+| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
 
-\* Если нужно заказывать Load Balancer.
+\* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
+
+{% alert level="info" %}
+Для Compute и Block Storage фактически поддерживаемая microversion зависит от установленного релиза OpenStack. Для Block Storage минимальной и используемой по умолчанию является microversion 3.0.
+{% endalert %}
 
 Чтобы интеграция и работа с платформой Deckhouse Kubernetes проходила корректно, присвойте ассоциированному пользователю OpenStack роль `member`. Это обеспечит разрешения на взаимодействие с указанными сервисами и управление ресурсами.
 
-В случае использования публичных облаков, адреса и порты API можно узнать в официальной документации сервиса:  
-* [VK Cloud](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints)
+{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
+Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+{% endif %}
 
 {% include module-settings.liquid %}
