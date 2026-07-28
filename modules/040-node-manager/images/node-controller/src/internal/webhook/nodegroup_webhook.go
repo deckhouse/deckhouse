@@ -80,6 +80,20 @@ func SetupWithManager(mgr ctrl.Manager) error {
 		},
 	})
 
+	// Migrated shell webhooks (modules/040-node-manager/webhooks/validating). The uniqueness
+	// checks list live via the APIReader: an informer-backed read could miss a just-created
+	// object and let a conflicting one through, and these writes are rare enough that live
+	// LISTs cost nothing.
+	hookServer.Register("/validate-deckhouse-io-v1-nodeuser", &webhook.Admission{
+		Handler: &NodeUserValidator{Reader: mgr.GetAPIReader()},
+	})
+	hookServer.Register("/validate-deckhouse-io-v1alpha1-staticinstance", &webhook.Admission{
+		Handler: &StaticInstanceValidator{Reader: mgr.GetAPIReader()},
+	})
+	hookServer.Register("/validate-instanceclass-delete", &webhook.Admission{
+		Handler: &InstanceClassDeleteValidator{},
+	})
+
 	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
 	hookServer.Register("/convert", &ConversionHandler{
 		Client: mgr.GetClient(),
