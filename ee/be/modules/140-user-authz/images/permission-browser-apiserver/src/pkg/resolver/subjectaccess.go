@@ -412,7 +412,10 @@ func (r *SubjectAccessResolver) superadminIndex(report *reportBuilder) superadmi
 	index := superadminScopes{namespaces: map[string]struct{}{}}
 
 	for _, assignment := range report.assignments {
-		if !IsSuperadminRole(assignment.Role) {
+		// A cluster administrator passes the same protection, and the webhook
+		// recognises those roles by name: their descriptor is empty because they
+		// carry no rbac.deckhouse.io labels.
+		if !IsSuperadminRole(assignment.Role) && !IsClusterAdminRole(assignment.RoleName) {
 			continue
 		}
 		if assignment.BindingKind == "ClusterRoleBinding" {

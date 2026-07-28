@@ -191,3 +191,24 @@ func IsSuperadminRole(descriptor v1alpha1.RoleDescriptor) bool {
 		return false
 	}
 }
+
+// clusterAdminRoles are the roles the system-resource webhook treats as a cluster
+// administrator: Kubernetes' own cluster-admin and the previous role model's
+// user-authz:super-admin, which a ClusterAuthorizationRule with accessLevel
+// SuperAdmin binds to. They carry no rbac.deckhouse.io labels, so the descriptor
+// says nothing about them and they have to be recognised by name.
+var clusterAdminRoles = map[string]struct{}{
+	"cluster-admin":          {},
+	"user-authz:super-admin": {},
+}
+
+// IsClusterAdminRole reports whether holding this role bypasses the
+// system-resource protection the same way a superadmin does. Keep in sync with
+// CLUSTER_ADMIN_ROLES in modules/140-user-authz/webhooks/validating/system_resources.py:
+// a report that claims a restriction the webhook does not apply is worse than no
+// report at all.
+func IsClusterAdminRole(roleName string) bool {
+	_, ok := clusterAdminRoles[roleName]
+
+	return ok
+}
