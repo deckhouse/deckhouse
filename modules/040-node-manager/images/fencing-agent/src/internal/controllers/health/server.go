@@ -30,20 +30,33 @@ const shutdownTimeout = 5 * time.Second
 type Server struct {
 	addr   string
 	logger *log.Logger
+	ready  func() bool
 }
 
-func NewServer(addr string, logger *log.Logger) *Server {
-	return &Server{addr: addr, logger: logger}
+// NewServer serves liveness unconditionally and gates readiness on ready (non-nil).
+func NewServer(addr string, logger *log.Logger, ready func() bool) *Server {
+	return &Server{addr: addr, logger: logger, ready: ready}
 }
 
 func (s *Server) Run(ctx context.Context) error {
 	mux := http.NewServeMux()
-	probe := func(w http.ResponseWriter, _ *http.Request) {
+
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
-	}
-	mux.HandleFunc("/healthz", probe)
-	mux.HandleFunc("/readyz", probe)
+	})
+
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		if !s.ready() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("not joined to the gossip network"))
+
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 
 	srv := &http.Server{
 		Addr:              s.addr,

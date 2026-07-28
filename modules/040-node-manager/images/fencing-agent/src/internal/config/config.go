@@ -36,6 +36,8 @@ type Config struct {
 	NodeGroup      string `env:"NODE_GROUP" env-required:"true"`
 	ProfileRefName string `env:"PROFILE_REF_NAME" env-required:"true"`
 
+	MemberlistPort int `env:"MEMBERLIST_PORT" env-default:"8500"`
+
 	WatchdogDevice       string        `env:"WATCHDOG_DEVICE" env-default:"/dev/watchdog"`
 	WatchdogFeedInterval time.Duration `env:"WATCHDOG_FEED_INTERVAL" env-default:"1s"`
 	WatchdogTimeout      time.Duration `env:"WATCHDOG_TIMEOUT" env-default:"10s"`
@@ -47,7 +49,8 @@ type Config struct {
 	RejoinInterval    time.Duration `env:"REJOIN_INTERVAL" env-default:"1s"`
 	RejoinMaxInterval time.Duration `env:"REJOIN_MAX_INTERVAL" env-default:"10s"`
 
-	KubernetesAPITimeout time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"2s"`
+
+	KubernetesAPITimeout time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"10s"`
 
 	APISocketPath          string `env:"API_SOCKET_PATH" env-default:"/var/run/fencing-agent/fencing-agent.sock"`
 	HealthProbeBindAddress string `env:"HEALTH_PROBE_BIND_ADDRESS" env-default:":8081"`
@@ -75,6 +78,10 @@ func (c *Config) validate() error {
 
 	if !slices.Contains(v1alpha1.ProfileNames(), v1alpha1.ProfileName(c.ProfileRefName)) {
 		return fmt.Errorf("PROFILE_REF_NAME=%q is invalid, must be one of %v", c.ProfileRefName, v1alpha1.ProfileNames())
+	}
+
+	if c.MemberlistPort < 1 || c.MemberlistPort > 65535 {
+		return fmt.Errorf("MEMBERLIST_PORT=%d is out of range 1-65535", c.MemberlistPort)
 	}
 
 	if strings.TrimSpace(c.WatchdogDevice) == "" {

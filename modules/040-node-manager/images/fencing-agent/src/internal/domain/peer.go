@@ -14,4 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package memberlist
+package domain
+
+// NodeGroupLabel assigns a Node to a NodeGroup and scopes the gossip network.
+const NodeGroupLabel = "node.deckhouse.io/group"
+
+// Peer is a Node of the NodeGroup. IP is empty when the Node has no InternalIP.
+type Peer struct {
+	Name string
+	IP   string
+}
