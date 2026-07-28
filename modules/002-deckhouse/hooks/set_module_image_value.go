@@ -73,8 +73,15 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal deckhouse snapshot: %w", err)
 	}
 
-	if len(deckhouseImages) != 1 {
-		return fmt.Errorf("deckhouse was not able to find an image of itself")
+	if len(deckhouseImages) == 0 {
+		// No deckhouse Deployment in the cluster: deckhouse runs outside the
+		// managed cluster, so there is no image of itself to track. Leave
+		// currentReleaseImageName unset; templates gate the self-Deployment on it.
+		input.Logger.Info("no deckhouse deployment in the cluster, skip setting the release image")
+		return nil
+	}
+	if len(deckhouseImages) > 1 {
+		return fmt.Errorf("deckhouse found more than one image of itself")
 	}
 	image := deckhouseImages[0]
 

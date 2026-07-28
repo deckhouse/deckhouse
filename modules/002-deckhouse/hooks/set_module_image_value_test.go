@@ -129,4 +129,17 @@ spec:
 			})
 		})
 	})
+
+	Context("Without Deckhouse pod (running outside the managed cluster)", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should run and leave the release image unset", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").Exists()).To(BeFalse())
+		})
+	})
 })
