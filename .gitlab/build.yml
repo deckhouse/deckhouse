@@ -206,7 +206,7 @@
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
       echo "TESTS_IMAGE_NAME=${TESTS_IMAGE_NAME}" > build.env
 
-      if [[ "${BUILD_MODE}" == "dev" ]]; then
+      if [[ "${BUILD_MODE}" == "dev" && "${WERF_ENV,,}" == "fe" ]]; then
         set -euo pipefail
         regctl image get-file "${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss:${IMAGE_TAG_BASE}" \
           /deckhouse/modules/images_digests.json > images_digests.json
