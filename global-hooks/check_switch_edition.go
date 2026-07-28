@@ -74,6 +74,14 @@ func checkSwitchDeckhouseEdition(ctx context.Context, input *go_hook.HookInput, 
 
 	d8Deployment, err := client.AppsV1().Deployments("d8-system").Get(ctx, "deckhouse", metav1.GetOptions{})
 	if err != nil {
+		// No deckhouse Deployment in the managed cluster: deckhouse runs outside
+		// it (or the cluster is being installed), so there is no previous edition
+		// to compare against. Nothing to check.
+		if k8serrors.IsNotFound(err) {
+			input.Logger.Warn("deckhouse deployment not found, probably running outside the managed cluster. Skip")
+			return nil
+		}
+
 		return fmt.Errorf("cannot get deckhouse deployment: %v", err)
 	}
 
