@@ -47,11 +47,11 @@ import (
 const (
 	// RootPath is where a module or package image keeps its digests.
 	RootPath = digests.FileName
-	// ModulesPath is where the Deckhouse image keeps the digests of every
+	// ModulesImagesDigestsPath is where the Deckhouse image keeps the digests of every
 	// module it bundles. That file is nested.
-	ModulesPath = "deckhouse/modules/" + digests.FileName
-	// CandiPath is where the installer images keep theirs, also nested.
-	CandiPath = "deckhouse/candi/" + digests.FileName
+	ModulesImagesDigestsPath = "deckhouse/modules/" + digests.FileName
+	// CandiImagesDigestsPath is where the installer images keep theirs, also nested.
+	CandiImagesDigestsPath = "deckhouse/candi/" + digests.FileName
 )
 
 // Service is a repository holding artifact bundles.

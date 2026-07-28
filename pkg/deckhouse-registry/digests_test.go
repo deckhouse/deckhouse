@@ -44,12 +44,12 @@ const nestedDigests = `{
 func TestDigestsDeckhouseImage(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
 	reg.MustAddImage("deckhouse/fe", "v1.73.0",
-		fake.NewImageBuilder().WithFile(bundle.ModulesPath, nestedDigests).MustBuild())
+		fake.NewImageBuilder().WithFile(bundle.ModulesImagesDigestsPath, nestedDigests).MustBuild())
 
 	got, err := newFakeRegistry(t, reg).Deckhouse().Digests(t.Context(), "v1.73.0")
 	require.NoError(t, err)
 
-	assert.Equal(t, bundle.ModulesPath, got.Source)
+	assert.Equal(t, bundle.ModulesImagesDigestsPath, got.Source)
 	assert.True(t, got.IsNested())
 	assert.ElementsMatch(t, []string{"ingressNginx", "userAuthn"}, got.Modules())
 	assert.Equal(t, 3, got.Count())
@@ -101,7 +101,7 @@ func TestDigestsPackageImage(t *testing.T) {
 // image's — the shape follows what is bundled, not the kind of bundle.
 func TestDigestsInstallerImages(t *testing.T) {
 	reg := fake.NewRegistry("registry.deckhouse.io")
-	img := fake.NewImageBuilder().WithFile(bundle.CandiPath, nestedDigests).MustBuild()
+	img := fake.NewImageBuilder().WithFile(bundle.CandiImagesDigestsPath, nestedDigests).MustBuild()
 	reg.MustAddImage("deckhouse/fe/install", "v1.73.0", img)
 	reg.MustAddImage("deckhouse/fe/install-standalone", "v1.73.0", img)
 	reg.MustAddImage("deckhouse/installer", "v1.73.0", img)
@@ -117,7 +117,7 @@ func TestDigestsInstallerImages(t *testing.T) {
 			got, err := svc.Digests(t.Context(), "v1.73.0")
 			require.NoError(t, err)
 
-			assert.Equal(t, bundle.CandiPath, got.Source)
+			assert.Equal(t, bundle.CandiImagesDigestsPath, got.Source)
 			assert.True(t, got.IsNested())
 			assert.Equal(t, 3, got.Count())
 		})
@@ -148,14 +148,14 @@ func TestDigestsMissingImage(t *testing.T) {
 // succeed — a module's root file cannot satisfy a Deckhouse-image read.
 func TestDigestsPathsPerBundle(t *testing.T) {
 	assert.Equal(t, "images_digests.json", bundle.RootPath)
-	assert.Equal(t, "deckhouse/modules/images_digests.json", bundle.ModulesPath)
-	assert.Equal(t, "deckhouse/candi/images_digests.json", bundle.CandiPath)
+	assert.Equal(t, "deckhouse/modules/images_digests.json", bundle.ModulesImagesDigestsPath)
+	assert.Equal(t, "deckhouse/candi/images_digests.json", bundle.CandiImagesDigestsPath)
 
 	reg := newFE(t)
-	assert.Equal(t, bundle.ModulesPath, reg.Deckhouse().DigestsPath())
-	assert.Equal(t, bundle.CandiPath, reg.Deckhouse().Install().DigestsPath())
-	assert.Equal(t, bundle.CandiPath, reg.Deckhouse().InstallStandalone().DigestsPath())
-	assert.Equal(t, bundle.CandiPath, reg.Installer().DigestsPath())
+	assert.Equal(t, bundle.ModulesImagesDigestsPath, reg.Deckhouse().DigestsPath())
+	assert.Equal(t, bundle.CandiImagesDigestsPath, reg.Deckhouse().Install().DigestsPath())
+	assert.Equal(t, bundle.CandiImagesDigestsPath, reg.Deckhouse().InstallStandalone().DigestsPath())
+	assert.Equal(t, bundle.CandiImagesDigestsPath, reg.Installer().DigestsPath())
 	assert.Equal(t, bundle.RootPath, reg.Modules().Module("stronghold").DigestsPath())
 	assert.Equal(t, bundle.RootPath, reg.Packages().Package("elma").DigestsPath())
 }

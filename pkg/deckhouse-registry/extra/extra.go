@@ -39,11 +39,12 @@ type Catalog struct {
 	images           *cache.Cache[*service.BasicService]
 }
 
-// NewCatalog builds the extra catalog under parent, appending Segment.
-// catalogServiceName and imageServiceName appear in log records.
-func NewCatalog(parent *service.BasicService, catalogServiceName, imageServiceName string) *Catalog {
+// NewCatalog wraps a repository that already addresses an extra catalog. The
+// caller supplies the path via Sub(...Segment); imageServiceName appears in log
+// records for the images beneath it.
+func NewCatalog(svc *service.BasicService, imageServiceName string) *Catalog {
 	return &Catalog{
-		BasicService:     parent.Sub(catalogServiceName, Segment),
+		BasicService:     svc,
 		imageServiceName: imageServiceName,
 		images:           cache.New[*service.BasicService](),
 	}

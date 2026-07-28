@@ -63,11 +63,11 @@ type Catalog struct {
 	packages *cache.Cache[*Service]
 }
 
-// NewCatalog builds the package catalog under editionRoot, appending
-// CatalogSegment.
-func NewCatalog(editionRoot *service.BasicService) *Catalog {
+// NewCatalog wraps a repository that already addresses the package catalog.
+// The assembler supplies the path via Sub(CatalogServiceName, CatalogSegment).
+func NewCatalog(svc *service.BasicService) *Catalog {
 	return &Catalog{
-		BasicService: editionRoot.Sub(CatalogServiceName, CatalogSegment),
+		BasicService: svc,
 		packages:     cache.New[*Service](),
 	}
 }
@@ -141,7 +141,7 @@ func New(svc *service.BasicService) *Service {
 	return &Service{
 		Service:  bundle.New(svc, bundle.RootPath),
 		versions: &VersionService{Service: release.New(svc.Sub(versionServiceName, VersionSegment))},
-		extra:    extra.NewCatalog(svc, extraServiceName, extraImageServiceName),
+		extra:    extra.NewCatalog(svc.Sub(extraServiceName, extra.Segment), extraImageServiceName),
 	}
 }
 

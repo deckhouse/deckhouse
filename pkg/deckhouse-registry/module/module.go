@@ -60,11 +60,16 @@ type Catalog struct {
 	modules *cache.Cache[*Service]
 }
 
-// NewCatalog builds the module catalog under editionRoot, appending
-// CatalogSegment.
-func NewCatalog(editionRoot *service.BasicService) *Catalog {
+// NewCatalog wraps a repository that already addresses a module catalog — its
+// tags are module names, with <module> and <module>/release beneath it.
+//
+// It does not scope a segment: whoever assembles the tree supplies the catalog
+// path. From an edition root that is
+// editionRoot.Sub(CatalogServiceName, CatalogSegment); a ModuleSource passes
+// its spec.registry.repo, which is the catalog itself.
+func NewCatalog(svc *service.BasicService) *Catalog {
 	return &Catalog{
-		BasicService: editionRoot.Sub(CatalogServiceName, CatalogSegment),
+		BasicService: svc,
 		modules:      cache.New[*Service](),
 	}
 }
@@ -136,7 +141,7 @@ func New(svc *service.BasicService) *Service {
 	return &Service{
 		Service:  bundle.New(svc, bundle.RootPath),
 		releases: &ReleaseService{Service: release.New(svc.Sub(releaseServiceName, ReleaseSegment))},
-		extra:    extra.NewCatalog(svc, extraServiceName, extraImageServiceName),
+		extra:    extra.NewCatalog(svc.Sub(extraServiceName, extra.Segment), extraImageServiceName),
 	}
 }
 

@@ -83,10 +83,10 @@ type Service struct {
 // under deckhouse/candi/, so each is built with its own path.
 func New(editionRoot *service.BasicService) *Service {
 	return &Service{
-		Service:           bundle.New(editionRoot, bundle.ModulesPath),
+		Service:           bundle.New(editionRoot, bundle.ModulesImagesDigestsPath),
 		releases:          &ReleaseService{Service: release.New(editionRoot.Sub(releaseServiceName, ReleaseChannelSegment))},
-		install:           bundle.New(editionRoot.Sub(installServiceName, InstallSegment), bundle.CandiPath),
-		installStandalone: bundle.New(editionRoot.Sub(standaloneServiceName, InstallStandaloneSegment), bundle.CandiPath),
+		install:           bundle.New(editionRoot.Sub(installServiceName, InstallSegment), bundle.CandiImagesDigestsPath),
+		installStandalone: bundle.New(editionRoot.Sub(standaloneServiceName, InstallStandaloneSegment), bundle.CandiImagesDigestsPath),
 	}
 }
 

@@ -62,14 +62,14 @@ type Service struct {
 	plugins  *PluginCatalog
 }
 
-// New builds the deckhouse-cli sub-tree under editionRoot, appending Segment.
-func New(editionRoot *service.BasicService) *Service {
-	svc := editionRoot.Sub(ServiceName, Segment)
-
+// New wraps a repository that already addresses the deckhouse-cli tree. The
+// assembler supplies the path via Sub(ServiceName, Segment); cli fixes the
+// version and plugins sub-paths beneath it, its own domain.
+func New(svc *service.BasicService) *Service {
 	return &Service{
 		BasicService: svc,
 		versions:     release.New(svc.Sub(versionServiceName, VersionSegment)),
-		plugins:      newPluginCatalog(svc),
+		plugins:      newPluginCatalog(svc.Sub(pluginsServiceName, PluginsSegment)),
 	}
 }
 
@@ -93,9 +93,9 @@ type PluginCatalog struct {
 	plugins *cache.Cache[*Plugin]
 }
 
-func newPluginCatalog(cliSvc *service.BasicService) *PluginCatalog {
+func newPluginCatalog(svc *service.BasicService) *PluginCatalog {
 	return &PluginCatalog{
-		BasicService: cliSvc.Sub(pluginsServiceName, PluginsSegment),
+		BasicService: svc,
 		plugins:      cache.New[*Plugin](),
 	}
 }

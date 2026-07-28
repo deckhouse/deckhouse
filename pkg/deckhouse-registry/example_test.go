@@ -102,7 +102,7 @@ func exampleRegistry() *dhregistry.Registry {
 		WithFile(release.VersionFile, deckhouseVersionJSON).
 		MustBuild())
 	reg.MustAddImage("deckhouse/fe", "v1.73.0", fake.NewImageBuilder().
-		WithFile(bundle.ModulesPath, nestedDigests).
+		WithFile(bundle.ModulesImagesDigestsPath, nestedDigests).
 		MustBuild())
 
 	// A module release image, and the module image it describes.

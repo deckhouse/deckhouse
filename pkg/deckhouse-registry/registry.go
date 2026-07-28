@@ -154,17 +154,17 @@ func New(client registry.Client, opts ...Option) *Registry {
 	editionRoot := service.NewBasicService(deckhouse.ServiceName, r.editionRoot, logger)
 
 	r.deckhouse = deckhouse.New(editionRoot)
-	r.modules = module.NewCatalog(editionRoot)
-	r.packages = packages.NewCatalog(editionRoot)
-	r.security = security.NewCatalog(editionRoot)
-	r.cli = cli.New(editionRoot)
+	r.modules = module.NewCatalog(editionRoot.Sub(module.CatalogServiceName, module.CatalogSegment))
+	r.packages = packages.NewCatalog(editionRoot.Sub(packages.CatalogServiceName, packages.CatalogSegment))
+	r.security = security.NewCatalog(editionRoot.Sub(security.CatalogServiceName, security.Segment))
+	r.cli = cli.New(editionRoot.Sub(cli.ServiceName, cli.Segment))
 
 	// The installer is published once for all editions, so it hangs off the
 	// non-edition root. It is a bundle like the edition-scoped installers, and
 	// keeps its digests in the same place.
 	r.installer = bundle.New(
 		service.NewBasicService(installerServiceName, client.WithSegment(InstallerSegment), logger),
-		bundle.CandiPath,
+		bundle.CandiImagesDigestsPath,
 	)
 
 	return r

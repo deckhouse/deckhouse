@@ -41,10 +41,11 @@ type Catalog struct {
 	images *cache.Cache[*service.BasicService]
 }
 
-// NewCatalog builds the security catalog under editionRoot, appending Segment.
-func NewCatalog(editionRoot *service.BasicService) *Catalog {
+// NewCatalog wraps a repository that already addresses the security catalog.
+// The assembler supplies the path via Sub(CatalogServiceName, Segment).
+func NewCatalog(svc *service.BasicService) *Catalog {
 	return &Catalog{
-		BasicService: editionRoot.Sub(CatalogServiceName, Segment),
+		BasicService: svc,
 		images:       cache.New[*service.BasicService](),
 	}
 }
