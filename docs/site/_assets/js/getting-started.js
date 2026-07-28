@@ -24,6 +24,8 @@ function config_highlight() {
   let matchMustChange = '!CHANGE_';
   let matchMightChangeEN = /# [Yy]ou might consider changing this\.?/;
   let matchMightChangeRU = /# [Вв]озможно, захотите изменить\.?/;
+  let matchExceptionEN = /Specify, if the cluster nodes have more than one network interface|If only one interface is used on the nodes of the cluster/i;
+  let matchExceptionRU = /Укажите, если используете модуль virtualization|Если на узлах кластера используется только один интерфейс/i;
 
   function nextCodeSpan($el) {
     let n = $el.next();
@@ -38,8 +40,20 @@ function config_highlight() {
   }
 
   $('code span.c1').filter(function () {
-    return (matchMightChangeEN.test(this.innerText)) || (matchMightChangeRU.test(this.innerText));
+    // Новые проверки через ИЛИ
+    return (matchMightChangeEN.test(this.innerText)) || 
+           (matchMightChangeRU.test(this.innerText)) ||
+           (matchExceptionEN.test(this.innerText)) || 
+           (matchExceptionRU.test(this.innerText));
   }).each(function (index) {
+    const commentText = $(this).text();
+    const shouldSkipChildren = commentText.includes('virtualization') || commentText.includes('StaticClusterConfiguration');
+    
+    if (shouldSkipChildren) {
+      $(this).addClass('mightChange');
+      return; // Выходим, не обрабатывая дочерние элементы
+    }
+    
     let $third = nextCodeSpan(nextCodeSpan(nextCodeSpan($(this))));
     let $colon = $third.length && nextCodeSpan($third).length && nextCodeSpan($third).text().trim() === ':' ? nextCodeSpan($third) : null;
     try {
