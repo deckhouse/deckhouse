@@ -72,7 +72,7 @@ Summary:
 ### Определение возможности переключения на желаемую редакцию
 
 {% capture take_care_of_the_internal_modules %}
-1. Определите список модулей, которые используются в кластере и не поддерживаются в DKP $NEW_EDITION. Для этого выполните следующие шаги:
+1. Определите список внутренних модулей, которые используются в кластере и не поддерживаются в DKP $NEW_EDITION. Для этого выполните следующие шаги:
 
    <!REMOVE_FOR_CE>
    1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
@@ -80,7 +80,6 @@ Summary:
       ```shell
       LICENSE_TOKEN=<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
       ```
-
    <!/REMOVE_FOR_CE>
 
    1. Получите список модулей, которые не поддерживаются в DKP $NEW_EDITION:
@@ -146,7 +145,7 @@ Summary:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CSE>.+?<!/REMOVE_FOR_CSE>\s*\n?", ""
+   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 {{ take_care_of_the_queue }}
@@ -155,8 +154,8 @@ Summary:
 {% tab "На DKP BE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 {{ take_care_of_the_queue }}
@@ -165,8 +164,8 @@ Summary:
 {% tab "На DKP SE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 {{ take_care_of_the_queue }}
@@ -175,8 +174,8 @@ Summary:
 {% tab "На DKP SE+" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 {{ take_care_of_the_queue }}
@@ -185,8 +184,8 @@ Summary:
 {% tab "На DKP EE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 {{ take_care_of_the_queue }}
@@ -217,7 +216,7 @@ Summary:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "<!/REMOVE_FOR_CE>", ""
    | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
    | regex_replace: "\$NEW_EDITION", "cse"

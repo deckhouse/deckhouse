@@ -69,7 +69,7 @@ You can find the edition and version currently used in the cluster on the main p
 ### Checking whether switching to the desired edition is possible
 
 {% capture take_care_of_the_internal_modules %}
-1. Determine the list of modules used in the cluster that are not supported in DKP $NEW_EDITION. To do this, follow these steps:
+1. Determine the list of internal modules used in the cluster that are not supported in DKP $NEW_EDITION. To do this, follow these steps:
 
    <!REMOVE_FOR_CE>
    1. Set the environment variable with the license key for the edition you plan to switch to:
@@ -77,7 +77,6 @@ You can find the edition and version currently used in the cluster on the main p
       ```shell
       LICENSE_TOKEN=<LICENSE_KEY>
       ```
-
    <!/REMOVE_FOR_CE>
 
    1. Get the list of modules not supported in DKP $NEW_EDITION:
@@ -145,7 +144,7 @@ What to consider before switching:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 {{ take_care_of_the_queue }}
@@ -154,8 +153,8 @@ What to consider before switching:
 {% tab "To DKP BE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 {{ take_care_of_the_queue }}
@@ -164,8 +163,8 @@ What to consider before switching:
 {% tab "To DKP SE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 {{ take_care_of_the_queue }}
@@ -174,8 +173,8 @@ What to consider before switching:
 {% tab "To DKP SE+" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 {{ take_care_of_the_queue }}
@@ -184,8 +183,8 @@ What to consider before switching:
 {% tab "To DKP EE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 {{ take_care_of_the_queue }}
