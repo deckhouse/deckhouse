@@ -38,7 +38,7 @@ To run an Argo CD instance, create an [ArgoCD](/modules/operator-argo/cr.html#ar
 Deploying [one](#deploying-an-argo-cd-instance) or [multiple](#deploying-multiple-argo-cd-instances) Argo CD instances is described below.
 Working with custom resources that belong to an Argo CD instance is described in the [Usage](/products/kubernetes-platform/documentation/v1/user/delivery/argocd/) section.
 
-{% offtopic title="List of Argo CD custom resources created by the `operator-argo` module..." %}
+{% offtopic title="List of Argo CD custom resources created by the <code>operator-argo</code> module..." %}
 
 | CRD | Scope | Purpose |
 |---|---|---|
