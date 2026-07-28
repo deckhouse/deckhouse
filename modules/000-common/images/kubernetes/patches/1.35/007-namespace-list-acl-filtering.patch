@@ -1080,7 +1080,7 @@ index e27495de54e..fbb551e9a4f 100644
  	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
  	s.GenericAPIServer.RegisterDestroyFunc(crdHandler.destroy)
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index c252e7fe75b..59419b6cf9c 100644
+index c252e7fe75b..418de39a661 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -68,12 +68,14 @@ import (
@@ -1137,7 +1137,7 @@ index c252e7fe75b..59419b6cf9c 100644
  	for _, v := range crd.Spec.Versions {
  		// Do not construct storage if version is neither served nor stored
  		if !v.Storage && !v.Served {
-@@ -887,6 +907,39 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -887,6 +907,42 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  
  		clusterScoped := crd.Spec.Scope == apiextensionsv1.ClusterScoped
  
@@ -1161,23 +1161,26 @@ index c252e7fe75b..59419b6cf9c 100644
 +		}
 +
 +		// Deckhouse: a cluster-scoped CRD normally has nothing to classify against,
-+		// but one whose object NAME is a namespace name is filtered by the namespace
-+		// ACL itself -- the Project CRD, named after its main namespace. It runs in
-+		// the same IdentityByName mode the namespaces storage uses, triggered by the
-+		// same filtering-mode flag, so a user without RBAC for the resource gets the
-+		// accessible subset instead of a 403.
++		// but one whose visibility follows the namespace ACL is filtered all the
++		// same -- the Project CRD, visible whenever any of its namespaces is. It
++		// runs in the same IdentityByName mode the namespaces storage uses,
++		// triggered by the same filtering-mode flag, so a user without RBAC for the
++		// resource gets the accessible subset instead of a 403. A nil decorator
++		// means the resource derives no names and is left unfiltered.
 +		if clusterScoped && r.scopeResolvers != nil && scopefilter.IsNamespaceIdentityResource(resource.GroupResource()) {
 +			store := storages[v.Name].CustomResource.Store
-+			store.ScopeFilter = r.scopeResolvers.NewIdentityDecorator(
++			if decorator := r.scopeResolvers.NewIdentityDecorator(
 +				store, store.PredicateFunc, store.Decorator, resource, filters.IsNamespaceFilteringMode,
-+			)
-+			scopeFilterWired = true
++			); decorator != nil {
++				store.ScopeFilter = decorator
++				scopeFilterWired = true
++			}
 +		}
 +
  		// CRDs explicitly do not support protobuf, but some objects returned by the API server do
  		streamingCollections := utilfeature.DefaultFeatureGate.Enabled(features.StreamingCollectionEncodingToJSON)
  		negotiatedSerializer := unstructuredNegotiatedSerializer{
-@@ -1075,6 +1128,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1075,6 +1131,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  	storageMap2[crd.UID] = ret
  	r.customStorage.Store(storageMap2)
  
@@ -1194,7 +1197,7 @@ index c252e7fe75b..59419b6cf9c 100644
  }
  
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-index 439696d07ab..6abb84b9c69 100644
+index 439696d07ab..bc9744429e3 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 @@ -24,16 +24,19 @@ import (
@@ -1266,9 +1269,9 @@ index 439696d07ab..6abb84b9c69 100644
 +
 +// isNamespaceListGetOrWatchRequest reports whether the request targets the
 +// core /v1/namespaces list/get/watch endpoint, or that of a cluster-scoped
-+// resource filtered by the same namespace ACL (see
-+// scopefilter.IsNamespaceIdentityResource -- the Project CRD, whose object
-+// name is its main namespace). These three verbs are the only ones we bypass
++// resource whose visibility is derived from the same namespace ACL (see
++// scopefilter.IsNamespaceIdentityResource -- the Project CRD, visible whenever
++// any namespace of the project is). These three verbs are the only ones we bypass
 +// 403 for: create/update/delete still reject denied users with the standard
 +// error so we don't accidentally let unauthorized callers mutate cluster state.
 +//
@@ -1433,10 +1436,10 @@ index 439696d07ab..6abb84b9c69 100644
  			decisionAnnotationKey, decisionForbid,
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go
 new file mode 100644
-index 00000000000..30aa99e6df7
+index 00000000000..f108ede546d
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,154 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -1481,7 +1484,8 @@ index 00000000000..30aa99e6df7
 +}
 +
 +// TestWithAuthorization_IdentityResourceBypass covers the bypass for a
-+// cluster-scoped resource filtered by the namespace ACL (the Project CRD).
++// cluster-scoped resource whose visibility is derived from the namespace ACL
++// (the Project CRD).
 +// The negative cases are the ones that matter: the bypass must not widen to
 +// resources nobody wired a filter for, nor to verbs that mutate.
 +func TestWithAuthorization_IdentityResourceBypass(t *testing.T) {
@@ -2050,10 +2054,10 @@ index 722a312270a..996add5ae90 100644
  		label = options.LabelSelector
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache.go
 new file mode 100644
-index 00000000000..3d544f83c66
+index 00000000000..9cf1d0760cd
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache.go
-@@ -0,0 +1,253 @@
+@@ -0,0 +1,257 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2117,40 +2121,42 @@ index 00000000000..3d544f83c66
 +)
 +
 +// resolveCache is a small TTL cache with singleflight de-duplication, shared by
-+// the caching resolver wrappers below. Values are namespace-name sets that are
-+// immutable once stored (a refresh replaces the entry with a new map, never
-+// mutates in place), so concurrent readers -- and long-lived watch selectors
-+// holding a reference -- are safe without copying.
++// the caching resolver wrappers below. Values are maps that are immutable once
++// stored (a refresh replaces the entry with a new map, never mutates in place),
++// so concurrent readers -- and long-lived watch selectors holding a reference --
++// are safe without copying. It is generic over the value type because the
++// wrappers cache different shapes: namespace-name sets for classification and
++// the RBAC floor, a namespace-to-project map for project membership.
 +//
 +// The whole point is watch-poll amplification: N concurrent watches sharing a
 +// user+resource+verb (or a user-independent classification) collapse to ~one
 +// loopback resolve per TTL instead of one per watch per tick.
-+type resolveCache struct {
++type resolveCache[T any] struct {
 +	ttl   time.Duration
 +	group singleflight.Group
 +
 +	mu        sync.Mutex
-+	entries   map[string]resolveCacheEntry
++	entries   map[string]resolveCacheEntry[T]
 +	nextSweep time.Time
 +
 +	now func() time.Time // overridable in tests
 +}
 +
-+type resolveCacheEntry struct {
-+	set    map[string]struct{}
++type resolveCacheEntry[T any] struct {
++	value  T
 +	expiry time.Time
 +}
 +
-+func newResolveCache(ttl time.Duration) *resolveCache {
++func newResolveCache[T any](ttl time.Duration) *resolveCache[T] {
 +	if ttl <= 0 {
 +		ttl = DefaultResolveCacheTTL
 +	}
 +	if ttl > maxResolveCacheTTL {
 +		ttl = maxResolveCacheTTL
 +	}
-+	return &resolveCache{
++	return &resolveCache[T]{
 +		ttl:     ttl,
-+		entries: make(map[string]resolveCacheEntry),
++		entries: make(map[string]resolveCacheEntry[T]),
 +		now:     time.Now,
 +	}
 +}
@@ -2159,7 +2165,7 @@ index 00000000000..3d544f83c66
 +// opportunistically from set() at most once per sweepInterval, which keeps the
 +// map bounded (stale identities are reclaimed within a sweep period of the
 +// next write) at O(len(entries)) amortized over at least a minute of writes.
-+func (c *resolveCache) sweepLocked() {
++func (c *resolveCache[T]) sweepLocked() {
 +	now := c.now()
 +	for k, e := range c.entries {
 +		if now.After(e.expiry) {
@@ -2168,21 +2174,22 @@ index 00000000000..3d544f83c66
 +	}
 +}
 +
-+func (c *resolveCache) get(key string) (map[string]struct{}, bool) {
++func (c *resolveCache[T]) get(key string) (T, bool) {
 +	c.mu.Lock()
 +	defer c.mu.Unlock()
++	var zero T
 +	e, ok := c.entries[key]
 +	if !ok {
-+		return nil, false
++		return zero, false
 +	}
 +	if c.now().After(e.expiry) {
 +		delete(c.entries, key)
-+		return nil, false
++		return zero, false
 +	}
-+	return e.set, true
++	return e.value, true
 +}
 +
-+func (c *resolveCache) set(key string, s map[string]struct{}) {
++func (c *resolveCache[T]) set(key string, v T) {
 +	c.mu.Lock()
 +	defer c.mu.Unlock()
 +	now := c.now()
@@ -2190,7 +2197,7 @@ index 00000000000..3d544f83c66
 +		c.sweepLocked()
 +		c.nextSweep = now.Add(sweepInterval)
 +	}
-+	c.entries[key] = resolveCacheEntry{set: s, expiry: now.Add(c.ttl)}
++	c.entries[key] = resolveCacheEntry[T]{value: v, expiry: now.Add(c.ttl)}
 +}
 +
 +// getOrLoad returns the cached set for key or runs load exactly once across all
@@ -2203,27 +2210,28 @@ index 00000000000..3d544f83c66
 +// context-canceled -- defeating dedup exactly when it matters most. Identity is
 +// passed to the resolvers as an explicit argument, never read from the context,
 +// so detaching the context changes nothing about the authorization decision.
-+func (c *resolveCache) getOrLoad(key string, load func(ctx context.Context) (map[string]struct{}, error)) (map[string]struct{}, error) {
-+	if s, ok := c.get(key); ok {
-+		return s, nil
++func (c *resolveCache[T]) getOrLoad(key string, load func(ctx context.Context) (T, error)) (T, error) {
++	var zero T
++	if v, ok := c.get(key); ok {
++		return v, nil
 +	}
-+	v, err, _ := c.group.Do(key, func() (interface{}, error) {
-+		if s, ok := c.get(key); ok { // double-check after winning the flight
-+			return s, nil
++	loaded, err, _ := c.group.Do(key, func() (interface{}, error) {
++		if v, ok := c.get(key); ok { // double-check after winning the flight
++			return v, nil
 +		}
 +		ctx, cancel := context.WithTimeout(context.Background(), resolveLoadTimeout)
 +		defer cancel()
-+		s, err := load(ctx)
++		v, err := load(ctx)
 +		if err != nil {
 +			return nil, err
 +		}
-+		c.set(key, s)
-+		return s, nil
++		c.set(key, v)
++		return v, nil
 +	})
 +	if err != nil {
-+		return nil, err
++		return zero, err
 +	}
-+	return v.(map[string]struct{}), nil
++	return loaded.(T), nil
 +}
 +
 +// ----- caching resolver wrappers --------------------------------------------
@@ -2234,7 +2242,7 @@ index 00000000000..3d544f83c66
 +// all users.
 +type cachingClassificationResolver struct {
 +	inner ClassificationResolver
-+	cache *resolveCache
++	cache *resolveCache[map[string]struct{}]
 +}
 +
 +var _ ClassificationResolver = (*cachingClassificationResolver)(nil)
@@ -2253,7 +2261,7 @@ index 00000000000..3d544f83c66
 +// privilege rather than merely go stale.
 +type cachingRBACFloorResolver struct {
 +	inner RBACFloorResolver
-+	cache *resolveCache
++	cache *resolveCache[map[string]struct{}]
 +}
 +
 +var _ RBACFloorResolver = (*cachingRBACFloorResolver)(nil)
@@ -2309,7 +2317,7 @@ index 00000000000..3d544f83c66
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache_test.go
 new file mode 100644
-index 00000000000..325693a7754
+index 00000000000..e3eb7f6c132
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/cache_test.go
 @@ -0,0 +1,239 @@
@@ -2377,7 +2385,7 @@ index 00000000000..325693a7754
 +		calls:  map[string]int{},
 +		setFor: map[string]map[string]struct{}{"alice": {"ns-a": {}}},
 +	}
-+	c := newResolveCache(time.Minute) // long TTL: all hits share one load
++	c := newResolveCache[map[string]struct{}](time.Minute) // long TTL: all hits share one load
 +	cached := &cachingRBACFloorResolver{inner: inner, cache: c}
 +
 +	alice := &user.DefaultInfo{Name: "alice", Groups: []string{"g1"}}
@@ -2416,7 +2424,7 @@ index 00000000000..325693a7754
 +		calls:   map[string]int{},
 +		results: map[string]map[string]struct{}{},
 +	}
-+	c := newResolveCache(time.Minute)
++	c := newResolveCache[map[string]struct{}](time.Minute)
 +	cached := &cachingRBACFloorResolver{inner: perIdentity, cache: c}
 +
 +	// Three identities: same name, but distinct groups / uid.
@@ -2466,7 +2474,7 @@ index 00000000000..325693a7754
 +		atomic.AddInt32(&innerCalls, 1)
 +		return map[string]struct{}{"sys-ns": {}}, nil
 +	})
-+	c := newResolveCache(time.Minute)
++	c := newResolveCache[map[string]struct{}](time.Minute)
 +	cached := &cachingClassificationResolver{inner: inner, cache: c}
 +
 +	// Two different users asking for the same classification kind -> one load.
@@ -2497,7 +2505,7 @@ index 00000000000..325693a7754
 +		calls:  map[string]int{},
 +		setFor: map[string]map[string]struct{}{"alice": {"ns-a": {}}},
 +	}
-+	c := newResolveCache(time.Minute)
++	c := newResolveCache[map[string]struct{}](time.Minute)
 +	// Drive time manually.
 +	nowT := time.Now()
 +	c.now = func() time.Time { return nowT }
@@ -2534,7 +2542,7 @@ index 00000000000..325693a7754
 +		}
 +		return map[string]struct{}{"ns": {}}, nil
 +	})
-+	c := newResolveCache(time.Minute)
++	c := newResolveCache[map[string]struct{}](time.Minute)
 +	cached := &cachingClassificationResolver{inner: inner, cache: c}
 +
 +	if _, err := cached.Resolve(context.Background(), KindProjects, ""); err == nil {
@@ -4029,65 +4037,10 @@ index 00000000000..cf070f1812d
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity.go
 new file mode 100644
-index 00000000000..d67947c29d9
+index 00000000000..e7806d73efc
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity.go
-@@ -0,0 +1,49 @@
-+/*
-+Copyright 2026 The Kubernetes Authors.
-+
-+Licensed under the Apache License, Version 2.0 (the "License");
-+you may not use this file except in compliance with the License.
-+You may obtain a copy of the License at
-+
-+    http://www.apache.org/licenses/LICENSE-2.0
-+
-+Unless required by applicable law or agreed to in writing, software
-+distributed under the License is distributed on an "AS IS" BASIS,
-+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+See the License for the specific language governing permissions and
-+limitations under the License.
-+*/
-+
-+package scopefilter
-+
-+import (
-+	"k8s.io/apimachinery/pkg/runtime/schema"
-+)
-+
-+// namespaceIdentityResources are the CLUSTER-scoped resources whose object name
-+// is itself a namespace name, so namespace visibility already answers object
-+// visibility and the namespaces ACL can be reused verbatim -- same fetcher,
-+// same accessible set, no second permission endpoint.
-+//
-+// projects.deckhouse.io is multitenancy-manager's Project: its main namespace
-+// carries the project's own name, and every project-level grant (ProjectRoleBinding
-+// and ClusterProjectRoleBinding alike) fans out into that main namespace. A user
-+// who may work in a project therefore always sees the namespace the project is
-+// named after. The remaining gap is deliberate: a bare RoleBinding created in an
-+// ADDITIONAL namespace of a project, bypassing the project mechanisms, leaves the
-+// namespace visible while the Project object stays hidden. Closing it would mean
-+// matching against every namespace of the project, which is not expressible as a
-+// field selector and would force reading and filtering the whole list in memory.
-+var namespaceIdentityResources = map[schema.GroupResource]struct{}{
-+	{Group: "deckhouse.io", Resource: "projects"}: {},
-+}
-+
-+// IsNamespaceIdentityResource reports whether the resource is filtered by
-+// treating its object name as a namespace name. Consulted both when wiring the
-+// storage (which mode the Decorator runs in) and by the authorization filter
-+// (whether a read may be bypassed for filtering instead of denied).
-+func IsNamespaceIdentityResource(gr schema.GroupResource) bool {
-+	_, ok := namespaceIdentityResources[gr]
-+
-+	return ok
-+}
-diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
-new file mode 100644
-index 00000000000..c3ed38299a1
---- /dev/null
-+++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
-@@ -0,0 +1,96 @@
+@@ -0,0 +1,113 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -4108,6 +4061,128 @@ index 00000000000..c3ed38299a1
 +
 +import (
 +	"context"
++
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apiserver/pkg/authentication/user"
++)
++
++// namespaceIdentityResources are the CLUSTER-scoped resources whose visibility
++// is decided by the namespace ACL, mapped to how their object names are derived
++// from the namespaces a user may see. Reusing the ACL is what keeps this cheap:
++// no second permission endpoint, no per-object authorization, and the derived
++// name set drops straight into the IdentityByName machinery the namespaces
++// storage already uses.
++//
++// Membership in this map has an authorization consequence -- reads of these
++// resources are answered with a filtered list instead of a 403 (see
++// isNamespaceListGetOrWatchRequest) -- so it is an allowlist, never a blanket
++// rule for cluster-scoped resources.
++var namespaceIdentityResources = map[schema.GroupResource]func(*Resolvers) AccessibleNamespaceFetcher{
++	{Group: "deckhouse.io", Resource: "projects"}: func(r *Resolvers) AccessibleNamespaceFetcher {
++		return &projectFetcher{accessible: r.Accessible, membership: r.Membership}
++	},
++}
++
++// IsNamespaceIdentityResource reports whether the resource's visibility is
++// derived from the namespace ACL. Consulted when wiring the storage (which
++// fetcher the Decorator gets) and by the authorization filter (whether a denied
++// read may be answered with a filtered list instead).
++func IsNamespaceIdentityResource(gr schema.GroupResource) bool {
++	_, ok := namespaceIdentityResources[gr]
++
++	return ok
++}
++
++// projectFetcher answers "which Projects may this user see" in the shape an
++// IdentityByName Decorator consumes: a set of object NAMES. A project is
++// visible when ANY of its namespaces is -- the main one, which carries the
++// project's own name, or an additional one ordered through a ProjectNamespace
++// -- because multitenancy-manager stamps ProjectLabel on all of them alike.
++//
++// Deriving names this way rather than comparing them keeps the whole existing
++// pipeline intact: the derived set is still matched against metadata.name by
++// the same field selector, and the watch poller still synthesizes ADDED events
++// by diffing successive sets. Gaining access to a namespace therefore surfaces
++// its project within one refresh interval, with no extra machinery.
++type projectFetcher struct {
++	accessible AccessibleNamespaceFetcher
++	membership ProjectMembershipResolver
++}
++
++var _ AccessibleNamespaceFetcher = (*projectFetcher)(nil)
++
++// FetchAccessibleNamespaces returns project names, not namespace names -- the
++// identity the caller filters on. Both underlying answers are cached and
++// user-independent (membership) or already needed anyway (the ACL), so this
++// costs no extra round trip per request.
++func (f *projectFetcher) FetchAccessibleNamespaces(ctx context.Context, u user.Info) ([]string, error) {
++	namespaces, err := f.accessible.FetchAccessibleNamespaces(ctx, u)
++	if err != nil {
++		return nil, err
++	}
++	membership, err := f.membership.Resolve(ctx)
++	if err != nil {
++		return nil, err
++	}
++
++	projects := make(map[string]struct{}, len(namespaces))
++	for _, namespace := range namespaces {
++		if project, ok := membership[namespace]; ok {
++			projects[project] = struct{}{}
++		}
++	}
++
++	names := make([]string, 0, len(projects))
++	for project := range projects {
++		names = append(names, project)
++	}
++	return names, nil
++}
++
++// IsNamespaceAccessible answers for a PROJECT name. It is no faster than the
++// full fetch here -- a project is visible only in terms of its namespace set,
++// so the set has to be built either way -- and exists to satisfy the interface.
++func (f *projectFetcher) IsNamespaceAccessible(ctx context.Context, u user.Info, project string) (bool, error) {
++	projects, err := f.FetchAccessibleNamespaces(ctx, u)
++	if err != nil {
++		return false, err
++	}
++	for _, candidate := range projects {
++		if candidate == project {
++			return true, nil
++		}
++	}
++	return false, nil
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
+new file mode 100644
+index 00000000000..7ba7f42c847
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
+@@ -0,0 +1,235 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"errors"
++	"reflect"
++	"sort"
 +	"testing"
 +
 +	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -4151,11 +4226,11 @@ index 00000000000..c3ed38299a1
 +	}
 +}
 +
-+// TestNewIdentityDecorator pins the wiring an identity resource gets: the
-+// namespace ACL by object name, and none of the namespace-classification
++// TestNewIdentityDecorator pins the wiring an identity resource gets: names
++// derived from the namespace ACL, and none of the namespace-classification
 +// machinery, which has nothing to work with on a cluster-scoped object.
 +func TestNewIdentityDecorator(t *testing.T) {
-+	resolvers := &Resolvers{Accessible: staticFetcher{}}
++	resolvers := &Resolvers{Accessible: staticFetcher{}, Membership: staticMembership{}}
 +	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha3", Resource: "projects"}
 +	triggered := func(_ context.Context) bool { return true }
 +
@@ -4167,22 +4242,158 @@ index 00000000000..c3ed38299a1
 +	if decorator.Classify != nil || decorator.RBACFloor != nil {
 +		t.Fatal("a cluster-scoped identity resource has no namespace to classify or floor against")
 +	}
-+	if decorator.Accessible == nil {
-+		t.Fatal("the decorator must carry the namespace ACL fetcher")
++	if _, ok := decorator.Accessible.(*projectFetcher); !ok {
++		t.Fatalf("expected the name-deriving fetcher from the allowlist, got %T", decorator.Accessible)
 +	}
 +	if !decorator.Trigger(context.Background()) {
 +		t.Fatal("the caller-supplied trigger must be used as is")
 +	}
 +}
 +
-+type staticFetcher struct{}
++// TestNewIdentityDecoratorUnknownResource pins the caller contract: a resource
++// outside the allowlist derives no names, and filtering it by an empty set
++// would hide every object rather than fall back to plain RBAC.
++func TestNewIdentityDecoratorUnknownResource(t *testing.T) {
++	resolvers := &Resolvers{Accessible: staticFetcher{}, Membership: staticMembership{}}
++	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "projecttemplates"}
 +
-+func (staticFetcher) FetchAccessibleNamespaces(_ context.Context, _ user.Info) ([]string, error) {
-+	return nil, nil
++	if decorator := resolvers.NewIdentityDecorator(nil, nil, nil, gvr, nil); decorator != nil {
++		t.Fatal("expected no decorator for a resource outside the allowlist")
++	}
 +}
 +
-+func (staticFetcher) IsNamespaceAccessible(_ context.Context, _ user.Info, _ string) (bool, error) {
++// TestProjectFetcherDerivesProjectsFromNamespaces is the heart of the rule:
++// access to ANY namespace of a project reveals the project, whether that is the
++// main namespace (named after the project) or an additional one.
++func TestProjectFetcherDerivesProjectsFromNamespaces(t *testing.T) {
++	membership := staticMembership{
++		"team-a":       "team-a",
++		"team-a-stage": "team-a",
++		"team-b":       "team-b",
++		"team-c":       "team-c",
++	}
++
++	tests := []struct {
++		name       string
++		accessible []string
++		expected   []string
++	}{
++		{
++			name:       "the main namespace reveals its project",
++			accessible: []string{"team-a"},
++			expected:   []string{"team-a"},
++		},
++		{
++			name:       "an additional namespace alone reveals the project too",
++			accessible: []string{"team-a-stage"},
++			expected:   []string{"team-a"},
++		},
++		{
++			name:       "several namespaces of one project collapse to one name",
++			accessible: []string{"team-a", "team-a-stage"},
++			expected:   []string{"team-a"},
++		},
++		{
++			name:       "namespaces outside every project reveal nothing",
++			accessible: []string{"d8-system", "default"},
++			expected:   nil,
++		},
++		{
++			name:       "unrelated projects stay hidden",
++			accessible: []string{"team-a-stage", "team-b"},
++			expected:   []string{"team-a", "team-b"},
++		},
++		{
++			name:       "no accessible namespaces means no visible projects",
++			accessible: nil,
++			expected:   nil,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			fetcher := &projectFetcher{
++				accessible: staticFetcher{namespaces: tt.accessible},
++				membership: membership,
++			}
++
++			got, err := fetcher.FetchAccessibleNamespaces(context.Background(), &user.DefaultInfo{Name: "alice"})
++			if err != nil {
++				t.Fatalf("FetchAccessibleNamespaces: %v", err)
++			}
++
++			sort.Strings(got)
++			if !reflect.DeepEqual(got, tt.expected) && !(len(got) == 0 && len(tt.expected) == 0) {
++				t.Fatalf("expected projects %v, got %v", tt.expected, got)
++			}
++		})
++	}
++}
++
++func TestProjectFetcherIsNamespaceAccessible(t *testing.T) {
++	fetcher := &projectFetcher{
++		accessible: staticFetcher{namespaces: []string{"team-a-stage"}},
++		membership: staticMembership{"team-a-stage": "team-a", "team-b": "team-b"},
++	}
++
++	visible, err := fetcher.IsNamespaceAccessible(context.Background(), &user.DefaultInfo{Name: "alice"}, "team-a")
++	if err != nil {
++		t.Fatalf("IsNamespaceAccessible: %v", err)
++	}
++	if !visible {
++		t.Fatal("a project is visible through any of its namespaces")
++	}
++
++	hidden, err := fetcher.IsNamespaceAccessible(context.Background(), &user.DefaultInfo{Name: "alice"}, "team-b")
++	if err != nil {
++		t.Fatalf("IsNamespaceAccessible: %v", err)
++	}
++	if hidden {
++		t.Fatal("a project none of whose namespaces are accessible must stay hidden")
++	}
++}
++
++// TestProjectFetcherPropagatesErrors pins fail-closed behavior: a resolver
++// failure must surface, never degrade into an empty (deny-everything) or
++// unfiltered set.
++func TestProjectFetcherPropagatesErrors(t *testing.T) {
++	fetcher := &projectFetcher{
++		accessible: staticFetcher{namespaces: []string{"team-a"}},
++		membership: failingMembership{},
++	}
++
++	if _, err := fetcher.FetchAccessibleNamespaces(context.Background(), &user.DefaultInfo{Name: "alice"}); err == nil {
++		t.Fatal("expected the membership failure to surface")
++	}
++}
++
++type staticFetcher struct {
++	namespaces []string
++}
++
++func (f staticFetcher) FetchAccessibleNamespaces(_ context.Context, _ user.Info) ([]string, error) {
++	return f.namespaces, nil
++}
++
++func (f staticFetcher) IsNamespaceAccessible(_ context.Context, _ user.Info, namespace string) (bool, error) {
++	for _, candidate := range f.namespaces {
++		if candidate == namespace {
++			return true, nil
++		}
++	}
 +	return false, nil
++}
++
++type staticMembership map[string]string
++
++func (m staticMembership) Resolve(_ context.Context) (map[string]string, error) {
++	return m, nil
++}
++
++type failingMembership struct{}
++
++func (failingMembership) Resolve(_ context.Context) (map[string]string, error) {
++	return nil, errors.New("membership unavailable")
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go
 new file mode 100644
@@ -4687,6 +4898,194 @@ index 00000000000..3bdffd44e6a
 +	}
 +	return ctx
 +}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/membership.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/membership.go
+new file mode 100644
+index 00000000000..f467448afbc
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/membership.go
+@@ -0,0 +1,94 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"fmt"
++
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/client-go/kubernetes"
++	restclient "k8s.io/client-go/rest"
++)
++
++// ProjectMembershipResolver answers which project owns each namespace. Like
++// ClassificationResolver it is identity-independent -- it describes how the
++// cluster is labeled, not what any user may see -- so one answer is shared by
++// every caller.
++type ProjectMembershipResolver interface {
++	// Resolve returns namespace name -> owning project name for every
++	// namespace that belongs to a project. Namespaces outside every project
++	// are absent from the map rather than present with an empty value.
++	Resolve(ctx context.Context) (map[string]string, error)
++}
++
++// LoopbackProjectMembershipResolver reads membership from ProjectLabel through
++// the loopback client -- the same single List the "projects" classification
++// does, keeping the values instead of discarding them. multitenancy-manager
++// stamps the label on EVERY namespace of a project: the main one, whose name is
++// the project's, and each additional one created through a ProjectNamespace. So
++// the map covers a project's whole namespace set without this package knowing
++// anything about how additional namespaces are named or requested.
++type LoopbackProjectMembershipResolver struct {
++	client kubernetes.Interface
++}
++
++var _ ProjectMembershipResolver = (*LoopbackProjectMembershipResolver)(nil)
++
++// NewLoopbackProjectMembershipResolver builds a resolver from a loopback REST
++// config. The config is copied internally by kubernetes.NewForConfig; callers
++// may safely mutate it after this returns.
++func NewLoopbackProjectMembershipResolver(loopbackConfig *restclient.Config) (*LoopbackProjectMembershipResolver, error) {
++	cfg := restclient.CopyConfig(loopbackConfig)
++	client, err := kubernetes.NewForConfig(cfg)
++	if err != nil {
++		return nil, fmt.Errorf("build project membership client: %w", err)
++	}
++	return &LoopbackProjectMembershipResolver{client: client}, nil
++}
++
++// Resolve implements ProjectMembershipResolver.
++func (r *LoopbackProjectMembershipResolver) Resolve(ctx context.Context) (map[string]string, error) {
++	list, err := r.client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{LabelSelector: ProjectLabel})
++	if err != nil {
++		return nil, fmt.Errorf("list namespaces for project membership: %w", err)
++	}
++
++	membership := make(map[string]string, len(list.Items))
++	for _, ns := range list.Items {
++		if project := ns.Labels[ProjectLabel]; project != "" {
++			membership[ns.Name] = project
++		}
++	}
++	return membership, nil
++}
++
++// cachingProjectMembershipResolver caches the whole membership map under one
++// key: the answer is a pure function of cluster namespace labels, so every user
++// and every resource shares the single entry.
++type cachingProjectMembershipResolver struct {
++	inner ProjectMembershipResolver
++	cache *resolveCache[map[string]string]
++}
++
++var _ ProjectMembershipResolver = (*cachingProjectMembershipResolver)(nil)
++
++func (r *cachingProjectMembershipResolver) Resolve(_ context.Context) (map[string]string, error) {
++	return r.cache.getOrLoad(keyField("membership"), func(ctx context.Context) (map[string]string, error) {
++		return r.inner.Resolve(ctx)
++	})
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/membership_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/membership_test.go
+new file mode 100644
+index 00000000000..39b5fed1e40
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/membership_test.go
+@@ -0,0 +1,82 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter_test
++
++import (
++	"context"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	corev1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
++	restclient "k8s.io/client-go/rest"
++)
++
++// TestLoopbackProjectMembershipResolver builds membership from a fake Namespace
++// LIST: every namespace of a project maps to it regardless of naming, and a
++// namespace outside every project is absent rather than mapped to "".
++func TestLoopbackProjectMembershipResolver(t *testing.T) {
++	namespaces := []corev1.Namespace{
++		{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{scopefilter.ProjectLabel: "team-a"}}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "team-a-stage", Labels: map[string]string{scopefilter.ProjectLabel: "team-a"}}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "team-b", Labels: map[string]string{scopefilter.ProjectLabel: "team-b"}}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "empty-value", Labels: map[string]string{scopefilter.ProjectLabel: ""}}},
++		{ObjectMeta: metav1.ObjectMeta{Name: "d8-monitoring"}},
++	}
++
++	var gotLabelSelector string
++	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		gotLabelSelector = r.URL.Query().Get("labelSelector")
++		w.Header().Set("Content-Type", "application/json")
++		_ = json.NewEncoder(w).Encode(corev1.NamespaceList{
++			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "NamespaceList"},
++			Items:    namespaces,
++		})
++	}))
++	defer srv.Close()
++
++	resolver, err := scopefilter.NewLoopbackProjectMembershipResolver(&restclient.Config{Host: srv.URL})
++	if err != nil {
++		t.Fatalf("NewLoopbackProjectMembershipResolver: %v", err)
++	}
++
++	got, err := resolver.Resolve(context.Background())
++	if err != nil {
++		t.Fatalf("Resolve: %v", err)
++	}
++
++	if gotLabelSelector != scopefilter.ProjectLabel {
++		t.Fatalf("labelSelector = %q, want the bare %q", gotLabelSelector, scopefilter.ProjectLabel)
++	}
++
++	want := map[string]string{
++		"team-a":       "team-a",
++		"team-a-stage": "team-a",
++		"team-b":       "team-b",
++	}
++	if len(got) != len(want) {
++		t.Fatalf("membership = %v, want %v", got, want)
++	}
++	for namespace, project := range want {
++		if got[namespace] != project {
++			t.Fatalf("membership = %v, want %v", got, want)
++		}
++	}
++}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/rbacfloor.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/rbacfloor.go
 new file mode 100644
 index 00000000000..093caf0545a
@@ -5118,10 +5517,10 @@ index 00000000000..aed7e883430
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
 new file mode 100644
-index 00000000000..adeaad72157
+index 00000000000..34bd8da9fa5
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
-@@ -0,0 +1,161 @@
+@@ -0,0 +1,180 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -5167,11 +5566,13 @@ index 00000000000..adeaad72157
 +// covered resources collapse to ~one loopback resolve per key per TTL.
 +type Resolvers struct {
 +	Accessible      AccessibleNamespaceFetcher
-+	Classify        ClassificationResolver // caching wrapper
-+	Floor           RBACFloorResolver      // caching wrapper
++	Classify        ClassificationResolver    // caching wrapper
++	Floor           RBACFloorResolver         // caching wrapper
++	Membership      ProjectMembershipResolver // caching wrapper
 +	RefreshInterval time.Duration
 +
-+	cache *resolveCache
++	cache           *resolveCache[map[string]struct{}]
++	membershipCache *resolveCache[map[string]string]
 +}
 +
 +// NewLoopbackResolvers builds the shared bundle. Returns (nil, nil) -- not an
@@ -5195,18 +5596,25 @@ index 00000000000..adeaad72157
 +	if err != nil {
 +		return nil, err
 +	}
++	membership, err := NewLoopbackProjectMembershipResolver(loopbackConfig)
++	if err != nil {
++		return nil, err
++	}
 +
 +	ttl := envDuration(envCacheTTL, DefaultResolveCacheTTL)
 +	interval := envDuration(envPollInterval, DefaultRefreshInterval)
 +
-+	cache := newResolveCache(ttl)
++	cache := newResolveCache[map[string]struct{}](ttl)
++	membershipCache := newResolveCache[map[string]string](ttl)
 +
 +	return &Resolvers{
 +		Accessible:      accessible,
 +		Classify:        &cachingClassificationResolver{inner: classify, cache: cache},
 +		Floor:           &cachingRBACFloorResolver{inner: floor, cache: cache},
++		Membership:      &cachingProjectMembershipResolver{inner: membership, cache: membershipCache},
 +		RefreshInterval: interval,
 +		cache:           cache,
++		membershipCache: membershipCache,
 +	}, nil
 +}
 +
@@ -5234,11 +5642,16 @@ index 00000000000..adeaad72157
 +}
 +
 +// NewIdentityDecorator builds a Decorator for a cluster-scoped resource whose
-+// object NAME is a namespace name (see IsNamespaceIdentityResource). Visibility
-+// follows the namespace ACL, so the decorator runs in IdentityByName mode with
-+// the same fetcher the namespaces storage uses and without Classify/RBACFloor:
-+// there is no namespace to classify and no separate resource+verb to narrow a
-+// floor against.
++// visibility follows the namespace ACL (see IsNamespaceIdentityResource). It
++// runs in IdentityByName mode, over the name-deriving fetcher the allowlist
++// names for the resource, and without Classify/RBACFloor: there is no namespace
++// to classify and no separate resource+verb to narrow a floor against.
++//
++// Returns nil for a resource that is not in the allowlist, or for a bundle
++// missing the resolvers name derivation needs. The caller must treat nil as
++// "leave this storage unfiltered": wiring a filter that cannot derive names
++// would hide everything, and an unwired resource simply stays on plain RBAC,
++// since the authorization bypass only fires for a registered filter.
 +//
 +// trigger is supplied by the caller rather than fixed here because the flag it
 +// reads lives in the authorization filter package, which already imports this
@@ -5250,13 +5663,18 @@ index 00000000000..adeaad72157
 +	gvr schema.GroupVersionResource,
 +	trigger func(context.Context) bool,
 +) *Decorator {
++	newFetcher, ok := namespaceIdentityResources[gvr.GroupResource()]
++	if !ok || r.Accessible == nil || r.Membership == nil {
++		return nil
++	}
++
 +	return &Decorator{
 +		Store:           store,
 +		BuildPredicate:  buildPredicate,
 +		Resource:        gvr,
 +		Mode:            IdentityByName,
 +		Trigger:         trigger,
-+		Accessible:      r.Accessible,
++		Accessible:      newFetcher(r),
 +		RefreshInterval: r.RefreshInterval,
 +		PostRead:        postRead,
 +	}
