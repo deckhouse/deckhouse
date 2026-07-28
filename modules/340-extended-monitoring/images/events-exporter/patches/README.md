@@ -2,7 +2,9 @@
 
 ### 001-go-mod.patch
 
-Update dependencies
+Update dependencies. Bumps `golang.org/x/net` to v0.56.0, `golang.org/x/sys` to v0.46.0 and
+`golang.org/x/text` to v0.39.0 (and transitive `x/term`) to fix Trivy-reported CVEs in the
+embedded Go dependencies.
 
 ### 001-go-mod-logrus.patch
 
