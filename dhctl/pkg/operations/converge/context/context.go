@@ -229,7 +229,7 @@ func (c *Context) loadMetaConfig() (*config.MetaConfig, error) {
 		// Commander sends no registry_config; the external provider bundle
 		// registry is read from the target cluster inside ParseMetaConfig. The
 		// kube client is fetched lazily, only when a bundle download is needed.
-		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, infrastructureprovider.DhctlOperationConverge, c.KubeClientCtx)
+		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, infrastructureprovider.DhctlOperationConverge, c.KubeClientCtx, c.opts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}

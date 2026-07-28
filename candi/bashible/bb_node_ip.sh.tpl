@@ -23,7 +23,12 @@ function discover_internal_network_cidrs() {
     discovered_internal_network_cidrs="$(ip route show scope link proto kernel dev "${physical_iface}" | awk '{print $1}')"
     echo "$discovered_internal_network_cidrs"
   else
-    echo "Cannot discover internal network CIDRs: node has more than one interface and StaticClusterConfiguration.internalNetworkCIDRs is not set" >&2
+    echo "Cannot discover internal network CIDRs automatically: more than one physical network interface was found and StaticClusterConfiguration.internalNetworkCIDRs is not set." >&2
+    echo "Specify internalNetworkCIDRs explicitly in StaticClusterConfiguration." >&2
+    echo "Current IPv4 addresses:" >&2
+    ip -o -4 addr show 2>/dev/null | awk '{print "  " $2 ": " $4}' >&2 || true
+    echo "Current routes:" >&2
+    ip route 2>/dev/null | sed 's/^/  /' >&2 || true
     return 1
   fi
 }
@@ -45,6 +50,14 @@ function check_slash32_node_ip() {
 
 # Ensure we have file
 touch /var/lib/bashible/discovered-node-ip
+
+{{- if eq .nodeGroup.nodeType "Static" }}
+if ! command -v ip >/dev/null 2>&1; then
+  bb-log-error "Cannot discover node IP: required command \"ip\" is not installed."
+  bb-log-error "Install the iproute2 package on Debian/Ubuntu or the iproute package on RHEL/CentOS-compatible systems and retry."
+  exit 1
+fi
+{{- end }}
 
 {{- if ne .nodeGroup.nodeType "Static" }}
   {{ if eq .runType "ClusterBootstrap" }}

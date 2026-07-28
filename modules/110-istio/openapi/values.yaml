@@ -2,6 +2,12 @@ x-extend:
   schema: config-values.yaml
 type: object
 properties:
+  registry:
+    type: object
+    default: {}
+    properties:
+      dockercfg:
+        type: string
   internal:
     type: object
     default: {}

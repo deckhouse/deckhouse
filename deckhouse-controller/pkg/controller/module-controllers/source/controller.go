@@ -503,7 +503,38 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 		}
 
-		if r.needToEnsureRelease(source, module, availableModule, meta, exists, embeddedTargetSource) {
+		if !r.releaseEnsureAllowed(source, module, meta, embeddedTargetSource) {
+			availableModule.Checksum = meta.Checksum
+			availableModule.Version = meta.ModuleVersion
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		// checksum changed or the target release is missing - ensure as usual.
+		ensure := availableModule.Checksum != meta.Checksum || !exists
+		if !ensure {
+			// The target release already exists and its checksum has not changed, but
+			// the step-by-step chain of ModuleReleases from the deployed release up to
+			// the target may still be incomplete: intermediate minor versions can be
+			// mirrored into the registry after the target release was first created, and
+			// the fetch that created the target could not see them then. The checksum
+			// guard never reopens on its own, so re-run the fetch whenever the chain has
+			// a gap - ensureReleases is idempotent and creates only the missing releases.
+			complete, err := r.releaseChainToTargetComplete(ctx, moduleName, meta.ModuleVersion)
+			if err != nil {
+				logger.Error("failed to check release chain to target, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				// meta was fetched successfully above, so the channel version is known -
+				// keep it instead of wiping it to "unknown" on this transient check error
+				availableModule.Checksum = meta.Checksum
+				availableModule.Version = meta.ModuleVersion
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+			ensure = !complete
+		}
+		if ensure {
 			logger.Debug("ensure release")
 
 			err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {

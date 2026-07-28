@@ -145,6 +145,13 @@ func generateBasicTargetsCode(workDir string, output string) error {
 		}
 	}
 
+	// d8-monitoring hosts the monitoring stack (prometheus, monitoring-kubernetes,
+	// monitoring-custom, monitoring-applications, etc.), which has been fully moved to
+	// external modules. No embedded module declares this namespace anymore, but the
+	// namespace still exists at runtime and its API operations must stay audited, so
+	// keep it in the basic audit targets explicitly.
+	namespacesMap["d8-monitoring"] = struct{}{}
+
 	namespaces := make([]string, 0, len(namespacesMap))
 	sas := make([]string, 0, len(sasMap))
 

@@ -32,6 +32,8 @@ import (
 	installermock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -404,5 +406,75 @@ func TestDeleteStaleModuleReleases(t *testing.T) {
 
 		err := l.client.Get(context.Background(), client.ObjectKey{Name: "echo-v1.0.0"}, new(v1alpha1.ModuleRelease))
 		assert.NoError(t, err, "embedded module release must be kept")
+	})
+}
+
+// --- ensureModule ----------------------------------------------------------
+
+// newEnsureLoader builds a Loader wired for ensureModule: it needs the embedded
+// update policy (for the release channel) and a version, which newTestLoader
+// leaves unset.
+func newEnsureLoader(t *testing.T, objects ...client.Object) *Loader {
+	t.Helper()
+	l := newTestLoader(t, newRecordingInstaller(new(installerCalls), nil), objects...)
+	l.version = "v1.76.0"
+	l.embeddedPolicy = helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
+		ReleaseChannel: "Stable",
+	})
+	return l
+}
+
+// TestEnsureModuleEmbeddedSource verifies that ensureModule keeps the invariant
+// "a physically embedded module always reports Source == Embedded". This is the
+// reconciliation point that heals a stale external source (e.g. deckhouse) left
+// on an embedded module by a pre-hardening erroneous flip after a registry
+// migration - a value that otherwise stuck until the Module was deleted by hand.
+func TestEnsureModuleEmbeddedSource(t *testing.T) {
+	embeddedDef := func() *moduletypes.Definition {
+		return &moduletypes.Definition{
+			Name:   "ingress-nginx",
+			Weight: 380,
+			// parsed from the embedded modules dir - i.e. shipped on the filesystem
+			Path: "/deckhouse/modules/380-ingress-nginx",
+		}
+	}
+
+	t.Run("stale external source on an embedded module is reset to Embedded", func(t *testing.T) {
+		l := newEnsureLoader(t, testModule("ingress-nginx", "deckhouse"))
+
+		require.NoError(t, l.ensureModule(context.Background(), embeddedDef(), true))
+
+		module := getModule(t, l, "ingress-nginx")
+		assert.Equal(t, v1alpha1.ModuleSourceEmbedded, module.Properties.Source,
+			"embedded module must be pinned back to the Embedded source")
+	})
+
+	t.Run("empty source on an embedded module is set to Embedded", func(t *testing.T) {
+		l := newEnsureLoader(t, testModule("ingress-nginx", ""))
+
+		require.NoError(t, l.ensureModule(context.Background(), embeddedDef(), true))
+
+		module := getModule(t, l, "ingress-nginx")
+		assert.Equal(t, v1alpha1.ModuleSourceEmbedded, module.Properties.Source)
+	})
+
+	t.Run("embedded source is left untouched", func(t *testing.T) {
+		l := newEnsureLoader(t, testModule("ingress-nginx", v1alpha1.ModuleSourceEmbedded))
+
+		require.NoError(t, l.ensureModule(context.Background(), embeddedDef(), true))
+
+		module := getModule(t, l, "ingress-nginx")
+		assert.Equal(t, v1alpha1.ModuleSourceEmbedded, module.Properties.Source)
+	})
+
+	t.Run("downloaded (non-embedded) module keeps its external source", func(t *testing.T) {
+		l := newEnsureLoader(t, testModule("echo", "example"))
+		def := &moduletypes.Definition{Name: "echo", Weight: 900, Path: l.downloadedModulesDir + "/modules/echo"}
+
+		require.NoError(t, l.ensureModule(context.Background(), def, false))
+
+		module := getModule(t, l, "echo")
+		assert.Equal(t, "example", module.Properties.Source,
+			"a downloaded module must not be forced to the Embedded source")
 	})
 }

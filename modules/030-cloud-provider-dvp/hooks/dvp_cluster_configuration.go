@@ -85,7 +85,7 @@ func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 		m, err := config.ParseConfigFromData(
 			context.Background(),
 			string(clusterConfigYAML),
-			infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()),
+			infrastructureprovider.MetaConfigValidatorProvider(),
 			nil,
 		)
 		if err != nil {

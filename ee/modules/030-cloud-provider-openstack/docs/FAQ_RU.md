@@ -4,11 +4,19 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ## Как настроить LoadBalancer?
 
-> **Внимание.** Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
+{% alert level="warning" %}
+Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
+{% endalert %}
+
+Рекомендуется ограничивать список узлов, добавляемых в пул балансировщика, с помощью аннотации [`loadbalancer.openstack.org/node-selector`](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#load-balancer).
+
+Без ограничения по `node-selector` cloud-controller-manager может использовать в качестве таргетов балансировщика все подходящие узлы кластера. В результате добавление или удаление узлов, не связанных с обслуживаемой балансировщиком нагрузкой, может приводить к обновлению состава пула балансировщика. В крупных или часто изменяющихся кластерах такие обновления могут происходить регулярно, а в некоторых конфигурациях сопровождаться кратковременными нарушениями существующих соединений.
+
+С помощью `loadbalancer.openstack.org/node-selector` рекомендуется выбирать только те узлы, которые должны использоваться в качестве таргетов данного LoadBalancer.
 
 ### Пример IngressNginxController
 
-Ниже представлен простой пример конфигурации `IngressNginxController`:
+В примере поды Ingress-контроллера размещаются на frontend-узлах, а аннотация `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -20,6 +28,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
   nodeSelector:
@@ -56,7 +65,7 @@ spec:
 ### Установка дополнительных групп безопасности (security groups) на ephemeral-узлах
 
 Необходимо прописать параметр `additionalSecurityGroups` для всех `OpenStackInstanceClass` в кластере, которым нужны дополнительные
-групп безопасности. Подробнее — [параметры модуля `cloud-provider-openstack`](../../modules/cloud-provider-openstack/configuration.html).
+групп безопасности. Подробнее — [параметры модуля `cloud-provider-openstack`](/cloud-provider-openstack/configuration.html).
 
 ## Как поднять гибридный кластер?
 
@@ -72,7 +81,7 @@ spec:
 1. Удалите flannel из kube-system: `d8 k -n kube-system delete ds flannel-ds`.
 2. Включите и [настройте](configuration.html#параметры) модуль.
 3. Создайте один или несколько custom resource [OpenStackInstanceClass](cr.html#openstackinstanceclass).
-4. Создайте один или несколько custom resource [NodeManager](../../modules/node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
+4. Создайте один или несколько custom resource [NodeManager](/node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
 
 > **Важно!** Cloud-controller-manager синхронизирует состояние между OpenStack и Kubernetes, удаляя из Kubernetes те узлы, которых нет в OpenStack. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому, если узел Kubernetes запущен не с параметром `--cloud-provider=external`, он автоматически игнорируется (Deckhouse прописывает `static://` на узлы в `.spec.providerID`, а cloud-controller-manager такие узлы игнорирует).
 

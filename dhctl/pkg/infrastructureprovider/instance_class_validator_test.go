@@ -60,7 +60,7 @@ kind: ConfigMap
 metadata:
   name: d8-release-data
 `,
-		MetaConfigPreparatorProvider(NewPreparatorProviderParamsWithoutLogger()),
+		MetaConfigValidatorProvider(),
 		nil,
 	)
 	require.NoError(t, err)

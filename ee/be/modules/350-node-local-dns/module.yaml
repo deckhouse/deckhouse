@@ -9,3 +9,30 @@ requirements:
 descriptions:
   en: Deploys a caching DNS server on each cluster node and exports data to the monitoring system for analysis.
   ru: Разворачивает кеширующий DNS-сервер на каждом узле кластера, экспортирует данные в систему мониторинга для анализа.
+accessibility:
+  editions:
+    be:
+      available: true
+      enabledInBundles:
+        - Default
+    se:
+      available: true
+      enabledInBundles:
+        - Default
+    se-plus:
+      available: true
+      enabledInBundles:
+        - Default
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
+    fe:
+      available: true
+      enabledInBundles:
+        - Default
+    cse:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

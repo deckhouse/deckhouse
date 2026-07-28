@@ -1392,7 +1392,7 @@ Add a worker node to the cluster.
 
 Perform the following steps:
 
-* Configure a StorageClass for [local storage](../../../modules/local-path-provisioner/cr.html#localpathprovisioner) by running the following command on the master node:
+* Configure a StorageClass for [local storage](/modules/local-path-provisioner/cr.html#localpathprovisioner) by running the following command on the master node:
 
   ```console
   sudo -i d8 k create -f - << EOF
@@ -1431,7 +1431,7 @@ Perform the following steps:
   EOF
   ```
 
-* Create an [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials) resource in the cluster. Run on the master node:
+* Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster. Run on the master node:
 
   ```console
   sudo -i d8 k create -f - <<EOF
@@ -1451,7 +1451,7 @@ Perform the following steps:
   cat /dev/shm/caps-id.pub
   ```
 
-* Create a [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) for the node to add. On the master node, set the node IP and apply:
+* Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance) for the node to add. On the master node, set the node IP and apply:
 
   ```console
   # Specify the IP address of the node to be added to the cluster.
@@ -1486,7 +1486,7 @@ Perform the following steps:
 
 ### Installing the ingress controller
 
-Make sure the Kruise controller manager Pod of the [ingress-nginx](../../../modules/ingress-nginx/) module is running and in the `Running` status. To do this, run the following command on the master node:
+Make sure the Kruise controller manager Pod of the [ingress-nginx](/modules/ingress-nginx/) module is running and in the `Running` status. To do this, run the following command on the master node:
 
 ```bash
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise

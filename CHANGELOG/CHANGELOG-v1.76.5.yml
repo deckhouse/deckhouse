@@ -1,0 +1,94 @@
+cert-manager:
+  fixes:
+    - summary: Additional letsencrypt-staging cluster issuer for Gateway API is provided.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+ci:
+  fixes:
+    - summary: This is a manual cherry-pick the script for the CI fix in the release branch
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21348
+cilium-hubble:
+  fixes:
+    - summary: Gateway API certificate manifest is updated to support any cluster issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+cloud-provider-dvp:
+  fixes:
+    - summary: fix dvp kubernetes dependency mismatch
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21367
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: Adds patches to the upstream version to make it ignore static nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21388
+deckhouse:
+  fixes:
+    - summary: Bump addon-operator to fix module install with conversion webhooks
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21365
+deckhouse-controller:
+  fixes:
+    - summary: Bump addon-operator to v1.21.22 — propagate module context to nelm logs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21413
+deckhouse-tools:
+  fixes:
+    - summary: Gateway API certificate manifest is updated to support any cluster issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+docs:
+  fixes:
+    - summary: Fix ingressClass description in global settings
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21238
+    - summary: Corrected the link from direct to relative in the alert about the module requirements.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21357
+    - summary: >-
+        Corrected the link from direct to relative in the alert about the module requirements for external
+        modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21374
+    - summary: Add missing sidebar title mappings for Istio documentation CR page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21360
+documentation:
+  fixes:
+    - summary: Gateway API certificate manifest is updated to support any cluster issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+istio:
+  fixes:
+    - summary: Gateway API certificate manifest is updated to support any cluster issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+log-shipper:
+  fixes:
+    - summary: fix daemonset template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21368
+      impact: log-shipper
+openvpn:
+  fixes:
+    - summary: Gateway API certificate manifest is updated to support any cluster issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+prometheus:
+  fixes:
+    - summary: Gateway API certificate manifest is updated to support any cluster issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+registry:
+  fixes:
+    - summary: Gateway API certificate manifest is updated to support any cluster issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+registry-packages-proxy:
+  fixes:
+    - summary: Gateway API certificate manifest is updated to support any cluster issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+upmeter:
+  fixes:
+    - summary: Gateway API certificate manifest is updated to support any cluster issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+user-authn:
+  fixes:
+    - summary: >-
+        Gateway API certificate manifest is updated to support any cluster issuer. Kubernetes API HTTProute
+        was updated to return 403 instead of 404.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21385
+user-authz:
+  fixes:
+    - summary: Honor CAR-independent RBAC in webhook and permission-browser
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21373
+      impact: >-
+        With enableMultiTenancy, effective access is now the union of CAR (within its limitNamespaces/namespaceSelector),
+        AuthorizationRules, and plain RoleBindings/ClusterRoleBindings. Previously the webhook denied
+        requests outside the CAR scope even when RBAC explicitly granted them: such existing bindings
+        for subjects with a CAR silently become effective after the upgrade — review them. The CAR access
+        level still does not apply outside its namespace limits. AccessibleNamespaces reflects the same
+        union.

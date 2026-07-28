@@ -28,10 +28,6 @@ message ValidateOptions {
 message ValidateResourcesRequest {
   string config = 1;
   ValidateOptions opts = 2;
-  // registry_config carries an InitConfiguration document and/or the deckhouse
-  // ModuleConfig so the server can resolve registry access for the external
-  // provider bundle download.
-  string registry_config = 3;
 }
 
 message ValidateResourcesResponse {
@@ -70,10 +66,6 @@ message ValidateProviderSpecificClusterConfigRequest {
   string config = 1;
   string cluster_config = 2;
   ValidateOptions opts = 3;
-  // registry_config carries an InitConfiguration document and/or the deckhouse
-  // ModuleConfig so the server can resolve registry access for the external
-  // provider bundle download.
-  string registry_config = 4;
 }
 
 message ValidateProviderSpecificClusterConfigResponse {

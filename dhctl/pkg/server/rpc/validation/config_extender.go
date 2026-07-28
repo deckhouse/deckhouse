@@ -39,7 +39,7 @@ func (s *Service) ConfigExtender(
 	metaConfig, err := config.ParseConfigFromData(
 		ctx,
 		request.Config,
-		config.DummyPreparatorProvider(),
+		config.DummyValidatorProvider(),
 		nil,
 		config.ValidateOptionCommanderMode(true),
 	)

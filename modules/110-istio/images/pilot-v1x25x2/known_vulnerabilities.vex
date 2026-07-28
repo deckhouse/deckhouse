@@ -1,7 +1,7 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-2a4150b46379ac95a55d8eb62cb035f9930831c37db2941aeee7f195e08e9527",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "@id": "merged-vex-e270c5151609ebc66df9e4051c0dcf4b3f85b87ced1468e2d4241a0d6ed88b55",
+  "author": "Deckhouse <contact@deckhouse.io>",
   "version": 1,
   "statements": [
     {
@@ -10,13 +10,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (stored XSS, CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79). Бинарник pilot-discovery не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.301.0 (Istio 1.25.x) подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
-      "timestamp": "2026-05-04T09:08:31.000000000Z"
+      "impact_statement": "Stored XSS in the Prometheus 3.x web UI (CVE-2026-40179). This binary does not run the Prometheus server or expose that UI; github.com/prometheus/prometheus is a library dependency only.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -24,13 +24,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость относится к раскрытию client_secret конфигурации Azure AD remote write через HTTP API /-/config сервера Prometheus 3.x (CVE-2026-42151, GHSA-wg65-39gg-5wfj, CWE-312). Бинарник pilot-discovery не запускает сервер Prometheus и не предоставляет указанный endpoint; зависимость github.com/prometheus/prometheus v0.301.0 (Istio 1.25.x) используется как библиотека без исполняемого пути уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
-      "timestamp": "2026-05-19T08:20:01.000000000Z"
+      "impact_statement": "Azure OAuth client_secret disclosure via Prometheus /-/config API (CVE-2026-42151). This binary does not run the Prometheus server or expose that endpoint; the dependency is library-only.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -38,13 +38,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость относится к endpoint удалённого чтения /api/v1/read сервера Prometheus: некорректная валидация длины snappy-payload может привести к исчерпанию памяти и отказу в обслуживании (CVE-2026-42154, GHSA-8rm2-7qqf-34qm, CWE-400). Бинарник pilot-discovery не запускает сервер Prometheus и не обрабатывает запросы к /api/v1/read; зависимость github.com/prometheus/prometheus v0.301.0 (Istio 1.25.x) подтягивается как библиотека. Эксплуатация в контексте данного компонента недоступна.",
-      "timestamp": "2026-05-19T08:20:22.000000000Z"
+      "impact_statement": "DoS via snappy payload on Prometheus remote-read /api/v1/read (CVE-2026-42154). This binary does not run the Prometheus server or handle that endpoint; the dependency is library-only.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
     {
       "vulnerability": {
@@ -52,14 +52,28 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость относится к stored XSS в устаревшем веб-UI сервера Prometheus (heatmap, histogram bucket label values, флаг --enable-feature=old-ui, CVE-2026-44903, GHSA-fw8g-cg8f-9j28, CWE-79). Бинарник pilot-discovery не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.301.0 (Istio 1.25.x) подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
-      "timestamp": "2026-05-27T12:03:22.000000000Z"
+      "impact_statement": "Stored XSS in the legacy Prometheus UI (CVE-2026-44903). This binary does not run the Prometheus server or expose that UI; the dependency is library-only.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 concerns golang.org/x/crypto/openpgp, which is unmaintained and unsafe by design. This component does not import or execute the openpgp package; golang.org/x/crypto is pulled in transitively for other subpackages. Exploitation of openpgp via this binary is not available.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
     }
   ],
-  "timestamp": "2026-05-27T12:03:58Z"
+  "timestamp": "2026-07-24T12:00:00Z"
 }

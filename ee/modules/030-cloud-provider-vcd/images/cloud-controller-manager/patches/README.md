@@ -14,7 +14,7 @@ Update klog to klog/v2 in pkg/vcdsdk/vapp.go
 
 ### 003-go-mod.patch
 
-Update dependencies
+Bump go.mod dependencies to fix known CVEs.
 
 ### 004-klog.patch
 
@@ -43,3 +43,4 @@ Changes:
 Fix NewCloudControllerManagerCommand call signature for k8s.io v0.34.3
 
 In k8s.io v0.34.3, the function signature changed to include an additional `map[string]string` parameter for feature gates between `DefaultInitFuncConstructors` and `NamedFlagSets`.
+

@@ -2,7 +2,7 @@
   rules:
     - alert: D8CloudProviderDVPMigrationPending
       expr: |
-        max(kube_configmap_info{namespace="d8-cloud-provider-dvp", configmap="d8-module-is-migrating"}) > 0
+        max(d8_cloud_provider_dvp_migration_pending) > 0
       for: 1m
       labels:
         severity_level: "6"

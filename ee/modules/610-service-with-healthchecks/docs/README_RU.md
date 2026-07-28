@@ -28,7 +28,7 @@ description: "Readiness-пробы с модулем service-with-healthchecks �
 
 В отличие от стандартного балансировщика, где readiness-пробы привязаны к состоянию контейнеров, `ServiceWithHealthcheck` позволяет настраивать активные пробы на отдельные TCP-порты. Таким образом, каждый балансировщик, обслуживающий один и тот же под, может работать независимо от других.
 
-Настроить данный способ балансировки можно при помощи ресурса [ServiceWithHealthchecks](../../modules/service-with-healthchecks/cr.html#servicewithhealthchecks):
+Настроить данный способ балансировки можно при помощи ресурса [ServiceWithHealthchecks](cr.html#servicewithhealthchecks):
 
 * Его спецификация идентична стандартному `Service` с добавлением раздела `healthcheck`, который содержит набор проверок.
 * На данный момент поддерживается три вида проб:

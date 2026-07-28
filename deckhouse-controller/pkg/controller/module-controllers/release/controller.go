@@ -632,7 +632,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		Controller: ptr.To(true),
 	}
 
-	// do not (re)create documentation for a module disabled by config
+	// do not (re)create documentation for a disabled module
 	module := new(v1alpha1.Module)
 	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
 		r.log.Error("failed to get module", slog.String("module", release.GetModuleName()), log.Err(err))
@@ -640,8 +640,11 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, fmt.Errorf("get module: %w", err)
 	}
 
-	// ensure documentation only for a module enabled by config
-	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+	// ensure documentation for any enabled module, regardless of how it is enabled
+	// (by module config, by bundle or by an enabled script) - EnabledByModuleManager
+	// reflects the effective enabled state, unlike EnabledByModuleConfig which is only
+	// set for modules enabled explicitly via a ModuleConfig
+	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 		if err = utils.EnsureModuleDocumentationForRelease(ctx, r.client, release); err != nil {
 			r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
 

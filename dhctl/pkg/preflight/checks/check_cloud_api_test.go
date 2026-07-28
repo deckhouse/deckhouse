@@ -76,7 +76,7 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
 `
-			metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfigYAML, config.DummyPreparatorProvider(), &options.New().Global)
+			metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfigYAML, config.DummyValidatorProvider(), &options.New().Global)
 			s.NoError(err)
 			metaConfig.ProviderName = tt.providerName
 			metaConfig.ProviderClusterConfig = map[string]json.RawMessage{

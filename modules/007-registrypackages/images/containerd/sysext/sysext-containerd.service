@@ -1,0 +1,58 @@
+# Copyright The containerd Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[Unit]
+Description=containerd container runtime
+Documentation=https://containerd.io
+# Immutable OS: config.toml is generated at boot by the runtime controller
+# into tmpfs /run (not /etc, which is stateless/templated). Refuse to start
+# until it exists.
+ConditionPathExists=/run/etc/containerd/config.toml
+
+[Service]
+# Immutable OS: runc and containerd-shim-runc-vN live in /opt/deckhouse/bin
+# (delivered via sysext), which is not in the default PATH. containerd looks
+# up shims/runc via PATH, so prepend it here.
+Environment=PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+ExecStart=/opt/deckhouse/bin/containerd --config /run/etc/containerd/config.toml
+
+Type=notify
+Delegate=yes
+KillMode=process
+Restart=always
+RestartSec=5
+
+# Immutable OS: ensure state/runtime dirs exist with correct ownership on
+# first boot (persistent /var and tmpfs /run may start empty).
+StateDirectory=containerd
+StateDirectoryMode=0750
+RuntimeDirectory=containerd
+RuntimeDirectoryMode=0750
+
+# Having non-zero Limit*s causes performance problems due to accounting overhead
+# in the kernel. We recommend using cgroups to do container-local accounting.
+LimitNPROC=infinity
+LimitCORE=infinity
+# Container workloads open many file descriptors; immutable OS defaults are
+# often low.
+LimitNOFILE=1048576
+
+# Comment TasksMax if your systemd version does not supports it.
+# Only systemd 226 and above support this version.
+TasksMax=infinity
+OOMScoreAdjust=-999
+
+[Install]
+WantedBy=node.target
