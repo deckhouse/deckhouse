@@ -1258,13 +1258,24 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 # Домен кластера.
 clusterDomain: "cluster.local"
-# Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
-defaultCRI: "ContainerdV2"
 # Настройки proxy-сервера.
 proxy:
   httpProxy: http://proxy.local:3128
   httpsProxy: https://proxy.local:3128
   noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+---
+# Настройки модуля node-manager.
+# https://deckhouse.ru/modules/node-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: node-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    # Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
+    defaultCRI: "ContainerdV2"
 ---
 # Настройки модуля deckhouse.
 # https://deckhouse.ru/modules/deckhouse/configuration.html
