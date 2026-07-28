@@ -18,3 +18,8 @@ Update Go dependencies to fix CVEs
 - [CVE-2026-1229](https://github.com/advisories/GHSA-q9hv-hpm4-hj6x) — `github.com/cloudflare/circl` bumped to `v1.6.3`
 - [CVE-2026-35469](https://github.com/advisories/GHSA-pc3f-x583-g7j2) — `github.com/moby/spdystream` bumped to `v0.5.1`
 - [CVE-2026-32952](https://github.com/advisories/GHSA-pjcq-xvwq-hhpj) — `github.com/Azure/go-ntlmssp` bumped to `v0.1.1`
+- x/crypto→v0.53.0, x/net→v0.56.0, x/sys→v0.46.0, x/text→v0.39.0, `go.mongodb.org/mongo-driver`→v1.17.7: x/crypto CVE-2026-39828/39829/39830/39831/39832/39835, CVE-2026-42508, CVE-2026-46595/46597; x/net CVE-2026-25680/25681/27136/33814/39821, CVE-2026-42502/42506, CVE-2026-46600; x/sys CVE-2026-39824; x/text CVE-2026-56852; mongo-driver CVE-2026-2303.
+
+The grafana `stdlib` CVEs (CVE-2026-39822, CVE-2026-42505) are not fixable by a dependency bump —
+the Go toolchain comes from the shared `builder/golang-bookworm` base image; they are handled via
+`known_vulnerabilities.vex`.

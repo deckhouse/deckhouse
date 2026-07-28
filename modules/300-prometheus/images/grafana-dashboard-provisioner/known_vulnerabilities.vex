@@ -1,0 +1,183 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-operator-prometheus-grafana-dashboard-provisioner",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-07-28T12:00:00.000000+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-69725"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-chi/chi/v5@v5.2.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2025-69725 (Open Redirect) в go-chi/chi >=5.2.0 приводит к перенаправлению на внешний сайт при обработке специально сформированного пути роутером. Бинарник shell-operator наследуется без изменений из общего базового образа common/shell-operator; в образе grafana-dashboard-provisioner shell-operator запускает только Python-хук, который следит за ConfigMap с дашбордами и отправляет их в Grafana по её HTTP API. Встроенный в shell-operator HTTP-сервер на базе chi обслуживает исключительно внутренние служебные эндпоинты (метрики, liveness) внутри кластера и не выполняет пользовательских редиректов на контролируемые злоумышленником адреса. Предусловие эксплуатации (недоверенный путь, приводящий к редиректу) в данном образе не выполняется, поэтому уязвимый путь исполнения недостижим. Штатное исправление — обновление базового образа common/shell-operator (chi v5.2.4)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-2303"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/go.mongodb.org/mongo-driver@v1.5.4"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-2303 относится к CGo-биндингам GSSAPI/Kerberos в go.mongodb.org/mongo-driver. Бинарник shell-operator (из общего базового образа common/shell-operator) не подключается к MongoDB и не использует GSSAPI-аутентификацию mongo-driver; модуль присутствует лишь как транзитивная зависимость и не вызывается в рантайме. Уязвимый код не исполняется. Штатное исправление — обновление базового образа common/shell-operator (mongo-driver v1.17.7)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-25680 — DoS из-за чрезмерного потребления CPU при разборе произвольного HTML в golang.org/x/net/html. Бинарник shell-operator (из общего базового образа common/shell-operator) является Kubernetes-контроллером: он обрабатывает объекты Kubernetes (JSON/YAML) и не разбирает HTML через x/net/html. Пакет присутствует только как транзитивная зависимость и не вызывается. Уязвимый путь исполнения недостижим. Штатное исправление — обновление базового образа common/shell-operator (x/net v0.56.0)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-25681 — XSS при разборе и последующем рендеринге произвольного HTML в golang.org/x/net/html. shell-operator (общий базовый образ common/shell-operator) не разбирает и не рендерит HTML: он работает с объектами Kubernetes. Пакет x/net/html не вызывается в рантайме, поэтому уязвимый путь исполнения недостижим. Штатное исправление — обновление базового образа common/shell-operator (x/net v0.56.0)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-27136 — XSS через обход разбора HTML в golang.org/x/net/html. shell-operator (общий базовый образ common/shell-operator) не выполняет разбор/рендеринг HTML, а обрабатывает объекты Kubernetes; пакет x/net/html транзитивен и не исполняется. Уязвимый путь недостижим. Штатное исправление — обновление базового образа common/shell-operator (x/net v0.56.0)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-42502 — XSS из-за неожиданного построения дерева при разборе HTML в golang.org/x/net/html. shell-operator (общий базовый образ common/shell-operator) не разбирает HTML; пакет не вызывается в рантайме. Уязвимый путь недостижим. Штатное исправление — обновление базового образа common/shell-operator (x/net v0.56.0)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-42506 — XSS при разборе произвольного HTML в golang.org/x/net/html. shell-operator (общий базовый образ common/shell-operator) не разбирает и не рендерит HTML; пакет x/net/html транзитивен и не исполняется. Уязвимый путь недостижим. Штатное исправление — обновление базового образа common/shell-operator (x/net v0.56.0)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-33814 — DoS HTTP/2-сервера через некорректный кадр SETTINGS_MAX_FRAME_SIZE. Уязвимость затрагивает серверную сторону HTTP/2. shell-operator (общий базовый образ common/shell-operator) использует HTTP/2 только как клиент к доверенному in-cluster API-серверу Kubernetes; его собственные служебные эндпоинты (метрики, liveness) обслуживаются по HTTP/1 внутри кластера и не принимают HTTP/2-кадры от недоверенных источников. Предусловие эксплуатации не выполняется, уязвимый путь недостижим. Штатное исправление — обновление базового образа common/shell-operator (x/net v0.56.0)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-39821 — некорректная обработка Punycode-меток в golang.org/x/net/idna (ToASCII/ToUnicode). shell-operator (общий базовый образ common/shell-operator) обращается к доверенному in-cluster API-серверу Kubernetes по адресу из kubeconfig/service host (IP или короткое DNS-имя сервиса) и не выполняет преобразование недоверенных интернационализированных доменных имён. Уязвимый путь idna недостижим. Штатное исправление — обновление базового образа common/shell-operator (x/net v0.56.0)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-46600 — panic при разборе некорректной SVCB/HTTPS DNS-записи в golang.org/x/net/dns/dnsmessage. Затрагивает shell-operator (x/net v0.52.0) и встроенный в него kubectl (x/net v0.55.0); оба наследуются из общего базового образа common/shell-operator. Разрешение имён выполняется штатным резолвером против доверенного кластерного DNS; специализированный разбор SVCB/HTTPS RR через dnsmessage в путях исполнения этих бинарников не задействован и не получает недоверенного ввода. Уязвимый путь недостижим. Штатное исправление — обновление базового образа common/shell-operator (x/net v0.56.0)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-39824 — целочисленное переполнение в NewNTUnicodeString в golang.org/x/sys/windows. Уязвимый код относится исключительно к Windows-подпакету x/sys/windows. Бинарник shell-operator (из общего базового образа common/shell-operator) собирается и запускается под Linux (GOOS=linux), поэтому пакет x/sys/windows не компилируется в исполняемый путь и не вызывается. Уязвимый код в образе не исполняется. Штатное исправление — обновление базового образа common/shell-operator (x/sys v0.46.0)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.35.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.37.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-56852 — бесконечный цикл в norm.Iter (golang.org/x/text) при обработке ввода с некорректными UTF-8 байтами. Затрагивает shell-operator (x/text v0.35.0) и встроенный kubectl (x/text v0.37.0), наследуемые из общего базового образа common/shell-operator. Эти бинарники не выполняют Unicode-нормализацию недоверенного ввода через norm.Iter: shell-operator обрабатывает объекты Kubernetes, kubectl — клиент к доверенному API-серверу. Предусловие эксплуатации (нормализация недоверенного невалидного UTF-8) не выполняется, уязвимый путь недостижим. Штатное исправление — обновление базового образа common/shell-operator (x/text v0.39.0)."
+    }
+  ]
+}
