@@ -141,9 +141,9 @@ git:
     - documentation/config
     - documentation/search-embedded-modules-*
     - documentation/pages/drafts
-{{ if and ( eq .ModuleName "documentation") (ne .Edition "CSE") }}
-    - documentation/pages/cse
-{{ end }}
+# {{ if and ( eq .ModuleName "documentation") (ne .Edition "CSE") }}
+#     - documentation/pages/cse
+# {{ end }}
 #{{ if ne .ModuleName "website-docs" }}
 #    - site/_faq
 #    - site/pages
@@ -176,6 +176,10 @@ git:
 {{ if eq .Edition "CE" }}
   excludePaths:
     - pages/LICENSE_AGREEMENT_RU.md
+{{ end }}
+{{ if ne .Edition "CSE" }}
+  excludePaths:
+    - pages/cse
 {{ end }}
   stageDependencies:
     setup:
