@@ -5,11 +5,14 @@ lang: ru
 decimalNumber: RU.86432418.00001-01 90 04-1
 ---
 
-{% raw %}
 
+{% unless site.mode == "module" %}
 <div style="text-align: right">
 <a href="pdf/admin_guide.pdf" class="button button--outline">Скачать PDF</a>
 </div>
+{% endunless %}
+
+{% raw %}
 
 ## Список используемых обозначений и сокращений
 

@@ -2,6 +2,7 @@
 title: "Список алертов"
 permalink: ru/reference/alerts.html
 lang: ru
+editionsNotAvailable: [cse]
 search: alerts list, monitoring alerts, список алертов, алерты мониторинга
 ---
 

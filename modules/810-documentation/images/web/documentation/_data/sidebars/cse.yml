@@ -1,7 +1,6 @@
 # Next lines are for local build only
 entries:
     - title:
-        en: Overview
         ru: Введение в документацию
       url: /
     - title:
@@ -13,6 +12,66 @@ entries:
     - title:
         ru: Руководство пользователя
       url: /user-guide.html
+    - title:
+        en: Reference
+        ru: Справка
+      folders:
+        - title:
+            en: API
+            ru: API
+          folders:
+            - title:
+                en: Global configuration
+                ru: Глобальные настройки
+              url: /reference/api/global.html
+            - title:
+                en: Custom Resources
+                ru: Custom Resources
+              url: /reference/api/cr.html
+        - title:
+            en: Container registry structure
+            ru: Структура хранилища образов контейнеров
+          url: /reference/container-registry-structure.html
+        - title:
+            en: Network interaction
+            ru: Сетевое взаимодействие
+          url: /reference/network_interaction.html
+        - title:
+            en: Sysctl parameters
+            ru: Параметры sysctl
+          url: /reference/sysctl.html
+        - title:
+            en: Used directors
+            ru: Используемые директории
+          url: /reference/used_directories.html
+    - title:
+        en: Console utilities
+        ru: Консольные утилиты
+      folders:
+      - title:
+          en: Deckhouse CLI (d8)
+          ru: Deckhouse CLI (d8)
+        folders:
+        - title:
+            en: Overview and installation
+            ru: Описание и установка
+          url: /cli/d8/
+        - title:
+            en: Reference
+            ru: Справка
+          url: /cli/d8/reference/
+    - title:
+        en: FAQ
+        ru: FAQ
+      url: /faq.html
+    - title:
+        en: Release notes
+        ru: История изменений
+      url: /release-notes.html
+    - title:
+        ru: --------------
+      url: /
+
 # ------------- Administration -------------
     - title:
         en: Administration
@@ -1767,73 +1826,3 @@ entries:
             en: Reference
             ru: Справка
           url: /cli/d8/reference/
-    - title:
-        en: FAQ
-        ru: FAQ
-      url: /faq.html
-    - title:
-        en: Release notes
-        ru: История изменений
-      url: /release-notes.html
-  # ------------- TEST -------------
-    - title:
-        en: Projects (WIP)
-        ru: Проекты (WIP)
-      draft: true
-      folders:
-        - title:
-            en: Concepts
-            ru: Концепции
-          folders:
-            - title:
-                en: Overview
-                ru: Обзор
-              url: /test/concepts/
-            - title:
-                en: Glossary
-                ru: Глоссарий
-              url: /test/concepts/glossary.html
-            - title:
-                en: Projects
-                ru: Проекты
-              url: /test/concepts/projects.html
-            - title:
-                en: Role Model
-                ru: Ролевая модель
-              url: /test/concepts/rbac.html
-        - title:
-            en: Administration
-            ru: Администрирование
-          folders:
-            - title:
-                en: Projects
-                ru: Проекты
-              url: /test/admin/projects.html
-            - title:
-                en: Role Model
-                ru: Ролевая модель
-              url: /test/admin/rbac.html
-        - title:
-            en: Using
-            ru: Использование
-          folders:
-            - title:
-                en: Projects
-                ru: Проекты
-              url: /test/user/projects.html
-        - title:
-            en: Architecture
-            ru: Архитектура
-          folders:
-            - title:
-                en: Overview
-                ru: Обзор
-              url: /test/architecture/
-            - title:
-                en: Projects
-                ru: Проекты
-              url: /test/architecture/projects.html
-            - title:
-                en: Role Model
-                ru: Ролевая модель
-              url: /test/architecture/rbac.html

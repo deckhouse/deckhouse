@@ -133,11 +133,16 @@ defaults:
     values:
       ai_export: false
   - scope:
+      path: "pages/installing"
+    values:
+      editionsNotAvailable: [cse]
+  - scope:
       path: "pages/admin"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
       searchBoost: 2
   - scope:
       path: "pages/architecture"
@@ -145,6 +150,7 @@ defaults:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
       searchBoost: 2
   - scope:
       path: "pages/user"
@@ -152,6 +158,7 @@ defaults:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
       searchBoost: 1.5
   - scope:
       path: "pages/reference"
