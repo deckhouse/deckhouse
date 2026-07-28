@@ -55,13 +55,14 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 1. **Node-termination-handler** — [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler), отвечает за обработку DKP событий от сервисов AWS о недоступности экземпляров EC2.
 
    Node-termination-handler обрабатывает следующие события AWS:
+
    * [EC2 maintenance events](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html);
    * [EC2 Spot interruptions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html);
    * [ASG Scale-In](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroupLifecycle.html#as-lifecycle-scale-in);
    * [ASG AZ Rebalance](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html);
    * [EC2 Instance Termination](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html).
 
-   При получении указанных событий node-termination-handler выполняет drain/cordon для соответствующего узла.
+   При получении события, когда необходимо выполнить drain, а затем удаление узла, например, в случае штатного прерывания работы spot-инстанса, node-termination-handler устанавливает тейнт `aws-node-termination-handler/spot-itn` для соответствующего узла. Непосредственно drain, а затем удаление узла выполняется модулем [`node-manager`](/modules/node-manager/) через механику [хуков модуля](../../module-development/structure/#hooks).
 
    Состоит из одного контейнера:
 
