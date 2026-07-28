@@ -40,6 +40,12 @@ StateDirectory=containerd
 StateDirectoryMode=0750
 RuntimeDirectory=containerd
 RuntimeDirectoryMode=0750
+# ...but do NOT take /run/containerd away again when the unit stops. systemd
+# removes a RuntimeDirectory on stop unless told otherwise, and that directory
+# holds the shim sockets: wiping it turns every containerd restart into the loss
+# of every container on the node, which is exactly what Delegate=yes and
+# KillMode=process are here to prevent.
+RuntimeDirectoryPreserve=yes
 
 # Having non-zero Limit*s causes performance problems due to accounting overhead
 # in the kernel. We recommend using cgroups to do container-local accounting.
