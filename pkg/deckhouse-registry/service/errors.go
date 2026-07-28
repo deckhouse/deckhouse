@@ -17,7 +17,10 @@ package service
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
+
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"github.com/deckhouse/deckhouse/pkg/registry"
 )
@@ -40,6 +43,35 @@ var (
 // IsNotFound reports whether err is (or wraps) ErrImageNotFound.
 func IsNotFound(err error) bool {
 	return errors.Is(err, ErrImageNotFound)
+}
+
+// isNotFound recognizes a registry answer meaning "there is nothing here":
+// either the sentinel already, or the transport-level codes a registry uses for
+// a missing repository or manifest. Operations that the underlying client does
+// not already map — listing, in particular — run their error through this so
+// callers only ever match ErrImageNotFound.
+func isNotFound(err error) bool {
+	if errors.Is(err, ErrImageNotFound) {
+		return true
+	}
+
+	var transportErr *transport.Error
+	if !errors.As(err, &transportErr) {
+		return false
+	}
+
+	if transportErr.StatusCode == http.StatusNotFound {
+		return true
+	}
+
+	for _, e := range transportErr.Errors {
+		switch e.Code {
+		case transport.NameUnknownErrorCode, transport.ManifestUnknownErrorCode:
+			return true
+		}
+	}
+
+	return false
 }
 
 // pathComponentRe is the OCI distribution spec grammar for one path component.

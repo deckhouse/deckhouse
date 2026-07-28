@@ -198,6 +198,13 @@ func (s *BasicService) ListTags(ctx context.Context, opts ...registry.ListTagsOp
 
 	tags, err := s.client.ListTags(ctx, opts...)
 	if err != nil {
+		// A repository that does not exist answers NAME_UNKNOWN or 404 here.
+		// Mapping it to the sentinel keeps callers from having to recognize
+		// transport-level codes themselves.
+		if isNotFound(err) {
+			return nil, fmt.Errorf("%w: %s", ErrImageNotFound, s.Path())
+		}
+
 		return nil, fmt.Errorf("list tags of %s: %w", s.Path(), err)
 	}
 
