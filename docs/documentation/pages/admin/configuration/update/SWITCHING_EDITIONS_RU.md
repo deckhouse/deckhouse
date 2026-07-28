@@ -170,7 +170,7 @@ Summary:
          [[ -z "$modules" ]] && return 0
          local registry_modules=$(d8-crane ls "$repo" 2>/dev/null)
 
-         echo "Модуль | Наличие модуля | Наличие версии";
+         echo "Модуль | Наличие модуля | Наличие версии"
          echo "-------|----------------|---------------"
 
          echo "$modules" | while read module version; do

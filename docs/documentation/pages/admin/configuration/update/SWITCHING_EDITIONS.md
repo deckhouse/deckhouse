@@ -167,8 +167,8 @@ You can find the edition and version currently used in the cluster on the main p
          [[ -z "$modules" ]] && return 0
          local registry_modules=$(d8-crane ls "$repo" 2>/dev/null)
 
-         echo "Module | In list | Release";
-         echo "-------|----------|--------"
+         echo "Module | In registry | Version in registry"
+         echo "-------|-------------|--------------------"
 
          echo "$modules" | while read module version; do
             grep -qx "$module" <<< "$registry_modules" && list="✅" || list="❌"
