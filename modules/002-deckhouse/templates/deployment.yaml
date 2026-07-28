@@ -3,6 +3,13 @@ cpu: 150m
 memory: 500Mi
 {{- end }}
 
+{{- /*
+  Render deckhouse's own workload only when it runs in this cluster (self-hosted).
+  currentReleaseImageName is set by the set_module_image_value hook from the
+  in-cluster deckhouse Deployment; when deckhouse manages a remote cluster it is
+  unset, so nothing here is rendered into that cluster.
+*/}}
+{{- if (hasKey .Values.deckhouse.internal "currentReleaseImageName") }}
 {{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -415,3 +422,4 @@ spec:
         hostPath:
           path: /var/lib/deckhouse/downloaded
           type: DirectoryOrCreate
+{{- end }}
