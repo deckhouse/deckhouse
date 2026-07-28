@@ -152,6 +152,7 @@ ClusterRole
 ClusterRoleBinding
 ClusterVirtualImage
 CoC
+CodeScoring
 Colocating
 Colour
 CommitDetail
@@ -179,12 +180,14 @@ CustomPrometheusRules
 CustomResource
 CustomResourceDefinition
 CustomResourceDefinitions
+CycloneDX
 Cелектор
 Cертификат
 Cинхронизация
 Cоздается
 Cоздайте
 Cписок
+DAST
 DCGM
 DDTHH
 DHCP
@@ -271,6 +274,7 @@ Elasticsearch
 EmailConfig
 EnvoyFilter
 EuropeClouds
+Exploitability
 ExternalIP
 ExternalIPs
 ExternalSecret
@@ -280,6 +284,7 @@ FCD
 FCGI
 FQDN
 FSID
+FSTEC
 Failover
 Falco
 FalcoAuditRules
@@ -402,6 +407,7 @@ JFrog
 JPA
 JQ
 JSC
+JUnit
 JWK
 JWKS
 JWT
@@ -555,6 +561,7 @@ OOM
 OPA
 ORG
 ORM
+OSA
 OSI
 OSes
 OVF
@@ -696,8 +703,11 @@ RuleGroup
 S3
 SAML
 SANs
+SARIF
 SASL
+SAST
 SBOM
+SCA
 SCM
 SCP
 SCSITarget
@@ -840,6 +850,7 @@ VCDClusterConfiguration
 VCDInstanceClass
 VDC
 VDI
+VEX
 VK
 VLAN
 VM
@@ -1161,6 +1172,7 @@ dst
 dvp
 dynDNS
 eBPF
+eXchange
 earlyOOM
 ee
 eg
@@ -1772,6 +1784,7 @@ zoneTagCategory
 Аудиофайлы
 Б
 БД
+БДУ
 Булевый
 ВМ
 Визуализировать
@@ -2788,3 +2801,4 @@ zoneTagCategory
 юзера
 юнит
 юнита
+️Необходимо

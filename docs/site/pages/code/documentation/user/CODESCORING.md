@@ -14,7 +14,7 @@ The CodeScoring integration in Deckhouse Code lets you use CodeScoring features 
 
 - Dependency analysis
 - Vulnerability detection
-- SBOM generation
+- Software Bill of Materials (SBOM) generation
 - Platform-side triage
 
 Static (SAST) and dynamic testing (DAST) are not part of this integration.
@@ -24,9 +24,9 @@ Static (SAST) and dynamic testing (DAST) are not part of this integration.
 This integration provides the following capabilities:
 
 - Dependency analysis (packages, libraries, versions).
-- Vulnerability detection using CVE databases (including Kaspersky Open Source Software Threats Data Feed).
+- Vulnerability detection using Common Vulnerabilities and Exposures (CVE) databases (including FSTEC BDU and Kaspersky Open Source Software Threats Data Feed).
 - SBOM generation in CycloneDX format.
-- Native GitLab reports produced in a single run: "Dependency Scanning", "Code Quality", "JUnit", plus "SARIF" and a "CycloneDX SBOM".
+- Native GitLab reports produced in a single run: "Dependency Scanning", "Code Quality", "JUnit", plus "SARIF" (Static Analysis Results Interchange Format) and a "CycloneDX SBOM".
 - Triage and policies (severity thresholds, finding suppression) on the CodeScoring platform side.
 
 ## Prerequisites
@@ -133,7 +133,7 @@ Detected vulnerabilities can be triaged directly in the CodeScoring interface. T
 
 1. Navigate to "SCA" → "Vulnerabilities".
 1. Select the status: `Active`, `Confirmed`, `Not affected`, or `False positive`.
-1. Fill in the justification and response (compatible with CycloneDX VEX format).
+1. Fill in the justification and response, compatible with the CycloneDX Vulnerability Exploitability eXchange (VEX) format.
 
 Temporary suppression of findings is available by project, technology, package, license, or CVE.
 
