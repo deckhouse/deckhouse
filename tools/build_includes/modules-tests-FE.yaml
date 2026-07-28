@@ -131,17 +131,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/035-cni-simple-bridge
-  to: /deckhouse/modules/035-cni-simple-bridge
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/036-kube-proxy
   to: /deckhouse/modules/036-kube-proxy
   excludePaths:

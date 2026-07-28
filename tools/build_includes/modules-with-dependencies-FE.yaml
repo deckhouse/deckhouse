@@ -111,22 +111,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/035-cni-simple-bridge/hooks
-  to: /deckhouse/modules/035-cni-simple-bridge/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/035-cni-simple-bridge/requirements
-  to: /deckhouse/modules/035-cni-simple-bridge/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/036-kube-proxy/hooks
   to: /deckhouse/modules/036-kube-proxy/hooks
   excludePaths:

@@ -81,3 +81,6 @@ git:
   stageDependencies:
     install:
     - "*.yaml"
+shell:
+  install:
+  - echo noop

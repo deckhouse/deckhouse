@@ -37,6 +37,9 @@ import:
   to: /validator
   before: setup
 {{ include "image_spec_for_infrastructure_manager" . }}
+shell:
+  install:
+  - echo noop
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
