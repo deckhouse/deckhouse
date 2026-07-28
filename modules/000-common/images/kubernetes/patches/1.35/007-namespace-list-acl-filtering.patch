@@ -270,10 +270,10 @@ index 00000000000..42a8cdeed49
 +}
 diff --git a/pkg/registry/core/namespace/storage/filtering_test.go b/pkg/registry/core/namespace/storage/filtering_test.go
 new file mode 100644
-index 00000000000..0355f4fe5ba
+index 00000000000..95d89968a7e
 --- /dev/null
 +++ b/pkg/registry/core/namespace/storage/filtering_test.go
-@@ -0,0 +1,525 @@
+@@ -0,0 +1,524 @@
 +/*
 +Copyright 2025 The Kubernetes Authors.
 +
@@ -305,7 +305,6 @@ index 00000000000..0355f4fe5ba
 +	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 +	"k8s.io/apimachinery/pkg/watch"
 +	"k8s.io/apiserver/pkg/authentication/user"
-+	"k8s.io/apiserver/pkg/endpoints/filters"
 +	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 +	"k8s.io/apiserver/pkg/registry/generic"
 +	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
@@ -405,7 +404,7 @@ index 00000000000..0355f4fe5ba
 +}
 +
 +func ctxFiltered(username string, groups []string) context.Context {
-+	return filters.WithNamespaceFilteringMode(ctxWithUser(username, groups))
++	return scopefilter.WithNamespaceFilteringMode(ctxWithUser(username, groups))
 +}
 +
 +// emptyListOptions is the minimal ListOptions value the watch path expects:
@@ -800,10 +799,10 @@ index 00000000000..0355f4fe5ba
 +	}
 +}
 diff --git a/pkg/registry/core/namespace/storage/storage.go b/pkg/registry/core/namespace/storage/storage.go
-index e67cedeb15e..ff89cf9de64 100644
+index e67cedeb15e..c6b940436b9 100644
 --- a/pkg/registry/core/namespace/storage/storage.go
 +++ b/pkg/registry/core/namespace/storage/storage.go
-@@ -19,19 +19,25 @@ package storage
+@@ -19,19 +19,24 @@ package storage
  import (
  	"context"
  	"fmt"
@@ -816,7 +815,6 @@ index e67cedeb15e..ff89cf9de64 100644
 +	"k8s.io/apimachinery/pkg/runtime/schema"
  	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
  	"k8s.io/apimachinery/pkg/watch"
-+	"k8s.io/apiserver/pkg/endpoints/filters"
  	"k8s.io/apiserver/pkg/registry/generic"
  	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 +	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
@@ -829,7 +827,7 @@ index e67cedeb15e..ff89cf9de64 100644
  	api "k8s.io/kubernetes/pkg/apis/core"
  	"k8s.io/kubernetes/pkg/printers"
  	printersinternal "k8s.io/kubernetes/pkg/printers/internalversion"
-@@ -40,7 +46,25 @@ import (
+@@ -40,7 +45,25 @@ import (
  	"sigs.k8s.io/structured-merge-diff/v6/fieldpath"
  )
  
@@ -846,7 +844,7 @@ index e67cedeb15e..ff89cf9de64 100644
 +// the filtering logic lives one level down, on store.ScopeFilter (see
 +// genericregistry.Store's field doc). When a fetcher was supplied to
 +// NewREST, store.ScopeFilter is wired in IdentityByName mode with an
-+// unconditional trigger (filters.IsNamespaceFilteringMode, set by the
++// unconditional trigger (scopefilter.IsNamespaceFilteringMode, set by the
 +// authorization filter for users who lack RBAC for list/get on namespaces
 +// but should still see the subset they have *some* access to). This is the
 +// original, narrower ACL-filtering mechanism that scopefilter's generic
@@ -856,7 +854,7 @@ index e67cedeb15e..ff89cf9de64 100644
  type REST struct {
  	store  *genericregistry.Store
  	status *genericregistry.Store
-@@ -56,8 +80,73 @@ type FinalizeREST struct {
+@@ -56,8 +79,73 @@ type FinalizeREST struct {
  	store *genericregistry.Store
  }
  
@@ -932,7 +930,7 @@ index e67cedeb15e..ff89cf9de64 100644
  	store := &genericregistry.Store{
  		NewFunc:                   func() runtime.Object { return &api.Namespace{} },
  		NewListFunc:               func() runtime.Object { return &api.NamespaceList{} },
-@@ -75,8 +164,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
+@@ -75,8 +163,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
  
  		TableConvertor: printerstorage.TableConvertor{TableGenerator: printers.NewTableGenerator().With(printersinternal.AddHandlers)},
  	}
@@ -943,7 +941,7 @@ index e67cedeb15e..ff89cf9de64 100644
  		return nil, nil, nil, err
  	}
  
-@@ -88,7 +177,33 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
+@@ -88,7 +176,33 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
  	finalizeStore.UpdateStrategy = namespace.FinalizeStrategy
  	finalizeStore.ResetFieldsStrategy = namespace.FinalizeStrategy
  
@@ -955,7 +953,7 @@ index e67cedeb15e..ff89cf9de64 100644
 +	// statusStore/finalizeStore were already copied above, so neither
 +	// subresource inherits it -- consistent with the authorization filter
 +	// never tagging a subresource request for filtering in the first
-+	// place (filters.IsNamespaceFilteringMode only ever fires for the
++	// place (scopefilter.IsNamespaceFilteringMode only ever fires for the
 +	// top-level namespaces resource), just structurally guaranteed rather
 +	// than incidentally true.
 +	if fetcher != nil {
@@ -964,7 +962,7 @@ index e67cedeb15e..ff89cf9de64 100644
 +			BuildPredicate:  store.PredicateFunc,
 +			Resource:        namespacesGVR,
 +			Mode:            scopefilter.IdentityByName,
-+			Trigger:         filters.IsNamespaceFilteringMode,
++			Trigger:         scopefilter.IsNamespaceFilteringMode,
 +			Accessible:      fetcher,
 +			RefreshInterval: cfg.refreshInterval,
 +		}
@@ -978,7 +976,7 @@ index e67cedeb15e..ff89cf9de64 100644
  }
  
  func (r *REST) NamespaceScoped() bool {
-@@ -114,6 +229,8 @@ func (r *REST) NewList() runtime.Object {
+@@ -114,6 +228,8 @@ func (r *REST) NewList() runtime.Object {
  	return r.store.NewList()
  }
  
@@ -987,7 +985,7 @@ index e67cedeb15e..ff89cf9de64 100644
  func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
  	return r.store.List(ctx, options)
  }
-@@ -126,10 +243,14 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
+@@ -126,10 +242,14 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
  	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
  }
  
@@ -1020,7 +1018,7 @@ index 3ad71470cfb..6172ee28192 100644
  		restOptionsGetter,
  		p.primaryServiceClusterIPAllocator.IPFamily(),
 diff --git a/pkg/registry/core/rest/storage_core_generic.go b/pkg/registry/core/rest/storage_core_generic.go
-index 9d82ca85633..0a9f149c3eb 100644
+index 9d82ca85633..44a9a1442b1 100644
 --- a/pkg/registry/core/rest/storage_core_generic.go
 +++ b/pkg/registry/core/rest/storage_core_generic.go
 @@ -106,7 +106,21 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
@@ -1031,7 +1029,7 @@ index 9d82ca85633..0a9f149c3eb 100644
 +	// Deckhouse: always wire the filtering-capable namespace storage. The
 +	// fetcher is constructed from the loopback client so impersonation
 +	// against permission-browser-apiserver works out of the box. Actual
-+	// per-request filtering only kicks in when filters.IsNamespaceFilteringMode(ctx)
++	// per-request filtering only kicks in when scopefilter.IsNamespaceFilteringMode(ctx)
 +	// is true — set by WithAuthorization when a user lacks RBAC for
 +	// list/get on namespaces but should still see their accessible subset.
 +	//
@@ -1080,17 +1078,10 @@ index e27495de54e..fbb551e9a4f 100644
  	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
  	s.GenericAPIServer.RegisterDestroyFunc(crdHandler.destroy)
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index c252e7fe75b..418de39a661 100644
+index c252e7fe75b..efba538c9a1 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-@@ -68,12 +68,14 @@ import (
- 	"k8s.io/apimachinery/pkg/version"
- 	"k8s.io/apiserver/pkg/admission"
- 	"k8s.io/apiserver/pkg/authorization/authorizer"
-+	"k8s.io/apiserver/pkg/endpoints/filters"
- 	"k8s.io/apiserver/pkg/endpoints/handlers"
- 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
- 	"k8s.io/apiserver/pkg/endpoints/metrics"
+@@ -74,6 +74,7 @@ import (
  	apirequest "k8s.io/apiserver/pkg/endpoints/request"
  	"k8s.io/apiserver/pkg/features"
  	"k8s.io/apiserver/pkg/registry/generic"
@@ -1098,7 +1089,7 @@ index c252e7fe75b..418de39a661 100644
  	genericfilters "k8s.io/apiserver/pkg/server/filters"
  	utilfeature "k8s.io/apiserver/pkg/util/feature"
  	"k8s.io/apiserver/pkg/util/webhook"
-@@ -130,6 +132,14 @@ type crdHandler struct {
+@@ -130,6 +131,14 @@ type crdHandler struct {
  	// The limit on the request size that would be accepted and decoded in a write request
  	// 0 means no limit.
  	maxRequestBodyBytes int64
@@ -1113,7 +1104,7 @@ index c252e7fe75b..418de39a661 100644
  }
  
  // crdInfo stores enough information to serve the storage for the custom resource
-@@ -582,6 +592,11 @@ func (r *crdHandler) tearDown(oldInfo *crdInfo) {
+@@ -582,6 +591,11 @@ func (r *crdHandler) tearDown(oldInfo *crdInfo) {
  		// destroy only the main storage. Those for the subresources share cacher and etcd clients.
  		storage.CustomResource.DestroyFunc()
  	}
@@ -1125,7 +1116,7 @@ index c252e7fe75b..418de39a661 100644
  }
  
  // Destroy shuts down storage layer for all registered CRDs.
-@@ -770,6 +785,11 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -770,6 +784,11 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		}
  	}
  
@@ -1137,7 +1128,7 @@ index c252e7fe75b..418de39a661 100644
  	for _, v := range crd.Spec.Versions {
  		// Do not construct storage if version is neither served nor stored
  		if !v.Storage && !v.Served {
-@@ -887,6 +907,42 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -887,6 +906,42 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  
  		clusterScoped := crd.Spec.Scope == apiextensionsv1.ClusterScoped
  
@@ -1170,7 +1161,7 @@ index c252e7fe75b..418de39a661 100644
 +		if clusterScoped && r.scopeResolvers != nil && scopefilter.IsNamespaceIdentityResource(resource.GroupResource()) {
 +			store := storages[v.Name].CustomResource.Store
 +			if decorator := r.scopeResolvers.NewIdentityDecorator(
-+				store, store.PredicateFunc, store.Decorator, resource, filters.IsNamespaceFilteringMode,
++				store, store.PredicateFunc, store.Decorator, resource,
 +			); decorator != nil {
 +				store.ScopeFilter = decorator
 +				scopeFilterWired = true
@@ -1180,7 +1171,7 @@ index c252e7fe75b..418de39a661 100644
  		// CRDs explicitly do not support protobuf, but some objects returned by the API server do
  		streamingCollections := utilfeature.DefaultFeatureGate.Enabled(features.StreamingCollectionEncodingToJSON)
  		negotiatedSerializer := unstructuredNegotiatedSerializer{
-@@ -1075,6 +1131,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1075,6 +1130,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  	storageMap2[crd.UID] = ret
  	r.customStorage.Store(storageMap2)
  
@@ -1197,7 +1188,7 @@ index c252e7fe75b..418de39a661 100644
  }
  
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-index 439696d07ab..bc9744429e3 100644
+index 439696d07ab..f1800c4ce64 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 @@ -24,16 +24,19 @@ import (
@@ -1220,7 +1211,7 @@ index 439696d07ab..bc9744429e3 100644
  )
  
  const (
-@@ -45,8 +48,103 @@ const (
+@@ -45,8 +48,78 @@ const (
  	decisionAllow  = "allow"
  	decisionForbid = "forbid"
  	reasonError    = "internal error"
@@ -1242,31 +1233,6 @@ index 439696d07ab..bc9744429e3 100644
 +	reasonScopeFilter   = "scope filtering mode"
  )
  
-+// Deckhouse: namespaceFilteringModeKey is the context-value key that the
-+// authorization filter uses to flag a request as "denied by RBAC but routed
-+// to the namespace-filtering code path in storage". It is intentionally an
-+// unexported zero-size struct so external packages cannot synthesize it
-+// without going through WithNamespaceFilteringMode (which is only meant for
-+// tests).
-+type namespaceFilteringModeKey struct{}
-+
-+// IsNamespaceFilteringMode reports whether the request context was tagged for
-+// ACL-based namespace filtering (see the WithAuthorization branch below).
-+// The storage layer reads this to decide whether to invoke the accessible-
-+// namespace fetcher.
-+func IsNamespaceFilteringMode(ctx context.Context) bool {
-+	val, ok := ctx.Value(namespaceFilteringModeKey{}).(bool)
-+	return ok && val
-+}
-+
-+// WithNamespaceFilteringMode returns a derivative context with the namespace
-+// filtering flag set. Production code reaches this state via the
-+// authorization filter; tests use this helper to construct a context that
-+// pretends an authorizer denial happened.
-+func WithNamespaceFilteringMode(ctx context.Context) context.Context {
-+	return context.WithValue(ctx, namespaceFilteringModeKey{}, true)
-+}
-+
 +// isNamespaceListGetOrWatchRequest reports whether the request targets the
 +// core /v1/namespaces list/get/watch endpoint, or that of a cluster-scoped
 +// resource whose visibility is derived from the same namespace ACL (see
@@ -1324,7 +1290,7 @@ index 439696d07ab..bc9744429e3 100644
  type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
  
  // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
-@@ -68,6 +166,23 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -68,6 +141,23 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			responsewriters.InternalError(w, req, err)
  			return
  		}
@@ -1348,7 +1314,7 @@ index 439696d07ab..bc9744429e3 100644
  		authorized, reason, err := a.Authorize(ctx, attributes)
  
  		authorizationFinish := time.Now()
-@@ -81,6 +196,24 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -81,6 +171,24 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			audit.AddAuditAnnotations(ctx,
  				decisionAnnotationKey, decisionAllow,
  				reasonAnnotationKey, reason)
@@ -1373,7 +1339,7 @@ index 439696d07ab..bc9744429e3 100644
  			handler.ServeHTTP(w, req)
  			return
  		}
-@@ -90,6 +223,60 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -90,6 +198,60 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			return
  		}
  
@@ -1381,7 +1347,7 @@ index 439696d07ab..bc9744429e3 100644
 +		// storage layer return an ACL-filtered response instead. This is
 +		// strictly a relaxation for *read* verbs; mutating verbs still
 +		// hit the standard Forbidden path below. The storage layer keys
-+		// off IsNamespaceFilteringMode() so other consumers of this
++		// off scopefilter.IsNamespaceFilteringMode() so other consumers of this
 +		// filter chain are unaffected.
 +		requestInfo, _ := request.RequestInfoFrom(ctx)
 +		if isNamespaceListGetOrWatchRequest(requestInfo) {
@@ -1390,7 +1356,7 @@ index 439696d07ab..bc9744429e3 100644
 +			audit.AddAuditAnnotations(ctx,
 +				decisionAnnotationKey, decisionAllowFiltered,
 +				reasonAnnotationKey, reasonNamespaceFilter)
-+			handler.ServeHTTP(w, req.WithContext(WithNamespaceFilteringMode(ctx)))
++			handler.ServeHTTP(w, req.WithContext(scopefilter.WithNamespaceFilteringMode(ctx)))
 +			return
 +		}
 +
@@ -1436,7 +1402,7 @@ index 439696d07ab..bc9744429e3 100644
  			decisionAnnotationKey, decisionForbid,
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go
 new file mode 100644
-index 00000000000..f108ede546d
+index 00000000000..62afedbaeb5
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go
 @@ -0,0 +1,154 @@
@@ -1479,7 +1445,7 @@ index 00000000000..f108ede546d
 +
 +func (h *identityTestHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 +	h.called = true
-+	h.filteringMode = IsNamespaceFilteringMode(req.Context())
++	h.filteringMode = scopefilter.IsNamespaceFilteringMode(req.Context())
 +	w.WriteHeader(http.StatusOK)
 +}
 +
@@ -4156,10 +4122,10 @@ index 00000000000..e7806d73efc
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
 new file mode 100644
-index 00000000000..7ba7f42c847
+index 00000000000..97b89679b56
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
-@@ -0,0 +1,235 @@
+@@ -0,0 +1,236 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -4232,9 +4198,7 @@ index 00000000000..7ba7f42c847
 +func TestNewIdentityDecorator(t *testing.T) {
 +	resolvers := &Resolvers{Accessible: staticFetcher{}, Membership: staticMembership{}}
 +	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha3", Resource: "projects"}
-+	triggered := func(_ context.Context) bool { return true }
-+
-+	decorator := resolvers.NewIdentityDecorator(nil, nil, nil, gvr, triggered)
++	decorator := resolvers.NewIdentityDecorator(nil, nil, nil, gvr)
 +
 +	if decorator.Mode != IdentityByName {
 +		t.Fatalf("expected IdentityByName, got %v", decorator.Mode)
@@ -4245,8 +4209,11 @@ index 00000000000..7ba7f42c847
 +	if _, ok := decorator.Accessible.(*projectFetcher); !ok {
 +		t.Fatalf("expected the name-deriving fetcher from the allowlist, got %T", decorator.Accessible)
 +	}
-+	if !decorator.Trigger(context.Background()) {
-+		t.Fatal("the caller-supplied trigger must be used as is")
++	if decorator.Trigger(context.Background()) {
++		t.Fatal("filtering must not engage on a context the authorization filter never tagged")
++	}
++	if !decorator.Trigger(WithNamespaceFilteringMode(context.Background())) {
++		t.Fatal("filtering must engage once the authorization filter tags the request")
 +	}
 +}
 +
@@ -4257,7 +4224,7 @@ index 00000000000..7ba7f42c847
 +	resolvers := &Resolvers{Accessible: staticFetcher{}, Membership: staticMembership{}}
 +	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "projecttemplates"}
 +
-+	if decorator := resolvers.NewIdentityDecorator(nil, nil, nil, gvr, nil); decorator != nil {
++	if decorator := resolvers.NewIdentityDecorator(nil, nil, nil, gvr); decorator != nil {
 +		t.Fatal("expected no decorator for a resource outside the allowlist")
 +	}
 +}
@@ -5381,10 +5348,10 @@ index 00000000000..65bbc78eec3
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go
 new file mode 100644
-index 00000000000..aed7e883430
+index 00000000000..f04b1abb4b8
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/request.go
-@@ -0,0 +1,130 @@
+@@ -0,0 +1,157 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -5495,6 +5462,33 @@ index 00000000000..aed7e883430
 +
 +type bypassContextKey struct{}
 +
++// namespaceFilteringModeKey is the context-value key flagging a request as
++// "denied by RBAC but routed to the namespace-filtering code path in storage".
++// It is an unexported zero-size struct so no external package can synthesize
++// the tag without going through WithNamespaceFilteringMode.
++type namespaceFilteringModeKey struct{}
++
++// WithNamespaceFilteringMode returns a derivative context with the namespace
++// filtering flag set. Production code reaches this state through the
++// authorization filter; tests use this helper to construct a context that
++// pretends an authorizer denial happened.
++//
++// The flag lives here rather than in the authorization filter that sets it
++// because the readers are all on this side: the namespaces storage and every
++// identity resource trigger on it, and none of them should have to import the
++// HTTP filter chain to ask a question about scope filtering.
++func WithNamespaceFilteringMode(ctx context.Context) context.Context {
++	return context.WithValue(ctx, namespaceFilteringModeKey{}, true)
++}
++
++// IsNamespaceFilteringMode reports whether the request context was tagged for
++// ACL-based filtering. Storage reads it to decide whether to invoke the
++// accessible-namespace fetcher.
++func IsNamespaceFilteringMode(ctx context.Context) bool {
++	val, ok := ctx.Value(namespaceFilteringModeKey{}).(bool)
++	return ok && val
++}
++
 +// WithBypass marks ctx as "RBAC denied this request, but the authorization
 +// filter chose to hand it to the storage layer for ACL-based filtering
 +// instead of returning 403". The storage layer reads this to decide whether
@@ -5517,10 +5511,10 @@ index 00000000000..aed7e883430
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
 new file mode 100644
-index 00000000000..34bd8da9fa5
+index 00000000000..e14f2d88f3d
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
-@@ -0,0 +1,180 @@
+@@ -0,0 +1,175 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -5652,16 +5646,11 @@ index 00000000000..34bd8da9fa5
 +// "leave this storage unfiltered": wiring a filter that cannot derive names
 +// would hide everything, and an unwired resource simply stays on plain RBAC,
 +// since the authorization bypass only fires for a registered filter.
-+//
-+// trigger is supplied by the caller rather than fixed here because the flag it
-+// reads lives in the authorization filter package, which already imports this
-+// one -- taking it as an argument keeps the dependency pointing one way.
 +func (r *Resolvers) NewIdentityDecorator(
 +	store StoreAccessor,
 +	buildPredicate func(labels.Selector, fields.Selector) storage.SelectionPredicate,
 +	postRead func(runtime.Object),
 +	gvr schema.GroupVersionResource,
-+	trigger func(context.Context) bool,
 +) *Decorator {
 +	newFetcher, ok := namespaceIdentityResources[gvr.GroupResource()]
 +	if !ok || r.Accessible == nil || r.Membership == nil {
@@ -5673,7 +5662,7 @@ index 00000000000..34bd8da9fa5
 +		BuildPredicate:  buildPredicate,
 +		Resource:        gvr,
 +		Mode:            IdentityByName,
-+		Trigger:         trigger,
++		Trigger:         IsNamespaceFilteringMode,
 +		Accessible:      newFetcher(r),
 +		RefreshInterval: r.RefreshInterval,
 +		PostRead:        postRead,
