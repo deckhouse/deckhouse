@@ -79,6 +79,17 @@ func GetCloudConfig(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 					default:
 						kubeCl, err := kubeProvider.KubeClientCtx(ctx)
 						if err != nil {
+							dhlog.FromContext(ctx).DebugContext(
+								ctx,
+								fmt.Sprintf("Could not get Kubernetes client for Deckhouse log printer: %v", err),
+							)
+
+							select {
+							case <-ctx.Done():
+								return
+							case <-time.After(time.Second):
+							}
+
 							continue
 						}
 
