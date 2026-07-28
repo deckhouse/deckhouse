@@ -8,7 +8,7 @@ metadata:
     security.deckhouse.io: security-policy
   annotations:
     metadata.gatekeeper.sh/title: "Deny Exec"
-    metadata.gatekeeper.sh/version: 1.0.0
+    metadata.gatekeeper.sh/version: 1.1.0
     description: >-
       Defines an allow-list of commands that could be executed via the pod/exec action.
       Interactive exec is not permitted.
