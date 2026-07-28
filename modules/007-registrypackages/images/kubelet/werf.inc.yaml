@@ -98,6 +98,10 @@ shell:
   - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
   - cp -f /scripts/sysext-kubelet.service /sysext/usr/lib/systemd/system/kubelet.service
   - cp -f /scripts/extension-release.kubelet /sysext/usr/lib/extension-release.d/
+  # TEST MARKER (branch sysext-update-test2, do not merge): changes the image
+  # content so the sysext gets a new digest, and lands a file the node can be
+  # checked for to prove the merged overlay is the new image.
+  - printf 'sysext-update-test rev2\\n' > /sysext/usr/lib/nodelet-sysext-test-kubelet
   - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 kubelet.erofs sysext/
   - veritysetup format kubelet.erofs kubelet.verity > verity.txt
   - export ROOTHASH=$(awk '/^Root hash:/ {print $3}' verity.txt)
