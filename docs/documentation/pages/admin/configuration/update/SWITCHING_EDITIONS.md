@@ -152,7 +152,7 @@ You can find the edition and version currently used in the cluster on the main p
       }
 
       <!REMOVE_FOR_CE>
-      d8-crane-auth() {
+      d8-crane-login() {
          if command -v d8 &>/dev/null && d8 cr &>/dev/null 2>&1; then
             d8 cr login "$1" -u "license-token" -p "$2"
          else
@@ -180,7 +180,7 @@ You can find the edition and version currently used in the cluster on the main p
       }
 
       <!REMOVE_FOR_CE>
-      d8-crane-auth "registry.deckhouse.io" "$LICENSE_TOKEN"
+      d8-crane-login "registry.deckhouse.io" "$LICENSE_TOKEN"
       <!/REMOVE_FOR_CE>
       check_external_modules "registry.deckhouse.io/deckhouse/$NEW_EDITION/modules"
       ```

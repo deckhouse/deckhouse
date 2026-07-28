@@ -153,7 +153,7 @@ Summary:
       }
 
       <!REMOVE_FOR_CE>
-      d8-crane-auth() {
+      d8-crane-login() {
          if command -v d8 &>/dev/null && d8 cr &>/dev/null 2>&1; then
             d8 cr login "$1" -u "license-token" -p "$2"
          else
@@ -181,7 +181,7 @@ Summary:
       }
 
       <!REMOVE_FOR_CE>
-      d8-crane-auth "registry.deckhouse.ru" "$LICENSE_TOKEN"
+      d8-crane-login "registry.deckhouse.ru" "$LICENSE_TOKEN"
       <!/REMOVE_FOR_CE>
       check_external_modules "registry.deckhouse.ru/deckhouse/$NEW_EDITION/modules"
       ```
