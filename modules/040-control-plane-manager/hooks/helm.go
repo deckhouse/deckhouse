@@ -124,14 +124,14 @@ func init() {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: moduleQueue + "/helm-releases-scan",
+	Queue:     moduleQueue + "/helm-releases-scan",
+	OnStartup: &go_hook.OrderedConfig{Order: 10},
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",
 			Crontab: "0 * * * *", // every hour
 		},
 	},
-	// kubernetesVersionIsAutomatic comes from global Values — no Secret binding needed.
 }, dependency.WithExternalDependencies(handleHelmReleases))
 
 func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {

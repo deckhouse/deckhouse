@@ -877,6 +877,16 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 			description: "old object without spec.version → extractOldSettings returns nil → CEL rules skipped",
 		},
 		{
+			name:        "UPDATE: old settings conversion failure skips CEL",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"bundle": "Minimal"},
+			newVersion:  1,
+			oldSettings: map[string]any{"bundle": "Default"},
+			oldVersion:  99,
+			wantAllowed: true,
+			description: "raw settings from an unsupported old schema version must not be evaluated by CEL",
+		},
+		{
 			// Regression test: when old settings are present but without an explicit
 			// bundle key, the CEL expression "(has(oldSelf.bundle) ? oldSelf.bundle : 'Default')"
 			// treats the effective old value as "Default". Setting bundle: Minimal must

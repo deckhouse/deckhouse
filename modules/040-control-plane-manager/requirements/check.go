@@ -19,6 +19,7 @@ package requirements
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -65,11 +66,18 @@ func init() {
 // checkKubernetesVersionMigrated blocks a DeckhouseRelease that requires the ClusterConfiguration
 // kubernetesVersion field to have been moved to ModuleConfig control-plane-manager.
 //
-// requirementValue comes from the release; "true" (or anything other than ""/"false") means the
-// gate is armed. Until T+2 no release declares this key, so the check is inert.
+// requirementValue comes from the release. Until T+2 no release declares this key, so the check
+// is inert.
 func checkKubernetesVersionMigrated(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 	requirementValue = strings.TrimSpace(requirementValue)
-	if requirementValue == "" || requirementValue == "false" {
+	if requirementValue == "" {
+		return true, nil
+	}
+	gateEnabled, err := strconv.ParseBool(requirementValue)
+	if err != nil {
+		return false, fmt.Errorf("invalid %s requirement value %q: %w", kubernetesVersionMigratedRequirementsKey, requirementValue, err)
+	}
+	if !gateEnabled {
 		return true, nil
 	}
 

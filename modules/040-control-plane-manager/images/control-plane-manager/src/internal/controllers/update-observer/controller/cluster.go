@@ -29,6 +29,7 @@ import (
 	"control-plane-manager/internal/controllers/update-observer/cluster"
 	"control-plane-manager/internal/controllers/update-observer/common"
 	podstatus "control-plane-manager/internal/controllers/update-observer/pkg/pod-status"
+	"control-plane-manager/internal/controllers/update-observer/pkg/version"
 )
 
 func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, configmapLabels map[string]string, downgradeInProgress bool) (*cluster.State, error) {
@@ -72,8 +73,13 @@ func getDesiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuratio
 		return nil, fmt.Errorf("configMap %s/%s 'spec.desiredVersion' is empty", configMap.Namespace, configMap.Name)
 	}
 
+	desiredVersion, err := version.Normalize(spec.DesiredVersion)
+	if err != nil {
+		return nil, fmt.Errorf("invalid configMap %s/%s 'spec.desiredVersion': %w", configMap.Namespace, configMap.Name, err)
+	}
+
 	return &cluster.Configuration{
-		DesiredVersion: spec.DesiredVersion,
+		DesiredVersion: desiredVersion,
 		UpdateMode:     cluster.UpdateMode(spec.UpdateMode),
 	}, nil
 }

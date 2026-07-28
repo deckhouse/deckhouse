@@ -57,6 +57,16 @@ func TestGetDesiredConfiguration(t *testing.T) {
 		assert.Equal(t, cluster.UpdateModeAutomatic, cfg.UpdateMode)
 	})
 
+	t.Run("normalizes a full semantic version", func(t *testing.T) {
+		cm := makeCM(map[string]string{
+			"spec": "desiredVersion: \"v1.35.4\"\nupdateMode: Manual\n",
+		})
+
+		cfg, err := getDesiredConfiguration(cm)
+		require.NoError(t, err)
+		assert.Equal(t, "1.35", cfg.DesiredVersion)
+	})
+
 	t.Run("missing spec key errors", func(t *testing.T) {
 		cm := makeCM(map[string]string{})
 
@@ -72,4 +82,22 @@ func TestGetDesiredConfiguration(t *testing.T) {
 		_, err := getDesiredConfiguration(cm)
 		require.Error(t, err)
 	})
+
+	t.Run("invalid desiredVersion errors", func(t *testing.T) {
+		cm := makeCM(map[string]string{
+			"spec": "desiredVersion: invalid\nupdateMode: Automatic\n",
+		})
+
+		_, err := getDesiredConfiguration(cm)
+		require.Error(t, err)
+	})
+}
+
+func TestFillConfigMapPreservesRawSpec(t *testing.T) {
+	rawSpec := "updateMode: Manual\ndesiredVersion: \"1.35\"\n"
+	cm := makeCM(map[string]string{"spec": rawSpec})
+
+	got, err := fillConfigMap(cm, &cluster.State{}, ReconcileTriggerIdle)
+	require.NoError(t, err)
+	assert.Equal(t, rawSpec, got.Data["spec"])
 }

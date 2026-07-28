@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
 	"strconv"
 
@@ -34,6 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -133,7 +135,14 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(defaultVersionDriftMetricGroup)
 
 	mcVersion := ""
-	if mcSnaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, controlPlaneManagerModuleConfigSnapshot); err == nil && len(mcSnaps) > 0 {
+	mcSnaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, controlPlaneManagerModuleConfigSnapshot)
+	if err != nil {
+		input.Logger.Warn(
+			"failed to unmarshal snapshot",
+			slog.String("snapshot", controlPlaneManagerModuleConfigSnapshot),
+			dlog.Err(err),
+		)
+	} else if len(mcSnaps) > 0 {
 		mcVersion = mcSnaps[0]
 	}
 
@@ -212,7 +221,14 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	// suppress the value (effective_kubernetes_version / get_crds throttle the actual rollout).
 	if isAutomatic {
 		currentVersion := ""
-		if cmSnaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, clusterKubernetesConfigMapSnapshot); err == nil && len(cmSnaps) > 0 {
+		cmSnaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, clusterKubernetesConfigMapSnapshot)
+		if err != nil {
+			input.Logger.Warn(
+				"failed to unmarshal snapshot",
+				slog.String("snapshot", clusterKubernetesConfigMapSnapshot),
+				dlog.Err(err),
+			)
+		} else if len(cmSnaps) > 0 {
 			currentVersion = cmSnaps[0]
 		}
 		if currentVersion != "" {
@@ -255,7 +271,7 @@ func isMoreThanOneMinorBelow(candidate, current string) (bool, error) {
 	if candidateV.Major() != currentV.Major() {
 		return candidateV.Major() < currentV.Major(), nil
 	}
-	return candidateV.Minor() < currentV.Minor()-1, nil
+	return currentV.Minor() > 0 && candidateV.Minor() < currentV.Minor()-1, nil
 }
 
 func maxNodesAmountMetric(input *go_hook.HookInput, podSubnetCIDR json.RawMessage, podSubnetNodeCIDRPrefix json.RawMessage) error {

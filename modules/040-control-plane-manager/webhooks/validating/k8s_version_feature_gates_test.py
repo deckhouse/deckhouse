@@ -69,6 +69,7 @@ def _prepare_validation_binding_context(
     old_k8s_version: str,
     new_k8s_version: str,
     enabled_feature_gates: list,
+    default_version: str = "1.30.0",
 ) -> DotMap:
     binding_context_json = """
 {
@@ -147,6 +148,9 @@ def _prepare_validation_binding_context(
 """
     ctx_dict = json.loads(binding_context_json)
     ctx = DotMap(ctx_dict)
+    encoded_default_version = base64.b64encode(default_version.encode('utf-8')).decode('utf-8')
+    ctx.review.request.oldObject.data['deckhouseDefaultKubernetesVersion'] = encoded_default_version
+    ctx.review.request.object.data['deckhouseDefaultKubernetesVersion'] = encoded_default_version
     
     if old_k8s_version:
         old_cluster_config = {'kubernetesVersion': old_k8s_version}
@@ -241,12 +245,25 @@ class TestK8sVersionFeatureGatesValidationWebhook(unittest.TestCase):
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
 
+    def test_removing_cc_version_uses_default_and_rejects_deprecated_feature_gate(self):
+        ctx = _prepare_validation_binding_context(
+            '1.30.0', None, ['New123'], default_version='1.32.0',
+        )
+        out = hook.testrun(main, [ctx])
+        error_msg = (
+            "Cannot change Kubernetes version to 1.32.0:\n"
+            "The following feature gates are deprecated in this version or earlier: 'New123'\n"
+            "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
+        )
+        tests.assert_validation_deny(self, out, error_msg)
+
 
 def _prepare_mc_validation_binding_context(
     mc_k8s_version,
     enabled_feature_gates,
     cc_k8s_version: str = None,
     cc_default_version: str = "1.30.0",
+    cc_snapshot_present: bool = None,
 ) -> DotMap:
     binding_context_json = """
 {
@@ -316,8 +333,13 @@ def _prepare_mc_validation_binding_context(
     if mc_k8s_version is not None:
         ctx.review.request.object.spec.settings.kubernetesVersion = mc_k8s_version
 
-    if cc_k8s_version:
-        cluster_config = {'kubernetesVersion': cc_k8s_version}
+    if cc_snapshot_present is None:
+        cc_snapshot_present = cc_k8s_version is not None
+
+    if cc_snapshot_present:
+        cluster_config = {}
+        if cc_k8s_version is not None:
+            cluster_config['kubernetesVersion'] = cc_k8s_version
         cluster_config_yaml = yaml.dump(cluster_config)
         encoded_config = base64.b64encode(cluster_config_yaml.encode('utf-8')).decode('utf-8')
         encoded_default_version = base64.b64encode(cc_default_version.encode('utf-8')).decode('utf-8')
@@ -398,6 +420,21 @@ class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
         )
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
+
+    def test_mc_automatic_with_cc_version_absent_uses_default(self):
+        ctx = _prepare_mc_validation_binding_context(
+            'Automatic',
+            ['New123'],
+            cc_default_version='1.32.0',
+            cc_snapshot_present=True,
+        )
+        out = hook.testrun(main, [ctx])
+        error_msg = (
+            "Cannot change Kubernetes version to 1.32.0:\n"
+            "The following feature gates are deprecated in this version or earlier: 'New123'\n"
+            "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
+        )
+        tests.assert_validation_deny(self, out, error_msg)
 
     def test_mc_without_kubernetes_version_and_without_cluster_configuration_should_allow(self):
         ctx = _prepare_mc_validation_binding_context(None, ['New123'])

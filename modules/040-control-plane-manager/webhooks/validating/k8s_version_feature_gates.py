@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import base64
+import logging
 import yaml
 from typing import Optional, List
 from deckhouse import hook
@@ -133,17 +134,22 @@ def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
     return None
 
 
-def get_enabled_feature_gates(ctx: DotMap) -> List[str]:
+def get_module_config_settings(ctx: DotMap) -> dict:
     snapshot = ctx.snapshots.get(MODULE_CONFIG_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
-        return []
+        return {}
     
     module_config = snapshot[0]
     if not module_config or not hasattr(module_config, 'object'):
-        return []
+        return {}
     
     spec = module_config.object.get('spec', {})
     settings = spec.get('settings', {})
+    return settings if isinstance(settings, dict) else {}
+
+
+def get_enabled_feature_gates(ctx: DotMap) -> List[str]:
+    settings = get_module_config_settings(ctx)
     enabled_feature_gates = settings.get('enabledFeatureGates', [])
     
     if not enabled_feature_gates or not isinstance(enabled_feature_gates, list):
@@ -171,24 +177,26 @@ def get_cluster_configuration_secret_data(ctx: DotMap):
     return secret.object.data
 
 
-def resolve_effective_version(mc_kubernetes_version: Optional[str], ctx: DotMap) -> Optional[str]:
+def resolve_effective_version(
+    mc_kubernetes_version: Optional[str],
+    ctx: DotMap,
+    secret_data=None,
+) -> Optional[str]:
     # Mirrors global-hooks/discovery/cluster_configuration.go resolveTargetKubernetesVersion:
     # ModuleConfig wins when pinned, otherwise fall back to ClusterConfiguration.
     if mc_kubernetes_version and mc_kubernetes_version != "Automatic":
         return mc_kubernetes_version
 
-    secret_data = get_cluster_configuration_secret_data(ctx)
+    if secret_data is None:
+        secret_data = get_cluster_configuration_secret_data(ctx)
     if not secret_data:
         return None
 
     cc_version = get_k8s_version_from_cluster_config(secret_data)
-    if not cc_version:
-        return None
+    if cc_version and cc_version != "Automatic":
+        return cc_version
 
-    if cc_version == "Automatic":
-        return get_deckhouse_default_version_from_secret(secret_data)
-
-    return cc_version
+    return get_deckhouse_default_version_from_secret(secret_data)
 
 
 def build_deprecated_feature_gates_error(target_version: str, enabled_feature_gates: List[str]) -> Optional[str]:
@@ -241,19 +249,13 @@ def validate_cluster_configuration_change(ctx: DotMap) -> Optional[str]:
     if old_config_version == new_config_version:
         return None
 
-    if not new_config_version:
-        return None
-
-    target_version = new_config_version
-
-    if target_version == "Automatic":
-        default_version = get_deckhouse_default_version_from_secret(new_data)
-        if not default_version:
-            return None
-        target_version = default_version
-
     enabled_feature_gates = get_enabled_feature_gates(ctx)
     if not enabled_feature_gates:
+        return None
+
+    mc_version = get_module_config_settings(ctx).get('kubernetesVersion')
+    target_version = resolve_effective_version(mc_version, ctx, new_data)
+    if not target_version:
         return None
 
     return build_deprecated_feature_gates_error(target_version, enabled_feature_gates)

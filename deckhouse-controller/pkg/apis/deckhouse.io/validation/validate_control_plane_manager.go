@@ -34,7 +34,7 @@ import (
 const (
 	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
 	clusterConfigurationSecretName = "d8-cluster-configuration"
-	clusterConfigurationSecretNS   = "kube-system"
+	kubeSystemNamespace            = "kube-system"
 	clusterConfigurationDataKey    = "cluster-configuration.yaml"
 	clusterKubernetesStatusDataKey = "status"
 )
@@ -158,7 +158,7 @@ func (v *moduleConfigValidator) readAvailableKubernetesVersions(ctx context.Cont
 	cm := &v1.ConfigMap{}
 	if err := v.client.Get(ctx, client.ObjectKey{
 		Name:      clusterKubernetesConfigMapName,
-		Namespace: clusterConfigurationSecretNS,
+		Namespace: kubeSystemNamespace,
 	}, cm); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Warn("skipping the kubernetesVersion availableVersions guard: cannot read the d8-cluster-kubernetes ConfigMap", log.Err(err))
@@ -189,7 +189,7 @@ func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.C
 	secret := &v1.Secret{}
 	if err := v.client.Get(ctx, client.ObjectKey{
 		Name:      clusterConfigurationSecretName,
-		Namespace: clusterConfigurationSecretNS,
+		Namespace: kubeSystemNamespace,
 	}, secret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Warn("skipping the kubernetesVersion fallback guard: cannot read the d8-cluster-configuration secret", log.Err(err))

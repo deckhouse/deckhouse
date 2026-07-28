@@ -315,12 +315,8 @@ data:
 		}
 
 		It("fires when Automatic target is more than 1 minor below currentVersion", func() {
-			// Default is 1.36 in this suite; pin Default lower by temporarily swapping — instead
-			// use CC Automatic with Default=1.36 and currentVersion=1.34 wait, Default is 1.36 so
-			// target is ABOVE current. To get target below current: use an MC-less Automatic CC
-			// but override Default... We cannot. Simulate by pinning nothing and using a custom
-			// state where Default (1.36) is below a fabricated current of 1.38 — but Default is
-			// the target. So target=1.36, current=1.38 → 2 minors below → drift.
+			// Default is 1.36 in this suite. Use an artificial currentVersion of 1.38 so the
+			// Automatic target is two minors behind and must trigger the drift signal.
 			state := stateC + clusterKubernetesCM("1.38")
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(state, 1))
 			f.RunHook()
@@ -353,6 +349,12 @@ data:
 			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
 			_, found := findDriftMetric()
 			Expect(found).To(BeFalse())
+		})
+
+		It("does not underflow when current minor is zero", func() {
+			drifted, err := isMoreThanOneMinorBelow("1.0", "1.0")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(drifted).To(BeFalse())
 		})
 	})
 })

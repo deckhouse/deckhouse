@@ -34,7 +34,6 @@ import (
 )
 
 type ConfigMapData struct {
-	*Spec
 	*Status
 }
 
@@ -94,15 +93,15 @@ func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error
 }
 
 func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, reconcileTrigger ReconcileTrigger) (*corev1.ConfigMap, error) {
+	rawSpec, hasSpec := configMap.Data["spec"]
 	configMapData := renderConfigMapData(clusterState)
 	configMap.Data = map[string]string{}
 
-	if configMapData.Spec != nil {
-		specBytes, err := yaml.Marshal(configMapData.Spec)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal Spec: %w", err)
-		}
-		configMap.Data["spec"] = string(specBytes)
+	// data.spec is external input owned by sync_desired_kubernetes_version.go. Preserve it
+	// byte-for-byte; re-marshalling it here would make this controller a second writer and couple
+	// both components to identical YAML serialization.
+	if hasSpec {
+		configMap.Data["spec"] = rawSpec
 	}
 
 	if configMapData.Status != nil {
@@ -184,10 +183,6 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 	}
 
 	return ConfigMapData{
-		Spec: &Spec{
-			DesiredVersion: clusterState.Spec.DesiredVersion,
-			UpdateMode:     string(clusterState.Spec.UpdateMode),
-		},
 		Status: &Status{
 			CurrentVersion:    clusterState.CurrentVersion,
 			SupportedVersions: clusterState.SupportedVersions,

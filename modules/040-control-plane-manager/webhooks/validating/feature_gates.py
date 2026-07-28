@@ -101,6 +101,11 @@ def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
 
 
 def get_k8s_version(ctx: DotMap) -> Optional[str]:
+    settings = ctx.review.request.object.get('spec', {}).get('settings', {})
+    mc_version = settings.get('kubernetesVersion')
+    if mc_version and mc_version != "Automatic":
+        return mc_version
+
     snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
         return None
@@ -114,13 +119,10 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
         return None
     
     k8s_version = get_k8s_version_from_cluster_config(data)
-    if not k8s_version:
-        return None
-    
-    if k8s_version.lower() == "automatic":
-        k8s_version = get_deckhouse_default_version_from_secret(data)
-    
-    return k8s_version
+    if k8s_version and k8s_version.lower() != "automatic":
+        return k8s_version
+
+    return get_deckhouse_default_version_from_secret(data)
 
 
 def validate(ctx: DotMap) -> List[str]:

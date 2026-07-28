@@ -182,8 +182,8 @@ func (c *deckhouseVersionCheck) Verify(_ context.Context, dr *v1alpha1.Deckhouse
 type kubernetesVersionCheck struct {
 	name string
 
-	enabledModules           set.Set
-	clusterKubernetesVersion string
+	enabledModules              set.Set
+	clusterKubernetesUpdateMode string
 
 	k8sclient client.Client
 }
@@ -224,7 +224,7 @@ func (c *kubernetesVersionCheck) Verify(_ context.Context, dr *v1alpha1.Deckhous
 }
 
 func (c *kubernetesVersionCheck) isKubernetesVersionAutomatic() bool {
-	return c.clusterKubernetesVersion == k8sAutomaticUpdateMode
+	return c.clusterKubernetesUpdateMode == k8sAutomaticUpdateMode
 }
 
 type clusterKubernetesSpec struct {
@@ -247,7 +247,7 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 	if mode, found, err := c.readUpdateModeFromConfigMap(ctx); err != nil {
 		return err
 	} else if found {
-		c.clusterKubernetesVersion = mode
+		c.clusterKubernetesUpdateMode = mode
 		return nil
 	}
 
@@ -256,7 +256,7 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 		return err
 	}
 	if automatic {
-		c.clusterKubernetesVersion = k8sAutomaticUpdateMode
+		c.clusterKubernetesUpdateMode = k8sAutomaticUpdateMode
 	}
 	return nil
 }

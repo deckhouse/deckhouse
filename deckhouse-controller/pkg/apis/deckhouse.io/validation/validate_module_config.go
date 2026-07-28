@@ -128,7 +128,10 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 
 	allowExperimental := v.settings.ExperimentalModuleAllowed(cfg.Name)
 
-	var oldSettings map[string]interface{}
+	var (
+		oldSettings                          map[string]interface{}
+		oldSettingsForKubernetesVersionGuard map[string]interface{}
+	)
 
 	switch review.Operation {
 	case kwhmodel.OperationDelete:
@@ -153,13 +156,14 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		var extractErr error
 		oldSettings, extractErr = v.extractOldSettings(review.OldObjectRaw)
 		if extractErr != nil {
-			// Same reason as DELETE: keep the kubernetesVersion clear-guard alive when conversion
-			// of the old object fails. CEL with raw settings is imperfect but better than
-			// silently dropping the old pin (nil would skip both CEL and the clear-guard).
+			// Keep the kubernetesVersion clear-guard alive when conversion of the old object
+			// fails, but do not feed unconverted settings to CEL transition rules.
 			oldConfig := new(v1alpha1.ModuleConfig)
 			if json.Unmarshal(review.OldObjectRaw, oldConfig) == nil {
-				oldSettings = rawModuleConfigSettings(oldConfig)
+				oldSettingsForKubernetesVersionGuard = rawModuleConfigSettings(oldConfig)
 			}
+		} else {
+			oldSettingsForKubernetesVersionGuard = oldSettings
 		}
 
 		if res, err := v.validateUpdate(ctx, review, cfg, allowExperimental); res != nil || err != nil {
@@ -167,7 +171,7 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		}
 	}
 
-	return v.validateCommon(ctx, cfg, oldSettings)
+	return v.validateCommon(ctx, cfg, oldSettings, oldSettingsForKubernetesVersionGuard)
 }
 
 // validateDelete guards deletion: a confirmation-required module that is still
@@ -369,7 +373,12 @@ func (v *moduleConfigValidator) checkExperimentalFromStorage(moduleName string, 
 // resolution, update policy existence, settings validation and the
 // exclusive-group conflict check. It returns an allow result with any
 // accumulated warnings when nothing rejects the request.
-func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha1.ModuleConfig, oldSettings map[string]interface{}) (*kwhvalidating.ValidatorResult, error) {
+func (v *moduleConfigValidator) validateCommon(
+	ctx context.Context,
+	cfg *v1alpha1.ModuleConfig,
+	oldSettings map[string]interface{},
+	oldSettingsForKubernetesVersionGuard map[string]interface{},
+) (*kwhvalidating.ValidatorResult, error) {
 	if cfg.Spec.Source == v1alpha1.ModuleSourceEmbedded {
 		return rejectResult("'Embedded' is a forbidden source")
 	}
@@ -396,7 +405,7 @@ func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha
 	}
 
 	if cfg.Name == controlPlaneManagerModuleName {
-		if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, result.Settings, oldSettings); res != nil || err != nil {
+		if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, result.Settings, oldSettingsForKubernetesVersionGuard); res != nil || err != nil {
 			return res, err
 		}
 	}

@@ -80,6 +80,21 @@ func TestKubernetesVersionMigratedRequirement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("gate disarmed — boolean false variants", func(t *testing.T) {
+		requirements.SaveValue(hooks.KubernetesVersionMigratedRequirementKey, false)
+		for _, value := range []string{"False", "FALSE", "0"} {
+			ok, err := requirements.CheckRequirement(kubernetesVersionMigratedRequirementsKey, value)
+			assert.True(t, ok, value)
+			require.NoError(t, err, value)
+		}
+	})
+
+	t.Run("invalid boolean requirement is rejected", func(t *testing.T) {
+		ok, err := requirements.CheckRequirement(kubernetesVersionMigratedRequirementsKey, "no")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+
 	t.Run("migrated — requirement met", func(t *testing.T) {
 		requirements.SaveValue(hooks.KubernetesVersionMigratedRequirementKey, true)
 		ok, err := requirements.CheckRequirement(kubernetesVersionMigratedRequirementsKey, "true")

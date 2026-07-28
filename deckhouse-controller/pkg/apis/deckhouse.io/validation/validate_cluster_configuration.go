@@ -235,14 +235,17 @@ func parseVersion(version string) (*semver.Version, error) {
 // control-plane-manager effective_kubernetes_version.go hook), not ClusterConfiguration fields.
 // They are passed in rather than read from a specific object so that callers validating different
 // resources — the ClusterConfiguration Secret and the control-plane-manager ModuleConfig — can
-// supply them from whatever source they already hold. An empty string means "not available".
+// supply them from whatever source they already hold. Presence is tracked separately because a
+// missing baseline is allowed during startup, while an explicitly published empty value is invalid.
 type kubernetesVersionBaseline struct {
 	// MaxUsed is the highest version the cluster has ever run
 	// (maxUsedControlPlaneKubernetesVersion).
-	MaxUsed string
+	MaxUsed    string
+	MaxUsedSet bool
 	// DeckhouseDefault is the version "Automatic" currently resolves to
 	// (deckhouseDefaultKubernetesVersion).
-	DeckhouseDefault string
+	DeckhouseDefault    string
+	DeckhouseDefaultSet bool
 }
 
 // kubernetesVersionBaselineFromSecret reads the baseline out of the d8-cluster-configuration
@@ -252,15 +255,20 @@ type kubernetesVersionBaseline struct {
 // the Secret: the kube-system/d8-cluster-kubernetes ConfigMap already carries both facts, written
 // by the update-observer controller — status.automaticVersion is DeckhouseDefault, and the
 // max-k8s-version label is MaxUsed. Splitting the source out of the check exists precisely so that
-// swap needs no change to the validation logic itself.
+// swap needs no change to the validation logic itself. The presence flags distinguish a missing
+// key (baseline not published yet, fail open) from a published but empty value (invalid data).
 func kubernetesVersionBaselineFromSecret(secret *v1.Secret) kubernetesVersionBaseline {
 	if secret == nil {
 		return kubernetesVersionBaseline{}
 	}
 
+	maxUsed, maxUsedSet := secret.Data["maxUsedControlPlaneKubernetesVersion"]
+	deckhouseDefault, deckhouseDefaultSet := secret.Data["deckhouseDefaultKubernetesVersion"]
 	return kubernetesVersionBaseline{
-		MaxUsed:          string(secret.Data["maxUsedControlPlaneKubernetesVersion"]),
-		DeckhouseDefault: string(secret.Data["deckhouseDefaultKubernetesVersion"]),
+		MaxUsed:             string(maxUsed),
+		MaxUsedSet:          maxUsedSet,
+		DeckhouseDefault:    string(deckhouseDefault),
+		DeckhouseDefaultSet: deckhouseDefaultSet,
 	}
 }
 
@@ -334,7 +342,7 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 	selectedChecker = minorSubCheck
 
 	var maxUsedVersionSemver *semver.Version
-	if baseline.MaxUsed != "" {
+	if baseline.MaxUsedSet {
 		var err error
 		maxUsedVersionSemver, err = parseVersion(baseline.MaxUsed)
 
@@ -368,7 +376,7 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 		// Corner case: If deckhouseDefaultKubernetesVersion is not available,
 		// we cannot determine what Automatic will resolve to, so we allow the change.
 		// This can happen during initial cluster setup or if the source is incomplete.
-		if baseline.DeckhouseDefault == "" {
+		if !baseline.DeckhouseDefaultSet {
 			return allowResult(nil)
 		}
 
