@@ -18,6 +18,7 @@ package clusterprefix
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -61,23 +62,41 @@ func ccSecret(cloudPrefix string) *corev1.Secret {
 	}
 }
 
+func keylessSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace},
+		Data:       map[string][]byte{"other.yaml": []byte("{}")},
+	}
+}
+
 func TestResolve(t *testing.T) {
 	tests := []struct {
-		name string
-		objs []client.Object
-		want string
+		name    string
+		objs    []client.Object
+		want    string
+		wantErr string // substring; empty means no error expected
 	}{
 		{name: "global MC prefix wins over cloud.prefix", objs: []client.Object{globalMC("from-mc"), ccSecret("from-cloud")}, want: "from-mc"},
 		{name: "falls back to cloud.prefix when MC prefix empty", objs: []client.Object{globalMC(""), ccSecret("from-cloud")}, want: "from-cloud"},
 		{name: "falls back to cloud.prefix when MC absent", objs: []client.Object{ccSecret("from-cloud")}, want: "from-cloud"},
-		{name: "empty when neither set", objs: []client.Object{globalMC(""), ccSecret("")}, want: ""},
-		{name: "empty when nothing exists", objs: nil, want: ""},
+		{name: "empty when config parses without a prefix", objs: []client.Object{globalMC(""), ccSecret("")}, want: ""},
+		// Fail-closed: the secret is the base source of truth. An unreadable one
+		// must error rather than yield an empty prefix (which would prune every
+		// real MachineDeployment). Only reached when the MC has no prefix.
+		{name: "errors when the secret is missing", objs: nil, wantErr: "get cluster-configuration secret"},
+		{name: "errors when the config key is missing", objs: []client.Object{keylessSecret()}, wantErr: "no cluster-configuration.yaml key"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme(t)).WithObjects(tt.objs...).Build()
 			got, err := Resolve(context.Background(), cl)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("Resolve error = %v, want substring %q (prefix was %q)", err, tt.wantErr, got)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatalf("Resolve: %v", err)
 			}

@@ -23,11 +23,14 @@ package clusterprefix
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,8 +53,17 @@ func ModuleConfigGVK() schema.GroupVersionKind {
 // Resolve returns the effective cluster prefix: the global ModuleConfig
 // spec.settings.prefix if set, otherwise the deprecated
 // ClusterConfiguration.cloud.prefix from the d8-cluster-configuration secret.
-// Returns an empty string when neither is set. The global ModuleConfig read
-// short-circuits, so the secret is only read when the ModuleConfig has no prefix.
+//
+// The global ModuleConfig is optional and read fail-open (absent -> empty, fall
+// through to the secret). The secret is the base source of truth and always
+// present in a real cluster, so it is read fail-closed: an unreadable
+// configuration surfaces as an error rather than an empty prefix. This matters
+// because the prefix is part of every MachineDeployment name; an empty prefix
+// read fail-open would make the stale-object prune treat every real
+// "<prefix>-<ng>-<hash>" MachineDeployment as stale and delete it. A
+// configuration that parses and simply carries no prefix is legitimate and
+// returns an empty string. The ModuleConfig read short-circuits, so the secret
+// is only read when the ModuleConfig has no prefix.
 func Resolve(ctx context.Context, reader client.Reader) (string, error) {
 	if prefix, err := FromModuleConfig(ctx, reader); err != nil {
 		return "", err
@@ -62,12 +74,13 @@ func Resolve(ctx context.Context, reader client.Reader) (string, error) {
 }
 
 // FromModuleConfig returns spec.settings.prefix from the global ModuleConfig, or
-// an empty string when the ModuleConfig or the field is absent.
+// an empty string when the ModuleConfig or the field is absent. The ModuleConfig
+// is optional, so a missing object (or a missing CRD/kind) is not an error.
 func FromModuleConfig(ctx context.Context, reader client.Reader) (string, error) {
 	mc := &unstructured.Unstructured{}
 	mc.SetGroupVersionKind(ModuleConfigGVK())
 	if err := reader.Get(ctx, types.NamespacedName{Name: GlobalModuleConfigName}, mc); err != nil {
-		if errors.IsNotFound(err) {
+		if errors.IsNotFound(err) || meta.IsNoMatchError(err) || runtime.IsNotRegisteredError(err) {
 			return "", nil
 		}
 		return "", fmt.Errorf("get global ModuleConfig: %w", err)
@@ -80,22 +93,30 @@ func FromModuleConfig(ctx context.Context, reader client.Reader) (string, error)
 }
 
 // FromClusterConfigurationSecret returns ClusterConfiguration.cloud.prefix from
-// the d8-cluster-configuration secret, or an empty string when absent.
+// the d8-cluster-configuration secret. It fails closed: a secret that cannot be
+// read or that lacks the cluster-configuration.yaml key is an error, not an
+// empty prefix (see Resolve for why). A configuration that parses and simply
+// carries no cloud.prefix returns an empty string.
 func FromClusterConfigurationSecret(ctx context.Context, reader client.Reader) (string, error) {
 	secret := &corev1.Secret{}
 	if err := reader.Get(ctx, types.NamespacedName{
 		Name:      clusterConfigSecretName,
 		Namespace: clusterConfigSecretNamespace,
 	}, secret); err != nil {
-		if errors.IsNotFound(err) {
-			return "", nil
-		}
-		return "", fmt.Errorf("get secret %s/%s: %w", clusterConfigSecretNamespace, clusterConfigSecretName, err)
+		return "", fmt.Errorf("get cluster-configuration secret: %w", err)
 	}
 
-	data, ok := secret.Data[clusterConfigSecretKey]
+	raw, ok := secret.Data[clusterConfigSecretKey]
 	if !ok {
-		return "", nil
+		return "", fmt.Errorf("cluster-configuration secret has no %s key", clusterConfigSecretKey)
+	}
+
+	// The cluster-configuration.yaml value is stored base64-encoded in some
+	// installations; fall back to the raw bytes when it is not (plain YAML is
+	// never valid base64, so this never corrupts an already-decoded document).
+	decoded, err := base64.StdEncoding.DecodeString(string(raw))
+	if err != nil {
+		decoded = raw
 	}
 
 	var cfg struct {
@@ -103,8 +124,8 @@ func FromClusterConfigurationSecret(ctx context.Context, reader client.Reader) (
 			Prefix string `json:"prefix"`
 		} `json:"cloud"`
 	}
-	if err := sigsyaml.Unmarshal(data, &cfg); err != nil {
-		return "", fmt.Errorf("parse %s: %w", clusterConfigSecretKey, err)
+	if err := sigsyaml.Unmarshal(decoded, &cfg); err != nil {
+		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
 	return cfg.Cloud.Prefix, nil
 }

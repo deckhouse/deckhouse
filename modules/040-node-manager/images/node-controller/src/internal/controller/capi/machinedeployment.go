@@ -425,7 +425,7 @@ func (r *MachineDeploymentReconciler) readClusterUUID(ctx context.Context) (stri
 // the deprecated ClusterConfiguration.cloud.prefix. Kept in one place so the
 // webhook, CAPI and the migration controller never diverge.
 func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (string, error) {
-	return clusterprefix.Resolve(ctx, r.APIReader)
+	return clusterprefix.Resolve(ctx, r.Client)
 }
 
 func getMinMax(ng *deckhousev1.NodeGroup) (int32, int32) {
