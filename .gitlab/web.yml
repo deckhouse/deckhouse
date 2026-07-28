@@ -1,0 +1,95 @@
+# Documentation / site werf builds (parallel to deckhouse image builds).
+# doc  -> docs/documentation
+# main -> docs/site
+
+.web_build:
+  stage: build
+  tags:
+    - vm-intteam-cloud-d8-ssdlc-runner
+  needs: []
+  timeout: 2h
+  extends:
+    - .rules:on_validate
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+    GIT_STRATEGY: fetch
+    GIT_DEPTH: "0"
+    WERF_ENV: development
+    WERF_LOG_VERBOSE: "on"
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    DECKHOUSE_DEV_REGISTRY_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_DEV_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  before_script:
+    - !reference [.scripts, docker_config_isolation]
+    - !reference [.scripts, read_werf_version]
+    - !reference [.scripts, install_werf]
+    - !reference [.scripts, login_dev_registry]
+
+doc_web_build:
+  extends:
+    - .web_build
+  variables:
+    WERF_DIR: docs/documentation
+  script:
+    - |
+      set -euo pipefail
+      export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_HOST}/deckhouse/site"
+      type werf && source "$(werf ci-env gitlab --verbose --as-file)"
+      werf build
+
+main_web_build:
+  extends:
+    - .web_build
+  variables:
+    WERF_DIR: docs/site
+  # Child secrets replace parent secrets in GitLab — include registry + DOC_API_*.
+  secrets:
+    DECKHOUSE_DEV_REGISTRY_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_DEV_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DOC_API_KEY:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/DOC_API_KEY@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DOC_API_URL:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/DOC_API_URL@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DOC_API_REFERER:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/documentation_deploy_secret/DOC_API_REFERER@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - |
+      set -euo pipefail
+      if [[ -z "${DOC_API_KEY:-}" || -z "${DOC_API_URL:-}" || -z "${DOC_API_REFERER:-}" ]]; then
+        echo "DOC_API_KEY / DOC_API_URL / DOC_API_REFERER must be present from Vault" >&2
+        exit 1
+      fi
+      export DOC_API_KEY DOC_API_URL DOC_API_REFERER
+      export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_HOST}/deckhouse/site"
+      type werf && source "$(werf ci-env gitlab --verbose --as-file)"
+      werf build

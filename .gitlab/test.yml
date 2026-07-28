@@ -1,0 +1,188 @@
+# Post-build tests that require the built `tests` image (from build_tests).
+# Shell executor: docker pull/run (dotenv cannot configure `image:`).
+
+.needs_build_tests:
+  needs:
+    - job: build_tests:mr
+      optional: true
+      artifacts: true
+    - job: build_tests:main
+      optional: true
+      artifacts: true
+    - job: build_tests:tag
+      optional: true
+      artifacts: true
+    - job: build_tests:release
+      optional: true
+      artifacts: true
+
+.needs_build_fe:
+  needs:
+    - job: build_fe:mr
+      optional: true
+      artifacts: true
+    - job: build_fe:main
+      optional: true
+      artifacts: true
+    - job: build_fe:tag
+      optional: true
+      artifacts: true
+    - job: build_fe:release
+      optional: true
+      artifacts: true
+
+.test_base:
+  stage: test
+  tags:
+    - vm-intteam-cloud-d8-ssdlc-runner
+  timeout: 2h
+  variables:
+    GIT_STRATEGY: fetch
+    GIT_DEPTH: "0"
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+    TEST_TIMEOUT: 15m
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    DECKHOUSE_DEV_REGISTRY_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_DEV_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  before_script:
+    - !reference [.scripts, docker_config_isolation]
+    - !reference [.scripts, login_dev_registry]
+
+dhctl_tests:
+  extends:
+    - .test_base
+    - .needs_build_tests
+    - .rules:on_validate
+  script:
+    - |
+      set -euo pipefail
+      if [[ -z "${TESTS_IMAGE_NAME:-}" ]]; then
+        echo "TESTS_IMAGE_NAME is empty" >&2
+        exit 1
+      fi
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      docker pull "${TESTS_IMAGE_NAME}"
+      docker run --rm -u 0:0 -w /deckhouse/dhctl \
+        --tmpfs /tmp:mode=1777,exec -e HOME=/tmp \
+        "${TESTS_IMAGE_NAME}" make ci
+
+golint:
+  extends:
+    - .test_base
+    - .needs_build_tests
+    - .rules:on_validate
+  script:
+    - |
+      set -euo pipefail
+      if [[ -z "${TESTS_IMAGE_NAME:-}" ]]; then
+        echo "TESTS_IMAGE_NAME is empty" >&2
+        exit 1
+      fi
+      if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
+        export DIFF_BASE="${CI_MERGE_REQUEST_DIFF_BASE_SHA}"
+      elif [[ -n "${CI_COMMIT_BEFORE_SHA:-}" && "${CI_COMMIT_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
+        export DIFF_BASE="${CI_COMMIT_BEFORE_SHA}"
+      else
+        export DIFF_BASE="$(git rev-parse HEAD^)"
+      fi
+      echo "DIFF_BASE=${DIFF_BASE}"
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      docker pull "${TESTS_IMAGE_NAME}"
+      docker run --rm -u "$(id -u):$(id -g)" \
+        -w /deckhouse -v "${CI_PROJECT_DIR}:/deckhouse" \
+        --tmpfs /tmp:mode=1777,exec -e HOME=/tmp \
+        -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" \
+        "${TESTS_IMAGE_NAME}" \
+        sh -c 'git config --global --add safe.directory /deckhouse && make lint-changed'
+
+openapi_test_cases:
+  extends:
+    - .test_base
+    - .needs_build_tests
+    - .rules:on_validate
+  script:
+    - |
+      set -euo pipefail
+      if [[ -z "${TESTS_IMAGE_NAME:-}" ]]; then
+        echo "TESTS_IMAGE_NAME is empty" >&2
+        exit 1
+      fi
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      docker pull "${TESTS_IMAGE_NAME}"
+      docker run --rm -u "$(id -u):$(id -g)" \
+        -v "${CI_PROJECT_DIR}:/deckhouse" -w /deckhouse \
+        --tmpfs /tmp:mode=1777,exec -e HOME=/tmp \
+        "${TESTS_IMAGE_NAME}" \
+        ginkgo -vet=off ./testing/openapi_cases/
+
+validators:
+  extends:
+    - .test_base
+    - .needs_build_tests
+    - .rules:on_validate
+  script:
+    - |
+      set -euo pipefail
+      if [[ -z "${TESTS_IMAGE_NAME:-}" ]]; then
+        echo "TESTS_IMAGE_NAME is empty" >&2
+        exit 1
+      fi
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      docker pull "${TESTS_IMAGE_NAME}"
+      docker run --rm -u "$(id -u):$(id -g)" \
+        -w /deckhouse -v "${CI_PROJECT_DIR}:/deckhouse" \
+        --tmpfs /tmp:mode=1777,exec -e HOME=/tmp \
+        -e "TEST_TIMEOUT=${TEST_TIMEOUT}" \
+        "${TESTS_IMAGE_NAME}" \
+        sh -c 'go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout="${TEST_TIMEOUT}" ./testing/...'
+
+# Rootless / default-user scan on built FE images.
+security_scan_images:
+  extends:
+    - .test_base
+    - .needs_build_fe
+    - .rules:on_validate
+  secrets:
+    DECKHOUSE_DEV_REGISTRY_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_DEV_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_PRIVATE_REPO:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret/DECKHOUSE_PRIVATE_REPO@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - |
+      set -euo pipefail
+      if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+        TAG="pr${CI_MERGE_REQUEST_IID}"
+      else
+        TAG="${CI_COMMIT_REF_SLUG}"
+      fi
+      export TAG
+      export IMAGE="${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss"
+      export DECKHOUSE_PRIVATE_REPO
+      echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+      make cve-base-images-check-default-user

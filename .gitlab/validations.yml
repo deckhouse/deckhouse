@@ -1,0 +1,73 @@
+# Source validations (GitHub validation.yml subset). No JS, no cron.
+# Title/description from MR vars (fallback: commit). Diff from merge-base/before SHA.
+
+.scripts:
+  prepare_validation_diff: |
+    set -euo pipefail
+    git config --global --add safe.directory "${CI_PROJECT_DIR}"
+    export VALIDATE_TITLE="${CI_MERGE_REQUEST_TITLE:-${CI_COMMIT_TITLE:-}}"
+    export VALIDATE_DESCRIPTION="${CI_MERGE_REQUEST_DESCRIPTION:-${CI_COMMIT_MESSAGE:-}}"
+    if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
+      git diff "${CI_MERGE_REQUEST_DIFF_BASE_SHA}...HEAD" > pr.diff || true
+    elif [[ -n "${CI_COMMIT_BEFORE_SHA:-}" && "${CI_COMMIT_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
+      git diff "${CI_COMMIT_BEFORE_SHA}...HEAD" > pr.diff || true
+    else
+      git diff HEAD^...HEAD > pr.diff || true
+    fi
+    export DIFF_PATH=./pr.diff
+    echo "VALIDATE_TITLE length=${#VALIDATE_TITLE} diff_bytes=$(wc -c < "${DIFF_PATH}")"
+
+.validation_base:
+  stage: validate
+  needs: []
+  variables:
+    GIT_STRATEGY: fetch
+    GIT_DEPTH: "0"
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  before_script:
+    - !reference [.scripts, prepare_validation_diff]
+
+no_cyrillic_validation:
+  extends:
+    - .validation_base
+    - .rules:on_validate
+  script:
+    - ./testing/validate_no_cyrillic.sh "${DIFF_PATH}"
+
+doc_validation:
+  extends:
+    - .validation_base
+    - .rules:on_validate
+  script:
+    - ./testing/validate_doc_changes.sh "${DIFF_PATH}"
+
+doc_validation_reference:
+  extends:
+    - .validation_base
+    - .rules:on_validate
+  script:
+    - ./testing/validate_doc_reference.sh "${DIFF_PATH}"
+
+copyright_validation:
+  extends:
+    - .validation_base
+    - .rules:on_validate
+  script:
+    - ./testing/validate_copyright.sh "${DIFF_PATH}"
+
+grafana_dashboard_validation:
+  extends:
+    - .validation_base
+    - .rules:on_validate
+  script:
+    - ./testing/validate_grafana_dashboard.sh "${DIFF_PATH}"
+
+release_requirements_validation:
+  extends:
+    - .validation_base
+    - .rules:on_validate
+  script:
+    - ./testing/validate_release_requirements.sh "${DIFF_PATH}"
+
+# markdown_linter deferred: make lint-markdown pulls public ghcr.io image;
+# needs an internal ${CI_REGISTRY} mirror of MDLINTER_IMAGE first.
