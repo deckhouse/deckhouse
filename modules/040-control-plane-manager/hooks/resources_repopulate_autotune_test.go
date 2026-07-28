@@ -31,7 +31,7 @@ import (
 
 var _ = Describe("Module hooks :: control-plane-manager :: resources_repopulate_autotune", func() {
 	f := HookExecutionConfigInit(
-		`{"controlPlaneManager":{"internal":{"resourcesRequests":{"milliCpuControlPlane":2000,"memoryControlPlane":4294967296}}},"global":{"enabledModules":["prometheus-metrics-adapter"]}}`,
+		`{"controlPlaneManager":{"internal":{"resourcesRequests":{"milliCpuControlPlane":2000,"memoryControlPlane":4294967296}}},"global":{"enabledModules":["prometheus","prometheus-metrics-adapter"]}}`,
 		`{}`,
 	)
 
@@ -40,6 +40,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_repopulate_
 
 		BeforeEach(func() {
 			called = false
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus","prometheus-metrics-adapter"]`))
 			fetchComponentUsage = func(_ context.Context, _ dependency.Container, _, _ string) (float64, bool, error) {
 				called = true
 				return 0, false, nil
@@ -82,6 +83,35 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_repopulate_
 				}
 			}
 			Expect(found).To(BeTrue())
+		})
+	})
+
+	Context("Synchronization: PMA disabled discards autotune for legacy fallback", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
+			f.ValuesSetFromYaml("controlPlaneManager.internal.resourcesRequests.components", []byte(`
+kubeApiserver:
+  milliCPU: 700
+`))
+			st := autotuneState{
+				CPU: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
+					},
+					CapacityBlocked: &capacityBlocked{Since: "2026-07-20T00:00:00Z", Deficit: 500},
+				},
+			}
+			f.BindingContexts.Set(f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st)))
+			f.RunHook()
+		})
+
+		It("removes components, expires capacityBlocked metric, deletes ConfigMap", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName).Exists()).To(BeFalse())
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				Expect(m.Name).NotTo(Equal(autotuneMetricName))
+			}
 		})
 	})
 })
