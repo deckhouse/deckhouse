@@ -20,12 +20,12 @@ import "maps"
 
 // ControlPlaneTemplateConfig is the data passed to control-plane template rendering.
 //
-// Settings holds ModuleConfig control-plane-manager spec.settings (authoritative source).
+// Settings holds ModuleConfig control-plane-manager spec.settings (authoritative when pinned).
 // ClusterConfiguration holds legacy ClusterConfiguration data (fallback during migration).
-// Templates choose the source explicitly for migrated fields (nil-safe equivalent of
-// `coalesce .settings.field .clusterConfiguration.field`); see candi/control-plane/*.tpl
-// for kubernetesVersion. ClusterConfigMap also publishes the resolved MC ?? CC ?? Default
-// version into clusterConfiguration.kubernetesVersion for bashible and Automatic fallback.
+// Templates prefer a pinned settings.kubernetesVersion over clusterConfiguration; Automatic
+// in settings is not a pin (same rule as global resolveTargetKubernetesVersion).
+// ClusterConfigMap publishes the resolved pinned MC → pinned CC → Default version into
+// clusterConfiguration.kubernetesVersion for bashible and template fallback.
 type TemplateConfig struct {
 	RunType    string                 `json:"runType"`
 	NodeIP     string                 `json:"nodeIP"`

@@ -641,27 +641,42 @@ func resolveKubernetesVersion(v string) string {
 	return v
 }
 
-// kubernetesVersionRaw returns the unresolved kubernetesVersion preferred during the
-// ClusterConfiguration → ModuleConfig migration: ModuleConfig control-plane-manager
-// settings first, then ClusterConfiguration.
+func isPinnedKubernetesVersion(version string) bool {
+	return version != "" && version != "Automatic"
+}
+
+// kubernetesVersionRaw returns the unresolved kubernetesVersion with the same preference as
+// global-hooks resolveTargetKubernetesVersion: pinned ModuleConfig → pinned
+// ClusterConfiguration → empty (nowhere pinned; resolveKubernetesVersion → Default).
+//
+// "Automatic" is not a pin — MC Automatic must not hide a CC pin, or bootstrap would
+// start on Default while Deckhouse later targets the CC version.
 //
 // An install config that pins the version only in ModuleConfig must still set
 // ModuleConfig.spec.enabled and ModuleConfig.spec.version — dhctl rejects ModuleConfigs
 // without them (see load.go ModuleConfig validation).
 func (m *MetaConfig) kubernetesVersionRaw() string {
+	mcVersion := ""
 	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {
-		if v, ok := mc.Spec.Settings["kubernetesVersion"].(string); ok && v != "" {
-			return v
+		if v, ok := mc.Spec.Settings["kubernetesVersion"].(string); ok {
+			mcVersion = v
 		}
 	}
 
+	ccVersion := ""
 	if raw, ok := m.ClusterConfig["kubernetesVersion"]; ok {
 		var v string
 		if err := json.Unmarshal(raw, &v); err == nil {
-			return v
+			ccVersion = v
 		}
 	}
 
+	if isPinnedKubernetesVersion(mcVersion) {
+		return mcVersion
+	}
+	if isPinnedKubernetesVersion(ccVersion) {
+		return ccVersion
+	}
 	return ""
 }
 
@@ -675,8 +690,9 @@ func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
 		}
 		out[k] = a
 	}
-	// Always publish the effective concrete version (MC ?? CC ?? Default) so control-plane
-	// templates and bashible see one resolved value even when the field is absent from CC.
+	// Always publish the effective concrete version (pinned MC → pinned CC → Default) so
+	// control-plane templates and bashible see one resolved value even when the field is
+	// absent from CC.
 	out["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
 	return out, nil
 }

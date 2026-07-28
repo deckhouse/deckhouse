@@ -1,9 +1,8 @@
-{{- /* MC settings are authoritative; CC is fallback. Guard nil settings like resourcesRequests. */ -}}
+{{- /* Pinned MC settings win; Automatic is not a pin — keep resolved clusterConfiguration. */ -}}
 {{- $kubernetesVersion := .clusterConfiguration.kubernetesVersion -}}
-{{- if and .settings .settings.kubernetesVersion -}}
+{{- if and .settings .settings.kubernetesVersion (ne .settings.kubernetesVersion "Automatic") -}}
   {{- $kubernetesVersion = .settings.kubernetesVersion -}}
 {{- end -}}
-{{- if eq $kubernetesVersion "Automatic" -}}{{- $kubernetesVersion = .clusterConfiguration.kubernetesVersion -}}{{- end -}}
 {{- $etcdName := .nodeName | default "etcd-member" -}}
 {{- $nodeIP := .nodeIP | default "127.0.0.1" -}}
 {{- $advertiseClient := printf "https://%s:2379" $nodeIP -}}

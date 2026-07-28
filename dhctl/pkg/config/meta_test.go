@@ -606,18 +606,32 @@ func TestKubernetesVersionResolution(t *testing.T) {
 		require.Equal(t, "1.34", ccm["kubernetesVersion"])
 	})
 
-	t.Run("Automatic resolves to DefaultKubernetesVersion", func(t *testing.T) {
+	t.Run("ModuleConfig Automatic defers to pinned ClusterConfiguration", func(t *testing.T) {
 		m := &MetaConfig{
 			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
 			ModuleConfigs: []*ModuleConfig{cpm("Automatic")},
 		}
+		require.Equal(t, "1.32", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, "1.32", ccm["kubernetesVersion"])
+	})
+
+	t.Run("unset falls back to DefaultKubernetesVersion", func(t *testing.T) {
+		m := &MetaConfig{ClusterConfig: map[string]json.RawMessage{}}
 		ccm, err := m.ClusterConfigMap()
 		require.NoError(t, err)
 		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
 	})
 
-	t.Run("unset falls back to DefaultKubernetesVersion", func(t *testing.T) {
-		m := &MetaConfig{ClusterConfig: map[string]json.RawMessage{}}
+	t.Run("both Automatic falls back to DefaultKubernetesVersion", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("Automatic")},
+			ModuleConfigs: []*ModuleConfig{cpm("Automatic")},
+		}
+		require.Equal(t, "", m.kubernetesVersionRaw())
+
 		ccm, err := m.ClusterConfigMap()
 		require.NoError(t, err)
 		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
