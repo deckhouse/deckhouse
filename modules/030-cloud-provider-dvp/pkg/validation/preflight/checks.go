@@ -17,18 +17,19 @@ package preflight
 import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 
-	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
 // ValidatePreflight checks resources required before cluster bootstrap or converge.
-func ValidatePreflight(state *cpval.State) cpval.Result {
+func ValidatePreflight(state *cpvalapi.State) cpvalapi.Result {
 	if state == nil {
-		return cpval.ResultForNilState()
+		return cpvalapi.ResultForNilState()
 	}
 
-	result := cpval.Result{}
-	result.Merge(cpval.ValidateProviderClusterConfigKubeconfig(state, dvpmeta.ProviderClusterConfigKubeconfigPath))
+	result := cpvalapi.Result{}
+	result.Merge(cpval.ValidateProviderClusterConfig(state, dvpmeta.PCCCredentialsValidationAdapter))
 
 	if cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
 		return result
@@ -36,7 +37,7 @@ func ValidatePreflight(state *cpval.State) cpval.Result {
 
 	result.Merge(cpval.ValidateModuleConfig(state))
 	result.Merge(cpval.ValidateCredentialSecretPresence(state))
-	result.Merge(cpval.ValidateCredentialSecretContent(state, dvpmeta.AllowedCredentialAuthSchemes))
+	result.Merge(cpval.ValidateCredentialSecretContent(state, dvpmeta.CredentialsValidator))
 	result.Merge(cpval.ValidateMasterNodeGroupPresence(state))
 	result.Merge(cpval.ValidateNodeGroupsClassReference(state, true))
 	result.Merge(cpval.ValidateInstanceClassesEtcdDisk(state))

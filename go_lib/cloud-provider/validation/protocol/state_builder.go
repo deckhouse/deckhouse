@@ -17,7 +17,8 @@ package protocol
 import (
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/decode"
 )
 
 // StateBuilderConfig holds provider-specific settings for dhctl protocol state building.
@@ -41,9 +42,9 @@ func NewStateBuilder(config StateBuilderConfig) *StateBuilder {
 }
 
 // Build decodes dhctl input and applies provider context from the builder configuration.
-func (b *StateBuilder) Build(input proto.ValidateInput) (*cpval.State, error) {
+func (b *StateBuilder) Build(input proto.ValidateInput) (*cpvalapi.State, error) {
 	var err error
-	state := &cpval.State{
+	state := &cpvalapi.State{
 		InstanceClassKind:           b.config.InstanceClassKind,
 		NamespaceName:               b.config.NamespaceName,
 		ModuleName:                  b.config.ModuleName,
@@ -51,22 +52,22 @@ func (b *StateBuilder) Build(input proto.ValidateInput) (*cpval.State, error) {
 	}
 
 	if input.CloudProviderVars != nil {
-		state.ModuleConfig, err = cpval.DecodeModuleConfigForModule(b.config.ModuleName, input.CloudProviderVars.Settings)
+		state.ModuleConfig, err = decode.DecodeModuleConfigForModule(b.config.ModuleName, input.CloudProviderVars.Settings)
 		if err != nil {
 			return nil, err
 		}
 
-		state.CredentialSecrets, err = cpval.DecodeCredentialSecrets(input.CloudProviderVars.Secrets)
+		state.CredentialSecrets, err = decode.DecodeCredentialSecrets(input.CloudProviderVars.Secrets)
 		if err != nil {
 			return nil, err
 		}
 
-		state.NodeGroups, err = cpval.DecodeNodeGroups(input.CloudProviderVars.NodeGroups)
+		state.NodeGroups, err = decode.DecodeNodeGroups(input.CloudProviderVars.NodeGroups)
 		if err != nil {
 			return nil, err
 		}
 
-		state.InstanceClasses, err = cpval.DecodeInstanceClasses(input.CloudProviderVars.InstanceClasses)
+		state.InstanceClasses, err = decode.DecodeInstanceClasses(input.CloudProviderVars.InstanceClasses)
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +77,7 @@ func (b *StateBuilder) Build(input proto.ValidateInput) (*cpval.State, error) {
 		state.ModuleConfig.Name = b.config.ModuleName
 	}
 
-	state.MigrationStatus = cpval.MigrationStatusFromState(state)
+	state.MigrationStatus = cpvalapi.MigrationStatusFromState(state)
 
 	return state, nil
 }

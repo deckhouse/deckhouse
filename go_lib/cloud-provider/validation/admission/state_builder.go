@@ -29,7 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/decode"
 )
 
 var (
@@ -97,7 +98,7 @@ func (b *StateBuilder) BuildForCredentialSecret(
 	ctx context.Context,
 	operation admissionv1.Operation,
 	secret cpapi.CredentialSecret,
-) (*cpval.State, error) {
+) (*cpvalapi.State, error) {
 	state, err := b.newBaseState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("build base state: %w", err)
@@ -121,7 +122,7 @@ func (b *StateBuilder) BuildForNodeGroup(
 	ctx context.Context,
 	operation admissionv1.Operation,
 	obj runtime.Object,
-) (*cpval.State, error) {
+) (*cpvalapi.State, error) {
 	state, err := b.newBaseState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("build base state: %w", err)
@@ -135,7 +136,7 @@ func (b *StateBuilder) BuildForNodeGroup(
 			return nil, fmt.Errorf("convert runtime object to map: %w", err)
 		}
 
-		nodeGroup, err := cpval.DecodeNodeGroup(objMap)
+		nodeGroup, err := decode.DecodeNodeGroup(objMap)
 		if err != nil {
 			return nil, fmt.Errorf("decode NodeGroup: %w", err)
 		}
@@ -161,7 +162,7 @@ func (b *StateBuilder) BuildForInstanceClass(
 	ctx context.Context,
 	operation admissionv1.Operation,
 	obj runtime.Object,
-) (*cpval.State, *cpapi.InstanceClass, error) {
+) (*cpvalapi.State, *cpapi.InstanceClass, error) {
 	state, err := b.newBaseState(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("build base state: %w", err)
@@ -172,7 +173,7 @@ func (b *StateBuilder) BuildForInstanceClass(
 		return nil, nil, fmt.Errorf("convert runtime object to map: %w", err)
 	}
 
-	instanceClass, err := cpval.DecodeInstanceClass(objMap)
+	instanceClass, err := decode.DecodeInstanceClass(objMap)
 	if err != nil {
 		return nil, nil, fmt.Errorf("decode %s: %w", b.config.InstanceClassKind, err)
 	}
@@ -193,8 +194,8 @@ func (b *StateBuilder) BuildForInstanceClass(
 	return state, nil, nil
 }
 
-func (b *StateBuilder) newBaseState(ctx context.Context) (*cpval.State, error) {
-	state := &cpval.State{
+func (b *StateBuilder) newBaseState(ctx context.Context) (*cpvalapi.State, error) {
+	state := &cpvalapi.State{
 		InstanceClassKind: b.config.InstanceClassKind,
 		NamespaceName:     b.config.NamespaceName,
 		ModuleName:        b.config.ModuleName,
@@ -244,7 +245,7 @@ func (b *StateBuilder) getInstanceClassByName(ctx context.Context, name string) 
 		return nil, fmt.Errorf("get %s %q: %w", b.config.InstanceClassKind, name, err)
 	}
 
-	instanceClass, err := cpval.DecodeInstanceClass(obj.Object)
+	instanceClass, err := decode.DecodeInstanceClass(obj.Object)
 	if err != nil {
 		return nil, fmt.Errorf("decode %s %q: %w", b.config.InstanceClassKind, name, err)
 	}
@@ -265,7 +266,7 @@ func (b *StateBuilder) listNodeGroupsByInstanceClass(ctx context.Context, classN
 
 	result := make([]cpapi.NodeGroup, 0, len(list.Items))
 	for i := range list.Items {
-		nodeGroup, err := cpval.DecodeNodeGroup(list.Items[i].Object)
+		nodeGroup, err := decode.DecodeNodeGroup(list.Items[i].Object)
 		if err != nil {
 			return nil, fmt.Errorf("decode NodeGroup: %w", err)
 		}

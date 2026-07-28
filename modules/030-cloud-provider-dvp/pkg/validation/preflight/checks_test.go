@@ -20,12 +20,13 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 )
 
-func hasViolationCode(result cpval.Result, code string) bool {
+func hasViolationCode(result cpvalapi.Result, code string) bool {
 	for _, violation := range result.Errors() {
 		if violation.Code == code {
 			return true
@@ -38,15 +39,15 @@ func TestValidatePreflightNilState(t *testing.T) {
 	t.Parallel()
 
 	result := ValidatePreflight(nil)
-	if !hasViolationCode(result, cpval.CodeInternalStateNil) {
-		t.Fatalf("ValidatePreflight(nil) = %q, want %s", result.Error(), cpval.CodeInternalStateNil)
+	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
+		t.Fatalf("ValidatePreflight(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
 }
 
 func TestValidatePreflightSkipsPendingMigration(t *testing.T) {
 	t.Parallel()
 
-	state := &cpval.State{
+	state := &cpvalapi.State{
 		MigrationStatus: cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true},
 	}
 	if result := ValidatePreflight(state); result.HasErrors() {
@@ -61,7 +62,7 @@ func TestValidatePreflightRequiresCredentialSecret(t *testing.T) {
 	state.CredentialSecrets = nil
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "credential_secret_required") {
+	if !hasViolationCode(result, cpval.CodeCredentialSecretRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
@@ -70,10 +71,12 @@ func TestValidatePreflightRejectsInvalidCredentialSecretType(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
+	// ExistsCredentialSecret filters by IsManaged(), so a secret with wrong type
+	// becomes invisible — ValidateCredentialSecretPresence reports "required" instead.
 	state.CredentialSecrets[0].Type = string(corev1.SecretTypeTLS)
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "invalid_credential_secret_type") {
+	if !hasViolationCode(result, cpval.CodeCredentialSecretRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
@@ -89,7 +92,7 @@ func TestValidatePreflightRejectsInvalidPCCKubeconfig(t *testing.T) {
 	}
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "invalid_pcc_kubeconfig") {
+	if !hasViolationCode(result, "pcc_"+cpval.CodeInvalidKubeconfigSecret) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
@@ -97,7 +100,7 @@ func TestValidatePreflightRejectsInvalidPCCKubeconfig(t *testing.T) {
 func TestValidatePreflightRejectsInvalidPCCKubeconfigDuringMigration(t *testing.T) {
 	t.Parallel()
 
-	state := &cpval.State{
+	state := &cpvalapi.State{
 		MigrationStatus: cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true},
 		LegacyProviderClusterConfig: map[string]any{
 			"provider": map[string]any{
@@ -107,7 +110,7 @@ func TestValidatePreflightRejectsInvalidPCCKubeconfigDuringMigration(t *testing.
 	}
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "invalid_pcc_kubeconfig") {
+	if !hasViolationCode(result, "pcc_"+cpval.CodeInvalidKubeconfigSecret) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
@@ -119,7 +122,7 @@ func TestValidatePreflightRequiresMasterNodeGroup(t *testing.T) {
 	state.NodeGroups = nil
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "master_node_group_required") {
+	if !hasViolationCode(result, cpval.CodeMasterNodeGroupRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
@@ -143,7 +146,7 @@ func TestValidatePreflightRejectsInvalidInstanceClassKind(t *testing.T) {
 	state.NodeGroups[0].Spec.CloudInstances.ClassReference.Kind = "WrongKind"
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "node_group_invalid_instance_class_kind") {
+	if !hasViolationCode(result, cpval.CodeNodeGroupInvalidInstanceClassKind) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
@@ -155,7 +158,7 @@ func TestValidatePreflightRequiresInstanceClassName(t *testing.T) {
 	state.NodeGroups[0].Spec.CloudInstances.ClassReference.Name = "  "
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "node_group_class_reference_name_required") {
+	if !hasViolationCode(result, cpval.CodeNodeGroupClassReferenceNameRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
@@ -167,7 +170,7 @@ func TestValidatePreflightRequiresExistingInstanceClass(t *testing.T) {
 	state.InstanceClasses = nil
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "instance_class_not_found") {
+	if !hasViolationCode(result, cpval.CodeInstanceClassNotFound) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
@@ -179,7 +182,7 @@ func TestValidatePreflightRequiresMasterEtcdDisk(t *testing.T) {
 	state.InstanceClasses[0].Spec.EtcdDisk = nil
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "master_etcd_disk_required") {
+	if !hasViolationCode(result, cpval.CodeMasterEtcdDiskRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
@@ -202,15 +205,15 @@ func TestValidatePreflightInvalidKindStillChecksNameWhenPresent(t *testing.T) {
 
 	result := ValidatePreflight(state)
 	if !strings.Contains(result.Error(), "node_group_class_reference_name_required") &&
-		!hasViolationCode(result, "node_group_class_reference_name_required") {
+		!hasViolationCode(result, cpval.CodeNodeGroupClassReferenceNameRequired) {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
 }
 
-func validState(t *testing.T) *cpval.State {
+func validState(t *testing.T) *cpvalapi.State {
 	t.Helper()
 
-	state := &cpval.State{
+	state := &cpvalapi.State{
 		ModuleName:        dvpmeta.ModuleName,
 		NamespaceName:     dvpmeta.Namespace,
 		InstanceClassKind: dvpmeta.InstanceClassKind,

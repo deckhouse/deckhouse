@@ -12,19 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package meta contains DVP validation constants.
-package meta
+package validation
 
 import (
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"fmt"
+	"strings"
 )
 
-const (
-	// ProviderClusterConfigKubeconfigPath is the dot path to kubeconfig in legacy ProviderClusterConfiguration.
-	ProviderClusterConfigKubeconfigPath = "provider.kubeconfigDataBase64"
-)
+func getNamedResourcePath(kind, name string) string {
+	if name == "" {
+		return kind
+	}
 
-var (
-	// AllowedCredentialAuthSchemes lists auth schemes supported by the DVP provider.
-	AllowedCredentialAuthSchemes = []cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig}
-)
+	return fmt.Sprintf("%s/%s", kind, name)
+}
+
+func lookupMapStringPath(data map[string]any, path string) (string, bool) {
+	if data == nil || path == "" {
+		return "", false
+	}
+
+	current := any(data)
+	for _, part := range strings.Split(path, ".") {
+		object, ok := current.(map[string]any)
+		if !ok {
+			return "", false
+		}
+
+		value, ok := object[part]
+		if !ok {
+			return "", false
+		}
+
+		current = value
+	}
+
+	value, ok := current.(string)
+	return value, ok
+}

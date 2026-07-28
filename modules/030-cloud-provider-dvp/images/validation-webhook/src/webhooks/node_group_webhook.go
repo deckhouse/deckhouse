@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
+	cpvaldecode "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/decode"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 	dvpadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/admission"
@@ -175,7 +175,7 @@ func decodeNodeGroup(obj runtime.Object) (cpapi.NodeGroup, error) {
 		return cpapi.NodeGroup{}, err
 	}
 
-	return cpval.DecodeJSONValue[cpapi.NodeGroup](object)
+	return cpvaldecode.DecodeJSONValue[cpapi.NodeGroup](object)
 }
 
 func runtimeObjectToMap(obj runtime.Object) (map[string]any, error) {

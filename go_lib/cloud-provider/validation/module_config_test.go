@@ -18,11 +18,12 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 	"k8s.io/utils/ptr"
 )
 
-func moduleConfigState(moduleConfig *cpapi.ModuleConfig, legacy map[string]any) *State {
-	return &State{
+func moduleConfigState(moduleConfig *cpapi.ModuleConfig, legacy map[string]any) *cpvalapi.State {
+	return &cpvalapi.State{
 		ModuleName:                  "cloud-provider-dvp",
 		ModuleConfig:                moduleConfig,
 		LegacyProviderClusterConfig: legacy,
@@ -73,7 +74,7 @@ func TestValidateModuleConfigIgnoresSensitiveSettings(t *testing.T) {
 func TestValidateModuleConfigRequiredWithoutLegacyPCC(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateModuleConfig(&State{ModuleName: "cloud-provider-dvp"})
+	result := ValidateModuleConfig(&cpvalapi.State{ModuleName: "cloud-provider-dvp"})
 	if !hasViolationCode(result, "module_config_required") {
 		t.Fatalf("ValidateModuleConfig() = %q", result.Error())
 	}

@@ -12,32 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package meta contains DVP validation constants.
 package validation
 
 import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 )
 
-func credentialContentState(secrets []cpapi.CredentialSecret) *State {
-	return &State{
-		NamespaceName:     "d8-cloud-provider-test",
-		CredentialSecrets: secrets,
-	}
-}
+const (
+	// PCCKubeconfigPath is the dot path to kubeconfig in legacy ProviderClusterConfiguration.
+	PCCKubeconfigPath = "provider.kubeconfigDataBase64"
+)
 
-func instanceClassState(kind string, nodeGroups []cpapi.NodeGroup, classes []cpapi.InstanceClass) *State {
-	return &State{
-		InstanceClassKind: kind,
-		NodeGroups:        nodeGroups,
-		InstanceClasses:   classes,
+var (
+	CredentialsValidator            = &cpval.KubeconfigValidator{}
+	PCCCredentialsValidationAdapter = &cpval.PCCCredentialsValidationAdapter{
+		Validator: CredentialsValidator,
+		Schemes: []cpval.PCCSchemeConfig{
+			{
+				AuthScheme: cpapi.AuthSchemeKubeconfig,
+				SecretPath: PCCKubeconfigPath,
+			},
+		},
 	}
-}
-
-func hasViolationCode(result Result, code string) bool {
-	for _, violation := range result.Errors() {
-		if violation.Code == code {
-			return true
-		}
-	}
-	return false
-}
+)

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation
+package api
 
 import (
 	"strings"
@@ -149,5 +149,61 @@ func TestResultErrorOrNilReturnsWrappedMessage(t *testing.T) {
 	err := result.ErrorOrNil()
 	if err == nil || err.Error() != "Secret/x: failed" {
 		t.Fatalf("ErrorOrNil() = %v, want Secret/x: failed", err)
+	}
+}
+
+func TestResultWarnings(t *testing.T) {
+	t.Parallel()
+
+	result := Result{}
+	result.AddWarning("path.a", "code_a", "val", "warning a")
+	result.AddWarning("path.b", "code_b", nil, "warning b")
+
+	warnings := result.Warnings()
+	if len(warnings) != 2 {
+		t.Fatalf("Warnings() = %d, want 2", len(warnings))
+	}
+
+	codes := make(map[string]bool, len(warnings))
+	for _, w := range warnings {
+		codes[w.Code] = true
+	}
+	if !codes["code_a"] {
+		t.Fatal("Warnings() missing code_a")
+	}
+	if !codes["code_b"] {
+		t.Fatal("Warnings() missing code_b")
+	}
+}
+
+func TestResultMergeWarnings(t *testing.T) {
+	t.Parallel()
+
+	r1 := Result{}
+	r1.AddWarning("w1", "code_w1", nil, "warn1")
+	r2 := Result{}
+	r2.AddWarning("w2", "code_w2", nil, "warn2")
+	r1.Merge(r2)
+
+	if len(r1.Warnings()) != 2 {
+		t.Fatalf("Merged warnings = %d, want 2", len(r1.Warnings()))
+	}
+}
+
+func TestResultHasErrorsAndWarnings(t *testing.T) {
+	t.Parallel()
+
+	r := Result{}
+	r.AddError("e", "code_e", nil, "err")
+	r.AddWarning("w", "code_w", nil, "warn")
+
+	if !r.HasErrors() {
+		t.Fatal("HasErrors() should be true with errors")
+	}
+	if len(r.Warnings()) != 1 {
+		t.Fatalf("Warnings() = %d, want 1", len(r.Warnings()))
+	}
+	if len(r.Errors()) != 1 {
+		t.Fatalf("Errors() = %d, want 1", len(r.Errors()))
 	}
 }

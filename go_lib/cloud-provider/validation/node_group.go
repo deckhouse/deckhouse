@@ -19,18 +19,27 @@ import (
 	"strings"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+)
+
+// Validation violation codes for NodeGroup validation.
+const (
+	CodeMasterNodeGroupRequired             = "master_node_group_required"
+	CodeNodeGroupInvalidInstanceClassKind   = "node_group_invalid_instance_class_kind"
+	CodeNodeGroupClassReferenceNameRequired = "node_group_class_reference_name_required"
+	CodeInstanceClassNotFound               = "instance_class_not_found"
 )
 
 // ValidateMasterNodeGroupPresence checks that master NodeGroup exists (before bootstrap or converge).
-func ValidateMasterNodeGroupPresence(state *State) Result {
+func ValidateMasterNodeGroupPresence(state *cpvalapi.State) cpvalapi.Result {
 	if state == nil {
-		return ResultForNilState()
+		return cpvalapi.ResultForNilState()
 	}
 
-	result := Result{}
+	result := cpvalapi.Result{}
 
-	if !existsNodeGroup(state, "master") {
-		result.AddError("NodeGroup/master", "master_node_group_required", nil, `NodeGroup "master" is required`)
+	if !state.ExistsNodeGroup("master") {
+		result.AddError("NodeGroup/master", CodeMasterNodeGroupRequired, nil, `NodeGroup "master" is required`)
 	}
 
 	return result
@@ -44,12 +53,12 @@ func ValidateMasterNodeGroupPresence(state *State) Result {
 //
 // Non-CloudPermanent NodeGroups are skipped.
 // Set verifyExistence=false during admission (InstanceClass may not exist yet).
-func ValidateNodeGroupsClassReference(state *State, verifyExistence bool) Result {
+func ValidateNodeGroupsClassReference(state *cpvalapi.State, verifyExistence bool) cpvalapi.Result {
 	if state == nil {
-		return ResultForNilState()
+		return cpvalapi.ResultForNilState()
 	}
 
-	result := Result{}
+	result := cpvalapi.Result{}
 
 	for _, nodeGroup := range state.NodeGroups {
 		if nodeGroup.Spec.NodeType != cpapi.NodeTypeCloudPermanent {
@@ -63,8 +72,8 @@ func ValidateNodeGroupsClassReference(state *State, verifyExistence bool) Result
 		classRef := nodeGroup.Spec.CloudInstances.ClassReference
 		if classRef.Kind != state.InstanceClassKind {
 			result.AddError(
-				"NodeGroup/"+nodeGroup.Name+".spec.cloudInstances.classReference.kind",
-				"node_group_invalid_instance_class_kind",
+				fmt.Sprintf("NodeGroup/%s.spec.cloudInstances.classReference.kind", nodeGroup.Name),
+				CodeNodeGroupInvalidInstanceClassKind,
 				classRef.Kind,
 				fmt.Sprintf(`NodeGroup "%s" must have reference with kind %s`, nodeGroup.Name, state.InstanceClassKind),
 			)
@@ -72,8 +81,8 @@ func ValidateNodeGroupsClassReference(state *State, verifyExistence bool) Result
 
 		if strings.TrimSpace(classRef.Name) == "" {
 			result.AddError(
-				"NodeGroup/"+nodeGroup.Name+".spec.cloudInstances.classReference.name",
-				"node_group_class_reference_name_required",
+				fmt.Sprintf("NodeGroup/%s.spec.cloudInstances.classReference.name", nodeGroup.Name),
+				CodeNodeGroupClassReferenceNameRequired,
 				classRef.Name,
 				fmt.Sprintf(`NodeGroup "%s" has empty class reference name`, nodeGroup.Name),
 			)
@@ -81,10 +90,10 @@ func ValidateNodeGroupsClassReference(state *State, verifyExistence bool) Result
 			continue
 		}
 
-		if verifyExistence && !existsInstanceClass(state, classRef.Name) {
+		if verifyExistence && !state.ExistsInstanceClass(classRef.Name) {
 			result.AddError(
-				"NodeGroup/"+nodeGroup.Name+".spec.cloudInstances.classReference.name",
-				"instance_class_not_found",
+				fmt.Sprintf("NodeGroup/%s.spec.cloudInstances.classReference.name", nodeGroup.Name),
+				CodeInstanceClassNotFound,
 				classRef.Name,
 				fmt.Sprintf("%s %q was not found", state.InstanceClassKind, classRef.Name),
 			)
@@ -92,24 +101,4 @@ func ValidateNodeGroupsClassReference(state *State, verifyExistence bool) Result
 	}
 
 	return result
-}
-
-func existsNodeGroup(state *State, name string) bool {
-	for _, nodeGroup := range state.NodeGroups {
-		if nodeGroup.Name == name {
-			return true
-		}
-	}
-
-	return false
-}
-
-func existsInstanceClass(state *State, name string) bool {
-	for _, class := range state.InstanceClasses {
-		if class.Name == name {
-			return true
-		}
-	}
-
-	return false
 }

@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 )
 
 func TestValidateInstanceClassesEtcdDiskAllowsUnattachedEtcdDisk(t *testing.T) {
@@ -364,8 +365,8 @@ func TestValidateMasterInstanceClassAllowsConfiguredMaster(t *testing.T) {
 		}},
 	)
 
-	for name, validate := range map[string]func(*State) Result{
-		"ValidateNodeGroupsClassReference": func(s *State) Result { return ValidateNodeGroupsClassReference(s, true) },
+	for name, validate := range map[string]func(*cpvalapi.State) cpvalapi.Result{
+		"ValidateNodeGroupsClassReference": func(s *cpvalapi.State) cpvalapi.Result { return ValidateNodeGroupsClassReference(s, true) },
 		"ValidateInstanceClassesEtcdDisk":  ValidateInstanceClassesEtcdDisk,
 	} {
 		result := validate(state)

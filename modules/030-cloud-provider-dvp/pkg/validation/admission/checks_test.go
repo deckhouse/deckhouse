@@ -22,11 +22,12 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 )
 
-func hasViolationCode(result cpval.Result, code string) bool {
+func hasViolationCode(result cpvalapi.Result, code string) bool {
 	for _, violation := range result.Errors() {
 		if violation.Code == code {
 			return true
@@ -58,7 +59,7 @@ func TestValidateInstanceClassAllowsUnattachedEtcdDisk(t *testing.T) {
 func TestValidateAdmissionSkipsPendingMigration(t *testing.T) {
 	t.Parallel()
 
-	state := &cpval.State{
+	state := &cpvalapi.State{
 		ModuleName:        dvpmeta.ModuleName,
 		NamespaceName:     dvpmeta.Namespace,
 		InstanceClassKind: dvpmeta.InstanceClassKind,
@@ -79,14 +80,14 @@ func TestValidateAdmissionSkipsPendingMigration(t *testing.T) {
 		},
 	}
 
-	for name, validate := range map[string]func(*cpval.State) cpval.Result{
-		"ValidateCredentialSecret": func(state *cpval.State) cpval.Result {
+	for name, validate := range map[string]func(*cpvalapi.State) cpvalapi.Result{
+		"ValidateCredentialSecret": func(state *cpvalapi.State) cpvalapi.Result {
 			return ValidateCredentialSecret(state, admissionv1.Update)
 		},
-		"ValidateInstanceClass": func(state *cpval.State) cpval.Result {
+		"ValidateInstanceClass": func(state *cpvalapi.State) cpvalapi.Result {
 			return ValidateInstanceClass(state, admissionv1.Update, nil)
 		},
-		"ValidateNodeGroup": func(state *cpval.State) cpval.Result {
+		"ValidateNodeGroup": func(state *cpvalapi.State) cpvalapi.Result {
 			return ValidateNodeGroup(state, admissionv1.Update)
 		},
 	} {
@@ -104,7 +105,7 @@ func TestValidateInstanceClassRequiresMasterEtcdDisk(t *testing.T) {
 	state.InstanceClasses[0].Spec.EtcdDisk = nil
 
 	result := ValidateInstanceClass(state, admissionv1.Update, nil)
-	if !hasViolationCode(result, "master_etcd_disk_required") {
+	if !hasViolationCode(result, cpval.CodeMasterEtcdDiskRequired) {
 		t.Fatalf("ValidateInstanceClass() = %q, want master etcdDisk requirement", result.Error())
 	}
 }
@@ -152,10 +153,10 @@ func TestValidateCredentialSecretDoesNotRequirePrimaryCredentialSecret(t *testin
 	}
 }
 
-func validState(t *testing.T) *cpval.State {
+func validState(t *testing.T) *cpvalapi.State {
 	t.Helper()
 
-	state := &cpval.State{
+	state := &cpvalapi.State{
 		ModuleName:        dvpmeta.ModuleName,
 		NamespaceName:     dvpmeta.Namespace,
 		InstanceClassKind: dvpmeta.InstanceClassKind,

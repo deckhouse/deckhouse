@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation
+package api
 
 import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/decode"
 )
 
 type legacyProviderClusterConfig struct {
@@ -50,11 +51,11 @@ func IsNewResourcesComplete(state *State) bool {
 		return false
 	}
 
-	if _, ok := findCredentialSecret(state, cpapi.CredentialSecretName); !ok {
+	if !state.ExistsCredentialSecret(cpapi.CredentialSecretName) {
 		return false
 	}
 
-	legacy, err := DecodeJSONValue[legacyProviderClusterConfig](state.LegacyProviderClusterConfig)
+	legacy, err := decode.DecodeJSONValue[legacyProviderClusterConfig](state.LegacyProviderClusterConfig)
 	if err != nil {
 		return false
 	}

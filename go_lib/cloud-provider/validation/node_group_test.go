@@ -18,12 +18,13 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 )
 
 const testInstanceClassKind = "DVPInstanceClass"
 
-func masterNodeGroupState(nodeGroups []cpapi.NodeGroup) *State {
-	return &State{
+func masterNodeGroupState(nodeGroups []cpapi.NodeGroup) *cpvalapi.State {
+	return &cpvalapi.State{
 		InstanceClassKind: testInstanceClassKind,
 		NodeGroups:        nodeGroups,
 	}
@@ -48,8 +49,8 @@ func TestValidateNodeGroupsClassReferenceNilState(t *testing.T) {
 	t.Parallel()
 
 	result := ValidateNodeGroupsClassReference(nil, true)
-	if !hasViolationCode(result, CodeInternalStateNil) {
-		t.Fatalf("ValidateNodeGroupsClassReference(nil) = %q, want %s", result.Error(), CodeInternalStateNil)
+	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
+		t.Fatalf("ValidateNodeGroupsClassReference(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
 }
 
@@ -246,8 +247,8 @@ func TestValidateMasterNodeGroupPresenceNilState(t *testing.T) {
 	t.Parallel()
 
 	result := ValidateMasterNodeGroupPresence(nil)
-	if !hasViolationCode(result, CodeInternalStateNil) {
-		t.Fatalf("ValidateMasterNodeGroupPresence(nil) = %q, want %s", result.Error(), CodeInternalStateNil)
+	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
+		t.Fatalf("ValidateMasterNodeGroupPresence(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
 }
 
