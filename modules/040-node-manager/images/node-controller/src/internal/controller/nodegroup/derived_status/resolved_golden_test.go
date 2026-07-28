@@ -36,21 +36,21 @@ func kubeletDefaults() map[string]interface{} {
 	}
 }
 
-func assertBlobMatchesGolden(t *testing.T, blob map[string]interface{}, goldenJSON string) {
+func assertResolvedMatchesGolden(t *testing.T, nodeGroupValues map[string]interface{}, goldenJSON string) {
 	t.Helper()
 
-	blobJSON, err := json.Marshal(blob)
+	rawJSON, err := json.Marshal(nodeGroupValues)
 	require.NoError(t, err)
 
 	var got, want interface{}
-	require.NoError(t, json.Unmarshal(blobJSON, &got))
+	require.NoError(t, json.Unmarshal(rawJSON, &got))
 	require.NoError(t, json.Unmarshal([]byte(goldenJSON), &want))
 
 	assert.Equal(t, want, got)
 }
 
-func TestBuildNodeGroupBlob_Golden_CloudPermanent(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_Golden_CloudPermanent(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "cp1",
 		NodeType: v1.NodeTypeCloudPermanent,
 		RawSpec: map[string]interface{}{
@@ -66,7 +66,7 @@ func TestBuildNodeGroupBlob_Golden_CloudPermanent(t *testing.T) {
 		UpdateEpoch:       "111",
 	})
 
-	assertBlobMatchesGolden(t, blob, `{
+	assertResolvedMatchesGolden(t, nodeGroupValues, `{
 		"kubernetesVersion": "1.32",
 		"cri": { "type": "Containerd" },
 		"engine": "None",
@@ -85,8 +85,8 @@ func TestBuildNodeGroupBlob_Golden_CloudPermanent(t *testing.T) {
 	}`)
 }
 
-func TestBuildNodeGroupBlob_Golden_CloudEphemeralProcessed(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_Golden_CloudEphemeralProcessed(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -111,7 +111,7 @@ func TestBuildNodeGroupBlob_Golden_CloudEphemeralProcessed(t *testing.T) {
 		UpdateEpoch:       "222",
 	})
 
-	assertBlobMatchesGolden(t, blob, `{
+	assertResolvedMatchesGolden(t, nodeGroupValues, `{
 		"nodeType": "CloudEphemeral",
 		"cloudInstances": {
 			"classReference": { "kind": "D8TestInstanceClass", "name": "proper1" },
@@ -135,8 +135,8 @@ func TestBuildNodeGroupBlob_Golden_CloudEphemeralProcessed(t *testing.T) {
 	}`)
 }
 
-func TestBuildNodeGroupBlob_Golden_EmptyZones(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_Golden_EmptyZones(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -159,17 +159,17 @@ func TestBuildNodeGroupBlob_Golden_EmptyZones(t *testing.T) {
 		UpdateEpoch:       "222",
 	})
 
-	ci, ok := blob["cloudInstances"].(map[string]interface{})
+	ci, ok := nodeGroupValues["cloudInstances"].(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, []string{}, ci["zones"], "empty zones must stay an empty slice, not nil")
 
-	blobJSON, err := json.Marshal(blob)
+	rawJSON, err := json.Marshal(nodeGroupValues)
 	require.NoError(t, err)
-	assert.Contains(t, string(blobJSON), `"zones":[]`, "empty zones must marshal as [] not null")
+	assert.Contains(t, string(rawJSON), `"zones":[]`, "empty zones must marshal as [] not null")
 }
 
-func TestBuildNodeGroupBlob_Golden_Static(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_Golden_Static(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "static1",
 		NodeType: v1.NodeTypeStatic,
 		RawSpec: map[string]interface{}{
@@ -188,7 +188,7 @@ func TestBuildNodeGroupBlob_Golden_Static(t *testing.T) {
 		UpdateEpoch:       "333",
 	})
 
-	assertBlobMatchesGolden(t, blob, `{
+	assertResolvedMatchesGolden(t, nodeGroupValues, `{
 		"kubernetesVersion": "1.32",
 		"cri": { "type": "Containerd" },
 		"engine": "None",

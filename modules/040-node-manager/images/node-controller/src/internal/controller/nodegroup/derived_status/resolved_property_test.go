@@ -34,22 +34,22 @@ const (
 	propertyIterations = 2000
 )
 
-func TestBuildNodeGroupBlob_LegacyParityProperty(t *testing.T) {
+func TestResolvedNodeGroup_LegacyParityProperty(t *testing.T) {
 	rng := rand.New(rand.NewSource(propertySeed))
 
 	for i := range propertyIterations {
-		in, result := randomBlobInput(rng)
+		in, result := randomResolveInput(rng)
 
 		require.Equalf(t,
 			legacyBuildNodeGroupBlob(in, result),
-			buildNodeGroupBlob(in, result),
+			resolvedMap(in, result),
 			"iteration %d\ninput: %#v\nresult: %#v", i, in, result,
 		)
 	}
 }
 
-func randomBlobInput(rng *rand.Rand) (BlobInput, Result) {
-	in := BlobInput{
+func randomResolveInput(rng *rand.Rand) (ResolveInput, Result) {
+	in := ResolveInput{
 		Name:            randomString(rng, "ng"),
 		ManualRolloutID: randomString(rng, "rollout"),
 		NodeType:        randomNodeType(rng),
@@ -106,7 +106,7 @@ func randomRawSpec(rng *rand.Rand) map[string]interface{} {
 		spec["approval"] = "not-in-the-allowlist"
 	}
 
-	for _, key := range nodeGroupForValuesKeys {
+	for _, key := range specPassthroughKeys {
 		if rng.Intn(3) == 0 {
 			continue
 		}

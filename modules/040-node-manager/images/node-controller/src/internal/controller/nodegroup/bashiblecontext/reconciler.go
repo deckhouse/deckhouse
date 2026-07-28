@@ -53,7 +53,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 		return fmt.Errorf("list nodegroups: %w", err)
 	}
 
-	elements := make([]map[string]interface{}, 0, len(ngList.Items))
+	nodeGroups := make([]map[string]interface{}, 0, len(ngList.Items))
 	for i := range ngList.Items {
 		obj := &ngList.Items[i]
 		rawSpec, _ := obj.Object["spec"].(map[string]interface{})
@@ -72,27 +72,27 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 		if errStr != "" {
 			logger.Info("NodeGroup failed validation", "nodeGroup", ng.Name, "error", errStr)
 			if p, ok := prior[ng.Name]; ok {
-				elements = append(elements, p)
+				nodeGroups = append(nodeGroups, p)
 			}
 			continue
 		}
 
-		elements = append(elements, resolved.ToMap())
+		nodeGroups = append(nodeGroups, resolved.ToMap())
 	}
 
-	sort.Slice(elements, func(i, j int) bool {
-		return blobName(elements[i]) < blobName(elements[j])
+	sort.Slice(nodeGroups, func(i, j int) bool {
+		return nodeGroupName(nodeGroups[i]) < nodeGroupName(nodeGroups[j])
 	})
 
-	setNodeGroupInfo(elements)
+	setNodeGroupInfo(nodeGroups)
 
-	return r.Context.WriteSecret(ctx, elements)
+	return r.Context.WriteSecret(ctx, nodeGroups)
 }
 
-// readPriorNodeGroups returns the elements of the currently published context, keyed by
-// NodeGroup name. They stay raw parsed maps on purpose: the Secret may have been written by an
-// older node-controller, and an element shape this build does not model must survive the
-// last-good fallback unchanged.
+// readPriorNodeGroups returns the entries of the currently published context, keyed by NodeGroup
+// name. They stay raw parsed maps on purpose: the Secret may have been written by an older
+// node-controller, and a shape this build does not model must survive the last-good fallback
+// unchanged.
 func (r *Reconciler) readPriorNodeGroups(ctx context.Context) map[string]map[string]interface{} {
 	out := map[string]map[string]interface{}{}
 
@@ -113,18 +113,18 @@ func (r *Reconciler) readPriorNodeGroups(ctx context.Context) map[string]map[str
 		return out
 	}
 	for _, item := range ngs {
-		element, ok := item.(map[string]interface{})
+		nodeGroup, ok := item.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		if name := blobName(element); name != "" {
-			out[name] = element
+		if name := nodeGroupName(nodeGroup); name != "" {
+			out[name] = nodeGroup
 		}
 	}
 	return out
 }
 
-func blobName(element map[string]interface{}) string {
-	name, _ := element["name"].(string)
+func nodeGroupName(nodeGroup map[string]interface{}) string {
+	name, _ := nodeGroup["name"].(string)
 	return name
 }

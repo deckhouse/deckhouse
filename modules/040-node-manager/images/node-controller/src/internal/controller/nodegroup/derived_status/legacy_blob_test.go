@@ -45,7 +45,7 @@ var legacyNodeGroupForValuesKeys = []string{
 	"nodeDrainTimeoutSecond",
 }
 
-func legacyBuildNodeGroupBlob(in BlobInput, r Result) map[string]interface{} {
+func legacyBuildNodeGroupBlob(in ResolveInput, r Result) map[string]interface{} {
 	blob := make(map[string]interface{})
 
 	for _, key := range legacyNodeGroupForValuesKeys {
@@ -129,15 +129,15 @@ func legacyRawExtensionToValue(ext *runtime.RawExtension) interface{} {
 	return out
 }
 
-// TestBuildNodeGroupBlob_MatchesFrozenLegacy compares the live values, not their serialization:
+// TestResolvedNodeGroup_MatchesFrozenLegacy compares the live values, not their serialization:
 // the element also feeds text/template, where []string and []interface{} render differently and
 // the rendered instance-class checksum names an immutable machine template.
-func TestBuildNodeGroupBlob_MatchesFrozenLegacy(t *testing.T) {
-	for _, fixture := range blobCorpus() {
+func TestResolvedNodeGroup_MatchesFrozenLegacy(t *testing.T) {
+	for _, fixture := range nodeGroupCorpus() {
 		t.Run(fixture.name, func(t *testing.T) {
 			require.Equal(t,
 				legacyBuildNodeGroupBlob(fixture.input, fixture.result),
-				buildNodeGroupBlob(fixture.input, fixture.result),
+				resolvedMap(fixture.input, fixture.result),
 			)
 		})
 	}

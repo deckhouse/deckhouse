@@ -45,7 +45,7 @@ func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, rawSpe
 		return ResolvedNodeGroup{}, "", err
 	}
 
-	in := BlobInput{
+	in := ResolveInput{
 		Name:            ng.Name,
 		ManualRolloutID: ng.GetAnnotations()[manualRolloutIDAnnotation],
 		NodeType:        ng.Spec.NodeType,

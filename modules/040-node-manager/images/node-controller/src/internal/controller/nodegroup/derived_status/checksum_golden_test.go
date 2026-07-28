@@ -26,15 +26,15 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
-// TestBuildNodeGroupBlob_ChecksumGoldens renders real provider checksum templates over the
-// elements the corpus produces and pins the result as a literal. The checksum names the CAPI
+// TestResolvedNodeGroup_ChecksumGoldens renders real provider checksum templates over the
+// maps the corpus produces and pins the result as a literal. The checksum names the CAPI
 // machine template and the MCM MachineClass, both immutable: a checksum that moves renames them,
 // which rolls the MachineDeployment and recreates every VM in it.
 //
 // The sibling pins in machineclass/ feed the templates a hand-written instanceClass; these ones
-// start from buildNodeGroupBlob, so they also cover how the element carries the value there —
+// start from resolvedMap, so they also cover how the published map carries the value there —
 // the Go type of a number included, since toYaml renders float64 and int64 differently.
-func TestBuildNodeGroupBlob_ChecksumGoldens(t *testing.T) {
+func TestResolvedNodeGroup_ChecksumGoldens(t *testing.T) {
 	const (
 		awsMCMTemplate     = "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum"
 		yandexMCMTemplate  = "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum"
@@ -79,8 +79,8 @@ func TestBuildNodeGroupBlob_ChecksumGoldens(t *testing.T) {
 		},
 	}
 
-	byName := make(map[string]blobFixture, len(blobCorpus()))
-	for _, fixture := range blobCorpus() {
+	byName := make(map[string]corpusFixture, len(nodeGroupCorpus()))
+	for _, fixture := range nodeGroupCorpus() {
 		byName[fixture.name] = fixture
 	}
 
@@ -92,7 +92,7 @@ func TestBuildNodeGroupBlob_ChecksumGoldens(t *testing.T) {
 			tmpl, err := os.ReadFile(tc.template)
 			require.NoError(t, err, "provider checksum template must exist")
 
-			got, err := machineclass.RenderChecksum(tmpl, buildNodeGroupBlob(fixture.input, fixture.result), nil)
+			got, err := machineclass.RenderChecksum(tmpl, resolvedMap(fixture.input, fixture.result), nil)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, got)
 		})

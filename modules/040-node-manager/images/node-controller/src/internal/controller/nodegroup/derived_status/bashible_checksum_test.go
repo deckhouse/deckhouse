@@ -30,11 +30,11 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-func bashibleNodeGroupChecksum(t *testing.T, blob map[string]interface{}) string {
+func bashibleNodeGroupChecksum(t *testing.T, nodeGroupValues map[string]interface{}) string {
 	t.Helper()
 
-	// JSON round-trip deep-copy so stripping does not mutate the caller's blob.
-	raw, err := json.Marshal(blob)
+	// JSON round-trip deep-copy so stripping does not mutate the caller's nodeGroupValues.
+	raw, err := json.Marshal(nodeGroupValues)
 	require.NoError(t, err)
 	var cpy map[string]interface{}
 	require.NoError(t, json.Unmarshal(raw, &cpy))
@@ -53,9 +53,9 @@ func bashibleNodeGroupChecksum(t *testing.T, blob map[string]interface{}) string
 	return hex.EncodeToString(sum[:])
 }
 
-func buildCloudBlob(t *testing.T, kubernetesVersion string, minPerZone, maxPerZone float64, zones []string) map[string]interface{} {
+func buildCloudResolvedMap(t *testing.T, kubernetesVersion string, minPerZone, maxPerZone float64, zones []string) map[string]interface{} {
 	t.Helper()
-	return buildNodeGroupBlob(BlobInput{
+	return resolvedMap(ResolveInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -81,8 +81,8 @@ func buildCloudBlob(t *testing.T, kubernetesVersion string, minPerZone, maxPerZo
 }
 
 func TestBashibleChecksum_UpscaleInvariance(t *testing.T) {
-	small := buildCloudBlob(t, "1.32", float64(1), float64(3), []string{"a", "b"})
-	large := buildCloudBlob(t, "1.32", float64(5), float64(10), []string{"a", "b", "c"})
+	small := buildCloudResolvedMap(t, "1.32", float64(1), float64(3), []string{"a", "b"})
+	large := buildCloudResolvedMap(t, "1.32", float64(5), float64(10), []string{"a", "b", "c"})
 
 	assert.Equal(t,
 		bashibleNodeGroupChecksum(t, small),
@@ -92,8 +92,8 @@ func TestBashibleChecksum_UpscaleInvariance(t *testing.T) {
 }
 
 func TestBashibleChecksum_MeaningfulFieldChanges(t *testing.T) {
-	v132 := buildCloudBlob(t, "1.32", float64(1), float64(3), []string{"a", "b"})
-	v131 := buildCloudBlob(t, "1.31", float64(1), float64(3), []string{"a", "b"})
+	v132 := buildCloudResolvedMap(t, "1.32", float64(1), float64(3), []string{"a", "b"})
+	v131 := buildCloudResolvedMap(t, "1.31", float64(1), float64(3), []string{"a", "b"})
 
 	assert.NotEqual(t,
 		bashibleNodeGroupChecksum(t, v132),
@@ -103,7 +103,7 @@ func TestBashibleChecksum_MeaningfulFieldChanges(t *testing.T) {
 }
 
 func TestBashibleChecksum_GoldenParity(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -152,7 +152,7 @@ func TestBashibleChecksum_GoldenParity(t *testing.T) {
 
 	assert.Equal(t,
 		bashibleNodeGroupChecksum(t, golden),
-		bashibleNodeGroupChecksum(t, blob),
-		"BuildNodeGroupBlob must reproduce the get_crds element's bashible checksum",
+		bashibleNodeGroupChecksum(t, nodeGroupValues),
+		"the resolved NodeGroup must reproduce the get_crds element's bashible checksum",
 	)
 }

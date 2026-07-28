@@ -48,8 +48,8 @@ func buildMCMMachineDeployment(in mcmMachineDeploymentInput) *unstructured.Unstr
 	if nodeCapacity, _ := in.resolved.NodeCapacity.(map[string]interface{}); nodeCapacity != nil {
 		annotations["cluster-autoscaler.kubernetes.io/scale-from-zero"] = "true"
 		annotations["cluster-autoscaler.kubernetes.io/node-region"] = in.region
-		annotations["cluster-autoscaler.kubernetes.io/node-cpu"] = blobString(nodeCapacity, "cpu")
-		annotations["cluster-autoscaler.kubernetes.io/node-memory"] = blobString(nodeCapacity, "memory")
+		annotations["cluster-autoscaler.kubernetes.io/node-cpu"] = nestedString(nodeCapacity, "cpu")
+		annotations["cluster-autoscaler.kubernetes.io/node-memory"] = nestedString(nodeCapacity, "memory")
 		annotations["cluster-autoscaler.kubernetes.io/node-zone"] = in.zone
 	}
 
@@ -61,18 +61,18 @@ func buildMCMMachineDeployment(in mcmMachineDeploymentInput) *unstructured.Unstr
 
 	instanceGroup := fmt.Sprintf("%s-%s", in.ngName, in.zone)
 
-	cloudInstances := blobMap(spec, "cloudInstances")
-	maxSurge := intOrDefault(blobInt32Ptr(cloudInstances, "maxSurgePerZone"), 1)
-	maxUnavailable := intOrDefault(blobInt32Ptr(cloudInstances, "maxUnavailablePerZone"), 0)
+	cloudInstances := nestedMap(spec, "cloudInstances")
+	maxSurge := intOrDefault(nestedInt32Ptr(cloudInstances, "maxSurgePerZone"), 1)
+	maxUnavailable := intOrDefault(nestedInt32Ptr(cloudInstances, "maxUnavailablePerZone"), 0)
 
 	drainTimeout, maxEvictRetries := mcmDrainTimeout(spec)
 
-	nodeTemplate := blobMap(spec, "nodeTemplate")
+	nodeTemplate := nestedMap(spec, "nodeTemplate")
 
 	nodeTemplateMeta := map[string]interface{}{
 		"labels": mcmNodeTemplateLabels(in.ngName, nodeTemplate),
 	}
-	if ann := blobMap(nodeTemplate, "annotations"); len(ann) > 0 {
+	if ann := nestedMap(nodeTemplate, "annotations"); len(ann) > 0 {
 		out := make(map[string]interface{}, len(ann))
 		for k, v := range ann {
 			out[k] = v
@@ -137,7 +137,7 @@ func buildMCMMachineDeployment(in mcmMachineDeploymentInput) *unstructured.Unstr
 }
 
 func mcmDrainTimeout(spec map[string]interface{}) (string, int64) {
-	if cloudInstances := blobMap(spec, "cloudInstances"); cloudInstances != nil {
+	if cloudInstances := nestedMap(spec, "cloudInstances"); cloudInstances != nil {
 		if q, ok := cloudInstances["quickShutdown"].(bool); ok && q {
 			return "5m", 9
 		}
@@ -146,7 +146,7 @@ func mcmDrainTimeout(spec map[string]interface{}) (string, int64) {
 	// and fell through to the default. Honouring it literally would render drainTimeout: 0s
 	// with maxEvictRetries: 0 — nodes deleted with no drain grace at all — and change
 	// spec.template on upgrade, rolling every node of the group.
-	if n, ok := blobInt64(spec, "nodeDrainTimeoutSecond"); ok && n > 0 {
+	if n, ok := nestedInt64(spec, "nodeDrainTimeoutSecond"); ok && n > 0 {
 		return fmt.Sprintf("%ds", n), n / 20
 	}
 	return "600s", 30
@@ -158,7 +158,7 @@ func mcmNodeTemplateLabels(ngName string, nodeTemplate map[string]interface{}) m
 		"node.deckhouse.io/group":           ngName,
 		"node.deckhouse.io/type":            "CloudEphemeral",
 	}
-	for k, v := range blobMap(nodeTemplate, "labels") {
+	for k, v := range nestedMap(nodeTemplate, "labels") {
 		res[k] = v
 	}
 	return res
@@ -176,10 +176,10 @@ func mcmNodeTemplateTaints(nodeTemplate map[string]interface{}) []interface{} {
 			continue
 		}
 		taint := map[string]interface{}{
-			"key":    blobString(t, "key"),
-			"effect": blobString(t, "effect"),
+			"key":    nestedString(t, "key"),
+			"effect": nestedString(t, "effect"),
 		}
-		if v := blobString(t, "value"); v != "" {
+		if v := nestedString(t, "value"); v != "" {
 			taint["value"] = v
 		}
 		res = append(res, taint)
@@ -187,7 +187,7 @@ func mcmNodeTemplateTaints(nodeTemplate map[string]interface{}) []interface{} {
 	return res
 }
 
-func blobMap(m map[string]interface{}, key string) map[string]interface{} {
+func nestedMap(m map[string]interface{}, key string) map[string]interface{} {
 	if m == nil {
 		return nil
 	}
@@ -195,8 +195,8 @@ func blobMap(m map[string]interface{}, key string) map[string]interface{} {
 	return sub
 }
 
-// blobString returns m[key] as a string, or "" when absent or not a string.
-func blobString(m map[string]interface{}, key string) string {
+// nestedString returns m[key] as a string, or "" when absent or not a string.
+func nestedString(m map[string]interface{}, key string) string {
 	if m == nil {
 		return ""
 	}
@@ -204,7 +204,7 @@ func blobString(m map[string]interface{}, key string) string {
 	return s
 }
 
-func blobInt64(m map[string]interface{}, key string) (int64, bool) {
+func nestedInt64(m map[string]interface{}, key string) (int64, bool) {
 	if m == nil {
 		return 0, false
 	}
@@ -222,8 +222,8 @@ func blobInt64(m map[string]interface{}, key string) (int64, bool) {
 	}
 }
 
-func blobInt32Ptr(m map[string]interface{}, key string) *int32 {
-	if n, ok := blobInt64(m, key); ok {
+func nestedInt32Ptr(m map[string]interface{}, key string) *int32 {
+	if n, ok := nestedInt64(m, key); ok {
 		v := int32(n)
 		return &v
 	}

@@ -167,8 +167,8 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 	}
 }
 
-// TestAssemble_InputYAMLGolden pins the whole published document, not just the NodeGroup
-// elements: bashible-apiserver hashes the parsed input.yaml into every node's configuration
+// TestAssemble_InputYAMLGolden pins the whole published document, not just its per-NodeGroup
+// entries: bashible-apiserver hashes the parsed input.yaml into every node's configuration
 // checksum, so a key that appears or disappears rebuilds every bashible step in the cluster.
 // updateEpoch is the one value that legitimately moves (it is a function of wall time) and is
 // masked.
@@ -208,11 +208,11 @@ func maskUpdateEpoch(t *testing.T, input map[string]interface{}) {
 	require.True(t, ok, "input.yaml must carry nodeGroups")
 
 	for _, item := range nodeGroups {
-		element, ok := item.(map[string]interface{})
+		nodeGroup, ok := item.(map[string]interface{})
 		require.True(t, ok)
-		epoch, ok := element["updateEpoch"].(string)
-		require.True(t, ok, "every element must carry updateEpoch")
+		epoch, ok := nodeGroup["updateEpoch"].(string)
+		require.True(t, ok, "every nodeGroup must carry updateEpoch")
 		require.NotEmpty(t, epoch)
-		element["updateEpoch"] = "<epoch>"
+		nodeGroup["updateEpoch"] = "<epoch>"
 	}
 }

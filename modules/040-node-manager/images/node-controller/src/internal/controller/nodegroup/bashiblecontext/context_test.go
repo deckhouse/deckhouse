@@ -77,8 +77,8 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 		ClusterUUID:      "uuid-1",
 		Proxy:            map[string]interface{}{"httpProxy": "http://p"},
 	}
-	blob := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
-	input, err := s.Build(context.Background(), globals, blob)
+	nodeGroups := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
+	input, err := s.Build(context.Background(), globals, nodeGroups)
 	require.NoError(t, err)
 
 	assert.Equal(t, map[string]interface{}{"type": "yandex"}, input["cloudProvider"])
@@ -87,7 +87,7 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 	assert.Equal(t, float64(10), input["nodeStatusUpdateFrequency"])
 	assert.Equal(t, []string{"X"}, input["allowedKubeletFeatureGates"])
 	assert.Equal(t, map[string]interface{}{"token": "tok"}, input["packagesProxy"])
-	assert.Equal(t, blob, input["nodeGroups"])
+	assert.Equal(t, nodeGroups, input["nodeGroups"])
 
 	deckhouse := input["deckhouse"].(map[string]interface{})
 	assert.Equal(t, "stable", deckhouse["channel"])
@@ -131,9 +131,9 @@ func TestWriteSecret_UpsertsInputYAML(t *testing.T) {
 		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
 		kubeDNSService("10.222.0.10"),
 	)
-	blob := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
+	nodeGroups := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
 
-	require.NoError(t, s.WriteSecret(context.Background(), blob))
+	require.NoError(t, s.WriteSecret(context.Background(), nodeGroups))
 
 	got := &corev1.Secret{}
 	require.NoError(t, s.Client.Get(context.Background(),

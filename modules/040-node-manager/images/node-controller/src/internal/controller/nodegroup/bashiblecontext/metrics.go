@@ -33,15 +33,15 @@ func init() {
 	ctrlmetrics.Registry.MustRegister(nodeGroupInfo)
 }
 
-func setNodeGroupInfo(elements []map[string]interface{}) {
+func setNodeGroupInfo(nodeGroups []map[string]interface{}) {
 	nodeGroupInfo.Reset()
-	for _, element := range elements {
-		name, _ := element["name"].(string)
+	for _, nodeGroup := range nodeGroups {
+		name, _ := nodeGroup["name"].(string)
 		if name == "" {
 			continue
 		}
 		var criType string
-		if cri, ok := element["cri"].(map[string]interface{}); ok {
+		if cri, ok := nodeGroup["cri"].(map[string]interface{}); ok {
 			criType, _ = cri["type"].(string)
 		}
 		nodeGroupInfo.WithLabelValues(name, criType).Set(1)

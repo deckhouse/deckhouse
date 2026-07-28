@@ -33,9 +33,9 @@ func buildChecksumElement(instanceClass map[string]interface{}, manualRolloutID 
 // .nodeGroup; some (vcd CAPI) additionally require
 // .Values.nodeManager.internal.cloudProvider.<type> and fail rendering without it, so the
 // cloud-provider tree is always part of the context — callers cannot omit it.
-func RenderChecksum(templateContent []byte, blobElement, cloudProvider map[string]interface{}) (string, error) {
+func RenderChecksum(templateContent []byte, nodeGroupValues, cloudProvider map[string]interface{}) (string, error) {
 	ctx := map[string]interface{}{
-		"nodeGroup": blobElement,
+		"nodeGroup": nodeGroupValues,
 		"Values": map[string]interface{}{
 			"nodeManager": map[string]interface{}{
 				"internal": map[string]interface{}{

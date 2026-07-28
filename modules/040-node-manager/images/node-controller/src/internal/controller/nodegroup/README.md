@@ -106,8 +106,8 @@ flowchart LR
     C --> D[list every NodeGroup]
     D --> E[derived_status.ResolveNodeGroup<br/>per NodeGroup]
     E --> F{valid?}
-    F -->|yes| G[use the new element]
-    F -->|no| H[keep the last good element<br/>from the published Secret]
+    F -->|yes| G[use the new entry]
+    F -->|no| H[keep the last good entry<br/>from the published Secret]
     G --> I[sort by name]
     H --> I
     I --> J[add cluster-wide inputs:<br/>master addresses, DNS, CA,<br/>registry, cluster domain]
@@ -117,7 +117,7 @@ flowchart LR
 Two rules matter here:
 
 - **One NodeGroup must not break the others.** A group that fails validation keeps its previous
-  element, so the rest of the cluster still gets a complete document.
+  entry, so the rest of the cluster still gets a complete document.
 - **Write only on a real change.** The Secret is compared before writing. Every write makes
   bashible-apiserver rebuild the scripts for all groups, and a changed checksum makes every node
   re-apply its configuration.
@@ -195,13 +195,13 @@ Node, Machine or MachineDeployment back to its NodeGroup, and condition conversi
 
 ## Things worth knowing before changing this code
 
-- **Derived values reach the nodes.** Anything in the element ends up in the node configuration
-  checksum. A field that changes for no reason makes every node re-apply its configuration.
+- **Derived values reach the nodes.** Anything in the resolved NodeGroup ends up in the node
+  configuration checksum. A field that changes for no reason makes every node re-apply its configuration.
 - **The instance-class checksum reaches the machines.** See `machineclass` above: it renames
   immutable objects and rolls them.
 - **Read errors are not all treated alike.** Some readers return an error so the reconcile
-  retries; some fall back to a zero value. A fallback that reaches the element publishes a
-  changed document, so prefer returning the error.
+  retries; some fall back to a zero value. A fallback that reaches the resolved NodeGroup
+  publishes a changed document, so prefer returning the error.
 - **Events are filtered on purpose.** The predicates on both controllers exist because
   unfiltered events multiplied the work during NodeGroup bursts. Removing one is easy to do by
   accident and expensive at scale.

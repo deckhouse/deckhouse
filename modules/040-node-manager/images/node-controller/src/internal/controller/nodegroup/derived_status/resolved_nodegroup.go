@@ -24,7 +24,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-var nodeGroupForValuesKeys = []string{
+var specPassthroughKeys = []string{
 	"cri",
 	"gpu",
 	"staticInstances",
@@ -38,7 +38,7 @@ var nodeGroupForValuesKeys = []string{
 	"nodeDrainTimeoutSecond",
 }
 
-type BlobInput struct {
+type ResolveInput struct {
 	Name            string
 	ManualRolloutID string
 	NodeType        v1.NodeType
@@ -62,7 +62,7 @@ type ResolvedNodeGroup struct {
 	SerializedTaints  string
 	UpdateEpoch       string
 
-	// Spec is the allowlisted (nodeGroupForValuesKeys) passthrough of the NodeGroup spec, kept
+	// Spec is the allowlisted (specPassthroughKeys) passthrough of the NodeGroup spec, kept
 	// as the raw unstructured values. These subtrees are read by the node bundles and by the
 	// provider templates, never by node-controller, so typing them here would only add a
 	// conversion that can lose data.
@@ -79,7 +79,7 @@ type ResolvedNodeGroup struct {
 	NodeCapacity   interface{}
 }
 
-func ResolveNodeGroup(in BlobInput, r Result) ResolvedNodeGroup {
+func ResolveNodeGroup(in ResolveInput, r Result) ResolvedNodeGroup {
 	resolved := ResolvedNodeGroup{
 		Name:              in.Name,
 		NodeType:          in.NodeType,
@@ -111,52 +111,52 @@ func ResolveNodeGroup(in BlobInput, r Result) ResolvedNodeGroup {
 // bashible-apiserver hashes the parsed context into every node's configuration checksum, so a
 // key published empty must not become an absent key, and an absent one must not appear.
 func (r ResolvedNodeGroup) ToMap() map[string]interface{} {
-	blob := make(map[string]interface{}, len(r.Spec)+12)
+	out := make(map[string]interface{}, len(r.Spec)+12)
 	for key, val := range r.Spec {
-		blob[key] = val
+		out[key] = val
 	}
 
-	blob["nodeType"] = string(r.NodeType)
+	out["nodeType"] = string(r.NodeType)
 
-	blob["name"] = r.Name
-	blob["manualRolloutID"] = r.ManualRolloutID
-	blob["engine"] = r.Engine
+	out["name"] = r.Name
+	out["manualRolloutID"] = r.ManualRolloutID
+	out["engine"] = r.Engine
 
 	if len(r.Static) > 0 {
-		blob["static"] = r.Static
+		out["static"] = r.Static
 	}
 
 	if r.CloudProcessed {
 		if r.NodeCapacity != nil {
-			blob["nodeCapacity"] = r.NodeCapacity
+			out["nodeCapacity"] = r.NodeCapacity
 		}
-		blob["instanceClass"] = r.InstanceClass
+		out["instanceClass"] = r.InstanceClass
 		cloudInstances := copyMap(r.Spec["cloudInstances"])
 		cloudInstances["zones"] = r.Zones
-		blob["cloudInstances"] = cloudInstances
+		out["cloudInstances"] = cloudInstances
 	}
 
-	blob["kubernetesVersion"] = r.KubernetesVersion
-	blob["serializedLabels"] = r.SerializedLabels
-	blob["serializedTaints"] = r.SerializedTaints
+	out["kubernetesVersion"] = r.KubernetesVersion
+	out["serializedLabels"] = r.SerializedLabels
+	out["serializedTaints"] = r.SerializedTaints
 
 	cri := copyMap(r.Spec["cri"])
 	cri["type"] = r.CRIType
-	blob["cri"] = cri
+	out["cri"] = cri
 
-	blob["updateEpoch"] = r.UpdateEpoch
+	out["updateEpoch"] = r.UpdateEpoch
 
-	return blob
+	return out
 }
 
 func specPassthrough(rawSpec map[string]interface{}) map[string]interface{} {
-	spec := make(map[string]interface{}, len(nodeGroupForValuesKeys))
-	for _, key := range nodeGroupForValuesKeys {
+	spec := make(map[string]interface{}, len(specPassthroughKeys))
+	for _, key := range specPassthroughKeys {
 		val, ok := rawSpec[key]
 		if !ok {
 			continue
 		}
-		if isEmptyBlobValue(val) {
+		if isEmptySpecValue(val) {
 			continue
 		}
 		spec[key] = val
@@ -164,7 +164,7 @@ func specPassthrough(rawSpec map[string]interface{}) map[string]interface{} {
 	return spec
 }
 
-func isEmptyBlobValue(v interface{}) bool {
+func isEmptySpecValue(v interface{}) bool {
 	switch val := v.(type) {
 	case nil:
 		return true

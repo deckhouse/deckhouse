@@ -25,8 +25,8 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-func TestBuildNodeGroupBlob_SpecPassthrough(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_SpecPassthrough(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeStatic,
 		RawSpec: map[string]interface{}{
@@ -43,19 +43,19 @@ func TestBuildNodeGroupBlob_SpecPassthrough(t *testing.T) {
 		UpdateEpoch:       "12345",
 	})
 
-	assert.Equal(t, map[string]interface{}{"sharing": "TimeSlicing"}, blob["gpu"],
+	assert.Equal(t, map[string]interface{}{"sharing": "TimeSlicing"}, nodeGroupValues["gpu"],
 		"gpu.sharing must survive verbatim")
-	assert.NotContains(t, blob, "update", "spec.update must be dropped (not in nodeGroupForValues)")
-	assert.Equal(t, "worker", blob["name"])
-	assert.Equal(t, "None", blob["engine"])
-	assert.Equal(t, "1.29", blob["kubernetesVersion"])
-	assert.Equal(t, "12345", blob["updateEpoch"])
+	assert.NotContains(t, nodeGroupValues, "update", "spec.update must be dropped (not in nodeGroupForValues)")
+	assert.Equal(t, "worker", nodeGroupValues["name"])
+	assert.Equal(t, "None", nodeGroupValues["engine"])
+	assert.Equal(t, "1.29", nodeGroupValues["kubernetesVersion"])
+	assert.Equal(t, "12345", nodeGroupValues["updateEpoch"])
 	// cri is synthesized from the resolved type even without a spec cri block.
-	assert.Equal(t, map[string]interface{}{"type": "Containerd"}, blob["cri"])
+	assert.Equal(t, map[string]interface{}{"type": "Containerd"}, nodeGroupValues["cri"])
 }
 
-func TestBuildNodeGroupBlob_CRITypeOverride(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_CRITypeOverride(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -64,24 +64,24 @@ func TestBuildNodeGroupBlob_CRITypeOverride(t *testing.T) {
 		},
 	}, Result{CRIType: "NotManaged"})
 
-	cri, ok := blob["cri"].(map[string]interface{})
+	cri, ok := nodeGroupValues["cri"].(map[string]interface{})
 	if assert.True(t, ok) {
 		assert.Equal(t, "NotManaged", cri["type"], "resolved cri.type overrides the spec value")
 		assert.Equal(t, map[string]interface{}{"manage": true}, cri["docker"], "other cri fields preserved")
 	}
 }
 
-func TestBuildNodeGroupBlob_StaticEmbedded(t *testing.T) {
+func TestResolvedNodeGroup_StaticEmbedded(t *testing.T) {
 	static := map[string]interface{}{"internalNetworkCIDRs": []interface{}{"192.168.0.0/24"}}
 
-	staticNG := buildNodeGroupBlob(BlobInput{
+	staticNG := resolvedMap(ResolveInput{
 		Name: "s", NodeType: v1.NodeTypeStatic,
 		RawSpec: map[string]interface{}{"nodeType": "Static"},
 		Static:  static,
 	}, Result{CRIType: "Containerd"})
 	assert.Equal(t, static, staticNG["static"], "static value embedded for Static NG")
 
-	cloudNG := buildNodeGroupBlob(BlobInput{
+	cloudNG := resolvedMap(ResolveInput{
 		Name: "c", NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{"nodeType": "CloudEphemeral"},
 		Static:  static,
@@ -89,8 +89,8 @@ func TestBuildNodeGroupBlob_StaticEmbedded(t *testing.T) {
 	assert.NotContains(t, cloudNG, "static", "static must not leak into non-Static NG")
 }
 
-func TestBuildNodeGroupBlob_CloudProcessed(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_CloudProcessed(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "cloud",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec: map[string]interface{}{
@@ -106,18 +106,18 @@ func TestBuildNodeGroupBlob_CloudProcessed(t *testing.T) {
 		InstanceClass: &runtime.RawExtension{Raw: []byte(`{"flavorName":"m1.large"}`)},
 	})
 
-	ci, ok := blob["cloudInstances"].(map[string]interface{})
+	ci, ok := nodeGroupValues["cloudInstances"].(map[string]interface{})
 	if assert.True(t, ok) {
 		assert.Equal(t, []string{"a", "b"}, ci["zones"], "resolved zones overlaid")
 		assert.Equal(t, float64(3), ci["maxPerZone"], "spec cloudInstances fields preserved")
 	}
-	assert.Equal(t, map[string]interface{}{"cpu": "4", "memory": "8Gi"}, blob["nodeCapacity"],
+	assert.Equal(t, map[string]interface{}{"cpu": "4", "memory": "8Gi"}, nodeGroupValues["nodeCapacity"],
 		"nodeCapacity embedded as nested structure")
-	assert.Equal(t, map[string]interface{}{"flavorName": "m1.large"}, blob["instanceClass"])
+	assert.Equal(t, map[string]interface{}{"flavorName": "m1.large"}, nodeGroupValues["instanceClass"])
 }
 
-func TestBuildNodeGroupBlob_CloudNotProcessed(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_CloudNotProcessed(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "cloud",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec:  map[string]interface{}{"nodeType": "CloudEphemeral"},
@@ -127,13 +127,13 @@ func TestBuildNodeGroupBlob_CloudNotProcessed(t *testing.T) {
 		InstanceClass: &runtime.RawExtension{Raw: []byte(`{"flavorName":"m1.large"}`)},
 	})
 
-	assert.NotContains(t, blob, "instanceClass")
-	assert.NotContains(t, blob, "nodeCapacity")
-	assert.NotContains(t, blob, "cloudInstances")
+	assert.NotContains(t, nodeGroupValues, "instanceClass")
+	assert.NotContains(t, nodeGroupValues, "nodeCapacity")
+	assert.NotContains(t, nodeGroupValues, "cloudInstances")
 }
 
-func TestBuildNodeGroupBlob_FencingPassthrough(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_FencingPassthrough(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "worker",
 		NodeType: v1.NodeTypeStatic,
 		RawSpec: map[string]interface{}{
@@ -152,17 +152,17 @@ func TestBuildNodeGroupBlob_FencingPassthrough(t *testing.T) {
 		SerializedLabels:  "node.deckhouse.io/group=worker",
 	})
 
-	assert.Equal(t, map[string]interface{}{"mode": "Watchdog"}, blob["fencing"],
+	assert.Equal(t, map[string]interface{}{"mode": "Watchdog"}, nodeGroupValues["fencing"],
 		"fencing must survive verbatim (node-controller v1 has no Fencing field)")
 	assert.Equal(t, map[string]interface{}{
 		"labelSelector": map[string]interface{}{
 			"matchLabels": map[string]interface{}{"node-group": "worker"},
 		},
-	}, blob["staticInstances"], "staticInstances passthrough preserved")
+	}, nodeGroupValues["staticInstances"], "staticInstances passthrough preserved")
 }
 
-func TestBuildNodeGroupBlob_SerializedTaints(t *testing.T) {
-	blob := buildNodeGroupBlob(BlobInput{
+func TestResolvedNodeGroup_SerializedTaints(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "test",
 		NodeType: v1.NodeTypeCloudEphemeral,
 		RawSpec:  map[string]interface{}{"nodeType": "CloudEphemeral"},
@@ -171,15 +171,15 @@ func TestBuildNodeGroupBlob_SerializedTaints(t *testing.T) {
 		SerializedTaints: "b=v:NoExecute,a,d:NoExecute,c=v1:",
 	})
 
-	assert.Equal(t, "b=v:NoExecute,a,d:NoExecute,c=v1:", blob["serializedTaints"],
+	assert.Equal(t, "b=v:NoExecute,a,d:NoExecute,c=v1:", nodeGroupValues["serializedTaints"],
 		"serializedTaints placed verbatim, unsorted")
 }
 
-func TestBuildNodeGroupBlob_DoesNotMutateRawSpec(t *testing.T) {
+func TestResolvedNodeGroup_DoesNotMutateRawSpec(t *testing.T) {
 	rawCRI := map[string]interface{}{"type": "Docker"}
 	rawSpec := map[string]interface{}{"nodeType": "Static", "cri": rawCRI}
 
-	buildNodeGroupBlob(BlobInput{
+	resolvedMap(ResolveInput{
 		Name: "w", NodeType: v1.NodeTypeStatic, RawSpec: rawSpec,
 	}, Result{CRIType: "Containerd"})
 

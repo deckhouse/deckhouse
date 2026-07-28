@@ -206,7 +206,7 @@ func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string
 	case string:
 		add(v)
 	}
-	// Sorted because the result is published verbatim in the bashible context blob: the
+	// Sorted because the result is published verbatim in the bashible context: the
 	// MachineDeployment List comes back in cache map-iteration order, so an unsorted slice
 	// would differ on every pass and rewrite the context Secret (and rebuild every bashible
 	// step) for no reason. get_crds does the same via set.Slice().

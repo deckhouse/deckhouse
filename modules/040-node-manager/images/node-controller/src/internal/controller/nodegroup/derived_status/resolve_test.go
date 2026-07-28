@@ -113,7 +113,7 @@ func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T)
 	assert.Equal(t, []string{"zone-a", "zone-b"}, got)
 }
 
-func TestBuildElement_StaticWiresNameRolloutAndStatic(t *testing.T) {
+func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 	s := newTestService(t, testSecret(staticConfigSecretNamespace, staticConfigSecretName, map[string][]byte{
 		staticConfigKey: []byte("internalNetworkCIDRs:\n- 172.18.200.0/24\n"),
 	}))
@@ -138,7 +138,7 @@ func TestBuildElement_StaticWiresNameRolloutAndStatic(t *testing.T) {
 	assert.NotContains(t, resolved.ToMap(), "instanceClass", "static NG must not receive cloud overlays")
 }
 
-func TestBuildElement_CloudKindMismatchErrors(t *testing.T) {
+func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
 		"instanceClassKind": []byte(`"YandexInstanceClass"`),
 	}))

@@ -30,15 +30,15 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-var updateGoldens = flag.Bool("update-goldens", false, "rewrite the blob goldens under testdata/blob")
+var updateGoldens = flag.Bool("update-goldens", false, "rewrite the resolved-NodeGroup goldens under testdata/resolved")
 
-// blobFixture is one NodeGroup shape the published element is pinned for. The corpus covers
-// every branch of BuildNodeGroupBlob, so any change in which keys reach the bashible context —
+// corpusFixture is one NodeGroup shape the published map is pinned for. The corpus covers
+// every branch of ToMap, so any change in which keys reach the bashible context —
 // and a key present with an empty value is different data from an absent key — shows up as a
 // golden diff.
-type blobFixture struct {
+type corpusFixture struct {
 	name   string
-	input  BlobInput
+	input  ResolveInput
 	result Result
 }
 
@@ -46,20 +46,20 @@ func rawExtension(json string) *runtime.RawExtension {
 	return &runtime.RawExtension{Raw: []byte(json)}
 }
 
-// buildNodeGroupBlob is the published element of a NodeGroup, which is what most of these tests
+// resolvedMap is the published form of a NodeGroup, which is what most of these tests
 // assert on. Production code holds the ResolvedNodeGroup and serializes it at the two boundaries
 // that need a map, so this shortcut lives here.
-func buildNodeGroupBlob(in BlobInput, r Result) map[string]interface{} {
+func resolvedMap(in ResolveInput, r Result) map[string]interface{} {
 	return ResolveNodeGroup(in, r).ToMap()
 }
 
 // Integral numbers arrive as int64 and fractional ones as float64: the raw spec comes from the
 // unstructured NodeGroup, not from encoding/json.
-func blobCorpus() []blobFixture {
-	return []blobFixture{
+func nodeGroupCorpus() []corpusFixture {
+	return []corpusFixture{
 		{
 			name: "static-minimal",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "static-minimal",
 				NodeType: v1.NodeTypeStatic,
 				RawSpec:  map[string]interface{}{"nodeType": "Static"},
@@ -74,7 +74,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "static-with-cluster-config",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "static-full",
 				NodeType: v1.NodeTypeStatic,
 				RawSpec: map[string]interface{}{
@@ -109,7 +109,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "static-without-cluster-config",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "static-no-config",
 				NodeType: v1.NodeTypeStatic,
 				RawSpec:  map[string]interface{}{"nodeType": "Static"},
@@ -124,7 +124,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "cloud-permanent",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "master",
 				NodeType: v1.NodeTypeCloudPermanent,
 				RawSpec: map[string]interface{}{
@@ -152,7 +152,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "cloud-ephemeral-processed-full",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:            "worker",
 				ManualRolloutID: "rollout-1",
 				NodeType:        v1.NodeTypeCloudEphemeral,
@@ -192,7 +192,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "cloud-ephemeral-processed-nil-instance-class",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "worker-nil-class",
 				NodeType: v1.NodeTypeCloudEphemeral,
 				// No cloudInstances in the spec at all: the cloud overlay still creates the block.
@@ -211,7 +211,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "cloud-ephemeral-processed-empty-zones",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "worker-empty-zones",
 				NodeType: v1.NodeTypeCloudEphemeral,
 				RawSpec: map[string]interface{}{
@@ -233,7 +233,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "cloud-ephemeral-processed-nil-zones",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "worker-nil-zones",
 				NodeType: v1.NodeTypeCloudEphemeral,
 				RawSpec: map[string]interface{}{
@@ -255,7 +255,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "cloud-ephemeral-not-processed",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "worker-unprocessed",
 				NodeType: v1.NodeTypeCloudEphemeral,
 				RawSpec: map[string]interface{}{
@@ -282,7 +282,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "empty-allowlist-values",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "empty-values",
 				NodeType: v1.NodeTypeStatic,
 				RawSpec: map[string]interface{}{
@@ -311,7 +311,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "unknown-spec-keys",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "unknown-keys",
 				NodeType: v1.NodeTypeStatic,
 				RawSpec: map[string]interface{}{
@@ -331,7 +331,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "manual-rollout-id",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:            "rolled",
 				ManualRolloutID: "2026-07-28",
 				NodeType:        v1.NodeTypeStatic,
@@ -346,7 +346,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "numbers-and-quantities",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "numbers",
 				NodeType: v1.NodeTypeCloudEphemeral,
 				RawSpec: map[string]interface{}{
@@ -391,7 +391,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "cri-docker-not-managed",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:     "docker-ng",
 				NodeType: v1.NodeTypeStatic,
 				RawSpec: map[string]interface{}{
@@ -412,7 +412,7 @@ func blobCorpus() []blobFixture {
 		},
 		{
 			name: "empty-node-type",
-			input: BlobInput{
+			input: ResolveInput{
 				Name:    "no-type",
 				RawSpec: map[string]interface{}{},
 			},
@@ -424,25 +424,25 @@ func blobCorpus() []blobFixture {
 	}
 }
 
-// TestBuildNodeGroupBlob_CorpusGoldens pins the published element of every NodeGroup shape.
+// TestResolvedNodeGroup_CorpusGoldens pins the published map of every NodeGroup shape.
 // The comparison is on the parsed documents, not on bytes: bashible-apiserver re-marshals what
 // it reads, so key order is irrelevant — but key presence and values are the node configuration
 // checksum, and a drift here rebuilds every node's bashible steps.
-func TestBuildNodeGroupBlob_CorpusGoldens(t *testing.T) {
-	for _, fixture := range blobCorpus() {
+func TestResolvedNodeGroup_CorpusGoldens(t *testing.T) {
+	for _, fixture := range nodeGroupCorpus() {
 		t.Run(fixture.name, func(t *testing.T) {
-			assertBlobGolden(t, fixture.name, buildNodeGroupBlob(fixture.input, fixture.result))
+			assertResolvedGolden(t, fixture.name, resolvedMap(fixture.input, fixture.result))
 		})
 	}
 }
 
-func assertBlobGolden(t *testing.T, name string, blob map[string]interface{}) {
+func assertResolvedGolden(t *testing.T, name string, nodeGroupValues map[string]interface{}) {
 	t.Helper()
 
-	raw, err := sigsyaml.Marshal(blob)
+	raw, err := sigsyaml.Marshal(nodeGroupValues)
 	require.NoError(t, err)
 
-	path := filepath.Join("testdata", "blob", name+".yaml")
+	path := filepath.Join("testdata", "resolved", name+".yaml")
 	if *updateGoldens {
 		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
 		require.NoError(t, os.WriteFile(path, raw, 0o644))
