@@ -77,6 +77,7 @@ You can find the edition and version currently used in the cluster on the main p
       ```shell
       LICENSE_TOKEN=<LICENSE_KEY>
       ```
+
    <!/REMOVE_FOR_CE>
 
    1. Get the list of modules not supported in DKP $NEW_EDITION:
@@ -124,6 +125,67 @@ You can find the edition and version currently used in the cluster on the main p
       ```shell
       echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
       ```
+
+{% endcapture %}
+
+{% capture take_care_of_the_external_modules %}
+1. Determine the list of external modules launched via `moduleSource/deckhouse` that are not supported in DKP $NEW_EDITION. To do this, follow these steps:
+
+   <!REMOVE_FOR_CE>
+   1. Set the environment variable with the license key for the edition you plan to switch to:
+
+      ```shell
+      LICENSE_TOKEN=<LICENSE_KEY>
+      ```
+
+   <!/REMOVE_FOR_CE>
+
+   1. Get the list of modules not supported in DKP $NEW_EDITION:
+
+      ```shell
+      d8-crane() {
+         if command -v d8 &>/dev/null && d8 cr &>/dev/null 2>&1; then
+            d8 cr "$@"
+         else
+            crane "$@"
+         fi
+      }
+
+      <!REMOVE_FOR_CE>
+      d8-crane-auth() {
+         if command -v d8 &>/dev/null && d8 cr &>/dev/null 2>&1; then
+            d8 cr login "$1" -u "license-token" -p "$2"
+         else
+            crane auth login "$1" -u "license-token" -p "$2"
+         fi
+      }
+      <!/REMOVE_FOR_CE>
+
+      check_external_modules() {
+         local repo="$1"
+
+         local modules=$(kubectl get modulerelease -o json | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.kind=="ModuleSource" and .name=="deckhouse")) | "\(.spec.moduleName) \(.spec.version)"')
+         [[ -z "$modules" ]] && return 0
+         local registry_modules=$(d8-crane ls "$repo" 2>/dev/null)
+
+         echo "MODULE | IN LIST | IMAGE | RELEASE";
+         echo "-------|---------|-------|--------"
+
+         echo "$modules" | while read m v; do
+            grep -qx "$m" <<< "$registry_modules" && l="✅" || l="❌"
+            d8-crane manifest "$repo/${m}:v${v}" &>/dev/null && i="✅" || i="❌"
+            d8-crane manifest "$repo/${m}/release:v${v}" &>/dev/null && r="✅" || r="❌"
+            echo "$m ($v) | $l | $i | $r"
+         done
+      }
+
+      <!REMOVE_FOR_CE>
+      d8-crane-auth "registry.deckhouse.io" "$LICENSE_TOKEN"
+      <!/REMOVE_FOR_CE>
+      check_external_modules "registry.deckhouse.io/deckhouse/$NEW_EDITION/modules"
+      ```
+
+   1. Disable the modules from the list if acceptable. Otherwise, **abort the switching process.**
 {% endcapture %}
 
 {% capture take_care_of_the_queue %}
@@ -146,6 +208,13 @@ What to consider before switching:
    | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\$NEW_EDITION", "ce"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 
@@ -156,6 +225,14 @@ What to consider before switching:
    | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "be"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 
@@ -166,6 +243,14 @@ What to consider before switching:
    | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "se"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 
@@ -176,6 +261,14 @@ What to consider before switching:
    | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "se-plus"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 
@@ -186,6 +279,14 @@ What to consider before switching:
    | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "ee"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 {% endtabs %}

@@ -80,6 +80,7 @@ Summary:
       ```shell
       LICENSE_TOKEN=<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
       ```
+
    <!/REMOVE_FOR_CE>
 
    1. Получите список модулей, которые не поддерживаются в DKP $NEW_EDITION:
@@ -125,6 +126,68 @@ Summary:
       ```shell
       echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
       ```
+
+{% endcapture %}
+
+{% capture take_care_of_the_external_modules %}
+1. Определите список внешних модулей, запущенные с помощью `moduleSource/deckhouse` не поддерживаются в DKP $NEW_EDITION. Для этого выполните следующие шаги:
+
+   <!REMOVE_FOR_CE>
+   1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
+
+      ```shell
+      LICENSE_TOKEN=<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
+      ```
+
+   <!/REMOVE_FOR_CE>
+
+   1. Получите список модулей, которые не поддерживаются в DKP $NEW_EDITION:
+
+      ```shell
+      d8-crane() {
+         if command -v d8 &>/dev/null && d8 cr &>/dev/null 2>&1; then
+            d8 cr "$@"
+         else
+            crane "$@"
+         fi
+      }
+
+      <!REMOVE_FOR_CE>
+      d8-crane-auth() {
+         if command -v d8 &>/dev/null && d8 cr &>/dev/null 2>&1; then
+            d8 cr login "$1" -u "license-token" -p "$2"
+         else
+            crane auth login "$1" -u "license-token" -p "$2"
+         fi
+      }
+      <!/REMOVE_FOR_CE>
+
+      check_external_modules() {
+         local repo="$1"
+
+         local modules=$(kubectl get modulerelease -o json | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.kind=="ModuleSource" and .name=="deckhouse")) | "\(.spec.moduleName) \(.spec.version)"')
+         [[ -z "$modules" ]] && return 0
+         local registry_modules=$(d8-crane ls "$repo" 2>/dev/null)
+
+         echo "MODULE | IN LIST | IMAGE | RELEASE";
+         echo "-------|---------|-------|--------"
+
+         echo "$modules" | while read m v; do
+            grep -qx "$m" <<< "$registry_modules" && l="✅" || l="❌"
+            d8-crane manifest "$repo/${m}:v${v}" &>/dev/null && i="✅" || i="❌"
+            d8-crane manifest "$repo/${m}/release:v${v}" &>/dev/null && r="✅" || r="❌"
+            echo "$m ($v) | $l | $i | $r"
+         done
+      }
+
+      <!REMOVE_FOR_CE>
+      d8-crane-auth "registry.deckhouse.ru" "$LICENSE_TOKEN"
+      <!/REMOVE_FOR_CE>
+      check_external_modules "registry.deckhouse.ru/deckhouse/$NEW_EDITION/modules"
+      ```
+
+   1. Отключите модули из полученного списка, если это допустимо. Иначе, **прервите процесс переключения.**
+
 {% endcapture %}
 
 {% capture take_care_of_the_queue %}
@@ -147,6 +210,13 @@ Summary:
    | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\$NEW_EDITION", "ce"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 
@@ -157,6 +227,14 @@ Summary:
    | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "be"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 
@@ -167,6 +245,14 @@ Summary:
    | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "se"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 
@@ -177,6 +263,14 @@ Summary:
    | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "se-plus"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 
@@ -187,6 +281,14 @@ Summary:
    | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "ee"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 
@@ -220,6 +322,15 @@ Summary:
    | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
    | regex_replace: "\$NEW_EDITION", "cse"
 }}
+
+{{
+   take_care_of_the_external_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+   | regex_replace: "\$NEW_EDITION", "cse"
+}}
+
 {{ take_care_of_the_queue }}
 {% endtab %}
 {% endtabs %}
