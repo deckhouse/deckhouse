@@ -46,7 +46,6 @@ tests:
   script:
     - |
       set -euo pipefail
-      git config --global --add safe.directory "${CI_PROJECT_DIR}" # возможно убрать?
       make tests-controller tests-modules
 
 # --- node-controller unit + envtest ---
@@ -58,7 +57,6 @@ tests_node_controller:
   script:
     - |
       set -euo pipefail
-      git config --global --add safe.directory "${CI_PROJECT_DIR}" # возможно убрать?
       mkdir -p "${HOME}/envtest-assets"
       export GOFLAGS=-buildvcs=false
       export GOCACHE="${HOME}/go-build-cache-node-controller"
