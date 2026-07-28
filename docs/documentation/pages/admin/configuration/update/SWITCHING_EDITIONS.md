@@ -332,61 +332,11 @@ d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(
 
 {% endcapture %}
 
-{% capture check_old_pods_direct %}
-{% alert level="info" %}
-The check does not account for external modules.
-{% endalert %}
-
-```shell
-IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
-
-d8 k get pods -A -o json |
-jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
-  .items[]
-  | {name: .metadata.name, namespace: .metadata.namespace, containers: .spec.containers}
-  | select(.containers != null)
-  | select(
-      .containers[]
-      | select(.image | test("registry.d8-system.svc:5001/system/deckhouse") and test("@sha256:"))
-      | .image as $img
-      | ($img | split("@") | last) as $digest
-      | ($digest | IN($digests[]) | not)
-    )
-  | .namespace + "\t" + .name
-' | sort -u
-```
-
-{% endcapture %}
-
 ### Switching using the registry module
 
 {% alert level="warning" %}
 Not applicable for managed Kubernetes (EKS, AKS, GKE).
 {% endalert %}
-
-{% capture change-registry-mc-deckhouse-direct %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  enabled: true
-  settings:
-    registry:
-      mode: Direct
-      direct:
-<!REMOVE_FOR_CE>
-        license: <LICENSE_KEY>
-<!/REMOVE_FOR_CE>
-        checkMode: Relax
-        imagesRepo: <REGISTRY_HOST>/deckhouse/<EDITION_CODE>
-        scheme: HTTPS
-```
-
-{% endcapture %}
 
 {% capture change-registry-mc-deckhouse-unmanaged %}
 
@@ -448,38 +398,23 @@ conditions:
    d8 k edit moduleconfig deckhouse
    ```
 
-   Choose the example for your edition and mode (`Direct` / `Unmanaged`):
+   Choose the example for your edition:
 
    {% tabs switch-registry-edition %}
    {% tab "DKP CE" %}
-   {% tabs switch-registry-ce-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "ce" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "ce" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "ce" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% tab "DKP BE" %}
-   {% tabs switch-registry-be-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% tab "DKP SE" %}
-   {% tabs switch-registry-se-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% tab "DKP SE+" %}
-   {% tabs switch-registry-seplus-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% tab "DKP EE" %}
-   {% tabs switch-registry-ee-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% endtabs %}
 
@@ -493,24 +428,11 @@ conditions:
 
    {{ registry_status_example | regex_replace: "^", "   " }}
 
-1. Set `checkMode` back to `Default` (choose the command for your mode):
-
-   {% tabs switch-registry-relax %}
-   {% tab "Direct" %}
-
-   ```shell
-   d8 k patch moduleconfig deckhouse --type=json -p='[{"op": "replace", "path": "/spec/settings/registry/direct/checkMode", "value": "Default"}]'
-   ```
-
-   {% endtab %}
-   {% tab "Unmanaged" %}
+1. Set `checkMode` back to `Default`:
 
    ```shell
    d8 k patch moduleconfig deckhouse --type=json -p='[{"op": "replace", "path": "/spec/settings/registry/unmanaged/checkMode", "value": "Default"}]'
    ```
-
-   {% endtab %}
-   {% endtabs %}
 
 1. Check the switch status again.
 
@@ -537,10 +459,7 @@ conditions:
 
 1. Check for pods using the old registry:
 
-   {% tabs switch-registry-check-old %}
-   {% tab "Direct" %}{{ check_old_pods_direct }}{% endtab %}
-   {% tab "Unmanaged" %}{{ check_old_pods_unmanaged }}{% endtab %}
-   {% endtabs %}
+   {{ check_old_pods_unmanaged }}
 
 ### Switching without the registry module
 

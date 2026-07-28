@@ -130,7 +130,7 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_of_the_external_modules %}
-1. Определите список внешних модулей, запущенные с помощью `moduleSource/deckhouse` не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
+1. Определите список внешних модулей, запущенные с помощью `moduleSource/deckhouse`, которые не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
 
    <!REMOVE_FOR_CE>
    1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
@@ -376,32 +376,6 @@ d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(
 
 {% endcapture %}
 
-{% capture check_old_pods_direct %}
-{% alert level="info" %}
-Проверка не учитывает внешние модули.
-{% endalert %}
-
-```shell
-IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
-
-d8 k get pods -A -o json |
-jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
-  .items[]
-  | {name: .metadata.name, namespace: .metadata.namespace, containers: .spec.containers}
-  | select(.containers != null)
-  | select(
-      .containers[]
-      | select(.image | test("registry.d8-system.svc:5001/system/deckhouse") and test("@sha256:"))
-      | .image as $img
-      | ($img | split("@") | last) as $digest
-      | ($digest | IN($digests[]) | not)
-    )
-  | .namespace + "\t" + .name
-' | sort -u
-```
-
-{% endcapture %}
-
 {% capture enable_chrony_cse %}
 
 ```shell
@@ -415,30 +389,6 @@ d8 system module enable chrony
 {% alert level="warning" %}
 Не подходит для managed Kubernetes (EKS, AKS, GKE) и для DKP CSE **ниже** 1.73.
 {% endalert %}
-
-{% capture change-registry-mc-deckhouse-direct %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  enabled: true
-  settings:
-    registry:
-      mode: Direct
-      direct:
-<!REMOVE_FOR_CE>
-        license: <ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
-<!/REMOVE_FOR_CE>
-        checkMode: Relax
-        imagesRepo: <REGISTRY_HOST>/deckhouse/<КОД_РЕДАКЦИИ>
-        scheme: HTTPS
-```
-
-{% endcapture %}
 
 {% capture change-registry-mc-deckhouse-unmanaged %}
 
@@ -500,44 +450,26 @@ conditions:
    d8 k edit moduleconfig deckhouse
    ```
 
-   Выберите пример для вашей редакции и режима (`Direct` / `Unmanaged`):
+   Выберите пример для вашей редакции:
 
    {% tabs switch-registry-edition %}
    {% tab "DKP CE" %}
-   {% tabs switch-registry-ce-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "ce" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "ce" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "ce" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% tab "DKP BE" %}
-   {% tabs switch-registry-be-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% tab "DKP SE" %}
-   {% tabs switch-registry-se-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% tab "DKP SE+" %}
-   {% tabs switch-registry-seplus-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% tab "DKP EE" %}
-   {% tabs switch-registry-ee-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% tab "DKP CSE" %}
-   {% tabs switch-registry-cse-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "cse" | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "cse" | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
-   {% endtabs %}
+   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "cse" | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
    {% endtab %}
    {% endtabs %}
 
@@ -554,24 +486,11 @@ conditions:
    {% tab "CSE" %}{{ registry_status_example | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "^", "   " }}{% endtab %}
    {% endtabs %}
 
-1. Верните `checkMode` в `Default` (выберите команду для вашего режима):
-
-   {% tabs switch-registry-relax %}
-   {% tab "Direct" %}
-
-   ```shell
-   d8 k patch moduleconfig deckhouse --type=json -p='[{"op": "replace", "path": "/spec/settings/registry/direct/checkMode", "value": "Default"}]'
-   ```
-
-   {% endtab %}
-   {% tab "Unmanaged" %}
+1. Верните `checkMode` в `Default`:
 
    ```shell
    d8 k patch moduleconfig deckhouse --type=json -p='[{"op": "replace", "path": "/spec/settings/registry/unmanaged/checkMode", "value": "Default"}]'
    ```
-
-   {% endtab %}
-   {% endtabs %}
 
 1. Снова проверьте статус переключения.
 
@@ -601,10 +520,7 @@ conditions:
 
 1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
 
-   {% tabs switch-registry-check-old %}
-   {% tab "Direct" %}{{ check_old_pods_direct }}{% endtab %}
-   {% tab "Unmanaged" %}{{ check_old_pods_unmanaged }}{% endtab %}
-   {% endtabs %}
+   {{ check_old_pods_unmanaged }}
 
 1. **Только для DKP CSE** — включите модуль `chrony`:
 
