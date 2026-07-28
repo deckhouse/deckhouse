@@ -1080,10 +1080,17 @@ index 1a730d3310c..cf630c2a06f 100644
  	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
  	s.GenericAPIServer.RegisterDestroyFunc(crdHandler.destroy)
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 9afeb2f80ce..0d870f149c6 100644
+index 9afeb2f80ce..5ddfb17cdac 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-@@ -72,6 +72,7 @@ import (
+@@ -66,12 +66,14 @@ import (
+ 	"k8s.io/apimachinery/pkg/version"
+ 	"k8s.io/apiserver/pkg/admission"
+ 	"k8s.io/apiserver/pkg/authorization/authorizer"
++	"k8s.io/apiserver/pkg/endpoints/filters"
+ 	"k8s.io/apiserver/pkg/endpoints/handlers"
+ 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
+ 	"k8s.io/apiserver/pkg/endpoints/metrics"
  	apirequest "k8s.io/apiserver/pkg/endpoints/request"
  	"k8s.io/apiserver/pkg/features"
  	"k8s.io/apiserver/pkg/registry/generic"
@@ -1091,7 +1098,7 @@ index 9afeb2f80ce..0d870f149c6 100644
  	genericfilters "k8s.io/apiserver/pkg/server/filters"
  	utilfeature "k8s.io/apiserver/pkg/util/feature"
  	"k8s.io/apiserver/pkg/util/webhook"
-@@ -128,6 +129,14 @@ type crdHandler struct {
+@@ -128,6 +130,14 @@ type crdHandler struct {
  	// The limit on the request size that would be accepted and decoded in a write request
  	// 0 means no limit.
  	maxRequestBodyBytes int64
@@ -1106,7 +1113,7 @@ index 9afeb2f80ce..0d870f149c6 100644
  }
  
  // crdInfo stores enough information to serve the storage for the custom resource
-@@ -577,6 +586,11 @@ func (r *crdHandler) tearDown(oldInfo *crdInfo) {
+@@ -577,6 +587,11 @@ func (r *crdHandler) tearDown(oldInfo *crdInfo) {
  		// destroy only the main storage. Those for the subresources share cacher and etcd clients.
  		storage.CustomResource.DestroyFunc()
  	}
@@ -1118,7 +1125,7 @@ index 9afeb2f80ce..0d870f149c6 100644
  }
  
  // Destroy shuts down storage layer for all registered CRDs.
-@@ -719,6 +733,11 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -719,6 +734,11 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		replicasPathInCustomResource[schema.GroupVersion{Group: crd.Spec.Group, Version: v.Name}.String()] = path
  	}
  
@@ -1130,7 +1137,7 @@ index 9afeb2f80ce..0d870f149c6 100644
  	for _, v := range crd.Spec.Versions {
  		// In addition to Unstructured objects (Custom Resources), we also may sometimes need to
  		// decode unversioned Options objects, so we delegate to parameterScheme for such types.
-@@ -853,6 +872,25 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -853,6 +873,39 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  
  		clusterScoped := crd.Spec.Scope == apiextensionsv1.ClusterScoped
  
@@ -1153,10 +1160,24 @@ index 9afeb2f80ce..0d870f149c6 100644
 +			scopeFilterWired = true
 +		}
 +
++		// Deckhouse: a cluster-scoped CRD normally has nothing to classify against,
++		// but one whose object NAME is a namespace name is filtered by the namespace
++		// ACL itself -- the Project CRD, named after its main namespace. It runs in
++		// the same IdentityByName mode the namespaces storage uses, triggered by the
++		// same filtering-mode flag, so a user without RBAC for the resource gets the
++		// accessible subset instead of a 403.
++		if clusterScoped && r.scopeResolvers != nil && scopefilter.IsNamespaceIdentityResource(resource.GroupResource()) {
++			store := storages[v.Name].CustomResource.Store
++			store.ScopeFilter = r.scopeResolvers.NewIdentityDecorator(
++				store, store.PredicateFunc, store.Decorator, resource, filters.IsNamespaceFilteringMode,
++			)
++			scopeFilterWired = true
++		}
++
  		// CRDs explicitly do not support protobuf, but some objects returned by the API server do
  		streamingCollections := utilfeature.DefaultFeatureGate.Enabled(features.StreamingCollectionEncodingToJSON)
  		negotiatedSerializer := unstructuredNegotiatedSerializer{
-@@ -1059,6 +1097,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1059,6 +1112,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  	storageMap2[crd.UID] = ret
  	r.customStorage.Store(storageMap2)
  
@@ -1173,7 +1194,7 @@ index 9afeb2f80ce..0d870f149c6 100644
  }
  
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-index 29acc428688..25ea075f3ab 100644
+index 29acc428688..910d47bd1a1 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 @@ -24,16 +24,19 @@ import (
@@ -1196,7 +1217,7 @@ index 29acc428688..25ea075f3ab 100644
  )
  
  const (
-@@ -45,8 +48,88 @@ const (
+@@ -45,8 +48,103 @@ const (
  	decisionAllow  = "allow"
  	decisionForbid = "forbid"
  	reasonError    = "internal error"
@@ -1244,15 +1265,30 @@ index 29acc428688..25ea075f3ab 100644
 +}
 +
 +// isNamespaceListGetOrWatchRequest reports whether the request targets the
-+// core /v1/namespaces list/get/watch endpoint. These three verbs are the
-+// only ones we bypass 403 for: create/update/delete still reject denied
-+// users with the standard error so we don't accidentally let unauthorized
-+// callers mutate cluster state.
++// core /v1/namespaces list/get/watch endpoint, or that of a cluster-scoped
++// resource filtered by the same namespace ACL (see
++// scopefilter.IsNamespaceIdentityResource -- the Project CRD, whose object
++// name is its main namespace). These three verbs are the only ones we bypass
++// 403 for: create/update/delete still reject denied users with the standard
++// error so we don't accidentally let unauthorized callers mutate cluster state.
++//
++// Unlike namespaces, whose storage always carries the filter, an identity
++// resource is served by a CRD that may not exist: the bypass is gated on the
++// filter actually being registered for it, so a missing CRD leaves the plain
++// 403 rather than a silently unfiltered read.
 +func isNamespaceListGetOrWatchRequest(requestInfo *request.RequestInfo) bool {
 +	if requestInfo == nil || !requestInfo.IsResourceRequest {
 +		return false
 +	}
-+	if requestInfo.APIGroup != "" || requestInfo.Resource != "namespaces" || requestInfo.Subresource != "" {
++	if requestInfo.Subresource != "" {
++		return false
++	}
++
++	gr := schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}
++	switch {
++	case gr.Group == "" && gr.Resource == "namespaces":
++	case scopefilter.IsNamespaceIdentityResource(gr) && scopefilter.IsRegistered(gr):
++	default:
 +		return false
 +	}
 +	switch requestInfo.Verb {
@@ -1285,7 +1321,7 @@ index 29acc428688..25ea075f3ab 100644
  type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
  
  // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
-@@ -68,6 +151,23 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -68,6 +166,23 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			responsewriters.InternalError(w, req, err)
  			return
  		}
@@ -1309,7 +1345,7 @@ index 29acc428688..25ea075f3ab 100644
  		authorized, reason, err := a.Authorize(ctx, attributes)
  
  		authorizationFinish := time.Now()
-@@ -81,6 +181,24 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -81,6 +196,24 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			audit.AddAuditAnnotations(ctx,
  				decisionAnnotationKey, decisionAllow,
  				reasonAnnotationKey, reason)
@@ -1334,7 +1370,7 @@ index 29acc428688..25ea075f3ab 100644
  			handler.ServeHTTP(w, req)
  			return
  		}
-@@ -90,6 +208,60 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -90,6 +223,60 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			return
  		}
  
@@ -1395,12 +1431,171 @@ index 29acc428688..25ea075f3ab 100644
  		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
  		audit.AddAuditAnnotations(ctx,
  			decisionAnnotationKey, decisionForbid,
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go
+new file mode 100644
+index 00000000000..30aa99e6df7
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go
+@@ -0,0 +1,153 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package filters
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/runtime/serializer"
++	"k8s.io/apiserver/pkg/registry/generic/scopefilter"
++)
++
++// identityTestHandler records whether the denied request was handed to the
++// storage layer in namespace-filtering mode -- the flag the identity
++// resources' Decorator triggers on.
++type identityTestHandler struct {
++	called        bool
++	filteringMode bool
++}
++
++func (h *identityTestHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
++	h.called = true
++	h.filteringMode = IsNamespaceFilteringMode(req.Context())
++	w.WriteHeader(http.StatusOK)
++}
++
++// TestWithAuthorization_IdentityResourceBypass covers the bypass for a
++// cluster-scoped resource filtered by the namespace ACL (the Project CRD).
++// The negative cases are the ones that matter: the bypass must not widen to
++// resources nobody wired a filter for, nor to verbs that mutate.
++func TestWithAuthorization_IdentityResourceBypass(t *testing.T) {
++	projects := schema.GroupResource{Group: "deckhouse.io", Resource: "projects"}
++	scopefilter.Register(projects)
++	t.Cleanup(func() { scopefilter.Unregister(projects) })
++
++	scheme := runtime.NewScheme()
++	negotiatedSerializer := serializer.NewCodecFactory(scheme).WithoutConversion()
++
++	tests := []struct {
++		name       string
++		method     string
++		path       string
++		wantBypass bool
++	}{
++		{
++			name:       "list projects is filtered instead of denied",
++			method:     http.MethodGet,
++			path:       "/apis/deckhouse.io/v1alpha3/projects",
++			wantBypass: true,
++		},
++		{
++			name:       "get a single project is filtered instead of denied",
++			method:     http.MethodGet,
++			path:       "/apis/deckhouse.io/v1alpha3/projects/team-a",
++			wantBypass: true,
++		},
++		{
++			name:       "watch projects is filtered instead of denied",
++			method:     http.MethodGet,
++			path:       "/apis/deckhouse.io/v1alpha3/projects?watch=true",
++			wantBypass: true,
++		},
++		{
++			name:       "creating a project is still denied",
++			method:     http.MethodPost,
++			path:       "/apis/deckhouse.io/v1alpha3/projects",
++			wantBypass: false,
++		},
++		{
++			name:       "deleting a project is still denied",
++			method:     http.MethodDelete,
++			path:       "/apis/deckhouse.io/v1alpha3/projects/team-a",
++			wantBypass: false,
++		},
++		{
++			name:       "a subresource is never filtered",
++			method:     http.MethodGet,
++			path:       "/apis/deckhouse.io/v1alpha3/projects/team-a/status",
++			wantBypass: false,
++		},
++		{
++			name:       "another cluster-scoped resource of the same group is untouched",
++			method:     http.MethodGet,
++			path:       "/apis/deckhouse.io/v1alpha1/projecttemplates",
++			wantBypass: false,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			handler := &identityTestHandler{}
++			wrapped := WithAuthorization(handler, denyAllAuthorizer(), negotiatedSerializer)
++			req := newScopeTestRequest(t, tt.method, tt.path, "")
++			w := httptest.NewRecorder()
++			wrapped.ServeHTTP(w, req)
++
++			if tt.wantBypass {
++				if !handler.called {
++					t.Fatalf("expected the storage layer to be reached, got HTTP %d: %s", w.Code, w.Body.String())
++				}
++				if !handler.filteringMode {
++					t.Fatal("the request reached storage without namespace-filtering mode, so nothing would filter it")
++				}
++				return
++			}
++
++			if handler.called {
++				t.Fatal("expected a plain denial, but the request was handed to the storage layer")
++			}
++			if w.Code != http.StatusForbidden {
++				t.Fatalf("expected 403 Forbidden, got %d: %s", w.Code, w.Body.String())
++			}
++		})
++	}
++}
++
++// TestWithAuthorization_IdentityResourceNotRegistered pins the gate that makes
++// the bypass safe when the CRD is absent: without a registered filter the read
++// must stay denied rather than fall through unfiltered.
++func TestWithAuthorization_IdentityResourceNotRegistered(t *testing.T) {
++	scheme := runtime.NewScheme()
++	negotiatedSerializer := serializer.NewCodecFactory(scheme).WithoutConversion()
++
++	handler := &identityTestHandler{}
++	wrapped := WithAuthorization(handler, denyAllAuthorizer(), negotiatedSerializer)
++	req := newScopeTestRequest(t, http.MethodGet, "/apis/deckhouse.io/v1alpha3/projects", "")
++	w := httptest.NewRecorder()
++	wrapped.ServeHTTP(w, req)
++
++	if handler.called {
++		t.Fatal("no filter is registered for projects, so the read must not reach the storage layer")
++	}
++	if w.Code != http.StatusForbidden {
++		t.Fatalf("expected 403 Forbidden, got %d: %s", w.Code, w.Body.String())
++	}
++}
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go
 new file mode 100644
-index 00000000000..981e25d412f
+index 00000000000..d090b2a96e1
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_scope_test.go
-@@ -0,0 +1,353 @@
+@@ -0,0 +1,354 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -1582,7 +1777,8 @@ index 00000000000..981e25d412f
 +		},
 +		{
 +			name: "cluster-scoped resource with header never bypasses when not registered " +
-+				"(real wiring never registers cluster-scoped resources -- see wireScopeFilter)",
++				"(the scope-header wiring skips cluster-scoped resources -- see wireScopeFilter; " +
++				"the one exception, an identity resource, is filtered without a header)",
 +			method:     http.MethodGet,
 +			path:       "/apis/rbac.authorization.k8s.io/v1/clusterroles",
 +			header:     "system",
@@ -3831,6 +4027,163 @@ index 00000000000..cf070f1812d
 +		return false, fmt.Errorf("GET accessiblenamespace %q for user %q: unexpected status %d: %s", namespace, u.GetName(), resp.StatusCode, readErrorBody(resp.Body))
 +	}
 +}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity.go
+new file mode 100644
+index 00000000000..d67947c29d9
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity.go
+@@ -0,0 +1,49 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"k8s.io/apimachinery/pkg/runtime/schema"
++)
++
++// namespaceIdentityResources are the CLUSTER-scoped resources whose object name
++// is itself a namespace name, so namespace visibility already answers object
++// visibility and the namespaces ACL can be reused verbatim -- same fetcher,
++// same accessible set, no second permission endpoint.
++//
++// projects.deckhouse.io is multitenancy-manager's Project: its main namespace
++// carries the project's own name, and every project-level grant (ProjectRoleBinding
++// and ClusterProjectRoleBinding alike) fans out into that main namespace. A user
++// who may work in a project therefore always sees the namespace the project is
++// named after. The remaining gap is deliberate: a bare RoleBinding created in an
++// ADDITIONAL namespace of a project, bypassing the project mechanisms, leaves the
++// namespace visible while the Project object stays hidden. Closing it would mean
++// matching against every namespace of the project, which is not expressible as a
++// field selector and would force reading and filtering the whole list in memory.
++var namespaceIdentityResources = map[schema.GroupResource]struct{}{
++	{Group: "deckhouse.io", Resource: "projects"}: {},
++}
++
++// IsNamespaceIdentityResource reports whether the resource is filtered by
++// treating its object name as a namespace name. Consulted both when wiring the
++// storage (which mode the Decorator runs in) and by the authorization filter
++// (whether a read may be bypassed for filtering instead of denied).
++func IsNamespaceIdentityResource(gr schema.GroupResource) bool {
++	_, ok := namespaceIdentityResources[gr]
++
++	return ok
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
+new file mode 100644
+index 00000000000..c3ed38299a1
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
+@@ -0,0 +1,96 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"context"
++	"testing"
++
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apiserver/pkg/authentication/user"
++)
++
++func TestIsNamespaceIdentityResource(t *testing.T) {
++	tests := []struct {
++		name     string
++		gr       schema.GroupResource
++		expected bool
++	}{
++		{
++			name:     "the Project CRD is named after its main namespace",
++			gr:       schema.GroupResource{Group: "deckhouse.io", Resource: "projects"},
++			expected: true,
++		},
++		{
++			name:     "a same-group neighbour is not an identity resource",
++			gr:       schema.GroupResource{Group: "deckhouse.io", Resource: "projecttemplates"},
++			expected: false,
++		},
++		{
++			name:     "the group is part of the match, not just the plural",
++			gr:       schema.GroupResource{Group: "example.com", Resource: "projects"},
++			expected: false,
++		},
++		{
++			name:     "namespaces themselves are filtered by their own storage, not this list",
++			gr:       schema.GroupResource{Resource: "namespaces"},
++			expected: false,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			if got := IsNamespaceIdentityResource(tt.gr); got != tt.expected {
++				t.Fatalf("IsNamespaceIdentityResource(%v) = %v, expected %v", tt.gr, got, tt.expected)
++			}
++		})
++	}
++}
++
++// TestNewIdentityDecorator pins the wiring an identity resource gets: the
++// namespace ACL by object name, and none of the namespace-classification
++// machinery, which has nothing to work with on a cluster-scoped object.
++func TestNewIdentityDecorator(t *testing.T) {
++	resolvers := &Resolvers{Accessible: staticFetcher{}}
++	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha3", Resource: "projects"}
++	triggered := func(_ context.Context) bool { return true }
++
++	decorator := resolvers.NewIdentityDecorator(nil, nil, nil, gvr, triggered)
++
++	if decorator.Mode != IdentityByName {
++		t.Fatalf("expected IdentityByName, got %v", decorator.Mode)
++	}
++	if decorator.Classify != nil || decorator.RBACFloor != nil {
++		t.Fatal("a cluster-scoped identity resource has no namespace to classify or floor against")
++	}
++	if decorator.Accessible == nil {
++		t.Fatal("the decorator must carry the namespace ACL fetcher")
++	}
++	if !decorator.Trigger(context.Background()) {
++		t.Fatal("the caller-supplied trigger must be used as is")
++	}
++}
++
++type staticFetcher struct{}
++
++func (staticFetcher) FetchAccessibleNamespaces(_ context.Context, _ user.Info) ([]string, error) {
++	return nil, nil
++}
++
++func (staticFetcher) IsNamespaceAccessible(_ context.Context, _ user.Info, _ string) (bool, error) {
++	return false, nil
++}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go
 new file mode 100644
 index 00000000000..3bdffd44e6a
@@ -4765,10 +5118,10 @@ index 00000000000..aed7e883430
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
 new file mode 100644
-index 00000000000..2ec33aca03c
+index 00000000000..adeaad72157
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/resolvers.go
-@@ -0,0 +1,132 @@
+@@ -0,0 +1,161 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -4874,6 +5227,35 @@ index 00000000000..2ec33aca03c
 +		Trigger:         scopeRequestPresent,
 +		Classify:        r.Classify,
 +		RBACFloor:       r.Floor,
++		Accessible:      r.Accessible,
++		RefreshInterval: r.RefreshInterval,
++		PostRead:        postRead,
++	}
++}
++
++// NewIdentityDecorator builds a Decorator for a cluster-scoped resource whose
++// object NAME is a namespace name (see IsNamespaceIdentityResource). Visibility
++// follows the namespace ACL, so the decorator runs in IdentityByName mode with
++// the same fetcher the namespaces storage uses and without Classify/RBACFloor:
++// there is no namespace to classify and no separate resource+verb to narrow a
++// floor against.
++//
++// trigger is supplied by the caller rather than fixed here because the flag it
++// reads lives in the authorization filter package, which already imports this
++// one -- taking it as an argument keeps the dependency pointing one way.
++func (r *Resolvers) NewIdentityDecorator(
++	store StoreAccessor,
++	buildPredicate func(labels.Selector, fields.Selector) storage.SelectionPredicate,
++	postRead func(runtime.Object),
++	gvr schema.GroupVersionResource,
++	trigger func(context.Context) bool,
++) *Decorator {
++	return &Decorator{
++		Store:           store,
++		BuildPredicate:  buildPredicate,
++		Resource:        gvr,
++		Mode:            IdentityByName,
++		Trigger:         trigger,
 +		Accessible:      r.Accessible,
 +		RefreshInterval: r.RefreshInterval,
 +		PostRead:        postRead,
