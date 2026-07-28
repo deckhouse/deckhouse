@@ -1,0 +1,30 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Заявка на первичную загрузку для конкретной машины, которую MachineSet Cluster API клонирует из NodeBootstrapConfigTemplate.
+
+            node-controller рендерит для машины конфигурацию узла (NodeConfig) в Secret и сообщает о нём через `status`, ожидаемый контроллером Machine.
+          properties:
+            spec:
+              description: |
+                В версии `v1alpha1` пустое: данные первичной загрузки рендерит контроллер из состояния кластера, в объекте они не хранятся.
+            status:
+              description: |
+                Состояние заявки.
+              properties:
+                dataSecretName:
+                  description: |
+                    Имя Secret с отрендеренными данными первичной загрузки.
+                initialization:
+                  description: |
+                    Контракт первичной загрузки Cluster API версии `v1beta2`. Контроллер Machine ждёт `dataSecretCreated`, прежде чем прочитать Secret.
+                  properties:
+                    dataSecretCreated:
+                      description: |
+                        Устанавливается в `true`, как только Secret с данными первичной загрузки отрендерен.
+                conditions:
+                  description: |
+                    Условия, объясняющие, доступны ли данные первичной загрузки.

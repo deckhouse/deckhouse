@@ -78,6 +78,14 @@ func SetupWithManager(mgr ctrl.Manager) error {
 		},
 	})
 
+	// Validating webhook enforcing NodeExtensionRequest sysext uniqueness.
+	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodeextensionrequest", &webhook.Admission{
+		Handler: &NodeExtensionRequestValidator{
+			Client:  mgr.GetClient(),
+			decoder: decoder,
+		},
+	})
+
 	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
 	hookServer.Register("/convert", &ConversionHandler{
 		Client: mgr.GetClient(),
