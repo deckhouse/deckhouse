@@ -69,7 +69,7 @@ You can find the edition and version currently used in the cluster on the main p
 ### Checking whether switching to the desired edition is possible
 
 {% capture take_care_of_the_internal_modules %}
-1. Determine the list of internal modules used in the cluster that are not supported in DKP $NEW_EDITION. To do this, follow these steps:
+1. Determine the list of internal modules used in the cluster that are not supported in DKP new edition. To do this, follow these steps:
 
    <!REMOVE_FOR_CE>
    1. Set the environment variable with the license key for the edition you plan to switch to:
@@ -129,7 +129,7 @@ You can find the edition and version currently used in the cluster on the main p
 {% endcapture %}
 
 {% capture take_care_of_the_external_modules %}
-1. Determine the list of external modules launched via `moduleSource/deckhouse` that are not supported in DKP $NEW_EDITION. To do this, follow these steps:
+1. Determine the list of external modules launched via `moduleSource/deckhouse` that are not supported in DKP new edition. To do this, follow these steps:
 
    <!REMOVE_FOR_CE>
    1. Set the environment variable with the license key for the edition you plan to switch to:
