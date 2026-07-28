@@ -1,4 +1,4 @@
-2790
+2792
 1GB
 2GB
 5XX
@@ -517,6 +517,7 @@ NOERROR
 NSX
 NTP
 NUMA
+NVD
 NVMe
 Namespaced
 Namespase
@@ -698,6 +699,7 @@ S3
 SAML
 SANs
 SASL
+SAST
 SBOM
 SCM
 SCP
