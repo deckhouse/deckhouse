@@ -264,6 +264,7 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 		}
 
 		if fetchModuleErr != nil {
+			r.logger.Error("Failed to fetch documentation from module directory", slog.String("module_name", moduleName), slog.String("address", addr), slog.String("path", md.Spec.Path), log.Err(fetchModuleErr))
 			cond.Type = v1alpha1.TypeError
 			cond.Message = fmt.Sprintf("Error occurred while fetching the documentation: %s. Please fix the module's docs or restart the Deckhouse to restore the module", fetchModuleErr)
 			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
