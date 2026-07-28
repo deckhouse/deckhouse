@@ -93,6 +93,7 @@ func TestKubernetesVersionMigratedRequirement(t *testing.T) {
 		assert.False(t, ok)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "d8 k patch moduleconfig control-plane-manager")
+		assert.Contains(t, err.Error(), `awk '{gsub(/"/, "", $2); print $2}'`)
 		assert.Contains(t, err.Error(), "d8 system edit cluster-configuration")
 	})
 

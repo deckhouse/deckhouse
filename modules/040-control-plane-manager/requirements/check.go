@@ -94,7 +94,7 @@ func checkKubernetesVersionMigrated(requirementValue string, getter requirements
 			"to ModuleConfig control-plane-manager.\n" +
 			"Migrate it first:\n" +
 			"  d8 k patch moduleconfig control-plane-manager --type merge -p \"$(cat <<EOF\n" +
-			"{\"spec\": {\"version\": 3, \"settings\": {\"kubernetesVersion\": \"$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\\.yaml}' | base64 -d | grep kubernetesVersion | awk '{print $2}')\"}}}\n" +
+			"{\"spec\": {\"version\": 3, \"settings\": {\"kubernetesVersion\": \"$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\\.yaml}' | base64 -d | grep kubernetesVersion | awk '{gsub(/\"/, \"\", $2); print $2}')\"}}}\n" +
 			"EOF\n" +
 			")\"\n" +
 			"Then remove kubernetesVersion from ClusterConfiguration via `d8 system edit cluster-configuration`.",
