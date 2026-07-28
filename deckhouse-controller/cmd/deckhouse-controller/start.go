@@ -139,11 +139,16 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 			version = strings.TrimSuffix(string(content), "\n")
 		}
 
-		if version == "dev" && !app.EnabledHA() {
+		// A remote managed cluster (--kube-config) or a single-replica dev run does
+		// not use in-cluster leader election: the lease belongs to the cluster the
+		// pod lives in, not the managed one, and a dev run has a single replica.
+		if cfg.Kube.Config != "" || (version == "dev" && !app.EnabledHA()) {
 			if err := run(ctx, operator, logger); err != nil {
 				logger.Error("run", log.Err(err))
 				os.Exit(1)
 			}
+
+			return nil
 		}
 
 		logger.Info("Deckhouse starts in HA mode")
