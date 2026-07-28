@@ -70,8 +70,8 @@ You can find the edition and version currently used in the cluster on the main p
 
 {% capture take_care_of_the_internal_modules %}
 1. Determine the list of internal modules used in the cluster that are not supported in DKP new edition. To do this, follow these steps:
-   <!REMOVE_FOR_CE>
 
+   <!REMOVE_FOR_CE>
    1. Set the environment variable with the license key for the edition you plan to switch to:
 
       ```shell
@@ -89,11 +89,10 @@ You can find the edition and version currently used in the cluster on the main p
       echo
       echo "Running the deckhouse pod of the new edition with the command 'sleep -- infinity'"
 
+      DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
       <!REMOVE_FOR_CE>
       d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry.deckhouse.io --docker-username=license-token --docker-password=${LICENSE_TOKEN}
       <!/REMOVE_FOR_CE>
-
-      DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
       d8 k run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
       <!REMOVE_FOR_CE>
       --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
@@ -130,8 +129,8 @@ You can find the edition and version currently used in the cluster on the main p
 
 {% capture take_care_of_the_external_modules %}
 1. Determine the list of external modules launched via `moduleSource/deckhouse` that are not supported in DKP new edition. To do this, follow these steps:
-   <!REMOVE_FOR_CE>
 
+   <!REMOVE_FOR_CE>
    1. Set the environment variable with the license key for the edition you plan to switch to:
 
       ```shell
@@ -204,13 +203,13 @@ What to consider before switching:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
@@ -220,14 +219,14 @@ What to consider before switching:
 {% tab "To DKP BE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
@@ -238,14 +237,14 @@ What to consider before switching:
 {% tab "To DKP SE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
@@ -256,14 +255,14 @@ What to consider before switching:
 {% tab "To DKP SE+" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
@@ -274,14 +273,14 @@ What to consider before switching:
 {% tab "To DKP EE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}

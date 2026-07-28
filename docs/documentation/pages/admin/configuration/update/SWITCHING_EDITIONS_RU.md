@@ -73,8 +73,8 @@ Summary:
 
 {% capture take_care_of_the_internal_modules %}
 1. Определите список внутренних модулей, которые используются в кластере и не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
-   <!REMOVE_FOR_CE>
 
+   <!REMOVE_FOR_CE>
    1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
 
       ```shell
@@ -92,11 +92,10 @@ Summary:
       echo
       echo "Запуск пода deckhouse новой редакции с командой 'sleep -- infinity'"
 
+      DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
       <!REMOVE_FOR_CE>
       d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry.deckhouse.ru --docker-username=license-token --docker-password=${LICENSE_TOKEN}
       <!/REMOVE_FOR_CE>
-
-      DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
       d8 k run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
       <!REMOVE_FOR_CE>
       --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
@@ -133,8 +132,8 @@ Summary:
 
 {% capture take_care_of_the_external_modules %}
 1. Определите список внешних модулей, запущенных из `moduleSource/deckhouse`, которые не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
-   <!REMOVE_FOR_CE>
 
+   <!REMOVE_FOR_CE>
    1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
 
       ```shell
@@ -208,13 +207,13 @@ Summary:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
@@ -224,14 +223,14 @@ Summary:
 {% tab "На DKP BE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
@@ -242,14 +241,14 @@ Summary:
 {% tab "На DKP SE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
@@ -260,14 +259,14 @@ Summary:
 {% tab "На DKP SE+" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
@@ -278,14 +277,14 @@ Summary:
 {% tab "На DKP EE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
@@ -318,7 +317,7 @@ Summary:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "<!/REMOVE_FOR_CE>", ""
    | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
    | regex_replace: "\$NEW_EDITION", "cse"
@@ -326,7 +325,7 @@ Summary:
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
    | regex_replace: "<!/REMOVE_FOR_CE>", ""
    | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
    | regex_replace: "\$NEW_EDITION", "cse"
