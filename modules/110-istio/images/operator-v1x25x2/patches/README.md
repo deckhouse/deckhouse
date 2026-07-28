@@ -8,7 +8,6 @@ Fix Istio CVE vulnerabilities
 
 Fix Sails operator check status about CNI
 
-
 ## 003-istio-init-readonly-rootfs.patch
 
 Set `readOnlyRootFilesystem: true` for the `istio-init` container in the sidecar injection template (`InitContainer` mode).
