@@ -63,7 +63,7 @@ test: envtest gotestfmt ## Run unit + envtest in two labeled sections with GitHu
 		eval $$fmt < $(GOTEST_JSON_UNIT); \
 		echo "📊 unit coverage: $$(go tool cover -func=cover-unit.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
 		echo ""; echo "☸️  ENVTEST (INTEGRATION) TESTS"; echo ""; \
-		envpkgs="$$(grep -rl 'RunSpecs' internal/controller --include=suite_test.go | xargs -n1 dirname | sort -u | sed 's#^#./#')"; \
+		envpkgs="$$(grep -rl 'RunSpecs' internal --include=suite_test.go | xargs -n1 dirname | sort -u | sed 's#^#./#')"; \
 		KUBEBUILDER_ASSETS="$$assets" go test -json -v $$envpkgs -run '$(ENVTEST_RUN_REGEX)' -coverprofile cover-envtest.out -args -ginkgo.v > $(GOTEST_JSON_ENVTEST) 2>&1; erc=$$?; \
 		eval $$fmt < $(GOTEST_JSON_ENVTEST); \
 		echo "📊 envtest coverage: $$(go tool cover -func=cover-envtest.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
@@ -75,7 +75,7 @@ test: envtest gotestfmt ## Run unit + envtest in two labeled sections with GitHu
 test-envtest: envtest ## Run every controller's envtest suite (ENVTEST_DEBUG=1 dumps state before/after each spec; ENVTEST_LOGS=1 adds controller logs).
 	@echo "==> [test-envtest] running each controller envtest suite live (ENVTEST_DEBUG=1 = state dumps, ENVTEST_LOGS=1 = controller logs)..."
 	@assets="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"; \
-	for pkg in $$(grep -rl 'RunSpecs' internal/controller --include=suite_test.go | xargs -n1 dirname | sort -u | sed 's#^#./#'); do \
+	for pkg in $$(grep -rl 'RunSpecs' internal --include=suite_test.go | xargs -n1 dirname | sort -u | sed 's#^#./#'); do \
 		echo ""; echo "==> $$pkg"; \
 		KUBEBUILDER_ASSETS="$$assets" go test $$pkg -run 'ControllerEnvtest$$' -v -ginkgo.v -count=1 || exit $$?; \
 	done

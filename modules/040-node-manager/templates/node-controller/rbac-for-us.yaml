@@ -227,6 +227,16 @@ rules:
   - get
   - patch
   - update
+# NodeUsers + StaticInstances - live LISTs from the admission webhooks
+# (uid/address uniqueness checks read via the APIReader, no watch needed)
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeusers
+  - staticinstances
+  verbs:
+  - get
+  - list
 # ModuleConfig - read for validation (customTolerationKeys) and prefix resolution.
 - apiGroups:
   - deckhouse.io

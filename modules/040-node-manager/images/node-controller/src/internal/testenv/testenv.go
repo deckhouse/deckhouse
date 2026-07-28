@@ -18,16 +18,20 @@ package testenv
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-logr/logr"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
@@ -88,8 +93,24 @@ func AssetsAvailable() bool {
 // Start boots an envtest apiserver with the given scheme and CRD files and returns a client.
 // Call testEnv.Stop() in AfterSuite.
 func Start(scheme *runtime.Scheme, crdPaths ...string) (*envtest.Environment, *rest.Config, client.Client, error) {
-	// The production cache scoping used by NewManager needs RESTMappings for every kind it
-	// scopes, so those CRDs are always installed on top of whatever the suite asked for.
+	return startEnvironment(newEnvironment(crdPaths), scheme)
+}
+
+// StartWithWebhooks boots an envtest apiserver like Start and additionally installs the
+// given ValidatingWebhookConfigurations, rewriting their clientConfig to a local webhook
+// server with envtest-generated certs (webhook entries must set clientConfig.service.path,
+// without a leading slash). Build the manager with NewManagerWithWebhooks and block on
+// WaitForWebhookServer before exercising admission.
+func StartWithWebhooks(scheme *runtime.Scheme, validating []*admissionregistrationv1.ValidatingWebhookConfiguration, crdPaths ...string) (*envtest.Environment, *rest.Config, client.Client, error) {
+	env := newEnvironment(crdPaths)
+	env.WebhookInstallOptions = envtest.WebhookInstallOptions{ValidatingWebhooks: validating}
+	return startEnvironment(env, scheme)
+}
+
+// newEnvironment builds the envtest.Environment shared by Start and StartWithWebhooks.
+// The production cache scoping used by NewManager needs RESTMappings for every kind it
+// scopes, so those CRDs are always installed on top of whatever the suite asked for.
+func newEnvironment(crdPaths []string) *envtest.Environment {
 	seen := make(map[string]struct{})
 	allPaths := make([]string, 0, len(crdPaths)+8)
 	for _, p := range append(append([]string{}, crdPaths...), RealCacheCRDPaths()...) {
@@ -99,11 +120,14 @@ func Start(scheme *runtime.Scheme, crdPaths ...string) (*envtest.Environment, *r
 		seen[p] = struct{}{}
 		allPaths = append(allPaths, p)
 	}
-	env := &envtest.Environment{
+	return &envtest.Environment{
 		CRDDirectoryPaths:     allPaths,
 		ErrorIfCRDPathMissing: true,
 		BinaryAssetsDirectory: BinaryAssetsDir(),
 	}
+}
+
+func startEnvironment(env *envtest.Environment, scheme *runtime.Scheme) (*envtest.Environment, *rest.Config, client.Client, error) {
 	cfg, err := env.Start()
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("start envtest: %w", err)
@@ -119,6 +143,38 @@ func Start(scheme *runtime.Scheme, crdPaths ...string) (*envtest.Environment, *r
 // registered itself via register.RegisterController in the test binary. Import only the
 // controller package under test so only it gets wired. Start it with `go mgr.Start(ctx)`.
 func NewManager(cfg *rest.Config, scheme *runtime.Scheme) (manager.Manager, error) {
+	return newManager(cfg, scheme, nil)
+}
+
+// NewManagerWithWebhooks is NewManager plus a webhook server bound to the host/port/certs
+// prepared by StartWithWebhooks (pass &env.WebhookInstallOptions). The suite registers its
+// admission handlers on the returned manager itself.
+func NewManagerWithWebhooks(cfg *rest.Config, scheme *runtime.Scheme, webhookOpts *envtest.WebhookInstallOptions) (manager.Manager, error) {
+	return newManager(cfg, scheme, webhookOpts)
+}
+
+// WaitForWebhookServer blocks until the local webhook server behind webhookOpts accepts TLS
+// connections, so specs cannot race the manager's server startup.
+func WaitForWebhookServer(ctx context.Context, webhookOpts *envtest.WebhookInstallOptions) error {
+	addr := net.JoinHostPort(webhookOpts.LocalServingHost, strconv.Itoa(webhookOpts.LocalServingPort))
+	deadline := time.Now().Add(EventuallyTimeout)
+	for time.Now().Before(deadline) {
+		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: time.Second}, "tcp", addr,
+			&tls.Config{InsecureSkipVerify: true}) //nolint:gosec // readiness probe of a local test server
+		if err == nil {
+			_ = conn.Close()
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(EventuallyPoll):
+		}
+	}
+	return fmt.Errorf("webhook server at %s did not become ready within %s", addr, EventuallyTimeout)
+}
+
+func newManager(cfg *rest.Config, scheme *runtime.Scheme, webhookOpts *envtest.WebhookInstallOptions) (manager.Manager, error) {
 	// Use the production cache/client scoping: a reconciler reading an object outside the
 	// scoped informers fails only against this configuration ("unknown namespace for the
 	// cache", empty cached reads), so tests on a default wide cache would miss exactly the
@@ -135,13 +191,21 @@ func NewManager(cfg *rest.Config, scheme *runtime.Scheme) (manager.Manager, erro
 		}
 	}
 	cacheOpts, clientOpts := common.CacheOptions()
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+	opts := ctrl.Options{
 		Scheme:         scheme,
 		Metrics:        metricsserver.Options{BindAddress: "0"},
 		LeaderElection: false,
 		Cache:          cacheOpts,
 		Client:         clientOpts,
-	})
+	}
+	if webhookOpts != nil {
+		opts.WebhookServer = ctrlwebhook.NewServer(ctrlwebhook.Options{
+			Host:    webhookOpts.LocalServingHost,
+			Port:    webhookOpts.LocalServingPort,
+			CertDir: webhookOpts.LocalServingCertDir,
+		})
+	}
+	mgr, err := ctrl.NewManager(cfg, opts)
 	if err != nil {
 		return nil, fmt.Errorf("new manager: %w", err)
 	}
