@@ -226,3 +226,46 @@ effective_pod_template_labels_for_kind(obj, kind) := labels if {
   kind != "CronJob"
   labels := object.get(obj, ["spec", "template", "metadata", "labels"], {})
 }
+
+# Pod template metadata for the current review object.
+# For Pod: empty (no pod template)
+# For CronJob: spec.jobTemplate.spec.template.metadata
+# For other controllers: spec.template.metadata
+pod_template_metadata := meta if {
+  obj := object.get(input.review, "object", {})
+  kind := object.get(obj, "kind", "")
+  meta := pod_template_metadata_for_kind(obj, kind)
+}
+
+pod_template_metadata_for_kind(obj, "Pod") := {} if {
+  true
+}
+
+pod_template_metadata_for_kind(obj, "CronJob") := meta if {
+  meta := object.get(obj, ["spec", "jobTemplate", "spec", "template", "metadata"], {})
+}
+
+pod_template_metadata_for_kind(obj, kind) := meta if {
+  kind != "Pod"
+  kind != "CronJob"
+  meta := object.get(obj, ["spec", "template", "metadata"], {})
+}
+
+# Effective metadata for annotation resolution from input.review.object.
+# Merges top-level metadata with pod template metadata.
+# Pod template metadata takes precedence (annotations on pods created by controllers
+# should be on the pod template, not the controller's top-level metadata).
+effective_metadata := meta if {
+  obj := object.get(input.review, "object", {})
+  top := object.get(obj, "metadata", {})
+  tmpl := pod_template_metadata
+  meta := merge_metadata(top, tmpl)
+}
+
+merge_metadata(base, override) := merged if {
+  all_keys := {k | base[k]} | {k | override[k]}
+  merged := {k: v |
+    k := all_keys[_]
+    v := merge_label_value(base, override, k)
+  }
+}

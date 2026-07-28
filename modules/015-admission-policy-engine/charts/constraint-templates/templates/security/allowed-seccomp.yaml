@@ -89,6 +89,7 @@ spec:
               import data.lib.common.pod_spec
               import data.lib.common.object_labels
               import data.lib.common.object_namespace
+              import data.lib.common.effective_metadata
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_for_container
               import data.lib.expand_synonyms.expand
@@ -118,7 +119,7 @@ spec:
                   {"type": "annotation", "key": pod_annotation_key}
                 ]
                 normalized_obj := {
-                  "metadata": object.get(input.review.object, "metadata", {}),
+                  "metadata": effective_metadata,
                   "spec": pod_spec,
                 }
                 profile_raw := resolve_from_sources(normalized_obj, container, sources)

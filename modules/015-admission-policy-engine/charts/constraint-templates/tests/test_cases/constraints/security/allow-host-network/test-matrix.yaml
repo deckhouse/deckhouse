@@ -1465,3 +1465,116 @@ spec:
                           - containerPort: 80
                             hostPort: 8080
                             protocol: TCP
+        - name: controller-disallowed-no-exception
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speAbsent
+            - path: spec.network.hostPorts[].port
+              scenario: speAbsent
+            - path: spec.network.hostPorts[].protocol
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-disallowed-no-exception
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        ports:
+                          - containerPort: 25000
+                            hostPort: 25000
+                            protocol: TCP
+                    hostNetwork: true
+        - name: controller-allowed-by-spe-on-pod-template
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-tcp-25000
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                name: controller-allowed-by-spe-on-pod-template
+              spec:
+                template:
+                  metadata:
+                    labels:
+                      security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-tcp-25000
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        ports:
+                          - containerPort: 25000
+                            hostPort: 25000
+                            protocol: TCP
+                    hostNetwork: true
+        - name: controller-allowed-by-spe-on-top-level-metadata
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-tcp-25000
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+          object:
+            base: admissionDeployment
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-tcp-25000
+                name: controller-allowed-by-spe-on-top-level-metadata
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        ports:
+                          - containerPort: 25000
+                            hostPort: 25000
+                            protocol: TCP
+                    hostNetwork: true

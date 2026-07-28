@@ -757,3 +757,99 @@ spec:
                       - ALL
       exception: ''
       exceptionRef: ''
+    - name: controller-disallowed-no-exception
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.capabilities.add
+        scenario: negative
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-disallowed-no-exception
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    capabilities:
+                      add:
+                      - NET_ADMIN
+      exception: ''
+      exceptionRef: ''
+    - name: controller-allowed-by-spe-on-pod-template
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.capabilities.add
+        scenario: speMatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-capabilities-spe
+          spec:
+            securityContext:
+              capabilities:
+                allowedValues:
+                  add:
+                  - NET_ADMIN
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-by-spe-on-pod-template
+          spec:
+            template:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-capabilities-spe
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    capabilities:
+                      add:
+                      - NET_ADMIN
+      exception: ''
+      exceptionRef: ''
+    - name: controller-allowed-by-spe-on-top-level-metadata
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.capabilities.add
+        scenario: speMatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-capabilities-spe-top
+          spec:
+            securityContext:
+              capabilities:
+                allowedValues:
+                  add:
+                  - NET_ADMIN
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-capabilities-spe-top
+            name: controller-allowed-by-spe-on-top-level-metadata
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    capabilities:
+                      add:
+                      - NET_ADMIN
+      exception: ''
+      exceptionRef: ''

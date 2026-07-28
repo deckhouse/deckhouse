@@ -626,3 +626,93 @@ spec:
                       type: RuntimeDefault
       exception: ''
       exceptionRef: ''
+    - name: controller-disallowed-no-exception
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.metadata.annotations
+        scenario: negative
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-disallowed-no-exception
+          spec:
+            template:
+              metadata:
+                annotations:
+                  container.apparmor.security.beta.kubernetes.io/nginx: unconfined
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
+    - name: controller-allowed-by-spe-on-pod-template
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.metadata.annotations
+        scenario: speMatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-apparmor-spe
+          spec:
+            securityContext:
+              appArmorProfile:
+                allowedValues:
+                - unconfined
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-by-spe-on-pod-template
+          spec:
+            template:
+              metadata:
+                annotations:
+                  container.apparmor.security.beta.kubernetes.io/nginx: unconfined
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-apparmor-spe
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
+    - name: controller-allowed-by-spe-on-top-level-metadata
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.metadata.annotations
+        scenario: speMatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-apparmor-spe-top
+          spec:
+            securityContext:
+              appArmorProfile:
+                allowedValues:
+                - unconfined
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-apparmor-spe-top
+            name: controller-allowed-by-spe-on-top-level-metadata
+          spec:
+            template:
+              metadata:
+                annotations:
+                  container.apparmor.security.beta.kubernetes.io/nginx: unconfined
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
