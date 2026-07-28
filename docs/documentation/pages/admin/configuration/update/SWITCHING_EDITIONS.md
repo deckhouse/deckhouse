@@ -68,47 +68,56 @@ You can find the edition and version currently used in the cluster on the main p
 
 ### Checking whether switching to the desired edition is possible
 
-{% capture check_new_internal_modules %}
+{% capture take_care_of_the_internal_modules %}
+1. Determine the list of modules used in the cluster that are not supported in DKP $NEW_EDITION. To do this, follow these steps:
 
-```shell
-(set -e
-trap 'echo "Execution error"' ERR
+   <!REMOVE_FOR_CE>
+   1. Set the environment variable with the license key for the edition you plan to switch to:
 
-echo
-echo "Running the deckhouse pod of the new edition with the command 'sleep -- infinity'"
+      ```shell
+      LICENSE_TOKEN=<LICENSE_KEY>
+      ```
 
-<!REMOVE_FOR_CE>
-d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry.deckhouse.io --docker-username=license-token --docker-password=${LICENSE_TOKEN}
-<!/REMOVE_FOR_CE>
+   <!/REMOVE_FOR_CE>
 
-DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-d8 k run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
-<!REMOVE_FOR_CE>
---overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
-<!/REMOVE_FOR_CE>
---command sleep -- infinity
-d8 k wait --for=condition=ready pod/$NEW_EDITION-image --timeout=300s
+   1. Get the list of modules not supported in DKP $NEW_EDITION:
 
-echo
-echo "Getting information about internal modules from the current and new edition"
-echo "Comparing internal modules of the current and new edition"
-NEW_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ |   grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-MODULES_TO_DISABLE=$(echo "$USED_MODULES" | tr ' ' '\n' | grep -Fxv -f <(echo "$NEW_MODULES" | tr ' ' '\n') 2>&1) || { status=$?; [ $status -eq 1 ] && MODULES_TO_DISABLE="" || exit $status; }
+      ```shell
+      (set -e
+      trap 'echo "Execution error"' ERR
 
-echo
-echo "Modules not supported in the desired edition (edition code - $NEW_EDITION, version - $DECKHOUSE_VERSION):"
-echo MODULES_TO_DISABLE=\"$MODULES_TO_DISABLE\"
+      echo
+      echo "Running the deckhouse pod of the new edition with the command 'sleep -- infinity'"
 
-echo
-echo "Deleting the deckhouse pod of the new edition"
-d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=true --ignore-not-found=true
-)
-```
+      <!REMOVE_FOR_CE>
+      d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry.deckhouse.io --docker-username=license-token --docker-password=${LICENSE_TOKEN}
+      <!/REMOVE_FOR_CE>
 
-{% endcapture %}
+      DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+      d8 k run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
+      <!REMOVE_FOR_CE>
+      --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
+      <!/REMOVE_FOR_CE>
+      --command sleep -- infinity
+      d8 k wait --for=condition=ready pod/$NEW_EDITION-image --timeout=300s
 
-{% capture disable_internal_modules %}
+      echo
+      echo "Getting information about internal modules from the current and new edition"
+      echo "Comparing internal modules of the current and new edition"
+      NEW_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ |   grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+      USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+      MODULES_TO_DISABLE=$(echo "$USED_MODULES" | tr ' ' '\n' | grep -Fxv -f <(echo "$NEW_MODULES" | tr ' ' '\n') 2>&1) || { status=$?; [ $status -eq 1 ] && MODULES_TO_DISABLE="" || exit $status; }
+
+      echo
+      echo "Modules not supported in the desired edition (edition code - $NEW_EDITION, version - $DECKHOUSE_VERSION):"
+      echo MODULES_TO_DISABLE=\"$MODULES_TO_DISABLE\"
+
+      echo
+      echo "Deleting the deckhouse pod of the new edition"
+      d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=true --ignore-not-found=true
+      )
+      ```
+
 1. Disable the modules from the list if acceptable (the module functionality is not used, or you are ready to give it up). Otherwise, **abort the switching process.**
 
    You can disable the modules from the list in the DKP web interface under System → System Management → Deckhouse → Modules, or by running the following command:
@@ -117,6 +126,9 @@ d8 k delete pod/$NEW_EDITION-image secret/$NEW_EDITION-image-pull-secret --wait=
    echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
+{% endcapture %}
+
+{% capture take_care_of_the_queue %}
 1. Make sure all tasks in the DKP queue are complete before continuing the switching process:
 
    {{ wait_queue | regex_replace: "^", "   " }}
@@ -130,78 +142,53 @@ What to consider before switching:
 
 {% tabs step1 %}
 {% tab "To DKP CE" %}
-1. Determine the list of modules used in the cluster that are not supported in DKP CE. To do this, follow these steps:
 
-   1. Get the list of modules not supported in DKP CE:
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "(?m)\n?<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "ce"
-         | regex_replace: "^", "      "
-      }}
-
-{{ disable_internal_modules }}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "ce"
+}}
+{{ take_care_of_the_queue }}
 {% endtab %}
-{% tab "To DKP BE/SE/SE+/EE" %}
-1. Determine the list of modules used in the cluster that are not supported in the desired DKP edition. To do this, follow these steps:
 
-   1. Set the environment variable with the license key for the edition you plan to switch to:
+{% tab "To DKP BE" %}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "be"
+}}
+{{ take_care_of_the_queue }}
+{% endtab %}
 
-      ```shell
-      LICENSE_TOKEN=<LICENSE_KEY>
-      ```
+{% tab "To DKP SE" %}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "se"
+}}
+{{ take_care_of_the_queue }}
+{% endtab %}
 
-   1. Get the list of modules not supported in the desired DKP edition:
+{% tab "To DKP SE+" %}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "se-plus"
+}}
+{{ take_care_of_the_queue }}
+{% endtab %}
 
-      {% tabs env-edition %}
-      {% tab "DKP BE" %}
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
-         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "be"
-         | regex_replace: "^", "      "
-      }}
-
-      {% endtab %}
-      {% tab "DKP SE" %}
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
-         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "se"
-         | regex_replace: "^", "      "
-      }}
-
-      {% endtab %}
-      {% tab "DKP SE+" %}
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
-         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "se-plus"
-         | regex_replace: "^", "      "
-      }}
-
-      {% endtab %}
-      {% tab "DKP EE" %}
-
-      {{
-         check_new_internal_modules
-         | regex_replace: "\n?<!REMOVE_FOR_CE>", ""
-         | regex_replace: "<!/REMOVE_FOR_CE>\n?", ""
-         | regex_replace: "\$NEW_EDITION", "ee"
-         | regex_replace: "^", "      "
-      }}
-
-      {% endtab %}
-      {% endtabs %}
-
-{{ disable_internal_modules }}
+{% tab "To DKP EE" %}
+{{
+   take_care_of_the_internal_modules
+   | regex_replace: "\n?\s*<!REMOVE_FOR_CE>", ""
+   | regex_replace: "<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\$NEW_EDITION", "ee"
+}}
+{{ take_care_of_the_queue }}
 {% endtab %}
 {% endtabs %}
 
