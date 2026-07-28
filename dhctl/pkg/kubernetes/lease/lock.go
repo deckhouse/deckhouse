@@ -236,7 +236,7 @@ func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1
 		"acquire lease",
 		acquireRetries,
 		l.config.RetryWaitDuration,
-	).RunContext(ctx, func() error {
+	).BreakIf(cannotRenew).RunContext(ctx, func() error {
 		var err error
 
 		lease, err = l.createLease(ctx, kubeClient)
