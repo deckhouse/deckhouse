@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -371,104 +370,8 @@ spec:
 
 	Context("Invalid NG with a stored last-good value", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.32")
-			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Containerd")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.32.5")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
-			f.RunHook()
-		})
-
-		It("Hook must not fail; cri must be correct", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("Containerd"))
-		})
-	})
-
-	Context("Cluster with proper NG, global cri is set to not managed", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.32")
-			f.ValuesSet("global.clusterConfiguration.defaultCRI", "NotManaged")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.32.5")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
-			f.RunHook()
-		})
-
-		It("Hook must not fail", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
-		})
-	})
-
-	Context("Cluster with proper NG, defaultCRI is set in node-manager ModuleConfig only", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.32")
-			f.ValuesSet("nodeManager.defaultCRI", "NotManaged")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.32.5")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
-			f.RunHook()
-		})
-
-		It("Hook must not fail; ModuleConfig value must be used", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
-		})
-	})
-
-	Context("Cluster with proper NG, defaultCRI set in both ClusterConfiguration and node-manager ModuleConfig", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.32")
-			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Containerd")
-			f.ValuesSet("nodeManager.defaultCRI", "NotManaged")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.32.5")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
-			f.RunHook()
-		})
-
-		It("Hook must not fail; ModuleConfig value takes precedence", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
-		})
-	})
-
-	Context("Cluster with proper NG, node-manager ModuleConfig defaultCRI left at default, ClusterConfiguration set", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.32")
-			f.ValuesSet("global.clusterConfiguration.defaultCRI", "NotManaged")
-			f.ValuesSet("nodeManager.defaultCRI", "Containerd")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.32.5")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
-			f.RunHook()
-		})
-
-		It("Hook must not fail; falls back to ClusterConfiguration when ModuleConfig is at the default value", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
-		})
-	})
-
-	assertNodeCapacity := func(f *HookExecutionConfig, expectType v1alpha1.InstanceType) {
-		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").Exists()).To(BeTrue())
-
-		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.name").String()).To(Equal(expectType.Name))
-		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.cpu").String()).To(Equal(expectType.CPU.String()))
-		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.memory").String()).To(Equal(expectType.Memory.String()))
-		Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.rootDisk").String()).To(Equal(expectType.RootDisk.String()))
-	}
-
-	Context("ScaleFromZero: can't find a capacity", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: test
-spec:
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(`
+- name: lastgood
   nodeType: CloudEphemeral
   instanceClass:
     saved: true

@@ -145,7 +145,7 @@ func TestLoadClusterConfig_DefaultCRIPrecedence(t *testing.T) {
 		{name: "only ClusterConfiguration", clusterCRI: "ContainerdV2", moduleCRI: "", expectedCRI: "ContainerdV2"},
 		{name: "only ModuleConfig", clusterCRI: "", moduleCRI: "ContainerdV2", expectedCRI: "ContainerdV2"},
 		{name: "ModuleConfig overrides ClusterConfiguration", clusterCRI: "Containerd", moduleCRI: "ContainerdV2", expectedCRI: "ContainerdV2"},
-		{name: "ModuleConfig at default falls back to ClusterConfiguration", clusterCRI: "ContainerdV2", moduleCRI: "Containerd", expectedCRI: "ContainerdV2"},
+		{name: "explicit ModuleConfig Containerd wins over ClusterConfiguration", clusterCRI: "ContainerdV2", moduleCRI: "Containerd", expectedCRI: "Containerd"},
 		{name: "neither set", clusterCRI: "", moduleCRI: "", expectedCRI: ""},
 	}
 

@@ -89,6 +89,14 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	result.UpdateEpoch = calculateUpdateEpoch(epochTimestampAccessor(), clusterUUID, ng.Name)
 
 	targetVersion, defaultCRI := s.readClusterConfiguration(ctx)
+	// The node-manager ModuleConfig is the new home for defaultCRI. An explicitly
+	// set value always wins over the deprecated ClusterConfiguration.defaultCRI —
+	// reading the ModuleConfig object directly lets us tell "set" from "unset"
+	// (an absent field yields ""), so even an explicit "Containerd" takes effect.
+	// Mirrors the webhook's loadClusterConfig so validation and rendering agree.
+	if mcCRI := s.readDefaultCRIFromModuleConfig(ctx); mcCRI != "" {
+		defaultCRI = mcCRI
+	}
 	controlPlaneMinVersion := s.readControlPlaneMinVersion(ctx)
 	effectiveKubeVer := effectiveKubernetesVersion(targetVersion, controlPlaneMinVersion)
 	result.KubernetesVersion = semverMajMin(effectiveKubeVer)

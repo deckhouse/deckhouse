@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/Masterminds/semver/v3"
 	cljson "github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -297,89 +296,6 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 			cloudInstances.Zones = zones
 			ngForValues["cloudInstances"] = cloudInstances
 		}
-
-		// Determine effective Kubernetes version.
-		effectiveKubeVer := globalTargetKubernetesVersion
-		if controlPlaneMinVersion != nil {
-			if effectiveKubeVer == nil || effectiveKubeVer.GreaterThan(controlPlaneMinVersion) {
-				// Nodes should not be above control plane
-				effectiveKubeVer = controlPlaneMinVersion
-			}
-		}
-		effectiveKubeVerMajMin := semverMajMin(effectiveKubeVer)
-		ngForValues[kubeVersionStatusField] = effectiveKubeVerMajMin
-
-		setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, kubeVersionStatusField, effectiveKubeVerMajMin)
-
-		// Detect CRI type. Default CRI type is 'Docker' for Kubernetes version less than 1.19.
-		v1_19_0, _ := semver.NewVersion("1.19.0")
-		defaultCRIType := NodeGroupDefaultCRIType
-		if effectiveKubeVer.LessThan(v1_19_0) {
-			defaultCRIType = CRITypeDocker
-		}
-
-		// ClusterConfiguration.defaultCRI is deprecated and kept as a fallback.
-		if criValue, has := input.Values.GetOk("global.clusterConfiguration.defaultCRI"); has {
-			defaultCRIType = criValue.String()
-		}
-
-		// node-manager ModuleConfig setting takes precedence over the deprecated
-		// ClusterConfiguration field when it is set to a non-default value.
-		if criValue, has := input.Values.GetOk("nodeManager.defaultCRI"); has {
-			if v := criValue.String(); v != "" && v != NodeGroupDefaultCRIType {
-				defaultCRIType = v
-			}
-		}
-
-		newCRIType := nodeGroup.Spec.CRI.Type
-		if newCRIType == "" {
-			newCRIType = defaultCRIType
-		}
-
-		switch newCRIType {
-		case CRITypeDocker:
-			// cri is NotManaged if .spec.cri.docker.manage is explicitly set to false.
-			if nodeGroup.Spec.CRI.Docker != nil && nodeGroup.Spec.CRI.Docker.Manage != nil && !*nodeGroup.Spec.CRI.Docker.Manage {
-				newCRIType = "NotManaged"
-			}
-		case CRITypeContainerd:
-			// Containerd requires Kubernetes version 1.19+.
-			if effectiveKubeVer.LessThan(v1_19_0) {
-				return fmt.Errorf("cri type Containerd is allowed only for kubernetes 1.19+")
-			}
-		}
-
-		ngForValues["serializedLabels"] = serializeLabels(nodeGroup)
-		ngForValues["serializedTaints"] = serializeTaints(nodeGroup)
-
-		if ngForValues["cri"] == nil {
-			ngForValues["cri"] = ngv1.CRI{}
-		}
-		cri := ngForValues["cri"].(ngv1.CRI)
-		cri.Type = newCRIType
-		ngForValues["cri"] = cri
-
-		gpu, ok := ngForValues["gpu"].(ngv1.GPU)
-		if ok {
-			ngForValues["gpu"] = gpu
-		}
-
-		fencing, ok := ngForValues["fencing"].(ngv1.Fencing)
-		if ok {
-			ngForValues["fencing"] = fencing
-		}
-
-		// Calculate update epoch
-		// updateEpoch is a value that changes every 4 hour for a particular NodeGroup in the cluster.
-		// Values are spread over 4 hour window to update nodes at different times.
-		// Also, updateEpoch value is a unix time of the next update.
-		updateEpoch := calculateUpdateEpoch(timestamp,
-			input.Values.Get("global.discovery.clusterUUID").String(),
-			nodeGroup.Name)
-		ngForValues["updateEpoch"] = updateEpoch
-
-		// Reset status error for current NodeGroup.
-		setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, "")
 
 		ngBytes, _ := cljson.Marshal(ngForValues)
 		finalNodeGroups = append(finalNodeGroups, json.RawMessage(ngBytes))

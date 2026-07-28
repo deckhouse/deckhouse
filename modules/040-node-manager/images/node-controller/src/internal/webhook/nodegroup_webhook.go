@@ -501,13 +501,15 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterCon
 		}
 	}
 
-	// The node-manager ModuleConfig setting is the new home for defaultCRI and takes
-	// precedence over the deprecated ClusterConfiguration field when set to a non-default value.
+	// The node-manager ModuleConfig setting is the new home for defaultCRI. An
+	// explicitly set value always wins over the deprecated ClusterConfiguration
+	// field: loadDefaultCRIFromModuleConfig returns "" only when the field is
+	// absent, so any non-empty value is an explicit choice (even "Containerd").
 	mcCRI, err := w.loadDefaultCRIFromModuleConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if mcCRI != "" && mcCRI != defaultCRIType {
+	if mcCRI != "" {
 		config.DefaultCRI = mcCRI
 	}
 
