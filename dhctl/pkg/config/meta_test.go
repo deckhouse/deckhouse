@@ -564,6 +564,68 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	require.Equal(t, expectedMingetBytes, mingetBytes)
 }
 
+func TestKubernetesVersionResolution(t *testing.T) {
+	mustRaw := func(v string) json.RawMessage {
+		b, err := json.Marshal(v)
+		require.NoError(t, err)
+		return b
+	}
+	cpm := func(version string) *ModuleConfig {
+		mc := &ModuleConfig{
+			Spec: ModuleConfigSpec{
+				Enabled:  boolPtr(true),
+				Version:  3,
+				Settings: SettingsValues{"kubernetesVersion": version},
+			},
+		}
+		mc.SetName("control-plane-manager")
+		return mc
+	}
+
+	t.Run("ModuleConfig wins over ClusterConfiguration", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("1.35")},
+		}
+		require.Equal(t, "1.35", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, "1.35", ccm["kubernetesVersion"])
+	})
+
+	t.Run("ModuleConfig only when ClusterConfiguration omits the field", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{},
+			ModuleConfigs: []*ModuleConfig{cpm("1.34")},
+		}
+		require.Equal(t, "1.34", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, "1.34", ccm["kubernetesVersion"])
+	})
+
+	t.Run("Automatic resolves to DefaultKubernetesVersion", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("Automatic")},
+		}
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
+	})
+
+	t.Run("unset falls back to DefaultKubernetesVersion", func(t *testing.T) {
+		m := &MetaConfig{ClusterConfig: map[string]json.RawMessage{}}
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
+	})
+}
+
+func boolPtr(v bool) *bool { return &v }
+
 func TestMetaConfig_DeepCopy_PreservesValidateInputs(t *testing.T) {
 	src := &MetaConfig{
 		DownloadRootDir:  "/tmp/dl",

@@ -22,8 +22,10 @@ import "maps"
 //
 // Settings holds ModuleConfig control-plane-manager spec.settings (authoritative source).
 // ClusterConfiguration holds legacy ClusterConfiguration data (fallback during migration).
-// Templates choose the source explicitly: `coalesce .settings.field .clusterConfiguration.field`.
-// ToMap is the only boundary with the Go template engine.
+// Templates choose the source explicitly for migrated fields (nil-safe equivalent of
+// `coalesce .settings.field .clusterConfiguration.field`); see candi/control-plane/*.tpl
+// for kubernetesVersion. ClusterConfigMap also publishes the resolved MC ?? CC ?? Default
+// version into clusterConfiguration.kubernetesVersion for bashible and Automatic fallback.
 type TemplateConfig struct {
 	RunType    string                 `json:"runType"`
 	NodeIP     string                 `json:"nodeIP"`

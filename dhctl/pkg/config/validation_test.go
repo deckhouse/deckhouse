@@ -154,10 +154,9 @@ kind: ClusterConfiguration
 metadata:
   name: deckhouse
 `,
-			errContains: `ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed: 5 errors occurred:
+			errContains: `ValidationFailed: [1] deckhouse.io/v1alpha1, Kind=ClusterConfiguration "deckhouse": "ClusterConfiguration, deckhouse.io/v1" document validation failed: 4 errors occurred:
 	* .metadata is a forbidden property
 	* .clusterType is required
-	* .kubernetesVersion is required
 	* .podSubnetCIDR is required
 	* .serviceSubnetCIDR is required
 
@@ -195,6 +194,19 @@ clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
+clusterDomain: "cluster.local"
+`,
+			expected: ClusterConfig{
+				ClusterType: "Static",
+			},
+		},
+		"ok, Static without kubernetesVersion": {
+			config: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
 clusterDomain: "cluster.local"
 `,
 			expected: ClusterConfig{

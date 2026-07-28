@@ -1,3 +1,9 @@
+{{- /* MC settings are authoritative; CC is fallback. Guard nil settings like resourcesRequests. */ -}}
+{{- $kubernetesVersion := .clusterConfiguration.kubernetesVersion -}}
+{{- if and .settings .settings.kubernetesVersion -}}
+  {{- $kubernetesVersion = .settings.kubernetesVersion -}}
+{{- end -}}
+{{- if eq $kubernetesVersion "Automatic" -}}{{- $kubernetesVersion = .clusterConfiguration.kubernetesVersion -}}{{- end -}}
 {{- $resourcesRequests := dict -}}
 {{- if and $.settings $.settings.resourcesRequests -}}
   {{- $resourcesRequests = $.settings.resourcesRequests -}}
@@ -14,11 +20,11 @@
     {{- $gcThresholdCount = 6000 }}
 {{- end }}
 {{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" -}}
-{{- if semverCompare ">=1.31 <1.36" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.31 <1.36" $kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
 {{- end }}
 {{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
-{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.32 <1.34" $kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
@@ -27,7 +33,7 @@
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
-{{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare "<=1.31" $kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "AnonymousAuthConfigurableEndpoints=true" -}}
 {{- end }}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
@@ -41,7 +47,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   annotations:
-    control-plane-manager.deckhouse.io/kubernetes-version: {{ $.clusterConfiguration.kubernetesVersion | quote }}
+    control-plane-manager.deckhouse.io/kubernetes-version: {{ $kubernetesVersion | quote }}
   labels:
     component: kube-controller-manager
     tier: control-plane
@@ -86,7 +92,7 @@ spec:
     - name: GOGC
       value: "50"
     {{- if (.images).controlPlaneManager }}  
-      {{- $imageWithVersion := printf "kubeControllerManager%s" ($.clusterConfiguration.kubernetesVersion | replace "." "") }}
+      {{- $imageWithVersion := printf "kubeControllerManager%s" ($kubernetesVersion | replace "." "") }}
         {{- if hasKey $.images.controlPlaneManager $imageWithVersion }}
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
       {{- end }}

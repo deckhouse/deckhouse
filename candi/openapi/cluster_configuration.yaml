@@ -19,7 +19,7 @@ apiVersions:
       d8 system edit cluster-configuration
       ```
     additionalProperties: false
-    required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
+    required: [apiVersion, kind, clusterType, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
     x-examples:
     - apiVersion: deckhouse.io/v1
       kind: ClusterConfiguration
@@ -159,6 +159,8 @@ apiVersions:
           **Deprecated.** Use `kubernetesVersion` in the `control-plane-manager` ModuleConfig instead.
 
           When the ModuleConfig field is set, it takes precedence over this field.
+          The field is optional here: if omitted, set `kubernetesVersion` in ModuleConfig
+          `control-plane-manager` (that ModuleConfig must include `spec.enabled` and `spec.version`).
 
           Kubernetes version (control plane components of the cluster).
 

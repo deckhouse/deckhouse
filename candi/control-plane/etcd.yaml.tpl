@@ -1,3 +1,9 @@
+{{- /* MC settings are authoritative; CC is fallback. Guard nil settings like resourcesRequests. */ -}}
+{{- $kubernetesVersion := .clusterConfiguration.kubernetesVersion -}}
+{{- if and .settings .settings.kubernetesVersion -}}
+  {{- $kubernetesVersion = .settings.kubernetesVersion -}}
+{{- end -}}
+{{- if eq $kubernetesVersion "Automatic" -}}{{- $kubernetesVersion = .clusterConfiguration.kubernetesVersion -}}{{- end -}}
 {{- $etcdName := .nodeName | default "etcd-member" -}}
 {{- $nodeIP := .nodeIP | default "127.0.0.1" -}}
 {{- $advertiseClient := printf "https://%s:2379" $nodeIP -}}
@@ -39,7 +45,7 @@ spec:
     {{- end }}
     {{- end }}
     {{- end }}
-    {{- if semverCompare "< 1.34" .clusterConfiguration.kubernetesVersion }}
+    {{- if semverCompare "< 1.34" $kubernetesVersion }}
     - --feature-gates=InitialCorruptCheck=true
     {{- end }}
     - --watch-progress-notify-interval=5s

@@ -635,10 +635,34 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 }
 
 func resolveKubernetesVersion(v string) string {
-	if v == "Automatic" {
+	if v == "" || v == "Automatic" {
 		return DefaultKubernetesVersion
 	}
 	return v
+}
+
+// kubernetesVersionRaw returns the unresolved kubernetesVersion preferred during the
+// ClusterConfiguration → ModuleConfig migration: ModuleConfig control-plane-manager
+// settings first, then ClusterConfiguration.
+//
+// An install config that pins the version only in ModuleConfig must still set
+// ModuleConfig.spec.enabled and ModuleConfig.spec.version — dhctl rejects ModuleConfigs
+// without them (see load.go ModuleConfig validation).
+func (m *MetaConfig) kubernetesVersionRaw() string {
+	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {
+		if v, ok := mc.Spec.Settings["kubernetesVersion"].(string); ok && v != "" {
+			return v
+		}
+	}
+
+	if raw, ok := m.ClusterConfig["kubernetesVersion"]; ok {
+		var v string
+		if err := json.Unmarshal(raw, &v); err == nil {
+			return v
+		}
+	}
+
+	return ""
 }
 
 func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
@@ -651,9 +675,9 @@ func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
 		}
 		out[k] = a
 	}
-	if v, _ := out["kubernetesVersion"].(string); v != "" {
-		out["kubernetesVersion"] = resolveKubernetesVersion(v)
-	}
+	// Always publish the effective concrete version (MC ?? CC ?? Default) so control-plane
+	// templates and bashible see one resolved value even when the field is absent from CC.
+	out["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
 	return out, nil
 }
 
@@ -669,9 +693,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 		data[key] = t
 	}
 
-	if data["kubernetesVersion"] == "Automatic" {
-		data["kubernetesVersion"] = DefaultKubernetesVersion
-	}
+	data["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
 
 	clusterBootstrap := map[string]any{
 		"clusterDomain":     data["clusterDomain"],

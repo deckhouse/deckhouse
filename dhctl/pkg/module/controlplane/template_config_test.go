@@ -68,6 +68,49 @@ func TestConfigForControlPlaneTemplates_KubernetesVersionAutomatic(t *testing.T)
 	require.Equal(t, config.DefaultKubernetesVersion, cfg.ClusterConfiguration["kubernetesVersion"].(string))
 }
 
+func TestConfigForControlPlaneTemplates_KubernetesVersionModuleConfigWins(t *testing.T) {
+	cc := baseClusterConfig()
+	cc["kubernetesVersion"] = mustRawMessage("1.32")
+	m := newMetaConfig(t, cc, []*config.ModuleConfig{
+		newModuleConfig("control-plane-manager", config.SettingsValues{
+			"kubernetesVersion": "1.35",
+		}),
+	})
+
+	cfg := getTestTemplateConfig(t, m, "")
+
+	require.Equal(t, "1.35", cfg.ClusterConfiguration["kubernetesVersion"].(string))
+	require.Equal(t, "1.35", cfg.Settings["kubernetesVersion"])
+}
+
+func TestConfigForControlPlaneTemplates_KubernetesVersionFromModuleConfigOnly(t *testing.T) {
+	cc := baseClusterConfig()
+	delete(cc, "kubernetesVersion")
+	m := newMetaConfig(t, cc, []*config.ModuleConfig{
+		newModuleConfig("control-plane-manager", config.SettingsValues{
+			"kubernetesVersion": "1.34",
+		}),
+	})
+
+	cfg := getTestTemplateConfig(t, m, "")
+
+	require.Equal(t, "1.34", cfg.ClusterConfiguration["kubernetesVersion"].(string))
+}
+
+func TestConfigForControlPlaneTemplates_KubernetesVersionModuleConfigAutomatic(t *testing.T) {
+	cc := baseClusterConfig()
+	cc["kubernetesVersion"] = mustRawMessage("1.32")
+	m := newMetaConfig(t, cc, []*config.ModuleConfig{
+		newModuleConfig("control-plane-manager", config.SettingsValues{
+			"kubernetesVersion": "Automatic",
+		}),
+	})
+
+	cfg := getTestTemplateConfig(t, m, "")
+
+	require.Equal(t, config.DefaultKubernetesVersion, cfg.ClusterConfiguration["kubernetesVersion"].(string))
+}
+
 func TestConfigForControlPlaneTemplates_PartialResourcesRequests(t *testing.T) {
 	m := newMetaConfig(t, baseClusterConfig(), []*config.ModuleConfig{
 		newModuleConfig("control-plane-manager", config.SettingsValues{
