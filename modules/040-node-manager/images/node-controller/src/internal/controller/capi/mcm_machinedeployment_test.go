@@ -1,0 +1,222 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package capi
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
+)
+
+func resolvedFromSpecJSON(t *testing.T, s string) derived_status.ResolvedNodeGroup {
+	t.Helper()
+	var spec map[string]interface{}
+	require.NoError(t, json.Unmarshal([]byte(s), &spec))
+	return derived_status.ResolvedNodeGroup{Name: "worker", Spec: spec}
+}
+
+func mdSpec(t *testing.T, md map[string]interface{}) map[string]interface{} {
+	t.Helper()
+	spec, ok := md["spec"].(map[string]interface{})
+	require.True(t, ok, "spec must be a map")
+	return spec
+}
+
+func mdTemplateSpec(t *testing.T, md map[string]interface{}) map[string]interface{} {
+	t.Helper()
+	tmpl := mdSpec(t, md)["template"].(map[string]interface{})
+	return tmpl["spec"].(map[string]interface{})
+}
+
+func TestBuildMCMMachineDeployment_Defaults(t *testing.T) {
+	resolved := resolvedFromSpecJSON(t, `{}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
+		resolved:         resolved,
+		ngName:           "worker",
+		zone:             "eu-west-1a",
+		mdName:           "worker-abcdef01",
+		machineClassName: "worker-abcdef01",
+		machineClassKind: "AWSMachineClass",
+		checksum:         "deadbeef",
+		replicas:         3,
+	})
+
+	assert.Equal(t, "machine.sapcloud.io/v1alpha1", md.GetAPIVersion())
+	assert.Equal(t, "MachineDeployment", md.GetKind())
+
+	meta := md.Object["metadata"].(map[string]interface{})
+	assert.Equal(t, "worker-abcdef01", meta["name"])
+	assert.Equal(t, capiNamespace, meta["namespace"])
+	assert.Equal(t, map[string]interface{}{
+		"heritage":   "deckhouse",
+		"module":     "node-manager",
+		"node-group": "worker",
+	}, meta["labels"])
+	// Only the zone annotation, no scale-from-zero.
+	assert.Equal(t, map[string]interface{}{"zone": "eu-west-1a"}, meta["annotations"])
+
+	spec := mdSpec(t, md.Object)
+	assert.Equal(t, int64(3), spec["replicas"])
+	assert.Equal(t, int64(300), spec["minReadySeconds"])
+
+	strat := spec["strategy"].(map[string]interface{})
+	assert.Equal(t, "RollingUpdate", strat["type"])
+	ru := strat["rollingUpdate"].(map[string]interface{})
+	assert.Equal(t, int64(1), ru["maxSurge"])
+	assert.Equal(t, int64(0), ru["maxUnavailable"])
+
+	sel := spec["selector"].(map[string]interface{})["matchLabels"].(map[string]interface{})
+	assert.Equal(t, "worker-eu-west-1a", sel["instance-group"])
+
+	tmpl := spec["template"].(map[string]interface{})
+	tmplMeta := tmpl["metadata"].(map[string]interface{})
+	assert.Equal(t, map[string]interface{}{"instance-group": "worker-eu-west-1a"}, tmplMeta["labels"])
+	assert.Equal(t, map[string]interface{}{"checksum/machine-class": "deadbeef"}, tmplMeta["annotations"])
+
+	ts := mdTemplateSpec(t, md.Object)
+	assert.Equal(t, map[string]interface{}{
+		"kind": "AWSMachineClass",
+		"name": "worker-abcdef01",
+	}, ts["class"])
+	assert.Equal(t, "600s", ts["drainTimeout"])
+	assert.Equal(t, int64(30), ts["maxEvictRetries"])
+	_, hasCreationTimeout := ts["creationTimeout"]
+	assert.False(t, hasCreationTimeout, "no creationTimeout without aws spot")
+
+	// Mandatory nodeTemplate labels only, no annotations/taints.
+	ntMeta := ts["nodeTemplate"].(map[string]interface{})["metadata"].(map[string]interface{})
+	assert.Equal(t, map[string]interface{}{
+		"node-role.kubernetes.io/worker": "",
+		"node.deckhouse.io/group":        "worker",
+		"node.deckhouse.io/type":         "CloudEphemeral",
+	}, ntMeta["labels"])
+	_, hasAnn := ntMeta["annotations"]
+	assert.False(t, hasAnn)
+	_, hasSpec := ts["nodeTemplate"].(map[string]interface{})["spec"]
+	assert.False(t, hasSpec)
+}
+
+func TestBuildMCMMachineDeployment_ScaleFromZero(t *testing.T) {
+	resolved := resolvedFromSpecJSON(t, `{}`)
+	resolved.NodeCapacity = map[string]interface{}{"cpu": "4", "memory": "8Gi"}
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
+		resolved: resolved,
+		ngName:   "worker",
+		zone:     "eu-west-1a",
+		mdName:   "worker-abcdef01",
+		region:   "eu-west-1",
+		checksum: "deadbeef",
+	})
+	ann := md.Object["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})
+	assert.Equal(t, "eu-west-1a", ann["zone"])
+	assert.Equal(t, "true", ann["cluster-autoscaler.kubernetes.io/scale-from-zero"])
+	assert.Equal(t, "eu-west-1", ann["cluster-autoscaler.kubernetes.io/node-region"])
+	assert.Equal(t, "4", ann["cluster-autoscaler.kubernetes.io/node-cpu"])
+	assert.Equal(t, "8Gi", ann["cluster-autoscaler.kubernetes.io/node-memory"])
+	assert.Equal(t, "eu-west-1a", ann["cluster-autoscaler.kubernetes.io/node-zone"])
+}
+
+// TestBuildMCMMachineDeployment_QuickShutdown covers the 5m/9 drain tier.
+func TestBuildMCMMachineDeployment_QuickShutdown(t *testing.T) {
+	resolved := resolvedFromSpecJSON(t, `{"cloudInstances":{"quickShutdown":true}}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
+	ts := mdTemplateSpec(t, md.Object)
+	assert.Equal(t, "5m", ts["drainTimeout"])
+	assert.Equal(t, int64(9), ts["maxEvictRetries"])
+}
+
+func TestBuildMCMMachineDeployment_NodeDrainTimeout(t *testing.T) {
+	resolved := resolvedFromSpecJSON(t, `{"nodeDrainTimeoutSecond":210}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
+	ts := mdTemplateSpec(t, md.Object)
+	assert.Equal(t, "210s", ts["drainTimeout"])
+	assert.Equal(t, int64(10), ts["maxEvictRetries"])
+}
+
+// TestBuildMCMMachineDeployment_ZeroNodeDrainTimeout pins the helm behaviour the migration has
+// to keep: the template branched on `{{- else if $ng.nodeDrainTimeoutSecond }}`, so an explicit
+// 0 was falsy and kept the 600s/30 default. Rendering "0s" would delete nodes with no drain
+// grace at all and change spec.template, rolling the whole group on upgrade.
+func TestBuildMCMMachineDeployment_ZeroNodeDrainTimeout(t *testing.T) {
+	resolved := resolvedFromSpecJSON(t, `{"nodeDrainTimeoutSecond":0}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
+	ts := mdTemplateSpec(t, md.Object)
+	assert.Equal(t, "600s", ts["drainTimeout"])
+	assert.Equal(t, int64(30), ts["maxEvictRetries"])
+}
+
+// TestBuildMCMMachineDeployment_ZeroMaxSurge pins the other falsy-zero default: helm rendered
+// `maxSurgePerZone | default "1"`, so 0 (which the CRD allows) came out as 1. maxSurge 0 with
+// maxUnavailable 0 is a rollout that can never make progress.
+func TestBuildMCMMachineDeployment_ZeroMaxSurge(t *testing.T) {
+	resolved := resolvedFromSpecJSON(t, `{"cloudInstances":{"maxSurgePerZone":0,"maxUnavailablePerZone":0}}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
+	ru := mdSpec(t, md.Object)["strategy"].(map[string]interface{})["rollingUpdate"].(map[string]interface{})
+	assert.Equal(t, int64(1), ru["maxSurge"])
+	assert.Equal(t, int64(0), ru["maxUnavailable"])
+}
+
+// TestBuildMCMMachineDeployment_MaxSurgeUnavailable covers the per-zone overrides.
+func TestBuildMCMMachineDeployment_MaxSurgeUnavailable(t *testing.T) {
+	resolved := resolvedFromSpecJSON(t, `{"cloudInstances":{"maxSurgePerZone":3,"maxUnavailablePerZone":2}}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
+	ru := mdSpec(t, md.Object)["strategy"].(map[string]interface{})["rollingUpdate"].(map[string]interface{})
+	assert.Equal(t, int64(3), ru["maxSurge"])
+	assert.Equal(t, int64(2), ru["maxUnavailable"])
+}
+
+func TestBuildMCMMachineDeployment_NodeTemplate(t *testing.T) {
+	resolved := resolvedFromSpecJSON(t, `{
+		"nodeTemplate":{
+			"labels":{"custom/label":"v","node.deckhouse.io/type":"override-ignored-by-order"},
+			"annotations":{"custom/ann":"a"},
+			"taints":[
+				{"key":"k1","effect":"NoSchedule","value":"v1"},
+				{"key":"k2","effect":"NoExecute"}
+			]
+		}
+	}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z"})
+	nt := mdTemplateSpec(t, md.Object)["nodeTemplate"].(map[string]interface{})
+	ntMeta := nt["metadata"].(map[string]interface{})
+
+	labels := ntMeta["labels"].(map[string]interface{})
+	assert.Equal(t, "", labels["node-role.kubernetes.io/worker"])
+	assert.Equal(t, "worker", labels["node.deckhouse.io/group"])
+	assert.Equal(t, "v", labels["custom/label"])
+	// User label overrides the mandatory one (helm merge order: user last wins).
+	assert.Equal(t, "override-ignored-by-order", labels["node.deckhouse.io/type"])
+
+	assert.Equal(t, map[string]interface{}{"custom/ann": "a"}, ntMeta["annotations"])
+
+	taints := nt["spec"].(map[string]interface{})["taints"].([]interface{})
+	require.Len(t, taints, 2)
+	assert.Equal(t, map[string]interface{}{"key": "k1", "effect": "NoSchedule", "value": "v1"}, taints[0])
+	assert.Equal(t, map[string]interface{}{"key": "k2", "effect": "NoExecute"}, taints[1])
+}
+
+// TestBuildMCMMachineDeployment_AWSSpot covers the creationTimeout 5m addition.
+func TestBuildMCMMachineDeployment_AWSSpot(t *testing.T) {
+	resolved := resolvedFromSpecJSON(t, `{}`)
+	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{resolved: resolved, ngName: "worker", zone: "z", awsSpot: true})
+	ts := mdTemplateSpec(t, md.Object)
+	assert.Equal(t, "5m", ts["creationTimeout"])
+}

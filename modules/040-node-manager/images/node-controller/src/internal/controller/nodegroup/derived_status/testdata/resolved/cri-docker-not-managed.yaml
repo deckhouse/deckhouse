@@ -1,0 +1,15 @@
+cri:
+  containerd:
+    maxConcurrentDownloads: 3
+  docker:
+    manage: false
+    maxConcurrentDownloads: 3
+  type: NotManaged
+engine: None
+kubernetesVersion: ""
+manualRolloutID: ""
+name: docker-ng
+nodeType: Static
+serializedLabels: node.deckhouse.io/group=docker-ng
+serializedTaints: ""
+updateEpoch: "1013"

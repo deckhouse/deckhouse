@@ -1,0 +1,10 @@
+cri:
+  type: Containerd
+engine: None
+kubernetesVersion: ""
+manualRolloutID: "2026-07-28"
+name: rolled
+nodeType: Static
+serializedLabels: node.deckhouse.io/group=rolled
+serializedTaints: ""
+updateEpoch: "1011"

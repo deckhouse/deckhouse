@@ -17,11 +17,14 @@ limitations under the License.
 package capi
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -38,11 +41,27 @@ const (
 type BaseWithReader struct {
 	register.Base
 	APIReader client.Reader
+	// InstanceClassKinds are the InstanceClass kinds this cluster serves, discovered once in
+	// Setup so SetupWatches can watch them (the kind is provider-specific, see
+	// common.ServedInstanceClassKinds).
+	InstanceClassKinds []schema.GroupVersionKind
 }
 
 func (b *BaseWithReader) Setup(mgr ctrl.Manager) error {
 	b.APIReader = mgr.GetAPIReader()
+
+	kinds, err := common.ServedInstanceClassKinds(mgr.GetConfig())
+	if err != nil {
+		return fmt.Errorf("discover InstanceClass kinds: %w", err)
+	}
+	b.InstanceClassKinds = kinds
 	return nil
+}
+
+func newUnstructuredForGVK(gvk schema.GroupVersionKind) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(gvk)
+	return u
 }
 
 func newUnstructured(group, version, kind string) *unstructured.Unstructured {
