@@ -1,0 +1,10 @@
+cri:
+  type: Containerd
+engine: None
+kubernetesVersion: ""
+manualRolloutID: ""
+name: static-no-config
+nodeType: Static
+serializedLabels: node.deckhouse.io/group=static-no-config
+serializedTaints: ""
+updateEpoch: "1002"
