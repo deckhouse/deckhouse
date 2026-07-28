@@ -75,7 +75,14 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 	// lives in the global module (thread-safe for the scheduler's enabled getter).
 	// Reschedule if either actually changed.
 	settingsChanged := r.packages.UpdateSettings(name, settingsVersion, settings)
-	enabledChanged := r.global.SetConfigEnabled(name, enabled)
+
+	// global is the synthetic order-0 barrier in the scheduler graph,
+	// not a real module — no scheduling rule reads its intent key.
+	// Skip the no-op call to avoid polluting the intent map.
+	var enabledChanged bool
+	if name != "global" {
+		enabledChanged = r.global.SetConfigEnabled(name, enabled)
+	}
 
 	if settingsChanged || enabledChanged {
 		r.scheduler.Reschedule(name)

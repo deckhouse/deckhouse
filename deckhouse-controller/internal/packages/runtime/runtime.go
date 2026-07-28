@@ -916,3 +916,17 @@ func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, sett
 
 	return validator.ValidateSettings(ctx, settingsVersion, settings)
 }
+
+// ValidateSettings validates module settings against the OpenAPI schema.
+// Thin wrapper over ValidatePackageSettings for the packageRuntime interface.
+// Returns nil if valid, or an error describing the failure.
+func (r *Runtime) ValidateSettings(ctx context.Context, name string, settingsVersion int, settings addonutils.Values) error {
+	result, err := r.ValidatePackageSettings(ctx, name, settingsVersion, settings)
+	if err != nil {
+		return fmt.Errorf("validate settings: %w", err)
+	}
+	if !result.Valid {
+		return fmt.Errorf("invalid settings: %s", result.Message)
+	}
+	return nil
+}
