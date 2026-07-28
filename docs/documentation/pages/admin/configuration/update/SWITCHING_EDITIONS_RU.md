@@ -207,13 +207,13 @@ Summary:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\s*", ""
+   | regex_replace: "(?m)\n?\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
@@ -224,14 +224,14 @@ Summary:
 {{
    take_care_of_the_internal_modules
    | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 
 {{
    take_care_of_the_external_modules
    | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 
@@ -242,14 +242,14 @@ Summary:
 {{
    take_care_of_the_internal_modules
    | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 
 {{
    take_care_of_the_external_modules
    | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 
@@ -260,14 +260,14 @@ Summary:
 {{
    take_care_of_the_internal_modules
    | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 
 {{
    take_care_of_the_external_modules
    | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 
@@ -278,14 +278,14 @@ Summary:
 {{
    take_care_of_the_internal_modules
    | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 
 {{
    take_care_of_the_external_modules
    | regex_replace: "\n?\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>\s*\n?", ""
+   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 
