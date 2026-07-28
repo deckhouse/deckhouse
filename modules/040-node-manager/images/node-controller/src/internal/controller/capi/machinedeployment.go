@@ -307,6 +307,17 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 	}
 	logger.V(1).Info("deleted StaticMachineTemplate for removed NodeGroup", "name", ngName)
 
+	// The bootstrap template of an immutable group. Its per-machine clones and
+	// their secrets are owned by the Machines and go with them; the template is
+	// ours to remove. Deleting one the group never had is a no-op.
+	tmpl := newUnstructured("bootstrap.deckhouse.io", "v1alpha1", "NodeBootstrapConfigTemplate")
+	tmpl.SetName(ngName)
+	tmpl.SetNamespace(common.MachineNamespace)
+	if err := r.Client.Delete(ctx, tmpl); err != nil && !errors.IsNotFound(err) && !meta.IsNoMatchError(err) {
+		return false, fmt.Errorf("delete NodeBootstrapConfigTemplate %s: %w", ngName, err)
+	}
+	logger.V(1).Info("deleted NodeBootstrapConfigTemplate for removed NodeGroup", "name", ngName)
+
 	if staleMCMs > 0 {
 		logger.V(1).Info("waiting for MCM MachineDeployments to go away before deleting their MachineClasses",
 			"ng", ngName, "remaining", staleMCMs)
