@@ -20,3 +20,10 @@
   license: Apache License 2.0
   id: kine
   version: 0.16.3
+
+- name: API Server Network Proxy
+  link: https://github.com/kubernetes-sigs/apiserver-network-proxy
+  description: Konnectivity proxy-server and proxy-agent for Kubernetes apiserver network proxying.
+  license: Apache License 2.0
+  id: apiserver-network-proxy
+  version: 0.30.3
