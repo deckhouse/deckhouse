@@ -698,15 +698,15 @@ func buildTargetBashibleService(vcp *controlplanev1alpha1.VirtualControlPlane) *
 			Name:      constants.VirtualResourceName(bashibleServiceName, vcp.Name),
 			Namespace: vcp.Namespace,
 			Labels: map[string]string{
-				"app":                                      bashibleAppLabel,
-				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				"app":                      bashibleAppLabel,
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
 				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{
-				"app":                                      bashibleAppLabel,
+				"app": bashibleAppLabel,
 				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 			Ports: []corev1.ServicePort{
