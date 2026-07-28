@@ -38,7 +38,7 @@ The module includes the following components:
    - Stores DKP component availability metrics in a local SQLite database.
    - Receives and processes DKP component probe data.
    - Handles API requests for platform availability data.
-   - Watches the custom resource [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) and sends probe results to the endpoint defined in that resource by using the `remote_write` protocol.
+   - Watches the custom resource [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) and sends probe results to the endpoint defined in that resource by using the [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) protocol.
 
    It includes the following containers:
 
@@ -48,31 +48,31 @@ The module includes the following components:
 
 1. **Upmeter-agent** (DaemonSet) runs on `master` nodes and regularly executes the following probe groups:
 
-   - `control-plane`: API server availability and controller health checks.
-   - `deckhouse`: DKP cluster health and `deckhouse` module controller checks.
-   - `extensions`: Checks that every extension has at least one `Ready` Pod.
-   - `load-balancing`: Checks availability of network load balancing services.
-   - `monitoring-and-autoscaling`: Checks that the Observability subsystem is healthy and gathers metrics from system components.
-   - `nginx`: Checks that every Ingress Controller has at least one `Ready` Pod.
-   - `nodegroups`: Checks the number of `desired` nodes in each NodeGroup.
-   - `synthetic`: Checks network connectivity between cluster nodes with HTTP requests to `smoke-mini-[a-e]`.
+   - Control-plane: API server availability and controller health checks.
+   - Deckhouse: DKP cluster health and `deckhouse` module controller checks.
+   - Extensions: Checks that every extension has at least one `Ready` Pod.
+   - Load-balancing: Checks availability of network load balancing services.
+   - Monitoring-and-autoscaling: Checks that the Observability subsystem is healthy and gathers metrics from system components.
+   - Nginx: Checks that every Ingress Controller has at least one `Ready` Pod.
+   - Nodegroups: Checks the number of `desired` nodes in each NodeGroup.
+   - Synthetic: Checks network connectivity between cluster nodes with HTTP requests to smoke-mini-[a-e].
 
-   The `control-plane` group includes the following probes:
-   - `apiserver`: `upmeter-agent` checks Kubernetes API availability.
-   - `basic-functionality`: `upmeter-agent` checks basic Kubernetes API behavior through the ConfigMap lifecycle.
-   - `namespace`: `upmeter-agent` creates the `upmeter-probe-namespace` namespace and removes it after validation.
-   - `scheduler`: `upmeter-agent` creates a Pod named `upmeter-probe-scheduler`, verifies that it is scheduled to any cluster node, and removes it.
-   - `controller-manager`: `upmeter-agent` creates a StatefulSet named `upmeter-probe-controller-manager` with an intentionally missing container in the Pod spec, verifies that the target Pod is created and reaches the expected state, and then removes the StatefulSet.
-   - `cert-manager`: `upmeter-agent` creates a self-signed Certificate named `upmeter-probe-cert-manager`, verifies that cert-manager created the related Secret, and then removes the Certificate and Secret.
+   The control-plane group includes the following probes:
+   - Apiserver: Upmeter-agent checks Kubernetes API availability.
+   - Basic-functionality: Upmeter-agent checks basic Kubernetes API behavior through the ConfigMap lifecycle.
+   - Namespace: Upmeter-agent creates the `upmeter-probe-namespace` namespace and removes it after validation.
+   - Scheduler: Upmeter-agent creates a Pod named `upmeter-probe-scheduler`, verifies that it is scheduled to any cluster node, and removes it.
+   - Controller-manager: Upmeter-agent creates a StatefulSet named `upmeter-probe-controller-manager` with an intentionally missing container in the Pod spec, verifies that the target Pod is created and reaches the expected state, and then removes the StatefulSet.
+   - Cert-manager: Upmeter-agent creates a self-signed Certificate named `upmeter-probe-cert-manager`, verifies that cert-manager created the related Secret, and then removes the Certificate and Secret.
 
-   The following flow is used to check the `deckhouse` controller:
-   - `Upmeter-agent` creates or updates the custom resource `UpmeterHookProbe`.
-   - The `deckhouse` controller watches this resource and runs a hook to update it.
-   - `Upmeter-agent` also watches `UpmeterHookProbe` and validates changes.
+   The following flow is used to check the deckhouse controller:
+   - Upmeter-agent creates or updates the custom resource `UpmeterHookProbe`.
+   - The deckhouse controller watches this resource and runs a hook to update it.
+   - Upmeter-agent also watches `UpmeterHookProbe` and validates changes.
 
    You can disable probes or probe groups by using the [`.spec.settings.disabledProbes` parameter](/modules/upmeter/configuration.html#parameters-disabledprobes).
 
-   `Upmeter-agent` sends collected probe results to upmeter with an HTTP request: `POST /downtime`.
+   Upmeter-agent sends collected probe results to upmeter with an HTTP request: `POST /downtime`.
 
    It includes the following containers:
 
@@ -80,9 +80,9 @@ The module includes the following components:
    - **chown-volume-data**: Init container that sets required permissions for the `/var/lib/upmeter/agent` directory on a cluster node.
    - **migrator**: Init container that applies SQL migrations to the component SQLite database.
 
-1. **Smoke-mini-[a-e]** (StatefulSet) is used for synthetic connectivity checks. It includes a single **smoke-mini** container. When `upmeter-agent` sends a request, `Smoke-mini-[a-e]` instances send requests to each other and to the cluster DNS service, then return probe results.
+1. **Smoke-mini-[a-e]** (StatefulSet) is used for synthetic connectivity checks. It includes a single **smoke-mini** container. When upmeter-agent sends a request, smoke-mini-[a-e] instances send requests to each other and to the cluster DNS service, then return probe results.
 
-   When the [`upmeter`](/modules/upmeter/) module is installed, the `deckhouse` controller from the [`deckhouse`](/modules/deckhouse) module registers a hook that distributes StatefulSet instances across different cluster nodes when possible. After that, it rebalances one StatefulSet every minute to another node.
+   When the [`upmeter`](/modules/upmeter/) module is installed, the deckhouse controller from the [`deckhouse`](/modules/deckhouse) module registers a hook that distributes StatefulSet instances across different cluster nodes when possible. After that, it rebalances one StatefulSet every minute to another node.
 
 1. **Status** (Deployment) includes a single **status** container and serves a web page with the current availability status of all DKP components.
 
@@ -97,12 +97,12 @@ The module interacts with the following components:
    - Manages custom resources `UpmeterRemoteWrite` and `UpmeterHookProbe`.
    - Provides custom resources `Downtime`.
    - Authorizes requests to upmeter.
-   - Creates, validates, and deletes standard resources: `Pod`, `StatefulSet`, `Namespace`, `Certificate`, and `Secret`.
+   - Creates, validates, and deletes standard resources: Pod, StatefulSet, Namespace, and Secret, and the custom resource Certificate.
 
-1. **External metric storage systems**: Sends probe results with the `remote-write` protocol.
+1. **External metric storage systems**: Sends probe results with the Prometheus Remote Write protocol.
 
 The following external components interact with the module:
 
 1. **Prometheus-main**: Uses monitoring rules and metrics related to the upmeter module.
 
-1. **Ingress controller**: Forwards external user requests to the module web interface.
+1. **Сontroller nginx**: Forwards external user requests to the module web interface.

@@ -48,26 +48,26 @@ description: Архитектура модуля upmeter в Deckhouse Kubernetes
 
 1. **Upmeter-agent** (DaemonSet) — компонент, работающий на master-узлах кластера и выполняющий на регулярной основе следующие группы проверок:
 
-    - `control-plane` — проверка доступности Kubernetes API, а также проверки работы контроллеров control plane кластера;
-    - `deckhouse` — проверка состояния кластера DKP, а также проверка работоспособности deckhouse-контроллера модуля [deckhouse](/modules/deckhouse);
-    - `extensions` — проверки, что у всех расширений есть хотя бы один Pod в состоянии `Ready`;
-    - `load-balancing` — проверки доступности сервисов, обеспечивающих сетевую балансировку;
-    - `monitoring-and-autoscaling` — проверки того, что подсистема Observability исправно работает и собирает метрики с системных компонентов;
-    - `nginx` — проверки того, что все Ingress Controller имеют хотя бы один Pod в состоянии `Ready`;
-    - `nodegroups` — проверка количества `desired` узлов в каждой NodeGroup;
-    - `synthetic` — проверка сетевого взаимодействия между узлами кластера через HTTP-запросы к компоненту smoke-mini-\[a-e\].
+    - control-plane — проверка доступности Kubernetes API, а также проверки работы контроллеров control plane кластера;
+    - deckhouse — проверка состояния кластера DKP, а также проверка работоспособности deckhouse-контроллера модуля [deckhouse](/modules/deckhouse);
+    - extensions — проверки, что у всех расширений есть хотя бы один Pod в состоянии `Ready`;
+    - load-balancing — проверки доступности сервисов, обеспечивающих сетевую балансировку;
+    - monitoring-and-autoscaling — проверки того, что подсистема Observability исправно работает и собирает метрики с системных компонентов;
+    - nginx — проверки того, что все Ingress Controller имеют хотя бы один Pod в состоянии `Ready`;
+    - nodegroups — проверка количества `desired` узлов в каждой NodeGroup;
+    - synthetic — проверка сетевого взаимодействия между узлами кластера через HTTP-запросы к компоненту smoke-mini-\[a-e\].
 
-    В группу проверок `control-plane` входят следующие пробы:
-    - `apiserver` — upmeter-agent проверяет доступность Kubernetes API;
-    - `basic-functionality` — upmeter-agent проверяет базовую работу Kubernetes API через жизненный цикл ConfigMap;
-    - `namespace` — upmeter-agent создаёт неймспейс `upmeter-probe-namespace` и после проверки удаляет его;
-    - `scheduler` — upmeter-agent создаёт Pod с именем `upmeter-probe-scheduler`, проверяет, что он назначен на какой-либо узел кластера, и удаляет его;
-    - `controller-manager` — upmeter-agent создаёт StatefulSet с именем `upmeter-probe-controller-manager` и с заведомо несуществующим контейнером в спецификации Pod, проверяет, что нужный Pod создался и находится в ожидаемом состоянии, после чего удаляет StatefulSet;
-    - `cert-manager` — upmeter-agent создаёт ресурс Certificate (самоподписанный) с именем `upmeter-probe-cert-manager`, проверяет, что cert-manager сформировал соответствующий ресурс Secret, после чего выполняет удаление созданных ресурсов Certificate и Secret.
+    В группу проверок control-plane входят следующие пробы:
+    - apiserver — upmeter-agent проверяет доступность Kubernetes API;
+    - basic-functionality — upmeter-agent проверяет базовую работу Kubernetes API через жизненный цикл ConfigMap;
+    - namespace — upmeter-agent создаёт неймспейс `upmeter-probe-namespace` и после проверки удаляет его;
+    - scheduler — upmeter-agent создаёт Pod с именем `upmeter-probe-scheduler`, проверяет, что он назначен на какой-либо узел кластера, и удаляет его;
+    - controller-manager — upmeter-agent создаёт StatefulSet с именем `upmeter-probe-controller-manager` и с заведомо несуществующим контейнером в спецификации Pod, проверяет, что нужный Pod создался и находится в ожидаемом состоянии, после чего удаляет StatefulSet;
+    - cert-manager — upmeter-agent создаёт ресурс Certificate (самоподписанный) с именем `upmeter-probe-cert-manager`, проверяет, что cert-manager сформировал соответствующий ресурс Secret, после чего выполняет удаление созданных ресурсов Certificate и Secret.
 
-    Для проверки работоспособности контроллера deckhouse выполняется следующая последовательность действий:
+    Для проверки работоспособности deckhouse-контроллера выполняется следующая последовательность действий:
     - upmeter-agent создаёт или обновляет кастомный ресурс UpmeterHookProbe;
-    - контроллер deckhouse следит за этим ресурсом и выполняет хук для обновления ресурса;
+    - deckhouse-контроллер следит за этим ресурсом и выполняет хук для обновления ресурса;
     - upmeter-agent также следит за ресурсом UpmeterHookProbe и при изменении проверяет их корректность.
 
     Проверки или группы проверок могут быть отключены в параметре [`.spec.settings.disabledProbes`](/modules/upmeter/configuration.html#parameters-disabledprobes) модуля.
@@ -80,9 +80,9 @@ description: Архитектура модуля upmeter в Deckhouse Kubernetes
     - **migrator** — init-контейнер, применяющий миграцию базы данных SQLite компонента;
     - **agent** — основной контейнер.
 
-1. **Smoke-mini-\[a-e\]** (StatefulSet) — компонент для синтетических проверок связности. Он состоит из одного контейнера **smoke-mini**. При получении запроса от upmeter-agent экземпляры Smoke-mini-\[a-e\] выполняют запросы друг к другу и к DNS-сервису кластера, после чего возвращают результаты проверок.
+1. **Smoke-mini-\[a-e\]** (StatefulSet) — компонент для синтетических проверок связности. Он состоит из одного контейнера **smoke-mini**. При получении запроса от upmeter-agent экземпляры smoke-mini-\[a-e\] выполняют запросы друг к другу и к DNS-сервису кластера, после чего возвращают результаты проверок.
 
-    При установке модуля [`upmeter`](/modules/upmeter), deckhouse-контроллер модуля [`deckhouse`](/modules/deckhouse) регистрирует хук, который распределяет экземпляры StatefulSet по разным узлам кластера (при такой возможности) и после этого каждую минуту перераспределяет по 1 StatefulSet на другой узел.
+    При установке модуля [`upmeter`](/modules/upmeter), deckhouse-контроллер модуля [`deckhouse`](/modules/deckhouse) регистрирует хук, который распределяет экземпляры StatefulSet по разным узлам кластера (при такой возможности) и после этого каждую минуту перераспределяет по одной реплике StatefulSet на другой узел.
 
 1. **Status** (Deployment) — компонент, состоящий из одного контейнера **status** и реализующий веб-страницу с текущим статусом доступности всех компонентов DKP.
 
@@ -94,15 +94,15 @@ description: Архитектура модуля upmeter в Deckhouse Kubernetes
 
 1. **Kube-apiserver**:
 
-    - управляет кастомными ресурсами UpmeterRemoteWrite и UpmeterHookProbe;
-    - получает кастомные ресурсы Downtime;
+    - управление кастомными ресурсами UpmeterRemoteWrite и UpmeterHookProbe;
+    - обработка кастомных ресурсов Downtime;
     - авторизация запросов к upmeter;
-    - создание, проверка и удаление стандартных ресурсов Pod, StatefulSet, Namespace, Certificate, Secret.
+    - создание, проверка и удаление стандартных ресурсов Pod, StatefulSet, Namespace, Secret и кастомных ресурсов Certificate.
 
 1. **Внешние системы хранения метрик** — отправка результатов проверок по протоколу Prometheus Remote Write.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Prometheus-main** — использует правила мониторинга и метрики, связанные с модулем upmeter.
+1. **Prometheus-main** — использование правила мониторинга и метрик, связанных с модулем upmeter.
 
-1. **Ingress контроллер** — пересылка внешних запросов пользователя к веб-интерфейсу модуля.
+1. **Сontroller nginx** — пересылка внешних запросов пользователя к веб-интерфейсу модуля.
