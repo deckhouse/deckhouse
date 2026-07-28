@@ -81,7 +81,7 @@ periodSeconds: 10
 {{- $_ := set $capiConfig "hostNetwork" true -}}
 {{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
 {{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
-{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "uninitialized") -}}
+{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "with-uninitialized" "with-no-csi" "with-cloud-provider-uninitialized") -}}
 {{- $_ := set $capiConfig "additionalArgs" (include "capv_controller_manager_args" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalEnv" (include "capv_controller_manager_env" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalPorts" (include "capv_controller_manager_ports" . | fromYamlArray) -}}
