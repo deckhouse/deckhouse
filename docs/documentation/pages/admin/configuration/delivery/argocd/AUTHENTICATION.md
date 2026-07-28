@@ -136,6 +136,8 @@ metadata:
   name: argocd
   namespace: argocd
 spec:
+  rbac:
+    scopes: "[groups, email]"
   sso:
     dex:
       config: |
