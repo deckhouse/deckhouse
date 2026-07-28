@@ -24,8 +24,8 @@ status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to list packages: failed to list tags: assert.AnError general
-      error for testing'
+    message: 'failed to list packages: list tags of registry.example.com/test: assert.AnError
+      general error for testing'
     reason: ScanFailed
     status: "True"
     type: Completed
@@ -42,8 +42,8 @@ spec:
 status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to list packages: failed to list tags: assert.AnError general
-      error for testing'
+    message: 'failed to list packages: list tags of registry.example.com/test: assert.AnError
+      general error for testing'
     reason: ScanFailed
     status: "False"
     type: LastScanSucceeded
