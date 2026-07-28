@@ -15,32 +15,8 @@
 # limitations under the License.
 */}}
 
-{{- $python_discovery := .Files.Get "deckhouse/candi/bashible/check_python.sh.tpl" }}
-{{- tpl ( $python_discovery ) . | nindent 0 }}
+target='{{.url}}'
+target="${target#http://}"
 
-check_python
-
-cat - <<EOF | $python_binary
-import ssl
-try:
-    from urllib.request import urlopen, Request
-    from urllib.error import HTTPError
-except ImportError as e:
-    from urllib2 import urlopen, Request, HTTPError
-
-ssl._create_default_https_context = ssl._create_unverified_context
-request = Request('{{.url}}')
-alive = False
-try:
-    urlopen(request, timeout=5)
-    alive = True
-except HTTPError:
-    # Any HTTP status (e.g. 404 from the rpp-get server) proves the SSH
-    # channel is alive end-to-end, so the reverse tunnel is healthy.
-    alive = True
-except Exception as err:
-    alive = False
-
-exit(0) if alive else exit(1)
-
-EOF
+# Any HTTP response proves that the SSH channel is alive end-to-end.
+minget "$target" --timeout 5 >/dev/null

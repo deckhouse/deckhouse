@@ -45,7 +45,13 @@ func TestRenderAndSavePreflightReverseTunnelReachableScript(t *testing.T) {
 	require.NoError(t, err)
 
 	s := string(content)
-	require.Contains(t, s, "Request('http://127.0.0.1:4282/healthz')")
-	require.Contains(t, s, "except HTTPError:")
-	require.Contains(t, s, "alive = True")
+
+	require.Contains(t, s, `target='http://127.0.0.1:4282/healthz'`)
+	require.Contains(t, s, `target="${target#http://}"`)
+	require.Contains(t, s, `minget "$target" --timeout 5 >/dev/null`)
+
+	require.NotContains(t, s, "check_python")
+	require.NotContains(t, s, "python_binary")
+	require.NotContains(t, s, "urllib")
+	require.NotContains(t, s, `minget "$target" --fail`)
 }
