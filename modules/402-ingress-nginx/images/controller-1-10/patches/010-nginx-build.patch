@@ -14,7 +14,7 @@ index f60a260f9..c434a00b0 100755
  set -o pipefail
  
 -export NGINX_VERSION=1.25.5
-+export NGINX_VERSION=1.30.3
++export NGINX_VERSION=1.30.4
  
  # Check for recent changes: https://github.com/vision5/ngx_devel_kit/compare/v0.3.3...master
  export NDK_VERSION=v0.3.3
