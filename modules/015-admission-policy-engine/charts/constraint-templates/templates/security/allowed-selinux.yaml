@@ -61,6 +61,8 @@ spec:
                 {{- include "constraint-templates.lib.check_object_match" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
@@ -73,6 +75,7 @@ spec:
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_for_container
               import data.lib.exception.resolve_spe_from_labels
+              import data.lib.message.violation_message
 
               # Disallow top-level custom SELinux options
               violation contains {"msg": msg, "details": {}} if {
@@ -88,9 +91,7 @@ spec:
                   spe_allowed
                 )
                 not result.allowed
-                actual_value := sprintf("Actual SELinux options: %v", [pod_spec.securityContext.seLinuxOptions])
-                allowed_by_policy := sprintf("Allowed options: %v", [input.parameters.allowedSELinuxOptions])
-                msg := sprintf("SELinux options are not allowed, pod: %v. | %v | %v", [input.review.object.metadata.name, actual_value, allowed_by_policy])
+                msg := violation_message("SELinux options are not allowed", sprintf("pod: %v", [input.review.object.metadata.name]), result.detail)
               }
 
               # Disallow container-level custom SELinux options
@@ -108,9 +109,7 @@ spec:
                   spe_allowed
                 )
                 not result.allowed
-                actual_value := sprintf("Actual SELinux options: %v", [c.securityContext.seLinuxOptions])
-                allowed_by_policy := sprintf("Allowed options: %v", [input.parameters.allowedSELinuxOptions])
-                msg := sprintf("SELinux options are not allowed, pod: %v, container %v. | %v | %v", [input.review.object.metadata.name, c.name, actual_value, allowed_by_policy])
+                msg := violation_message("SELinux options are not allowed", sprintf("pod: %v, container: %v", [input.review.object.metadata.name, c.name]), result.detail)
               }
 
               input_security_context contains c if {
