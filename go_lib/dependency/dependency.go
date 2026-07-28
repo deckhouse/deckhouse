@@ -29,7 +29,6 @@ import (
 	"github.com/flant/kube-client/fake"
 	"github.com/gojuno/minimock/v3"
 	"github.com/jonboulle/clockwork"
-	"github.com/pkg/errors"
 	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -187,17 +186,21 @@ func (dc *dependencyContainer) GetClientConfig() (*rest.Config, error) {
 		return TestDC.GetClientConfig()
 	}
 
-	config, err := rest.InClusterConfig()
+	config, err := k8s.RESTConfig()
 	if err != nil {
-		return nil, fmt.Errorf("in cluster config: %w", err)
+		return nil, fmt.Errorf("rest config: %w", err)
 	}
 
-	caCert, err := os.ReadFile(config.TLSClientConfig.CAFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read CA file")
-	}
+	// InClusterConfig reports the CA via a file path; callers expect the bytes
+	// inline, so read the file when the kubeconfig did not already provide CAData.
+	if len(config.CAData) == 0 && config.TLSClientConfig.CAFile != "" {
+		caCert, err := os.ReadFile(config.TLSClientConfig.CAFile)
+		if err != nil {
+			return nil, fmt.Errorf("read CA file: %w", err)
+		}
 
-	config.CAData = caCert
+		config.CAData = caCert
+	}
 
 	return config, nil
 }

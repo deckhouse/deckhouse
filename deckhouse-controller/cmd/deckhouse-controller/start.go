@@ -52,6 +52,7 @@ import (
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -82,6 +83,13 @@ func (r *reaperMutex) Release() {
 
 func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []string) error {
 	return func(_ *cobra.Command, _ []string) error {
+		// Point the Kubernetes clients built by go_lib/dependency (used by Go
+		// hooks and controllers) at the same kubeconfig the operator's own client
+		// uses. Empty in the normal in-cluster case, which keeps the in-cluster
+		// service-account behavior; set to --kube-config when deckhouse-controller
+		// drives a remote cluster. Must run before the operator and any hook start.
+		k8s.SetDefaultKubeConfig(cfg.Kube.Config, cfg.Kube.Context)
+
 		if os.Getenv(app.EnvSkipEntrypoint) != "true" {
 			if err := entrypoint(logger); err != nil {
 				logger.Error("entrypoint run", log.Err(err))
