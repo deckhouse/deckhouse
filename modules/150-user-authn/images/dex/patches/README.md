@@ -127,25 +127,47 @@ Key changes:
 ### 017-fix-upstream-refresh-token-rotation.patch
 
 This patch fixes broken token refresh with upstream providers that rotate refresh tokens, GitLab
-in particular. GitLab invalidates the previous refresh token as soon as it is used, while Dex keeps
-the upstream credentials in two places: the offline session shared by all clients of the user, which
-is updated on every rotation, and a private copy inside every refresh token, which is a snapshot
-taken at login time and never updated. Because the snapshot took precedence, the first refresh of a
-client failed as soon as another client of the same user had rotated the shared credential, and it
-kept failing forever, since a failed refresh does not clear the snapshot. Users had to re-login
-every `idTokenTTL`.
+in particular. Such a provider invalidates the presented refresh token as soon as it is used, so a
+credential has to have exactly one holder that may spend it. Dex broke that: a login wrote the
+credential it obtained into two long-lived objects at once, the offline session shared by all clients
+of the user and a private copy inside the issued refresh token, and read the private copy first.
+As soon as any other client of the same user refreshed, it spent the shared credential and the
+private copy became dead. The refresh of the affected client then failed forever, because a failed
+refresh does not replace the copy it presented, and users had to log in again every `idTokenTTL`.
+
+The fix makes every upstream credential belong to exactly one storage object, and writes the rotated
+successor back to the object the spent one was read from. A login keeps its credential in the refresh
+token it issues and no longer overwrites the credential of the offline session, so the clients of a
+user stop sharing one credential. The offline session keeps serving the clients that have none of
+their own, which is every token issued before this patch and every provider that issues a single
+credential per user.
+
+No storage schema change is involved, and that is deliberate: which object owns a credential is
+derived from comparing the copy in the refresh token with the one in the offline session, so old and
+new replicas can serve requests side by side during a rolling update, and a rollback keeps working.
 
 Key changes:
 
-- The offline session is the source of connector data; the refresh token's own copy is only a
-  fallback for tokens issued before connector data was moved to offline sessions.
+- Credentials are offered to the provider in order, the token's own one first and the shared one as a
+  fallback, so a token whose private credential turned out to be spent rejoins the shared credential
+  instead of failing forever. This is what heals sessions broken by the old behaviour, without a
+  migration.
+- A rotated credential is written back to its own object only, and a shared one only if the session
+  still holds the credential the request spent, so a request that lost a race cannot overwrite a
+  newer credential another client has published.
+- A refresh that lost a race for the shared credential continues from the credential the winner
+  published instead of failing, within a small bounded number of attempts.
 - The connector is called at most once per request, so a storage that retries the refresh token
   updater (the Kubernetes storage does that on resource conflicts) cannot spend an already rotated
   upstream refresh token twice.
-- Connector data rotated upstream is persisted even when the request fails afterwards, so such a
-  failure stays a single failed request instead of breaking every further refresh of the user.
+- A credential rotated upstream is persisted even when the request fails afterwards, so such a
+  failure stays a single failed request instead of breaking every further refresh.
+- Refreshes served from the reuse interval no longer clear the stored credential, which would have
+  thrown away the only copy of a credential nothing had rotated.
+- An upstream rejection is no longer reported as a failure to update the refresh token.
+- Upstream credentials are no longer written to the logs.
 - `updateOfflineSession` no longer dereferences a missing refresh token reference.
-- Regression tests for all three scenarios.
+- Regression tests for every scenario above; all of them fail without the patch.
 
 Upstream is affected as well, including `master`: an upstream PR is to be opened on top of this
 patch.
