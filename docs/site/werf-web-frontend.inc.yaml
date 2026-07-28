@@ -74,6 +74,7 @@ git:
   - _plugins/custom_filters.rb
   - _plugins/breadcrumbs_generator.rb
   - _plugins/custom_sidebar.rb
+  - _plugins/editions_not_available.rb
   - _plugins/related_links.rb
   - _plugins/sidebar_custom.rb
   - _plugins/utils.rb
