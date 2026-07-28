@@ -223,6 +223,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/140-user-authz/requirements
+  to: /deckhouse/modules/140-user-authz/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/150-user-authn/hooks
   to: /deckhouse/modules/150-user-authn/hooks
   excludePaths:
@@ -431,14 +439,6 @@
         - '**/*'
 - add: /ee/modules/450-network-gateway/hooks
   to: /deckhouse/modules/450-network-gateway/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/340-monitoring-applications/hooks
-  to: /deckhouse/modules/340-monitoring-applications/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'

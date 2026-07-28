@@ -67,3 +67,5 @@ shell:
     - strip /terraform-provider-vsphere
     - chmod -R 755 /terraform-provider-vsphere
     - chown 64535:64535 /terraform-provider-vsphere
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

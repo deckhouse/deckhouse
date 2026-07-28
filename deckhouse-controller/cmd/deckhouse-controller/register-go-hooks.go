@@ -6,7 +6,6 @@ import (
 
 	_ "github.com/deckhouse/deckhouse/ee/be/modules/350-node-local-dns/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/cse/modules/040-node-manager/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-monitoring-applications/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-okmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-dynamix/hooks"
@@ -53,6 +52,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
+	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/init-secret"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/node-services"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
@@ -76,6 +76,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 	_ "github.com/deckhouse/deckhouse/modules/110-istio/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/140-user-authz/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/140-user-authz/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/150-user-authn/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/150-user-authn/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/160-multitenancy-manager/hooks"

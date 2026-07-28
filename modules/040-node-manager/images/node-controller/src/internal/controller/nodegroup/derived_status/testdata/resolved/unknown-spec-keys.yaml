@@ -1,0 +1,12 @@
+cri:
+  type: Containerd
+engine: None
+gpu:
+  sharing: MPS
+kubernetesVersion: ""
+manualRolloutID: ""
+name: unknown-keys
+nodeType: Static
+serializedLabels: node.deckhouse.io/group=unknown-keys
+serializedTaints: ""
+updateEpoch: "1010"

@@ -1,0 +1,22 @@
+# TEST FIXTURE. Minimal DVPInstanceClass CRD: provider-owned in production, needed here so
+# the derived-status checks can resolve and list the instance class kind. Schema-free.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dvpinstanceclasses.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: DVPInstanceClass
+    listKind: DVPInstanceClassList
+    plural: dvpinstanceclasses
+    singular: dvpinstanceclass
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          x-kubernetes-preserve-unknown-fields: true

@@ -133,43 +133,15 @@ func TestPatchProcessedStatus_NotFound(t *testing.T) {
 	}
 }
 
-func TestPatchProcessedStatus_SetsSyncedFalseWhenChecksumDiffers(t *testing.T) {
+func TestPatchProcessedStatus_WritesObservedProcessedAndSyncedTrue(t *testing.T) {
 	t.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", "2021-01-01T13:30:00Z")
 	t.Setenv("TEST_CONDITIONS_CALC_CHKSUM", "newsum")
 
+	// A stale observed checksum from before the migration must not keep synced False:
+	// node-controller now owns observed and rewrites it to the processed checksum.
 	ng := newNodeGroupUnstructured("worker")
 	if err := unstructured.SetNestedField(ng.Object, "oldsum", "status", "deckhouse", "observed", "checkSum"); err != nil {
-		t.Fatalf("seed observed checksum: %v", err)
-	}
-
-	h := newFakeClientWithNG(t, ng)
-	s := &Service{Client: h.client}
-	if err := s.PatchProcessedStatus(context.Background(), "worker"); err != nil {
-		t.Fatalf("PatchProcessedStatus: %v", err)
-	}
-
-	got := fetchNG(t, h, "worker")
-	synced, _, _ := unstructured.NestedString(got.Object, "status", "deckhouse", "synced")
-	if synced != "False" {
-		t.Fatalf("expected synced=False, got %q", synced)
-	}
-	checkSum, _, _ := unstructured.NestedString(got.Object, "status", "deckhouse", "processed", "checkSum")
-	if checkSum != "newsum" {
-		t.Fatalf("expected processed checkSum=newsum, got %q", checkSum)
-	}
-	ts, _, _ := unstructured.NestedString(got.Object, "status", "deckhouse", "processed", "lastTimestamp")
-	if ts != "2021-01-01T13:30:00Z" {
-		t.Fatalf("expected lastTimestamp from env, got %q", ts)
-	}
-}
-
-func TestPatchProcessedStatus_SetsSyncedTrueWhenChecksumMatches(t *testing.T) {
-	t.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", "2021-01-01T13:30:00Z")
-	t.Setenv("TEST_CONDITIONS_CALC_CHKSUM", "samesum")
-
-	ng := newNodeGroupUnstructured("worker")
-	if err := unstructured.SetNestedField(ng.Object, "samesum", "status", "deckhouse", "observed", "checkSum"); err != nil {
-		t.Fatalf("seed observed checksum: %v", err)
+		t.Fatalf("seed stale observed checksum: %v", err)
 	}
 
 	h := newFakeClientWithNG(t, ng)
@@ -182,6 +154,43 @@ func TestPatchProcessedStatus_SetsSyncedTrueWhenChecksumMatches(t *testing.T) {
 	synced, _, _ := unstructured.NestedString(got.Object, "status", "deckhouse", "synced")
 	if synced != "True" {
 		t.Fatalf("expected synced=True, got %q", synced)
+	}
+	observed, _, _ := unstructured.NestedString(got.Object, "status", "deckhouse", "observed", "checkSum")
+	processed, _, _ := unstructured.NestedString(got.Object, "status", "deckhouse", "processed", "checkSum")
+	if observed != "newsum" || processed != "newsum" {
+		t.Fatalf("expected observed=processed=newsum, got observed=%q processed=%q", observed, processed)
+	}
+	ts, _, _ := unstructured.NestedString(got.Object, "status", "deckhouse", "processed", "lastTimestamp")
+	if ts != "2021-01-01T13:30:00Z" {
+		t.Fatalf("expected lastTimestamp from env, got %q", ts)
+	}
+}
+
+// A reconcile that does not change the processed spec must not issue a status write
+// (a Node/Machine event re-triggers this controller; it must not churn a NodeGroup write).
+func TestPatchProcessedStatus_SkipsWriteWhenUnchanged(t *testing.T) {
+	t.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", "2021-01-01T13:30:00Z")
+	t.Setenv("TEST_CONDITIONS_CALC_CHKSUM", "samesum")
+
+	ng := newNodeGroupUnstructured("worker")
+	for _, field := range []string{"observed", "processed"} {
+		if err := unstructured.SetNestedField(ng.Object, "samesum", "status", "deckhouse", field, "checkSum"); err != nil {
+			t.Fatalf("seed %s checksum: %v", field, err)
+		}
+	}
+	if err := unstructured.SetNestedField(ng.Object, "True", "status", "deckhouse", "synced"); err != nil {
+		t.Fatalf("seed synced: %v", err)
+	}
+
+	h := newFakeClientWithNG(t, ng)
+	s := &Service{Client: h.client}
+	rvBefore := fetchNG(t, h, "worker").GetResourceVersion()
+	if err := s.PatchProcessedStatus(context.Background(), "worker"); err != nil {
+		t.Fatalf("PatchProcessedStatus: %v", err)
+	}
+
+	if rvAfter := fetchNG(t, h, "worker").GetResourceVersion(); rvAfter != rvBefore {
+		t.Fatalf("expected no status write (resourceVersion unchanged), before=%q after=%q", rvBefore, rvAfter)
 	}
 }
 
@@ -214,41 +223,6 @@ func TestPatchProcessedStatus_DeckhouseStatusNotMap(t *testing.T) {
 	s := &Service{Client: h.client}
 	if err := s.PatchProcessedStatus(context.Background(), "worker"); err == nil {
 		t.Fatal("expected error when status.deckhouse is not a map")
-	}
-}
-
-func TestPatchProcessedStatus_ObservedChecksumNotString(t *testing.T) {
-	t.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", "2021-01-01T13:30:00Z")
-	t.Setenv("TEST_CONDITIONS_CALC_CHKSUM", "newsum")
-
-	ng := newNodeGroupUnstructured("worker")
-	if err := unstructured.SetNestedField(ng.Object, int64(7), "status", "deckhouse", "observed", "checkSum"); err != nil {
-		t.Fatalf("seed bad observed checksum: %v", err)
-	}
-
-	h := newFakeClientWithNG(t, ng)
-	s := &Service{Client: h.client}
-	if err := s.PatchProcessedStatus(context.Background(), "worker"); err == nil {
-		t.Fatal("expected error when observed checkSum is not a string")
-	}
-}
-
-func TestPatchProcessedStatus_NoObservedChecksumSetsSyncedFalse(t *testing.T) {
-	t.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", "2021-01-01T13:30:00Z")
-	t.Setenv("TEST_CONDITIONS_CALC_CHKSUM", "newsum")
-
-	ng := newNodeGroupUnstructured("worker")
-
-	h := newFakeClientWithNG(t, ng)
-	s := &Service{Client: h.client}
-	if err := s.PatchProcessedStatus(context.Background(), "worker"); err != nil {
-		t.Fatalf("PatchProcessedStatus: %v", err)
-	}
-
-	got := fetchNG(t, h, "worker")
-	synced, _, _ := unstructured.NestedString(got.Object, "status", "deckhouse", "synced")
-	if synced != "False" {
-		t.Fatalf("expected synced=False when no observed checksum present, got %q", synced)
 	}
 }
 

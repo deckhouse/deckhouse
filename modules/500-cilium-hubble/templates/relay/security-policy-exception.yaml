@@ -1,0 +1,45 @@
+{{- if (.Values.global.enabledModules | has "admission-policy-engine") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: hubble-relay
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-relay")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          hubble-relay must run as root to read TLS material mounted with mode 0400 and
+          to access the Cilium agent UNIX socket on the host.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for TLS secrets (defaultMode 0400) and the hubble.sock hostPath.
+    capabilities:
+      allowedValues:
+        add:
+          - DAC_OVERRIDE
+      metadata:
+        description: |
+          After capabilities.drop ALL, root loses the implicit DAC bypass. DAC_OVERRIDE is
+          required to execute the hubble-relay binary (mode 0700, owner 64535) and to read
+          TLS files mounted with mode 0400.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          hostPath is required to reach the Cilium agent UNIX socket for Hubble observation data.
+    hostPath:
+      allowedValues:
+        - path: /var/run/cilium
+          readOnly: true
+          metadata:
+            description: Cilium runtime directory containing the Hubble peer socket.
+{{- end }}

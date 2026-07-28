@@ -1,37 +1,5 @@
-From 1fd75983a24118d20e82ec77fd3db0272c63efa8 Mon Sep 17 00:00:00 2001
-From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-Date: Tue, 13 May 2025 13:21:15 +0300
-Subject: [PATCH] add least-conn lb algorithm
-
-Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
----
- bpf/bpf_lxc.c                           |   2 +
- bpf/include/bpf/helpers.h               |   5 +
- bpf/lib/lb.h                            | 288 +++++++++++++++++++++++-
- daemon/cmd/daemon_main.go               |   4 +-
- daemon/cmd/datapath.go                  |   7 +
- daemon/cmd/kube_proxy_replacement.go    |   3 +-
- pkg/annotation/k8s.go                   |   1 +
- pkg/datapath/linux/config/config.go     |  11 +
- pkg/datapath/maps/map.go                |   8 +
- pkg/loadbalancer/loadbalancer.go        |  10 +-
- pkg/maps/ctmap/ctmap.go                 |  26 +++
- pkg/maps/ctmap/gc/gc.go                 |   7 +
- pkg/maps/ctmap/types.go                 |   4 +
- pkg/maps/lbmap/lbmap.go                 |  13 ++
- pkg/maps/lbmap/leastconn.go             | 165 ++++++++++++++
- pkg/maps/lbmap/leastconn_backend_map.go |  42 ++++
- pkg/maps/lbmap/leastconn_service_map.go |  48 ++++
- pkg/metrics/features/metrics.go         |   1 +
- pkg/option/config.go                    |   3 +
- pkg/service/service.go                  |  11 +
- 20 files changed, 651 insertions(+), 8 deletions(-)
- create mode 100644 pkg/maps/lbmap/leastconn.go
- create mode 100644 pkg/maps/lbmap/leastconn_backend_map.go
- create mode 100644 pkg/maps/lbmap/leastconn_service_map.go
-
 diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
-index 878185780a..0a1dc5dca6 100644
+index 314dda8f..f82709c1 100644
 --- a/bpf/bpf_lxc.c
 +++ b/bpf/bpf_lxc.c
 @@ -37,8 +37,10 @@
@@ -46,7 +14,7 @@ index 878185780a..0a1dc5dca6 100644
  #include "lib/lb.h"
  #include "lib/drop.h"
 diff --git a/bpf/include/bpf/helpers.h b/bpf/include/bpf/helpers.h
-index 65ba8cf604..5892d1c4f1 100644
+index 65ba8cf6..5892d1c4 100644
 --- a/bpf/include/bpf/helpers.h
 +++ b/bpf/include/bpf/helpers.h
 @@ -29,6 +29,11 @@
@@ -62,7 +30,7 @@ index 65ba8cf604..5892d1c4f1 100644
  static void *BPF_FUNC(map_lookup_elem, const void *map, const void *key);
  static int BPF_FUNC(map_update_elem, const void *map, const void *key,
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 9a6fee3035..8769cce01a 100644
+index 154bd7c5..bcd13489 100644
 --- a/bpf/lib/lb.h
 +++ b/bpf/lib/lb.h
 @@ -3,6 +3,8 @@
@@ -82,7 +50,7 @@ index 9a6fee3035..8769cce01a 100644
  
  #ifndef SKIP_CALLS_MAP
  #include "drop.h"
-@@ -188,6 +191,59 @@ struct {
+@@ -192,6 +195,59 @@ struct {
  	});
  } LB4_MAGLEV_MAP_OUTER __section_maps_btf;
  #endif /* LB_SELECTION == LB_SELECTION_MAGLEV */
@@ -142,17 +110,16 @@ index 9a6fee3035..8769cce01a 100644
  #endif /* ENABLE_IPV4 */
  
  #ifdef ENABLE_SESSION_AFFINITY
-@@ -758,8 +814,7 @@ lb6_select_backend_id(struct __ctx_buff *ctx, struct lb6_key *key,
- #endif /* LB_SELECTION */
+@@ -773,7 +829,7 @@ lb6_select_backend_id(struct __ctx_buff *ctx, struct lb6_key *key,
  	}
  }
--
+ 
 -#elif LB_SELECTION == LB_SELECTION_RANDOM
 +#elif LB_SELECTION == LB_SELECTION_RANDOM || LB_SELECTION == LB_SELECTION_LEAST_CONN
  # define lb6_select_backend_id	lb6_select_backend_id_random
  #elif LB_SELECTION == LB_SELECTION_MAGLEV
  # define lb6_select_backend_id	lb6_select_backend_id_maglev
-@@ -1464,6 +1519,215 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
+@@ -1488,6 +1544,215 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
  }
  #endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_MAGLEV */
  
@@ -368,7 +335,7 @@ index 9a6fee3035..8769cce01a 100644
  #ifdef LB_SELECTION_PER_SERVICE
  static __always_inline __u32 lb4_algorithm(const struct lb4_service *svc)
  {
-@@ -1480,11 +1744,15 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+@@ -1504,6 +1769,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
  		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
  	case LB_SELECTION_RANDOM:
  		return lb4_select_backend_id_random(ctx, key, tuple, svc);
@@ -377,14 +344,7 @@ index 9a6fee3035..8769cce01a 100644
  	default:
  #if LB_SELECTION == LB_SELECTION_RANDOM
  		return lb4_select_backend_id_random(ctx, key, tuple, svc);
- #elif LB_SELECTION == LB_SELECTION_MAGLEV
- 		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
-+#elif LB_SELECTION == LB_SELECTION_LEAST_CONN
-+		return lb4_select_backend_id_least_conn(ctx, key, tuple, svc);
- #else
- # error "Invalid load balancer backend selection algorithm!"
- #endif /* LB_SELECTION */
-@@ -1494,6 +1762,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+@@ -1518,6 +1785,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
  # define lb4_select_backend_id	lb4_select_backend_id_random
  #elif LB_SELECTION == LB_SELECTION_MAGLEV
  # define lb4_select_backend_id	lb4_select_backend_id_maglev
@@ -393,7 +353,7 @@ index 9a6fee3035..8769cce01a 100644
  #elif LB_SELECTION == LB_SELECTION_FIRST
  /* Backend selection for tests that always chooses first slot. */
  static __always_inline __u32
-@@ -1780,6 +2050,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -1804,6 +2073,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  		if (IS_ERR(ret))
  			goto drop_err;
  
@@ -404,7 +364,7 @@ index 9a6fee3035..8769cce01a 100644
  #ifdef ENABLE_ACTIVE_CONNECTION_TRACKING
  		_lb_act_conn_open(state->rev_nat_index, backend->zone);
  #endif
-@@ -1793,6 +2067,16 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -1817,6 +2090,16 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  		 * session we are likely to get a TCP RST.
  		 */
  		backend = lb4_lookup_backend(ctx, backend_id);
@@ -422,10 +382,10 @@ index 9a6fee3035..8769cce01a 100644
  		if (backend) {
  			if (state->syn) /* Reopened connections */
 diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
-index 96e484911f..98e23b7dbc 100644
+index 5c848620..285e4897 100644
 --- a/daemon/cmd/daemon_main.go
 +++ b/daemon/cmd/daemon_main.go
-@@ -577,7 +577,7 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
+@@ -584,7 +584,7 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
  	flags.MarkHidden(option.NodePortMode)
  	option.BindEnv(vp, option.NodePortMode)
  
@@ -434,7 +394,7 @@ index 96e484911f..98e23b7dbc 100644
  	flags.MarkHidden(option.NodePortAlg)
  	option.BindEnv(vp, option.NodePortAlg)
  
-@@ -596,7 +596,7 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
+@@ -603,7 +603,7 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
  	flags.Bool(option.LoadBalancerAlgorithmAnnotation, false, "Enable service-level annotation for configuring BPF load balancing algorithm")
  	option.BindEnv(vp, option.LoadBalancerAlgorithmAnnotation)
  
@@ -444,10 +404,10 @@ index 96e484911f..98e23b7dbc 100644
  
  	flags.String(option.LoadBalancerDSRDispatch, option.DSRDispatchOption, "BPF load balancing DSR dispatch method (\"opt\", \"ipip\", \"geneve\")")
 diff --git a/daemon/cmd/datapath.go b/daemon/cmd/datapath.go
-index a8680acbac..5db7e81fb7 100644
+index 0dbc401c..38a2e516 100644
 --- a/daemon/cmd/datapath.go
 +++ b/daemon/cmd/datapath.go
-@@ -302,6 +302,13 @@ func (d *Daemon) initMaps() error {
+@@ -319,6 +319,13 @@ func (d *Daemon) initMaps() error {
  		}
  	}
  
@@ -462,7 +422,7 @@ index a8680acbac..5db7e81fb7 100644
  	if err != nil {
  		return fmt.Errorf("initializing local redirect policy maps: %w", err)
 diff --git a/daemon/cmd/kube_proxy_replacement.go b/daemon/cmd/kube_proxy_replacement.go
-index d4d59f172a..6b2667a349 100644
+index d4d59f17..6b2667a3 100644
 --- a/daemon/cmd/kube_proxy_replacement.go
 +++ b/daemon/cmd/kube_proxy_replacement.go
 @@ -130,7 +130,8 @@ func initKubeProxyReplacementOptions(sysctl sysctl.Sysctl, tunnelConfig tunnel.C
@@ -476,7 +436,7 @@ index d4d59f172a..6b2667a349 100644
  		}
  
 diff --git a/pkg/annotation/k8s.go b/pkg/annotation/k8s.go
-index 2cc4f63081..d6e0804074 100644
+index 2cc4f630..d6e08040 100644
 --- a/pkg/annotation/k8s.go
 +++ b/pkg/annotation/k8s.go
 @@ -123,6 +123,7 @@ const (
@@ -488,10 +448,10 @@ index 2cc4f63081..d6e0804074 100644
  
  	// ServiceNodeExposure is the label name used to mark a service to only a
 diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
-index a3243d93e3..5e368514ed 100644
+index ab2d145f..751c142c 100644
 --- a/pkg/datapath/linux/config/config.go
 +++ b/pkg/datapath/linux/config/config.go
-@@ -545,9 +545,11 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+@@ -587,9 +587,11 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
  	const (
  		selectionRandom = iota + 1
  		selectionMaglev
@@ -503,7 +463,7 @@ index a3243d93e3..5e368514ed 100644
  	if option.Config.LoadBalancerAlgorithmAnnotation {
  		cDefinesMap["LB_SELECTION_PER_SERVICE"] = "1"
  	}
-@@ -555,6 +557,8 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+@@ -597,6 +599,8 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
  		cDefinesMap["LB_SELECTION"] = fmt.Sprintf("%d", selectionRandom)
  	} else if option.Config.NodePortAlg == option.NodePortAlgMaglev {
  		cDefinesMap["LB_SELECTION"] = fmt.Sprintf("%d", selectionMaglev)
@@ -512,7 +472,7 @@ index a3243d93e3..5e368514ed 100644
  	}
  
  	// define maglev tables when loadbalancer algorith is maglev or config can
-@@ -569,6 +573,13 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+@@ -611,6 +615,13 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
  			cDefinesMap["LB4_MAGLEV_MAP_OUTER"] = lbmap.MaglevOuter4MapName
  		}
  	}
@@ -527,18 +487,18 @@ index a3243d93e3..5e368514ed 100644
  	cDefinesMap["HASH_INIT6_SEED"] = fmt.Sprintf("%d", h.maglev.SeedJhash1)
  
 diff --git a/pkg/datapath/maps/map.go b/pkg/datapath/maps/map.go
-index dd14245598..2f99873283 100644
+index 48c3f41b..b055486c 100644
 --- a/pkg/datapath/maps/map.go
 +++ b/pkg/datapath/maps/map.go
-@@ -126,6 +126,7 @@ func (ms *MapSweeper) CollectStaleMapGarbage() {
- func (ms *MapSweeper) RemoveDisabledMaps() {
- 	maps := []string{}
+@@ -141,6 +141,7 @@ func (ms *MapSweeper) RemoveDisabledMaps() {
+ 		}
+ 	)
  
 +	// TODO LeastConn maps
  	if !option.Config.EnableIPv6 {
  		maps = append(maps, []string{
  			"cilium_ct6_global",
-@@ -165,6 +166,8 @@ func (ms *MapSweeper) RemoveDisabledMaps() {
+@@ -180,6 +181,8 @@ func (ms *MapSweeper) RemoveDisabledMaps() {
  			"cilium_proxy4",
  			recorder.MapNameWcard4,
  			lbmap.MaglevOuter4MapName,
@@ -547,7 +507,7 @@ index dd14245598..2f99873283 100644
  			lbmap.Affinity4MapName,
  			lbmap.SourceRange4MapName,
  			lbmap.HealthProbe4MapName,
-@@ -200,6 +203,11 @@ func (ms *MapSweeper) RemoveDisabledMaps() {
+@@ -215,6 +218,11 @@ func (ms *MapSweeper) RemoveDisabledMaps() {
  		maps = append(maps, lbmap.MaglevOuter6MapName, lbmap.MaglevOuter4MapName)
  	}
  
@@ -560,7 +520,7 @@ index dd14245598..2f99873283 100644
  		maps = append(maps, lbmap.Affinity6MapName, lbmap.Affinity4MapName, lbmap.AffinityMatchMapName)
  	}
 diff --git a/pkg/loadbalancer/loadbalancer.go b/pkg/loadbalancer/loadbalancer.go
-index d6f2588624..c6862b3cdc 100644
+index d6f25886..c6862b3c 100644
 --- a/pkg/loadbalancer/loadbalancer.go
 +++ b/pkg/loadbalancer/loadbalancer.go
 @@ -74,9 +74,10 @@ func ToSVCForwardingMode(s string) SVCForwardingMode {
@@ -588,7 +548,7 @@ index d6f2588624..c6862b3cdc 100644
  }
  
 diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
-index ad69a5379d..cfac34212d 100644
+index fb14f915..b84fe37b 100644
 --- a/pkg/maps/ctmap/ctmap.go
 +++ b/pkg/maps/ctmap/ctmap.go
 @@ -14,6 +14,7 @@ import (
@@ -607,7 +567,7 @@ index ad69a5379d..cfac34212d 100644
  	"github.com/cilium/cilium/pkg/maps/nat"
  	"github.com/cilium/cilium/pkg/maps/timestamp"
  	"github.com/cilium/cilium/pkg/metrics"
-@@ -562,6 +564,13 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
+@@ -563,6 +565,13 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
  
  			switch action {
  			case deleteEntry:
@@ -620,8 +580,8 @@ index ad69a5379d..cfac34212d 100644
 +
  				err := purgeCtEntry4(m, currentKey4Global, entry, natMap, next)
  				if err != nil {
- 					log.WithError(err).WithField(logfields.Key, currentKey4Global.String()).Error("Unable to delete CT entry")
-@@ -570,6 +579,11 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
+ 					log := log.WithField(logfields.Key, currentKey4Global.ToHost().String())
+@@ -577,6 +586,11 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
  				}
  			default:
  				stats.aliveEntries++
@@ -633,7 +593,7 @@ index ad69a5379d..cfac34212d 100644
  			}
  		case *CtKey4:
  			currentKey4 := obj
-@@ -582,6 +596,13 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
+@@ -589,6 +603,13 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
  
  			switch action {
  			case deleteEntry:
@@ -646,8 +606,8 @@ index ad69a5379d..cfac34212d 100644
 +
  				err := purgeCtEntry4(m, currentKey4, entry, natMap, next)
  				if err != nil {
- 					log.WithError(err).WithField(logfields.Key, currentKey4.String()).Error("Unable to delete CT entry")
-@@ -590,6 +611,11 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
+ 					log := log.WithField(logfields.Key, currentKey4.ToHost().String())
+@@ -603,6 +624,11 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
  				}
  			default:
  				stats.aliveEntries++
@@ -660,7 +620,7 @@ index ad69a5379d..cfac34212d 100644
  		default:
  			log.Warningf("Encountered unknown type while scanning conntrack table: %v", reflect.TypeOf(key))
 diff --git a/pkg/maps/ctmap/gc/gc.go b/pkg/maps/ctmap/gc/gc.go
-index 68cdfd1567..4bef1c73f8 100644
+index 68cdfd15..4bef1c73 100644
 --- a/pkg/maps/ctmap/gc/gc.go
 +++ b/pkg/maps/ctmap/gc/gc.go
 @@ -20,6 +20,7 @@ import (
@@ -692,7 +652,7 @@ index 68cdfd1567..4bef1c73f8 100644
  		vsns := []ctmap.CTMapIPVersion{}
  		if ipv4 {
 diff --git a/pkg/maps/ctmap/types.go b/pkg/maps/ctmap/types.go
-index 75761e70c1..93ce1550fb 100644
+index 75761e70..93ce1550 100644
 --- a/pkg/maps/ctmap/types.go
 +++ b/pkg/maps/ctmap/types.go
 @@ -577,6 +577,10 @@ func (c *CtEntry) isDsrInternalEntry() bool {
@@ -707,7 +667,7 @@ index 75761e70c1..93ce1550fb 100644
  	var sb strings.Builder
  
 diff --git a/pkg/maps/lbmap/lbmap.go b/pkg/maps/lbmap/lbmap.go
-index 12686cec41..70d220b69c 100644
+index 12686cec..70d220b6 100644
 --- a/pkg/maps/lbmap/lbmap.go
 +++ b/pkg/maps/lbmap/lbmap.go
 @@ -37,6 +37,7 @@ var (
@@ -746,7 +706,7 @@ index 12686cec41..70d220b69c 100644
  
 diff --git a/pkg/maps/lbmap/leastconn.go b/pkg/maps/lbmap/leastconn.go
 new file mode 100644
-index 0000000000..4532ca86f0
+index 00000000..4532ca86
 --- /dev/null
 +++ b/pkg/maps/lbmap/leastconn.go
 @@ -0,0 +1,165 @@
@@ -917,7 +877,7 @@ index 0000000000..4532ca86f0
 +}
 diff --git a/pkg/maps/lbmap/leastconn_backend_map.go b/pkg/maps/lbmap/leastconn_backend_map.go
 new file mode 100644
-index 0000000000..02f8817d5e
+index 00000000..02f8817d
 --- /dev/null
 +++ b/pkg/maps/lbmap/leastconn_backend_map.go
 @@ -0,0 +1,42 @@
@@ -965,7 +925,7 @@ index 0000000000..02f8817d5e
 +}
 diff --git a/pkg/maps/lbmap/leastconn_service_map.go b/pkg/maps/lbmap/leastconn_service_map.go
 new file mode 100644
-index 0000000000..cf93bc3e07
+index 00000000..cf93bc3e
 --- /dev/null
 +++ b/pkg/maps/lbmap/leastconn_service_map.go
 @@ -0,0 +1,48 @@
@@ -1018,10 +978,10 @@ index 0000000000..cf93bc3e07
 +	return &LeastConnServiceMap{m}, nil
 +}
 diff --git a/pkg/metrics/features/metrics.go b/pkg/metrics/features/metrics.go
-index 782495651c..04bb757ea1 100644
+index 9009878c..08db1692 100644
 --- a/pkg/metrics/features/metrics.go
 +++ b/pkg/metrics/features/metrics.go
-@@ -186,6 +186,7 @@ var (
+@@ -189,6 +189,7 @@ var (
  	defaultNodePortModeAlgorithms = []string{
  		option.NodePortAlgMaglev,
  		option.NodePortAlgRandom,
@@ -1030,10 +990,10 @@ index 782495651c..04bb757ea1 100644
  
  	defaultNodePortModeAccelerations = []string{
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index e4390c0622..a4d5ee97a7 100644
+index d0130650..d504d86d 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
-@@ -1227,6 +1227,9 @@ const (
+@@ -1247,6 +1247,9 @@ const (
  	// NodePortAlgMaglev is for using maglev consistent hashing for backend selection
  	NodePortAlgMaglev = "maglev"
  
@@ -1044,10 +1004,10 @@ index e4390c0622..a4d5ee97a7 100644
  	DSRDispatchOption = "opt"
  
 diff --git a/pkg/service/service.go b/pkg/service/service.go
-index 52b2d9aa2b..fb2494991c 100644
+index 7b842980..31a58f56 100644
 --- a/pkg/service/service.go
 +++ b/pkg/service/service.go
-@@ -1735,6 +1735,9 @@ func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal b
+@@ -1763,6 +1763,9 @@ func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal b
  			getScopedLog().WithField(logfields.BackendID, id).
  				Debug("Removing obsolete backend")
  		}
@@ -1057,7 +1017,7 @@ index 52b2d9aa2b..fb2494991c 100644
  		s.lbmap.DeleteBackendByID(id)
  		s.TerminateUDPConnectionsToBackend(&be.L3n4Addr)
  	}
-@@ -1798,6 +1801,7 @@ func (s *Service) restoreBackendsLocked(svcBackendsById map[lb.BackendID]struct{
+@@ -1826,6 +1829,7 @@ func (s *Service) restoreBackendsLocked(svcBackendsById map[lb.BackendID]struct{
  			// size is limited, which can lead to connectivity disruptions.
  			id := b.ID
  			DeleteBackendID(id)
@@ -1065,7 +1025,7 @@ index 52b2d9aa2b..fb2494991c 100644
  			if err := s.lbmap.DeleteBackendByID(id); err != nil {
  				// As the backends map is not expected to be updated during restore,
  				// the deletion call shouldn't fail. But log the error, just
-@@ -1848,6 +1852,7 @@ func (s *Service) deleteOrphanBackends() error {
+@@ -1876,6 +1880,7 @@ func (s *Service) deleteOrphanBackends() error {
  				Debug("Removing orphan backend")
  			// The b.ID is unique across IPv4/6, hence attempt
  			// to clean it from both maps, and ignore errors.
@@ -1073,7 +1033,7 @@ index 52b2d9aa2b..fb2494991c 100644
  			DeleteBackendID(b.ID)
  			s.lbmap.DeleteBackendByID(b.ID)
  			delete(s.backendByHash, hash)
-@@ -2105,6 +2110,9 @@ func (s *Service) updateBackendsCacheLocked(svc *svcInfo, backends []*lb.Backend
+@@ -2133,6 +2138,9 @@ func (s *Service) updateBackendsCacheLocked(svc *svcInfo, backends []*lb.Backend
  
  			obsoleteSVCBackendIDs = append(obsoleteSVCBackendIDs, backend.ID)
  			if s.backendRefCount.Delete(hash) {
@@ -1083,7 +1043,7 @@ index 52b2d9aa2b..fb2494991c 100644
  				DeleteBackendID(backend.ID)
  				delete(s.backendByHash, hash)
  				obsoleteBackends = append(obsoleteBackends, backend)
-@@ -2123,6 +2131,9 @@ func (s *Service) deleteBackendsFromCacheLocked(svc *svcInfo) ([]lb.BackendID, [
+@@ -2151,6 +2159,9 @@ func (s *Service) deleteBackendsFromCacheLocked(svc *svcInfo) ([]lb.BackendID, [
  
  	for hash, backend := range svc.backendByHash {
  		if s.backendRefCount.Delete(hash) {
@@ -1093,6 +1053,3 @@ index 52b2d9aa2b..fb2494991c 100644
  			DeleteBackendID(backend.ID)
  			obsoleteBackendIDs = append(obsoleteBackendIDs, backend.ID)
  			obsoleteBackends = append(obsoleteBackends, backend.DeepCopy())
--- 
-2.34.1
-

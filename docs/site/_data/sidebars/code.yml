@@ -24,6 +24,10 @@ entries:
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
       - title:
+          en: Maintenance mode
+          ru: Режим обслуживания
+        url: /code/documentation/admin/configuration/maintenance-mode.html
+      - title:
           en: OpenSearch API
           ru: API OpenSearch
         url: /code/documentation/admin/configuration/opensearch-api.html

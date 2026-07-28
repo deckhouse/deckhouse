@@ -90,6 +90,10 @@ var _ = BeforeSuite(func() {
 	secret := &corev1.Secret{}
 	secret.Name = ua.ConfigurationChecksumsSecretName
 	secret.Namespace = ua.MachineNamespace
+	// In production bashible-apiserver owns this secret and labels it app=bashible-apiserver;
+	// the production cache scopes machine-namespace Secret informers by that label, so the
+	// fixture must carry it or the controller's cached reads see NotFound.
+	secret.Labels = map[string]string{"app": "bashible-apiserver"}
 	secret.Data = map[string][]byte{}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, secret))).To(Succeed())
 

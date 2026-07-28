@@ -4,7 +4,7 @@ Prevent sending empty shared bandwidth identifier in HTTP requests to create EIP
 
 ## 001-go-mod.patch
 
-Update dependencies
+Bump go.mod dependencies to fix known CVEs.
 
 ### 002-fix-cluster-name-handling.patch
 
@@ -25,3 +25,7 @@ Add default values for `elb.class` (`shared`) and `lb-algorithm` (`ROUND_ROBIN`)
 ### 006-ignore-static-nodes.patch
 
 Static nodes are registered with `providerID` set to `static://`, which does not match the cloud provider's expected instance ID format. Without this patch, the CCM fails to resolve such nodes in `InstanceExistsByProviderID`, `InstanceExists`, `InstanceShutdownByProviderID`, `NodeAddressesByProviderID` and `InstanceMetadata`. In particular, a failing `InstanceMetadata` call prevents the CCM from ever removing the `node.cloudprovider.kubernetes.io/uninitialized` taint from a freshly added static node, so the node never finishes initialization and gets recreated once the StaticMachine bootstrap timeout is reached. This patch makes the CCM treat any `static://` provider ID as a node the cloud provider does not manage, returning safe defaults instead of errors.
+
+### 007-use-leases-resource-lock.patch
+
+Use `LeasesResourceLock`, which is supported by the patched Kubernetes client libraries.

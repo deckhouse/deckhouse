@@ -197,6 +197,8 @@ run: |
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
   -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
   -e PREFIX=${PREFIX} \
+  -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+  -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e CRI=${CRI} \
   -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -220,6 +222,8 @@ run: |
   -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
   -e PREFIX=${PREFIX} \
+  -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+  -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -528,6 +532,8 @@ check_e2e_labels:
 {!{- if or (eq $provider "aws") (eq $provider "eks") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_READ_RU_HOST" "DECKHOUSE_REGISTRY_READ_RU_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG" "DECKHOUSE_E2E_MODULES_DOCKERCFG" "DECKHOUSE_E2E_MODULES_DOCKERCFG" ) $secrets -}!}
 {!{- else if eq $provider "gcp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP" "credentials_json_b64" "LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON" ) $secrets -}!}
 {!{- else if eq $provider "azure" }!}
@@ -765,6 +771,8 @@ check_e2e_labels:
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
         CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+        DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+        DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
 {!{- end }!}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}

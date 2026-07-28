@@ -309,6 +309,14 @@ func main() {
 	kpApp.HelpFlag.Short('h')
 	app.GlobalFlags(kpApp, &opts.Global)
 
+	// Runs after flags are parsed, before any command action: mirror the
+	// in-cluster kube flag into GlobalOptions so config parsing can pick the
+	// reachable registry (in-cluster mirror vs upstream) accordingly.
+	kpApp.PreAction(func(_ *kingpin.ParseContext) error {
+		opts.Global.KubeInCluster = opts.Kube.InCluster
+		return nil
+	})
+
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
 		fmt.Printf("%s %s", app.AppName, opts.BuildInfo.AppVersion)
 		return nil

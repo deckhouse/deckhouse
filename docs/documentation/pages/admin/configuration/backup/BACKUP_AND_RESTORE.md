@@ -339,6 +339,98 @@ To restore objects from exported YAML files, follow these steps:
 
 After completing these steps, the selected objects will be recreated in the cluster based on the definitions in the YAML files.
 
+### Restoring control plane component manifests from a control-plane-manager backup
+
+Before applying any change to a control plane component (`etcd`, `kube-apiserver`, `kube-controller-manager`, or `kube-scheduler`), the `control-plane-manager` module automatically backs up the files it is about to overwrite on that node. Backups are stored per component and per operation in:
+
+```text
+/etc/kubernetes/deckhouse/backup/<Component>/<operation-name>/
+```
+
+The `control-plane-manager` module keeps the 7 most recent operations per component. Older backups are removed automatically. The contents of a backup directory depend on the component. For example, for `kube-apiserver`, its static pod manifest, TLS certificates, and the `admin.conf` file are saved:
+
+```text
+/etc/kubernetes/deckhouse/backup/KubeAPIServer/kubeapiserver-ef53e5-n2snk/
+├── manifests/kube-apiserver.yaml
+├── pki/apiserver.crt
+├── pki/apiserver.key
+└── admin.conf
+```
+
+Next to the backup in the `/etc/kubernetes/deckhouse/diffs/<component>/<operation-name>/` directory, the module keeps a unified diff file containing the differences of the changes made. For example:
+
+```text
+/etc/kubernetes/deckhouse/diffs/KubeAPIServer/kubeapiserver-ef53e5-n2snk/
+├── manifests/kube-apiserver.yaml.diff
+└── extra-files/...
+```
+
+You can use these backups to revert a control plane component to its previous state — for example, after a change applied by `control-plane-manager` (such as one triggered by editing a ModuleConfig) broke the component.
+
+To restore a control plane component file from a `control-plane-manager` backup, do the following:
+
+1. On the target master node, list the available backups for the component and pick the operation to restore from:
+
+   ```shell
+   ls -lt /etc/kubernetes/deckhouse/backup/<COMPONENT>/
+   ```
+
+   Optionally, inspect the corresponding diff file to see what changed in that operation:
+
+   ```shell
+   cat /etc/kubernetes/deckhouse/diffs/<COMPONENT>/<OPERATION_NAME>/manifests/*.diff
+   ```
+
+1. Enable maintenance mode on the node's [ControlPlaneNode](/modules/control-plane-manager/cr.html#controlplanenode) resource. This prevents `control-plane-manager` from starting new operations on the node while you are restoring files manually. An operation already in progress is not affected.
+
+   ```shell
+   d8 k label cpn <NODE_NAME> control-plane-manager.deckhouse.io/maintenance=""
+   ```
+
+1. Copy the required file(s) from the backup directory back to their original location, preserving their relative path under `/etc/kubernetes`. For example, to restore the `kube-apiserver` manifest:
+
+   ```shell
+   cp /etc/kubernetes/deckhouse/backup/KubeAPIServer/<OPERATION_NAME>/manifests/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
+   ```
+
+   Restoring a static pod manifest is enough to trigger kubelet to restart the pod automatically, and no manual restart is required.
+
+1. If you restored certificates, keys, `admin.conf`, and similar files under `pki/` but didn't change the manifest itself, restart the corresponding component's pod manually. Kubelet only tracks changes in the manifest file and doesn't restart the container when mounted files are changed.
+
+   Deleting the pod is enough for kubelet to recreate it from the unchanged static manifest:
+
+   ```shell
+   d8 k -n kube-system delete po <COMPONENT_POD_NAME>
+   ```
+
+   Here `<COMPONENT_POD_NAME>` is the static pod's name, for example, `kube-apiserver-<NODE_NAME>`.
+
+   If the API server itself is unreachable (for example, if you are restoring a certificate of a single control plane node, making the API server unreachable), restart the container directly on the node instead:
+
+   ```shell
+   crictl stopp $(crictl pods --name=<COMPONENT_NAME> -q)
+   ```
+
+1. Make sure the component came back up healthy:
+
+   ```shell
+   d8 k -n kube-system wait pod \
+     --timeout=10m \
+     --for=condition=ContainersReady \
+     -l app=d8-control-plane-manager \
+     --field-selector spec.nodeName=<NODE_NAME>
+   ```
+
+1. Disable maintenance mode:
+
+   ```shell
+   d8 k label cpn <NODE_NAME> control-plane-manager.deckhouse.io/maintenance-
+   ```
+
+{% alert level="warning" %}
+Restoring files from a backup only reverts their on-disk state. If the change you're reverting is still requested by the current cluster configuration (for example, set in a ModuleConfig), `control-plane-manager` will detect the drift and create a new operation to reapply it as soon as maintenance mode is disabled. If you want to keep the restored state, modify the initial cluster configuration first.
+{% endalert %}
+
 ## Restoring objects after changing the master node IP address
 
 {% alert level="warning" %}
@@ -392,24 +484,30 @@ To simplify cluster recovery after the master node's IP address changes, use the
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
 OLD_IP=10.242.32.34                         # Old master node IP address.
 NEW_IP=10.242.32.21                         # New master node IP address.
+NODE_NAME=master-0                          # Must match --name in the etcd static pod manifest.
 
-mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
+mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
 mkdir ./etcd_old
-mv /var/lib/etcd ~/etcd_old
+mv /var/lib/etcd ./etcd_old
 ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
 ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
-ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
-
-mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+$ETCDUTL_PATH snapshot restore "$ETCD_SNAPSHOT_PATH" \
+  --data-dir=/var/lib/etcd \
+  --name="$NODE_NAME" \
+  --initial-advertise-peer-urls="https://$NEW_IP:2380" \
+  --initial-cluster="$NODE_NAME=https://$NEW_IP:2380"
 
 find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+find /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+sed -i "s/$OLD_IP/$NEW_IP/g" ~/etcd.yaml
 
 cp -r /etc/kubernetes/pki ./pki-backup
 
 d8 tools pki certs renew all --san $NEW_IP
+
+mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 
 crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -444,21 +542,17 @@ If you prefer to manually make changes during cluster recovery after the master 
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
+     NEW_IP=10.242.32.21                         # New master node IP address.
+     NODE_NAME=master-0                          # Must match --name in the etcd static pod manifest.
      ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
      ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
-     ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
-       etcd-backup.snapshot \
-       --data-dir=/var/lib/etcd
+     $ETCDUTL_PATH snapshot restore "$ETCD_SNAPSHOT_PATH" \
+       --data-dir=/var/lib/etcd \
+       --name="$NODE_NAME" \
+       --initial-advertise-peer-urls="https://$NEW_IP:2380" \
+       --initial-cluster="$NODE_NAME=https://$NEW_IP:2380"
      ```
-
-   - Restore the etcd manifest so kubelet starts the etcd pod again:
-
-     ```shell
-     mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-     ```
-
-   - Verify etcd is running by checking the pod list using `crictl ps | grep etcd` or reviewing the kubelet logs.
 
 1. Update the IP address in static configuration files. If the old IP address is used in manifests or kubelet services, replace it with the new one:
 
@@ -468,7 +562,8 @@ If you prefer to manually make changes during cluster recovery after the master 
 
     find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-    find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+    find /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+    sed -i "s/$OLD_IP/$NEW_IP/g" ~/etcd.yaml
     ```
 
 1. Back up the current certificates:
@@ -483,9 +578,11 @@ If you prefer to manually make changes during cluster recovery after the master 
    d8 tools pki certs renew all --san <NEW_IP>
    ```
 
-1. Restart all services so that components load the updated certificates and configurations. To immediately stop active containers, run:
+1. Restore the etcd manifest (so kubelet starts the etcd pod again) and restart all services so that components load the updated certificates and configurations. To immediately stop active containers, run:
 
     ```shell
+    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+
     crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
     crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
     crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
@@ -493,6 +590,8 @@ If you prefer to manually make changes during cluster recovery after the master 
     systemctl daemon-reload
     systemctl restart kubelet.service
     ```
+
+    Verify etcd is running by checking the pod list using `crictl ps | grep etcd` or reviewing the kubelet logs.
 
 1. Wait for kubelet to regenerate its own certificate. Kubelet will automatically generate a new certificate with the updated IP address:
 
