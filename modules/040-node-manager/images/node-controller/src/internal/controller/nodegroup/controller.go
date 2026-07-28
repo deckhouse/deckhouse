@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,12 +58,19 @@ func init() {
 
 type Status struct {
 	register.Base
-	apiReader        client.Reader
-	conditionService ngconditions.Service
+	apiReader          client.Reader
+	conditionService   ngconditions.Service
+	instanceClassKinds []schema.GroupVersionKind
 }
 
 func (r *Status) Setup(mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
+
+	kinds, err := nodecommon.ServedInstanceClassKinds(mgr.GetConfig())
+	if err != nil {
+		return fmt.Errorf("discover InstanceClass kinds: %w", err)
+	}
+	r.instanceClassKinds = kinds
 	return nil
 }
 
@@ -86,6 +94,15 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == "kube-system" && obj.GetName() == ngcommon.CloudProviderSecretName
 	})))
+	// status.error and the capacity checks are computed from the InstanceClass, so a class
+	// that appears, changes or is deleted must refresh the status of the NodeGroups pointing
+	// at it instead of leaving a stale error until the resync.
+	for _, gvk := range r.instanceClassKinds {
+		w.Watches(ngcommon.NewUnstructured(gvk), handler.EnqueueRequestsFromMapFunc(
+			func(ctx context.Context, obj client.Object) []reconcile.Request {
+				return nodecommon.InstanceClassToNodeGroups(ctx, r.Client, obj)
+			}))
+	}
 }
 
 func (r *Status) secretToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {

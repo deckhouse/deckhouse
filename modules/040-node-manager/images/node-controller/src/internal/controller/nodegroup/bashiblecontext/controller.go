@@ -18,10 +18,12 @@ package bashiblecontext
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,6 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -51,7 +55,8 @@ type Controller struct {
 	// the secondary watches map to the fixed "assemble" key), so sequential access relies
 	// on the controller running with a single worker — enforced via
 	// --max-concurrent-reconciles=...,bashible-context=1 in the deployment.
-	lastAssemble time.Time
+	lastAssemble       time.Time
+	instanceClassKinds []schema.GroupVersionKind
 }
 
 func (c *Controller) Setup(mgr ctrl.Manager) error {
@@ -61,6 +66,12 @@ func (c *Controller) Setup(mgr ctrl.Manager) error {
 		return err
 	}
 	c.clientset = cs
+
+	kinds, err := nodecommon.ServedInstanceClassKinds(mgr.GetConfig())
+	if err != nil {
+		return fmt.Errorf("discover InstanceClass kinds: %w", err)
+	}
+	c.instanceClassKinds = kinds
 	return nil
 }
 
@@ -98,6 +109,12 @@ func (c *Controller) SetupWatches(w register.Watcher) {
 		predicate.NewPredicateFuncs(func(obj client.Object) bool {
 			return obj.GetNamespace() == kubernetesEndpointSliceNS && obj.GetName() == kubernetesEndpointSliceName
 		})))
+	// The published context carries each NodeGroup's instanceClass, so an edit changes the
+	// configuration checksum the nodes compare against. Waiting for the resync would leave the
+	// nodes running the previous configuration for up to ten minutes with nothing to show why.
+	for _, gvk := range c.instanceClassKinds {
+		w.Watches(ngcommon.NewUnstructured(gvk), enqueue, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	}
 }
 
 func inNamespaces(namespaces ...string) predicate.Predicate {
