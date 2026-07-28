@@ -20,10 +20,12 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
 type mcmMachineDeploymentInput struct {
-	blob             map[string]interface{}
+	element          derived_status.Element
 	ngName           string
 	zone             string
 	mdName           string // {prefix-}{ng.name}-{hash}
@@ -36,12 +38,14 @@ type mcmMachineDeploymentInput struct {
 }
 
 func buildMCMMachineDeployment(in mcmMachineDeploymentInput) *unstructured.Unstructured {
-	blob := in.blob
+	// Everything below the resolved fields comes from the NodeGroup spec passthrough, which is
+	// raw unstructured data all the way to the node.
+	spec := in.element.Spec
 
 	annotations := map[string]interface{}{
 		"zone": in.zone,
 	}
-	if nodeCapacity := blobMap(blob, "nodeCapacity"); nodeCapacity != nil {
+	if nodeCapacity, _ := in.element.NodeCapacity.(map[string]interface{}); nodeCapacity != nil {
 		annotations["cluster-autoscaler.kubernetes.io/scale-from-zero"] = "true"
 		annotations["cluster-autoscaler.kubernetes.io/node-region"] = in.region
 		annotations["cluster-autoscaler.kubernetes.io/node-cpu"] = blobString(nodeCapacity, "cpu")
@@ -57,13 +61,13 @@ func buildMCMMachineDeployment(in mcmMachineDeploymentInput) *unstructured.Unstr
 
 	instanceGroup := fmt.Sprintf("%s-%s", in.ngName, in.zone)
 
-	cloudInstances := blobMap(blob, "cloudInstances")
+	cloudInstances := blobMap(spec, "cloudInstances")
 	maxSurge := intOrDefault(blobInt32Ptr(cloudInstances, "maxSurgePerZone"), 1)
 	maxUnavailable := intOrDefault(blobInt32Ptr(cloudInstances, "maxUnavailablePerZone"), 0)
 
-	drainTimeout, maxEvictRetries := mcmDrainTimeout(blob)
+	drainTimeout, maxEvictRetries := mcmDrainTimeout(spec)
 
-	nodeTemplate := blobMap(blob, "nodeTemplate")
+	nodeTemplate := blobMap(spec, "nodeTemplate")
 
 	nodeTemplateMeta := map[string]interface{}{
 		"labels": mcmNodeTemplateLabels(in.ngName, nodeTemplate),
@@ -132,8 +136,8 @@ func buildMCMMachineDeployment(in mcmMachineDeploymentInput) *unstructured.Unstr
 	return md
 }
 
-func mcmDrainTimeout(blob map[string]interface{}) (string, int64) {
-	if cloudInstances := blobMap(blob, "cloudInstances"); cloudInstances != nil {
+func mcmDrainTimeout(spec map[string]interface{}) (string, int64) {
+	if cloudInstances := blobMap(spec, "cloudInstances"); cloudInstances != nil {
 		if q, ok := cloudInstances["quickShutdown"].(bool); ok && q {
 			return "5m", 9
 		}
@@ -142,7 +146,7 @@ func mcmDrainTimeout(blob map[string]interface{}) (string, int64) {
 	// and fell through to the default. Honouring it literally would render drainTimeout: 0s
 	// with maxEvictRetries: 0 — nodes deleted with no drain grace at all — and change
 	// spec.template on upgrade, rolling every node of the group.
-	if n, ok := blobInt64(blob, "nodeDrainTimeoutSecond"); ok && n > 0 {
+	if n, ok := blobInt64(spec, "nodeDrainTimeoutSecond"); ok && n > 0 {
 		return fmt.Sprintf("%ds", n), n / 20
 	}
 	return "600s", 30

@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
 func TestBlobZones(t *testing.T) {
@@ -58,24 +59,24 @@ func TestBlobZones(t *testing.T) {
 	})
 }
 
-func TestBlobInstanceClassSpot(t *testing.T) {
+func TestInstanceClassSpot(t *testing.T) {
 	t.Run("spot true", func(t *testing.T) {
-		blob := map[string]interface{}{"instanceClass": map[string]interface{}{"spot": true}}
-		assert.True(t, blobInstanceClassSpot(blob))
+		element := derived_status.Element{InstanceClass: map[string]interface{}{"spot": true}}
+		assert.True(t, instanceClassSpot(element))
 	})
 	t.Run("spot false", func(t *testing.T) {
-		blob := map[string]interface{}{"instanceClass": map[string]interface{}{"spot": false}}
-		assert.False(t, blobInstanceClassSpot(blob))
+		element := derived_status.Element{InstanceClass: map[string]interface{}{"spot": false}}
+		assert.False(t, instanceClassSpot(element))
 	})
 	t.Run("no spot key", func(t *testing.T) {
-		blob := map[string]interface{}{"instanceClass": map[string]interface{}{}}
-		assert.False(t, blobInstanceClassSpot(blob))
+		element := derived_status.Element{InstanceClass: map[string]interface{}{}}
+		assert.False(t, instanceClassSpot(element))
 	})
 	t.Run("no instanceClass", func(t *testing.T) {
-		assert.False(t, blobInstanceClassSpot(map[string]interface{}{}))
+		assert.False(t, instanceClassSpot(derived_status.Element{}))
 	})
-	t.Run("null instanceClass", func(t *testing.T) {
-		assert.False(t, blobInstanceClassSpot(map[string]interface{}{"instanceClass": nil}))
+	t.Run("instanceClass resolved to null", func(t *testing.T) {
+		assert.False(t, instanceClassSpot(derived_status.Element{CloudProcessed: true, InstanceClass: nil}))
 	})
 }
 

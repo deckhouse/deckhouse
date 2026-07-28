@@ -39,7 +39,7 @@ import (
 func (r *MachineDeploymentReconciler) applyCAPIMachineTemplate(
 	ctx context.Context,
 	templateContent []byte,
-	cloudProvider, blob map[string]interface{},
+	cloudProvider, nodeGroupValues map[string]interface{},
 	clusterUUID, podSubnet, zone, templateName, checksum string,
 ) error {
 	renderCtx := map[string]interface{}{
@@ -56,7 +56,7 @@ func (r *MachineDeploymentReconciler) applyCAPIMachineTemplate(
 				},
 			},
 		},
-		"nodeGroup":             blob,
+		"nodeGroup":             nodeGroupValues,
 		"zoneName":              zone,
 		"templateName":          templateName,
 		"instanceClassChecksum": checksum,

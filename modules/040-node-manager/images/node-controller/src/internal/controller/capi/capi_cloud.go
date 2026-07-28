@@ -308,8 +308,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		logger.Info("skipping CAPI: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
 		return nil
 	}
-	blob := element.ToMap()
-	zones := blobZones(blob)
+	zones := element.Zones
 	if len(zones) == 0 {
 		logger.V(1).Info("skipping CAPI: no zones")
 		return nil
@@ -327,7 +326,10 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	if err != nil {
 		return err
 	}
-	checksum, err := machineclass.RenderChecksum(checksumTpl, blob, cloudProvider)
+	// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
+	// only, so the element is serialized here and nowhere else.
+	nodeGroupValues := element.ToMap()
+	checksum, err := machineclass.RenderChecksum(checksumTpl, nodeGroupValues, cloudProvider)
 	if err != nil {
 		return fmt.Errorf("render CAPI instance-class checksum for NodeGroup %s: %w", ng.Name, err)
 	}
@@ -387,7 +389,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			return err
 		}
 
-		if err := r.applyCAPIMachineTemplate(ctx, machineTemplateTpl, cloudProvider, blob, clusterUUID, podSubnet, zone, templateName, checksum); err != nil {
+		if err := r.applyCAPIMachineTemplate(ctx, machineTemplateTpl, cloudProvider, nodeGroupValues, clusterUUID, podSubnet, zone, templateName, checksum); err != nil {
 			return err
 		}
 

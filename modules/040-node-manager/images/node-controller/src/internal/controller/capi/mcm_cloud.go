@@ -63,8 +63,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	if err != nil {
 		return fmt.Errorf("build blob element for NodeGroup %s: %w", ng.Name, err)
 	}
-	blob := element.ToMap()
-	zones := blobZones(blob)
+	zones := element.Zones
 	logger.Info("MCM reconcile decision", "nodeGroup", ng.Name, "validationErr", validationErr, "zones", zones, "machineClassKind", machineClassKind)
 	if validationErr != "" {
 		logger.Info("skipping MCM: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
@@ -98,13 +97,16 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		return err
 	}
 
-	checksum, err := machineclass.RenderChecksum(checksumTemplate, blob, cloudProvider)
+	// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
+	// only, so the element is serialized here and nowhere else.
+	nodeGroupValues := element.ToMap()
+	checksum, err := machineclass.RenderChecksum(checksumTemplate, nodeGroupValues, cloudProvider)
 	if err != nil {
 		return fmt.Errorf("render checksum for NodeGroup %s: %w", ng.Name, err)
 	}
 
 	minReplicas, maxReplicas := getMinMax(ng)
-	awsSpot := cloudType == "aws" && blobInstanceClassSpot(blob)
+	awsSpot := cloudType == "aws" && instanceClassSpot(element)
 
 	desiredMDNames := make(map[string]struct{}, len(zones))
 	desiredClassNames := make(map[string]struct{}, len(zones))
@@ -133,7 +135,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 					},
 				},
 			},
-			"nodeGroup": blob,
+			"nodeGroup": nodeGroupValues,
 			"zoneName":  zone,
 		}
 
@@ -156,7 +158,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 		}
 
 		md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
-			blob:             blob,
+			element:          element,
 			ngName:           ng.Name,
 			zone:             zone,
 			mdName:           mdName,
@@ -415,8 +417,9 @@ func blobZones(blob map[string]interface{}) []string {
 	}
 }
 
-func blobInstanceClassSpot(blob map[string]interface{}) bool {
-	ic := blobMap(blob, "instanceClass")
-	spot, _ := ic["spot"].(bool)
+// instanceClassSpot reports the provider spot flag; only aws acts on it.
+func instanceClassSpot(element derived_status.Element) bool {
+	instanceClass, _ := element.InstanceClass.(map[string]interface{})
+	spot, _ := instanceClass["spot"].(bool)
 	return spot
 }
