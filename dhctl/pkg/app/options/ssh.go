@@ -53,6 +53,10 @@ type SSHOptions struct {
 	LegacyMode bool
 	ModernMode bool
 
+	// ForceUseSSHAgent instructs dhctl to use the SSH agent via SSH_AUTH_SOCK
+	// instead of inline private keys. Set from connection-config forceUseSSHAgent field.
+	ForceUseSSHAgent bool
+
 	// PrivateKeysToPassPhrasesFromConfig is populated by the connection-config parser.
 	PrivateKeysToPassPhrasesFromConfig PrivateKeyFileToPassphrase
 }
@@ -74,7 +78,12 @@ func NewSSHOptions() SSHOptions {
 // ProcessConnectionConfigFlags fills PrivateKeys from AgentPrivateKeys, applying
 // the default agent key when no key is configured. It used to live in pkg/app
 // as the unexported processConnectionConfigFlags.
+// When ForceUseSSHAgent is set, key injection is skipped: authentication happens
+// via the forwarded SSH_AUTH_SOCK socket instead.
 func (o *SSHOptions) ProcessConnectionConfigFlags() error {
+	if o.ForceUseSSHAgent {
+		return nil
+	}
 	if len(o.AgentPrivateKeys) == 0 {
 		o.AgentPrivateKeys = append(o.AgentPrivateKeys, DefaultSSHAgentPrivateKeys)
 	}
