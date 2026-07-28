@@ -1,0 +1,13 @@
+diff --git a/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml b/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
+index f88fec8242..c866d1cde1 100644
+--- a/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
++++ b/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
+@@ -148,7 +148,7 @@ spec:
+         drop:
+         - ALL
+     {{- if not .Values.istio_cni.enabled }}
+-      readOnlyRootFilesystem: false
++      readOnlyRootFilesystem: true
+       runAsGroup: 0
+       runAsNonRoot: false
+       runAsUser: 0
