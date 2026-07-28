@@ -117,14 +117,13 @@ You can find the edition and version currently used in the cluster on the main p
       )
       ```
 
-1. Disable the modules from the list if acceptable (the module functionality is not used, or you are ready to give it up). Otherwise, **abort the switching process.**
+   1. Disable the modules from the list if acceptable (the module functionality is not used, or you are ready to give it up). Otherwise, **abort the switching process.**
 
-   You can disable the modules from the list in the DKP web interface under System → System Management → Deckhouse → Modules, or by running the following command:
+      You can disable the modules from the list in the DKP web interface under System → System Management → Deckhouse → Modules, or by running the following command:
 
-   ```shell
-   echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
-   ```
-
+      ```shell
+      echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+      ```
 {% endcapture %}
 
 {% capture take_care_of_the_queue %}
