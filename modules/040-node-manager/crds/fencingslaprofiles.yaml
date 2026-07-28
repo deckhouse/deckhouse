@@ -4,6 +4,7 @@ metadata:
   name: fencingslaprofiles.node-manager.deckhouse.io
   labels:
     heritage: deckhouse
+    module: node-manager
 spec:
   group: node-manager.deckhouse.io
   scope: Cluster
