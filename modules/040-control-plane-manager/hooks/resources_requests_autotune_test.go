@@ -249,9 +249,24 @@ etcd:
 
 	Context("Schedule: first memory commit", func() {
 		BeforeEach(func() {
+			// Complete cpu+memory set required for the initial snapshot gate.
+			// Apiserver recommendations differ enough from %-split (660m / ~1.4Gi)
+			// to pass the deadband; others stay near fallback.
 			usage[componentKubeApiserver] = map[string]float64{
 				resourceCPU:    0.25,
 				resourceMemory: 256 * 1024 * 1024,
+			}
+			usage[componentEtcd] = map[string]float64{
+				resourceCPU:    0.70,
+				resourceMemory: 1503238553, // ~35% of 4Gi
+			}
+			usage[componentKubeControllerManager] = map[string]float64{
+				resourceCPU:    0.40,
+				resourceMemory: 858993459, // ~20% of 4Gi
+			}
+			usage[componentKubeScheduler] = map[string]float64{
+				resourceCPU:    0.20,
+				resourceMemory: 429496729, // ~10% of 4Gi
 			}
 			f.KubeStateSet(masterNodeYAML())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
@@ -262,6 +277,26 @@ etcd:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256 * 1024 * 1024)))
+			// Full initial snapshot materializes every component in one values write.
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.milliCPU").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.memoryBytes").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Schedule: incomplete initial metrics wait without writing components", func() {
+		BeforeEach(func() {
+			usage[componentKubeApiserver] = map[string]float64{
+				resourceCPU:    0.25,
+				resourceMemory: 256 * 1024 * 1024,
+			}
+			f.KubeStateSet(masterNodeYAML())
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.RunHook()
+		})
+
+		It("leaves components unset until the full set is available", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components").Exists()).To(BeFalse())
 		})
 	})
 
@@ -271,6 +306,18 @@ etcd:
 			usage[componentKubeApiserver] = map[string]float64{
 				resourceCPU:    0.25,
 				resourceMemory: 256 * 1024 * 1024,
+			}
+			usage[componentEtcd] = map[string]float64{
+				resourceCPU:    0.70,
+				resourceMemory: 1503238553,
+			}
+			usage[componentKubeControllerManager] = map[string]float64{
+				resourceCPU:    0.40,
+				resourceMemory: 858993459,
+			}
+			usage[componentKubeScheduler] = map[string]float64{
+				resourceCPU:    0.20,
+				resourceMemory: 429496729,
 			}
 			f.KubeStateSet(masterNodeYAML())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))

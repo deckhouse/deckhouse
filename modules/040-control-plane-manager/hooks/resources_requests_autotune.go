@@ -60,8 +60,8 @@ const (
 	//   lowerCooldown:  15 * time.Minute       ← prod 72 * time.Hour
 	// lookbackWindow is baked into PodMetric PromQL in
 	// templates/podmetrics-autotune.yaml and must stay in sync.
-	raiseThreshold      = 0.20 // +20%
-	lowerThreshold      = 0.30 // −30%
+	// raiseThreshold / lowerThreshold live in resources_common.go (shared with
+	// the legacy combined-budget calculate hook).
 	raiseCooldown       = 5 * time.Minute
 	lowerCooldown       = 15 * time.Minute
 	autotuneMinMilliCPU = int64(10)
@@ -275,24 +275,59 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 			}
 		}
 
+		// After clearing a manual override (or on cold start) applied* are empty.
+		// Wait for a complete recommendation set before the first commit of that
+		// measurement. When BOTH cpu and memory need an initial snapshot, require
+		// a full set for both and commit them in the same run — avoids
+		// legacy %-split → partial autotune → another restart waves.
+		initialCPU := !cpuOverridden && !measurementHasAnyApplied(state.CPU, resourceCPU)
+		initialMem := !memoryOverridden && !measurementHasAnyApplied(state.Memory, resourceMemory)
+		cpuReady := !initialCPU || completeComponentRecs(recsCPU)
+		memReady := !initialMem || completeComponentRecs(recsMem)
+		if initialCPU && initialMem && (!cpuReady || !memReady) {
+			cpuReady = false
+			memReady = false
+			input.Logger.Info("autotune: waiting for complete cpu+memory recommendations before initial snapshot",
+				"cpuHave", len(recsCPU), "memoryHave", len(recsMem), "need", len(controlPlaneComponents))
+		} else {
+			if initialCPU && !cpuReady {
+				input.Logger.Info("autotune: waiting for complete cpu recommendations before initial snapshot",
+					"have", len(recsCPU), "need", len(controlPlaneComponents))
+			}
+			if initialMem && !memReady {
+				input.Logger.Info("autotune: waiting for complete memory recommendations before initial snapshot",
+					"have", len(recsMem), "need", len(controlPlaneComponents))
+			}
+		}
+
 		// Missing/failed metrics: do not mutate applied*; keep capacityBlocked as-is.
 		// Evaluate each measurement independently — do NOT use `stateDirty || evaluate...`
 		// or a successful cpu commit short-circuits and skips memory entirely.
 		if usageOK || len(recsCPU) > 0 || len(recsMem) > 0 {
-			if !cpuOverridden {
+			if !cpuOverridden && cpuReady {
 				if len(recsCPU) == 0 {
 					input.Logger.Warn("autotune: no cpu usage datapoints from metrics API, leaving cpu state unchanged")
 				}
 				if evaluateMeasurement(input, state, resourceCPU, recsCPU, budgetCPU, combinedCPU, now) {
 					stateDirty = true
 				}
+				if initialCPU {
+					if fillMissingAppliedFromFallback(state, resourceCPU, combinedCPU) {
+						stateDirty = true
+					}
+				}
 			}
-			if !memoryOverridden {
+			if !memoryOverridden && memReady {
 				if len(recsMem) == 0 {
 					input.Logger.Warn("autotune: no memory usage datapoints from metrics API, leaving memory state unchanged")
 				}
 				if evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMem, combinedMem, now) {
 					stateDirty = true
+				}
+				if initialMem {
+					if fillMissingAppliedFromFallback(state, resourceMemory, combinedMem) {
+						stateDirty = true
+					}
 				}
 			}
 		}
@@ -319,6 +354,63 @@ func discardAutotuneForLegacy(input *go_hook.HookInput) error {
 	}
 	input.PatchCollector.Delete("v1", "ConfigMap", kubeSystemNS, autotuneStateCMName)
 	return nil
+}
+
+func measurementHasAnyApplied(m *autotuneMeasurementState, resourceName string) bool {
+	if m == nil || m.Components == nil {
+		return false
+	}
+	for _, comp := range controlPlaneComponents {
+		if appliedValue(m.Components[comp], resourceName) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func completeComponentRecs(recs map[string]int64) bool {
+	if len(recs) < len(controlPlaneComponents) {
+		return false
+	}
+	for _, comp := range controlPlaneComponents {
+		if _, ok := recs[comp]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// fillMissingAppliedFromFallback writes %-split baselines into empty applied*
+// slots so the first values snapshot covers every component in one ModuleRun.
+func fillMissingAppliedFromFallback(state *autotuneState, resourceName string, combinedBudget int64) bool {
+	if combinedBudget <= 0 {
+		return false
+	}
+	m := state.measurement(resourceName)
+	if m == nil {
+		m = &autotuneMeasurementState{Components: map[string]autotuneComponentState{}}
+		state.setMeasurement(resourceName, m)
+	}
+	if m.Components == nil {
+		m.Components = map[string]autotuneComponentState{}
+	}
+	changed := false
+	for _, comp := range controlPlaneComponents {
+		if appliedValue(m.Components[comp], resourceName) > 0 {
+			continue
+		}
+		cs := m.Components[comp]
+		val := fallbackSplit(combinedBudget, componentFallbackPercent[comp])
+		switch resourceName {
+		case resourceCPU:
+			cs.AppliedMilliCPU = ptr.To(val)
+		case resourceMemory:
+			cs.AppliedBytes = ptr.To(val)
+		}
+		m.Components[comp] = cs
+		changed = true
+	}
+	return changed
 }
 
 func isMeasurementOverridden(input *go_hook.HookInput, resourceName string) bool {
@@ -476,11 +568,11 @@ func evaluateMeasurement(
 	anyRaise := false
 
 	for _, comp := range controlPlaneComponents {
-		applied := appliedValue(m.Components[comp], resourceName)
-		if applied == 0 {
-			applied = fallbackSplit(combinedBudget, componentFallbackPercent[comp])
+		effectiveApplied := appliedValue(m.Components[comp], resourceName)
+		if effectiveApplied == 0 {
+			effectiveApplied = fallbackSplit(combinedBudget, componentFallbackPercent[comp])
 		}
-		proposed[comp] = applied
+		proposed[comp] = effectiveApplied
 
 		rec, hasRec := recs[comp]
 		if !hasRec {
@@ -489,7 +581,10 @@ func evaluateMeasurement(
 		}
 
 		lastChange := parseLastChange(m.Components[comp].LastChange)
-		action := decide(rec, appliedValue(m.Components[comp], resourceName), lastChange, now)
+		// Compare against the currently rendered request (applied* or %-split
+		// fallback) so the first snapshot after clearing a manual override does
+		// not unconditionally rewrite every component.
+		action := decide(rec, effectiveApplied, lastChange, now)
 		actions[comp] = action
 		if action == decideRaise || action == decideLower {
 			proposed[comp] = rec
