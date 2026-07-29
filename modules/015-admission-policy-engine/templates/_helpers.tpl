@@ -1,3 +1,15 @@
+{{/*
+  constraint_selector renders the namespace/label selectors from the CR's match section.
+  NOTE on labelSelector semantics (PR #21556 review M3):
+  Gatekeeper's match.labelSelector evaluates against the reviewed object's own
+  metadata.labels. For Pods this is the pod's labels. For controllers (Deployment,
+  StatefulSet, etc.) this is the controller's TOP-LEVEL metadata.labels, NOT the
+  pod template's metadata.labels (spec.template.metadata.labels). Users who
+  write labelSelector thinking about pod labels should be aware that a positive
+  selector not mirrored at the controller top level will result in no controller-level
+  check at all, and an exclusion-style selector (NotIn/DoesNotExist) used to exempt
+  a workload will stop exempting at the controller level.
+*/}}
 {{- define "constraint_selector" }}
     {{- $cr := index . 0 }}
 
