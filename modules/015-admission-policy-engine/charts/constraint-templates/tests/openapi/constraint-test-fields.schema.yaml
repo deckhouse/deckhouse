@@ -141,9 +141,9 @@ definitions:
           containers+initContainers+ephemeralContainers.
         enum:
           - Containers
-          - Containers+InitContainers
-          - Containers+InitContainers+EphemeralContainers
-          - Containers+SidecarInitContainers
+          - ContainersInitContainers
+          - ContainersInitContainersEphemeralContainers
+          - ContainersSidecarInitContainers
       description:
         type: string
         description: Human-readable explanation of why this field matters.
