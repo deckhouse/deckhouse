@@ -17,6 +17,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -26,6 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const (
@@ -87,21 +90,26 @@ func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) err
 	globalCPUPath := "global.modules.resourcesRequests.controlPlane.cpu"
 	globalMemoryPath := "global.modules.resourcesRequests.controlPlane.memory"
 
-	cpmCPUExists := input.Values.Exists(cpmCPUPath)
-	cpmMemoryExists := input.Values.Exists(cpmMemoryPath)
-	globalCPUExists := input.Values.Exists(globalCPUPath)
-	globalMemoryExists := input.Values.Exists(globalMemoryPath)
+	cpmCPU := input.Values.Get(cpmCPUPath)
+	cpmMemory := input.Values.Get(cpmMemoryPath)
+	globalCPU := input.Values.Get(globalCPUPath)
+	globalMemory := input.Values.Get(globalMemoryPath)
+
+	cpmCPUExists := configQuantityPresent(cpmCPU)
+	cpmMemoryExists := configQuantityPresent(cpmMemory)
+	globalCPUExists := configQuantityPresent(globalCPU)
+	globalMemoryExists := configQuantityPresent(globalMemory)
 
 	usedGlobalFallback := false
 
 	if cpmCPUExists {
-		quantity, err := getAndParseResourceQuantity(input.Values.Get(cpmCPUPath))
+		quantity, err := getAndParseResourceQuantity(cpmCPU)
 		if err != nil {
 			return err
 		}
 		calculatedControlPlaneMilliCPU = quantity.MilliValue()
 	} else if globalCPUExists {
-		quantity, err := getAndParseResourceQuantity(input.Values.Get(globalCPUPath))
+		quantity, err := getAndParseResourceQuantity(globalCPU)
 		if err != nil {
 			return err
 		}
@@ -110,13 +118,13 @@ func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) err
 	}
 
 	if cpmMemoryExists {
-		quantity, err := getAndParseResourceQuantity(input.Values.Get(cpmMemoryPath))
+		quantity, err := getAndParseResourceQuantity(cpmMemory)
 		if err != nil {
 			return err
 		}
 		calculatedControlPlaneMemory = quantity.Value()
 	} else if globalMemoryExists {
-		quantity, err := getAndParseResourceQuantity(input.Values.Get(globalMemoryPath))
+		quantity, err := getAndParseResourceQuantity(globalMemory)
 		if err != nil {
 			return err
 		}
@@ -133,10 +141,35 @@ func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) err
 		)
 	}
 
-	input.Values.Set("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane", calculatedControlPlaneMilliCPU)
-	input.Values.Set("controlPlaneManager.internal.resourcesRequests.memoryControlPlane", calculatedControlPlaneMemory)
+	cpuPath := "controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane"
+	memPath := "controlPlaneManager.internal.resourcesRequests.memoryControlPlane"
+	cpuFromConfig := cpmCPUExists || globalCPUExists
+	memFromConfig := cpmMemoryExists || globalMemoryExists
+
+	// When prometheus + PMA are enabled, discovery must not stomp the combined
+	// budget on every run: clearing a manual resourcesRequests override would
+	// otherwise jump to a fresh %-split and restart CP pods before autotune's
+	// first full per-component snapshot. Keep the previous budget sticky under
+	// the same asymmetric deadband; always apply manual/global overrides and
+	// always refresh when autotune cannot run (PMA/prometheus off).
+	autotuneActive := controlPlaneAutotuneActive(input)
+	if cpuFromConfig || !autotuneActive || significantResourceChange(calculatedControlPlaneMilliCPU, input.Values.Get(cpuPath).Int()) {
+		input.Values.Set(cpuPath, calculatedControlPlaneMilliCPU)
+	}
+	if memFromConfig || !autotuneActive || significantResourceChange(calculatedControlPlaneMemory, input.Values.Get(memPath).Int()) {
+		input.Values.Set(memPath, calculatedControlPlaneMemory)
+	}
 
 	return nil
+}
+
+func controlPlaneAutotuneActive(input *go_hook.HookInput) bool {
+	enabled := set.NewFromValues(input.Values, "global.enabledModules")
+	return enabled.Has("prometheus") && enabled.Has("prometheus-metrics-adapter")
+}
+
+func configQuantityPresent(v gjson.Result) bool {
+	return v.Exists() && strings.TrimSpace(v.String()) != ""
 }
 
 func getAndParseResourceQuantity(input gjson.Result) (resource.Quantity, error) {

@@ -252,6 +252,51 @@ var _ = Describe("Module hooks :: control-plane-manager :: calculate_resources_r
 
 	})
 
+	Context("PMA enabled: sticky combined budget inside deadband after clearing manual override", func() {
+		var discoveryCPU, discoveryMem int64
+
+		BeforeEach(func() {
+			f.ValuesDelete("controlPlaneManager.resourcesRequests")
+			f.ValuesDelete("global.modules.resourcesRequests")
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus","prometheus-metrics-adapter"]`))
+			discoveryCPU = int64((4000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
+			discoveryMem = int64((8*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
+			// Previous manual budget, within deadband of discovery (~10% higher).
+			f.ValuesSet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane", discoveryCPU*110/100)
+			f.ValuesSet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane", discoveryMem*110/100)
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
+			f.RunHook()
+		})
+
+		It("keeps the previous combined budget instead of jumping to discovery %-split base", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(discoveryCPU * 110 / 100))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(discoveryMem * 110 / 100))
+		})
+	})
+
+	Context("PMA enabled: significant discovery change still updates combined budget", func() {
+		var discoveryCPU, discoveryMem int64
+
+		BeforeEach(func() {
+			f.ValuesDelete("controlPlaneManager.resourcesRequests")
+			f.ValuesDelete("global.modules.resourcesRequests")
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus","prometheus-metrics-adapter"]`))
+			discoveryCPU = int64((4000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
+			discoveryMem = int64((8*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
+			f.ValuesSet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane", discoveryCPU/2)
+			f.ValuesSet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane", discoveryMem/2)
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
+			f.RunHook()
+		})
+
+		It("rewrites internal budgets when outside deadband", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(discoveryCPU))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(discoveryMem))
+		})
+	})
+
 	Context("absDiff", func() {
 		It("Correct calc", func() {
 			Expect(absDiff(2, 1)).To(Equal(int64(1)))

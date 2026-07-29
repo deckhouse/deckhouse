@@ -32,6 +32,13 @@ const (
 	hardLimitMilliCPU       = 4 * 1000          // 4 Cpu
 	hardLimitMemory         = 8 * 1024 * 1024 * 1024
 
+	// Asymmetric deadband for resource request updates (autotune + legacy
+	// combined-budget calculate). Go constants, not config-values.
+	// Change is significant only when delta > raiseThreshold or
+	// delta < -lowerThreshold (delta = (rec - applied) / applied).
+	raiseThreshold = 0.20 // +20%
+	lowerThreshold = 0.30 // −30%
+
 	// Minimum kubelet reservation we account for, regardless of what the kubelet
 	// has actually reported on Node.Status.Allocatable at the moment the hook
 	// runs. The hook uses Capacity (immutable) and subtracts max(actual kubelet
@@ -162,4 +169,15 @@ func minMasterNodeBudget(nodes []Node) (int64, int64, bool) {
 
 func fallbackSplit(total, percent int64) int64 {
 	return total * percent / 100
+}
+
+// significantResourceChange reports whether rec differs from applied enough to
+// commit an update under the asymmetric deadband. applied <= 0 always accepts
+// a positive recommendation (first commit).
+func significantResourceChange(rec, applied int64) bool {
+	if applied <= 0 {
+		return rec > 0
+	}
+	delta := float64(rec-applied) / float64(applied)
+	return delta > raiseThreshold || delta < -lowerThreshold
 }
