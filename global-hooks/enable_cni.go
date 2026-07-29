@@ -130,6 +130,13 @@ func enableCni(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	if len(explicitlyEnabledCNIs) > 1 {
+		if input.Values.Get("global.internal.cniMigrationEnabled").Bool() {
+			input.Logger.Info(
+				"more than one CNI enabled during CNI migration, skipping check",
+				slog.Any("cni", explicitlyEnabledCNIs.Slice()),
+			)
+			return nil
+		}
 		requirements.SaveValue(cniConfigurationSettledKey, "false")
 		return fmt.Errorf("more than one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
 	} else if len(explicitlyEnabledCNIs) == 1 {
