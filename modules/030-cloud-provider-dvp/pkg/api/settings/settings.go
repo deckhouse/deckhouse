@@ -193,10 +193,42 @@ type NodesParameters struct {
 	// +kubebuilder:validation:items:Type=string
 	// +optional
 	Zones []string `json:"zones,omitempty"`
-	// Static IP addresses to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
-	// For example, if 3 replicas are specified and the IP addresses provided are: ip1, ip2, and ip3, then ip1 will be assigned to the first replica, ip2 to the second, and ip3 to the third.
+	// A map of static IP addresses for CloudPermanent NodeGroups.
+	//
+	// The map key is the NodeGroup name, the value is a list of IP addresses assigned to nodes of that group.
+	// The number of addresses must match the number of replicas — each IP address is assigned to a specific replica.
+	//
+	// Example:
+	//
+	// ```yaml
+	// ipAddresses:
+	//   master:
+	//     - 10.66.30.100
+	//     - 10.66.30.101
+	//     - 10.66.30.102
+	//   worker:
+	//     - 10.66.30.200
+	//     - 10.66.30.201
+	// ```
+	//
 	// > These addresses must belong to the address range specified in the virtualization module configuration in the `virtualMachineCIDRs` parameter.
-	// +deckhouse:ru:description:value="Статические IP-адреса, назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно совпадать с количеством создаваемых реплик — каждый IP-адрес будет назначен отдельной реплике."
+	// +deckhouse:ru:description:value="Словарь статических IP-адресов для групп узлов типа CloudPermanent."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Ключ словаря — имя NodeGroup, значение — список IP-адресов, назначаемых узлам этой группы."
+	// +deckhouse:ru:description:value="Количество адресов должно совпадать с количеством реплик — каждый IP-адрес назначается отдельной реплике."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Пример:"
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="```yaml"
+	// +deckhouse:ru:description:value="ipAddresses:"
+	// +deckhouse:ru:description:value="  master:"
+	// +deckhouse:ru:description:value="    - 10.66.30.100"
+	// +deckhouse:ru:description:value="    - 10.66.30.101"
+	// +deckhouse:ru:description:value="    - 10.66.30.102"
+	// +deckhouse:ru:description:value="  worker:"
+	// +deckhouse:ru:description:value="    - 10.66.30.200"
+	// +deckhouse:ru:description:value="    - 10.66.30.201"
+	// +deckhouse:ru:description:value="```"
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="> Эти адреса должны принадлежать диапазону адресов, заданному в конфигурации модуля виртуализации в параметре `virtualMachineCIDRs`."
 	// +deckhouse:validation:AdditionalProperties:items:Pattern=`^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$`

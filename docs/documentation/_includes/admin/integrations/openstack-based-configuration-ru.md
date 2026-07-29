@@ -2,15 +2,17 @@
 
 Для работы Deckhouse Kubernetes Platform должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
 
-| Сервис                     |                         Версия API                         |
-| :------------------------- | :--------------------------------------------------------: |
-| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
-| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
-| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
-| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
-| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
 
-* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
+| Сервис                     | Версия API                                                 |
+| -------------------------- | ---------------------------------------------------------- |
+| Identity (Keystone)        | [v3](https://docs.openstack.org/api-ref/identity/v3/)      |
+| Compute (Nova)             | [v2.1](https://docs.openstack.org/api-ref/compute/)        |
+| Network (Neutron)          | [v2.0](https://docs.openstack.org/api-ref/network/)        |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * | [v2](https://docs.openstack.org/api-ref/load-balancer/)    |
+
+
+\* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
 
 {% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
 Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
@@ -29,8 +31,7 @@
 Например, `kube-apiserver` на master-узлах будет доступен на порту `6443`. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
 {% endalert %}
 
-![resources](../../../../images/cloud-provider-openstack/openstack-standard.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
+resources
 
 Пример конфигурации схемы размещения:
 
@@ -120,6 +121,8 @@ provider:
   ...
 ```
 
+
+
 ### StandardWithNoRouter
 
 Создается внутренняя сеть кластера без доступа в публичную сеть. Все узлы, включая master-узел, создаются с двумя интерфейсами:
@@ -129,14 +132,13 @@ provider:
 {% alert level="warning" %}
 
 - В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
-  сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
-  virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
+сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
+virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
 - В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере.
 
 {% endalert %}
 
-![resources](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
+resources
 
 Пример конфигурации схемы размещения:
 
@@ -209,6 +211,8 @@ provider:
   ...
 ```
 
+
+
 ### Simple
 
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
@@ -220,8 +224,7 @@ Master-узел и узлы кластера подключаются к сущ�
 virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
 {% endalert %}
 
-![resources](../../../../images/cloud-provider-openstack/openstack-simple.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
+resources
 
 Пример конфигурации схемы размещения:
 
@@ -290,6 +293,8 @@ provider:
   ...
 ```
 
+
+
 ### SimpleWithInternalNetwork
 
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
@@ -300,8 +305,7 @@ Master-узел и узлы кластера подключаются к сущ�
 Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере.
 {% endalert %}
 
-![resources](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
+resources
 
 Пример конфигурации схемы размещения:
 
@@ -374,6 +378,8 @@ provider:
   ...
 ```
 
+
+
 ## Конфигурация
 
 Интеграции с {{ site.data.admin.cloud-types.types[page.cloud_type].name }} осуществляется с помощью [ресурса OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration), который описывает конфигурацию облачного кластера в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
@@ -410,6 +416,8 @@ spec:
   flavorName: m1.large
 ```
 
+
+
 #### Пример 2
 
 ```yaml
@@ -445,19 +453,23 @@ spec:
       owner: default
 ```
 
+
+
 ### Список необходимых сервисов
 
 Список сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, необходимых для работы Deckhouse Kubernetes Platform в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
 
-| Сервис                           | Версия API |
-|:---------------------------------|:----------:|
-| Identity (Keystone)              | v3         |
-| Compute (Nova)                   | v2         |
-| Network (Neutron)                | v2         |
-| Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) *       | v2         |
 
-\* Если нужно заказывать Load Balancer.
+| Сервис                     | Версия API |
+| -------------------------- | ---------- |
+| Identity (Keystone)        | v3         |
+| Compute (Nova)             | v2         |
+| Network (Neutron)          | v2         |
+| Block Storage (Cinder)     | v3         |
+| Load Balancing (Octavia) * | v2         |
+
+
+ Если нужно заказывать Load Balancer.
 
 {% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
 Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
@@ -469,7 +481,7 @@ spec:
 Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
 {% endalert %}
 
-Рекомендуется ограничивать список узлов, добавляемых в пул балансировщика, с помощью аннотации [`loadbalancer.openstack.org/node-selector`](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#load-balancer).
+Рекомендуется ограничивать список узлов, добавляемых в пул балансировщика, с помощью аннотации `[loadbalancer.openstack.org/node-selector](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#load-balancer)`.
 
 Без ограничения по `node-selector` cloud-controller-manager может использовать в качестве таргетов балансировщика все подходящие узлы кластера. В результате добавление или удаление узлов, не связанных с обслуживаемой балансировщиком нагрузкой, может приводить к обновлению состава пула балансировщика. В крупных или часто изменяющихся кластерах такие обновления могут происходить регулярно, а в некоторых конфигурациях сопровождаться кратковременными нарушениями существующих соединений.
 
@@ -501,14 +513,16 @@ spec:
     value: frontend
 ```
 
+
+
 ### Настройка и политики безопасности на узлах кластера
 
 Вариантов, зачем может понадобиться ограничить или, наоборот, расширить входящий или исходящий трафик на виртуальных
 машинах кластера, может быть множество. Например:
 
-* Разрешить подключение к узлам кластера с виртуальных машин из другой подсети.
-* Разрешить подключение к портам статического узла для работы приложения.
-* Ограничить доступ к внешним ресурсам или другим ВМ в облаке по требованию службы безопасности.
+- Разрешить подключение к узлам кластера с виртуальных машин из другой подсети.
+- Разрешить подключение к портам статического узла для работы приложения.
+- Ограничить доступ к внешним ресурсам или другим ВМ в облаке по требованию службы безопасности.
 
 Для всего этого следует применять дополнительные группы безопасности (security groups). Можно использовать только группы безопасности, предварительно
 созданные в облаке.
@@ -518,8 +532,8 @@ spec:
 Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные
 группы безопасности указываются в [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration):
 
-* для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`;
-* для статических узлов — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, а также в поле `additionalSecurityGroups`.
+- для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`;
+- для статических узлов — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, а также в поле `additionalSecurityGroups`.
 
 Поле `additionalSecurityGroups` представляет собой массив строк с именами групп безопасности.
 
@@ -531,93 +545,35 @@ spec:
 ### Как загрузить образ в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 
 1. Скачайте последний стабильный образ Ubuntu 18.04:
-
-   ```shell
+  ```shell
    curl -L https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img --output ~/ubuntu-18-04-cloud-amd64
-   ```
-
+  ```
 2. Подготовьте openrc-файл, который содержит credentials для обращения к API {{ site.data.admin.cloud-types.types[page.cloud_type].name }}.
-
-   > Интерфейс получения openrc-файла может отличаться в зависимости от провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }}. Если провайдер предоставляет
-   > стандартный интерфейс для {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, скачать openrc-файл можно [по инструкции](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
-
+  > Интерфейс получения openrc-файла может отличаться в зависимости от провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }}. Если провайдер предоставляет
+  > стандартный интерфейс для {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, скачать openrc-файл можно [по инструкции](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
 3. Либо установите OpenStack-клиента [по инструкции](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
-
-   Также можно запустить контейнер, смонтировать в него openrc-файл и скачанный локально образ Ubuntu:
-
-   ```shell
-   docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.openrc:/openrc jmcvea/openstack-client
-   ```
-
+  Также можно запустить контейнер, смонтировать в него openrc-файл и скачанный локально образ Ubuntu:
 4. Инициализируйте переменные окружения из openrc-файла:
-
-   ```shell
+  ```shell
    source /openrc
-   ```
-
+  ```
 5. Получите список доступных типов дисков:
-
-   ```shell
+  ```shell
    openstack volume type list
-   ```
-
+  ```
    Пример вывода:
-
-   ```console
-   +--------------------------------------+---------------+-----------+
-   | ID                                   | Name          | Is Public |
-   +--------------------------------------+---------------+-----------+
-   | 8d39c9db-0293-48c0-8d44-015a2f6788ff | ko1-high-iops | True      |
-   | bf800b7c-9ae0-4cda-b9c5-fae283b3e9fd | dp1-high-iops | True      |
-   | 74101409-a462-4f03-872a-7de727a178b8 | ko1-ssd       | True      |
-   | eadd8860-f5a4-45e1-ae27-8c58094257e0 | dp1-ssd       | True      |
-   | 48372c05-c842-4f6e-89ca-09af3868b2c4 | ssd           | True      |
-   | a75c3502-4de6-4876-a457-a6c4594c067a | ms1           | True      |
-   | ebf5922e-42af-4f97-8f23-716340290de2 | dp1           | True      |
-   | a6e853c1-78ad-4c18-93f9-2bba317a1d13 | ceph          | True      |
-   +--------------------------------------+---------------+-----------+
-   ```
-
 6. Создайте образ и передайте в него в качестве свойств тип диска, который будет использоваться (если {{ site.data.admin.cloud-types.types[page.cloud_type].name }} не поддерживает локальные диски или если эти диски не подходят для работы):
-
-   ```shell
+  ```shell
    openstack image create --private --disk-format qcow2 --container-format bare \
      --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
-   ```
-
+  ```
 7. Проверьте, что образ успешно создан:
-
-   ```shell
+  ```shell
    openstack image show ubuntu-18-04-cloud-amd64
-   ```
-
+  ```
    Пример вывода:
 
-   ```console
-   +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | Field            | Value                                                                                                                                                                                                                                                                                     |
-   +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | checksum         | 3443a1fd810f4af9593d56e0e144d07d                                                                                                                                                                                                                                                          |
-   | container_format | bare                                                                                                                                                                                                                                                                                      |
-   | created_at       | 2020-01-10T07:23:48Z                                                                                                                                                                                                                                                                      |
-   | disk_format      | qcow2                                                                                                                                                                                                                                                                                     |
-   | file             | /v2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/file                                                                                                                                                                                                                                      |
-   | id               | 01998f40-57cc-4ce3-9642-c8654a6d14fc                                                                                                                                                                                                                                                      |
-   | min_disk         | 0                                                                                                                                                                                                                                                                                         |
-   | min_ram          | 0                                                                                                                                                                                                                                                                                         |
-   | name             | ubuntu-18-04-cloud-amd64                                                                                                                                                                                                                                                                  |
-   | owner            | bbf506e3ece54e21b2acf1bf9db4f62c                                                                                                                                                                                                                                                          |
-   | properties       | cinder_img_volume_type='dp1-high-iops', direct_url='rbd://b0e441fc-c317-4acf-a606-cf74683978d2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/snap', locations='[{u'url': u'rbd://b0e441fc-c317-4acf-a606-cf74683978d2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/snap', u'metadata': {}}]' |
-   | protected        | False                                                                                                                                                                                                                                                                                     |
-   | schema           | /v2/schemas/image                                                                                                                                                                                                                                                                         |
-   | size             | 343277568                                                                                                                                                                                                                                                                                 |
-   | status           | active                                                                                                                                                                                                                                                                                    |
-   | tags             |                                                                                                                                                                                                                                                                                           |
-   | updated_at       | 2020-05-01T17:18:34Z                                                                                                                                                                                                                                                                      |
-   | virtual_size     | None                                                                                                                                                                                                                                                                                      |
-   | visibility       | private                                                                                                                                                                                                                                                                                   |
-   +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   ```
+
 
 ### Проверка поддержки провайдером группы безопасности (security groups)
 
@@ -659,47 +615,59 @@ username = {{ nova_service_user_name }}
 
 ### Использование rootDiskSize
 
+
+
 #### Диски в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 
 Диск узла может быть локальным или сетевым. В терминологии {{ site.data.admin.cloud-types.types[page.cloud_type].name }} локальный диск — это ephemeral disk, а сетевой — persistent disk (cinder storage). Первый удаляется вместе с ВМ, а второй остается в облаке, когда ВМ удаляется.
 
-* Для master-узла предпочтительнее сетевой диск, чтобы узел мог мигрировать между гипервизорами.
-* Для ephemeral-узла предпочтительнее локальный диск, чтобы сэкономить на стоимости. Не все облачные провайдеры поддерживают использование локальных дисков. Если локальные диски не поддерживаются, для ephemeral-узлов придется использовать сетевые диски.
+- Для master-узла предпочтительнее сетевой диск, чтобы узел мог мигрировать между гипервизорами.
+- Для ephemeral-узла предпочтительнее локальный диск, чтобы сэкономить на стоимости. Не все облачные провайдеры поддерживают использование локальных дисков. Если локальные диски не поддерживаются, для ephemeral-узлов придется использовать сетевые диски.
 
-| Локальный диск (ephemeral)    | Сетевой диск (persistent)                    |
-| ----------------------------- | -------------------------------------------- |
-| Удаляется вместе с ВМ         | Остается в облаке и может переиспользоваться |
-| Дешевле                       | Дороже                                       |
-| Подходит для ephemeral-узлов  | Подходит для master-узлов                    |
+
+| Локальный диск (ephemeral)   | Сетевой диск (persistent)                    |
+| ---------------------------- | -------------------------------------------- |
+| Удаляется вместе с ВМ        | Остается в облаке и может переиспользоваться |
+| Дешевле                      | Дороже                                       |
+| Подходит для ephemeral-узлов | Подходит для master-узлов                    |
+
+
+
 
 #### Параметр rootDiskSize
 
-В OpenStackInstanceClass есть [параметр `rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize), и в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} flavor есть параметр размера диска.
+В OpenStackInstanceClass есть [параметр](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) `rootDiskSize`, и в {{ site.data.admin.cloud-types.types[page.cloud_type].name }} flavor есть параметр размера диска.
 
 Какой диск будет заказан в зависимости от комбинации параметров, указано в таблице:
 
-|                              | flavor disk size = 0                 | flavor disk size > 0                              |
-| ---------------------------- | ------------------------------------ | ------------------------------------------------- |
-| **`rootDiskSize` не указан** | ❗*Необходимо задать размер*. Без указания размера будет ошибка создания ВМ. | Локальный диск с размером из flavor               |
-| **`rootDiskSize` указан**    | Сетевой диск размером `rootDiskSize`                                         | ❗ Сетевой (rootDiskSize) и локальный (из flavor). Избегайте использования этого варианта, так как облачный провайдер будет взимать плату за оба диска. |
+
+|                              | flavor disk size = 0                                                        | flavor disk size > 0                                                                                                                                   |
+| ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `rootDiskSize` **не указан** | ❗*Необходимо задать размер*. Без указания размера будет ошибка создания ВМ. | Локальный диск с размером из flavor                                                                                                                    |
+| `rootDiskSize` **указан**    | Сетевой диск размером `rootDiskSize`                                        | ❗ Сетевой (rootDiskSize) и локальный (из flavor). Избегайте использования этого варианта, так как облачный провайдер будет взимать плату за оба диска. |
+
 
 {% if page.cloud_type != 'selectel' %}
 
-> При создании узлов с типом CloudEphemeral в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
+> При создании узлов с типом CloudEphemeral в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр `[rootDiskSize](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize)` в этом случае указывать не нужно.
 
 {% endif %}
 
 ##### Рекомендация для master-узлов и бастиона — сетевой диск
 
 - Используйте flavor с нулевым размером диска.
-- Задайте [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в OpenStackInstanceClass.
-- Проконтролируйте тип диска. Тип диска будет взят из образа ОС, если он задан. Если нет, тип диска будет взят из [`volumeTypeMap`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
+- Задайте `[rootDiskSize](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize)` в OpenStackInstanceClass.
+- Проконтролируйте тип диска. Тип диска будет взят из образа ОС, если он задан. Если нет, тип диска будет взят из `[volumeTypeMap](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap)`.
+
+
 
 ##### Рекомендация для ephemeral-узлов — локальный диск
 
 - Используйте flavor с заданным размером диска.
-- Не используйте [параметр `rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в OpenStackInstanceClass.
+- Не используйте [параметр](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) `rootDiskSize` в OpenStackInstanceClass.
 - Проконтролируйте тип диска. Тип диска будет взят из образа ОС, если он [задан](#как-переопределить-тип-диска-по-умолчанию-cloud-провайдера). Если нет, будет использоваться тип диска по умолчанию облачного провайдера.
+
+
 
 #### Как проверить объем диска в flavor
 
@@ -718,6 +686,8 @@ openstack flavor show m1.medium-50g -c disk
 | disk  | 50    |
 +-------+-------+
 ```
+
+
 
 ### Как переопределить тип диска по умолчанию облачного провайдера
 
@@ -747,4 +717,5 @@ Expected HTTP response code [202] when accessing
 [POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
+
 {% endif %}

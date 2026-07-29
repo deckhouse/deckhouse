@@ -52,8 +52,24 @@ properties:
                 type: string
               type: array
             description: |-
-              Static IP addresses to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
-              For example, if 3 replicas are specified and the IP addresses provided are: ip1, ip2, and ip3, then ip1 will be assigned to the first replica, ip2 to the second, and ip3 to the third.
+              A map of static IP addresses for CloudPermanent NodeGroups.
+
+              The map key is the NodeGroup name, the value is a list of IP addresses assigned to nodes of that group.
+              The number of addresses must match the number of replicas — each IP address is assigned to a specific replica.
+
+              Example:
+
+              ```yaml
+              ipAddresses:
+                master:
+                  - 10.66.30.100
+                  - 10.66.30.101
+                  - 10.66.30.102
+                worker:
+                  - 10.66.30.200
+                  - 10.66.30.201
+              ```
+
               > These addresses must belong to the address range specified in the virtualization module configuration in the `virtualMachineCIDRs` parameter.
             type: object
           layout:
