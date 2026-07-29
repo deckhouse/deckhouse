@@ -285,8 +285,21 @@ data:
 			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.33"))
 		})
 
-		It("ModuleConfig Automatic defers to pinned ClusterConfiguration", func() {
+		It("ModuleConfig Automatic overrides a pinned ClusterConfiguration", func() {
+			// Presence of the ModuleConfig setting decides which document owns the version, so an
+			// explicit Automatic means "track the Deckhouse default" and the CC pin is ignored.
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("Automatic"), 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			// Backward-compat: global.clusterConfiguration still reflects the Secret (CC pin).
+			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.33"))
+		})
+
+		It("unset ModuleConfig defers to a pinned ClusterConfiguration", func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML(""), 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())

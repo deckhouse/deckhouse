@@ -250,7 +250,7 @@
         plk_grouped_by__d8_control_plane_default_version_drift: "D8ControlPlaneDefaultVersionDrift,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Control plane Kubernetes version is more than 1 minor above the current Deckhouse default.
         description: |-
-          `kubernetesVersion` is not pinned explicitly (unset or `Automatic`) in ModuleConfig `control-plane-manager` (or in the deprecated `ClusterConfiguration` field), so it's expected to track the version Deckhouse currently considers stable — but that default is now more than 1 minor version below what the control plane is actually running.
+          The cluster tracks the Kubernetes version Deckhouse currently considers stable — either ModuleConfig `control-plane-manager` has `kubernetesVersion: Automatic`, or the parameter is unset there and the deprecated `ClusterConfiguration.kubernetesVersion` does not pin a version either. That default is now more than 1 minor version below what the control plane is actually running.
 
           This can happen if the cluster was previously pinned to an explicit, newer version and later switched back to `Automatic`, while the installed Deckhouse release's default hasn't caught up.
 

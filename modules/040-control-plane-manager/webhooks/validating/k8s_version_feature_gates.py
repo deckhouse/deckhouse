@@ -25,6 +25,8 @@ from feature_gates_generated import is_deprecated, is_feature_gate_deprecated_up
 
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
 MODULE_CONFIG_SNAPSHOT_NAME = "module-config-control-plane-manager"
+# Sentinel meaning "let Deckhouse pick the version".
+AUTOMATIC_VERSION = "Automatic"
 
 config = f"""
 configVersion: v1
@@ -183,8 +185,10 @@ def resolve_effective_version(
     secret_data=None,
 ) -> Optional[str]:
     # Mirrors global-hooks/discovery/cluster_configuration.go resolveTargetKubernetesVersion:
-    # ModuleConfig wins when pinned, otherwise fall back to ClusterConfiguration.
-    if mc_kubernetes_version and mc_kubernetes_version != "Automatic":
+    # a present ModuleConfig setting decides on its own, "Automatic" included (it then means the
+    # Deckhouse default, and ClusterConfiguration is not consulted at all). Only an absent setting
+    # falls back to ClusterConfiguration, where "Automatic" is not a pin either.
+    if mc_kubernetes_version and mc_kubernetes_version != AUTOMATIC_VERSION:
         return mc_kubernetes_version
 
     if secret_data is None:
@@ -192,8 +196,11 @@ def resolve_effective_version(
     if not secret_data:
         return None
 
+    if mc_kubernetes_version == AUTOMATIC_VERSION:
+        return get_deckhouse_default_version_from_secret(secret_data)
+
     cc_version = get_k8s_version_from_cluster_config(secret_data)
-    if cc_version and cc_version != "Automatic":
+    if cc_version and cc_version != AUTOMATIC_VERSION:
         return cc_version
 
     return get_deckhouse_default_version_from_secret(secret_data)

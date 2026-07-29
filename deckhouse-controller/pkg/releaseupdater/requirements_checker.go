@@ -291,6 +291,12 @@ func (c *kubernetesVersionCheck) isAutomaticFromModuleAndClusterConfig(ctx conte
 	if err != nil {
 		return false, err
 	}
+	// Mirror global-hooks resolveTargetKubernetesVersion: a present ModuleConfig setting decides
+	// on its own, "Automatic" included — ClusterConfiguration is not consulted at all then.
+	if mcVersion != "" {
+		return mcVersion == k8sAutomaticUpdateMode, nil
+	}
+
 	ccVersion, ccFound, err := c.readClusterConfigurationKubernetesVersion(ctx)
 	if err != nil {
 		return false, err
@@ -300,8 +306,7 @@ func (c *kubernetesVersionCheck) isAutomaticFromModuleAndClusterConfig(ctx conte
 	if !mcFound && !ccFound {
 		return false, nil
 	}
-	// Mirror global-hooks resolveTargetKubernetesVersion: Automatic iff nowhere pinned.
-	return !isPinnedKubernetesVersion(mcVersion) && !isPinnedKubernetesVersion(ccVersion), nil
+	return !isPinnedKubernetesVersion(ccVersion), nil
 }
 
 func (c *kubernetesVersionCheck) readModuleConfigKubernetesVersion(ctx context.Context) (version string, found bool, err error) {

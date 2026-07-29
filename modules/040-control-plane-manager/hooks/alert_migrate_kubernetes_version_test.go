@@ -81,10 +81,11 @@ data:
 		},
 		// Nothing migrated yet: ClusterConfiguration still drives the version.
 		Entry("CC pins a version, MC unset — fires", "1.34", "", true),
-		Entry("CC pins a version, MC is Automatic — fires", "1.34", "Automatic", true),
 
-		// ModuleConfig wins, so ClusterConfiguration is no longer consulted.
+		// ModuleConfig wins whenever the setting is present, so ClusterConfiguration is no longer
+		// consulted — including when the setting holds Automatic.
 		Entry("CC pins a version, MC overrides it — does not fire", "1.34", "1.35", false),
+		Entry("CC pins a version, MC is Automatic — does not fire", "1.34", "Automatic", false),
 
 		// Nothing to migrate: dropping the ClusterConfiguration field would change nothing.
 		// This is the case the previous, Values-based implementation got wrong — it fired here,

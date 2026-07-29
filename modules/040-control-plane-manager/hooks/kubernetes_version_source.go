@@ -30,6 +30,9 @@ import (
 // kube-system/d8-cluster-configuration Secret when it needs the raw, unresolved kubernetesVersion.
 const clusterConfigurationSecretSnapshot = "cluster_configuration_secret"
 
+// automaticKubernetesVersion is the sentinel meaning "let Deckhouse pick the version".
+const automaticKubernetesVersion = "Automatic"
+
 // KubernetesVersionMigratedRequirementKey is the requirements.SaveValue key that records whether
 // kubernetesVersion no longer depends on the deprecated ClusterConfiguration field.
 //
@@ -83,7 +86,7 @@ func rawClusterConfigurationVersion(input *go_hook.HookInput) string {
 // isPinnedKubernetesVersion reports whether a kubernetesVersion value names a concrete version, as
 // opposed to leaving the choice to Deckhouse ("Automatic" or unset).
 func isPinnedKubernetesVersion(version string) bool {
-	return version != "" && version != "Automatic"
+	return version != "" && version != automaticKubernetesVersion
 }
 
 // isKubernetesVersionMigrated reports whether the cluster's Kubernetes version no longer depends on
@@ -94,8 +97,14 @@ func isPinnedKubernetesVersion(version string) bool {
 // value would silently break this).
 //
 // Migrated means removing the ClusterConfiguration field would not change the effective version —
-// either the ModuleConfig pins it, so ClusterConfiguration is never consulted, or ClusterConfiguration
-// does not pin it either, so resolution lands on the Deckhouse default both before and after.
+// either the ModuleConfig setting is present, so ClusterConfiguration is never consulted, or
+// ClusterConfiguration does not pin a version either, so resolution lands on the Deckhouse default
+// both before and after.
+//
+// Presence, not pinning, is what makes the ModuleConfig authoritative: an explicit "Automatic"
+// there already means "track the Deckhouse default, ignore ClusterConfiguration" (see
+// resolveTargetKubernetesVersion in global-hooks/discovery/cluster_configuration.go), so such a
+// cluster has nothing left to migrate and must not be nagged by the alert or blocked at T+2.
 //
 // Two consumers must agree on this predicate: the migration reminder alert
 // (alert_migrate_kubernetes_version.go), which also publishes it via
@@ -105,5 +114,5 @@ func isPinnedKubernetesVersion(version string) bool {
 // a divergence would either alert clusters that have nothing to migrate, or block
 // their upgrade outright.
 func isKubernetesVersionMigrated(mcVersion, ccVersion string) bool {
-	return isPinnedKubernetesVersion(mcVersion) || !isPinnedKubernetesVersion(ccVersion)
+	return mcVersion != "" || !isPinnedKubernetesVersion(ccVersion)
 }

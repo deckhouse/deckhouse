@@ -44,6 +44,9 @@ const (
 
 	defaultVersionDriftMetricGroup = "D8ControlPlaneDefaultVersionDrift"
 	defaultVersionDriftMetricName  = "d8_control_plane_default_version_drift"
+
+	// automaticKubernetesVersion is the sentinel meaning "let Deckhouse pick the version".
+	automaticKubernetesVersion = "Automatic"
 )
 
 type ClusterConfigurationYaml struct {
@@ -181,7 +184,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		// Keep substituting Automatic → Default into global.clusterConfiguration for backward
 		// compatibility during the ClusterConfiguration.kubernetesVersion deprecation window.
 		// Declared target lives in global.discovery.targetKubernetesVersion instead.
-		if kubernetesVersionFromMetaConfig == "Automatic" {
+		if kubernetesVersionFromMetaConfig == automaticKubernetesVersion {
 			b, _ := json.Marshal(hooks.DefaultKubernetesVersion)
 			metaConfig.ClusterConfig["kubernetesVersion"] = b
 		}
@@ -242,20 +245,31 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 }
 
 // resolveTargetKubernetesVersion returns the operator-declared Kubernetes version and whether the
-// cluster is in Automatic mode (nowhere pinned). Preference: pinned ModuleConfig → pinned
-// ClusterConfiguration → Deckhouse default.
+// cluster is in Automatic mode (tracking the Deckhouse default).
+//
+// The ModuleConfig setting wins whenever it is present, including when it holds "Automatic" —
+// presence of the field, not its value, decides which document owns the version. Setting
+// "Automatic" there is a deliberate act meaning "let Deckhouse choose", so it must not silently
+// defer to a leftover ClusterConfiguration pin from bootstrap. The field has no schema default,
+// so it is never present unless someone wrote it.
+//
+// Only when ModuleConfig says nothing at all does the deprecated ClusterConfiguration field apply;
+// "Automatic" there is not a pin either and falls through to the Deckhouse default.
 func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string) (string, bool) {
-	if isPinnedKubernetesVersion(mcVersion) {
+	switch {
+	case mcVersion == automaticKubernetesVersion:
+		return defaultVersion, true
+	case mcVersion != "":
 		return mcVersion, false
-	}
-	if isPinnedKubernetesVersion(ccVersion) {
+	case isPinnedKubernetesVersion(ccVersion):
 		return ccVersion, false
+	default:
+		return defaultVersion, true
 	}
-	return defaultVersion, true
 }
 
 func isPinnedKubernetesVersion(version string) bool {
-	return version != "" && version != "Automatic"
+	return version != "" && version != automaticKubernetesVersion
 }
 
 // isMoreThanOneMinorBelow reports whether candidate is more than 1 minor version below current.

@@ -570,12 +570,18 @@ func TestKubernetesVersionResolution(t *testing.T) {
 		require.NoError(t, err)
 		return b
 	}
+	// An empty version models "the setting is absent", which is what the schema allows —
+	// kubernetesVersion is an enum without "" in it, so it can never be stored empty.
 	cpm := func(version string) *ModuleConfig {
+		settings := SettingsValues{}
+		if version != "" {
+			settings["kubernetesVersion"] = version
+		}
 		mc := &ModuleConfig{
 			Spec: ModuleConfigSpec{
 				Enabled:  boolPtr(true),
 				Version:  3,
-				Settings: SettingsValues{"kubernetesVersion": version},
+				Settings: settings,
 			},
 		}
 		mc.SetName("control-plane-manager")
@@ -606,10 +612,24 @@ func TestKubernetesVersionResolution(t *testing.T) {
 		require.Equal(t, "1.34", ccm["kubernetesVersion"])
 	})
 
-	t.Run("ModuleConfig Automatic defers to pinned ClusterConfiguration", func(t *testing.T) {
+	t.Run("ModuleConfig Automatic overrides a pinned ClusterConfiguration", func(t *testing.T) {
+		// Presence of the setting decides which document owns the version: an explicit Automatic
+		// means Default, so bootstrap starts on the same version Deckhouse will target afterwards.
 		m := &MetaConfig{
 			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
 			ModuleConfigs: []*ModuleConfig{cpm("Automatic")},
+		}
+		require.Equal(t, "", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
+	})
+
+	t.Run("unset ModuleConfig defers to pinned ClusterConfiguration", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("")},
 		}
 		require.Equal(t, "1.32", m.kubernetesVersionRaw())
 

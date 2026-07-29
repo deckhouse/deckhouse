@@ -101,6 +101,9 @@ const (
 	defaultClusterMasterAddress                = "127.0.0.1"
 	defaultClusterMasterRPPServerPort          = 5444
 	defaultClusterMasterRPPBootstrapServerPort = 4282
+
+	// automaticKubernetesVersion is the sentinel meaning "let Deckhouse pick the version".
+	automaticKubernetesVersion = "Automatic"
 )
 
 func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigValidatorProvider, m *MetaConfig) (*MetaConfig, error) {
@@ -635,22 +638,24 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 }
 
 func resolveKubernetesVersion(v string) string {
-	if v == "" || v == "Automatic" {
+	if v == "" || v == automaticKubernetesVersion {
 		return DefaultKubernetesVersion
 	}
 	return v
 }
 
 func isPinnedKubernetesVersion(version string) bool {
-	return version != "" && version != "Automatic"
+	return version != "" && version != automaticKubernetesVersion
 }
 
 // kubernetesVersionRaw returns the unresolved kubernetesVersion with the same preference as
-// global-hooks resolveTargetKubernetesVersion: pinned ModuleConfig → pinned
-// ClusterConfiguration → empty (nowhere pinned; resolveKubernetesVersion → Default).
+// global-hooks resolveTargetKubernetesVersion: a present ModuleConfig setting → pinned
+// ClusterConfiguration → empty (resolveKubernetesVersion turns empty into Default).
 //
-// "Automatic" is not a pin — MC Automatic must not hide a CC pin, or bootstrap would
-// start on Default while Deckhouse later targets the CC version.
+// The ModuleConfig setting wins whenever it is present, "Automatic" included: there it means
+// "let Deckhouse choose", so it returns empty here and bootstrap starts on Default — which is
+// exactly what the running Deckhouse will target afterwards. A leftover ClusterConfiguration pin
+// is deliberately ignored in that case.
 //
 // An install config that pins the version only in ModuleConfig must still set
 // ModuleConfig.spec.enabled and ModuleConfig.spec.version — dhctl rejects ModuleConfigs
@@ -671,13 +676,16 @@ func (m *MetaConfig) kubernetesVersionRaw() string {
 		}
 	}
 
-	if isPinnedKubernetesVersion(mcVersion) {
+	switch {
+	case mcVersion == automaticKubernetesVersion:
+		return ""
+	case mcVersion != "":
 		return mcVersion
-	}
-	if isPinnedKubernetesVersion(ccVersion) {
+	case isPinnedKubernetesVersion(ccVersion):
 		return ccVersion
+	default:
+		return ""
 	}
-	return ""
 }
 
 func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {

@@ -226,7 +226,9 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	t.Run("п.2: setting Automatic while clearing a pin falls back to CC", func(t *testing.T) {
+	t.Run("switching a pin to Automatic is allowed and ignores a stale CC pin", func(t *testing.T) {
+		// Automatic hands the choice back to Deckhouse; the resolver no longer consults CC when
+		// the setting is present, and the Automatic path cannot drop below maxUsed-1 anyway.
 		handler := withObjs(t,
 			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
 			newClusterConfigurationSecret("1.32"),
@@ -234,6 +236,22 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 
 		newCfg := newControlPlaneManagerConfig("Automatic")
 		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
+	})
+
+	t.Run("dropping the setting from Automatic is checked against the CC fallback", func(t *testing.T) {
+		// Removing the field does change ownership back to ClusterConfiguration, so a stale pin
+		// there must not silently become the target.
+		handler := withObjs(t,
+			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecret("1.32"),
+		)
+
+		newCfg := newControlPlaneManagerConfig("")
+		oldCfg := newControlPlaneManagerConfig("Automatic")
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
 		resp := callHandler(t, handler, review)

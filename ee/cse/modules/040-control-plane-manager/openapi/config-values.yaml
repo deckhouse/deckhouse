@@ -392,9 +392,9 @@ properties:
     description: |
       Desired Kubernetes version of the control plane components.
 
-      If `Automatic` is specified (or the parameter is not set), Deckhouse selects the version considered stable for the current release. If the stable version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
+      If `Automatic` is specified, Deckhouse selects the version considered stable for the current release, and the deprecated `ClusterConfiguration.kubernetesVersion` is ignored. If the stable version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
 
-      If parameter not set, the value from `ClusterConfiguration.kubernetesVersion` is used (deprecated; if that is not set either, the current Deckhouse release's default version is used).
+      If the parameter is not set at all, the value from `ClusterConfiguration.kubernetesVersion` is used (deprecated); if that is not set either, the current Deckhouse release's default version is used.
 
       Downgrading more than 1 minor version below the highest version the cluster has ever run is forbidden.
     enum:

@@ -108,8 +108,9 @@ func TestConfigForControlPlaneTemplates_KubernetesVersionModuleConfigAutomatic(t
 
 	cfg := getTestTemplateConfig(t, m, "")
 
-	// Same as global resolveTargetKubernetesVersion: Automatic is not a pin, CC wins.
-	require.Equal(t, "1.32", cfg.ClusterConfiguration["kubernetesVersion"].(string))
+	// Same as global resolveTargetKubernetesVersion: a present ModuleConfig setting decides, and an
+	// explicit Automatic means the Deckhouse default — the CC pin is ignored.
+	require.Equal(t, config.DefaultKubernetesVersion, cfg.ClusterConfiguration["kubernetesVersion"].(string))
 }
 
 func TestConfigForControlPlaneTemplates_PartialResourcesRequests(t *testing.T) {

@@ -37,6 +37,9 @@ const (
 	kubeSystemNamespace            = "kube-system"
 	clusterConfigurationDataKey    = "cluster-configuration.yaml"
 	clusterKubernetesStatusDataKey = "status"
+
+	// automaticKubernetesVersion is the sentinel meaning "let Deckhouse pick the version".
+	automaticKubernetesVersion = "Automatic"
 )
 
 // clusterKubernetesStatus is the subset of ConfigMap d8-cluster-kubernetes data.status
@@ -50,9 +53,18 @@ type clusterKubernetesStatus struct {
 // kube-system/d8-cluster-kubernetes (the set update-observer publishes as Supported[maxUsed-1:]).
 // Explicit versions are also checked against module compatibility (validateKubernetesVersion).
 //
-// Automatic / unset values are not subject to membership. Removing a prior ModuleConfig pin
-// (or deleting the ModuleConfig) resolves the future effective version via ClusterConfiguration
-// and applies the same membership check, so a stale CC pin cannot silently become the target.
+// An explicit "Automatic" is deliberately exempt from membership. It means "track the Deckhouse
+// default", and that path cannot run away: effective_kubernetes_version.go refuses to unbump below
+// maxUsed-1, which is documented behaviour ("if the stable version is more than 1 minor below the
+// maximum ever used, the version is not changed automatically") and is signalled by
+// D8ControlPlaneDefaultVersionDrift. Rejecting it here would contradict that contract and leave
+// clusters pinned high unable to ever hand control back to Deckhouse.
+//
+// Removing the setting (or deleting the ModuleConfig) is a different matter: resolution then falls
+// back to the deprecated ClusterConfiguration field, whose leftover value from bootstrap can be
+// arbitrarily stale, so the future effective version is resolved and membership-checked. Note this
+// applies when the previous value was "Automatic" too — under presence-wins resolution, dropping
+// the field does change which document owns the version.
 //
 // Unchanged kubernetesVersion skips the check so edits to unrelated settings are not blocked by an
 // orphaned pin that fell outside availableVersions after the ConfigMap appeared or Supported shrank.
@@ -74,10 +86,13 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		fromFallback bool
 	)
 	switch {
-	case isPinnedKubernetesVersion(newVersion):
+	case newVersion == automaticKubernetesVersion:
+		// Handing the choice back to Deckhouse — self-limiting, see the doc comment above.
+		return nil, nil
+	case newVersion != "":
 		effective = newVersion
-	case isPinnedKubernetesVersion(oldVersion):
-		// Clearing or deleting an override: effective falls back to CC, then Automatic.
+	case oldVersion != "":
+		// Clearing or deleting the setting: effective falls back to CC, then the Deckhouse default.
 		ccVersion, ok := v.readRawClusterConfigurationVersion(ctx)
 		if !ok {
 			return nil, nil
@@ -88,7 +103,7 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		effective = ccVersion
 		fromFallback = true
 	default:
-		// Automatic / unset without clearing a prior pin (HV-06, HV-07).
+		// Never set on either side (HV-06, HV-07).
 		return nil, nil
 	}
 
@@ -134,8 +149,11 @@ func settingsKubernetesVersion(settings map[string]interface{}) string {
 	return version
 }
 
+// isPinnedKubernetesVersion reports whether a kubernetesVersion value names a concrete version.
+// Only ever applied to the ClusterConfiguration value here: for the ModuleConfig setting what
+// matters is presence, not pinning (see validateControlPlaneManagerKubernetesVersion).
 func isPinnedKubernetesVersion(version string) bool {
-	return version != "" && version != "Automatic"
+	return version != "" && version != automaticKubernetesVersion
 }
 
 // rawModuleConfigSettings returns spec.settings as stored on the object, without schema

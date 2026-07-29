@@ -260,6 +260,12 @@ func TestKubernetesVersionCheck_AutomaticDetection(t *testing.T) {
 			wantAutomatic: true,
 		},
 		{
+			// Presence of the MC setting decides; an explicit Automatic there overrides a CC pin.
+			name:          "no ConfigMap, MC Automatic wins over CC pin",
+			objects:       []client.Object{controlPlaneMC("Automatic"), clusterConfigSecret("1.33")},
+			wantAutomatic: true,
+		},
+		{
 			name:          "nothing present (managed cluster) → not Automatic, fail-open",
 			objects:       nil,
 			wantAutomatic: false,
