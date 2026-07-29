@@ -1314,7 +1314,7 @@ vcenter:
 			csiSecret := f.KubernetesResource("Secret", moduleNamespace, "csi-controller")
 			cloudConfig, err := base64.StdEncoding.DecodeString(csiSecret.Field("data.cloud-config").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(cloudConfig)).To(ContainSubstring("insecure-flag = 1"))
+			Expect(string(cloudConfig)).To(ContainSubstring("insecure-flag = true"))
 			Expect(string(cloudConfig)).ToNot(ContainSubstring("ca-file"))
 		})
 

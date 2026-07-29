@@ -21,7 +21,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"math/big"
 	"net/url"
 	"testing"
@@ -68,27 +67,14 @@ func newTestSoapClient(t *testing.T) *soap.Client {
 	return soap.NewClient(u, false)
 }
 
-func setSoapClientCA(soapClient *soap.Client, caBundle string) error {
-	if caBundle != "" {
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM([]byte(caBundle)) {
-			return fmt.Errorf("failed to parse CA bundle")
-		}
-
-		soapClient.DefaultTransport().TLSClientConfig.RootCAs = pool
-	}
-
-	return nil
-}
-
-func TestSetSoapClientCA(t *testing.T) {
+func TestSetCABundleIfNeed(t *testing.T) {
 	validCA := generateTestCAPEM(t)
 
 	t.Run("empty CA bundle leaves RootCAs untouched", func(t *testing.T) {
 		soapClient := newTestSoapClient(t)
 		before := soapClient.DefaultTransport().TLSClientConfig.RootCAs
 
-		if err := setSoapClientCA(soapClient, ""); err != nil {
+		if err := setCABundleIfNeed(soapClient, false, ""); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
@@ -100,7 +86,7 @@ func TestSetSoapClientCA(t *testing.T) {
 	t.Run("valid CA bundle configures RootCAs", func(t *testing.T) {
 		soapClient := newTestSoapClient(t)
 
-		if err := setSoapClientCA(soapClient, validCA); err != nil {
+		if err := setCABundleIfNeed(soapClient, false, validCA); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
@@ -117,9 +103,22 @@ func TestSetSoapClientCA(t *testing.T) {
 	t.Run("invalid CA bundle returns error", func(t *testing.T) {
 		soapClient := newTestSoapClient(t)
 
-		err := setSoapClientCA(soapClient, "not-a-valid-pem")
+		err := setCABundleIfNeed(soapClient, false, "not-a-valid-pem")
 		if err == nil {
 			t.Fatalf("expected error for invalid CA bundle")
+		}
+	})
+
+	t.Run("insecure flag skips CA bundle", func(t *testing.T) {
+		soapClient := newTestSoapClient(t)
+		before := soapClient.DefaultTransport().TLSClientConfig.RootCAs
+
+		if err := setCABundleIfNeed(soapClient, true, validCA); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if soapClient.DefaultTransport().TLSClientConfig.RootCAs != before {
+			t.Fatalf("RootCAs must not change when insecure is true")
 		}
 	})
 }

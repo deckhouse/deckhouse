@@ -1,5 +1,15 @@
 x-config-version: 2
 type: object
+not:
+  allOf:
+  - required: [caBundle]
+  - properties:
+      caBundle:
+        minLength: 1
+  - required: [insecure]
+  - properties:
+      insecure:
+        enum: [true]
 properties:
   host:
     type: string
@@ -109,6 +119,16 @@ properties:
     description: |
       Kubernetes load balancer support using NSX-T for the vSphere cloud controller manager.
     required: [defaultIpPoolName, tier1GatewayPath, user, password, host]
+    not:
+      allOf:
+      - required: [caBundle]
+      - properties:
+          caBundle:
+            minLength: 1
+      - required: [insecureFlag]
+      - properties:
+          insecureFlag:
+            enum: [true]
     properties:
       defaultIpPoolName:
         type: string

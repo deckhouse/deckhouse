@@ -1,5 +1,5 @@
 diff --git a/vsphere/config.go b/vsphere/config.go
-index 405322c0..69f1abbc 100644
+index 405322c0..6248b6b9 100644
 --- a/vsphere/config.go
 +++ b/vsphere/config.go
 @@ -3,7 +3,9 @@ package vsphere
@@ -70,7 +70,18 @@ index 405322c0..69f1abbc 100644
  	if err != nil {
  		return nil, err
  	}
-@@ -476,7 +487,7 @@ func (c *Config) SavedVimSessionOrNew(u *url.URL) (*govmomi.Client, error) {
+@@ -436,6 +447,10 @@ func (c *Config) LoadVimClient() (*govmomi.Client, error) {
+ 		return nil, nil
+ 	}
+ 
++	if err := setCABundleIfNeed(client.Client, c.InsecureFlag, c.CABundle); err != nil {
++		return nil, err
++	}
++
+ 	m := session.NewManager(client)
+ 	u, err := m.UserSession(context.TODO())
+ 	if err != nil {
+@@ -476,7 +491,7 @@ func (c *Config) SavedVimSessionOrNew(u *url.URL) (*govmomi.Client, error) {
  	}
  	if client == nil {
  		log.Printf("[DEBUG] Creating new SOAP API session on endpoint %s", c.VSphereServer)
@@ -79,7 +90,7 @@ index 405322c0..69f1abbc 100644
  		if err != nil {
  			return nil, fmt.Errorf("error setting up new vSphere SOAP client: %s", err)
  		}
-@@ -485,8 +496,14 @@ func (c *Config) SavedVimSessionOrNew(u *url.URL) (*govmomi.Client, error) {
+@@ -485,8 +500,14 @@ func (c *Config) SavedVimSessionOrNew(u *url.URL) (*govmomi.Client, error) {
  	return client, nil
  }
  
@@ -95,7 +106,7 @@ index 405322c0..69f1abbc 100644
  	vimClient, err := vim25.NewClient(ctx, soapClient)
  	if err != nil {
  		return nil, err
-@@ -511,6 +528,28 @@ func newClientWithKeepAlive(ctx context.Context, u *url.URL, insecure bool, keep
+@@ -511,6 +532,28 @@ func newClientWithKeepAlive(ctx context.Context, u *url.URL, insecure bool, keep
  	return c, nil
  }
  
