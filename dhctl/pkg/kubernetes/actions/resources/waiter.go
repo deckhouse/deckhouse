@@ -120,26 +120,26 @@ func (w *Waiter) ReadyAll(ctx context.Context) (bool, error) {
 	return len(w.checkers) == 0, nil
 }
 
-func (w *Waiter) ReadyAllWithRes(ctx context.Context) (bool, []string, []string, error) {
-	checkersToStay := make([]Checker, 0)
-	readyResources := make([]string, 0)
-	remainedResources := make([]string, 0)
+// The returned pending slice is the waiter's own list of remaining checks - read it, do not
+// append to or reorder it.
+func (w *Waiter) ReadyAllWithRes(ctx context.Context) (bool, []Checker, []Checker, error) {
+	readyCheckers := make([]Checker, 0)
+	remainedCheckers := make([]Checker, 0)
 
 	for _, c := range w.checkers {
 		ready, err := c.IsReady(ctx)
 		if err != nil {
-			return false, readyResources, remainedResources, err
+			return false, readyCheckers, remainedCheckers, err
 		}
 
 		if !ready {
-			checkersToStay = append(checkersToStay, c)
-			remainedResources = append(remainedResources, c.Name())
+			remainedCheckers = append(remainedCheckers, c)
 		} else {
-			readyResources = append(readyResources, c.Name())
+			readyCheckers = append(readyCheckers, c)
 		}
 	}
 
-	w.checkers = checkersToStay
+	w.checkers = remainedCheckers
 
-	return len(w.checkers) == 0, readyResources, remainedResources, nil
+	return len(w.checkers) == 0, readyCheckers, remainedCheckers, nil
 }
