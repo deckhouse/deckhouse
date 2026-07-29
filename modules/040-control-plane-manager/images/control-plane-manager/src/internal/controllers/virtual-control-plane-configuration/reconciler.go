@@ -163,6 +163,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	// Parent-side IPs nested apiserver must reach via konnectivity-agent-cp (destHost).
+	// Runs after bashible (and any future parent services) so ClusterIPs exist.
+	if res, err := r.reconcileKonnectivityAgentCPIdentifiers(ctx, vcp); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	if res, err := r.reconcileDeckhouse(ctx, vcp, albVIP); err != nil || !res.IsZero() {
 		return res, err
 	}
