@@ -15,8 +15,15 @@
 # limitations under the License.
 */}}
 
-target='{{.url}}'
+set -e
+
+target='{{ .url }}'
 target="${target#http://}"
 
-# Any HTTP response proves that the SSH channel is alive end-to-end.
-minget "$target" --timeout 5 >/dev/null
+minget_path="$(mktemp /tmp/dhctl-minget.XXXXXX)"
+trap 'rm -f "$minget_path"' EXIT
+
+printf '%s' '{{ .mingetBase64 }}' | base64 -d > "$minget_path"
+chmod 0700 "$minget_path"
+
+"$minget_path" "$target" --timeout 5 >/dev/null

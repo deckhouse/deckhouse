@@ -15,7 +15,15 @@
 # limitations under the License.
 */}}
 
+set -e
+
 target='{{ .url }}'
 target="${target#http://}"
 
-minget "$target" --fail --timeout 5 >/dev/null
+minget_path="$(mktemp /tmp/dhctl-minget.XXXXXX)"
+trap 'rm -f "$minget_path"' EXIT
+
+printf '%s' '{{ .mingetBase64 }}' | base64 -d > "$minget_path"
+chmod 0700 "$minget_path"
+
+"$minget_path" "$target" --fail --timeout 5 >/dev/null

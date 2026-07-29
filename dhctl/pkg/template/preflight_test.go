@@ -25,14 +25,17 @@ import (
 )
 
 func TestRenderAndSavePreflightReverseTunnelReachableScript(t *testing.T) {
-	// RenderAndSaveTemplate reads the template directly from disk. In the install
-	// container CandiDir resolves to options.DefaultCandiDir (/deckhouse/candi);
-	// when running the unit test we point it at the candi dir of this repo.
 	candiDir := options.DefaultCandiDir
 	if _, err := os.Stat(candiDir); err != nil {
 		candiDir, err = filepath.Abs(filepath.Join("..", "..", "..", "candi"))
 		require.NoError(t, err)
 	}
+
+	// Render uses minget.Bytes. Point it to a small test file instead of
+	// requiring the real embedded minget binary to be prepared.
+	mingetPath := filepath.Join(t.TempDir(), "minget")
+	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o755))
+	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
 	path, err := RenderAndSavePreflightReverseTunnelReachableScript(
 		t.Context(),
@@ -48,10 +51,15 @@ func TestRenderAndSavePreflightReverseTunnelReachableScript(t *testing.T) {
 
 	require.Contains(t, s, `target='http://127.0.0.1:4282/healthz'`)
 	require.Contains(t, s, `target="${target#http://}"`)
-	require.Contains(t, s, `minget "$target" --timeout 5 >/dev/null`)
+
+	require.Contains(t, s, `minget_path="$(mktemp /tmp/dhctl-minget.XXXXXX)"`)
+	require.Contains(t, s, `trap 'rm -f "$minget_path"' EXIT`)
+	require.Contains(t, s, `base64 -d > "$minget_path"`)
+	require.Contains(t, s, `chmod 0700 "$minget_path"`)
+	require.Contains(t, s, `"$minget_path" "$target" --timeout 5 >/dev/null`)
 
 	require.NotContains(t, s, "check_python")
 	require.NotContains(t, s, "python_binary")
 	require.NotContains(t, s, "urllib")
-	require.NotContains(t, s, `minget "$target" --fail`)
+	require.NotContains(t, s, `"$minget_path" "$target" --fail`)
 }
