@@ -10,9 +10,9 @@ security.deckhouse.io/security-policy-exception: capv-controller-manager
 
 {{- define "capv_controller_manager_args" -}}
 - "--leader-elect"
-- "--health-addr=:4224"
-- "--webhook-port=4222"
-- "--diagnostics-address=:4223"
+- "--health-addr=:4272"
+- "--webhook-port=4270"
+- "--diagnostics-address=:4271"
 - "--insecure-diagnostics=false"
 - "--v=4"
 {{- end -}}
@@ -34,13 +34,13 @@ security.deckhouse.io/security-policy-exception: capv-controller-manager
 
 {{- define "capv_controller_manager_ports" -}}
 - name: webhook-server
-  containerPort: 4222
+  containerPort: 4270
   protocol: TCP
 - name: healthz
-  containerPort: 4224
+  containerPort: 4272
   protocol: TCP
 - name: metrics
-  containerPort: 4223
+  containerPort: 4271
   protocol: TCP
 {{- end -}}
 
@@ -60,7 +60,7 @@ security.deckhouse.io/security-policy-exception: capv-controller-manager
 {{- define "capv_controller_manager_liveness_probe" -}}
 httpGet:
   path: "/healthz"
-  port: 4224
+  port: 4272
 initialDelaySeconds: 15
 periodSeconds: 20
 {{- end -}}
@@ -68,7 +68,7 @@ periodSeconds: 20
 {{- define "capv_controller_manager_readiness_probe" -}}
 httpGet:
   path: "/readyz"
-  port: 4224
+  port: 4272
 initialDelaySeconds: 5
 periodSeconds: 10
 {{- end -}}
