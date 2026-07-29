@@ -109,7 +109,7 @@ status:
       reason: "RBAC: allowed by ClusterRoleBinding..."
     - allowed: false
       denied: true
-      reason: "user has no access to the namespace"
+      reason: "either you have no access to the namespace or the namespace does not exist"
 ```
 
 ### Resource: `WhoCan`
