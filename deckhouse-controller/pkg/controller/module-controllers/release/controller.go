@@ -644,7 +644,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	// (by module config, by bundle or by an enabled script) - EnabledByModuleManager
 	// reflects the effective enabled state, unlike EnabledByModuleConfig which is only
 	// set for modules enabled explicitly via a ModuleConfig
-	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
+	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) && !r.installer.IsEmbeddedPresent(release.GetModuleName()) {
 		if err = utils.EnsureModuleDocumentationForRelease(ctx, r.client, release); err != nil {
 			r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
 
