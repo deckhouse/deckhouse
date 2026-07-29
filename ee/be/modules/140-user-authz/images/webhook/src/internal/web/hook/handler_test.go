@@ -280,7 +280,6 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				// Отказ не должен отличать несуществующий namespace от закрытого.
 				Reason: noNamespaceAccessReason,
 			},
 		},
