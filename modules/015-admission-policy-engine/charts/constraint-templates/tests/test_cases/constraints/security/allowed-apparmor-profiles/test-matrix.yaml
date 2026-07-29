@@ -716,3 +716,24 @@ spec:
                   name: nginx
       exception: ''
       exceptionRef: ''
+    - name: controller-misplaced-apparmor-annotation-on-top-level-metadata
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.metadata.annotations
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-misplaced-apparmor-on-top-level
+            annotations:
+              container.apparmor.security.beta.kubernetes.io/nginx: unconfined
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx

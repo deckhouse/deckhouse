@@ -82,6 +82,27 @@ spec:
             containers:
             - name: nginx
               image: nginx
+    - name: example-absent-priority-class
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.priorityClassName
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: ''
+        merge:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: absent-priority-class
+            namespace: default
+          spec:
+            containers:
+            - name: nginx
+              image: nginx
   - name: pss-controller-deployment
     gatorBlock: pss-controller-deployment
     template: ../rendered/constraint-template.yaml

@@ -49,10 +49,15 @@ pod_spec := out if {
   out := pod_spec_for_kind(obj, kind)
 }
 
-pod_spec := {} if {
+# For unknown/absent kind, fall back to object.spec instead of {}.
+# This prevents fail-open: if pod_spec is {}, input_containers is empty
+# and every container-level check silently passes.
+# For security modules, an unrecognised input should not mean "allowed".
+pod_spec := out if {
   obj := object.get(input.review, "object", {})
   kind := object.get(obj, "kind", "")
   not workload_kind(kind)
+  out := object.get(obj, "spec", {})
 }
 
 pod_spec_for_kind(obj, "Pod") := out if {
@@ -189,13 +194,25 @@ merge_label_value(base, override, k) := v if {
 }
 
 # Effective labels for SPE resolution from input.review.object.
-# Merges top-level metadata.labels with pod template metadata.labels.
-# Pod template labels take precedence.
+# For Pods: uses the pod's own metadata.labels.
+# For controllers (Deployment, etc.): uses ONLY the pod template's
+# metadata.labels (spec.template.metadata.labels), NOT the controller's
+# top-level labels. This is because SPE labels on a controller's top-level
+# metadata do not propagate to the pods it creates — they only exist on
+# the controller object itself. Using top-level labels would cause the
+# controller to pass while the actual pods are still denied.
 object_labels := labels if {
   obj := object.get(input.review, "object", {})
-  top := object.get(obj, ["metadata", "labels"], {})
-  tmpl := pod_template_metadata_labels
-  labels := merge_labels(top, tmpl)
+  kind := object.get(obj, "kind", "")
+  kind == "Pod"
+  labels := object.get(obj, ["metadata", "labels"], {})
+}
+
+object_labels := labels if {
+  obj := object.get(input.review, "object", {})
+  kind := object.get(obj, "kind", "")
+  kind != "Pod"
+  labels := pod_template_metadata_labels
 }
 
 # Effective namespace for SPE resolution from input.review.object.
@@ -206,11 +223,18 @@ object_namespace := ns if {
 
 # Effective labels for SPE resolution from a given object.
 # Used by library functions that receive obj as a parameter.
+# For Pods: uses the pod's own metadata.labels.
+# For controllers: uses ONLY the pod template's metadata.labels.
 effective_labels(obj) := labels if {
-  top := object.get(obj, ["metadata", "labels"], {})
   kind := object.get(obj, "kind", "")
-  tmpl := effective_pod_template_labels_for_kind(obj, kind)
-  labels := merge_labels(top, tmpl)
+  kind == "Pod"
+  labels := object.get(obj, ["metadata", "labels"], {})
+}
+
+effective_labels(obj) := labels if {
+  kind := object.get(obj, "kind", "")
+  kind != "Pod"
+  labels := effective_pod_template_labels_for_kind(obj, kind)
 }
 
 effective_pod_template_labels_for_kind(obj, "Pod") := {} if {
@@ -252,14 +276,24 @@ pod_template_metadata_for_kind(obj, kind) := meta if {
 }
 
 # Effective metadata for annotation resolution from input.review.object.
-# Merges top-level metadata with pod template metadata.
-# Pod template metadata takes precedence (annotations on pods created by controllers
-# should be on the pod template, not the controller's top-level metadata).
+# For Pods: uses the pod's own metadata.
+# For controllers (Deployment, etc.): uses ONLY the pod template's metadata
+# (spec.template.metadata), NOT the controller's top-level metadata.
+# This prevents false positives where a misplaced annotation (e.g.
+# container.apparmor.security.beta.kubernetes.io/<name>) on the controller's
+# top-level metadata causes a denial even though the pods would never carry it.
 effective_metadata := meta if {
   obj := object.get(input.review, "object", {})
-  top := object.get(obj, "metadata", {})
-  tmpl := pod_template_metadata
-  meta := merge_metadata(top, tmpl)
+  kind := object.get(obj, "kind", "")
+  kind == "Pod"
+  meta := object.get(obj, "metadata", {})
+}
+
+effective_metadata := meta if {
+  obj := object.get(input.review, "object", {})
+  kind := object.get(obj, "kind", "")
+  kind != "Pod"
+  meta := pod_template_metadata
 }
 
 merge_metadata(base, override) := merged if {
