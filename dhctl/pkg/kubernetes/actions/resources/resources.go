@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
@@ -327,21 +326,15 @@ func CreateResourcesLoop(
 
 	// List each object on its own line so operators see which resources are actually
 	// applied. The old output deduplicated by GVK, hiding distinct instances (a single
-	// "Kind=ModuleConfig" line stood in for 15 different ModuleConfigs). Labels are padded
-	// to a common width so the instance names line up in a column.
+	// "Kind=ModuleConfig" line stood in for 15 different ModuleConfigs).
 	labels := make([]string, len(resourceCreator.resources))
 	names := make([]string, len(resourceCreator.resources))
-	maxLabel := 0
+
 	for i, resource := range resourceCreator.resources {
 		labels[i], names[i] = resourceListParts(resource)
-		if len(labels[i]) > maxLabel {
-			maxLabel = len(labels[i])
-		}
 	}
-	resourcesToCreate := make([]string, len(resourceCreator.resources))
-	for i := range resourcesToCreate {
-		resourcesToCreate[i] = fmt.Sprintf("%-*s %s", maxLabel, labels[i], names[i])
-	}
+
+	resourcesToCreate := alignedLines(labels, names)
 
 	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resources to create", func(ctx context.Context) error {
 		dhlog.FromContext(ctx).InfoContext(ctx, strings.Join(resourcesToCreate, "\n"))
@@ -349,7 +342,8 @@ func CreateResourcesLoop(
 	})
 
 	attempt := 0
-	createdResources := make([]string, 0, len(resourceCreator.resources))
+	createdCheckers := make([]Checker, 0, len(checkers))
+
 	for {
 		iterCtx, iterSpan := telemetry.StartSpan(ctx, "createResources.iteration")
 		iterSpan.SetAttributes(otattribute.Int("attempt", attempt))
@@ -366,29 +360,22 @@ func CreateResourcesLoop(
 			return err
 		}
 
-		ready, res, remained, errWaiter := waiter.ReadyAllWithRes(iterCtx)
+		ready, readyNow, remained, errWaiter := waiter.ReadyAllWithRes(iterCtx)
 		if errWaiter != nil {
 			iterSpan.End()
 			return errWaiter
 		}
 
-		if len(res) > 0 {
-			createdResources = append(createdResources, res...)
-		}
+		createdCheckers = append(createdCheckers, readyNow...)
 
 		iterSpan.SetAttributes(
 			otattribute.Int("pending_count", len(remained)),
-			otattribute.Int("created_count", len(createdResources)),
+			otattribute.Int("created_count", len(createdCheckers)),
 			otattribute.Bool("all_ready", ready),
 		)
 
 		if len(remained) > 0 && attempt%10 == 0 {
-			msg := make(map[string][]string)
-			msg["remained"] = remained
-			if len(createdResources) > 0 {
-				msg["created"] = createdResources
-			}
-			logResources(iterCtx, msg)
+			logResources(iterCtx, remained, createdCheckers)
 		}
 		iterSpan.End()
 		if ready && err == nil {
@@ -409,7 +396,7 @@ func CreateResourcesLoop(
 							"This is usually caused by the absence of worker nodes in the cluster. "+
 							"Add at least one worker node or remove the taints from the master node "+
 							"(in the case of a single-node installation).",
-						timeout, strings.Join(remained, "\n")))
+						timeout, strings.Join(checkerLines(remained), "\n")))
 					return nil
 				})
 
@@ -428,36 +415,42 @@ func CreateResourcesLoop(
 	}
 }
 
-func logResources(ctx context.Context, res map[string][]string) {
+func logResources(ctx context.Context, remained, created []Checker) {
+	remained, created = objectChecks(remained), objectChecks(created)
+	if len(remained) == 0 && len(created) == 0 {
+		return
+	}
+
 	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resource readiness check", func(ctx context.Context) error {
-		remained, ok := res["remained"]
-		if ok {
-			for i, s := range remained {
-				if strings.Contains(s, "cluster") {
-					remained = slices.Delete(remained, i, i+1)
-				}
-			}
-			_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resource not ready", func(ctx context.Context) error {
-				dhlog.FromContext(ctx).InfoContext(ctx, strings.Join(remained, "\n"))
-				return nil
-			})
-		}
-
-		created, ok := res["created"]
-		if ok {
-			for i, s := range created {
-				if strings.Contains(s, "cluster") {
-					created = slices.Delete(created, i, i+1)
-				}
-			}
-			_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resource ready", func(ctx context.Context) error {
-				dhlog.FromContext(ctx).InfoContext(ctx, strings.Join(created, "\n"))
-				return nil
-			})
-		}
-
+		logCheckerList(ctx, "Resource not ready", remained)
+		logCheckerList(ctx, "Resource ready", created)
 		return nil
 	})
+}
+
+func logCheckerList(ctx context.Context, title string, checkers []Checker) {
+	if len(checkers) == 0 {
+		return
+	}
+
+	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), title, func(ctx context.Context) error {
+		dhlog.FromContext(ctx).InfoContext(ctx, strings.Join(checkerLines(checkers), "\n"))
+		return nil
+	})
+}
+
+// The readiness listings answer "how far along are my resources", so they drop the checks that
+// stand for no applied object. Returning a fresh slice is required: the caller's slices are owned
+// by CreateResourcesLoop and live across its iterations.
+func objectChecks(checkers []Checker) []Checker {
+	listed := make([]Checker, 0, len(checkers))
+	for _, c := range checkers {
+		if _, ok := c.(*resourceReadinessChecker); ok {
+			listed = append(listed, c)
+		}
+	}
+
+	return listed
 }
 
 func getUnstructuredName(obj *unstructured.Unstructured) string {
@@ -485,6 +478,38 @@ func resourceListParts(r *template.Resource) (string, string) {
 		name = ns + "/" + name
 	}
 	return label, name
+}
+
+func checkerLines(checkers []Checker) []string {
+	labels := make([]string, len(checkers))
+	names := make([]string, len(checkers))
+
+	for i, c := range checkers {
+		switch check := c.(type) {
+		case *resourceReadinessChecker:
+			labels[i], names[i] = resourceListParts(check.resource)
+		case *clusterIsBootstrapCheck:
+			// Waits for the d8-cluster-is-bootstraped ConfigMap, which Deckhouse creates once the
+			// first Ready non-master node has joined (global-hooks/cluster_is_bootstrapped.go).
+			labels[i], names[i] = "Cluster bootstrap:", "waiting for a Ready worker node"
+		}
+	}
+
+	return alignedLines(labels, names)
+}
+
+func alignedLines(labels, names []string) []string {
+	width := 0
+	for _, label := range labels {
+		width = max(width, len(label))
+	}
+
+	lines := make([]string, len(labels))
+	for i := range labels {
+		lines[i] = fmt.Sprintf("%-*s %s", width, labels[i], names[i])
+	}
+
+	return lines
 }
 
 func DeleteResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources) error {
