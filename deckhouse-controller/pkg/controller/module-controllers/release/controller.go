@@ -648,8 +648,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, fmt.Errorf("get module: %w", err)
 	}
 
-	isEmbedded := module.IsEmbedded() && r.installer.IsEmbeddedPresent(release.GetModuleName())
-	if !isEmbedded {
+	if !r.installer.IsEmbeddedPresent(release.GetModuleName()) {
 		// mpo not found and module is not embedded - update the docs from the module release version
 		if err := utils.EnsureModuleDocumentation(ctx, r.client, release.GetModuleName(), release.GetModuleSource(), moduleChecksum, moduleVersion, modulePath, ownerRef); err != nil {
 			r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
