@@ -97,7 +97,7 @@ spec:
                     allowedHostPaths:
                       type: array
                       description: |
-                        The list of allowed path prefixes for hostPath mounts. An empty list (`[]`) forbids hostPath for all paths. If the field is omitted, there are no restrictions.
+                        The list of allowed path prefixes for `hostPath` mounts. An empty list (`[]`) forbids `hostPath` for all paths. If the field is omitted, no restrictions apply.
                       x-doc-examples: [[{"pathPrefix":"/dev", "readOnly": true}]]
                       items:
                         type: object

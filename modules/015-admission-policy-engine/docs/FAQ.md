@@ -271,7 +271,7 @@ To apply only the required security policies without turning off the entire buil
 1. Add a label to your namespace that matches the `namespaceSelector` in the SecurityPolicy. In the examples below, the label is `security-policy.deckhouse.io/baseline-enabled: "true"` or `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
 {% alert level="info" %}
-The `allowedHostPaths` field defines the list of allowed path prefixes for hostPath mounts. An empty list (`[]`) forbids hostPath for all paths. If the field is omitted, there are no restrictions.
+The `allowedHostPaths` field defines the list of allowed path prefixes for `hostPath` mounts. An empty list (`[]`) forbids `hostPath` for all paths. If the field is omitted, no restrictions apply.
 {% endalert %}
 
 SecurityPolicy that matches baseline:

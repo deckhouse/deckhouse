@@ -271,7 +271,7 @@ spec:
 1. Добавьте в неймспейс дополнительный лейбл, который будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
 {% alert level="info" %}
-Поле `allowedHostPaths` определяет список разрешённых префиксов путей для монтирования hostPath. Если указан пустой список (`[]`), использование hostPath запрещено для всех путей. Если поле отсутствует, ограничений нет.
+Поле `allowedHostPaths` определяет список разрешённых префиксов путей для монтирования `hostPath`. Если указан пустой список (`[]`), использование `hostPath` запрещено для всех путей. Если поле отсутствует, ограничения не применяются.
 {% endalert %}
 
 SecurityPolicy, соответствующая baseline:
