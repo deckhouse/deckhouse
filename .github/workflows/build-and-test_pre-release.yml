@@ -232,8 +232,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -639,8 +639,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -828,8 +828,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -994,8 +994,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -1413,8 +1413,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -1832,8 +1832,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -2251,8 +2251,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -2670,8 +2670,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -3089,8 +3089,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -3444,8 +3444,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -4488,8 +4488,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -4625,8 +4625,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -4772,8 +4772,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
