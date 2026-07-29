@@ -539,17 +539,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/110-istio/templates/config-analyzer
-  to: /deckhouse/modules/110-istio/templates/config-analyzer
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/110-istio/templates/control-plane-ee
   to: /deckhouse/modules/110-istio/templates/control-plane-ee
   excludePaths:
@@ -663,11 +652,6 @@
         - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
-  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
   stageDependencies:
     install:
         - '**/*'
