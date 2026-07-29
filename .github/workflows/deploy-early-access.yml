@@ -1436,7 +1436,7 @@ jobs:
           if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}k/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
           elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
@@ -1572,7 +1572,7 @@ jobs:
           if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
             echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}k/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
           elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
