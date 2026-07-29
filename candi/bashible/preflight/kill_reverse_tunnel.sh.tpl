@@ -45,7 +45,7 @@ for fd in /proc/[0-9]*/fd/*; do
     pid="${pid%%/*}"
 
     echo "$pid"
-    kill -9 "$pid" 2>/dev/null
+    nohup sh -c "sleep 1; kill -9 '$pid'" >/dev/null 2>&1 &
     exit 0
 done
 
