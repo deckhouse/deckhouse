@@ -38,7 +38,7 @@ type kindCoverageDoc struct {
 		Blocks []struct {
 			Name              string `yaml:"name"`
 			DefaultObjectBase string `yaml:"defaultObjectBase"`
-			Cases []struct {
+			Cases             []struct {
 				Name   string `yaml:"name"`
 				Object struct {
 					Base string `yaml:"base"`

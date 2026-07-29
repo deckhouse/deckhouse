@@ -13,12 +13,12 @@ spec:
   objectFields:
     - path: spec.containers[].readinessProbe
       level: container
-      containerScope: containers
+      containerScope: Containers
       description: Container must define readinessProbe when it is required by constraint parameters.
       requiredScenarios: [positive, negative, initContainer]
     - path: spec.containers[].livenessProbe
       level: container
-      containerScope: containers
+      containerScope: Containers
       description: Container must define livenessProbe when it is required by constraint parameters.
       requiredScenarios: [positive, negative, initContainer]
   applicableTracks:
