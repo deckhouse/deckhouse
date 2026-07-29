@@ -39,7 +39,10 @@ description: Архитектура компонента Virtualization API мо
    Субресурсами управляет компонент virtualization-api.
 
 Компонент Virtualization API модуля для управления ВМ, дисками и образами ВМ использует в качестве бэкенда кастомные ресурсы KubeVirt.
+
+{% alert level="info" %}
 [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления.
+{% endalert %}
 
 ## Архитектура Virtualization API
 
@@ -71,8 +74,7 @@ Virtualization API состоит из следующих компонентов
      В качестве бэкенда virtualization-controller использует кастомные ресурсы из API-группы `kubevirt.io`.
 
    - валидация ресурсов из API-группы `virtualization.deckhouse.io` с помощью механизма [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/);
-   - запуск подов`dvcr-importer` и `dvcr-uploader` для выполнения сценариев импорта и загрузки дисков и образов ВМ в хранилище образов DVCR.
-     [DVCR (или Deckhouse Virtualization Container Registry)](dvcr.html) — специализированный реестр для хранения и кеширования образов ВМ.
+   - запуск подов `dvcr-importer`, `dvcr-uploader`, `pvc-importer` и др. для выполнения сценариев импорта и загрузки дисков и образов ВМ. Подробнее с описанием импорта и загрузки образов и дисков ВМ можно ознакомиться [на соответствующей странице документации](import.html);
    - выполнение операций над ВМ посредством запросов к некоторым субресурсам API-группы `subresources.virtualization.deckhouse.io`, например `virtualmachines/freeze` и `virtualmachines/unfreeze`.
 
    Компонент содержит следующие контейнеры:

@@ -35,13 +35,13 @@ DVCR consists of the following components:
 1. **Dvcr-importer**: *Temporary* pod that consists of a single container, run by the virtualization controller to implement various scenarios for importing VM images and disks, such as:
 
    - Import of a VM disk or image from external sources (HTTP source available via URL or container registry) to the DVCR registry.
-   - Import of a VM image from external sources (HTTP source available via URL or container registry) into the PVC volume. Dvcr-importer does not directly import the disk into PVC volume. It uploads the source to the DVCR registry. Next, the InternalVirtualizationDataVolume resource is created, and then [CDI](cdi.html) imports the image from DVCR storage into PVC volume.
+   - Import of a VM image from external sources (HTTP source available via URL or container registry) into the PVC volume.
    - Import of a VM image from VirtualImage, ClusterVirtualImage, VirtualDisk or VirtualDiskSnapshot resources to DVCR registry.
 
 1. **Dvcr-uploader**: *Temporary* pod that consists of a single container, run by the virtualization controller to implement following scenarios for user to upload VM images and disks, such as:
 
    - Upload to DVCR.
-   - Upload into PVC volume. Dvcr-uploader does not directly upload the disk into PVC volume. It uploads the source to the DVCR registry. Next, the InternalVirtualizationDataVolume resource is created, and then [CDI](cdi.html) imports the image from DVCR storage into PVC volume.
+   - Upload into PVC volume.
 
 ## DVCR interactions
 
@@ -54,4 +54,4 @@ The following external components interact with the DVCR component:
 
 1. **Virtualization-controller**: Starts the dvcr-importer and dvcr-uploader pods to run scripts for VM disks and images import and download.
 1. **Ingress-controller**: Forwards user requests to upload a VM disk or image to the DVCR storage via the dvcr-uploader service HTTP endpoint.
-1. **Cdi-importer**: Uses images stored in DVCR as a source for InternalVirtualizationDataVolume resources.
+
