@@ -285,3 +285,23 @@ spec:
                 automountServiceAccountToken: false
       exception: ''
       exceptionRef: ''
+    - name: controller-disallowed-automount-true
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.automountServiceAccountToken
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-disallowed-automount-true
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                automountServiceAccountToken: true

@@ -215,3 +215,22 @@ spec:
                       memory: 256Mi
       exception: ''
       exceptionRef: ''
+    - name: controller-allowed-deployment-without-resources
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].resources
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-without-resources
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx

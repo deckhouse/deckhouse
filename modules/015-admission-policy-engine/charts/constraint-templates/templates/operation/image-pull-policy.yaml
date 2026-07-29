@@ -37,13 +37,19 @@ spec:
             rego: |
               package d8.operation_policies
 
-              import data.lib.common.input_containers
+              import data.lib.common.pod_spec
 
+              # Image pull policy is only meaningful for regular containers.
+              # We check only pod_spec.containers (not initContainers/ephemeralContainers)
+              # and only when imagePullPolicy is explicitly set on the container.
+              # When imagePullPolicy is absent, Kubernetes defaults it based on the
+              # image tag, so we do not produce a violation.
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 required := input.parameters.policy
-                container := input_containers[_]
-                provided := object.get(container, "imagePullPolicy", "")
+                container := pod_spec.containers[_]
+                has_field(container, "imagePullPolicy")
+                provided := container.imagePullPolicy
                 required != provided
                 msg := sprintf("Container <%v> in your %v <%v> has invalid pull policy: <%v>", [container.name, input.review.kind.kind, input.review.object.metadata.name, provided])
               }

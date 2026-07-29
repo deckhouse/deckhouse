@@ -76,6 +76,24 @@ spec:
             - name: nginx
               image: nginx
               imagePullPolicy: IfNotPresent
+    - name: example-absent-image-pull-policy
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].imagePullPolicy
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: absent-image-pull-policy
+          spec:
+            containers:
+            - name: nginx
+              image: nginx
   - name: pss-controller-deployment
     gatorBlock: pss-controller-deployment
     template: ../rendered/constraint-template.yaml

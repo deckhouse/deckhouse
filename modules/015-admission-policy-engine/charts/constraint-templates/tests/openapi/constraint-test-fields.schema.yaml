@@ -50,6 +50,30 @@ properties:
         description: Optional SecurityPolicyException fields and required SPE scenarios.
         items:
           $ref: "#/definitions/speField"
+      objectKinds:
+        type: array
+        description: |
+          Required Kubernetes object kinds that must be covered by test cases
+          (e.g. Pod, Deployment, StatefulSet). The coverage tool cross-checks
+          each declared kind against the actual kinds used in test-matrix cases.
+          This catches missing controller-level test coverage (e.g. a rule that
+          was extended to match Deployments but has no Deployment test case).
+        items:
+          type: string
+          minLength: 1
+        uniqueItems: true
+      operations:
+        type: array
+        description: |
+          Required admission operations that must be covered by test cases
+          (CREATE, UPDATE, DELETE). The coverage tool reports missing
+          operations until the test-matrix schema gains per-case operation
+          fields. This catches the H3 class of bug (is_update guard skips
+          controller-level UPDATE checks).
+        items:
+          type: string
+          enum: [CREATE, UPDATE, DELETE]
+        uniqueItems: true
       applicableTracks:
         type: object
         description: Enabled test tracks. At least one track must be explicitly true.
@@ -99,7 +123,27 @@ definitions:
           - initContainer
       defaultBehavior:
         type: string
-        description: Optional textual note about policy behavior when field is absent/default.
+        description: |
+          Policy behavior when the field is absent. When set to "undefined",
+          the coverage tool auto-requires the "absent" scenario to catch
+          regressions where object.get(..., "") turns a previously-undefined
+          field into a concrete value that triggers a false-positive violation.
+        enum:
+          - undefined
+          - violates
+          - passthrough
+      containerScope:
+        type: string
+        description: |
+          Which container arrays the rule iterates over. Used to verify that
+          test cases exercise each declared scope. Catches the C1/H3 class
+          of bug where input_containers silently expands from containers to
+          containers+initContainers+ephemeralContainers.
+        enum:
+          - containers
+          - containers+initContainers
+          - containers+initContainers+ephemeralContainers
+          - containers+sidecarInitContainers
       description:
         type: string
         description: Human-readable explanation of why this field matters.

@@ -39,7 +39,11 @@ spec:
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
-                priority_class := object.get(pod_spec, "priorityClassName", "")
+                # Only check when priorityClassName is explicitly set.
+                # The Priority admission plugin does not default priorityClassName,
+                # so an absent field means "no priority class" and should not fire.
+                has_field(pod_spec, "priorityClassName")
+                priority_class := pod_spec.priorityClassName
                 not list_contains(input.parameters.priorityClassNames, priority_class)
                 msg := sprintf("Pod <%v> has invalid priority class: %v, allowed: %v", [input.review.object.metadata.name, priority_class, input.parameters.priorityClassNames])
               }
