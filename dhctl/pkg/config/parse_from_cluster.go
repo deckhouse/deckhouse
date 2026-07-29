@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
@@ -132,6 +134,14 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, mc)
 	}
 
+	// Load the global ModuleConfig so the cluster prefix (spec.settings.prefix) —
+	// the new home for the deprecated ClusterConfiguration.cloud.prefix — is
+	// available to prefix resolution during converge/destroy, just like at
+	// bootstrap (where it comes from config.yml).
+	if gmc := loadGlobalModuleConfig(ctx, f.kubeCl); gmc != nil {
+		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, gmc)
+	}
+
 	pcc, err := loadLegacyProviderClusterConfig(ctx, f.kubeCl, f.schemaStore)
 	if err != nil {
 		return nil, err
@@ -150,6 +160,32 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 	}
 
 	return nil, nil
+}
+
+// loadGlobalModuleConfig fetches the global ModuleConfig from the cluster. It
+// deserialises without full schema validation because it is only consulted for
+// spec.settings.prefix (cluster prefix resolution); a not-found global
+// ModuleConfig is not an error. This must not be able to block converge/destroy.
+func loadGlobalModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient) *ModuleConfig {
+	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, "global", metav1.GetOptions{})
+	if err != nil {
+		if !k8serrors.IsNotFound(err) {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+				"failed to read global ModuleConfig, falling back to ClusterConfiguration.cloud.prefix: %v", err))
+		}
+		return nil
+	}
+	raw, err := json.Marshal(obj.Object)
+	if err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to marshal global ModuleConfig: %v", err))
+		return nil
+	}
+	mc := &ModuleConfig{}
+	if err := json.Unmarshal(raw, mc); err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to parse global ModuleConfig: %v", err))
+		return nil
+	}
+	return mc
 }
 
 func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, schemaStore *SchemaStore) (*ModuleConfig, error) {

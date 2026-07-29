@@ -1,0 +1,14 @@
+cloudInstances:
+  zones:
+  - a
+cri:
+  type: Containerd
+engine: CAPI
+instanceClass: null
+kubernetesVersion: "1.32"
+manualRolloutID: ""
+name: worker-nil-class
+nodeType: CloudEphemeral
+serializedLabels: node.deckhouse.io/group=worker-nil-class
+serializedTaints: ""
+updateEpoch: "1005"

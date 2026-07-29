@@ -53,7 +53,11 @@
 
     {{- if or (isset $versionSchema "x-doc-examples") (isset $versionSchema "x-doc-example") (isset $versionSchema "example") (isset $versionSchema "x-examples") }}
       {{- $linkAnchor := printf "%s-%s" $kindDowncase $versionName }}
-      {{- template "format-example" ( dict "attributes" $versionSchema "linkAnchor" $linkAnchor "name" "" ) }}
+      {{- $langSchema := dict }}
+      {{- if and $langVersionData.schema $langVersionData.schema.openAPIV3Schema }}
+        {{- $langSchema = $langVersionData.schema.openAPIV3Schema }}
+      {{- end }}
+      {{- template "format-example" ( dict "attributes" $versionSchema "langData" $langSchema "linkAnchor" $linkAnchor "name" "" ) }}
     {{- end }}
 
     <ul class="resources">

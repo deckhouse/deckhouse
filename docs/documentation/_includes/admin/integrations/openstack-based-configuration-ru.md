@@ -92,7 +92,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр, шлюз этой сети будет использован как шлюз по умолчанию.
-    # Совпадает с cloud.prefix в ресурсе ClusterConfiguration.
+    # Совпадает с параметром prefix в ModuleConfig global.
     mainNetwork: kube
     additionalNetworks:                         # Необязательный параметр.
     - office
@@ -185,7 +185,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр, шлюз этой сети будет использован как шлюз по умолчанию.
-    # Совпадает с cloud.prefix в ресурсе ClusterConfiguration.
+    # Совпадает с параметром prefix в ModuleConfig global.
     mainNetwork: kube
     additionalNetworks:                           # Необязательный параметр.
     - office
@@ -452,28 +452,6 @@ spec:
       project: cms
       owner: default
 ```
-
-
-
-### Список необходимых сервисов
-
-Список сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, необходимых для работы Deckhouse Kubernetes Platform в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
-
-
-| Сервис                     | Версия API |
-| -------------------------- | ---------- |
-| Identity (Keystone)        | v3         |
-| Compute (Nova)             | v2         |
-| Network (Neutron)          | v2         |
-| Block Storage (Cinder)     | v3         |
-| Load Balancing (Octavia) * | v2         |
-
-
- Если нужно заказывать Load Balancer.
-
-{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
-Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
-{% endif %}
 
 ### Настройка LoadBalancer
 

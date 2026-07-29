@@ -1,0 +1,4 @@
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: Fixed the Machine initialization contract — new nodes could not join the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21638

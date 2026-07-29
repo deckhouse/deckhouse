@@ -7,7 +7,6 @@
  - After upgrading to v1.76.0, kubectl logs and exec fail cluster-wide for all users. Manual workaround is available — see PR description.
  - Changes were introduced in the OpenTofu integration to support the new `kubernetes_resource_ready_v1` resource used by `cloud-provider-dvp` and avoid unnecessary or destructive plan changes when data sources depend on readiness checks. Other cloud providers are not affected. If you encounter unexpected converge plans or cluster bootstrap issues when using OpenTofu-based providers (such as DVP, DynamiX, zVirt, or Yandex), report them to Deckhouse Technical Support.
  - Cilium agents will be restarted during the update.
- - Custom edits to the local-path-config ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
  - During migration to the new Go-based implementation of apiserver-proxy, connection flaps to the API server may occur. This change exposes a new hostPort `6480` for health checks and upstreams statistics.
  - Istiod now enforces trust domain validation. Each remote root CA is now scoped to its declared trust domain in the meshConfig caCertificates. Verify that all IstioFederation resources have correct `trustDomain` values matching the remote cluster configuration.
  - Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
@@ -18,11 +17,14 @@
  - ServiceEntry and DestinationRule resources for federated public services will be recreated with new names. This causes a brief traffic interruption for cross-cluster federated service routing during the first reconciliation after the update.
  - The `local-path-provisioner` Pod is restarted during the update. Custom edits to the `local-path-config` ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
  - The `local-path-provisioner` Pod is restarted during the update. PV provisioning/teardown briefly pauses while the new Pod becomes Ready; existing volumes are not affected.
+ - The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
+ - The cni-cilium components (cilium agent, operator) will restart after the update.
  - The metallb components (controller, speaker, l2lb) will restart after the update.
  - This update triggers a rolling update of the flannel pods.
  - This update triggers a rolling update of the kube-proxy pods.
  - This update triggers a rolling update of the network-policy-engine pods.
  - Unnecessary or destructive plan updates that could occur when updating labels and annotations via OpenTofu should be prevented now. If you encounter unexpected converge plans or cluster bootstrap issues when using OpenTofu-based providers (such as DVP, DynamiX, zVirt, or Yandex), report them to Deckhouse Technical Support.
+ - Unsafe custom HelperPod settings in the `local-path-config` ConfigMap are no longer accepted. Default DKP installations are unaffected.
  - Users with accessLevel ClusterAdmin in ClusterAuthorizationRule gain read and write access to DVPInstanceClass objects; previously all access was denied.
  - Users with accessLevel ClusterAdmin in ClusterAuthorizationRule gain read and write access to DynamixInstanceClass objects; previously all access was denied.
  - When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
@@ -188,6 +190,8 @@
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend  by bumping OpenTelemetry Go to v1.41.0 [#20250](https://github.com/deckhouse/deckhouse/pull/20250)
  - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18657](https://github.com/deckhouse/deckhouse/pull/18657)
  - **[cilium-hubble]** Fixed CVE-2026-41520 in hubble-ui-backend [#20360](https://github.com/deckhouse/deckhouse/pull/20360)
+ - **[cilium-hubble]** Upgrade hubble-ui backend dependencies (cilium v1.17.16, Go 1.25.0) and switch build base image to fix known CVEs. [#21507](https://github.com/deckhouse/deckhouse/pull/21507)
+    The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
  - **[cloud-provider-aws]** Fixed detection of regional limitations versus IAM issues. [#19054](https://github.com/deckhouse/deckhouse/pull/19054)
  - **[cloud-provider-aws]** Install linux-modules-extra on Ubuntu nodes [#19426](https://github.com/deckhouse/deckhouse/pull/19426)
  - **[cloud-provider-aws]** add information about AWS security group rules limits [#18819](https://github.com/deckhouse/deckhouse/pull/18819)
@@ -215,6 +219,7 @@
  - **[cloud-provider-huaweicloud]** Added default values for `elb.class` and `lb-algorithm`, and fixed load balancer creation when `epid` is empty. [#19166](https://github.com/deckhouse/deckhouse/pull/19166)
  - **[cloud-provider-huaweicloud]** Adds patches to the upstream version to make it ignore static nodes [#21388](https://github.com/deckhouse/deckhouse/pull/21388)
  - **[cloud-provider-huaweicloud]** Fixed CVEs in `cloud-provider-huaweicloud`. [#18096](https://github.com/deckhouse/deckhouse/pull/18096)
+ - **[cloud-provider-huaweicloud]** Fixed the Machine initialization contract — new nodes could not join the cluster. [#21638](https://github.com/deckhouse/deckhouse/pull/21638)
  - **[cloud-provider-huaweicloud]** fix CVEs in cloud-provider-huaweicloud [#18289](https://github.com/deckhouse/deckhouse/pull/18289)
  - **[cloud-provider-openstack]** Add loadBalancer.enabled flag to prevent CCM crashes on k8s 1.32 without Octavia service [#18228](https://github.com/deckhouse/deckhouse/pull/18228)
  - **[cloud-provider-openstack]** Fixed CVEs in `cloud-provider-openstack`. [#18099](https://github.com/deckhouse/deckhouse/pull/18099)
@@ -236,6 +241,8 @@
  - **[cloud-provider-zvirt]** Fixed CVEs in `cloud-provider-zvirt`. [#18115](https://github.com/deckhouse/deckhouse/pull/18115)
  - **[cloud-provider-zvirt]** fix CSI token refresh patch apply [#18449](https://github.com/deckhouse/deckhouse/pull/18449)
  - **[cloud-provider-zvirt]** fix CVEs in cloud-provider-zvirt [#18257](https://github.com/deckhouse/deckhouse/pull/18257)
+ - **[cni-cilium]** Bump Go dependencies and backport upstream cilium security patches to fix known CVEs. [#21507](https://github.com/deckhouse/deckhouse/pull/21507)
+    The cni-cilium components (cilium agent, operator) will restart after the update.
  - **[cni-cilium]** Fixed CVE-2026-33186, CVE-2026-27142, and CVE-2026-27139 by updating grpc dependency and Go version, and resolved build compatibility issues. [#18553](https://github.com/deckhouse/deckhouse/pull/18553)
  - **[cni-cilium]** Fixed CVE-2026-41520 for cilium-bugtool util [#20240](https://github.com/deckhouse/deckhouse/pull/20240)
  - **[cni-cilium]** Fixed constant `invalid sysctl parameter: "net.ipv4.conf..rp_filter"` errors in cilium-agent logs when using Egress Gateway with a Virtual IP. [#18952](https://github.com/deckhouse/deckhouse/pull/18952)
@@ -292,6 +299,7 @@
  - **[deckhouse]** Use non-controller ownerRefs for multi-source package CRs. [#20463](https://github.com/deckhouse/deckhouse/pull/20463)
  - **[deckhouse]** atomically install modules and re-download incomplete versions [#21466](https://github.com/deckhouse/deckhouse/pull/21466)
  - **[deckhouse]** fix libs in the python-based images [#21011](https://github.com/deckhouse/deckhouse/pull/21011)
+ - **[dhctl]** Added a NodeReady wait to dhctl converge and improved etcd check output. [#18991](https://github.com/deckhouse/deckhouse/pull/18991)
  - **[dhctl]** Added a preflight check for validating InstanceClasses against the selected cloud provider. [#18473](https://github.com/deckhouse/deckhouse/pull/18473)
  - **[dhctl]** Added validation of the command execution status code [#18128](https://github.com/deckhouse/deckhouse/pull/18128)
  - **[dhctl]** Excluded `BaseInfraPhase` from the progress phase list for static clusters. [#17856](https://github.com/deckhouse/deckhouse/pull/17856)
@@ -308,7 +316,6 @@
  - **[dhctl]** Switched to using the system certificate pool together with custom registry CAs for registry TLS handling. [#18978](https://github.com/deckhouse/deckhouse/pull/18978)
  - **[dhctl]** Use internal node ip if bastion ip was passed in converge. [#18979](https://github.com/deckhouse/deckhouse/pull/18979)
  - **[dhctl]** Wait for stronghold cluster sync before node deletion [#19793](https://github.com/deckhouse/deckhouse/pull/19793)
- - **[dhctl]** add NodeReady wait to dhctl converge and improve etcd check output [#18991](https://github.com/deckhouse/deckhouse/pull/18991)
  - **[dhctl]** fix SSH preflight check for StaticInstances with password-only auth. [#19560](https://github.com/deckhouse/deckhouse/pull/19560)
  - **[dhctl]** fix grpc stream cancel deadlock [#21013](https://github.com/deckhouse/deckhouse/pull/21013)
  - **[dhctl]** fixed the `killall kubectl` command for the `d8 k` alias [#20423](https://github.com/deckhouse/deckhouse/pull/20423)
@@ -328,6 +335,8 @@
     All pods of Ingress-NGINX controller of 1.10 and 1.12 versions will be restarted.
  - **[ingress-nginx]** CVE-2026-3288 is mitigated in all Ingress-Nginx controllers. [#18387](https://github.com/deckhouse/deckhouse/pull/18387)
     All Ingress-Nginx controller pods will be restarted.
+ - **[ingress-nginx]** Controller 1.10 image uid and gid are set to deckhouse. [#21576](https://github.com/deckhouse/deckhouse/pull/21576)
+    All ingress-nginx controller pods of v1.10 will be restarted.
  - **[ingress-nginx]** Default ingress controller version is reverted to 1.10. [#20934](https://github.com/deckhouse/deckhouse/pull/20934)
     All ingress-nginx controller pods using default controller version will be restarted.
  - **[ingress-nginx]** Fixing mount points in a geoproxy image. [#20126](https://github.com/deckhouse/deckhouse/pull/20126)
@@ -371,7 +380,7 @@
  - **[local-path-provisioner]** Bump `local-path-provisioner` to `v0.0.34` to fix CVE-2025-62878 (path traversal via `StorageClass.parameters.pathPattern`, CVSS 10.0). [#19345](https://github.com/deckhouse/deckhouse/pull/19345)
     The `local-path-provisioner` Pod is restarted during the update. PV provisioning/teardown briefly pauses while the new Pod becomes Ready; existing volumes are not affected.
  - **[local-path-provisioner]** Update local-path-provisioner to v0.0.36 to pick up the upstream fix for CVE-2026-44543 (HelperPod template injection, CVSS 8.7). [#20449](https://github.com/deckhouse/deckhouse/pull/20449)
-    Custom edits to the local-path-config ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
+    Unsafe custom HelperPod settings in the `local-path-config` ConfigMap are no longer accepted. Default DKP installations are unaffected.
  - **[local-path-provisioner]** Update local-path-provisioner to v0.0.36 to pick up the upstream fix for CVE-2026-44543 (HelperPod template injection, CVSS 8.7). [#20456](https://github.com/deckhouse/deckhouse/pull/20456)
     The `local-path-provisioner` Pod is restarted during the update. Custom edits to the `local-path-config` ConfigMap that set unsafe HelperPod fields (privileged, capabilities, host namespaces, initContainers, custom volumes/volumeMounts, container probes/lifecycle, sysctls, etc.) will be rejected by the provisioner at startup. Default Deckhouse installations are unaffected.
  - **[log-shipper]** fix daemonset template [#21368](https://github.com/deckhouse/deckhouse/pull/21368)
@@ -390,18 +399,21 @@
  - **[node-local-dns]** Fix werf manifest [#18738](https://github.com/deckhouse/deckhouse/pull/18738)
  - **[node-local-dns]** Return stale-dns-connections-cleaner [#18707](https://github.com/deckhouse/deckhouse/pull/18707)
     An additional service daemonset will be added.
- - **[node-manager]** Add RBAC rules for node-manager [#19720](https://github.com/deckhouse/deckhouse/pull/19720)
+ - **[node-manager]** Add RBAC rules for node-manager [#20547](https://github.com/deckhouse/deckhouse/pull/20547)
+ - **[node-manager]** Added RBAC rules for node-manager. [#19720](https://github.com/deckhouse/deckhouse/pull/19720)
  - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19655](https://github.com/deckhouse/deckhouse/pull/19655)
  - **[node-manager]** Creating or re-applying an already-existing StaticInstance no longer fails address validation. [#21114](https://github.com/deckhouse/deckhouse/pull/21114)
  - **[node-manager]** Fencing controller no longer deletes Node objects for Notify-mode and Static/CloudStatic nodes. [#18218](https://github.com/deckhouse/deckhouse/pull/18218)
  - **[node-manager]** Fix capacity parsing logic for DVPInstanceClass and add test case for DVPSpecWorker [#17935](https://github.com/deckhouse/deckhouse/pull/17935)
     Capacity values (CPU/memory) for DVPInstanceClass are now correctly extracted according to spec shape. Nested `virtualMachine` fields are used and memory quantities like `Gi` are properly parsed.
  - **[node-manager]** Fix cluster-autoscaler deadlock when machine creation fails with a non-ResourceExhausted error, preventing scale-up to alternative node groups. [#18154](https://github.com/deckhouse/deckhouse/pull/18154)
+ - **[node-manager]** Fix create_rbac_and_certificate_for_kubernetes_api_proxy hook behavior. [#21631](https://github.com/deckhouse/deckhouse/pull/21631)
  - **[node-manager]** Fix fencing-agent crash when starting on a node in maintenance mode. [#20583](https://github.com/deckhouse/deckhouse/pull/20583)
     Previously, the fencing-agent would crash with "permission denied" on /dev/watchdog
     when the node had a maintenance annotation (e.g. during Deckhouse updates).
     Now the agent skips watchdog arming during maintenance and arms it automatically
     when maintenance ends.
+ - **[node-manager]** Fixed CAPS to use StaticMachine CreationTimestamp for the adopt timeout instead of StaticInstance. [#18821](https://github.com/deckhouse/deckhouse/pull/18821)
  - **[node-manager]** Fixed GPU observability in node-manager for full GPU, MIG, and time-slicing workloads (dashboard links/queries, VRAM semantics, MIG slice visibility), stabilized DCGM profiling metrics pipeline, synced MIG profile config with upstream, and made custom MIG defaults explicit for unspecified GPU indexes. [#18287](https://github.com/deckhouse/deckhouse/pull/18287)
  - **[node-manager]** Improve fencing-agent health monitor logging — warn on fallback feeding, error on watchdog starvation, add diagnostic context to all feeding log messages. [#19514](https://github.com/deckhouse/deckhouse/pull/19514)
     Operators can now detect degraded fencing states (quorum loss, API unreachability) through log levels and diagnostic fields without parsing log messages.
@@ -413,7 +425,6 @@
  - **[node-manager]** fix Cluster Autoscaler RBAC for CAPI providers, add missing machinedeployments/scale to write rule and patch verb to ClusterRole. [#18818](https://github.com/deckhouse/deckhouse/pull/18818)
  - **[node-manager]** fix draining hook event generation [#19165](https://github.com/deckhouse/deckhouse/pull/19165)
  - **[node-manager]** fix go lint errors in node-controller [#18187](https://github.com/deckhouse/deckhouse/pull/18187)
- - **[node-manager]** fix to caps for use staticmachine creationtimestamp [#18821](https://github.com/deckhouse/deckhouse/pull/18821)
  - **[node-manager]** fix webook validation in node-controller on cri changes in nodegroup. [#20098](https://github.com/deckhouse/deckhouse/pull/20098)
  - **[node-manager]** hook to restore apiVersion on CAPI resources. [#20374](https://github.com/deckhouse/deckhouse/pull/20374)
  - **[node-manager]** mitigate CVE-2026-33186 [#18649](https://github.com/deckhouse/deckhouse/pull/18649)
@@ -525,7 +536,7 @@
  - **[node-manager]** Fix cloud providers linter warnings. [#18650](https://github.com/deckhouse/deckhouse/pull/18650)
  - **[node-manager]** update cluster-api version in caps to v1.11.5 [#17936](https://github.com/deckhouse/deckhouse/pull/17936)
  - **[openvpn]** open source components versions migrated from werf.inc.yaml to oss.yaml [#18117](https://github.com/deckhouse/deckhouse/pull/18117)
- - **[registry]** Codeowners change [#19410](https://github.com/deckhouse/deckhouse/pull/19410)
+ - **[registry]** Changed the CODEOWNERS for the registry module. [#19410](https://github.com/deckhouse/deckhouse/pull/19410)
  - **[registry]** Update dependencies to fix CVEs [#18600](https://github.com/deckhouse/deckhouse/pull/18600)
  - **[upmeter]** fix go lint warning [#17909](https://github.com/deckhouse/deckhouse/pull/17909)
     upmeter

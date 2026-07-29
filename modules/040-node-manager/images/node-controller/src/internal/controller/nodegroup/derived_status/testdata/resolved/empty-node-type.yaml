@@ -1,0 +1,10 @@
+cri:
+  type: Containerd
+engine: ""
+kubernetesVersion: ""
+manualRolloutID: ""
+name: no-type
+nodeType: ""
+serializedLabels: ""
+serializedTaints: ""
+updateEpoch: "1014"

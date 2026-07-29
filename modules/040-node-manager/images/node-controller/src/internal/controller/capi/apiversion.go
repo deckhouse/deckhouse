@@ -33,41 +33,13 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
+// capiInfraAPIGroup is the CAPI-standard API group every infrastructure provider (and the
+// external control plane) lives under. The v1beta1→v1beta2 contract moved infrastructureRef
+// from apiVersion to apiGroup; objects created under the old contract carry only a kind, so
+// this controller backfills the group. It is provider-agnostic on purpose — node-controller
+// must not know the set of providers, so any infra kind with a missing group is filled with
+// this one constant instead of being matched against a hardcoded provider list.
 const capiInfraAPIGroup = "infrastructure.cluster.x-k8s.io"
-
-var machineTemplateAPIGroups = map[string]string{
-	"DeckhouseMachineTemplate":   capiInfraAPIGroup,
-	"DynamixMachineTemplate":     capiInfraAPIGroup,
-	"HuaweiCloudMachineTemplate": capiInfraAPIGroup,
-	"StaticMachineTemplate":      capiInfraAPIGroup,
-	"VCDMachineTemplate":         capiInfraAPIGroup,
-	"YandexMachineTemplate":      capiInfraAPIGroup,
-	"ZvirtMachineTemplate":       capiInfraAPIGroup,
-}
-
-var machineAPIGroups = map[string]string{
-	"DeckhouseMachine":   capiInfraAPIGroup,
-	"DynamixMachine":     capiInfraAPIGroup,
-	"HuaweiCloudMachine": capiInfraAPIGroup,
-	"StaticMachine":      capiInfraAPIGroup,
-	"VCDMachine":         capiInfraAPIGroup,
-	"YandexMachine":      capiInfraAPIGroup,
-	"ZvirtMachine":       capiInfraAPIGroup,
-}
-
-var clusterInfraAPIGroups = map[string]string{
-	"DeckhouseCluster":   capiInfraAPIGroup,
-	"DynamixCluster":     capiInfraAPIGroup,
-	"HuaweiCloudCluster": capiInfraAPIGroup,
-	"StaticCluster":      capiInfraAPIGroup,
-	"VCDCluster":         capiInfraAPIGroup,
-	"YandexCluster":      capiInfraAPIGroup,
-	"ZvirtCluster":       capiInfraAPIGroup,
-}
-
-var controlPlaneAPIGroups = map[string]string{
-	"DeckhouseControlPlane": capiInfraAPIGroup,
-}
 
 func init() {
 	register.RegisterController("capi-api-version", &capiv1beta2.MachineDeployment{}, &APIVersionReconciler{})
@@ -127,17 +99,12 @@ func (r *APIVersionReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	ref := &md.Spec.Template.Spec.InfrastructureRef
 	if ref.Kind != "" && ref.APIGroup == "" {
-		expected, ok := machineTemplateAPIGroups[ref.Kind]
-		if ok {
-			patch := client.MergeFrom(md.DeepCopy())
-			ref.APIGroup = expected
-			if err := r.Client.Patch(ctx, md, patch); err != nil {
-				return ctrl.Result{}, fmt.Errorf("patch MachineDeployment infrastructureRef.apiGroup: %w", err)
-			}
-			logger.Info("patched MachineDeployment infrastructureRef.apiGroup", "name", md.Name, "apiGroup", expected)
-		} else {
-			logger.Info("unknown infra template kind", "name", md.Name, "kind", ref.Kind)
+		patch := client.MergeFrom(md.DeepCopy())
+		ref.APIGroup = capiInfraAPIGroup
+		if err := r.Client.Patch(ctx, md, patch); err != nil {
+			return ctrl.Result{}, fmt.Errorf("patch MachineDeployment infrastructureRef.apiGroup: %w", err)
 		}
+		logger.Info("patched MachineDeployment infrastructureRef.apiGroup", "name", md.Name, "apiGroup", capiInfraAPIGroup)
 	}
 
 	machineList := &capiv1beta2.MachineList{}
@@ -151,17 +118,12 @@ func (r *APIVersionReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		m := &machineList.Items[i]
 		mRef := &m.Spec.InfrastructureRef
 		if mRef.Kind != "" && mRef.APIGroup == "" {
-			expected, ok := machineAPIGroups[mRef.Kind]
-			if !ok {
-				logger.Info("unknown infra machine kind", "machine", m.Name, "kind", mRef.Kind)
-				continue
-			}
 			patch := client.MergeFrom(m.DeepCopy())
-			mRef.APIGroup = expected
+			mRef.APIGroup = capiInfraAPIGroup
 			if err := r.Client.Patch(ctx, m, patch); err != nil {
 				return ctrl.Result{}, fmt.Errorf("patch Machine %s infrastructureRef.apiGroup: %w", m.Name, err)
 			}
-			logger.Info("patched Machine infrastructureRef.apiGroup", "name", m.Name, "apiGroup", expected)
+			logger.Info("patched Machine infrastructureRef.apiGroup", "name", m.Name, "apiGroup", capiInfraAPIGroup)
 		}
 	}
 
@@ -190,21 +152,17 @@ func (r *APIVersionReconciler) reconcileCluster(ctx context.Context, req ctrl.Re
 	infraKind, _, _ := unstructured.NestedString(cluster.Object, "spec", "infrastructureRef", "kind")
 	infraAPIGroup, _, _ := unstructured.NestedString(cluster.Object, "spec", "infrastructureRef", "apiGroup")
 	if infraKind != "" && infraAPIGroup == "" {
-		if expected, ok := clusterInfraAPIGroups[infraKind]; ok {
-			_ = unstructured.SetNestedField(cluster.Object, expected, "spec", "infrastructureRef", "apiGroup")
-			patched = true
-			logger.Info("setting Cluster infrastructureRef.apiGroup", "cluster", clusterName, "apiGroup", expected)
-		}
+		_ = unstructured.SetNestedField(cluster.Object, capiInfraAPIGroup, "spec", "infrastructureRef", "apiGroup")
+		patched = true
+		logger.Info("setting Cluster infrastructureRef.apiGroup", "cluster", clusterName, "apiGroup", capiInfraAPIGroup)
 	}
 
 	cpKind, _, _ := unstructured.NestedString(cluster.Object, "spec", "controlPlaneRef", "kind")
 	cpAPIGroup, _, _ := unstructured.NestedString(cluster.Object, "spec", "controlPlaneRef", "apiGroup")
 	if cpKind != "" && cpAPIGroup == "" {
-		if expected, ok := controlPlaneAPIGroups[cpKind]; ok {
-			_ = unstructured.SetNestedField(cluster.Object, expected, "spec", "controlPlaneRef", "apiGroup")
-			patched = true
-			logger.Info("setting Cluster controlPlaneRef.apiGroup", "cluster", clusterName, "apiGroup", expected)
-		}
+		_ = unstructured.SetNestedField(cluster.Object, capiInfraAPIGroup, "spec", "controlPlaneRef", "apiGroup")
+		patched = true
+		logger.Info("setting Cluster controlPlaneRef.apiGroup", "cluster", clusterName, "apiGroup", capiInfraAPIGroup)
 	}
 
 	if patched {

@@ -43,14 +43,9 @@ git:
   stageDependencies:
     install:
     - '**/*'
-import:
-- image: common/wheel-artifact
-  add: /wheels
-  to: /wheels
-  before: install
 shell:
   beforeInstall:
-  - pm install python@3.12 gnu-glibc python-wheel
+  - pm install python@3.12 libc python-wheel
   install:
   - pip3 install -f file:///wheels --no-index --upgrade pip
   - pip3 install -f file:///wheels --no-index -r /requirements.txt
@@ -74,11 +69,11 @@ import:
   to: /
   before: install
   includePaths:
-  - lib64/ld-linux-x86-64.so.2
   - usr/bin/python3*
-  - usr/lib64/python3*
   - usr/lib/python3*
-  - usr/lib64/lib*.so*
+  - usr/lib/lib*.so*
+  - usr/lib/ld-linux-x86-64.so.2
+  - lib64
   excludePaths:
   - usr/lib/python*/site-packages/pip-25.3*
   - usr/lib/python*/test

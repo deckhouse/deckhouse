@@ -91,8 +91,12 @@ func TestIntOrDefault(t *testing.T) {
 	if got := intOrDefault(nil, 1); got != 1 {
 		t.Fatalf("nil pointer: got %d, want default 1", got)
 	}
-	if got := intOrDefault(ptr(int32(0)), 1); got != 0 {
-		t.Fatalf("explicit zero must override default: got %d, want 0", got)
+	// helm rendered these with `| default`, where 0 is falsy: maxSurgePerZone: 0 came out as 1.
+	if got := intOrDefault(ptr(int32(0)), 1); got != 1 {
+		t.Fatalf("explicit zero must fall back like helm's default: got %d, want 1", got)
+	}
+	if got := intOrDefault(ptr(int32(0)), 0); got != 0 {
+		t.Fatalf("zero default stays zero: got %d, want 0", got)
 	}
 	if got := intOrDefault(ptr(int32(5)), 1); got != 5 {
 		t.Fatalf("got %d, want 5", got)
@@ -226,5 +230,45 @@ func TestApplyMachineDeploymentSpecPatchInvalidYAML(t *testing.T) {
 	err := applyMachineDeploymentSpecPatch(spec, "template: [", nil)
 	if err == nil {
 		t.Fatal("expected invalid patch error, got nil")
+	}
+}
+
+// desiredReplicas is pure: it only clamps what already exists into the NodeGroup's bounds.
+func TestDesiredReplicas(t *testing.T) {
+	tests := []struct {
+		name     string
+		existing *existingCAPIMachineDeployment
+		min, max int32
+		expOut   int32
+	}{
+		{name: "no MachineDeployment yet: start at min", existing: nil, min: 2, max: 5, expOut: 2},
+		{
+			name:     "exists without spec.replicas: scale-from-zero, not an error",
+			existing: &existingCAPIMachineDeployment{},
+			min:      1, max: 4, expOut: 1,
+		},
+		{
+			name:     "current value kept when inside bounds",
+			existing: &existingCAPIMachineDeployment{replicas: 3, hasReplicas: true},
+			min:      1, max: 5, expOut: 3,
+		},
+		{
+			name:     "current value clamped down to max",
+			existing: &existingCAPIMachineDeployment{replicas: 9, hasReplicas: true},
+			min:      1, max: 5, expOut: 5,
+		},
+		{
+			name:     "current value raised to min",
+			existing: &existingCAPIMachineDeployment{replicas: 0, hasReplicas: true},
+			min:      2, max: 5, expOut: 2,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := desiredReplicas(tc.existing, tc.min, tc.max); got != tc.expOut {
+				t.Fatalf("desiredReplicas() = %d, want %d", got, tc.expOut)
+			}
+		})
 	}
 }

@@ -18,9 +18,7 @@ package hooks
 
 import (
 	"encoding/json"
-	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -58,32 +56,6 @@ func decodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{
 	}
 
 	return res, nil
-}
-
-// semverMajMin is a Go implementation of this bash snippet:
-//
-//	function semver::majmin() {
-//	  echo "$(echo $1 | cut -d. -f1,2)"
-//	}
-func semverMajMin(ver *semver.Version) string {
-	if ver == nil {
-		return ""
-	}
-	return fmt.Sprintf("%d.%d", ver.Major(), ver.Minor())
-}
-
-// semverMin is a function that finds the minimum semver in a slice.
-func semverMin(versions []*semver.Version) *semver.Version {
-	if len(versions) == 0 {
-		return nil
-	}
-	var res *semver.Version
-	for i, ver := range versions {
-		if res == nil || res.GreaterThan(ver) {
-			res = versions[i]
-		}
-	}
-	return res
 }
 
 func patchNodeGroupStatus(patcher go_hook.PatchCollector, nodeGroupName string, patch interface{}) {

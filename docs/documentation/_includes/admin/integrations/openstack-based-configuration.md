@@ -97,7 +97,7 @@ nodeGroups:
     # is no DHCP in the network that is used as a default gateway.
     configDrive: false
     # Required, the gateway of this network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
@@ -188,7 +188,7 @@ nodeGroups:
     # gateway.
     configDrive: false
     # Required, the gateway of the network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                          # Optional.
     - office
@@ -456,24 +456,6 @@ spec:
       project: cms
       owner: default
 ```
-
-### List of required services
-
-Below is the list of {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services required for DKP to operate in {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
-
-| Service                           | API version |
-|:---------------------------------|:----------:|
-| Identity (Keystone)              | v3         |
-| Compute (Nova)                   | v2         |
-| Network (Neutron)                | v2         |
-| Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) *       | v2         |
-
-\* If you need to provision a LoadBalancer.
-
-{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
-For the API endpoints and ports, refer to the [official documentation](https://cloud.vk.com/docs/en/tools-for-using-services/api/rest-api/endpoints).
-{% endif %}
 
 ### LoadBalancer configuration
 
