@@ -1,0 +1,24 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-3da575d5732789bb8b86afcaede27478ca3ca711d6a220e503ceaf419a4cecff",
+  "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39824 (integer overflow в NewNTUnicodeString, golang.org/x/sys/windows) неэксплуатируема в kubernetes-api-proxy: уязвимый код специфичен для Windows; компонент собирается и исполняется только под Linux, пакет golang.org/x/sys/windows в бинарник не входит.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    }
+  ],
+  "timestamp": "2026-07-29T10:00:00Z",
+  "last_updated": "2026-07-29T10:00:00Z"
+}

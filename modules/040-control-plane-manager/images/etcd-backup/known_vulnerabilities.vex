@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7152d16cd60103e4d28ca93cb2ce02ff6d4c675c1f276558bde6c780ae8d1e01",
   "author": "Unknown Author",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -73,8 +73,92 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость CVE-2026-39821 невозможно эксплуатировать в etcdBackup в рамках Deckhouse: endpoint CronJob для etcdctl snapshot save — литеральный IPv4 127.0.0.1 без контролируемого атакующим hostname, без преобразования недоверенных IDN и без hostname ACL на базе Punycode.",
       "timestamp": "2026-07-21T10:21:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-25680 (чрезмерное потребление CPU при разборе HTML в golang.org/x/net/html, DoS) неэксплуатируема в etcd-backup: пакет golang.org/x/net/html не входит в граф зависимостей, разбора произвольного HTML нет.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39824 (integer overflow в NewNTUnicodeString, golang.org/x/sys/windows) неэксплуатируема в etcd-backup: уязвимый код специфичен для Windows; компонент собирается и исполняется только под Linux, пакет golang.org/x/sys/windows в бинарник не входит.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42502 (XSS через непредвиденное HTML-дерево при golang.org/x/net/html Render) неэксплуатируема в etcd-backup: пакет golang.org/x/net/html не импортируется, цепочки Parse->Render над недоверенной разметкой нет.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42506 (XSS через разбор произвольного HTML в golang.org/x/net/html) неэксплуатируема в etcd-backup: пакет golang.org/x/net/html не импортируется, санитизации и Render недоверенного HTML нет.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46600 (panic при разборе некорректной SVCB/HTTPS RR в golang.org/x/net/dns/dnsmessage) неэксплуатируема в etcd-backup: пакет golang.org/x/net/dns/dnsmessage не используется, компонент не парсит недоверенные DNS-ответы.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-56852 (зацикливание norm.Iter на некорректном UTF-8 в golang.org/x/text) неэксплуатируема в etcd-backup: golang.org/x/text/unicode/norm применяется только к доверенным строкам конфигурации и объектов Kubernetes, а не к вводу, контролируемому злоумышленником; путь norm.Iter над невалидным UTF-8 недостижим.",
+      "timestamp": "2026-07-29T10:00:00Z"
     }
   ],
   "timestamp": "2026-03-24T14:32:07Z",
-  "last_updated": "2026-07-21T10:21:00Z"
+  "last_updated": "2026-07-29T10:00:00Z"
 }

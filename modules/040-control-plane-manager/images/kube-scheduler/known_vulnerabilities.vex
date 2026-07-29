@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 8,
+  "version": 9,
   "statements": [
     {
       "vulnerability": {
@@ -325,8 +325,120 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость CVE-2026-46597 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: panic в декодере AES-GCM SSH-пакетов против вредоносного SSH-peer. У scheduler нет SSH packet path — только TLS к apiserver и extenders.",
       "timestamp": "2026-07-21T10:22:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39827"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39827 (DoS в golang.org/x/crypto/ssh: неограниченный рост памяти при повторных отклонённых открытиях каналов) неэксплуатируема в kube-scheduler: компонент не поднимает SSH-сервер и не линкует пакет golang.org/x/crypto/ssh; x/crypto присутствует только транзитивно, серверного пути обработки SSH-каналов нет.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39833"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39833 (необеспечение ограничения ConfirmBeforeUse в golang.org/x/crypto/ssh/agent) неэксплуатируема в kube-scheduler: пакет golang.org/x/crypto/ssh/agent не импортируется, компонент не создаёт in-memory keyring через NewKeyring и не использует SSH-agent.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39834"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39834 (integer overflow при записи в SSH-канал >4GB, зацикливание/DoS) неэксплуатируема в kube-scheduler: golang.org/x/crypto/ssh не входит в граф зависимостей, компонент не устанавливает SSH-соединений и не пишет в SSH-каналы.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41579"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-41579 (удаление/подмена файлов через симлинк /dev при setup rootfs в runc) неэксплуатируема в kube-scheduler: runc присутствует лишь транзитивно, компонент не запускает контейнеры и не выполняет setupPtmx/setupDevSymlinks; подмена /dev-симлинка в образе контейнера недостижима.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46598"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46598 (panic из-за ed25519.PrivateKey, собранного из некорректных байтов, в golang.org/x/crypto/ssh/agent) неэксплуатируема в kube-scheduler: пакет golang.org/x/crypto/ssh/agent не используется, разбора ключей SSH-agent нет.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46600 (panic при разборе некорректной SVCB/HTTPS RR в golang.org/x/net/dns/dnsmessage) неэксплуатируема в kube-scheduler: пакет golang.org/x/net/dns/dnsmessage не используется, компонент не парсит недоверенные DNS-ответы.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-56852 (зацикливание norm.Iter на некорректном UTF-8 в golang.org/x/text) неэксплуатируема в kube-scheduler: golang.org/x/text/unicode/norm применяется только к доверенным строкам конфигурации и объектов Kubernetes, а не к вводу, контролируемому злоумышленником; путь norm.Iter над невалидным UTF-8 недостижим.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932: пакет golang.org/x/crypto/openpgp не сопровождается и небезопасен по дизайну. В kube-scheduler он не импортируется — компонент не выполняет операций OpenPGP, поэтому уязвимость неэксплуатируема.",
+      "timestamp": "2026-07-29T10:00:00Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-07-21T10:22:00Z"
+  "last_updated": "2026-07-29T10:00:00Z"
 }
