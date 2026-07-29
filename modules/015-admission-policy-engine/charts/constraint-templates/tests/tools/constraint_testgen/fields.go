@@ -134,7 +134,7 @@ func normalizeTestFields(doc *testFieldsDoc) {
 		if len(field.RequiredScenarios) == 0 {
 			doc.Spec.ObjectFields[i].RequiredScenarios = defaultRequiredScenarios(field.Level, false)
 		}
-		// T2: When defaultBehavior is "undefined" (the rule used to be a no-op on
+		// T2: When defaultBehavior is "Undefined" (the rule used to be a no-op on
 		// absent field), auto-require the "absent" scenario if not already present.
 		// This catches the C2/C3 class of regression where object.get(..., "")
 		// turns an absent field into a concrete "" value that triggers a violation.
