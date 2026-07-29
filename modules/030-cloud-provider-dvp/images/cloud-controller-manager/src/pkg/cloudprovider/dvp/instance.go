@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"dvp-common/api"
 
@@ -75,6 +76,13 @@ func (c *Cloud) CurrentNodeName(ctx context.Context, hostname string) (types.Nod
 }
 
 func (c *Cloud) InstanceExistsByProviderID(ctx context.Context, providerID string) (bool, error) {
+	// Nodes managed by another cloud provider are outside DVP's responsibility.
+	// Report them as existing so that the cloud node lifecycle controller does
+	// not delete them, and avoid making a lookup against the DVP API.
+	if !strings.HasPrefix(providerID, providerName+"://") {
+		return true, nil
+	}
+
 	_, err := c.getVMByProviderID(ctx, providerID)
 	if err != nil {
 		if errors.Is(err, cloudprovider.InstanceNotFound) {
