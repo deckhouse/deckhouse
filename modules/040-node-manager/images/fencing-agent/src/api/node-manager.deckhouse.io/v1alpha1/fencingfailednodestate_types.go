@@ -17,11 +17,16 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // ProfileName selects the SLA timings a NodeGroup is fenced under.
+// The matching FencingSLAProfile object is named in lower case, because a
+// Kubernetes object name cannot contain capital letters. Use ObjectName to
+// resolve the profile.
 // +kubebuilder:validation:Enum=Critical;Medium;Moderate;Slow
 type ProfileName string
 
@@ -31,6 +36,11 @@ const (
 	ProfileModerate ProfileName = "Moderate"
 	ProfileSlow     ProfileName = "Slow"
 )
+
+// ObjectName returns the metadata.name of the FencingSLAProfile this profile refers to.
+func (p ProfileName) ObjectName() string {
+	return strings.ToLower(string(p))
+}
 
 // ProfileNames returns every valid profile, strictest first.
 func ProfileNames() []ProfileName {
