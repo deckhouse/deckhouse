@@ -33,6 +33,99 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
+func TestEffectiveClusterPrefix(t *testing.T) {
+	globalMC := func(prefix string) []*ModuleConfig {
+		settings := SettingsValues{}
+		if prefix != "" {
+			settings["prefix"] = prefix
+		}
+		mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
+		mc.SetName("global")
+		return []*ModuleConfig{mc}
+	}
+
+	tests := []struct {
+		name        string
+		moduleCfgs  []*ModuleConfig
+		cloudPrefix string
+		expected    string
+	}{
+		{name: "global MC prefix takes precedence", moduleCfgs: globalMC("mcprefix"), cloudPrefix: "cloudprefix", expected: "mcprefix"},
+		{name: "global MC prefix unset falls back to cloud.prefix", moduleCfgs: globalMC(""), cloudPrefix: "cloudprefix", expected: "cloudprefix"},
+		{name: "no global MC falls back to cloud.prefix", moduleCfgs: nil, cloudPrefix: "cloudprefix", expected: "cloudprefix"},
+		{name: "neither set", moduleCfgs: globalMC(""), cloudPrefix: "", expected: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MetaConfig{ModuleConfigs: tt.moduleCfgs}
+			require.Equal(t, tt.expected, m.effectiveClusterPrefix(tt.cloudPrefix))
+		})
+	}
+}
+
+func TestClusterConfigForInfrastructure(t *testing.T) {
+	cloudPrefixOf := func(cc map[string]json.RawMessage) (string, bool) {
+		raw, ok := cc["cloud"]
+		if !ok {
+			return "", false
+		}
+		var cloud map[string]any
+		if err := json.Unmarshal(raw, &cloud); err != nil {
+			return "", false
+		}
+		p, ok := cloud["prefix"].(string)
+		return p, ok
+	}
+
+	t.Run("injects prefix into tfvars but leaves the persisted ClusterConfig untouched", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   CloudClusterType,
+			ClusterPrefix: "lysov-test",
+			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"Yandex"}`)},
+		}
+
+		infra := m.clusterConfigForInfrastructure()
+
+		// tfvars copy has the prefix (and preserves other cloud fields)...
+		p, ok := cloudPrefixOf(infra)
+		require.True(t, ok)
+		require.Equal(t, "lysov-test", p)
+		var infraCloud map[string]any
+		require.NoError(t, json.Unmarshal(infra["cloud"], &infraCloud))
+		require.Equal(t, "Yandex", infraCloud["provider"])
+
+		// ...while the original (→ d8-cluster-configuration secret) has NO prefix.
+		_, ok = cloudPrefixOf(m.ClusterConfig)
+		require.False(t, ok, "m.ClusterConfig must not be mutated (secret stays clean)")
+	})
+
+	t.Run("global MC prefix overrides an existing cloud.prefix in tfvars only", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   CloudClusterType,
+			ClusterPrefix: "from-mc",
+			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"AWS","prefix":"old"}`)},
+		}
+		infra := m.clusterConfigForInfrastructure()
+		p, _ := cloudPrefixOf(infra)
+		require.Equal(t, "from-mc", p)
+		// original preserved verbatim
+		orig, _ := cloudPrefixOf(m.ClusterConfig)
+		require.Equal(t, "old", orig)
+	})
+
+	t.Run("static cluster returns config unchanged", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   StaticClusterType,
+			ClusterPrefix: "x",
+			ClusterConfig: map[string]json.RawMessage{},
+		}
+		infra := m.clusterConfigForInfrastructure()
+		_, ok := infra["cloud"]
+		require.False(t, ok)
+	})
+}
+
 func TestGetDNSAddress(t *testing.T) {
 	tests := []struct {
 		name   string

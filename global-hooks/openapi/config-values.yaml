@@ -37,6 +37,22 @@ properties:
 
       If not defined, the value is determined automatically as `true` for clusters with more than one master node. Otherwise, it is determined as`false`.
     x-examples: [ true, false ]
+  prefix:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+    maxLength: 45
+    description: |
+      A prefix of the objects to be created in the cloud.
+
+      Is used, for example, to distinguish objects created for different clusters, to configure routing, etc.
+
+      This is the new home for the prefix that was previously set in `ClusterConfiguration.cloud.prefix`. If not set, the value from `ClusterConfiguration.cloud.prefix` is used.
+
+      The prefix is used to name cloud objects such as disks (e.g. `<prefix>-kubernetes-data-0`). Cloud object names are limited to 63 characters, so the prefix is capped at 45 characters to leave room for the generated suffix. Depending on the provider and the number of master nodes, the effective limit may be lower; this is additionally enforced by a bootstrap preflight check.
+
+      > **Warning.** This value names existing cloud infrastructure (security groups, route tables, resource groups, instances, etc.). It must match the prefix the cluster was bootstrapped with — setting a different value will break cloud integration. It is not intended to be changed in a running cluster.
+    x-examples:
+      - "kube"
   modules:
     description: |
       Common parameters of Deckhouse modules.

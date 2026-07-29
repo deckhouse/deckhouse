@@ -54,6 +54,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/clusterprefix"
 )
 
 var webhookLog = logf.Log.WithName("nodegroup-webhook")
@@ -491,9 +492,15 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterCon
 		config.ClusterType = string(match[1])
 	}
 
-	if match := regexp.MustCompile(`prefix:\s+(\S+)`).FindSubmatch(configYAML); match != nil {
-		config.ClusterPrefixLen = len(string(match[1]))
+	// The cluster prefix is being migrated to the global ModuleConfig, so resolve
+	// it via the shared resolver (global MC first, then cloud.prefix) instead of
+	// only the secret — otherwise the NodeGroup name-length check would use a
+	// stale/empty length when the prefix lives in the global ModuleConfig.
+	prefix, err := clusterprefix.Resolve(ctx, w.Client)
+	if err != nil {
+		return nil, fmt.Errorf("resolve cluster prefix: %w", err)
 	}
+	config.ClusterPrefixLen = len(prefix)
 
 	if match := regexp.MustCompile(`podSubnetNodeCIDRPrefix:\s*"?(\d+)"?`).FindSubmatch(configYAML); match != nil {
 		if _, err := fmt.Sscanf(string(match[1]), "%d", &config.PodSubnetNodeCIDRPrefix); err != nil {
