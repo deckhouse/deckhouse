@@ -78,7 +78,10 @@ apiVersions:
               This field is still used by the installer (dhctl) to name cloud infrastructure at bootstrap and must remain set for cloud clusters; the ModuleConfig value is the source for in-cluster consumers and must match it.
 
               Is used, for example, to distinguish objects created for different clusters, to configure routing, etc.
+
+              Cloud object names (e.g. disks named `<prefix>-kubernetes-data-0`) are limited to 63 characters, so the prefix is capped at 45 characters. The effective limit may be lower depending on the provider and the number of master nodes; this is additionally enforced by a bootstrap preflight check.
             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+            maxLength: 45
       podSubnetCIDR:
         type: string
         x-unsafe: true
@@ -179,7 +182,6 @@ apiVersions:
         - "RSA-3072"
         - "RSA-4096"
         - "ECDSA-P256"
-        default: "RSA-2048"
       proxy:
         x-doc-d8Editions:
           - be
