@@ -1,28 +1,5 @@
 ## Patches
 
-### 001-go-mod.patch
-
-To create this patch run commands:
-
-```shell
-cd cluster-autoscaler
-go mod edit -go 1.23
-go get github.com/golang-jwt/jwt/v4@v4.5.1
-go get github.com/opencontainers/runc@v1.1.14
-go get golang.org/x/crypto@v0.31.0
-go get golang.org/x/net@v0.33.0
-
-go get k8s.io/kubernetes@v1.30.8
-go get k8s.io/kubelet@v0.30.8
-#replase all in k8s.io  v0.30.1 -> v0.30.8
-cd apis
-go get golang.org/x/net@v0.33.0
-cd ..
-go mod tidy
-git diff > patches/001-go_mod.patch
-#git apply patches/001-go_mod.patch
-```
-
 ### 002-kruise-ads.patch
 
 TODO: add description
@@ -41,12 +18,11 @@ We set priority for machines and keep `node.machine.sapcloud.io/trigger-deletion
 but we need to clean deleted machines from annotation in refresh function for keeping up to date annotation value to avoid
 drizzling replicas count in machine deployment.
 
-
 ### 005-report-all-machine-creation-errors-to-ca.patch
 
 Report all machine creation errors to Cluster Autoscaler, not only ResourceExhausted
 
-Previously, generateInstanceStatus only reported ErrorInfo to the Cluster Autoscaler when a Machine failed with ResourceExhausted error code (quota/stockout).
+Previously, generateInstanceStatus only reported ErrorInfo to the Cluster Autoscaler when a Machine failed with ResourceExhausted error code (quota/stockout). 
 All other creation failures (invalid image, wrong credentials, network errors, etc.) returned InstanceStatus without ErrorInfo, making them invisible to CA's error handling.
 
 ### 006-fix-upcoming-nodes-deadlock-for-failed-node-groups.patch

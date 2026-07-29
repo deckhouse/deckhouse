@@ -6,9 +6,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/cluster-autoscaler/simulator/cluster.go b/cluster-autoscaler/simulator/cluster.go
---- a/cluster-autoscaler/simulator/cluster.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
-+++ b/cluster-autoscaler/simulator/cluster.go	(date 1745485212497)
-@@ -230,6 +230,14 @@
+--- a/cluster-autoscaler/simulator/cluster.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
++++ b/cluster-autoscaler/simulator/cluster.go	(date 1745485672011)
+@@ -229,6 +229,14 @@
 
  	newpods := make([]*apiv1.Pod, 0, len(pods))
  	for _, podptr := range pods {
@@ -29,8 +29,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go b/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go
---- a/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
-+++ b/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go	(date 1745485212485)
+--- a/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
++++ b/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go	(date 1745485672003)
 @@ -49,7 +49,7 @@
 
  	if r.skipNodesWithCustomControllerPods {
@@ -46,8 +46,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go b/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go
---- a/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
-+++ b/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go	(date 1745485515574)
+--- a/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
++++ b/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go	(date 1745485990632)
 @@ -40,9 +40,20 @@
 
  // Drainable decides how to handle pods with pdbs on node drain.
@@ -77,8 +77,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/cluster-autoscaler/utils/pod/pod.go b/cluster-autoscaler/utils/pod/pod.go
---- a/cluster-autoscaler/utils/pod/pod.go	(revision 2818e0cffbc180b42fc486630ab36d43ecf56649)
-+++ b/cluster-autoscaler/utils/pod/pod.go	(date 1745485212509)
+--- a/cluster-autoscaler/utils/pod/pod.go	(revision 669115a6814d33b9d5757aa801402710029cb5b5)
++++ b/cluster-autoscaler/utils/pod/pod.go	(date 1745485672019)
 @@ -32,6 +32,9 @@
  func IsDaemonSetPod(pod *apiv1.Pod) bool {
  	controllerRef := metav1.GetControllerOf(pod)
