@@ -44,10 +44,10 @@ index 1cf2b62a..3d39295c 100644
  	return c.createIdentity(ctx, identity, token, refreshCaller)
  }
 diff --git a/server/handlers.go b/server/handlers.go
-index d0c7f708..166bc9af 100644
+index 04c391e2..9a5f34af 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
-@@ -925,7 +925,12 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -784,7 +784,12 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  
  	// Update existing OfflineSession obj with new RefreshTokenRef.
  	if err := s.storage.UpdateOfflineSessions(ctx, identity.UserID, authReq.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
@@ -60,8 +60,8 @@ index d0c7f708..166bc9af 100644
 +		if len(old.ConnectorData) == 0 && len(identity.ConnectorData) > 0 {
  			old.ConnectorData = identity.ConnectorData
  		}
- 		// Successful login resets any failed-attempt state. Email is also
-@@ -1483,7 +1488,9 @@ func (s *Server) exchangeAuthCode(ctx context.Context, w http.ResponseWriter, au
+ 		// If 2FA was enabled after OfflineSessions creation, existing users may have empty TOTP.
+@@ -1335,7 +1340,9 @@ func (s *Server) exchangeAuthCode(ctx context.Context, w http.ResponseWriter, au
  			// Update existing OfflineSession obj with new RefreshTokenRef.
  			if err := s.storage.UpdateOfflineSessions(ctx, session.UserID, session.ConnID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
  				old.Refresh[tokenRef.ClientID] = &tokenRef
@@ -72,7 +72,7 @@ index d0c7f708..166bc9af 100644
  					old.ConnectorData = refresh.ConnectorData
  				}
  				return old, nil
-@@ -1667,16 +1674,16 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+@@ -1507,16 +1514,16 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
  	var refreshToken string
  	if reqRefresh {
  		refresh := storage.RefreshToken{
@@ -99,7 +99,7 @@ index d0c7f708..166bc9af 100644
  		}
  		token := &internal.RefreshToken{
  			RefreshId: refresh.ID,
-@@ -1758,7 +1765,11 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+@@ -1598,7 +1605,11 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
  			// Update existing OfflineSession obj with new RefreshTokenRef.
  			if err := s.storage.UpdateOfflineSessions(ctx, session.UserID, session.ConnID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
  				old.Refresh[tokenRef.ClientID] = &tokenRef
