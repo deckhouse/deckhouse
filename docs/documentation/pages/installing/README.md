@@ -76,7 +76,7 @@ Required and optional objects/resources that may be needed in the installation c
 
    To add worker node groups (the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object), you may also need [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials).
 
-1. &lt;PROVIDER&gt;ClusterConfiguration: Parameters for integration with a cloud provider. **Required** when integrating DKP with a [supported cloud infrastructure](../admin/integrations/public/overview.html).
+1. `<PROVIDER>ClusterConfiguration`: Parameters for integration with a cloud provider. **Required** when integrating DKP with a [supported cloud infrastructure](../admin/integrations/public/overview.html).
 
    Examples of resources configuring integration with a cloud provider:
 
@@ -91,7 +91,7 @@ Required and optional objects/resources that may be needed in the installation c
    * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration): Yandex Cloud
    * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration): zVirt
 
-   To add cloud nodes, you also need &lt;PROVIDER&gt;InstanceClass objects (for example [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) for Yandex Cloud) that describe VM configuration in the node group (the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object).
+   To add cloud nodes, you also need `<PROVIDER>InstanceClass` objects (for example [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) for Yandex Cloud) that describe VM configuration in the node group (the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object).
 
 1. DKP module configurations.
 

@@ -88,7 +88,7 @@ relatedLinks:
 
    Для добавления группы узлов (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)) под рабочую нагрузку в кластер могут понадобиться также объекты [StaticInstance](/modules/node-manager/cr.html#staticinstance) и [SSHCredentials](/modules/node-manager/cr.html#sshcredentials).
 
-1. &lt;PROVIDER&gt;ClusterConfiguration — параметры интеграции с облачным провайдером. Является **обязательным** при интеграции DKP с [поддерживаемой облачной инфраструктурой](../admin/integrations/public/overview.html).
+1. `<PROVIDER>ClusterConfiguration` — параметры интеграции с облачным провайдером. Является **обязательным** при интеграции DKP с [поддерживаемой облачной инфраструктурой](../admin/integrations/public/overview.html).
 
    Примеры ресурсов, настраивающих интеграцию DKP с облачным провайдером:
 
@@ -104,7 +104,7 @@ relatedLinks:
    * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
    * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
-   Для добавления облачных узлов в кластер также понадобятся объекты &lt;PROVIDER&gt;InstanceClass (например [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) для Yandex Cloud), которые описывают конфигурацию виртуальных машин в группе узлов (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)).
+   Для добавления облачных узлов в кластер также понадобятся объекты `<PROVIDER>InstanceClass` (например [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) для Yandex Cloud), которые описывают конфигурацию виртуальных машин в группе узлов (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)).
 
 1. Конфигурации модулей DKP.
 
