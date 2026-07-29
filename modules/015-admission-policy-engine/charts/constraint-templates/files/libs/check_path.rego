@@ -11,7 +11,6 @@
 package lib.check_path
 
 import data.lib.common.has_field
-import data.lib.common.input_containers_from
 import data.lib.path.path_matches
 
 check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths) := result if {

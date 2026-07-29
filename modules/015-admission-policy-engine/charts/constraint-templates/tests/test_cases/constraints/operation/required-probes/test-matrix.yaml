@@ -109,6 +109,38 @@ spec:
                   port: 8080
                 initialDelaySeconds: 5
                 periodSeconds: 10
+    - name: example-allowed-with-init-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].livenessProbe
+        scenario: initContainer
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-with-init
+            namespace: default
+          spec:
+            initContainers:
+            - name: init
+              image: busybox
+            containers:
+            - name: foo
+              image: my.repo/app:latest
+              readinessProbe:
+                tcpSocket:
+                  port: 8080
+                initialDelaySeconds: 5
+                periodSeconds: 10
+              livenessProbe:
+                tcpSocket:
+                  port: 8080
+                initialDelaySeconds: 15
+                periodSeconds: 20
   - name: pss-controller-deployment
     gatorBlock: pss-controller-deployment
     template: ../rendered/constraint-template.yaml

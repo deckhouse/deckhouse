@@ -36,11 +36,16 @@ spec:
             rego: |
               package d8.operation_policies
 
-              import data.lib.common.input_containers
+              import data.lib.common.pod_spec
 
+              # Probes (livenessProbe, readinessProbe, startupProbe) are only valid
+              # on regular containers. Kubernetes rejects probes on initContainers
+              # (unless restartPolicy: Always sidecar) and on ephemeralContainers.
+              # Therefore we iterate only pod_spec.containers, not input_containers
+              # (which includes initContainers and ephemeralContainers).
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
-                container := input_containers[_]
+                container := pod_spec.containers[_]
                 probe := input.parameters.probes[_]
                 probe_is_missing(container, probe)
                 msg := get_violation_message(container, input.review, probe)
