@@ -165,8 +165,8 @@ func writeSections(settings writeSettings) {
 		if strings.Contains(file, "/ee/modules/040-node-manager/templates/nvidia-gpu") && settings.Edition == "CSE" {
 			return
 		}
-		// istio config-analyzer is EE-only (FE/CSE inherit ee/modules overlays)
-		if settings.Edition != "EE" &&
+		// istio config-analyzer is not shipped in CSE (FE inherits EE overlays)
+		if settings.Edition == "CSE" &&
 			(strings.Contains(file, "/ee/modules/110-istio/templates/config-analyzer") ||
 				strings.Contains(file, "/ee/modules/110-istio/monitoring/prometheus-rules/config-analysis")) {
 			return
