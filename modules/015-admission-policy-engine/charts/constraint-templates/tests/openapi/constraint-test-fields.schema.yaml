@@ -129,9 +129,9 @@ definitions:
           regressions where object.get(..., "") turns a previously-undefined
           field into a concrete value that triggers a false-positive violation.
         enum:
-          - undefined
-          - violates
-          - passthrough
+          - Undefined
+          - Violates
+          - Passthrough
       containerScope:
         type: string
         description: |
@@ -140,10 +140,10 @@ definitions:
           of bug where input_containers silently expands from containers to
           containers+initContainers+ephemeralContainers.
         enum:
-          - containers
-          - containers+initContainers
-          - containers+initContainers+ephemeralContainers
-          - containers+sidecarInitContainers
+          - Containers
+          - Containers+InitContainers
+          - Containers+InitContainers+EphemeralContainers
+          - Containers+SidecarInitContainers
       description:
         type: string
         description: Human-readable explanation of why this field matters.

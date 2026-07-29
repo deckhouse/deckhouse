@@ -36,11 +36,14 @@ type lintFinding struct {
 // false-positive violations when used in list_contains / equality / not checks.
 //
 // Matches:
-//   object.get(container, "imagePullPolicy", "")
-//   object.get(obj, "priorityClassName", "")
+//
+//	object.get(container, "imagePullPolicy", "")
+//	object.get(obj, "priorityClassName", "")
+//
 // Does NOT match:
-//   object.get(container, "imagePullPolicy", "IfNotPresent")
-//   object.get(obj, "priorityClassName", "system-cluster-critical")
+//
+//	object.get(container, "imagePullPolicy", "IfNotPresent")
+//	object.get(obj, "priorityClassName", "system-cluster-critical")
 var objectGetEmptyDefaultRe = regexp.MustCompile(
 	`object\.get\(\s*[^,]+,\s*"[^"]+"\s*,\s*""\s*\)`,
 )
