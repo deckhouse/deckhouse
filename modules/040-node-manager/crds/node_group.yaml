@@ -129,7 +129,7 @@ spec:
                       description: |
                         Container runtime type.
 
-                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
+                        If not specified, the `defaultCRI` parameter value of the `node-manager` ModuleConfig is used.
 
                         > **Note.** Docker support is deprecated.
                       enum:
@@ -752,7 +752,7 @@ spec:
                       description: |
                         Container runtime type.
 
-                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+                        The `defaultCRI` parameter value of the `node-manager` ModuleConfig is used if not specified.
 
                         > **Note.** Docker support is deprecated.
                       enum:
@@ -1557,7 +1557,7 @@ spec:
                       description: |
                         Container runtime type.
 
-                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
+                        If not specified, the `defaultCRI` parameter value of the `node-manager` ModuleConfig is used.
 
                         > **Note.** Docker support is deprecated.
                       enum:

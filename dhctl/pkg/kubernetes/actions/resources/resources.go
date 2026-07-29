@@ -31,12 +31,12 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were created")
@@ -256,7 +256,14 @@ func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*sch
 
 func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource, apires metav1.APIResource) error {
 	// Wait up to 10 minutes
-	return retry.NewSilentLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 600, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Create %s resources", resource.GVK.String()),
+		retry.WithAttempts(600),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	return retry.NewSilentLoopWithParams(loopParams).RunContext(ctx, func() error {
 		gvr, docCopy := resourceToGVR(resource, apires)
 		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
@@ -300,7 +307,14 @@ func (c *Creator) invalidateDiscovery() {
 
 func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfigTask) error {
 	// Wait up to 10 minutes
-	return retry.NewLoop(task.Title, 300, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("%s", task.Title),
+		retry.WithAttempts(300),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		return task.Do(c.kubeCl)
 	})
 }

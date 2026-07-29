@@ -587,10 +587,10 @@ containerd v2 использует новую схему по умолчанию
 Чтобы посмотреть тип container runtime, используемый на узлах кластера (в NodeGroup) по умолчанию, используйте команду:
 
 ```shell
-d8 system edit cluster-configuration
+d8 k get moduleconfig node-manager -o jsonpath='{.spec.settings.defaultCRI}'
 ```
 
-Тип container runtime указывается в параметре `defaultCRI`.
+Тип container runtime указывается в параметре `defaultCRI` ModuleConfig `node-manager`.
 
 Если в качестве container runtime используется containerd v2, используйте для миграции инструкцию [для containerd v2](#для-containerd-v2).
 
