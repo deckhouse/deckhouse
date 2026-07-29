@@ -103,7 +103,7 @@ func BuildContextInputYAML(p ContextInputParams) (string, error) {
 		},
 		PodSubnetNodeCIDRPrefix: "24",
 		ClusterDomain:           constants.DefaultTenantClusterDomain,
-		ClusterDNSAddress:       "10.96.0.10",
+		ClusterDNSAddress:       constants.DefaultTenantClusterDNS,
 		ClusterUUID:             clusterUUID,
 		BootstrapTokens: map[string]string{
 			"worker": p.JoinToken,
