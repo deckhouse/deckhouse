@@ -233,8 +233,8 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 
 	b := new(bytes.Buffer)
 
-	r.logger.Debug("Getting module's documentation locally", slog.String("module_name", moduleName))
-	fetchModuleErr := r.getDocumentationFromModuleDir(md.Spec.Path, b)
+	r.logger.Debug("Getting module's documentation locally", slog.String("module_name", moduleName), slog.String("version", md.Spec.Version))
+	fetchModuleErr := r.getDocumentationFromModuleOrDownloadedDir(md.Spec.Path, md.Spec.Version, b)
 
 	var rendered int
 	now := metav1.NewTime(r.dc.GetClock().Now().UTC())
@@ -344,12 +344,35 @@ func (r *reconciler) getDocsBuilderAddresses(ctx context.Context) ([]string, err
 	return addresses, nil
 }
 
+// If the documentation is not present in the module directory, try to get it from the downloaded directory.
+func (r *reconciler) getDocumentationFromModuleOrDownloadedDir(modulePath string, version string, buf *bytes.Buffer) error {
+	err := r.getDocumentationFromModuleDir(modulePath, buf)
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		return r.getDocumentationFromDownloadedDir(modulePath, version, buf)
+	}
+	return err
+}
+
 func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes.Buffer) error {
 	// modulePath is now in format "/modules/<module>" (e.g., "/modules/stronghold")
 	// Remove leading slash and join with downloadedModulesDir to get full path
 	cleanPath := strings.TrimPrefix(modulePath, "/")
 	moduleDir := filepath.Join(r.downloadedModulesDir, cleanPath)
 
+	return r.getDocumentationFromDir(moduleDir, buf)
+}
+
+func (r *reconciler) getDocumentationFromDownloadedDir(modulePath string, version string, buf *bytes.Buffer) error {
+	// modulePath is now in format "/<module>/<version>" (e.g., "/stronghold/v1.0.0")
+	// Remove leading slash and join with downloadedModulesDir to get full path
+	cleanPath := strings.TrimPrefix(modulePath, "/")
+	cleanPath = strings.TrimPrefix(cleanPath, "modules/")
+	moduleDir := filepath.Join(r.downloadedModulesDir, cleanPath, version)
+
+	return r.getDocumentationFromDir(moduleDir, buf)
+}
+
+func (r *reconciler) getDocumentationFromDir(moduleDir string, buf *bytes.Buffer) error {
 	dir, err := os.Stat(moduleDir)
 	if err != nil {
 		return fmt.Errorf("stat: %w", err)
