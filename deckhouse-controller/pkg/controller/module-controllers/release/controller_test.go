@@ -42,6 +42,7 @@ import (
 	"golang.org/x/text/language"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
@@ -176,6 +177,63 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			_, err = suite.ctr.handleRelease(context.TODO(), mr)
 			require.NoError(suite.T(), err)
 		})
+	})
+
+	// The module is not embedded, so deploying its release also creates the
+	// ModuleDocumentation resource.
+	suite.Run("module documentation created", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("module-documentation-create.yaml"))
+
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		documentation := suite.getModuleDocumentation("parca")
+		assert.Equal(suite.T(), "v1.4.3", documentation.Spec.Version)
+		assert.Equal(suite.T(), "/modules/parca", documentation.Spec.Path)
+		assert.Equal(suite.T(), "98d00f741c99e06e6c6c4d18b763c550", documentation.Spec.Checksum)
+	})
+
+	// A ModuleDocumentation left over from the previous release must be updated
+	// to the version, checksum and path of the newly deployed release.
+	suite.Run("module documentation updated", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("module-documentation-update.yaml"))
+
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		documentation := suite.getModuleDocumentation("parca")
+		assert.Equal(suite.T(), "v1.4.3", documentation.Spec.Version)
+		assert.Equal(suite.T(), "/modules/parca", documentation.Spec.Path)
+		assert.Equal(suite.T(), "98d00f741c99e06e6c6c4d18b763c550", documentation.Spec.Checksum)
+		require.Len(suite.T(), documentation.GetOwnerReferences(), 1)
+		assert.Equal(suite.T(), "parca-v1.4.3", documentation.GetOwnerReferences()[0].Name)
+	})
+
+	// The module is served by its embedded copy (source == Embedded, the copy is
+	// still on disk), so the release is only staged and no ModuleDocumentation is
+	// created for it - documentation for embedded modules is handled elsewhere.
+	suite.Run("module documentation skipped for embedded module", func() {
+		suite.setupReleaseController(
+			suite.fetchTestFileData("module-documentation-embedded.yaml"),
+			withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return true },
+			}),
+		)
+
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+
+		err = suite.client.Get(context.TODO(), client.ObjectKey{Name: "parca"}, new(v1alpha1.ModuleDocumentation))
+		assert.True(suite.T(), apierrors.IsNotFound(err), "documentation must not be created for an embedded module")
 	})
 
 	// The module was still embedded but its embedded copy is no longer on disk
@@ -1055,6 +1113,12 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) clien
 		require.NoError(suite.T(), err)
 		obj = module
 
+	case v1alpha1.ModuleDocumentationGVK.Kind:
+		documentation := new(v1alpha1.ModuleDocumentation)
+		err = yaml.Unmarshal(raw, documentation)
+		require.NoError(suite.T(), err)
+		obj = documentation
+
 	case "Secret":
 		secret := new(corev1.Secret)
 		err = yaml.Unmarshal(raw, secret)
@@ -1081,6 +1145,14 @@ func (suite *ReleaseControllerTestSuite) getModuleRelease(name string) *v1alpha1
 	require.NoError(suite.T(), err)
 
 	return release
+}
+
+func (suite *ReleaseControllerTestSuite) getModuleDocumentation(name string) *v1alpha1.ModuleDocumentation {
+	documentation := new(v1alpha1.ModuleDocumentation)
+	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, documentation)
+	require.NoError(suite.T(), err)
+
+	return documentation
 }
 
 func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
