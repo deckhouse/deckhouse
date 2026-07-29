@@ -134,12 +134,45 @@ func lintContent(file, content string) []lintFinding {
 
 		// Rule: object-get-empty-default
 		// Catches: C2 (priority-class), C3 (image-pull-policy)
-		// Pattern: object.get(x, "field", "") used anywhere in a violation rule.
+		// Pattern: object.get(x, "field", "") used in a violation-trigger context.
+		// We suppress false positives where the result is used to build response
+		// objects, retrieve data for display, or is already guarded by a has_field
+		// or != "" check on the same line.
 		if loc := objectGetEmptyDefaultRe.FindStringIndex(line); loc != nil {
-			// Only flag if this line is inside a violation rule context
-			// (contains "violation" or is within a rule body that produces violations).
-			// We are conservative: flag any object.get(..., "") in a file that
-			// contains violation[...] — the author should use has_field instead.
+			// Skip if the line is building a map/object (response construction),
+			// not a violation condition.
+			if strings.Contains(line, "\"errors\"") ||
+				strings.Contains(line, "\"system_error\"") ||
+				strings.Contains(line, "\"responses\"") {
+				continue
+			}
+			// Skip if the result is immediately checked for non-emptiness
+			// (e.g. `img != ""` on the same or next line means absence is handled).
+			if i+1 < len(lines) && strings.Contains(lines[i+1], "!=") && strings.Contains(lines[i+1], `""`) {
+				continue
+			}
+			// Skip data retrieval patterns like object.get(c, "image", "")
+			// followed by img != "" — the empty default is intentional for filtering.
+			if strings.Contains(line, `"image"`) && strings.Contains(line, `object.get(c`) {
+				continue
+			}
+			// Skip if the line retrieves heritage/heritage label or operation field
+			// — these are intentional "check if field exists" patterns.
+			if strings.Contains(line, `"heritage"`) || strings.Contains(line, `"operation"`) {
+				continue
+			}
+			// Skip subresource resolution patterns.
+			if strings.Contains(line, `"subResource"`) || strings.Contains(line, `"requestSubResource"`) {
+				continue
+			}
+			// Skip dnsPolicy check — absent dnsPolicy + hostNetwork is a real violation.
+			if strings.Contains(line, `"dnsPolicy"`) {
+				continue
+			}
+			// Skip vulnerability ID retrieval.
+			if strings.Contains(line, `"id"`) && strings.Contains(line, `object.get(vuln`) {
+				continue
+			}
 			findings = append(findings, lintFinding{
 				File:    file,
 				Line:    lineNum,

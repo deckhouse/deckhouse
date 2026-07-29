@@ -92,14 +92,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-      - apiGroups: [apps]
-        kinds: [Deployment, StatefulSet, DaemonSet]
-      - apiGroups: [""]
-        kinds: [ReplicationController]
-      - apiGroups: [batch]
-        kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
@@ -117,14 +110,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-      - apiGroups: [apps]
-        kinds: [Deployment, StatefulSet, DaemonSet]
-      - apiGroups: [""]
-        kinds: [ReplicationController]
-      - apiGroups: [batch]
-        kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
@@ -142,14 +128,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-      - apiGroups: [apps]
-        kinds: [Deployment, StatefulSet, DaemonSet]
-      - apiGroups: [""]
-        kinds: [ReplicationController]
-      - apiGroups: [batch]
-        kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -170,14 +149,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-      - apiGroups: [apps]
-        kinds: [Deployment, StatefulSet, DaemonSet]
-      - apiGroups: [""]
-        kinds: [ReplicationController]
-      - apiGroups: [batch]
-        kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -201,14 +173,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-      - apiGroups: [apps]
-        kinds: [Deployment, StatefulSet, DaemonSet]
-      - apiGroups: [""]
-        kinds: [ReplicationController]
-      - apiGroups: [batch]
-        kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
@@ -226,14 +191,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-      - apiGroups: [apps]
-        kinds: [Deployment, StatefulSet, DaemonSet]
-      - apiGroups: [""]
-        kinds: [ReplicationController]
-      - apiGroups: [batch]
-        kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
@@ -273,14 +231,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-      - apiGroups: [apps]
-        kinds: [Deployment, StatefulSet, DaemonSet]
-      - apiGroups: [""]
-        kinds: [ReplicationController]
-      - apiGroups: [batch]
-        kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -301,14 +252,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-      - apiGroups: [apps]
-        kinds: [Deployment, StatefulSet, DaemonSet]
-      - apiGroups: [""]
-        kinds: [ReplicationController]
-      - apiGroups: [batch]
-        kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -329,14 +273,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-      - apiGroups: [apps]
-        kinds: [Deployment, StatefulSet, DaemonSet]
-      - apiGroups: [""]
-        kinds: [ReplicationController]
-      - apiGroups: [batch]
-        kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -357,14 +294,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: [""]
-      kinds: ["Pod"]
-    - apiGroups: [apps]
-      kinds: [Deployment, StatefulSet, DaemonSet]
-    - apiGroups: [""]
-      kinds: [ReplicationController]
-    - apiGroups: [batch]
-      kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -391,14 +321,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: [""]
-      kinds: ["Pod"]
-    - apiGroups: [apps]
-      kinds: [Deployment, StatefulSet, DaemonSet]
-    - apiGroups: [""]
-      kinds: [ReplicationController]
-    - apiGroups: [batch]
-      kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -421,14 +344,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: [""]
-      kinds: ["Pod"]
-    - apiGroups: [apps]
-      kinds: [Deployment, StatefulSet, DaemonSet]
-    - apiGroups: [""]
-      kinds: [ReplicationController]
-    - apiGroups: [batch]
-      kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -451,14 +367,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: [""]
-      kinds: ["Pod"]
-    - apiGroups: [apps]
-      kinds: [Deployment, StatefulSet, DaemonSet]
-    - apiGroups: [""]
-      kinds: [ReplicationController]
-    - apiGroups: [batch]
-      kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -493,14 +402,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: [""]
-      kinds: ["Pod"]
-    - apiGroups: [apps]
-      kinds: [Deployment, StatefulSet, DaemonSet]
-    - apiGroups: [""]
-      kinds: [ReplicationController]
-    - apiGroups: [batch]
-      kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -521,14 +423,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: [""]
-      kinds: ["Pod"]
-    - apiGroups: [apps]
-      kinds: [Deployment, StatefulSet, DaemonSet]
-    - apiGroups: [""]
-      kinds: [ReplicationController]
-    - apiGroups: [batch]
-      kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -555,14 +450,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: [""]
-      kinds: ["Pod"]
-    - apiGroups: [apps]
-      kinds: [Deployment, StatefulSet, DaemonSet]
-    - apiGroups: [""]
-      kinds: [ReplicationController]
-    - apiGroups: [batch]
-      kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
@@ -589,14 +477,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-    - apiGroups: [""]
-      kinds: ["Pod"]
-    - apiGroups: [apps]
-      kinds: [Deployment, StatefulSet, DaemonSet]
-    - apiGroups: [""]
-      kinds: [ReplicationController]
-    - apiGroups: [batch]
-      kinds: [Job, CronJob]
+{{- include "workload_kinds" . }}
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
