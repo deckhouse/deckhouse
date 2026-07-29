@@ -1,5 +1,5 @@
 {{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" -}}
-{{- if semverCompare ">=1.32 <1.36" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.31 <1.36" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
 {{- end }}
 {{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}

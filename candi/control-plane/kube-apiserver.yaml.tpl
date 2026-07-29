@@ -1,5 +1,5 @@
 {{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" "CRDSensitiveData=true" -}}
-{{- if semverCompare ">=1.32 <1.36" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.31 <1.36" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
