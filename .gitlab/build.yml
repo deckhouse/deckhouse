@@ -6,6 +6,25 @@
 #   :mr      — FE + tests auto; other editions manual
 #   :release — FE + tests auto; other editions manual
 
+.publish_image: &publish_image |
+  publish_image() {
+    IMAGE_NAME=$1
+    IMAGE_DST_REPO=$2
+    IMAGE_DST_TAG=$3
+    IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+    IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+    IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+    IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+    echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+    regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+    if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+      echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+      regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+    else
+      echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+    fi
+  }
+
 .build:
   extends:
     - .build_base
@@ -17,6 +36,7 @@
     reports:
       dotenv: build.env
   script:
+    - *publish_image
     - |
       set -euo pipefail
 
@@ -136,24 +156,6 @@
         fi
         IMAGE_TAG="${IMAGE_TAG_BASE}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}"
       fi
-
-      publish_image() {
-        IMAGE_NAME=$1
-        IMAGE_DST_REPO=$2
-        IMAGE_DST_TAG=$3
-        IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
-        IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
-        IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
-        IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
-        echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
-        regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
-        if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
-          echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
-          regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
-        else
-          echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
-        fi
-      }
 
       type werf && source "$(werf ci-env gitlab --verbose --as-file)"
       werf build \
@@ -276,6 +278,7 @@
     reports:
       dotenv: build.env
   script:
+    - *publish_image
     - |
       set -euo pipefail
 
@@ -294,6 +297,12 @@
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
       export WERF_REPO="${DEV_REGISTRY_PATH}"
 
+      if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+        IMAGE_TAG="pr${CI_MERGE_REQUEST_IID}${REPO_SUFFIX:+-${REPO_SUFFIX}}"
+      else
+        IMAGE_TAG="${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}"
+      fi
+
       type werf && source "$(werf ci-env gitlab --verbose --as-file)"
       werf build tests \
         --parallel=true --parallel-tasks-limit=5 \
@@ -301,7 +310,9 @@
         --final-images-only=true \
         --build-report-path images_tags_werf.json
 
-      TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+      publish_image 'tests' "${REGISTRY_PATH}/tests" "${IMAGE_TAG}"
+
+      TESTS_IMAGE_NAME="${REGISTRY_PATH}/tests:${IMAGE_TAG}"
       rm -f images_tags_werf.json
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
       echo "TESTS_IMAGE_NAME=${TESTS_IMAGE_NAME}" > build.env
