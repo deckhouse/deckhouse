@@ -133,7 +133,7 @@ spec:
         - --agent-namespace=kube-system
         - --agent-service-account=konnectivity-agent
         - --authentication-audience=system:konnectivity-server
-        - --kubeconfig=/etc/konnectivity/kubeconfig/super-admin.conf
+        - --kubeconfig=/etc/konnectivity/kubeconfig/konnectivity-server.conf
         ports:
         - {containerPort: 8132, name: agent}
         - {containerPort: 8134, name: health}
@@ -194,7 +194,10 @@ spec:
           name: ${KONNECTIVITY_EGRESS_CM_NAME}
       - name: konnectivity-kubeconfig
         secret:
-          secretName: ${ADMIN_KUBECONFIG_SECRET_NAME}
+          secretName: ${CLIENTS_KUBECONFIG_SECRET_NAME}
+          items:
+          - key: konnectivity-server.conf
+            path: konnectivity-server.conf
       - name: konnectivity-agent-cp
         secret:
           secretName: ${KONNECTIVITY_AGENT_CP_SECRET_NAME}
