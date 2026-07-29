@@ -343,7 +343,6 @@ featureGates:
   DRADeviceBindingConditions: true
   DRAConsumableCapacity: true
   DRAExtendedResource: true
-  DRADeviceTaints: true
 {{- end }}
 {{- range .allowedKubeletFeatureGates }}
   {{ . }}: true
