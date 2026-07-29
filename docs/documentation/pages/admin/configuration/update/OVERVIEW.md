@@ -12,6 +12,15 @@ Each new version gradually moves through these channels,
 helping identify issues early and ensuring stability in production environments.
 For details on each channel, refer to the [Architecture](../../../architecture/updating.html#release-channels) section.
 
+{% alert level="warning" %}
+DKP does not support version downgrades.
+After a release is installed, rolling the platform back to an earlier minor or patch version is not possible.
+
+Rolling back by one minor version applies only to the
+[Kubernetes (control plane) version](../platform-scaling/control-plane/updating-and-versioning.html),
+not to the DKP version.
+{% endalert %}
+
 You can configure the update process.
 Both automatic and manual modes are supported, as well as update windows and other parameters.
 See [Update configuration](configuration.html#update-modes) for details.
