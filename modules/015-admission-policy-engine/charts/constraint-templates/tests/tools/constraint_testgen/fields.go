@@ -138,7 +138,7 @@ func normalizeTestFields(doc *testFieldsDoc) {
 		// absent field), auto-require the "absent" scenario if not already present.
 		// This catches the C2/C3 class of regression where object.get(..., "")
 		// turns an absent field into a concrete "" value that triggers a violation.
-		if field.DefaultBehavior == "undefined" {
+		if field.DefaultBehavior == "Undefined" {
 			hasAbsent := false
 			for _, s := range doc.Spec.ObjectFields[i].RequiredScenarios {
 				if s == "absent" {

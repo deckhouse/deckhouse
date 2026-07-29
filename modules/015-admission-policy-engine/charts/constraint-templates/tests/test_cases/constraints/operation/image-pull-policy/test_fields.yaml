@@ -13,8 +13,8 @@ spec:
   objectFields:
     - path: spec.containers[].imagePullPolicy
       level: container
-      defaultBehavior: undefined
-      containerScope: containers
+      defaultBehavior: Undefined
+      containerScope: Containers
       description: Container imagePullPolicy must match required policy value. When absent, the rule should NOT fire (old behaviour used undefined reference, not "" default).
       requiredScenarios: [positive, negative, absent]
   applicableTracks:
