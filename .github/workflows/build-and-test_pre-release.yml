@@ -232,8 +232,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -268,15 +268,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -639,8 +639,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -675,15 +675,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -828,8 +828,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -864,15 +864,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -994,8 +994,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -1030,15 +1030,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -1413,8 +1413,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -1449,15 +1449,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -1832,8 +1832,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -1868,15 +1868,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -2251,8 +2251,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -2287,15 +2287,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -2670,8 +2670,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -2706,15 +2706,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -3089,8 +3089,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -3125,15 +3125,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -3444,8 +3444,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -3480,15 +3480,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -4488,8 +4488,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -4524,15 +4524,15 @@ jobs:
           else
             werf_fallback=true
           fi
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          if [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "false" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf
             chmod +x "$WERF_PATH/werf"
-          elif [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
+          elif [[ "${WERF_VERSION}" != "$CACHED_VERSION" && $werf_fallback == "true" ]]; then
             echo "Current werf is $CACHED_VERSION, fallback to ${WERF_VERSION}";
             mkdir -p "$WERF_PATH"
             curl -Lsfo "$WERF_PATH/werf" https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf
@@ -4625,8 +4625,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
@@ -4772,8 +4772,8 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z"
+          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
             exit 1
           fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
