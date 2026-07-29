@@ -1,0 +1,14 @@
+diff --git a/controllers/vspherevm_controller.go b/controllers/vspherevm_controller.go
+--- a/controllers/vspherevm_controller.go
++++ b/controllers/vspherevm_controller.go
+@@ -118,10 +118,6 @@ func (r vmReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, o
+ 					GenericFunc: func(event.GenericEvent) bool { return false },
+ 				}),
+ 		).
+-		Watches(
+-			&ipamv1beta1.IPAddressClaim{},
+-			handler.EnqueueRequestsFromMapFunc(r.ipAddressClaimToVSphereVM),
+-		).
+ 		WatchesRawSource(r.clusterCache.GetClusterSource("vspherevm", r.clusterToVSphereVMs)).
+ 		Complete(r)
+ }
