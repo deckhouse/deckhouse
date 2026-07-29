@@ -110,6 +110,7 @@ func applyPostBootstrapModuleConfigs(
 			retry.WithAttempts(75),
 			retry.WithWait(1*time.Second),
 			retry.WithLogger(dhlog.FromContext(ctx)),
+			retry.WithWhitelist(actions.ErrManifestTaskTransient),
 		)
 		err := retry.NewLoopWithParams(p).
 			Run(func() error {

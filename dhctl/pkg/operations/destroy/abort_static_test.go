@@ -37,8 +37,8 @@ import (
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 )
 
 var rootTmpDirStaticAbort = path.Join(os.TempDir(), "dhctl-test-static-abort")
