@@ -21,7 +21,8 @@
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
-{{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion }}
+{{- /* DRADeviceTaints: Alpha default=false in 1.33-1.35, Beta default=true since 1.36 */ -}}
+{{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceTaints=true" -}}
 {{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}

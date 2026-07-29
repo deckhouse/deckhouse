@@ -10,6 +10,9 @@
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
+{{- end }}
+{{- /* DRADeviceTaints: Alpha default=false in 1.33-1.35, Beta default=true since 1.36 */ -}}
+{{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceTaints=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
