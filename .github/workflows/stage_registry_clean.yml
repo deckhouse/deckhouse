@@ -92,6 +92,7 @@ jobs:
 
     # </template: checkout_step>
 
+
     # <template: read_werf_version_step>
     - name: Read werf version from werf_envs.yml
       id: read_werf_version
