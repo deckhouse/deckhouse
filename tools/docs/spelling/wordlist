@@ -1199,6 +1199,8 @@ fallback
 filebeat
 filesystem
 filesystems
+finalizer
+finalizers
 flant
 flavorName
 flavorname
@@ -2715,6 +2717,16 @@ zoneTagCategory
 фикстурой
 фикстуру
 фикстуры
+финалайзер
+финалайзера
+финалайзерам
+финалайзерами
+финалайзерах
+финалайзере
+финалайзеров
+финалайзером
+финалайзеру
+финалайзеры
 фич
 фичах
 фичи
