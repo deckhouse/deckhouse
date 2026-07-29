@@ -9,6 +9,7 @@
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceTaints=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAPartitionableDevices=true" -}}
