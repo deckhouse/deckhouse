@@ -1085,28 +1085,28 @@ d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
 
 1. Выполните команду для указания данных аутентификации в хранилище образов:
 
- {{
-  ngc_auth_registry
-  | regex_replace: "\$NEW_EDITION", "cse"
-  | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
-  | regex_replace: "^", "   "
- }}
+   {{
+      ngc_auth_registry
+      | regex_replace: "\$NEW_EDITION", "cse"
+      | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+      | regex_replace: "^", "   "
+   }}
 
- {{
-  bashible_sync_wait
-  | regex_replace: "^", "   "
- }}
+   {{
+      bashible_sync_wait
+      | regex_replace: "^", "   "
+   }}
 
 1. Переключите хранилище образов контейнеров:
 
- {{
-  change_registry_helper
-  | regex_replace: "\$NEW_EDITION", "cse"
-  | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
-  | regex_replace: "^", "   "
- }}
+   {{
+      change_registry_helper
+      | regex_replace: "\$NEW_EDITION", "cse"
+      | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+      | regex_replace: "^", "   "
+   }}
 
-{{ take_care_deckhuse_imagepullbackoff }}
+   {{ take_care_deckhuse_imagepullbackoff }}
 
 1. Дождитесь готовности DKP:
 
@@ -1131,12 +1131,12 @@ d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
 
 1. Выполните очистку:
 
- {{
-  ngc_cleanup_registry
-  | regex_replace: "\$NEW_EDITION", "cse"
-  | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
-  | regex_replace: "^", "   "
- }}
+   {{
+      ngc_cleanup_registry
+      | regex_replace: "\$NEW_EDITION", "cse"
+      | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+      | regex_replace: "^", "   "
+   }}
 
 {% endtab %}
 
@@ -1266,23 +1266,23 @@ d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
    {% tabs cse-set-deckhouse-image %}
    {% tab "CSE 1.58" %}
 
- ```shell
- d8 k -n d8-system set image deployment/deckhouse \
- kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
- deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
- ```
+   ```shell
+   d8 k -n d8-system set image deployment/deckhouse \
+   kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
+   deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   ```
 
    {% endtab %}
 
    {% tab "CSE 1.64 / 1.67" %}
 
- ```shell
- CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
- d8 k -n d8-system set image deployment/deckhouse \
- init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER \
- kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
- deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
- ```
+   ```shell
+   CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   d8 k -n d8-system set image deployment/deckhouse \
+   init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER \
+   kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
+   deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   ```
 
    {% endtab %}
    {% endtabs %}
