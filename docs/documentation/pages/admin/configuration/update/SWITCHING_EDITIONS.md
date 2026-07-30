@@ -180,6 +180,12 @@ Summary:
       d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=$DKP_REPO@$DECKHOUSE_INIT
       ```
 
+   1. Make sure there is no image download error:
+
+      ```bash
+      d8 k -n d8-system get pods -l "app=deckhouse"
+      ```
+
 {% endcapture %}
 
 {% capture take_care_of_the_queue %}
@@ -203,7 +209,7 @@ journalctl -u bashible -n 5
 
 {% endcapture %}
 
-{% capture check_old_pods_unmanaged %}
+{% capture check_old_pods %}
 
 ```shell
 d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<PREVIOUS_EDITION_CODE>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
@@ -689,7 +695,7 @@ Not applicable for managed Kubernetes (EKS, AKS, GKE).
 
 1. Check for pods using the old registry:
 
-   {{ check_old_pods_unmanaged }}
+   {{ check_old_pods | regex_replace: "^", "   " }}
 
 ### Switching without the registry module
 
@@ -825,7 +831,7 @@ Choose the target edition:
 
 1. Check for pods using the old registry:
 
-   {{ check_old_pods_unmanaged }}
+   {{ check_old_pods | regex_replace: "^", "   " }}
 
 1. Perform cleanup:
 

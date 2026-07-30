@@ -182,6 +182,12 @@ Summary:
       d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=$DKP_REPO@$DECKHOUSE_INIT
       ```
 
+   1. Убедитесь, в отсутствии ошибки скачивания образа:
+
+      ```bash
+      d8 k -n d8-system get pods -l "app=deckhouse"
+      ```
+
 {% endcapture %}
 
 {% capture take_care_of_the_queue %}
@@ -943,7 +949,7 @@ d8 k delete ngc del-temp-config.sh
 
 1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
 
-   {{ check_old_pods }}
+   {{ check_old_pods | regex_replace: "^", "   " }}
 
 1. **Только для DKP CSE** — установите `releaseChannel` в moduleConfig `deckhouse`:
 
@@ -1087,7 +1093,7 @@ d8 k delete ngc del-temp-config.sh
 
 1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
 
-   {{ check_old_pods }}
+   {{ check_old_pods | regex_replace: "^", "   " }}
 
 1. Выполните очистку:
 
@@ -1253,7 +1259,7 @@ d8 k delete ngc del-temp-config.sh
 
 1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
 
-   {{ check_old_pods }}
+   {{ check_old_pods | regex_replace: "^", "   " }}
 
 1. Установите `releaseChannel` в moduleConfig `deckhouse`:
 
