@@ -32,7 +32,7 @@ Bashible — это ключевой компонент подсистемы Clu
 1. **Bashible-api-server** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), развернутый на master-узлах. Генерирует bashible-скрипты из шаблонов, хранящихся в кастомных ресурсах. При обращении к kube-apiserver за ресурсами, содержащими бандлы bashible, kube-apiserver перенаправляет запрос в bashible-api-server и возвращает сформированный результат. Подробнее с описанием работы bashible и bashible-api-server можно ознакомиться в [соответствующем разделе документации](bashible.html).
 
 1. **Node-controller** (Deployment) — контроллер, управляющий жизненным циклом кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup). Node-controller выполняет следующие операции:
-   
+
    * управляет жизненным циклом кастомного ресурса [NodeGroup](/modules/node-manager/cr.html#nodegroup);
    * реализует вебхуки для валидации кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) через механику [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/);
    * реализует вебхуки для конверсии кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [Instance](/modules/node-manager/cr.html#instance);
@@ -42,20 +42,22 @@ Bashible — это ключевой компонент подсистемы Clu
    * вычисляет и обновляет субресурс `status` кастомных ресурсов NodeGroup на основании агрегированной информации, полученной из соответствующих ресурсов Node и инфраструктурных кастомныех ресурсов;
    * устанавливает атрибут `spec.providerID = "static://"` для ресурсов Node типа Static при его отсутствии;
    * управляет жизненным циклом обновления узлов: одобрение обновления, обработка прерываний в работе узлов, перевод узла кластера [в режим обслуживания (draining a node)](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/) и очистка после успешного обновления.
-   
-   Под node-controller состоит из следующих контейнеров:
+
+   Компонент включает в себя следующие контейнеры:
 
    * **node-controller** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
 
 1. **Node-group-exporter** (Deployment) — компонент, экспортирующий метрики ресурса NodeGroup в формате Prometheus, содержащие информацию о количестве узлов в каждой группе узлов: общее количество, количество узлов в статусе `Ready`, количество узлов в ошибке, минимальное и максимальное количество узлов в группе и т.д.
 
-   Под node-group-exporter состоит из следующих контейнеров:
+   Компонент включает в себя следующие контейнеры:
 
    * **node-group-exporter** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам экспортера.
 
-1. **Capi-controller-manager** (Deployment) — основные контроллеры из проекта [Kubernetes Cluster API](https://github.com/kubernetes-sigs/cluster-api). Cluster API является расширением Kubernetes, которое дает возможность управлять кластерами как кастомными ресурсами внутри другого Kubernetes-кластера. Под capi-controller-manager состоит из следующих контейнеров:
+1. **Capi-controller-manager** (Deployment) — основные контроллеры из проекта [Kubernetes Cluster API](https://github.com/kubernetes-sigs/cluster-api). Cluster API является расширением Kubernetes, которое дает возможность управлять кластерами как кастомными ресурсами внутри другого Kubernetes-кластера.
+
+   Компонент включает в себя следующие контейнеры:
 
    * **control-plane-manager** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
@@ -77,7 +79,7 @@ Bashible — это ключевой компонент подсистемы Clu
 
    У пода standby-holder минимальный PriorityClass, и он вытесняется с узла при появлении реальной нагрузки. Подробнее о приоритизации и вытеснении подов можно почитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/).
 
-   Под содержит один контейнер **reserve-resources**.
+   Компонент содержит один контейнер **reserve-resources**.
 
 ## Взаимодействия модуля
 
