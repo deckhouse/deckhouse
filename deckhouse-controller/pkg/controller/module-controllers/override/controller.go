@@ -25,7 +25,6 @@ import (
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -198,27 +197,27 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	// the module must be enabled — explicitly by a ModuleConfig or by the bundle default
-	enabled := module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue)
+	// enabled := module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue)
 	// no ModuleConfig yet (the condition is absent or unknown) — fall back to the bundle default
-	if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
-		module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
-		enabled = module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle)
-	}
+	// if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
+	// module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
+	// enabled = module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle)
+	// }
 
-	if !enabled {
-		r.log.Debug("module is disabled, skip it", slog.String("name", mpo.Name))
-		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleDisabled {
-			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleDisabled
-			// unset image digest to trigger latter downloading
-			mpo.Status.ImageDigest = ""
-			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-				r.log.Error("failed to update module pull override", slog.String("name", mpo.Name), log.Err(uerr))
-				return ctrl.Result{}, uerr
-			}
-		}
+	// if !enabled {
+	// r.log.Debug("module is disabled, skip it", slog.String("name", mpo.Name))
+	// if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleDisabled {
+	// mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleDisabled
+	// unset image digest to trigger latter downloading
+	// mpo.Status.ImageDigest = ""
+	// if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
+	// r.log.Error("failed to update module pull override", slog.String("name", mpo.Name), log.Err(uerr))
+	// return ctrl.Result{}, uerr
+	// }
+	// }
 
-		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
-	}
+	// return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
+	// }
 
 	// source must be
 	if module.Properties.Source == "" {
