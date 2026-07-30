@@ -1140,7 +1140,7 @@ d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
 
 {% endtab %}
 
-{% tab "DKP CSE < v1.73" %}
+{% tab "DKP CSE 1.58/1.64/1.67" %}
 1. Укажите версию DKP CSE, которую вы хотите использовать:
 
    {% tabs cse-switch-deckhouse-version %}
