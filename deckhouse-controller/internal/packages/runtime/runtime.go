@@ -200,6 +200,10 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	// Initialize scheduler with enabling/disabling callbacks
 	r.buildScheduler(cli)
 
+	if err := r.scheduler.AddNode(r.global); err != nil {
+		return nil, fmt.Errorf("add node to scheduler: %w", err)
+	}
+
 	if err := r.loadEmbedded(context.Background()); err != nil {
 		return nil, fmt.Errorf("load embedded: %w", err)
 	}
