@@ -30,6 +30,15 @@ from deckhouse import hook
 from dotmap import DotMap
 
 KIND_LABEL = "rbac.deckhouse.io/kind"
+# Marks a ClusterRole as bindable inside a project: the grant registry for cluster roles excludes
+# everything without it, so a role may reach a project namespace only when it carries the label.
+DELEGATABLE_LABEL = "rbac.deckhouse.io/delegatable"
+# Selector label of a capability. Its value is "<scope>-capability.<module>.<name>", and a custom
+# capability prefixes that with "custom.".
+CAPABILITY_SELECTOR_LABEL = "rbac.deckhouse.io/capability"
+# Capability scopes whose rules a project may legitimately receive. A system/subsystem capability
+# must never travel into a project through a delegatable custom role.
+TENANT_CAPABILITY_SCOPES = {"namespace-capability", "project-capability"}
 # Administrators may override the DISPLAY title/description of a built-in role by
 # setting these annotations on it. The "d8:" prefix is otherwise reserved, so we allow an UPDATE to a
 # built-in role iff it touches ONLY annotations under this prefix (never rules/aggregation/labels).
@@ -112,6 +121,46 @@ def _only_custom_meta_annotation_change(old: dict, new: dict) -> bool:
     return True
 
 
+def _capability_scope(value: str) -> str:
+    """Scope segment of a capability label value; "" when the value has an unexpected shape."""
+    if value.startswith("custom."):
+        value = value[len("custom.") :]
+    return value.split(".", 1)[0]
+
+
+def _aggregates_only_tenant_capabilities(selectors) -> bool:
+    """
+    Whether every aggregated capability is one a project may receive.
+
+    Fail-closed on purpose: anything the check cannot read as a tenant-scoped capability disqualifies
+    the role. A selector by matchExpressions, by some other label, or with a value of an unexpected
+    shape could pull in a system capability, and the whole point of the label is that binding such a
+    role inside a project is refused.
+    """
+    if not selectors:
+        return False
+
+    for selector in selectors:
+        if selector.get("matchExpressions"):
+            return False
+
+        match_labels = selector.get("matchLabels") or {}
+        if not match_labels:
+            return False
+
+        for key, value in match_labels.items():
+            if key == CAPABILITY_SELECTOR_LABEL:
+                if _capability_scope(value) not in TENANT_CAPABILITY_SCOPES:
+                    return False
+                continue
+
+            m = AGGREGATE_LABEL_RE.match(key)
+            if m is None or m.group(1) not in TENANT_LINEAGES:
+                return False
+
+    return True
+
+
 def validate(ctx: DotMap) -> Optional[str]:
     request = ctx.review.request
     obj = _as_dict(request.object)
@@ -178,6 +227,16 @@ def validate(ctx: DotMap) -> Optional[str]:
             return (
                 f'ClusterRole "{name}" must not aggregate the "{system_side}" lineage together with '
                 f'the "{tenant_side}" lineage: mixing system and namespace/project scopes is forbidden.'
+            )
+
+        # The delegatable label is what lets a role be bound inside a project, so it may only be
+        # claimed by a role built entirely from namespace/project capabilities. The check above is
+        # not enough: it only reads the "aggregate-to-<lineage>-as" selectors, while a role
+        # assembled from individual capabilities selects them by the capability label instead.
+        if labels.get(DELEGATABLE_LABEL) == "true" and not _aggregates_only_tenant_capabilities(selectors):
+            return (
+                f'ClusterRole "{name}" must not be labeled "{DELEGATABLE_LABEL}: true": '
+                "a role bindable inside a project may aggregate namespace and project capabilities only."
             )
 
     return None
