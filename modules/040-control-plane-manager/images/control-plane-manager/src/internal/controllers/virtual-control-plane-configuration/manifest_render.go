@@ -18,6 +18,7 @@ package virtualcontrolplaneconfiguration
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -69,6 +70,7 @@ func renderManifests(
 	globalData map[string][]byte,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	apiAdvertiseAddress string,
+	egressDestinations []string,
 ) (map[string][]byte, error) {
 	table, err := parseImagesTable(globalData)
 	if err != nil {
@@ -86,6 +88,7 @@ func renderManifests(
 		table.Fixed,
 		apiAdvertiseAddress,
 		string(globalData["cluster-uuid"]),
+		egressDestinations,
 	)
 
 	rendered := make(map[string][]byte)
@@ -132,6 +135,7 @@ func buildManifestReplacer(
 	fixed fixedImages,
 	apiAdvertiseAddress string,
 	clusterUUID string,
+	egressDestinations []string,
 ) *strings.Replacer {
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
@@ -158,6 +162,7 @@ func buildManifestReplacer(
 		"${KONNECTIVITY_EGRESS_CM_NAME}", constants.VirtualResourceName(constants.VirtualKonnectivityEgressConfigMapName, vcp.Name),
 		"${KONNECTIVITY_SERVER_SERVICE_NAME}", constants.VirtualResourceName(constants.VirtualKonnectivityServerServiceName, vcp.Name),
 		"${KONNECTIVITY_AGENT_CP_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualKonnectivityAgentCPSecretName, vcp.Name),
+		"${KONNECTIVITY_AGENT_CP_IDENTIFIERS}", konnectivityagentCPIdentifiers(egressDestinations),
 		"${ADMIN_KUBECONFIG_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualAdminKubeconfigSecretName, vcp.Name),
 		"${KUBECONFIG_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualKubeconfigSecretName, vcp.Name),
 		"${DATASTORE_NAME}", constants.VirtualResourceName(constants.VirtualDatastoreName, vcp.Name),
@@ -165,4 +170,31 @@ func buildManifestReplacer(
 		"${CILIUM_CONFIG_NAME}", constants.VirtualResourceName("cilium-config", vcp.Name),
 		"${CILIUM_OPERATOR_NAME}", constants.VirtualResourceName("cilium-operator", vcp.Name),
 	)
+}
+
+// konnectivityagentCPIdentifiers builds:
+//
+//	--agent-identifiers=ipv4=A&ipv4=B
+//
+// IPs are deduplicated and sorted for stable STS/Secret diffs.
+func konnectivityagentCPIdentifiers(dests []string) string {
+	seen := make(map[string]struct{}, len(dests))
+	ips := make([]string, 0, len(dests))
+	for _, d := range dests {
+		if d == "" {
+			continue
+		}
+		if _, ok := seen[d]; ok {
+			continue
+		}
+		seen[d] = struct{}{}
+		ips = append(ips, d)
+	}
+	sort.Strings(ips)
+
+	parts := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		parts = append(parts, "ipv4="+ip)
+	}
+	return "ipv4=" + strings.Join(parts, "&ipv4=")
 }

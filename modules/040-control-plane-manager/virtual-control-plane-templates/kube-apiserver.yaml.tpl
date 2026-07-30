@@ -163,9 +163,7 @@ spec:
         - --admin-server-port=8135
         - --health-server-port=8136
         - --service-account-token-path=/etc/konnectivity-agent-cp/token
-        # Sentinel until reconcileKonnectivityAgentCPIdentifiers sets ipv4=<parent Service ClusterIPs>.
-        # Must not be default-route=true: that steals tenant pod/Service dials from worker agents.
-        - --agent-identifiers=ipv4=0.0.0.0
+        - --agent-identifiers=${KONNECTIVITY_AGENT_CP_IDENTIFIERS}
         livenessProbe:
           httpGet:
             port: 8136
