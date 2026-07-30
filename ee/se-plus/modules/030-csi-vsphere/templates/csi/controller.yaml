@@ -121,7 +121,7 @@
 
 {{- define "csi_node_registrar_liveness_exec_probes_command" }}
     - /csi-node-driver-registrar
-    - --kubelet-registration-path=/var/lib/kubelet/csi-plugins/csi.vsphere.vmware.com/csi.sock"
+    - --kubelet-registration-path=/var/lib/kubelet/csi-plugins/csi.vsphere.vmware.com/csi.sock
     - --mode=kubelet-registration-probe
 {{- end }}
 
