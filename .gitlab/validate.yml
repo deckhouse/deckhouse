@@ -39,7 +39,7 @@ tests:
 tests_node_controller:
   extends:
     - .validate_base
-    - .rules:on_validate
+    - .rules:on_merge_request_node_controller
   image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
   variables:
     GOFLAGS: -buildvcs=false

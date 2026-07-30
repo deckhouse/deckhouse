@@ -8,8 +8,6 @@
     - vm-intteam-cloud-d8-ssdlc-runner
   needs: []
   timeout: 2h
-  extends:
-    - .rules:on_validate
   variables:
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse
@@ -43,6 +41,7 @@
 doc_web_build:
   extends:
     - .web_build
+    - .rules:on_validate
   variables:
     WERF_DIR: docs/documentation
   script:
@@ -52,6 +51,7 @@ doc_web_build:
 main_web_build:
   extends:
     - .web_build
+    - .rules:on_pr_main
   variables:
     WERF_DIR: docs/site
   # Child secrets replace parent secrets in GitLab — include registry + DOC_API_*.

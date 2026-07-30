@@ -1,10 +1,10 @@
 # Deckhouse image builds (werf). Shell executor.
 #
 # Jobs are split by pipeline context and attach existing rule includes:
-#   :tag     — all editions + tests, automatic (.rules:on_tag)
+#   :tag     — FE + CE/EE/BE/SE/SE-plus automatic (no tests image, no CSE; GH release has no CSE)
 #   :main    — FE + tests auto; other editions manual
 #   :mr      — FE + tests auto; other editions manual
-#   :release — FE + tests auto; other editions manual
+#   :release — FE + tests + all editions automatic (incl. CSE)
 
 .publish_image: &publish_image |
   publish_image() {
@@ -347,15 +347,7 @@ build_se_plus:tag:
     - .build_se_plus
     - .rules:on_tag
 
-build_cse:tag:
-  extends:
-    - .build_cse
-    - .rules:on_tag
-
-build_tests:tag:
-  extends:
-    - .build_tests
-    - .rules:on_tag
+# CSE is not built on tags in GitHub release workflow.
 
 # ---------------------------------------------------------------------------
 # main: FE + tests automatic; other editions manual
@@ -462,29 +454,29 @@ build_tests:release:
 build_ce:release:
   extends:
     - .build_ce
-    - .rules:on_release_branch_manual
+    - .rules:on_release_branch
 
 build_ee:release:
   extends:
     - .build_ee
-    - .rules:on_release_branch_manual
+    - .rules:on_release_branch
 
 build_be:release:
   extends:
     - .build_be
-    - .rules:on_release_branch_manual
+    - .rules:on_release_branch
 
 build_se:release:
   extends:
     - .build_se
-    - .rules:on_release_branch_manual
+    - .rules:on_release_branch
 
 build_se_plus:release:
   extends:
     - .build_se_plus
-    - .rules:on_release_branch_manual
+    - .rules:on_release_branch
 
 build_cse:release:
   extends:
     - .build_cse
-    - .rules:on_release_branch_manual
+    - .rules:on_release_branch

@@ -106,6 +106,18 @@
     fi
     echo "BUILD_MODE=${BUILD_MODE}"
 
+  prepare_validation_diff: |
+    export VALIDATE_TITLE="${CI_MERGE_REQUEST_TITLE:-${CI_COMMIT_TITLE:-}}"
+    export VALIDATE_DESCRIPTION="${CI_MERGE_REQUEST_DESCRIPTION:-${CI_COMMIT_MESSAGE:-}}"
+    if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
+      git diff "${CI_MERGE_REQUEST_DIFF_BASE_SHA}...HEAD" > "${DIFF_PATH}" || true
+    elif [[ -n "${CI_COMMIT_BEFORE_SHA:-}" && "${CI_COMMIT_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
+      git diff "${CI_COMMIT_BEFORE_SHA}...HEAD" > "${DIFF_PATH}" || true
+    else
+      git diff HEAD^...HEAD > "${DIFF_PATH}" || true
+    fi
+    echo "VALIDATE_TITLE length=${#VALIDATE_TITLE} diff_bytes=$(wc -c < "${DIFF_PATH}")"
+
 .build_base:
   stage: build
   tags:

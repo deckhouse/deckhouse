@@ -10,9 +10,6 @@
     - job: build_tests:main
       optional: true
       artifacts: true
-    - job: build_tests:tag
-      optional: true
-      artifacts: true
     - job: build_tests:release
       optional: true
       artifacts: true
@@ -153,7 +150,7 @@ security_scan_images:
   extends:
     - .security_scan_base
     - .needs_build_fe
-    - .rules:on_test
+    - .rules:on_pr_main
   variables:
     IMAGE: ${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss
     TAG: ${DEV_IMAGE_TAG}

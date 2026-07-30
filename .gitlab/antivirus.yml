@@ -76,6 +76,43 @@
   fi
   docker exec "${CONTAINER_NAME}" rm -rf "scans/${SCAN_ID}" || true
 
+# Set MR labels like GitHub av_label_step (security/antivirus/success|failed).
+.av_set_labels: &av_set_labels |
+  if [[ -z "${CI_MERGE_REQUEST_IID:-}" ]]; then
+    echo "Not an MR, skip antivirus labels"
+    exit 0
+  fi
+  skipped=false
+  if [[ -f av.env ]]; then
+    # shellcheck disable=SC1091
+    source av.env
+  fi
+  echo "AV label update: job=${CI_JOB_STATUS} skipped=${skipped} changed_count=${CHANGED_COUNT:-}"
+  if [[ "${CHANGED_COUNT:-0}" == "0" || "${skipped}" == "true" ]]; then
+    echo "No rebuilt images / scan skipped — clear antivirus labels"
+    curl -sfS --request PUT \
+      --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+      --data-urlencode "remove_labels=security/antivirus/success,security/antivirus/failed" \
+      "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${CI_MERGE_REQUEST_IID}" \
+      >/dev/null
+    exit 0
+  fi
+  if [[ "${CI_JOB_STATUS}" == "success" ]]; then
+    curl -sfS --request PUT \
+      --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+      --data-urlencode "add_labels=security/antivirus/success" \
+      --data-urlencode "remove_labels=security/antivirus/failed" \
+      "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${CI_MERGE_REQUEST_IID}" \
+      >/dev/null
+  else
+    curl -sfS --request PUT \
+      --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+      --data-urlencode "add_labels=security/antivirus/failed" \
+      --data-urlencode "remove_labels=security/antivirus/success" \
+      "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${CI_MERGE_REQUEST_IID}" \
+      >/dev/null
+  fi
+
 .antivirus_base:
   stage: test
   tags:
@@ -100,6 +137,7 @@
       file: false
   after_script:
     - *av_cleanup
+    - *av_set_labels
 
 drweb_scan:
   extends:
@@ -113,6 +151,7 @@ drweb_scan:
     expire_in: 5 days
     paths:
       - av-results/
+      - av.env
 
 kaspersky_scan:
   extends:
@@ -126,3 +165,4 @@ kaspersky_scan:
     expire_in: 5 days
     paths:
       - av-results/
+      - av.env
