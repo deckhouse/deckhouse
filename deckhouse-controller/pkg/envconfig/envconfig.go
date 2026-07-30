@@ -67,7 +67,7 @@ import (
 
 	env "github.com/caarlos0/env/v11"
 
-	"github.com/deckhouse/deckhouse/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 )
 
 // Config mirrors the leaf settings of addon-operator's *Config with env tags
