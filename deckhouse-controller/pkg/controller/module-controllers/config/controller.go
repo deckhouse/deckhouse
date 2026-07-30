@@ -49,7 +49,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -150,7 +149,7 @@ type moduleManager interface {
 }
 
 type packageManager interface {
-	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, enabled *bool)
+	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -214,14 +213,13 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	}
 
-	if app.ModulePackagesEnabled() {
-		// update modules settings in the package manager
-		r.packageManager.UpdateModulesSettings(
-			moduleConfig.Name,
-			moduleConfig.Spec.Version,
-			moduleConfig.Spec.Settings.GetMap(),
-			moduleConfig.Spec.Enabled)
-	}
+	// update modules settings in the package manager
+	r.packageManager.UpdateModulesSettings(
+		moduleConfig.Name,
+		moduleConfig.Spec.Version,
+		moduleConfig.Spec.Settings.GetMap(),
+		moduleConfig.Spec.Maintenance,
+		moduleConfig.Spec.Enabled)
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{Requeue: true}, nil

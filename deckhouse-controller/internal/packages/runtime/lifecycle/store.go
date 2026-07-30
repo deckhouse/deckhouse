@@ -129,7 +129,7 @@ func (s *Store) Update(name, version string, settingsVersion int, settings addon
 // load tasks are left running. It is the settings-only counterpart to Update,
 // used when settings change independently of a version change. The ModuleConfig
 // enabled intent is tracked separately by the global module, not here.
-func (s *Store) UpdateSettings(name string, settingsVersion int, settings addonutils.Values) bool {
+func (s *Store) UpdateSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
 		return false
@@ -146,6 +146,7 @@ func (s *Store) UpdateSettings(name string, settingsVersion int, settings addonu
 		pkg.settings = settings
 	}
 	pkg.settingsVersion = settingsVersion
+	pkg.maintenance = maintenance
 
 	return true
 }
