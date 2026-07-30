@@ -583,7 +583,12 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 		apiAdvertiseAddress = "$(POD_IP)"
 	}
 
-	data, err := renderManifests(global.Data, vcp, apiAdvertiseAddress)
+	egressDestinations, err := r.prepareParentEgressDestinations(ctx, vcp)
+	if err != nil {
+		return nil, reconcile.Result{}, fmt.Errorf("collect parent egress destinations: %w", err)
+	}
+
+	data, err := renderManifests(global.Data, vcp, apiAdvertiseAddress, egressDestinations)
 	if err != nil {
 		return nil, reconcile.Result{}, fmt.Errorf("render manifests: %w", err)
 	}
@@ -614,6 +619,60 @@ func (r *reconciler) reconcileConfigSecret(ctx context.Context, vcp *controlplan
 	syncOwnerReferences(current, target)
 
 	return current, reconcile.Result{}, r.patchSecret(ctx, base, current)
+}
+
+func (r *reconciler) prepareParentEgressDestinations(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+) ([]string, error) {
+	var dests []string
+
+	// bashible aggregated API: nested Endpoints point at this parent ClusterIP.
+	{
+		_, res, err := r.reconcileBashibleService(ctx, vcp)
+		if err != nil || !res.IsZero() {
+			return nil, err
+		}
+
+		ip, res, err := r.getServiceClusterIP(ctx, vcp, bashibleServiceName)
+		if err != nil || !res.IsZero() {
+			return nil, err
+		}
+		dests = append(dests, ip)
+	}
+
+	return dests, nil
+}
+
+func (r *reconciler) getServiceClusterIP(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	baseName string,
+) (string, reconcile.Result, error) {
+	name := constants.VirtualResourceName(baseName, vcp.Name)
+	svc, err := r.getService(ctx, vcp.Namespace, name)
+	if apierrors.IsNotFound(err) {
+		return "", reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
+	}
+	if err != nil {
+		return "", reconcile.Result{}, fmt.Errorf("get parent Service %s/%s: %w", vcp.Namespace, name, err)
+	}
+	ip := serviceClusterIP(svc)
+	if ip == "" {
+		return "", reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
+	}
+	return ip, reconcile.Result{}, nil
+}
+
+func serviceClusterIP(svc *corev1.Service) string {
+	if svc == nil {
+		return ""
+	}
+	ip := svc.Spec.ClusterIP
+	if ip == "" || ip == corev1.ClusterIPNone {
+		return ""
+	}
+	return ip
 }
 
 func buildTargetConfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {

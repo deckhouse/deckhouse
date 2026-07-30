@@ -163,7 +163,7 @@ spec:
         - --admin-server-port=8135
         - --health-server-port=8136
         - --service-account-token-path=/etc/konnectivity-agent-cp/token
-        - --agent-identifiers=default-route=true
+        - --agent-identifiers=${KONNECTIVITY_AGENT_CP_IDENTIFIERS}
         livenessProbe:
           httpGet:
             port: 8136

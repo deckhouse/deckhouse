@@ -162,7 +162,7 @@ spec:
             - name: tmp
               mountPath: /run
             - name: kube
-              mountPath: /.kube
+              mountPath: /root/.kube
             - name: downloaded
               mountPath: /deckhouse/downloaded
             - name: kubeconfig

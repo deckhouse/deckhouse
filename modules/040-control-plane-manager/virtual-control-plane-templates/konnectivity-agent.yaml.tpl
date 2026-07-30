@@ -47,7 +47,9 @@ spec:
         - --admin-server-port=8133
         - --health-server-port=8134
         - --service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token
-        - --agent-identifiers=ipv4=$(NODE_IP)&cidr=${POD_SUBNET_CIDR}&cidr=${SERVICE_SUBNET_CIDR}
+        # default-route: ANP destHost ignores cidr=; unmatched dials (tenant pod/Service
+        # IPs) must land on tenant agents. Parent dials use exact ipv4= on agent-cp.
+        - --agent-identifiers=ipv4=$(NODE_IP)&default-route=true
         livenessProbe:
           httpGet:
             port: 8134
