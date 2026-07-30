@@ -140,9 +140,9 @@ type moduleManagerI interface {
 	IsModuleEnabled(name string) bool
 }
 
-// New creates and initializes a Runtime with all subsystems wired together.
+// Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)

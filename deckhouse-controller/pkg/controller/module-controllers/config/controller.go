@@ -24,6 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -66,6 +67,7 @@ const (
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
+	pm packageManager,
 	conversionsStore *conversion.ConversionsStore,
 	edition *d8edition.Edition,
 	handler *confighandler.Handler,
@@ -80,6 +82,7 @@ func RegisterController(
 		handler:          handler,
 		conversionsStore: conversionsStore,
 		moduleManager:    mm,
+		packageManager:   pm,
 		edition:          edition,
 		metricStorage:    ms,
 		configValidator:  configtools.NewValidator(mm, conversionsStore),
@@ -128,6 +131,7 @@ type reconciler struct {
 	edition          *d8edition.Edition
 	handler          *confighandler.Handler
 	moduleManager    moduleManager
+	packageManager   packageManager
 	metricStorage    metricsstorage.Storage
 	configValidator  *configtools.Validator
 	exts             extenders.IExtendersStack
@@ -142,6 +146,10 @@ type moduleManager interface {
 	GetGlobal() *modules.GlobalModule
 	GetUpdatedByExtender(name string) (string, error)
 	GetModuleEventsChannel() chan events.ModuleEvent
+}
+
+type packageManager interface {
+	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -198,23 +206,20 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
-	// TODO: remove after 1.73+
-	if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld) {
-		patch := client.MergeFrom(moduleConfig.DeepCopy())
-		controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld)
-
-		if err := r.client.Patch(ctx, moduleConfig, patch); err != nil {
-			r.logger.Error("failed to remove old finalizer", slog.String("name", moduleConfig.Name), log.Err(err))
-			return ctrl.Result{}, fmt.Errorf("patch: %w", err)
-		}
-	}
-
 	// send an event to addon-operator only if the module exists, or it is the global one
 	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
 	if moduleConfig.Name == moduleGlobal || basicModule != nil {
 		r.logger.Debug("send event to operator", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
 		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	}
+
+	// update modules settings in the package manager
+	r.packageManager.UpdateModulesSettings(
+		moduleConfig.Name,
+		moduleConfig.Spec.Version,
+		moduleConfig.Spec.Settings.GetMap(),
+		moduleConfig.Spec.Maintenance,
+		moduleConfig.Spec.Enabled)
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{Requeue: true}, nil
