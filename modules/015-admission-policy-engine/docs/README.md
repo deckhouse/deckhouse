@@ -28,7 +28,17 @@ Depending on how pods are created, there are differences in how the API generate
 
 ## Controller-level validation
 
-In addition to Pods, policies now validate pod-creating controllers (Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicationController) at CREATE and UPDATE time. This provides early feedback when a workload is created or updated, before any Pod is launched.
+In addition to Pods, policies validate pod-creating controllers at CREATE and UPDATE time. This provides early feedback when a workload is created or updated, before any Pod is launched.
+
+The following object types are intercepted:
+
+| API group | Kind                               | Operations     |
+| --------- | ---------------------------------- | -------------- |
+| (core)    | Pod                                | CREATE, UPDATE |
+| apps      | Deployment, StatefulSet, DaemonSet | CREATE, UPDATE |
+| (core)    | ReplicationController              | CREATE, UPDATE |
+| batch     | Job, CronJob                       | CREATE, UPDATE |
+| (core)    | pods/exec, pods/attach             | CONNECT        |
 
 {% alert level="warning" %}
 Controller-level checks evaluate the **un-mutated pod template** (`spec.template`), not the final Pod. A Pod reaching Gatekeeper has already passed through mutating admission (e.g. LimitRange injecting default `resources`, or a mutating webhook injecting `securityContext`); a controller's pod template has not.
