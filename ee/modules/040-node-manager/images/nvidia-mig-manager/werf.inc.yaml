@@ -7,20 +7,20 @@
   {{- $kubectl_version  := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/nvidia-mig-manager-{{ $image_version }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /usr/bin
   includePaths:
     - nvidia-mig-parted
     - nvidia-mig-manager
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /usr/lib64
   includePaths:
     - ld-linux-x86-64.so.2
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /usr/lib/x86_64-linux-gnu
   includePaths:
     - ld-linux-x86-64.so.2
@@ -31,13 +31,13 @@ import:
     - libdl.so.2
     - libm.so.6
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
   add: /
   includePaths:
     - lib64
     - lib
   before: setup
-- image: {{ $.ModuleName }}/nvidia-container-toolkit-build-artifact
+- from: {{ $.ModuleName }}/nvidia-container-toolkit-build-artifact
   add: /usr/bin/nvidia-ctk
   to: /usr/bin/nvidia-ctk
   before: setup
@@ -51,7 +51,7 @@ import:
   includePaths:
   - usr/bin/*
   before: setup
-- image: common/kubernetes-artifact-{{ $kubectl_version }}
+- from: common/kubernetes-artifact-{{ $kubectl_version }}
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
   before: setup
@@ -61,7 +61,7 @@ import:
   after: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 secrets:
 - id: SOURCE_REPO
@@ -74,9 +74,9 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
 final: false
-fromImage: {{ $.ModuleName }}/builder-cuda
+from: {{ $.ModuleName }}/builder-cuda
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   before: install
 mount:

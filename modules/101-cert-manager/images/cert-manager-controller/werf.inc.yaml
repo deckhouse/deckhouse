@@ -1,8 +1,8 @@
 {{- $version := include "get_oss_version_by_id" (list "cert-manager" $ )  -}} # see in oss.yaml
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /controller-linux-amd64
   to: /bin/cert-manager-controller
   before: setup
@@ -11,7 +11,7 @@ imageSpec:
     entrypoint: ["/bin/cert-manager-controller"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -20,7 +20,7 @@ git:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
-  to: /module_crds    
+  to: /module_crds
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -36,15 +36,15 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-ci-validator
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
   to: /module_crds
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/docs
-  to: /docs  
+  to: /docs
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src/deploy/crds
   to: /src/deploy/crds
   before: install
@@ -54,7 +54,7 @@ import:
   before: install
 shell:
   install:
-  - | 
+  - |
     echo "Checking if module crds are the same as cert-manager crds"
     DOWNLOAD=false CRD_FILE_PATH=/src/deploy/crds MODULE_VERSION=v{{ $version }} /module_crds/cert-manager/update.sh
 
@@ -63,7 +63,7 @@ shell:
     for f in $dir1/*.yaml; do
       base=$(basename "$f")
         diff <(yq -P 'sort_keys(..)' $dir1/$base) <(yq -P 'sort_keys(..)' $dir2/$base)
-    done  
+    done
 
   - |
     echo "Checking cert-manager version in documentation"
@@ -74,7 +74,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" ) }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install

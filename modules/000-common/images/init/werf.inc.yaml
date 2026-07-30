@@ -1,16 +1,16 @@
 {{- $binaries := "/bin/sh /bin/chown /bin/chmod /bin/ls /bin/cp /bin/rm /bin/mkdir /bin/nc /bin/sleep /bin/true" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /relocate
   to: /
   before: setup
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: common/relocate-artifact
+from: common/relocate-artifact
 final: false
 shell:
   beforeInstall:

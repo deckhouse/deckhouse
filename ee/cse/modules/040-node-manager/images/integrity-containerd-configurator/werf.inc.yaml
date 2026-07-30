@@ -1,18 +1,18 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 imageSpec:
   config:
     entrypoint: ["/integrity-containerd-configurator"]
 import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ $.ImageName }}-artifact
   add: /integrity-containerd-configurator
   to: /integrity-containerd-configurator
   before: setup
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/src
@@ -60,11 +60,11 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /go_lib/controlplane
   to: /go_lib/controlplane
   before: install

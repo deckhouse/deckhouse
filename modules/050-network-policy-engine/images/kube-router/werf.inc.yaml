@@ -3,7 +3,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-fromImage: common/relocate-artifact
+from: common/relocate-artifact
 shell:
   beforeInstall:
   - apt-get install -y ipset conntrack-tools
@@ -12,7 +12,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -33,7 +33,7 @@ shell:
 image: {{ .ModuleName }}/kube-router-artifact
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -50,13 +50,13 @@ shell:
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- image: {{ .ModuleName }}/kube-router-artifact
+- from: {{ .ModuleName }}/kube-router-artifact
   add: /src/kube-router
   to: /opt/bin/kube-router
   before: setup

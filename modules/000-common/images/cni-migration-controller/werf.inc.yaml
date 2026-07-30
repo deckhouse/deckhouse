@@ -18,18 +18,18 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  - from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
-  - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  - from: registrypackages/iptables-artifact-{{ $iptables_image_version }}
     add: /
     to: /relocate/sbin
     includePaths:
       - xtables-legacy-multi
       - xtables-nft-multi
     before: install
-  - image: common/iptables-wrapper
+  - from: common/iptables-wrapper
     add: /iptables-wrapper
     to: /relocate/sbin/iptables-wrapper
     before: install
@@ -67,15 +67,15 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /cni-migration-controller
     to: /cni-migration-controller
     before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /relocate/sbin
     to: /sbin
     before: setup
-  - image: cni-cilium/agent-distroless
+  - from: cni-cilium/agent-distroless
     add: /usr/bin/cilium-dbg
     to: /sbin/cilium-dbg
     before: setup

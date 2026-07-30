@@ -11,9 +11,9 @@
       {{- if ne $.Env "CSE" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/vsphere-syncer
   to: /bin/vsphere-syncer
   before: setup
@@ -22,7 +22,7 @@ imageSpec:
     entrypoint: ["/bin/vsphere-syncer"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
     {{- if $patch }}
 git:
@@ -50,7 +50,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install

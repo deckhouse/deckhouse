@@ -2,7 +2,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /
   to: /
   includePaths:

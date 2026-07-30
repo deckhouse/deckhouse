@@ -4,7 +4,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /relocate
   to: /
   includePaths:
@@ -23,7 +23,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /src/scripts
@@ -44,7 +44,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false
 from: {{ index $.Images "builder/alt" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install

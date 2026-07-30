@@ -1,8 +1,8 @@
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
+  - from: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
     add: /agent
     to: /agent
     before: install

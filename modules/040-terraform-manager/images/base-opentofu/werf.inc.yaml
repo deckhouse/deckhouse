@@ -2,7 +2,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
 import:
-- image: opentofu
+- from: opentofu
   add: /opentofu/opentofu
   to: /opentofu
   before: setup

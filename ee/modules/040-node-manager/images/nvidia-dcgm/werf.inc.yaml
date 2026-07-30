@@ -4,7 +4,7 @@
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -53,14 +53,14 @@ image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
 final: false
 from: {{ index $.Images "builder/golang-bookworm" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
   add: /deps/crosstool-ng
   to: /deps/crosstool-ng
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
   add: /deps/crosstool-ng-src
   to: /deps/crosstool-ng-src
   before: install
@@ -100,14 +100,14 @@ image: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 final: false
 from: {{ index $.Images "builder/golang-bookworm" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
   add: /opt/cross
   to: /opt/cross
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
   add: /deps/host
   to: /deps/host
   before: install
@@ -137,16 +137,16 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
 final: false
-fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+from: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
   add: /deps/target
   to: /deps/target
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
   add: /deps/nvidia
   to: /deps/nvidia
   before: install
@@ -189,12 +189,12 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+from: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
   add: /tmp/x86_64-linux-gnu
   before: install
 - from: {{ index $.Images "libs/glibc" }}
@@ -204,7 +204,7 @@ import:
   - usr/*
   - lib64/*
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-deps-artifact
   add: /deps/nvidia
   to: /deps/nvidia
   before: install
@@ -258,9 +258,9 @@ shell:
     ln -s /usr/lib /out/lib
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /out/
   to: /
   includePaths:

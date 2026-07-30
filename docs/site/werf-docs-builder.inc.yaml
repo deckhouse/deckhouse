@@ -1,16 +1,16 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "documentation" }}
-fromImage: common/distroless
+from: common/distroless
 {{ else }}
 from: {{ index $.Images "builder/scratch" }}
 {{ end }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/docs-builder
   to: /app/server
   before: setup
-- image: d8-docs-artifacts
+- from: d8-docs-artifacts
   add: /export
   to: /app/hugo-init/data/dkp
   includePaths:
@@ -138,7 +138,7 @@ mount:
 {{ include "mount points for golang builds" . }}
 {{ if ne .ModuleName "website-docs" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -157,7 +157,7 @@ shell:
 {{ if ne .ModuleName "website-docs" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 shell:
   install:

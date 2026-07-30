@@ -17,7 +17,7 @@ git:
     - '**/*'
 import:
 {{- range $_, $version := $version_map }}
-- image: terraform-provider-vcd-artifact
+- from: terraform-provider-vcd-artifact
   add: /terraform-provider-vcd-v{{ $version }}
   to: /terraform-manager/terraform-provider-vcd-v{{ $version }}
   before: setup
@@ -29,7 +29,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -54,7 +54,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
