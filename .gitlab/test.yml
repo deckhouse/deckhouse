@@ -45,6 +45,7 @@
     VAULT_AUTH_ROLE: deckhouse
     TEST_TIMEOUT: 15m
     HOME: "/tmp"
+    GOMODCACHE: ${HOME}/.cache/go-mod
     # username/password form — no base64; if pull fails, switch to "auth" field.
     DOCKER_AUTH_CONFIG: "{\"auths\":{\"${DECKHOUSE_DEV_REGISTRY_HOST}\":{\"username\":\"${DECKHOUSE_DEV_REGISTRY_USER}\",\"password\":\"${DECKHOUSE_DEV_REGISTRY_PASSWORD}\"}}}"
   id_tokens:
