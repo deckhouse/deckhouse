@@ -380,6 +380,7 @@ func autoConvert_v1alpha1_AccessSource_To_authorization_AccessSource(in *AccessS
 	if err := Convert_v1alpha1_RoleDescriptor_To_authorization_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
 		return err
 	}
+	out.ViaVerbWildcard = in.ViaVerbWildcard
 	return nil
 }
 
@@ -401,6 +402,7 @@ func autoConvert_authorization_AccessSource_To_v1alpha1_AccessSource(in *authori
 	if err := Convert_authorization_RoleDescriptor_To_v1alpha1_RoleDescriptor(&in.Role, &out.Role, s); err != nil {
 		return err
 	}
+	out.ViaVerbWildcard = in.ViaVerbWildcard
 	return nil
 }
 
@@ -535,6 +537,7 @@ func autoConvert_v1alpha1_NonResourceAccess_To_authorization_NonResourceAccess(i
 	out.Path = in.Path
 	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
 	out.Sources = *(*[]authorization.AccessSource)(unsafe.Pointer(&in.Sources))
+	out.ViaVerbWildcard = in.ViaVerbWildcard
 	return nil
 }
 
@@ -547,6 +550,7 @@ func autoConvert_authorization_NonResourceAccess_To_v1alpha1_NonResourceAccess(i
 	out.Path = in.Path
 	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
 	out.Sources = *(*[]AccessSource)(unsafe.Pointer(&in.Sources))
+	out.ViaVerbWildcard = in.ViaVerbWildcard
 	return nil
 }
 
@@ -634,6 +638,7 @@ func autoConvert_v1alpha1_ResourceAccess_To_authorization_ResourceAccess(in *Res
 	out.ViaWildcard = in.ViaWildcard
 	out.ResourceNames = *(*[]string)(unsafe.Pointer(&in.ResourceNames))
 	out.Sources = *(*[]authorization.AccessSource)(unsafe.Pointer(&in.Sources))
+	out.ViaVerbWildcard = in.ViaVerbWildcard
 	return nil
 }
 
@@ -649,6 +654,7 @@ func autoConvert_authorization_ResourceAccess_To_v1alpha1_ResourceAccess(in *aut
 	out.ViaWildcard = in.ViaWildcard
 	out.ResourceNames = *(*[]string)(unsafe.Pointer(&in.ResourceNames))
 	out.Sources = *(*[]AccessSource)(unsafe.Pointer(&in.Sources))
+	out.ViaVerbWildcard = in.ViaVerbWildcard
 	return nil
 }
 

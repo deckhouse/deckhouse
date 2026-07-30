@@ -136,6 +136,14 @@ func (s *SubjectAccessStorage) buildRequest(ctx context.Context, caller user.Inf
 	if spec.Subject == nil {
 		// Self mode: the caller's own token is the source of truth for its
 		// groups, so they are taken as-is instead of being looked up.
+		//
+		// spec.groups is dropped rather than honoured. Self reports are open to
+		// every authenticated user because they disclose nothing the caller
+		// cannot already obtain from SelfSubjectRulesReview -- which holds only
+		// for the caller's own identity. Adding an arbitrary group name would
+		// return that group's whole permission map, the very answer a
+		// Kind: Group report gates behind the nonself subresource.
+		req.ExtraGroups = nil
 		req.Subject = selfSubject(caller)
 		req.CallerGroups = caller.GetGroups()
 		req.ResolveGroups = false

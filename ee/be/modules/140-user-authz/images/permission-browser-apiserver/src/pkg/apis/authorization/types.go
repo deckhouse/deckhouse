@@ -440,6 +440,11 @@ type ResourceAccess struct {
 	// Sources describes where the access comes from.
 	// +optional
 	Sources []AccessSource
+
+	// ViaVerbWildcard is true when the access comes from a "verbs: [*]" rule, so
+	// Verbs above is a readable sample rather than the complete list.
+	// +optional
+	ViaVerbWildcard bool
 }
 
 // NonResourceAccess is the set of verbs the subject may use on a non-resource URL.
@@ -453,6 +458,10 @@ type NonResourceAccess struct {
 	// Sources describes where the access comes from.
 	// +optional
 	Sources []AccessSource
+
+	// ViaVerbWildcard is true when the access comes from a "verbs: [*]" rule.
+	// +optional
+	ViaVerbWildcard bool
 }
 
 // AccessSource attributes a slice of the access to the binding and role that
@@ -482,6 +491,11 @@ type AccessSource struct {
 
 	// Role carries display metadata of the referenced role.
 	Role RoleDescriptor
+
+	// ViaVerbWildcard is true when this source grants the access through a
+	// "verbs: [*]" rule.
+	// +optional
+	ViaVerbWildcard bool
 }
 
 // AccessCaveat describes restrictions applied on top of RBAC by admission

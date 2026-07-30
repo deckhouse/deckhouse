@@ -176,20 +176,29 @@ func setLevel(descriptor *v1alpha1.RoleDescriptor, level string) {
 	}
 }
 
-// IsSuperadminRole reports whether the role grants the superadmin level of a
-// scope whose protection the system-resource admission webhook bypasses for
-// superadmins.
-func IsSuperadminRole(descriptor v1alpha1.RoleDescriptor) bool {
-	if descriptor.Level != "superadmin" {
-		return false
-	}
+// superadminRoles are the roles the system-resource webhook bypasses as a scoped
+// superadmin. Keep in sync with SUPERADMIN_ROLES in
+// modules/140-user-authz/webhooks/validating/system_resources.py; the contract is
+// asserted by TestSuperadminSetsMatchTheWebhook.
+//
+// The names are matched literally rather than derived from the role descriptor.
+// A label-based rule ("level=superadmin in one of these scopes") reads as the
+// same thing but is wider: it also matches d8:subsystem:*:superadmin and any
+// custom or external role carrying those labels, none of which the webhook lets
+// through. Claiming a bypass the webhook does not grant is the failure direction
+// this whole file exists to avoid.
+var superadminRoles = map[string]struct{}{
+	"d8:namespace:superadmin": {},
+	"d8:project:superadmin":   {},
+	"d8:system:superadmin":    {},
+}
 
-	switch descriptor.Scope {
-	case "namespace", "project", "system", "subsystem":
-		return true
-	default:
-		return false
-	}
+// IsSuperadminRole reports whether holding this role bypasses the system-resource
+// protection as a scoped superadmin.
+func IsSuperadminRole(roleName string) bool {
+	_, ok := superadminRoles[roleName]
+
+	return ok
 }
 
 // clusterAdminRoles are the roles the system-resource webhook treats as a cluster
@@ -209,6 +218,28 @@ var clusterAdminRoles = map[string]struct{}{
 // report at all.
 func IsClusterAdminRole(roleName string) bool {
 	_, ok := clusterAdminRoles[roleName]
+
+	return ok
+}
+
+// bypassGroups are the administrator groups the system-resource webhook skips
+// before it looks at any role, so membership alone lifts the protection. Keep in
+// sync with the administrator half of BYPASS_GROUPS in
+// modules/140-user-authz/webhooks/validating/system_resources.py; the cluster
+// components in that set (system:nodes and the system service accounts) are
+// deliberately absent -- they are not subjects a report is ever built for, and
+// listing them would only invite treating a workload as an administrator.
+var bypassGroups = map[string]struct{}{
+	"system:masters":         {},
+	"kubeadm:cluster-admins": {},
+	"superadmins":            {},
+	"system:sudousers":       {},
+}
+
+// IsBypassGroup reports whether membership in this group alone bypasses the
+// system-resource protection.
+func IsBypassGroup(group string) bool {
+	_, ok := bypassGroups[group]
 
 	return ok
 }

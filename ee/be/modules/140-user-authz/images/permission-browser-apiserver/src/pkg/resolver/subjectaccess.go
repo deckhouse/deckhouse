@@ -46,14 +46,20 @@ type ReportLimits struct {
 	MaxNamespaces    int
 	MaxResourceRows  int
 	MaxSourcesPerRow int
+	// MaxRoleAssignments bounds the flat list of bindings. It is reached long
+	// before the others in one shape: a project role binding fanned out into
+	// every namespace of a large project produces an assignment per namespace
+	// while contributing a single namespace group to the scopes.
+	MaxRoleAssignments int
 }
 
 // DefaultReportLimits are sized to fit the widest realistic grant (a wildcard
 // rule over a full DKP discovery set) without truncating it.
 var DefaultReportLimits = ReportLimits{
-	MaxNamespaces:    500,
-	MaxResourceRows:  5000,
-	MaxSourcesPerRow: 50,
+	MaxNamespaces:      500,
+	MaxResourceRows:    5000,
+	MaxSourcesPerRow:   50,
+	MaxRoleAssignments: 2000,
 }
 
 // SubjectAccessResolver answers "what is this subject allowed to do" by
@@ -198,7 +204,14 @@ func (r *SubjectAccessResolver) Report(ctx context.Context, req SubjectAccessReq
 	mtNotes := r.applyMultitenancy(identity, report)
 	status.Notes = append(status.Notes, mtNotes...)
 
-	status.Scopes = report.scopes(r.superadminIndex(report))
+	// Wildcards are enumerated against the discovery snapshot, so an incomplete
+	// one silently narrows every "*" rule to the groups that happened to answer.
+	if r.scopeCache != nil && r.scopeCache.Partial() {
+		status.Notes = append(status.Notes,
+			"the discovery snapshot is incomplete: wildcard rules may have been expanded to fewer resources than they actually grant")
+	}
+
+	status.Scopes = report.scopes(r.superadminIndex(identity, report))
 	status.Truncated = report.truncated
 
 	if err := errors.Join(errs...); err != nil {
@@ -408,14 +421,26 @@ func (r *SubjectAccessResolver) rulesOf(binding *rbacv1.RoleBinding) ([]rbacv1.P
 
 // superadminIndex reports where the subject holds a superadmin role, which the
 // system-resource admission webhook lets through.
-func (r *SubjectAccessResolver) superadminIndex(report *reportBuilder) superadminScopes {
+func (r *SubjectAccessResolver) superadminIndex(identity subjectIdentity, report *reportBuilder) superadminScopes {
 	index := superadminScopes{namespaces: map[string]struct{}{}}
+
+	// The webhook skips its checks for these groups before looking at any role,
+	// so membership alone lifts the restriction everywhere. Reading only the
+	// bindings would stamp a member of system:masters with a restriction the
+	// webhook never applies to them.
+	for _, group := range identity.groups {
+		if IsBypassGroup(group) {
+			index.cluster = true
+
+			return index
+		}
+	}
 
 	for _, assignment := range report.assignments {
 		// A cluster administrator passes the same protection, and the webhook
 		// recognises those roles by name: their descriptor is empty because they
 		// carry no rbac.deckhouse.io labels.
-		if !IsSuperadminRole(assignment.Role) && !IsClusterAdminRole(assignment.RoleName) {
+		if !IsSuperadminRole(assignment.RoleName) && !IsClusterAdminRole(assignment.RoleName) {
 			continue
 		}
 		if assignment.BindingKind == "ClusterRoleBinding" {
@@ -478,17 +503,27 @@ func (g grantOrigin) sources(verbs []string) []v1alpha1.AccessSource {
 // expandVerbs turns a rule's verbs into concrete ones, replacing "*" with the
 // standard set while keeping non-standard verbs (impersonate, escalate, bind,
 // use) that a rule names explicitly.
-func expandVerbs(ruleVerbs []string) []string {
+//
+// The second return value reports that a "*" was expanded. The standard set is
+// what the console shows, but it is not everything a "*" grants -- escalate and
+// bind on roles, impersonate on subjects, proxy on nodes are all covered too --
+// so the caller has to mark the row instead of presenting the sample as the
+// complete answer.
+func expandVerbs(ruleVerbs []string) ([]string, bool) {
 	verbs := make([]string, 0, len(ruleVerbs))
+	viaWildcard := false
+
 	for _, verb := range ruleVerbs {
 		if verb == "*" {
 			verbs = append(verbs, standardVerbs...)
+			viaWildcard = true
+
 			continue
 		}
 		verbs = append(verbs, verb)
 	}
 
-	return sortVerbs(verbs)
+	return sortVerbs(verbs), viaWildcard
 }
 
 // sortVerbs deduplicates and orders verbs by the usual read-then-write reading

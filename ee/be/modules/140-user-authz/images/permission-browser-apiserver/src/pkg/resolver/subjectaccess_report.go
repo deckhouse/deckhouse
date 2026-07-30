@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package resolver
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -80,18 +81,20 @@ type resourceKey struct {
 }
 
 type resourceAccumulator struct {
-	group         string
-	resource      string
-	resourceNames []string
-	viaWildcard   bool
-	verbs         map[string]struct{}
-	sources       map[sourceKey]*sourceAccumulator
+	group           string
+	resource        string
+	resourceNames   []string
+	viaWildcard     bool
+	viaVerbWildcard bool
+	verbs           map[string]struct{}
+	sources         map[sourceKey]*sourceAccumulator
 }
 
 type nonResourceAccumulator struct {
-	path    string
-	verbs   map[string]struct{}
-	sources map[sourceKey]*sourceAccumulator
+	path            string
+	viaVerbWildcard bool
+	verbs           map[string]struct{}
+	sources         map[sourceKey]*sourceAccumulator
 }
 
 // sourceKey identifies a provenance entry. The binding namespace is left out on
@@ -108,8 +111,9 @@ type sourceKey struct {
 }
 
 type sourceAccumulator struct {
-	source v1alpha1.AccessSource
-	verbs  map[string]struct{}
+	source          v1alpha1.AccessSource
+	verbs           map[string]struct{}
+	viaVerbWildcard bool
 }
 
 func (b *reportBuilder) roleAssignments() []v1alpha1.RoleAssignment {
@@ -159,6 +163,11 @@ func (b *reportBuilder) addNamespaceGrant(namespace string, origin grantOrigin, 
 
 func (b *reportBuilder) recordAssignment(origin grantOrigin, namespace string) {
 	for _, match := range origin.matches {
+		if b.limits.MaxRoleAssignments > 0 && len(b.assignments) >= b.limits.MaxRoleAssignments {
+			b.truncated = true
+
+			return
+		}
 		b.assignments = append(b.assignments, v1alpha1.RoleAssignment{
 			BindingKind: origin.bindingKind,
 			BindingName: origin.bindingName,
@@ -176,7 +185,7 @@ func (b *reportBuilder) recordAssignment(origin grantOrigin, namespace string) {
 // cluster-scoped objects.
 func (b *reportBuilder) expand(scope *scopeAccumulator, origin grantOrigin, rules []rbacv1.PolicyRule, namespaced bool) {
 	for _, rule := range rules {
-		verbs := expandVerbs(rule.Verbs)
+		verbs, viaVerbWildcard := expandVerbs(rule.Verbs)
 		if len(verbs) == 0 {
 			continue
 		}
@@ -185,7 +194,7 @@ func (b *reportBuilder) expand(scope *scopeAccumulator, origin grantOrigin, rule
 		// grants them, matching upstream RBAC.
 		if !namespaced && len(rule.NonResourceURLs) > 0 {
 			for _, path := range rule.NonResourceURLs {
-				b.addNonResourceRow(scope, origin, path, verbs)
+				b.addNonResourceRow(scope, origin, path, verbs, viaVerbWildcard)
 			}
 		}
 
@@ -194,9 +203,17 @@ func (b *reportBuilder) expand(scope *scopeAccumulator, origin grantOrigin, rule
 		}
 
 		for _, target := range b.targetsOf(rule, namespaced) {
-			b.addResourceRow(scope, origin, target, rule.ResourceNames, verbs)
+			b.addResourceRow(scope, origin, target, rule.ResourceNames, verbs, viaVerbWildcard)
 		}
 	}
+}
+
+// isKnownClusterScoped reports whether discovery has seen this resource and says
+// it is cluster-scoped. An unknown resource answers false.
+func (b *reportBuilder) isKnownClusterScoped(group, resource string) bool {
+	namespaced, known := b.scopeCache.Scope(group, resource)
+
+	return known && !namespaced
 }
 
 // resourceTarget is one row a rule expands to.
@@ -231,8 +248,14 @@ func (b *reportBuilder) targetsOf(rule rbacv1.PolicyRule, namespaced bool) []res
 			if namespaced && !hasWildcard && b.scopeCache != nil {
 				// Skip cluster-scoped resources named by a RoleBinding: the
 				// grant exists in RBAC but can never be exercised.
+				//
+				// Only a resource discovery positively calls cluster-scoped is
+				// dropped. One the snapshot has never heard of is kept: the
+				// snapshot goes incomplete whenever an aggregated APIService
+				// flaps, and an audit report that omits a grant is a worse
+				// answer than one that lists a grant nobody can exercise.
 				base, _, _ := strings.Cut(resource, "/")
-				if !b.scopeCache.IsNamespaced(group, base) && !b.scopeCache.IsNamespaced(group, resource) {
+				if b.isKnownClusterScoped(group, base) && b.isKnownClusterScoped(group, resource) {
 					continue
 				}
 			}
@@ -247,7 +270,7 @@ func (b *reportBuilder) targetsOf(rule rbacv1.PolicyRule, namespaced bool) []res
 	return targets
 }
 
-func (b *reportBuilder) addResourceRow(scope *scopeAccumulator, origin grantOrigin, target resourceTarget, resourceNames, verbs []string) {
+func (b *reportBuilder) addResourceRow(scope *scopeAccumulator, origin grantOrigin, target resourceTarget, resourceNames, verbs []string, viaVerbWildcard bool) {
 	key := resourceKey{
 		group:         target.group,
 		resource:      target.resource,
@@ -272,14 +295,15 @@ func (b *reportBuilder) addResourceRow(scope *scopeAccumulator, origin grantOrig
 	}
 
 	row.viaWildcard = row.viaWildcard || target.viaWildcard
+	row.viaVerbWildcard = row.viaVerbWildcard || viaVerbWildcard
 	for _, verb := range verbs {
 		row.verbs[verb] = struct{}{}
 	}
 
-	b.addSources(row.sources, origin, verbs)
+	b.addSources(row.sources, origin, verbs, viaVerbWildcard)
 }
 
-func (b *reportBuilder) addNonResourceRow(scope *scopeAccumulator, origin grantOrigin, path string, verbs []string) {
+func (b *reportBuilder) addNonResourceRow(scope *scopeAccumulator, origin grantOrigin, path string, verbs []string, viaVerbWildcard bool) {
 	row, ok := scope.nonResources[path]
 	if !ok {
 		if b.rowCount >= b.limits.MaxResourceRows {
@@ -295,14 +319,15 @@ func (b *reportBuilder) addNonResourceRow(scope *scopeAccumulator, origin grantO
 		scope.nonResources[path] = row
 	}
 
+	row.viaVerbWildcard = row.viaVerbWildcard || viaVerbWildcard
 	for _, verb := range verbs {
 		row.verbs[verb] = struct{}{}
 	}
 
-	b.addSources(row.sources, origin, verbs)
+	b.addSources(row.sources, origin, verbs, viaVerbWildcard)
 }
 
-func (b *reportBuilder) addSources(sources map[sourceKey]*sourceAccumulator, origin grantOrigin, verbs []string) {
+func (b *reportBuilder) addSources(sources map[sourceKey]*sourceAccumulator, origin grantOrigin, verbs []string, viaVerbWildcard bool) {
 	for _, source := range origin.sources(nil) {
 		key := sourceKey{
 			bindingKind: source.BindingKind,
@@ -323,6 +348,7 @@ func (b *reportBuilder) addSources(sources map[sourceKey]*sourceAccumulator, ori
 			sources[key] = accumulated
 		}
 
+		accumulated.viaVerbWildcard = accumulated.viaVerbWildcard || viaVerbWildcard
 		for _, verb := range verbs {
 			accumulated.verbs[verb] = struct{}{}
 		}
@@ -405,6 +431,7 @@ func scopeSignature(scope *scopeAccumulator) string {
 		parts = append(parts, strings.Join([]string{
 			"r", key.group, key.resource, key.resourceNames,
 			strings.Join(sortVerbs(keysOf(row.verbs)), ","),
+			fmt.Sprintf("%t/%t", row.viaWildcard, row.viaVerbWildcard),
 			sourcesSignature(row.sources),
 		}, "|"))
 	}
@@ -412,6 +439,7 @@ func scopeSignature(scope *scopeAccumulator) string {
 		parts = append(parts, strings.Join([]string{
 			"n", path,
 			strings.Join(sortVerbs(keysOf(row.verbs)), ","),
+			fmt.Sprintf("%t", row.viaVerbWildcard),
 			sourcesSignature(row.sources),
 		}, "|"))
 	}
@@ -438,12 +466,13 @@ func renderResources(scope *scopeAccumulator, keepBindingNamespace bool) []v1alp
 
 	for _, row := range scope.resources {
 		rows = append(rows, v1alpha1.ResourceAccess{
-			Group:         row.group,
-			Resource:      row.resource,
-			Verbs:         sortVerbs(keysOf(row.verbs)),
-			ViaWildcard:   row.viaWildcard,
-			ResourceNames: sortedCopy(row.resourceNames),
-			Sources:       renderSources(row.sources, keepBindingNamespace),
+			Group:           row.group,
+			Resource:        row.resource,
+			Verbs:           sortVerbs(keysOf(row.verbs)),
+			ViaWildcard:     row.viaWildcard,
+			ViaVerbWildcard: row.viaVerbWildcard,
+			ResourceNames:   sortedCopy(row.resourceNames),
+			Sources:         renderSources(row.sources, keepBindingNamespace),
 		})
 	}
 
@@ -465,9 +494,10 @@ func renderNonResources(scope *scopeAccumulator) []v1alpha1.NonResourceAccess {
 	rows := make([]v1alpha1.NonResourceAccess, 0, len(scope.nonResources))
 	for _, row := range scope.nonResources {
 		rows = append(rows, v1alpha1.NonResourceAccess{
-			Path:    row.path,
-			Verbs:   sortVerbs(keysOf(row.verbs)),
-			Sources: renderSources(row.sources, false),
+			Path:            row.path,
+			Verbs:           sortVerbs(keysOf(row.verbs)),
+			ViaVerbWildcard: row.viaVerbWildcard,
+			Sources:         renderSources(row.sources, false),
 		})
 	}
 
@@ -484,6 +514,7 @@ func renderSources(sources map[sourceKey]*sourceAccumulator, keepBindingNamespac
 	for _, accumulated := range sources {
 		source := accumulated.source
 		source.Verbs = sortVerbs(keysOf(accumulated.verbs))
+		source.ViaVerbWildcard = accumulated.viaVerbWildcard
 		if !keepBindingNamespace {
 			source.BindingNamespace = ""
 		}

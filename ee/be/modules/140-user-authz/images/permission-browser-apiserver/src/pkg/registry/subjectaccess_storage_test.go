@@ -69,6 +69,42 @@ func TestSubjectAccessStorage_SelfModeNeedsNoExtraPermission(t *testing.T) {
 	assert.False(t, reporter.gotRequest.ResolveGroups)
 }
 
+// A self report is open to every authenticated user precisely because it discloses nothing about
+// anyone else. Honouring spec.groups would have handed out any named group's whole permission map --
+// the answer a Kind: Group report gates behind the nonself subresource -- so the field is dropped.
+func TestSubjectAccessStorage_SelfModeIgnoresRequestedGroups(t *testing.T) {
+	reporter := &mockReporter{}
+	storage := NewSubjectAccessStorage(reporter, &staticAuthorizer{decision: authorizer.DecisionDeny})
+
+	report := &v1alpha1.SubjectAccessReport{
+		Spec: v1alpha1.SubjectAccessReportSpec{Groups: []string{"d8:some-group", "system:masters"}},
+	}
+
+	_, err := storage.Create(contextWithUser("alice", "netops"), report, nil, nil)
+	require.NoError(t, err)
+
+	assert.Empty(t, reporter.gotRequest.ExtraGroups)
+	assert.Equal(t, []string{"netops"}, reporter.gotRequest.CallerGroups)
+}
+
+// The same field is the point of a non-self report, so there it survives.
+func TestSubjectAccessStorage_NonSelfKeepsRequestedGroups(t *testing.T) {
+	reporter := &mockReporter{}
+	storage := NewSubjectAccessStorage(reporter, &staticAuthorizer{decision: authorizer.DecisionAllow})
+
+	report := &v1alpha1.SubjectAccessReport{
+		Spec: v1alpha1.SubjectAccessReportSpec{
+			Subject: &v1alpha1.SubjectReference{Kind: v1alpha1.SubjectKindUser, Name: "bob"},
+			Groups:  []string{"d8:some-group"},
+		},
+	}
+
+	_, err := storage.Create(contextWithUser("alice"), report, nil, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"d8:some-group"}, reporter.gotRequest.ExtraGroups)
+}
+
 func TestSubjectAccessStorage_SelfModeRecognisesServiceAccount(t *testing.T) {
 	reporter := &mockReporter{}
 	storage := NewSubjectAccessStorage(reporter, &staticAuthorizer{decision: authorizer.DecisionDeny})
