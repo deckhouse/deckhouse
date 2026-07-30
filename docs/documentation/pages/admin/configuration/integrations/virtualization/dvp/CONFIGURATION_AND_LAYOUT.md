@@ -130,3 +130,4 @@ nodeGroups:
 provider:
   kubeconfigDataBase64: ZXhhbXBsZQo=
   namespace: default
+```
