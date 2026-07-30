@@ -200,7 +200,15 @@ def validate(ctx: DotMap) -> Optional[str]:
 
         # Custom roles aggregate capabilities and must not carry their own rules.
         if kind_label == "custom-role":
-            if rules:
+            # After creation .rules belongs to the aggregation controller, which fills it from the
+            # aggregated capabilities. Every later write therefore carries rules the user did not
+            # author -- a plain "kubectl label" already sends them back -- so on UPDATE we object
+            # only when the rules actually change. Comparing against the old object keeps the
+            # guarantee (a user still cannot smuggle rules in) without making an aggregated role
+            # uneditable.
+            if rules and (
+                request.operation != "UPDATE" or rules != (_as_dict(request.oldObject).get("rules") or [])
+            ):
                 return (
                     f'ClusterRole "{name}" with "{KIND_LABEL}: custom-role" must not define rules. '
                     "Move the rules to a custom-capability and aggregate it."
