@@ -47,9 +47,8 @@ secrets:
   env: REGISTRY_PASSWORD
 shell:
   setup:
-  - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
-  - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
-  - /crane pull --format oci $IMAGE_REPO@$IMAGE_DIGEST $param /tmp/image
+  - export param="--insecure"
+  - /crane pull --format oci 172.17.0.2:5000/deckhouse3@$IMAGE_DIGEST $param /tmp/image
   - rm -f ~/.docker/config.json
   - jq '.manifests[0].annotations = {"org.opencontainers.image.ref.name":"deckhouse.local/images:kubernetes-api-proxy"}' /tmp/image/index.json > /tmp/index.updated.json && mv /tmp/index.updated.json /tmp/image/index.json
   - tar -C /tmp/image -cf /kubernetes-api-proxy.tar .
