@@ -191,7 +191,19 @@ object_labels := labels if {
   obj := object.get(input.review, "object", {})
   kind := object.get(obj, "kind", "")
   kind != "Pod"
+  workload_kind(kind)
   labels := pod_template_metadata_labels
+}
+
+# Fallback for unknown kinds: use the object's own metadata.labels, so SPE
+# labels on an unrecognised object are not silently dropped. This mirrors the
+# pod_spec fallback to object.spec for unknown kinds.
+object_labels := labels if {
+  obj := object.get(input.review, "object", {})
+  kind := object.get(obj, "kind", "")
+  kind != "Pod"
+  not workload_kind(kind)
+  labels := object.get(obj, ["metadata", "labels"], {})
 }
 
 # Effective namespace for SPE resolution from input.review.object.
@@ -213,7 +225,18 @@ effective_labels(obj) := labels if {
 effective_labels(obj) := labels if {
   kind := object.get(obj, "kind", "")
   kind != "Pod"
+  workload_kind(kind)
   labels := effective_pod_template_labels_for_kind(obj, kind)
+}
+
+# Fallback for unknown kinds: use the object's own metadata.labels, so SPE
+# labels are not silently dropped for unrecognised objects. Mirrors the
+# pod_spec fallback to object.spec for unknown kinds.
+effective_labels(obj) := labels if {
+  kind := object.get(obj, "kind", "")
+  kind != "Pod"
+  not workload_kind(kind)
+  labels := object.get(obj, ["metadata", "labels"], {})
 }
 
 effective_pod_template_labels_for_kind(obj, "Pod") := {} if {

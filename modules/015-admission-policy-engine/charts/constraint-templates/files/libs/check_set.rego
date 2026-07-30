@@ -292,6 +292,10 @@ value_in_set(value, set) if {
   set[_] == value
 }
 
+value_in_set(_, set) if {
+  set[_] == "*"
+}
+
 all_in_set_or_prefix(values, allowed) if {
   every v in values {
     value_in_set_or_prefix(v, allowed)
@@ -302,65 +306,16 @@ value_in_set_or_prefix(value, allowed) if {
   value_in_set(value, allowed)
 }
 
-# Wildcard prefix match: pattern "foo*" matches "foo" or "foo/..." or "foo:..." etc.
-# The character after the prefix must be a segment boundary so that
-# "registry.example.com*" does NOT match "registry.example.com.evil.com/image".
-# A bare "*" (empty prefix) is a universal wildcard — it matches anything.
-value_in_set_or_prefix(value, allowed) if {
-  a := allowed[_]
-  a == "*"
-}
-
-# Prefix already ends with a separator (/, :, .) — any continuation is fine.
 value_in_set_or_prefix(value, allowed) if {
   a := allowed[_]
   endswith(a, "*")
-  prefix := trim_suffix(a, "*")
-  prefix != ""
-  ends_with_separator(prefix)
-  startswith(value, prefix)
-}
-
-# Prefix does NOT end with a separator — the next char in the value must be a
-# separator (/, :) or the value must equal the prefix exactly.  This prevents
-# "registry.example.com*" from matching "registry.example.com.evil.com/image".
-value_in_set_or_prefix(value, allowed) if {
-  a := allowed[_]
-  endswith(a, "*")
-  prefix := trim_suffix(a, "*")
-  prefix != ""
-  not ends_with_separator(prefix)
-  value == prefix
+  startswith(value, trim_suffix(a, "*"))
 }
 
 value_in_set_or_prefix(value, allowed) if {
   a := allowed[_]
-  endswith(a, "*")
-  prefix := trim_suffix(a, "*")
-  prefix != ""
-  not ends_with_separator(prefix)
-  startswith(value, concat("", [prefix, "/"]))
-}
-
-value_in_set_or_prefix(value, allowed) if {
-  a := allowed[_]
-  endswith(a, "*")
-  prefix := trim_suffix(a, "*")
-  prefix != ""
-  not ends_with_separator(prefix)
-  startswith(value, concat("", [prefix, ":"]))
-}
-
-ends_with_separator(s) if {
-  endswith(s, "/")
-}
-
-ends_with_separator(s) if {
-  endswith(s, ":")
-}
-
-ends_with_separator(s) if {
-  endswith(s, ".")
+  endswith(a, "/*")
+  startswith(value, trim_suffix(a, "*"))
 }
 
 set_violation_msg(field_name, value, allowed_set, false, _) := out if {

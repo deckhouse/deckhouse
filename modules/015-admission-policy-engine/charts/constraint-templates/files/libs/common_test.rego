@@ -329,3 +329,69 @@ test_effective_labels_template_precedence if {
   not result["app"]
   result["security.deckhouse.io/security-policy-exception"] == "spe-template"
 }
+
+# Regression (N7): object_labels must fall back to object's own metadata.labels
+# for unknown kinds (not Pod, not a known controller), so SPE labels are not
+# silently dropped. Mirrors the pod_spec fallback to object.spec.
+test_object_labels_unknown_kind_fallback if {
+  result := common.object_labels with input as {
+    "review": {
+      "object": {
+        "kind": "SomeCustomResource",
+        "metadata": {
+          "labels": {"security.deckhouse.io/security-policy-exception": "spe-unknown"},
+          "namespace": "default"
+        }
+      }
+    }
+  }
+  result["security.deckhouse.io/security-policy-exception"] == "spe-unknown"
+}
+
+# Regression (N7): effective_labels must fall back to object's own metadata.labels
+# for unknown kinds, symmetric with object_labels and pod_spec.
+test_effective_labels_unknown_kind_fallback if {
+  obj := {
+    "kind": "SomeCustomResource",
+    "metadata": {
+      "labels": {"security.deckhouse.io/security-policy-exception": "spe-unknown"},
+      "namespace": "default"
+    }
+  }
+  result := common.effective_labels(obj)
+  result["security.deckhouse.io/security-policy-exception"] == "spe-unknown"
+}
+
+# Regression (N7): object_labels for unknown kind with no labels returns empty
+test_object_labels_unknown_kind_no_labels if {
+  result := common.object_labels with input as {
+    "review": {
+      "object": {
+        "kind": "UnknownKind",
+        "metadata": {
+          "namespace": "default"
+        }
+      }
+    }
+  }
+  count(result) == 0
+}
+
+# Regression (N3): pod_spec must fall back to object.spec for unknown kinds
+# (already tested in pod_spec_for_unknown_kind, but verify the fallback
+# reads spec.containers correctly).
+test_pod_spec_unknown_kind_fallback_containers if {
+  result := common.pod_spec with input as {
+    "review": {
+      "object": {
+        "kind": "SomeCustomResource",
+        "spec": {
+          "containers": [
+            {"name": "custom-c", "image": "nginx"}
+          ]
+        }
+      }
+    }
+  }
+  result.containers[0].name == "custom-c"
+}
