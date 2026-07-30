@@ -137,17 +137,19 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 				return fmt.Errorf("new module by config: %w", err)
 			}
 
+			// lifecycle.Store is not thread-safe, so guard it (and the module map)
+			// with r.mu; status.Service is internally synchronized.
 			r.mu.Lock()
 			r.modules[module.GetName()] = module
+			r.packages.Update(module.GetName(), module.GetVersion().String(), 0, make(addonutils.Values), "")
 			r.mu.Unlock()
 
-			// register package in status and packages stores
+			// register package in status store
 			r.status.NewStatus(module.GetName())
 			r.status.SetConditionTrue(module.GetName(), status.ConditionRequirementsMet)
 			r.status.SetConditionTrue(module.GetName(), status.ConditionReadyOnFilesystem)
 			r.status.SetConditionTrue(module.GetName(), status.ConditionLoaded)
 			r.status.UpdateVersion(module.GetName(), module.GetVersion().String())
-			r.packages.Update(module.GetName(), module.GetVersion().String(), 0, make(addonutils.Values), "")
 
 			return nil
 		})
