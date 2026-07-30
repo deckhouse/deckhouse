@@ -211,7 +211,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
 	if moduleConfig.Name == moduleGlobal || basicModule != nil {
 		r.logger.Debug("send event to operator", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
-		// r.handler.HandleEvent(moduleConfig, config.EventUpdate)
+		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	}
 
 	if !app.ModulePackagesEnabled() {
