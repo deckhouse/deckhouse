@@ -192,9 +192,9 @@ func konnectivityagentCPIdentifiers(dests []string) string {
 	}
 	sort.Strings(ips)
 
-	parts := make([]string, 0, len(ips))
-	for _, ip := range ips {
-		parts = append(parts, "ipv4="+ip)
+	if len(ips) == 0 {
+		return "ipv4=0.0.0.0"
 	}
-	return "ipv4=" + strings.Join(parts, "&ipv4=")
+
+	return "ipv4=" + strings.Join(ips, "&ipv4=")
 }
