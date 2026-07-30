@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       const modalAttr = this.wrapper.dataset.modalWindow;
-
+      //names for CRM
       const formTypeLabels = {
         'request_access': 'бесплатного триала',
         'request_callback': 'обратного звонка',
