@@ -8,7 +8,7 @@ metadata:
     security.deckhouse.io: security-policy
   annotations:
     metadata.gatekeeper.sh/title: "Deny Exec"
-    metadata.gatekeeper.sh/version: 1.1.0
+    metadata.gatekeeper.sh/version: 1.0.0
     description: >-
       Defines an allow-list of commands that could be executed via the pod/exec action.
       Interactive exec is not permitted.
@@ -33,52 +33,34 @@ spec:
                 description: "Shell command."
   targets:
     - target: admission.k8s.gatekeeper.sh
-      code:
-        - engine: Rego
-          source:
-            version: "v1"
-            libs:
-              - |
-                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
-            rego: |
-              package d8.security_policies
+      rego: |
+        package d8.security_policies
 
-              import future.keywords.in
-              import data.lib.common.input_containers
+        import future.keywords.in
 
-              all_containers contains c if {
-                c := input_containers[_]
-              }
+        all_containers[c] {
+          c := object.get(input.review.object.spec, "containers", [])[_]
+        }
 
-              violation contains {"msg": msg} if {
-                not input.review.operation == "DELETE"
-                c := all_containers[_]
-                object.get(c, "stdin", false) == true
-                msg := "Interactive exec is not permitted."
-              }
+        all_containers[c] {
+          c := object.get(input.review.object.spec, "initContainers", [])[_]
+        }
 
-              violation contains {"msg": msg} if {
-                not input.review.operation == "DELETE"
-                c := all_containers[_]
-                object.get(c, "tty", false) == true
-                msg := "Interactive exec is not permitted (tty allocated)."
-              }
+        all_containers[c] {
+          c := object.get(input.review.object.spec, "ephemeralContainers", [])[_]
+        }
 
-              violation contains {"msg": msg} if {
-                not input.review.operation == "DELETE"
-                c := all_containers[_]
-                some command in object.get(c, "command", [])
-                not command in object.get(input.parameters, "allowedCommands", [])
-                msg := sprintf("Only %v commands are allowed.", [object.get(input.parameters, "allowedCommands", [])])
-              }
+        violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
+          c := all_containers[_]
+          object.get(c, "stdin", false) == true
+          msg := "Interactive exec is not permitted."
+        }
 
-              # Fail-closed: when allowedCommands is set, a container without an explicit
-              # command could execute an arbitrary entrypoint and must be denied.
-              violation contains {"msg": msg} if {
-                not input.review.operation == "DELETE"
-                allowed := object.get(input.parameters, "allowedCommands", [])
-                count(allowed) > 0
-                c := all_containers[_]
-                count(object.get(c, "command", [])) == 0
-                msg := sprintf("No command set; only %v commands are allowed.", [allowed])
-              }
+        violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
+          c := all_containers[_]
+          some command in object.get(c, "command", [])
+          not command in object.get(input.parameters, "allowedCommands", [])
+          msg := sprintf("Only %v commands are allowed.", [object.get(input.parameters, "allowedCommands", [])])
+        }

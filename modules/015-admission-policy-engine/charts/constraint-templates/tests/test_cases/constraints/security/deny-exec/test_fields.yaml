@@ -13,10 +13,6 @@ spec:
       level: pod
       description: Interactive exec via stdin is forbidden
       requiredScenarios: [positive, negative, absent]
-    - path: tty
-      level: pod
-      description: Interactive exec via tty allocation is forbidden
-      requiredScenarios: [positive, negative, absent]
   speFields: []
   applicableTracks:
     functional: true

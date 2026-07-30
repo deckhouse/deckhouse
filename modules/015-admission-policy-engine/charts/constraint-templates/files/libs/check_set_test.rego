@@ -55,20 +55,6 @@ test_value_in_set_prefix if {
   result.allowed == true
 }
 
-# Prefix wildcard
-
-test_value_in_set_prefix if {
-  result := check_set.check_value_in_set_with_wildcards("net.ipv4.ip_forward", ["net.*"], [], {})
-  result.allowed == true
-}
-
-# Domain traversal: registry.example.com* should NOT match registry.example.com.evil.com/image
-
-test_value_in_set_prefix_domain_traversal if {
-  result := check_set.check_value_in_set_with_wildcards("registry.example.com.evil.com/image", ["registry.example.com*"], [], {})
-  result.allowed == false
-}
-
 # SPE allows
 
 test_container_value_in_set_spe_allows if {

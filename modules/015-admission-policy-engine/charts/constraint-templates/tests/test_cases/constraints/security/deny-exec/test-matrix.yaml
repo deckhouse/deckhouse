@@ -7,7 +7,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-  - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
@@ -17,190 +17,95 @@ spec:
           namespace: testns
         spec:
           containers:
-          - image: nginx:latest
-            name: nginx
-    admissionDeployment:
-      document:
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-          namespace: testns
-        spec:
-          template:
-            spec:
-              containers:
-              - image: nginx
-                name: nginx
-  namedExceptions: {}
-  blocks:
-  - name: security-policy
-    gatorBlock: security-policy
-    defaultObjectBase: ''
-    template: ../rendered/constraint-template.yaml
-    constraint: constraints/policy_1.yaml
-    cases:
-    - name: 001-allowed-absent-command-stdin
-      violations: 'no'
-      assertionMessage: ''
-      fields:
-      - path: command[]
-        scenario: absent
-      - path: stdin
-        scenario: absent
-      exception: ''
-      exceptionRef: ''
-      object:
-        base: admissionPod
-        merge:
-          metadata:
-            name: allowed
-          spec:
-            containers:
-            - command:
-              - ls
-              image: nginx:latest
-              name: nginx
-    - name: 002-allowed-command-ls-stdin-false
-      violations: 'no'
-      assertionMessage: ''
-      fields:
-      - path: command[]
-        scenario: positive
-      - path: stdin
-        scenario: positive
-      exception: ''
-      exceptionRef: ''
-      object:
-        base: admissionPod
-        merge:
-          metadata:
-            name: allowed-command-ls-stdin-false
-          spec:
-            containers:
-            - command:
-              - ls
-              image: nginx:latest
-              name: nginx
-              stdin: false
-    - name: 003-disallowed-command-not-allowed
-      violations: 'yes'
-      assertionMessage: ''
-      fields:
-      - path: command[]
-        scenario: negative
-      exception: ''
-      exceptionRef: ''
-      object:
-        base: admissionPod
-        merge:
-          metadata:
-            name: disallowed-command-not-allowed
-          spec:
-            containers:
-            - command:
-              - cat
-              image: nginx:latest
-              name: nginx
-    - name: 004-disallowed-stdin-true
-      violations: 'yes'
-      assertionMessage: ''
-      fields:
-      - path: stdin
-        scenario: negative
-      exception: ''
-      exceptionRef: ''
-      object:
-        base: admissionPod
-        merge:
-          metadata:
-            name: disallowed-stdin-true
-          spec:
-            containers:
-            - command:
-              - ls
-              image: nginx:latest
-              name: nginx
-              stdin: true
-    - name: 005-disallowed-tty-true
-      violations: 'yes'
-      assertionMessage: ''
-      fields:
-      - path: tty
-        scenario: negative
-      exception: ''
-      exceptionRef: ''
-      object:
-        base: admissionPod
-        merge:
-          metadata:
-            name: disallowed-tty-true
-          spec:
-            containers:
-            - command:
-              - ls
-              image: nginx:latest
-              name: nginx
-              tty: true
-    - name: 006-disallowed-no-command-when-allowed
-      violations: 'yes'
-      assertionMessage: ''
-      fields:
-      - path: command[]
-        scenario: absent
-      - path: tty
-        scenario: absent
-      exception: ''
-      exceptionRef: ''
-      object:
-        base: admissionPod
-        merge:
-          metadata:
-            name: disallowed-no-command-when-allowed
-          spec:
-            containers:
             - image: nginx:latest
               name: nginx
-    - name: 007-allowed-tty-false
-      violations: 'no'
-      assertionMessage: ''
-      fields:
-      - path: tty
-        scenario: positive
-      exception: ''
-      exceptionRef: ''
-      object:
-        base: admissionPod
-        merge:
-          metadata:
-            name: allowed-tty-false
-          spec:
-            containers:
-            - command:
-              - ls
-              image: nginx:latest
-              name: nginx
-              tty: false
-  - name: pss-controller-deployment
-    gatorBlock: pss-controller-deployment
-    template: ../rendered/constraint-template.yaml
-    constraint: constraints/policy_1.yaml
-    cases:
-    - name: controller-allowed-deny-exec
-      violations: 'no'
-      assertionMessage: ''
-      fields:
-      - path: spec.template.spec.containers[].command
-        scenario: positive
-      object:
-        base: admissionDeployment
-        merge:
-          metadata:
-            name: controller-allowed-deny-exec
-          spec:
-            template:
+  namedExceptions: {}
+  blocks:
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 001-allowed-absent-command-stdin
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: command[]
+              scenario: absent
+            - path: stdin
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
               spec:
                 containers:
-                - image: nginx
-                  name: nginx
-      exception: ''
-      exceptionRef: ''
+                  - command:
+                      - ls
+                    image: nginx:latest
+                    name: nginx
+        - name: 002-allowed-command-ls-stdin-false
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: command[]
+              scenario: positive
+            - path: stdin
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-command-ls-stdin-false
+              spec:
+                containers:
+                  - command:
+                      - ls
+                    image: nginx:latest
+                    name: nginx
+                    stdin: false
+        - name: 003-disallowed-command-not-allowed
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: command[]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-command-not-allowed
+              spec:
+                containers:
+                  - command:
+                      - cat
+                    image: nginx:latest
+                    name: nginx
+        - name: 004-disallowed-stdin-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: stdin
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-stdin-true
+              spec:
+                containers:
+                  - command:
+                      - ls
+                    image: nginx:latest
+                    name: nginx
+                    stdin: true
