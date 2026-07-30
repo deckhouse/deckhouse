@@ -75,6 +75,7 @@ Summary:
 1. Определите список внутренних модулей, которые используются в кластере и не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
 
    <!REMOVE_FOR_CE>
+
    1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
 
       ```shell
@@ -134,6 +135,7 @@ Summary:
 1. Определите список внешних модулей, запущенных из `moduleSource/deckhouse`, которые не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
 
    <!REMOVE_FOR_CE>
+
    1. Подготовьте переменную окружения, указав лицензионный ключ для редакции, на которую вы планируете переключиться:
 
       ```shell
@@ -187,6 +189,50 @@ Summary:
       ```
 
    1. Отключите модули которые не были найден в новой редакции, если это допустимо. Иначе, **прервите процесс переключения.**
+
+{% endcapture %}
+
+{% capture take_care_deckhuse_imagepullbackoff %}
+1. Убедитесь, что deckhouse запустился после смены registry:
+
+   1. Для этого, воспользуйтесь командой:
+
+      ```bash
+      d8 k -n d8-system get pods -l "app=deckhouse"
+      ```
+
+   1. Если Deckhouse находится в ImagePullBackoff с ошибкой скачивания cidecar контейнеров, укажите актуальные образа:
+
+      Получить актуальные дайджесты cidecar образов
+
+      ```bash
+      DKP_REPO=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F':' '{print $1}')
+      DKP_IMG=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image')
+
+      d8 k run dkp-image --image=$DKP_IMG --command sleep -- infinity
+      d8 k wait --for=condition=ready pod/dkp-image --timeout=300s
+
+      DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec dkp-image -- cat /deckhouse/modules/images_digests.json | jq -r ".common.kubeRbacProxy")
+      DECKHOUSE_INIT=$(d8 k exec dkp-image -- cat /deckhouse/modules/images_digests.json | jq -r ".deckhouse.init")
+
+      # Либо
+      DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec dkp-image -- cat /deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+      DECKHOUSE_INIT=$(d8 k exec dkp-image -- cat /deckhouse/candi/images_digests.json | jq -r ".deckhouse.init")
+
+      d8 k delete pod dkp-image
+      ```
+
+      Применение для образа `kube-rbac-proxy`:
+
+      ```bash
+      d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=$DKP_REPO@$DECKHOUSE_KUBE_RBAC_PROXY
+      ```
+
+      Применение для образа `initContainer`:
+
+      ```bash
+      d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=$DKP_REPO@$DECKHOUSE_INIT
+      ```
 
 {% endcapture %}
 
@@ -390,7 +436,7 @@ d8 system module enable chrony
 Не подходит для managed Kubernetes (EKS, AKS, GKE) и для DKP CSE **ниже** 1.73.
 {% endalert %}
 
-{% capture change-registry-mc-deckhouse-unmanaged %}
+{% capture change_registry_mc_deckhouse_unmanaged %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -407,7 +453,7 @@ spec:
 <!REMOVE_FOR_CE>
         license: <ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
 <!/REMOVE_FOR_CE>
-        checkMode: Relax
+        checkMode: <РЕЖИМ_ПРОВЕРКИ>
         imagesRepo: <REGISTRY_HOST>/deckhouse/<КОД_РЕДАКЦИИ>
         scheme: HTTPS
 ```
@@ -442,6 +488,96 @@ conditions:
 
 {% endcapture %}
 
+1. Убедитесь, что в кластере используется модуль registry. В moduleConfig `deckhouse` должны быть указаны параметры registry старой редакции DKP в `Unmanaged` режиме работы. Если это не так, выполните [миграцию на использование модуля registry](../registry/managing-interaction.html#миграция-на-формат-управления-настройками-хранилища-образов-с-использованием-модуля-registry).
+
+   После выполнения миграции, в moduleConfig `deckhouse` должны появиться параметры registry:
+
+   {% tabs switch-registry-edition-1 %}
+   {% tab "DKP CE" %}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
+      }}
+   {% endtab %}
+
+   {% tab "DKP BE" %}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE" %}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE+" %}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
+   {% endtab %}
+
+   {% tab "DKP EE" %}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
+   {% endtab %}
+
+   {% tab "DKP CSE" %}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
+         | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
+   {% endtab %}
+   {% endtabs %}
+
+   В статусе переключения не должно быть ошибок:
+
+   {{ registry_status_cmd | regex_replace: "^", "   " }}
+
+   Пример успешного вывода:
+
+   {% tabs switch-registry-status-example-3 %}
+   {% tab "CE/BE/SE/SE+/EE" %}
+      {{
+         registry_status_example
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "CSE" %}
+      {{
+         registry_status_example
+         | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+   {% endtabs %}
+
 1. В ModuleConfig [`deckhouse`](/modules/deckhouse/configuration.html#parameters-registry) укажите `imagesRepo` целевой редакции и `checkMode: Relax`:
 
    Выполните команду для редактирования ModuleConfig `deckhouse`:
@@ -454,24 +590,67 @@ conditions:
 
    {% tabs switch-registry-edition %}
    {% tab "DKP CE" %}
-   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "ce" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" }}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "ce"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Relax"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
+      }}
    {% endtab %}
+
    {% tab "DKP BE" %}
-   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "be"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Relax"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
    {% endtab %}
+
    {% tab "DKP SE" %}
-   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "se"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Relax"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
    {% endtab %}
+
    {% tab "DKP SE+" %}
-   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Relax"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
    {% endtab %}
+
    {% tab "DKP EE" %}
-   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "ee"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Relax"
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
    {% endtab %}
+
    {% tab "DKP CSE" %}
-   {{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "cse" | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}
+      {{
+         change_registry_mc_deckhouse_unmanaged
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "cse"
+         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Relax"
+         | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru"
+         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
+      }}
    {% endtab %}
    {% endtabs %}
+
+{{ take_care_deckhuse_imagepullbackoff }}
 
 1. Дождитесь переключения.
 
@@ -482,8 +661,20 @@ conditions:
    Пример успешного вывода:
 
    {% tabs switch-registry-status-example-2 %}
-   {% tab "CE/BE/SE/SE+/EE" %}{{ registry_status_example | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "^", "   " }}{% endtab %}
-   {% tab "CSE" %}{{ registry_status_example | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "^", "   " }}{% endtab %}
+   {% tab "CE/BE/SE/SE+/EE" %}
+      {{
+         registry_status_example
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+   {% tab "CSE" %}
+      {{
+         registry_status_example
+         | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
    {% endtabs %}
 
 1. Верните `checkMode` в `Default`:
@@ -705,6 +896,10 @@ d8 k delete ngc del-temp-config.sh
 ```
 
 {% endcapture %}
+
+{% alert level="warning" %}
+Перед применением, убедитесь, что модуль registry не используется в кластере. В moduleConfig `deckhouse` должны отсутствовать параметры registry. Модуль `registry` должен быть выключен. Если это не так, выполните [миграция на устаревший формат управления настройками registry](../registry/managing-interaction.html#миграция-на-устаревший-формат-управления-настройками-хранилища-образов-компонентов-dkp-без-модуля-registry).
+{% endalert %}
 
 Выберите целевую редакцию:
 
