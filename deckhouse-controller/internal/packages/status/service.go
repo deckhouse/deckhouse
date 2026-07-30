@@ -17,6 +17,7 @@ package status
 import (
 	"errors"
 	"slices"
+	"strings"
 	"sync"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -50,8 +51,14 @@ const (
 	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
 	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
 
-	// queueName labels the notification workqueue for metrics.
-	queueName = "package-status"
+	// appQueueName labels the application notification workqueue for metrics.
+	appQueueName = "application-status"
+	// moduleQueueName labels the module notification workqueue for metrics.
+	moduleQueueName = "module-status"
+
+	// appNameParts is the number of dot-separated parts in an application
+	// name ("namespace.name", see apps.BuildName). Module names carry no dot.
+	appNameParts = 2
 )
 
 // Error wraps an error with associated status conditions
@@ -88,12 +95,15 @@ type Service struct {
 	// name drains the entry, so a startup-race event is not lost.
 	pendingHealth map[string]health.Event
 
-	// queue carries names of packages whose status changed. It coalesces
+	// appQueue carries names of packages whose status changed. It coalesces
 	// repeated notifications for the same package into a single item, so a
 	// flood of updates (e.g. nelm progress) cannot outgrow the number of
 	// packages. Notifications are enqueued outside s.mu, so a slow consumer
 	// can never block a producer that holds the lock.
-	queue workqueue.TypedRateLimitingInterface[string]
+	appQueue workqueue.TypedRateLimitingInterface[string]
+
+	// moduleQueue carries names of modules whose status changed.
+	moduleQueue workqueue.TypedRateLimitingInterface[string]
 }
 
 // Status represents the current state of a package
@@ -129,24 +139,48 @@ type Condition struct {
 
 func NewService() *Service {
 	return &Service{
-		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
+		appQueue: workqueue.NewTypedRateLimitingQueueWithConfig(
 			workqueue.DefaultTypedControllerRateLimiter[string](),
-			workqueue.TypedRateLimitingQueueConfig[string]{Name: queueName},
+			workqueue.TypedRateLimitingQueueConfig[string]{Name: appQueueName},
+		),
+		moduleQueue: workqueue.NewTypedRateLimitingQueueWithConfig(
+			workqueue.DefaultTypedControllerRateLimiter[string](),
+			workqueue.TypedRateLimitingQueueConfig[string]{Name: moduleQueueName},
 		),
 		statuses:      make(map[string]*Status),
 		pendingHealth: make(map[string]health.Event),
 	}
 }
 
-// Queue returns the notification queue. Consumers pull changed package names
-// via Get/Done and requeue transient failures via AddRateLimited.
-func (s *Service) Queue() workqueue.TypedRateLimitingInterface[string] {
-	return s.queue
+// AppQueue returns the application notification queue. Consumers pull changed
+// application names ("namespace.name") via Get/Done and requeue transient
+// failures via AddRateLimited.
+func (s *Service) AppQueue() workqueue.TypedRateLimitingInterface[string] {
+	return s.appQueue
+}
+
+// ModuleQueue returns the module notification queue. Consumers pull changed
+// module names via Get/Done and requeue transient failures via AddRateLimited.
+func (s *Service) ModuleQueue() workqueue.TypedRateLimitingInterface[string] {
+	return s.moduleQueue
+}
+
+// queueFor returns the notification queue that owns the given package name.
+// Application names are built as "namespace.name" (see apps.BuildName), so a
+// name that splits into exactly two dot-separated parts belongs to an
+// application; anything else is a module name.
+func (s *Service) queueFor(name string) workqueue.TypedRateLimitingInterface[string] {
+	if len(strings.Split(name, ".")) == appNameParts {
+		return s.appQueue
+	}
+
+	return s.moduleQueue
 }
 
 // Shutdown stops the notification queue; the consumer loop exits on the next Get.
 func (s *Service) Shutdown() {
-	s.queue.ShutDown()
+	s.appQueue.ShutDown()
+	s.moduleQueue.ShutDown()
 }
 
 // GetStatus retrieves a copy of the current status for a package by name ("namespace.name")
@@ -216,7 +250,7 @@ func (s *Service) SetConditionTrue(name string, condition ConditionType) {
 	s.mu.Unlock()
 
 	if notify {
-		s.queue.Add(name)
+		s.queueFor(name).Add(name)
 	}
 }
 
@@ -239,7 +273,7 @@ func (s *Service) SetConditionFalse(name string, condition ConditionType, reason
 	s.mu.Unlock()
 
 	if notify {
-		s.queue.Add(name)
+		s.queueFor(name).Add(name)
 	}
 }
 
@@ -257,7 +291,7 @@ func (s *Service) UpdateVersion(name string, version string) {
 	status.setCondition(Condition{Type: ConditionPending, Status: metav1.ConditionTrue, Message: "waiting for processing"})
 	s.mu.Unlock()
 
-	s.queue.Add(name)
+	s.queueFor(name).Add(name)
 }
 
 // UpdateTracking updates the nelm progress report for a package and notifies listeners.
@@ -297,7 +331,7 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	}
 	s.mu.Unlock()
 
-	s.queue.Add(name)
+	s.queueFor(name).Add(name)
 }
 
 // UpdateURLs stores application endpoint URLs collected from the rendered
@@ -318,7 +352,7 @@ func (s *Service) UpdateURLs(name string, urls []URL) {
 	s.mu.Unlock()
 
 	if notify {
-		s.queue.Add(name)
+		s.queueFor(name).Add(name)
 	}
 }
 
@@ -361,7 +395,7 @@ func (s *Service) UpdateHealth(name string, event health.Event) {
 	s.mu.Unlock()
 
 	if notify {
-		s.queue.Add(name)
+		s.queueFor(name).Add(name)
 	}
 }
 
@@ -408,7 +442,7 @@ func (s *Service) HandleError(name string, cond ConditionType, err error) {
 	s.mu.Unlock()
 
 	if notify {
-		s.queue.Add(name)
+		s.queueFor(name).Add(name)
 	}
 }
 
@@ -492,6 +526,6 @@ func (s *Service) NewStatus(name string) {
 	s.mu.Unlock()
 
 	if notify {
-		s.queue.Add(name)
+		s.queueFor(name).Add(name)
 	}
 }
