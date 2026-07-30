@@ -83,22 +83,43 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       const modalAttr = this.wrapper.dataset.modalWindow;
-      //names for CRM
-      const formTypeLabels = {
-        'request_access': 'бесплатного триала',
-        'request_callback': 'обратного звонка',
-        'request_education': 'обучения',
-        'request_demo': 'демо',
-        'get_a_report': 'отчета',
-        'become_a_partner': 'партнерства'
-      };
+      const isEn = FormData.language === 'en' || document.documentElement.lang === 'en';
 
-      const label = formTypeLabels[modalAttr] ? ' ' + formTypeLabels[modalAttr] : '';
+      if (isEn) {
+        const formTypeLabelsEn = {
+          'request_access': 'free trial',
+          'request_callback': 'callback',
+          'request_education': 'training',
+          'request_demo': 'demo',
+          'get_a_report': 'report',
+          'become_a_partner': 'partnership'
+        };
 
-      if (FormData.company) {
-        bitrixFields.fields['TITLE'] = FormData.company + ' - запрос' + label + ' с сайта Deckhouse';
+        const label = formTypeLabelsEn[modalAttr] ? formTypeLabelsEn[modalAttr] + ' ' : '';
+        const reqType = label ? label + 'request' : 'request';
+
+        if (FormData.company) {
+          bitrixFields.fields['TITLE'] = `${FormData.company} - ${reqType} from Deckhouse website`;
+        } else {
+          bitrixFields.fields['TITLE'] = `${reqType.charAt(0).toUpperCase() + reqType.slice(1)} from Deckhouse website`;
+        }
       } else {
-        bitrixFields.fields['TITLE'] = 'Запрос' + label + ' с сайта Deckhouse';
+        const formTypeLabelsRu = {
+          'request_access': 'бесплатного триала',
+          'request_callback': 'обратного звонка',
+          'request_education': 'обучения',
+          'request_demo': 'демо',
+          'get_a_report': 'отчета',
+          'become_a_partner': 'партнерства'
+        };
+
+        const label = formTypeLabelsRu[modalAttr] ? ' ' + formTypeLabelsRu[modalAttr] : '';
+
+        if (FormData.company) {
+          bitrixFields.fields['TITLE'] = FormData.company + ' - запрос' + label + ' с сайта Deckhouse';
+        } else {
+          bitrixFields.fields['TITLE'] = 'Запрос' + label + ' с сайта Deckhouse';
+        }
       }
 
       if (FormData.name) {
