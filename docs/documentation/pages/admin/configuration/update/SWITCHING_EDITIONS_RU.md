@@ -253,13 +253,13 @@ Summary:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
@@ -269,15 +269,13 @@ Summary:
 {% tab "На DKP BE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 
@@ -287,15 +285,13 @@ Summary:
 {% tab "На DKP SE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 
@@ -305,15 +301,13 @@ Summary:
 {% tab "На DKP SE+" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 
@@ -323,15 +317,13 @@ Summary:
 {% tab "На DKP EE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 
@@ -363,16 +355,14 @@ Summary:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
    | regex_replace: "\$NEW_EDITION", "cse"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
    | regex_replace: "\$NEW_EDITION", "cse"
 }}
@@ -488,7 +478,7 @@ conditions:
 
 {% endcapture %}
 
-1. Убедитесь, что в кластере используется модуль registry. В moduleConfig `deckhouse` должны быть указаны параметры registry старой редакции DKP в `Unmanaged` режиме работы. Если это не так, выполните [миграцию на использование модуля registry](../registry/managing-interaction.html#миграция-на-формат-управления-настройками-хранилища-образов-с-использованием-модуля-registry).
+1. Убедитесь, что в кластере используется модуль registry. В moduleConfig `deckhouse` должны быть указаны параметры registry предыдущей редакции DKP в `Unmanaged` режиме работы. Если это не так, выполните [миграцию на использование модуля registry](../registry/managing-interaction.html#миграция-на-формат-управления-настройками-хранилища-образов-с-использованием-модуля-registry).
 
    После выполнения миграции, в moduleConfig `deckhouse` должны появиться параметры registry:
 
@@ -496,7 +486,7 @@ conditions:
    {% tab "DKP CE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
          | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
          | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
@@ -506,7 +496,7 @@ conditions:
    {% tab "DKP BE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
          | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
          | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
@@ -516,7 +506,7 @@ conditions:
    {% tab "DKP SE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
          | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
          | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
@@ -526,7 +516,7 @@ conditions:
    {% tab "DKP SE+" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
          | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
          | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
@@ -536,7 +526,7 @@ conditions:
    {% tab "DKP EE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
          | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
          | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
@@ -546,7 +536,7 @@ conditions:
    {% tab "DKP CSE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_СТАРОЙ_РЕДАКЦИИ>"
+         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
          | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru"
          | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""

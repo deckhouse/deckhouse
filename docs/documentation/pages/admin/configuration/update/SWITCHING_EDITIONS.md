@@ -249,13 +249,13 @@ What to consider before switching:
 
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "ce"
 }}
 
@@ -265,15 +265,13 @@ What to consider before switching:
 {% tab "To DKP BE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "be"
 }}
 
@@ -283,15 +281,13 @@ What to consider before switching:
 {% tab "To DKP SE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "se"
 }}
 
@@ -301,15 +297,13 @@ What to consider before switching:
 {% tab "To DKP SE+" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "se-plus"
 }}
 
@@ -319,15 +313,13 @@ What to consider before switching:
 {% tab "To DKP EE" %}
 {{
    take_care_of_the_internal_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 
 {{
    take_care_of_the_external_modules
-   | regex_replace: "(?m)^\s*<!REMOVE_FOR_CE>\s*", ""
-   | regex_replace: "\s*<!/REMOVE_FOR_CE>", ""
+   | regex_replace: "(?m)^[ \t]*<!/?REMOVE_FOR_CE>\n?", ""
    | regex_replace: "\$NEW_EDITION", "ee"
 }}
 
@@ -434,7 +426,7 @@ conditions:
 
 {% endcapture %}
 
-1. Make sure the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the old DKP edition in `Unmanaged` mode. If this is not the case, perform the [migration to using the registry module](../registry/managing-interaction.html#migration-to-registry-management-format-using-the-registry-module).
+1. Make sure the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the previous DKP edition in `Unmanaged` mode. If this is not the case, perform the [migration to using the registry module](../registry/managing-interaction.html#migration-to-registry-management-format-using-the-registry-module).
 
    After completing the migration, ModuleConfig `deckhouse` must contain the registry parameters:
 
@@ -442,7 +434,7 @@ conditions:
    {% tab "DKP CE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<OLD_EDITION_CODE>"
+         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
          | regex_replace: "<CHECK_MODE>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
          | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
@@ -452,7 +444,7 @@ conditions:
    {% tab "DKP BE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<OLD_EDITION_CODE>"
+         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
          | regex_replace: "<CHECK_MODE>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
          | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
@@ -462,7 +454,7 @@ conditions:
    {% tab "DKP SE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<OLD_EDITION_CODE>"
+         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
          | regex_replace: "<CHECK_MODE>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
          | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
@@ -472,7 +464,7 @@ conditions:
    {% tab "DKP SE+" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<OLD_EDITION_CODE>"
+         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
          | regex_replace: "<CHECK_MODE>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
          | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
@@ -482,7 +474,7 @@ conditions:
    {% tab "DKP EE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<OLD_EDITION_CODE>"
+         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
          | regex_replace: "<CHECK_MODE>", "Default"
          | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
          | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
