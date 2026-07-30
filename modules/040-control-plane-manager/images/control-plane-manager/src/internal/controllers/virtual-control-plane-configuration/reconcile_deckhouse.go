@@ -61,9 +61,6 @@ var deckhouseDeploymentYAML string
 //go:embed deckhouse/manifests/moduleconfigs.yaml
 var deckhouseModuleConfigsYAML []byte
 
-//go:embed deckhouse/manifests/rbac.yaml
-var deckhouseRBACYAML []byte
-
 // reconcileDeckhouse installs a Deckhouse instance for the tenant cluster.
 // The deckhouse-controller pod runs in the parent cluster (vcp-<name>) with
 // the tenant admin kubeconfig (not-self-hosted mode), and the tenant cluster
@@ -78,7 +75,7 @@ func (r *reconciler) reconcileDeckhouse(
 		return reconcile.Result{}, fmt.Errorf("build tenant clients: %w", err)
 	}
 
-	// 1. Tenant: d8-system Namespace. The pod authenticates with its own client certificate (see 5a), and the module renders its own ServiceAccount.
+	// 1. Tenant: d8-system Namespace. The pod authenticates with its own client certificate bound in tenant-rbac.yaml.tpl, and the module renders its own ServiceAccount.
 	if err := reconcileTenantNamespace(ctx, tc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile tenant d8-system namespace: %w", err)
 	}
@@ -102,11 +99,6 @@ func (r *reconciler) reconcileDeckhouse(
 	//    global discovery works before any DNS module is deployed.
 	if err := reconcileTenantKubeDNSService(ctx, tc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile tenant kube-dns service: %w", err)
-	}
-
-	// 5a. Tenant: RBAC for the deckhouse client certificate, before the pod needs it.
-	if err := reconcileTenantDeckhouseRBAC(ctx, tc); err != nil {
-		return reconcile.Result{}, fmt.Errorf("reconcile tenant deckhouse rbac: %w", err)
 	}
 
 	// 6. Parent: registry secret copy for image pulls in vcp-<name>.
@@ -495,21 +487,6 @@ func buildTargetDeckhouseDeployment(
 	}
 
 	return deployment, nil
-}
-
-func reconcileTenantDeckhouseRBAC(ctx context.Context, tc client.Client) error {
-	objects, err := parseManifestDocs(deckhouseRBACYAML, "")
-	if err != nil {
-		return err
-	}
-
-	for _, target := range objects {
-		if err := applyObject(ctx, tc, target, patchTenantObject); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func reconcileTenantModuleConfigs(ctx context.Context, tc client.Client) (reconcile.Result, error) {

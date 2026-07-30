@@ -57,7 +57,6 @@ const (
 	bashibleSecurePort        = 4221
 	bashibleNestedServicePort = 443
 
-	bashibleKubeconfigSecretName  = constants.VirtualClientsKubeconfigSecretName
 	bashibleContextSecretName     = "bashible-apiserver-context"
 	bashibleRegistrySecretName    = "deckhouse-registry"
 	bashibleRegistrySecretNS      = "d8-system"
@@ -782,7 +781,7 @@ func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane
 
 	tlsSecret := constants.VirtualResourceName(bashibleTLSSecretName, vcp.Name)
 	filesCM := constants.VirtualResourceName(bashibleFilesConfigMapName, vcp.Name)
-	kubeconfigSecret := constants.VirtualResourceName(bashibleKubeconfigSecretName, vcp.Name)
+	kubeconfigSecret := constants.VirtualResourceName(constants.VirtualClientsKubeconfigSecretName, vcp.Name)
 	registrySecret := constants.VirtualResourceName(bashibleRegistrySecretName, vcp.Name)
 
 	deployment.Name = constants.VirtualResourceName(bashibleDeploymentName, vcp.Name)
@@ -816,7 +815,7 @@ func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane
 			switch vol.Secret.SecretName {
 			case bashibleTLSSecretName:
 				vol.Secret.SecretName = tlsSecret
-			case bashibleKubeconfigSecretName:
+			case constants.VirtualClientsKubeconfigSecretName:
 				vol.Secret.SecretName = kubeconfigSecret
 			}
 		}

@@ -87,3 +87,18 @@ subjects:
 - kind: User
   name: konnectivity-server
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:vcp:deckhouse
+  labels:
+    heritage: deckhouse
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: User
+  name: deckhouse
+  apiGroup: rbac.authorization.k8s.io

@@ -810,7 +810,6 @@ subjects:
 - kind: ServiceAccount
   name: "cilium-operator"
   namespace: kube-system
-# The operator runs in the parent cluster and authenticates with a client certificate.
 - kind: User
   name: cilium-operator
   apiGroup: rbac.authorization.k8s.io
@@ -831,7 +830,6 @@ subjects:
 - kind: ServiceAccount
   name: "cilium-operator"
   namespace: kube-system
-# The operator runs in the parent cluster and authenticates with a client certificate.
 - kind: User
   name: cilium-operator
   apiGroup: rbac.authorization.k8s.io
