@@ -8,6 +8,13 @@ permalink: en/admin/integrations/virtualization/dvp/configuration-and-layout-sch
 ![Standard layout](../../../../images/cloud-provider-dvp/dvp-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=1314-7740&t=5VUUyoMpasR1vVxZ-4 --->
 
+{% alert level="warning" %}
+If the cluster was installed with the DVPClusterConfiguration schema, migration to ModuleConfig-based configuration is required.
+Until the migration is completed, the `D8CloudProviderDVPMigrationPending` alert may fire and Deckhouse updates may be blocked.
+
+See: [How to migrate a cloud provider to ModuleConfig-based configuration](/faq.html#subsystem-cluster_infrastructure).
+{% endalert %}
+
 Example of the layout configuration:
 
 ```yaml
