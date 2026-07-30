@@ -44,6 +44,7 @@ type Module struct {
 	Definition      modules.Definition
 	Settings        addonutils.Values
 	SettingsVersion int // schema version from ModuleConfig.Spec.Version
+	Maintaince      string
 }
 
 // UpdateModulesSettings applies a settings-and-enabled change to an
@@ -105,11 +106,11 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	version := module.Definition.Version
 
 	// Modules do not support maintenance mode, so it is always empty here.
-	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, "") {
+	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintaince) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, "")
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintaince)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return

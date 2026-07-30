@@ -37,6 +37,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -60,7 +63,8 @@ func RegisterController(runtimeManager manager.Manager,
 	loader *moduleloader.Loader,
 	edition *d8edition.Edition,
 	dc dependency.Container,
-	logger *log.Logger) error {
+	logger *log.Logger,
+) error {
 	r := &reconciler{
 		init:                new(sync.WaitGroup),
 		client:              runtimeManager.GetClient(),
@@ -100,6 +104,7 @@ type reconciler struct {
 	log                 *log.Logger
 	dependencyContainer dependency.Container
 	moduleManager       moduleManager
+	packageManager      packageManager
 	edition             *d8edition.Edition
 }
 
@@ -108,6 +113,10 @@ type moduleManager interface {
 	GetModule(moduleName string) *addonmodules.BasicModule
 	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
 	AreModulesInited() bool
+}
+
+type packageManager interface {
+	UpdateModule(repo registry.Remote, module runtime.Module)
 }
 
 func (r *reconciler) preflight(ctx context.Context) error {
@@ -295,17 +304,15 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
 	}
 
-	if err = r.deployModule(ctx, source, mpo); err != nil {
-		r.log.Error("failed to deploy module", slog.String("module", mpo.Name), log.Err(err))
+	// if err = r.deployModule(ctx, source, mpo); err != nil {
+	// 	r.log.Error("failed to deploy module", slog.String("module", mpo.Name), log.Err(err))
+	// 	return ctrl.Result{}, err
+	// }
+
+	if err = r.deployPackage(ctx, source, mpo); err != nil {
+		r.log.Error("failed to deploy package", slog.String("module", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
-
-	defer func() {
-		r.log.Info("restart Deckhouse because ModulePullOverride image was updated", slog.String("name", mpo.Name))
-		if err = syscall.Kill(1, syscall.SIGUSR2); err != nil {
-			r.log.Fatal("failed to send SIGUSR2 signal", log.Err(err))
-		}
-	}()
 
 	mpo.Status.Message = v1alpha1.ModulePullOverrideMessageReady
 	mpo.Status.ImageDigest = digest
@@ -337,6 +344,25 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
+}
+
+func (r *reconciler) deployPackage(ctx context.Context, source *v1alpha1.ModuleSource, mpo *v1alpha2.ModulePullOverride) error {
+	config := new(v1alpha1.ModuleConfig)
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(mpo), config); err != nil {
+		return fmt.Errorf("get module config: %w", err)
+	}
+
+	r.packageManager.UpdateModule(registry.BuildRemote(source), runtime.Module{
+		Name: mpo.Name,
+		Definition: modules.Definition{
+			Version: "v2.0.0",
+		},
+		Settings:        config.Spec.Settings.GetMap(),
+		Maintaince:      config.Spec.Maintenance,
+		SettingsVersion: config.Spec.Version,
+	})
+
+	return nil
 }
 
 // deployModule downloads module on tmp, validates and installs
