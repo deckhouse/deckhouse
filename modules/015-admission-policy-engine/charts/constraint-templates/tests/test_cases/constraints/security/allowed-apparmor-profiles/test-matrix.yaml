@@ -706,6 +706,8 @@ spec:
           spec:
             template:
               metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-apparmor-spe-top
                 annotations:
                   container.apparmor.security.beta.kubernetes.io/nginx: unconfined
               spec:
