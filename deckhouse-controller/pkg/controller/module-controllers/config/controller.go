@@ -214,7 +214,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	}
 
-	if !app.ModulePackagesEnabled() {
+	if app.ModulePackagesEnabled() {
 		// update modules settings in the package manager
 		r.packageManager.UpdateModulesSettings(
 			moduleConfig.Name,
