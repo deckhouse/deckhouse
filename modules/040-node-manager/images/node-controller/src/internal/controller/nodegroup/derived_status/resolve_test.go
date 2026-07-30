@@ -41,6 +41,8 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 	require.NoError(t, corev1.AddToScheme(scheme))
 	scheme.AddKnownTypeWithName(ngcommon.MCMMachineDeploymentGVK, &unstructured.Unstructured{})
 	scheme.AddKnownTypeWithName(ngcommon.MCMMachineDeploymentGVK.GroupVersion().WithKind("MachineDeploymentList"), &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(moduleConfigGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(moduleConfigGVK.GroupVersion().WithKind("ModuleConfigList"), &unstructured.UnstructuredList{})
 	return scheme
 }
 

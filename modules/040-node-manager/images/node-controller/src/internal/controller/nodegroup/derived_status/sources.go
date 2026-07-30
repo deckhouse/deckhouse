@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -37,15 +38,17 @@ import (
 )
 
 const (
-	cloudProviderSecretName       = ngcommon.CloudProviderSecretName
-	cloudProviderSecretNamespace  = "kube-system"
-	clusterConfigSecretName       = "d8-cluster-configuration"
-	clusterConfigSecretNamespace  = "kube-system"
-	automaticKubernetesVersion    = "Automatic"
-	deckhouseDefaultK8sVersionKey = "deckhouseDefaultKubernetesVersion"
-	clusterUUIDConfigMapName      = "d8-cluster-uuid"
-	clusterUUIDConfigMapNS        = "kube-system"
-	nodeManagerModuleConfigName   = "node-manager"
+	cloudProviderSecretName        = ngcommon.CloudProviderSecretName
+	cloudProviderSecretNamespace   = "kube-system"
+	clusterConfigSecretName        = "d8-cluster-configuration"
+	clusterConfigSecretNamespace   = "kube-system"
+	automaticKubernetesVersion     = "Automatic"
+	deckhouseDefaultK8sVersionKey  = "deckhouseDefaultKubernetesVersion"
+	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
+	controlPlaneManagerModuleName  = "control-plane-manager"
+	clusterUUIDConfigMapName       = "d8-cluster-uuid"
+	clusterUUIDConfigMapNS         = "kube-system"
+	nodeManagerModuleConfigName    = "node-manager"
 
 	instanceTypesCatalogName = "for-cluster-autoscaler"
 	instanceClassGroup       = "deckhouse.io"
@@ -54,6 +57,8 @@ const (
 	apiserverPodNamespace  = "kube-system"
 	apiserverVersionAnnKey = "control-plane-manager.deckhouse.io/kubernetes-version"
 )
+
+var moduleConfigGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"}
 
 func (s *Service) readCloudProviderData(ctx context.Context) map[string]interface{} {
 	secret := &corev1.Secret{}
@@ -89,21 +94,29 @@ type clusterConfiguration struct {
 	DefaultCRI        string `json:"defaultCRI"`
 }
 
-func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
+type clusterKubernetesSpec struct {
+	DesiredVersion string `json:"desiredVersion"`
+}
+
+// readClusterConfiguration returns the legacy CC target, defaultCRI and the Deckhouse default.
+// defaultCRI still belongs to ClusterConfiguration; only kubernetesVersion is being migrated.
+func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string, *semver.Version) {
 	// Served from the kube-system Secret informer (watch-fresh); a live GET here used to
 	// cost hundreds of ms on every derived-status pass during a NodeGroup burst.
 	secret := &corev1.Secret{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
-		return nil, ""
+		return nil, "", nil
 	}
 	data := make(map[string]string, len(secret.Data))
 	for k, v := range secret.Data {
 		data[k] = string(v)
 	}
 
+	deckhouseDefault := parseSecretKubernetesVersion(data[deckhouseDefaultK8sVersionKey])
+
 	raw, ok := []byte(data["cluster-configuration.yaml"]), data["cluster-configuration.yaml"] != ""
 	if !ok {
-		return nil, ""
+		return nil, "", deckhouseDefault
 	}
 	if decoded, err := base64.StdEncoding.DecodeString(string(raw)); err == nil {
 		raw = decoded
@@ -111,27 +124,84 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 
 	cfg := &clusterConfiguration{}
 	if err := sigsyaml.Unmarshal(raw, cfg); err != nil {
-		return nil, ""
+		return nil, "", deckhouseDefault
 	}
 
 	var target *semver.Version
 	switch {
 	case cfg.KubernetesVersion == automaticKubernetesVersion:
-		if enc, ok := data[deckhouseDefaultK8sVersionKey]; ok {
-			verRaw := []byte(enc)
-			if decoded, err := base64.StdEncoding.DecodeString(enc); err == nil {
-				verRaw = decoded
-			}
-			if ver, err := semver.NewVersion(strings.TrimSpace(string(verRaw))); err == nil {
-				target = ver
-			}
-		}
+		target = deckhouseDefault
 	case cfg.KubernetesVersion != "":
 		if ver, err := semver.NewVersion(cfg.KubernetesVersion); err == nil {
 			target = ver
 		}
 	}
-	return target, cfg.DefaultCRI
+	return target, cfg.DefaultCRI, deckhouseDefault
+}
+
+func parseSecretKubernetesVersion(raw string) *semver.Version {
+	if raw == "" {
+		return nil
+	}
+	versionRaw := []byte(raw)
+	if decoded, err := base64.StdEncoding.DecodeString(raw); err == nil {
+		versionRaw = decoded
+	}
+	version, err := semver.NewVersion(strings.TrimSpace(string(versionRaw)))
+	if err != nil {
+		return nil
+	}
+	return version
+}
+
+// readTargetKubernetesVersion mirrors global discovery:
+// d8-cluster-kubernetes is the primary hand-off from addon-operator; MC/CC are fallback sources
+// for the startup window before the sync hook has written the ConfigMap.
+func (s *Service) readTargetKubernetesVersion(
+	ctx context.Context,
+	clusterConfigurationTarget, deckhouseDefault *semver.Version,
+) (*semver.Version, error) {
+	configMap := &corev1.ConfigMap{}
+	if err := s.Client.Get(ctx, types.NamespacedName{
+		Namespace: clusterConfigSecretNamespace,
+		Name:      clusterKubernetesConfigMapName,
+	}, configMap); err == nil {
+		if rawSpec := configMap.Data["spec"]; rawSpec != "" {
+			var spec clusterKubernetesSpec
+			if err := sigsyaml.Unmarshal([]byte(rawSpec), &spec); err != nil {
+				return nil, fmt.Errorf("parse %s ConfigMap spec: %w", clusterKubernetesConfigMapName, err)
+			}
+			if spec.DesiredVersion != "" {
+				version, err := semver.NewVersion(spec.DesiredVersion)
+				if err != nil {
+					return nil, fmt.Errorf("parse %s ConfigMap desiredVersion: %w", clusterKubernetesConfigMapName, err)
+				}
+				return version, nil
+			}
+		}
+	}
+
+	moduleConfig := &unstructured.Unstructured{}
+	moduleConfig.SetGroupVersionKind(moduleConfigGVK)
+	if err := s.Client.Get(ctx, types.NamespacedName{Name: controlPlaneManagerModuleName}, moduleConfig); err == nil {
+		versionRaw, found, err := unstructured.NestedString(moduleConfig.Object, "spec", "settings", "kubernetesVersion")
+		if err != nil {
+			return nil, fmt.Errorf("read control-plane-manager ModuleConfig kubernetesVersion: %w", err)
+		}
+		switch {
+		case versionRaw == automaticKubernetesVersion:
+			// Presence wins: an explicit Automatic in MC ignores a leftover CC pin.
+			return deckhouseDefault, nil
+		case found && versionRaw != "":
+			version, err := semver.NewVersion(versionRaw)
+			if err != nil {
+				return nil, fmt.Errorf("parse control-plane-manager ModuleConfig kubernetesVersion: %w", err)
+			}
+			return version, nil
+		}
+	}
+
+	return clusterConfigurationTarget, nil
 }
 
 // readDefaultCRIFromModuleConfig returns spec.settings.defaultCRI from the

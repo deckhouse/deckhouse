@@ -48,9 +48,13 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
-// statusResyncInterval bounds staleness of status inputs the controller does not watch
-// (cluster configuration, InstanceClasses); the For-predicate suppresses the manager resync.
-const statusResyncInterval = 10 * time.Minute
+const (
+	// statusResyncInterval bounds staleness after a transient missed event; the For-predicate
+	// suppresses the manager resync.
+	statusResyncInterval           = 10 * time.Minute
+	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
+	clusterKubernetesConfigMapNS   = "kube-system"
+)
 
 func init() {
 	register.RegisterController("nodegroup-status", &v1.NodeGroup{}, &Status{})
@@ -94,6 +98,9 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == "kube-system" && obj.GetName() == ngcommon.CloudProviderSecretName
 	})))
+	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.configMapToAllNodeGroups), builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetNamespace() == clusterKubernetesConfigMapNS && obj.GetName() == clusterKubernetesConfigMapName
+	})))
 	// status.error and the capacity checks are computed from the InstanceClass, so a class
 	// that appears, changes or is deleted must refresh the status of the NodeGroups pointing
 	// at it instead of leaving a stale error until the resync.
@@ -106,6 +113,10 @@ func (r *Status) SetupWatches(w register.Watcher) {
 }
 
 func (r *Status) secretToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
+	return nodecommon.SecretToAllNodeGroups(ctx, r.Client)
+}
+
+func (r *Status) configMapToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
 	return nodecommon.SecretToAllNodeGroups(ctx, r.Client)
 }
 
