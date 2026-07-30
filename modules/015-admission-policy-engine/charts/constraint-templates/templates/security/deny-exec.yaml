@@ -60,7 +60,25 @@ spec:
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 c := all_containers[_]
+                object.get(c, "tty", false) == true
+                msg := "Interactive exec is not permitted (tty allocated)."
+              }
+
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                c := all_containers[_]
                 some command in object.get(c, "command", [])
                 not command in object.get(input.parameters, "allowedCommands", [])
                 msg := sprintf("Only %v commands are allowed.", [object.get(input.parameters, "allowedCommands", [])])
+              }
+
+              # Fail-closed: when allowedCommands is set, a container without an explicit
+              # command could execute an arbitrary entrypoint and must be denied.
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                allowed := object.get(input.parameters, "allowedCommands", [])
+                count(allowed) > 0
+                c := all_containers[_]
+                count(object.get(c, "command", [])) == 0
+                msg := sprintf("No command set; only %v commands are allowed.", [allowed])
               }

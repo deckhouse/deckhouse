@@ -121,6 +121,65 @@ spec:
               image: nginx:latest
               name: nginx
               stdin: true
+    - name: 005-disallowed-tty-true
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: tty
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-tty-true
+          spec:
+            containers:
+            - command:
+              - ls
+              image: nginx:latest
+              name: nginx
+              tty: true
+    - name: 006-disallowed-no-command-when-allowed
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: command[]
+        scenario: absent
+      - path: tty
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-no-command-when-allowed
+          spec:
+            containers:
+            - image: nginx:latest
+              name: nginx
+    - name: 007-allowed-tty-false
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: tty
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-tty-false
+          spec:
+            containers:
+            - command:
+              - ls
+              image: nginx:latest
+              name: nginx
+              tty: false
   - name: pss-controller-deployment
     gatorBlock: pss-controller-deployment
     template: ../rendered/constraint-template.yaml

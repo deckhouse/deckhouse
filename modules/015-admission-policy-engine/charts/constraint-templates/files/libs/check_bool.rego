@@ -31,8 +31,7 @@ check_container_bool(container, field_path, field_name, expected, default_val, s
   exception := resolve_spe_for_container(container, labels, namespace)
   allowed_values := allowed_values_or_empty(exception, spe_path)
   count(allowed_values) > 0
-  allowed_value := allowed_values[0]
-  allowed_value == actual
+  spe_allows(allowed_values, actual)
   result := {"allowed": true, "msg": "", "detail": {}}
 }
 
@@ -54,7 +53,7 @@ check_container_bool(container, field_path, field_name, expected, default_val, s
 
 spe_allows(allowed_values, actual) if {
   count(allowed_values) > 0
-  allowed_values[0] == actual
+  allowed_values[_] == actual
 }
 
 bool_violation_msg(field_name, actual, expected, false, _) := out if {
