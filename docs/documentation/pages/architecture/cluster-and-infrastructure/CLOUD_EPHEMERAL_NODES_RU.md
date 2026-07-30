@@ -36,9 +36,9 @@ Bashible — это ключевой компонент подсистемы Clu
    * управляет жизненным циклом кастомного ресурса [NodeGroup](/modules/node-manager/cr.html#nodegroup);
    * реализует вебхуки для валидации кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) через механику [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/);
    * реализует вебхуки для конверсии кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [Instance](/modules/node-manager/cr.html#instance);
-   * выполняет очистку лейблов и тейнтов ресурса Node, которые остаются после первого запуска [bashible](bashible.html) для инициализации узла;
+   * выполняет очистку лейблов и taints ресурса Node, которые остаются после первого запуска [bashible](bashible.html) для инициализации узла;
    * обеспечивает перевод узла кластера [в режим обслуживания (draining a node)](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/);
-   * применяет лейблы, тейнты и аннотации из секции [`spec.nodeTemplate`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate) кастомного ресурса NodeGroup ко всем принадлежащим к нему ресурсам Node;
+   * применяет лейблы, taints и аннотации из секции [`spec.nodeTemplate`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate) кастомного ресурса NodeGroup ко всем принадлежащим к нему ресурсам Node;
    * вычисляет и обновляет субресурс `status` кастомных ресурсов NodeGroup на основании агрегированной информации, полученной из соответствующих ресурсов Node и инфраструктурных кастомных ресурсов;
    * устанавливает атрибут `spec.providerID = "static://"` для ресурсов Node типа Static при его отсутствии;
    * управляет жизненным циклом обновления узлов: одобрение обновления, обработка прерываний в работе узлов, перевод узла кластера [в режим обслуживания (draining a node)](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/) и очистка после успешного обновления.
