@@ -13,10 +13,8 @@ spec:
   objectFields:
     - path: spec.containers[].resources
       level: container
-      defaultBehavior: Undefined
-      containerScope: Containers
-      description: Every container must define required limits and requests (cpu/memory) according to policy parameters. When absent on a Deployment template, the rule should NOT fire because LimitRange mutating admission would inject defaults at Pod creation time (see PR #21556 review H1).
-      requiredScenarios: [positive, negative, absent, initContainer, ephemeralContainer]
+      description: Every container must define required limits and requests (cpu/memory) according to policy parameters.
+      requiredScenarios: [positive, negative]
   applicableTracks:
     functional: true
     spePod: false

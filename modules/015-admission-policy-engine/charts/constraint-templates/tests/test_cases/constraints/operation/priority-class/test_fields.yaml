@@ -13,8 +13,7 @@ spec:
   objectFields:
     - path: spec.priorityClassName
       level: pod
-      defaultBehavior: Undefined
-      description: Pod priorityClassName must be in allowed priorityClassNames list. When absent, the rule should NOT fire (old behaviour used undefined reference, not "" default).
+      description: Pod priorityClassName must be in allowed priorityClassNames list.
       requiredScenarios: [positive, negative, absent]
   applicableTracks:
     functional: true
