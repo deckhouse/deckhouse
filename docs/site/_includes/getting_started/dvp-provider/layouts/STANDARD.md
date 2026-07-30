@@ -4,33 +4,71 @@
 Example of the layout configuration:
 
 ```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 2
+  enabled: true
+  settings:
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        ipAddresses:
+          master:
+            - Auto
+    provider:
+      parameters:
+        namespace: demo
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: kubeconfig
+  secret: <KUBE_CONFIG_BASE64>
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: master
+spec:
+  virtualMachine:
+    cpu:
+      cores: 4
+      coreFraction: 100%
+    memory:
+      size: 8Gi
+    virtualMachineClassName: <VIRTUAL_MACHINE_CLASS_NAME>
+  rootDisk:
+    size: 50Gi
+    storageClass: <STORAGE_CLASS>
+    image:
+      kind: ClusterVirtualImage
+      name: <CLUSTER_VIRTUAL_IMAGE_NAME>
+  etcdDisk:
+    size: 15Gi
+    storageClass: <STORAGE_CLASS>
 ---
 apiVersion: deckhouse.io/v1
-kind: DVPClusterConfiguration
-layout: Standard
-sshPublicKey: <SSH_PUBLIC_KEY>
-masterNodeGroup:
-  replicas: 1
-  instanceClass:
-    virtualMachine:
-      cpu:
-        cores: 4
-        coreFraction: 100%
-      memory:
-        size: 8Gi
-      ipAddresses:
-        - Auto
-      virtualMachineClassName: <VIRTUAL_MACHINE_CLASS_NAME>
-    rootDisk:
-      size: 50Gi
-      storageClass: <STORAGE_CLASS>
-      image:
-        kind: ClusterVirtualImage
-        name: <CLUSTER_VIRTUAL_IMAGE_NAME>
-    etcdDisk:
-      size: 15Gi
-      storageClass: <STORAGE_CLASS>
-provider:
-  kubeconfigDataBase64: <KUBE_CONFIG>
-  namespace: demo
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    classReference:
+      kind: DVPInstanceClass
+      name: master
+    maxPerZone: 1
+    minPerZone: 1
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
 ```

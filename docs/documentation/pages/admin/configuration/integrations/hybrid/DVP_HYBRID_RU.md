@@ -75,7 +75,7 @@ description: Подготовка к гибридной интеграции с 
    Значение зоны в ModuleConfig и NodeGroup должно совпадать. Пока в DVP доступно только значение `default`.
    {% endalert %}
 
-1. Создайте файл, например `cloud-provider-dvp-mc.yaml`, с конфигурацией модуля `cloud-provider-dvp`:
+1. Создайте файл, например `cloud-provider-dvp-mc.yaml`, с конфигурацией модуля `cloud-provider-dvp` и секрет с учётными данными:
 
    ```shell
    cat > cloud-provider-dvp-mc.yaml <<EOF
@@ -85,19 +85,33 @@ description: Подготовка к гибридной интеграции с 
      name: cloud-provider-dvp
    spec:
      enabled: true
-     version: 1
+     version: 2
      settings:
+       nodes:
+         parameters:
+           layout: Standard
+           sshPublicKey: "<SSH_PUBLIC_KEY>"
+           zones:
+             - ${DVP_ZONE}
        provider:
-         kubeconfigDataBase64: ${DVP_KUBECONFIG_B64}
-         namespace: ${DVP_NAMESPACE}
-       zones:
-         - ${DVP_ZONE}
+         parameters:
+           namespace: ${DVP_NAMESPACE}
+   ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: d8-credentials
+     namespace: d8-cloud-provider-dvp
+   type: cloud-provider.deckhouse.io/credentials
+   stringData:
+     authScheme: kubeconfig
+     secret: ${DVP_KUBECONFIG_B64}
    EOF
    ```
 
-   В манифесте используются значения переменных окружения, заданных на предыдущих шагах: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE` и `DVP_ZONE`.
+   В манифесте используются значения переменных окружения, заданных на предыдущих шагах: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE` и `DVP_ZONE`. Замените `<SSH_PUBLIC_KEY>` на публичный SSH-ключ для доступа к создаваемым узлам.
 
-1. Примените ModuleConfig:
+1. Примените манифест:
 
    ```shell
    d8 k apply -f cloud-provider-dvp-mc.yaml
