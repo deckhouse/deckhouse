@@ -11,10 +11,10 @@ toc: false
 <link rel="stylesheet" type="text/css" href='{% css_asset_tag getting-started-css %}[_assets/css/getting-started.css]{% endcss_asset_tag %}' />
 <script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
 
-<div class="main-tabs-container">
-  <div class="main-tabs">
-    <a class="main-tab active" href="/gs/installer/">{{ site.data.i18n.getting_started_nav.gui_installer[page.lang] }}</a>
-    <a class="main-tab" href="/gs/">{{ site.data.i18n.getting_started_nav.manual_cli[page.lang] }}</a>
+<div class="gs-tabs">
+  <div class="gs-tabs__list">
+    <a class="gs-tabs__item gs-tabs__item--active" href="/gs/installer/">{{ site.data.i18n.getting_started_nav.gui_installer[page.lang] }}</a>
+    <a class="gs-tabs__item" href="/gs/">{{ site.data.i18n.getting_started_nav.manual_cli[page.lang] }}</a>
   </div>
 </div>
 <p>Скорее всего, вы уже ознакомились с основными <a href="/products/kubernetes-platform/">возможностями Deckhouse
