@@ -79,9 +79,3 @@ Deckhouse Code передаёт параметры импорта согласн
 ## Безопасность учётных данных в CI
 
 Если вы используете встроенные CI-переменные для интеграции с DefectDojo (`DD_URL` и `DD_TOKEN`), пометьте их как **masked** и **protected**.
-
-## Находки в DefectDojo
-
-На скриншоте ниже показаны находки, импортированные в DefectDojo.
-
-![Находки в DefectDojo](/images/code/defect_dojo_findings_en.png)

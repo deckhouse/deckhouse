@@ -78,9 +78,3 @@ Deckhouse Code sends import parameters according to integration settings:
 ## Secure CI credentials
 
 If you use built-in CI variables for DefectDojo integration (`DD_URL` and `DD_TOKEN`), mark them as **masked** and **protected**.
-
-## Findings in DefectDojo
-
-The screenshot below shows findings imported into DefectDojo.
-
-![DefectDojo findings](/images/code/defect_dojo_findings_en.png)
