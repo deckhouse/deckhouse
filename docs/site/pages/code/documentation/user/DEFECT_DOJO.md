@@ -46,7 +46,7 @@ Click **Test settings** on the DefectDojo integration page to verify that Deckho
 
 ## How automatic upload works
 
-After build completion, when security artifacts are present, Deckhouse Code runs `FE::Security::DefectDojoUploadWorker` and sends reports to DefectDojo using the reimport API endpoint `POST /api/v2/reimport-scan/`.
+After each pipeline build finishes with security artifacts, Deckhouse Code automatically uploads the scan reports to DefectDojo using the `reimport-scan` API.
 
 The integration uploads reports from these scanners:
 

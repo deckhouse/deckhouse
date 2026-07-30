@@ -47,7 +47,7 @@ weight: 50
 
 ## Как работает автоматическая загрузка
 
-После завершения сборки, когда доступны security-артефакты, Deckhouse Code запускает `FE::Security::DefectDojoUploadWorker` и отправляет отчёты в DefectDojo через endpoint reimport API `POST /api/v2/reimport-scan/`.
+После завершения каждой сборки с security-артефактами Deckhouse Code автоматически загружает отчёты в DefectDojo через API `reimport-scan`.
 
 Интеграция загружает отчёты следующих сканеров:
 
