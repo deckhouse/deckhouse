@@ -60,6 +60,7 @@ spec:
         - --allow-privileged=true
         - --secure-port=6443
         - --advertise-address=${VCP_API_VIP}
+        - --feature-gates=CRDSensitiveData=true
         - --egress-selector-config-file=/etc/kubernetes/konnectivity/egress-selector-configuration.yaml
         env:
         - name: POD_IP
