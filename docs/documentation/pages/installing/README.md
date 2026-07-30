@@ -951,7 +951,7 @@ You can check the current status of versions in the release channels at [release
   /home/user/d8-bundle
   ```
 
-  Example command to download `stronghold` module with semver `^` constraint from version 1.2.0:
+  Example command to download `stronghold` module with semver `^` constraint (allows updates that don't change the leftmost non-zero digit) from version 1.2.0:
 
   ```shell
   d8 mirror pull \
@@ -961,7 +961,7 @@ You can check the current status of versions in the release channels at [release
   /home/user/d8-bundle
   ```
 
-  Example command to download `secrets-store-integration` module with semver `~` constraint from version 1.1.0:
+  Example command to download `secrets-store-integration` module with semver `~` constraint (allows updates that don't change the last specified digit's place) from version 1.1.0:
 
   ```shell
   d8 mirror pull \
@@ -971,9 +971,9 @@ You can check the current status of versions in the release channels at [release
   /home/user/d8-bundle
   ```
 
-  Quote the whole `--include-module` value when the constraint uses `>=` or `<=`. Unquoted, the shell takes `>` as an output redirection.
+  Quote the `--include-module` flag value when it contains `>=` or `<=`. Unquoted, the shell treats it as an input/output redirection.
 
-  Example command to download the `console` module with semver `>=` constraint from version 1.43.2:
+  Example command to download the `console` module with semver `>=` constraint (any version from the specified one and above) from version 1.43.2:
 
   ```shell
   d8 mirror pull \
