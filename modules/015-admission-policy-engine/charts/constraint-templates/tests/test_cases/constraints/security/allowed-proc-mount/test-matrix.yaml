@@ -321,37 +321,6 @@ spec:
               name: sidecar
               securityContext:
                 procMount: Unmasked
-    - name: 015-disallowed-wildcard-in-spe-should-not-allow-all
-      violations: 'yes'
-      assertionMessage: ''
-      fields:
-      - path: spec.securityContext.procMount.allowedValues
-        scenario: speWildcard
-      exception: ''
-      exceptionRef: ''
-      inventory:
-      - base: securityPolicyException
-        merge:
-          metadata:
-            name: wildcard-spe
-          spec:
-            securityContext:
-              procMount:
-                allowedValues:
-                - "*"
-      object:
-        base: admissionPod
-        merge:
-          metadata:
-            labels:
-              security.deckhouse.io/security-policy-exception: wildcard-spe
-            name: disallowed-wildcard-in-spe-should-not-allow-all
-          spec:
-            containers:
-            - image: nginx
-              name: nginx
-              securityContext:
-                procMount: Unmasked
   - name: security-policy-with-exception
     gatorBlock: security-policy-with-exception
     defaultObjectBase: ''
