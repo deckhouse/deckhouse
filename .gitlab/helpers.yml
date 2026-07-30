@@ -2,13 +2,11 @@
 
 .scripts:
   docker_config_isolation: |
-    set -euo pipefail
     DOCKER_CONFIG="$(mktemp -d)"
     export DOCKER_CONFIG
     trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
 
   read_werf_version: |
-    set -euo pipefail
     WERF_ENVS_FILE=".github/ci_includes/werf_envs.yml"
     if [[ ! -f "${WERF_ENVS_FILE}" ]]; then
       echo "File ${WERF_ENVS_FILE} not found" >&2
@@ -23,7 +21,6 @@
     echo "Detected WERF_VERSION=${WERF_VERSION}"
 
   install_werf: |
-    set -euo pipefail
     if [[ -z "${WERF_VERSION:-}" ]]; then
       echo "WERF_VERSION is not set" >&2
       exit 1
@@ -65,21 +62,18 @@
     fi
 
   login_dev_registry: |
-    set -euo pipefail
     if [[ -n "${DECKHOUSE_DEV_REGISTRY_HOST:-}" ]]; then
       echo "${DECKHOUSE_DEV_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_DEV_REGISTRY_HOST}" \
         --username "${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin
     fi
 
   login_stage_registry: |
-    set -euo pipefail
     if [[ -n "${DECKHOUSE_REGISTRY_STAGE_HOST:-}" ]]; then
       echo "${DECKHOUSE_REGISTRY_STAGE_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_STAGE_HOST}" \
         --username "${DECKHOUSE_REGISTRY_STAGE_USER}" --password-stdin
     fi
 
   setup_ssh: |
-    set -euo pipefail
     eval "$(ssh-agent -s)"
     if [[ -n "${SOURCE_REPO_SSH_KEY:-}" ]]; then
       printf '%s\n' "${SOURCE_REPO_SSH_KEY}" | tr -d '\r' | ssh-add -
@@ -101,7 +95,6 @@
     fi
 
   detect_build_mode: |
-    set -euo pipefail
     if [[ -n "${CI_COMMIT_TAG:-}" ]]; then
       export BUILD_MODE=release
     elif [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
@@ -132,6 +125,14 @@
     WERF_TELEMETRY: "1"
     WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
     DOCKER_BUILDKIT: "1"
+    SOURCE_REPO: ${SOURCE_REPO_GIT}
+    WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: "1"
+    VAULT_ADDR: "https://seguro.flant.com"
+    WERF_VAULT_AUTH_JWT: ${VAULT_ID_TOKEN}
+    WERF_VAULT_AUTH_PATH: fox
+    WERF_SIGN_ELF_FILES: "0"
+    WERF_SIGN_MANIFEST: "1"
+    WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
   id_tokens:
     VAULT_ID_TOKEN:
       aud: gitlab-access-aud

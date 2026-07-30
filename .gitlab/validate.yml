@@ -19,17 +19,8 @@ go_generate:
     - !reference [.scripts, read_werf_version]
     - !reference [.scripts, install_werf]
   script:
-    - id -u #debug
-    - id -g #debug
-    - cat /etc/passwd
-    - |
-      set -euo pipefail
-      git config --global --add safe.directory "${CI_PROJECT_DIR}"
-      make generate
-      git diff --exit-code || {
-        echo 'Regenerated code does not match source, please run "make generate"' >&2
-        exit 1
-      }
+    - make generate
+    - git diff --exit-code || { echo 'Regenerated code does not match source, please run "make generate"' >&2; exit 1; }
 
 # --- unit tests (controller + modules) ---
 tests:
@@ -42,9 +33,7 @@ tests:
     TESTS_TIMEOUT: 15m
     CGO_ENABLED: "1"
   script:
-    - |
-      set -euo pipefail
-      make tests-controller tests-modules
+    - make tests-controller tests-modules
 
 # --- node-controller unit + envtest ---
 tests_node_controller:
@@ -52,16 +41,14 @@ tests_node_controller:
     - .validate_base
     - .rules:on_validate
   image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  variables:
+    GOFLAGS: -buildvcs=false
+    GOCACHE: ${HOME}/go-build-cache-node-controller
+    GOMODCACHE: ${HOME}/go-mod-cache-node-controller
   script:
-    - |
-      set -euo pipefail
-      mkdir -p "${HOME}/envtest-assets"
-      export GOFLAGS=-buildvcs=false
-      export GOCACHE="${HOME}/go-build-cache-node-controller"
-      export GOMODCACHE="${HOME}/go-mod-cache-node-controller"
-      mkdir -p "${GOCACHE}" "${GOMODCACHE}"
-      cd modules/040-node-manager/images/node-controller/src
-      make test LOCALBIN="${HOME}/envtest-assets"
+    - mkdir -p "${HOME}/envtest-assets" "${GOCACHE}" "${GOMODCACHE}"
+    - cd modules/040-node-manager/images/node-controller/src
+    - make test LOCALBIN="${HOME}/envtest-assets"
 
 # --- python webhook tests ---
 tests_python_webhooks:
@@ -71,7 +58,6 @@ tests_python_webhooks:
   image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/python-3.12.12:${CI_IMAGES_TAG}
   script:
     - |
-      set -euo pipefail
       # Same flow as testing/webhooks/test.sh, adapted for python image (no alpine/apk).
       REQUIREMENTS="${CI_PROJECT_DIR}/modules/002-deckhouse/images/webhook-handler/src/requirements.txt"
       pip3 install --break-system-packages -r "${REQUIREMENTS}"
@@ -114,7 +100,6 @@ tests_dmt_lint:
       file: false
   script:
     - |
-      set -euo pipefail
       # structure_prepare from tools/dmt-lint.sh (work on a copy; dmt binary from image).
       WORK_DIR="$(mktemp -d)"
       trap 'rm -rf "${WORK_DIR}"' EXIT

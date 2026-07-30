@@ -45,7 +45,11 @@
     VAULT_AUTH_ROLE: deckhouse
     TEST_TIMEOUT: 15m
     HOME: "/tmp"
-    GOMODCACHE: ${HOME}/.cache/go-mod
+    # Image GOPATH (/go) is root-owned; unprivileged jobs need a writable one
+    # for the module cache, the checksum-db cache and `go install` output.
+    GOPATH: ${HOME}/go
+    GOMODCACHE: ${HOME}/go/pkg/mod
+    GOCACHE: ${HOME}/.cache/go-build
     # username/password form — no base64; if pull fails, switch to "auth" field.
     DOCKER_AUTH_CONFIG: "{\"auths\":{\"${DECKHOUSE_DEV_REGISTRY_HOST}\":{\"username\":\"${DECKHOUSE_DEV_REGISTRY_USER}\",\"password\":\"${DECKHOUSE_DEV_REGISTRY_PASSWORD}\"}}}"
   id_tokens:
@@ -65,19 +69,17 @@
       token: $VAULT_ID_TOKEN
       file: false
 
+# Run from the checkout: baked-in /deckhouse/dhctl is root-owned and `make ci`
+# writes ./bin. /dhctl-tests and /deckhouse/candi still resolve by absolute path.
 dhctl_tests:
   extends:
     - .test_base
     - .needs_build_tests
     - .rules:on_test
-  variables:
-    GIT_STRATEGY: none
   script:
-    - |
-      set -euo pipefail
-      echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
-      cd /deckhouse/dhctl
-      make ci
+    - echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
+    - cd "${CI_PROJECT_DIR}/dhctl"
+    - make ci
 
 golint:
   extends:
@@ -86,7 +88,6 @@ golint:
     - .rules:on_test
   script:
     - |
-      set -euo pipefail
       if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
         export DIFF_BASE="${CI_MERGE_REQUEST_DIFF_BASE_SHA}"
       elif [[ -n "${CI_COMMIT_BEFORE_SHA:-}" && "${CI_COMMIT_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
@@ -95,9 +96,8 @@ golint:
         export DIFF_BASE="$(git rev-parse HEAD^)"
       fi
       echo "DIFF_BASE=${DIFF_BASE}"
-      echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
-      git config --global --add safe.directory "${CI_PROJECT_DIR}"
-      make lint-changed
+    - echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
+    - make lint-changed
 
 openapi_test_cases:
   extends:
@@ -105,10 +105,8 @@ openapi_test_cases:
     - .needs_build_tests
     - .rules:on_test
   script:
-    - |
-      set -euo pipefail
-      echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
-      ginkgo -vet=off ./testing/openapi_cases/
+    - echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
+    - ginkgo -vet=off ./testing/openapi_cases/
 
 validators:
   extends:
@@ -116,10 +114,8 @@ validators:
     - .needs_build_tests
     - .rules:on_test
   script:
-    - |
-      set -euo pipefail
-      echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
-      go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout="${TEST_TIMEOUT}" ./testing/...
+    - echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
+    - go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout="${TEST_TIMEOUT}" ./testing/...
 
 # Rootless / default-user scan on built FE images (needs docker + crane on host).
 .security_scan_base:
@@ -160,17 +156,10 @@ security_scan_images:
   extends:
     - .security_scan_base
     - .needs_build_fe
-    - .rules:on_validate
+    - .rules:on_test
+  variables:
+    IMAGE: ${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss
+    TAG: ${TESTS_IMAGE_TAG}
   script:
-    - |
-      set -euo pipefail
-      if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
-        TAG="pr${CI_MERGE_REQUEST_IID}"
-      else
-        TAG="${CI_COMMIT_REF_SLUG}"
-      fi
-      export TAG
-      export IMAGE="${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss"
-      export DECKHOUSE_PRIVATE_REPO
-      echo "⚓️ 🏎 Running default user validation on ${TAG}..."
-      make cve-base-images-check-default-user
+    - echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+    - make cve-base-images-check-default-user

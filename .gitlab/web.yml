@@ -17,6 +17,7 @@
     GIT_DEPTH: "0"
     WERF_ENV: development
     WERF_LOG_VERBOSE: "on"
+    WERF_REPO: ${DECKHOUSE_DEV_REGISTRY_HOST}/deckhouse/site
   id_tokens:
     VAULT_ID_TOKEN:
       aud: gitlab-access-aud
@@ -45,11 +46,8 @@ doc_web_build:
   variables:
     WERF_DIR: docs/documentation
   script:
-    - |
-      set -euo pipefail
-      export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_HOST}/deckhouse/site"
-      type werf && source "$(werf ci-env gitlab --verbose --as-file)"
-      werf build
+    - type werf && source "$(werf ci-env gitlab --verbose --as-file)"
+    - werf build
 
 main_web_build:
   extends:
@@ -84,12 +82,9 @@ main_web_build:
       file: false
   script:
     - |
-      set -euo pipefail
       if [[ -z "${DOC_API_KEY:-}" || -z "${DOC_API_URL:-}" || -z "${DOC_API_REFERER:-}" ]]; then
         echo "DOC_API_KEY / DOC_API_URL / DOC_API_REFERER must be present from Vault" >&2
         exit 1
       fi
-      export DOC_API_KEY DOC_API_URL DOC_API_REFERER
-      export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_HOST}/deckhouse/site"
-      type werf && source "$(werf ci-env gitlab --verbose --as-file)"
-      werf build
+    - type werf && source "$(werf ci-env gitlab --verbose --as-file)"
+    - werf build

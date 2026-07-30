@@ -35,15 +35,12 @@
       - images_tags_werf.json
     reports:
       dotenv: build.env
+  variables:
+    WERF_DOCKER_REGISTRY_DEBUG: "1"
+    IMAGES_TAGS_PATH: images_tags_werf.json
   script:
     - *publish_image
     - |
-      set -euo pipefail
-
-      export SOURCE_REPO="${SOURCE_REPO_GIT}"
-      export WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG=1
-      export WERF_DOCKER_REGISTRY_DEBUG=1
-
       if [[ "${BUILD_MODE}" == "dev" ]]; then
         export WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC=1
       fi
@@ -52,9 +49,6 @@
       fi
 
       # --- signing (same roles/paths as GitHub build; JWT from GitLab id_token) ---
-      export VAULT_ADDR="${VAULT_ADDR:-https://seguro.flant.com}"
-      export WERF_VAULT_AUTH_JWT="${VAULT_ID_TOKEN}"
-      export WERF_VAULT_AUTH_PATH="${WERF_VAULT_AUTH_PATH:-fox}"
       if [[ "${BUILD_MODE}" == "release" ]]; then
         export WERF_SIGN_KEY="hashivault://dh-prod-v01"
         export TRANSIT_SECRET_ENGINE_PATH="prod-int-signer"
@@ -72,9 +66,6 @@
         export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
         export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
       fi
-      export WERF_SIGN_ELF_FILES="${WERF_SIGN_ELF_FILES:-0}"
-      export WERF_SIGN_MANIFEST="${WERF_SIGN_MANIFEST:-1}"
-      export WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH="${WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH:-1}"
 
       sign_minimal_version="v2.71.0-dk"
       sign_current_version="$(werf version)"
@@ -200,7 +191,6 @@
       if [[ "${BUILD_MODE}" == "release" && "${CI_COMMIT_TAG:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
         export REGISTRY_TO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${WERF_ENV,,}"
-        export IMAGES_TAGS_PATH="images_tags_werf.json"
         python3 .github/scripts/python/copy_attestations.py
       fi
 
@@ -209,7 +199,6 @@
       echo "TESTS_IMAGE_NAME=${TESTS_IMAGE_NAME}" > build.env
 
       if [[ "${BUILD_MODE}" == "dev" && "${WERF_ENV,,}" == "fe" ]]; then
-        set -euo pipefail
         regctl image get-file "${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss:${IMAGE_TAG_BASE}" \
           /deckhouse/modules/images_digests.json > images_digests.json
         BUILD_REPORT_PATH=./images_tags_werf.json \
@@ -272,6 +261,9 @@
     - .build_base
   variables:
     WERF_ENV: FE
+    WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: "1"
+    REGISTRY_USER: ${DECKHOUSE_DEV_REGISTRY_USER}
+    REGISTRY_PASSWORD: ${DECKHOUSE_DEV_REGISTRY_PASSWORD}
   artifacts:
     when: on_success
     expire_in: 1 week
@@ -280,14 +272,6 @@
   script:
     - *publish_image
     - |
-      set -euo pipefail
-
-      export SOURCE_REPO="${SOURCE_REPO_GIT}"
-      export WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG=1
-      export WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC=1
-      export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-      export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-
       REPO_SUFFIX="${CI_PROJECT_PATH#deckhouse/deckhouse-}"
       if [[ "${REPO_SUFFIX}" == "${CI_PROJECT_PATH}" ]]; then
         REPO_SUFFIX=

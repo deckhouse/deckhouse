@@ -3,18 +3,15 @@
 
 .scripts:
   prepare_validation_diff: |
-    set -euo pipefail
-    git config --global --add safe.directory "${CI_PROJECT_DIR}"
     export VALIDATE_TITLE="${CI_MERGE_REQUEST_TITLE:-${CI_COMMIT_TITLE:-}}"
     export VALIDATE_DESCRIPTION="${CI_MERGE_REQUEST_DESCRIPTION:-${CI_COMMIT_MESSAGE:-}}"
     if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
-      git diff "${CI_MERGE_REQUEST_DIFF_BASE_SHA}...HEAD" > pr.diff || true
+      git diff "${CI_MERGE_REQUEST_DIFF_BASE_SHA}...HEAD" > "${DIFF_PATH}" || true
     elif [[ -n "${CI_COMMIT_BEFORE_SHA:-}" && "${CI_COMMIT_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
-      git diff "${CI_COMMIT_BEFORE_SHA}...HEAD" > pr.diff || true
+      git diff "${CI_COMMIT_BEFORE_SHA}...HEAD" > "${DIFF_PATH}" || true
     else
-      git diff HEAD^...HEAD > pr.diff || true
+      git diff HEAD^...HEAD > "${DIFF_PATH}" || true
     fi
-    export DIFF_PATH=./pr.diff
     echo "VALIDATE_TITLE length=${#VALIDATE_TITLE} diff_bytes=$(wc -c < "${DIFF_PATH}")"
 
 .validation_base:
@@ -23,6 +20,7 @@
   variables:
     GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
+    DIFF_PATH: ./pr.diff
   image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
   before_script:
     - !reference [.scripts, prepare_validation_diff]
