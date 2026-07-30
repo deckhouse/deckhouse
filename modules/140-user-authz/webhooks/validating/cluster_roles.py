@@ -39,6 +39,11 @@ CAPABILITY_SELECTOR_LABEL = "rbac.deckhouse.io/capability"
 # Capability scopes whose rules a project may legitimately receive. A system/subsystem capability
 # must never travel into a project through a delegatable custom role.
 TENANT_CAPABILITY_SCOPES = {"namespace-capability", "project-capability"}
+SCOPE_LABEL = "rbac.deckhouse.io/scope"
+# Scopes of a role that is granted inside a namespace or a project. The containment goes one way:
+# such a role must not reach for cluster-level capabilities, whereas a system/subsystem role may
+# well include namespace-level ones -- a platform administrator holds those anyway.
+TENANT_ROLE_SCOPES = {"namespace", "project"}
 # Administrators may override the DISPLAY title/description of a built-in role by
 # setting these annotations on it. The "d8:" prefix is otherwise reserved, so we allow an UPDATE to a
 # built-in role iff it touches ONLY annotations under this prefix (never rules/aggregation/labels).
@@ -126,6 +131,29 @@ def _capability_scope(value: str) -> str:
     if value.startswith("custom."):
         value = value[len("custom.") :]
     return value.split(".", 1)[0]
+
+
+def _cluster_level_selector(selectors) -> Optional[str]:
+    """
+    The first aggregated thing that belongs to the cluster side, described for the error message,
+    or None when everything aggregated stays within a namespace or a project.
+
+    Two selector shapes mean the same thing here: the built-in roles aggregate a whole lineage
+    ("aggregate-to-<lineage>-as"), while a role assembled from individual capabilities names each
+    of them by the capability label.
+    """
+    for selector in selectors:
+        for key, value in (selector.get("matchLabels") or {}).items():
+            if key == CAPABILITY_SELECTOR_LABEL:
+                if _capability_scope(value) not in TENANT_CAPABILITY_SCOPES:
+                    return f'capability "{value}"'
+                continue
+
+            m = AGGREGATE_LABEL_RE.match(key)
+            if m is not None and m.group(1) in SYSTEM_LINEAGES:
+                return f'the "{m.group(1)}" lineage'
+
+    return None
 
 
 def _aggregates_only_tenant_capabilities(selectors) -> bool:
@@ -236,6 +264,19 @@ def validate(ctx: DotMap) -> Optional[str]:
                 f'ClusterRole "{name}" must not aggregate the "{system_side}" lineage together with '
                 f'the "{tenant_side}" lineage: mixing system and namespace/project scopes is forbidden.'
             )
+
+        # A role granted inside a namespace or a project must stay within that world. The check
+        # above does not cover it: it only fires when the two sides are aggregated TOGETHER, so a
+        # tenant-scoped role built purely from cluster-level capabilities passed unnoticed. An
+        # unlabeled custom role is treated as tenant-scoped, because that is what it is bindable as.
+        scope = labels.get(SCOPE_LABEL, "")
+        if scope in TENANT_ROLE_SCOPES or (kind_label == "custom-role" and not scope):
+            offending = _cluster_level_selector(selectors)
+            if offending:
+                return (
+                    f'ClusterRole "{name}" with "{SCOPE_LABEL}: {scope or "<unset>"}" must not aggregate {offending}: '
+                    "a role granted in a namespace or a project may only aggregate namespace and project capabilities."
+                )
 
         # The delegatable label is what lets a role be bound inside a project, so it may only be
         # claimed by a role built entirely from namespace/project capabilities. The check above is

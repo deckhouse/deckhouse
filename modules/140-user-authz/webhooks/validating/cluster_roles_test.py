@@ -365,8 +365,23 @@ class TestClusterRolesValidation(unittest.TestCase):
         tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
 
 
-DELEGATABLE = {"rbac.deckhouse.io/kind": "custom-role", "rbac.deckhouse.io/delegatable": "true"}
 CAPABILITY = "rbac.deckhouse.io/capability"
+
+
+def delegatable_labels(scope):
+    """
+    Labels of a custom role claiming the delegatable label.
+
+    The scope is explicit because a tenant-scoped role is not allowed to aggregate cluster-level
+    capabilities in the first place, and that rule would answer first. Declaring the role
+    system-scoped isolates the delegatable check -- and reproduces the very attempt it exists to
+    stop: claim the cluster scope, which may aggregate anything, and ask for the label anyway.
+    """
+    return {
+        "rbac.deckhouse.io/kind": "custom-role",
+        "rbac.deckhouse.io/scope": scope,
+        "rbac.deckhouse.io/delegatable": "true",
+    }
 
 DELEGATABLE_DENY_MSG = (
     'ClusterRole "d8:custom:project:role-a" must not be labeled "rbac.deckhouse.io/delegatable: true": '
@@ -385,11 +400,11 @@ class TestDelegatableCustomRole(unittest.TestCase):
     def run_hook(self, ctx):
         return hook.testrun(cluster_roles.main, [ctx])
 
-    def _run(self, selector_values, labels=None):
+    def _run(self, selector_values, labels=None, scope="project"):
         return self.run_hook(
             binding_context(
                 "d8:custom:project:role-a",
-                labels=labels if labels is not None else DELEGATABLE,
+                labels=labels if labels is not None else delegatable_labels(scope),
                 selector_labels=[{CAPABILITY: value} for value in selector_values],
             )
         )
@@ -407,26 +422,26 @@ class TestDelegatableCustomRole(unittest.TestCase):
         tests.assert_validation_allowed(self, out, None)
 
     def test_system_capability_may_not_be_delegatable(self):
-        out = self._run(["namespace-capability.kubernetes.view_logs", "system-capability.deckhouse.manage"])
+        out = self._run(["namespace-capability.kubernetes.view_logs", "system-capability.deckhouse.manage"], scope="system")
         tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
 
     def test_subsystem_capability_may_not_be_delegatable(self):
-        out = self._run(["subsystem-capability.security.view"])
+        out = self._run(["subsystem-capability.security.view"], scope="system")
         tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
 
     def test_custom_system_capability_may_not_be_delegatable(self):
-        out = self._run(["custom.system-capability.hh-bqjxg0"])
+        out = self._run(["custom.system-capability.hh-bqjxg0"], scope="system")
         tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
 
     def test_unreadable_capability_value_may_not_be_delegatable(self):
-        out = self._run(["whatever"])
+        out = self._run(["whatever"], scope="system")
         tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
 
     def test_tenant_lineage_selector_may_be_delegatable(self):
         out = self.run_hook(
             binding_context(
                 "d8:custom:project:role-a",
-                labels=DELEGATABLE,
+                labels=delegatable_labels("system"),
                 selector_labels=[{"rbac.deckhouse.io/aggregate-to-namespace-as": "admin"}],
             )
         )
@@ -436,7 +451,7 @@ class TestDelegatableCustomRole(unittest.TestCase):
         out = self.run_hook(
             binding_context(
                 "d8:custom:project:role-a",
-                labels=DELEGATABLE,
+                labels=delegatable_labels("system"),
                 selector_labels=[{"rbac.deckhouse.io/aggregate-to-security-as": "viewer"}],
             )
         )
@@ -446,7 +461,7 @@ class TestDelegatableCustomRole(unittest.TestCase):
         out = self.run_hook(
             binding_context(
                 "d8:custom:project:role-a",
-                labels=DELEGATABLE,
+                labels=delegatable_labels("system"),
                 selector_labels=[{"some.other/label": "value"}],
             )
         )
@@ -455,7 +470,7 @@ class TestDelegatableCustomRole(unittest.TestCase):
     def test_same_role_without_the_label_is_untouched(self):
         out = self._run(
             ["system-capability.deckhouse.manage"],
-            labels={"rbac.deckhouse.io/kind": "custom-role"},
+            labels={"rbac.deckhouse.io/kind": "custom-role", "rbac.deckhouse.io/scope": "system"},
         )
         tests.assert_validation_allowed(self, out, None)
 
@@ -525,6 +540,84 @@ class TestAggregatedCustomRoleIsEditable(unittest.TestCase):
         old = self._role(rules=AGGREGATED_RULES)
         new = self._role()
         out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_allowed(self, out, None)
+
+
+class TestTenantRoleStaysWithinItsWorld(unittest.TestCase):
+    """
+    Containment goes one way. A role granted in a namespace or a project must not reach for
+    cluster-level capabilities, while a system/subsystem role may include namespace-level ones: a
+    platform administrator holds those anyway, and forbidding it would only force duplication.
+    """
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def _run(self, scope, selector, name="d8:custom:project:role-a"):
+        labels = {"rbac.deckhouse.io/kind": "custom-role"}
+        if scope is not None:
+            labels["rbac.deckhouse.io/scope"] = scope
+
+        return self.run_hook(binding_context(name, labels=labels, selector_labels=[selector]))
+
+    def _deny_msg(self, scope, offending, name="d8:custom:project:role-a"):
+        return (
+            f'ClusterRole "{name}" with "rbac.deckhouse.io/scope: {scope}" must not aggregate {offending}: '
+            "a role granted in a namespace or a project may only aggregate namespace and project capabilities."
+        )
+
+    def test_project_role_takes_tenant_capabilities(self):
+        for value in ("namespace-capability.kubernetes.view_logs", "project-capability.multitenancy-manager.view"):
+            with self.subTest(value=value):
+                out = self._run("project", {CAPABILITY: value})
+                tests.assert_validation_allowed(self, out, None)
+
+    def test_project_role_may_not_take_cluster_capabilities(self):
+        for value in ("system-capability.deckhouse.manage", "subsystem-capability.security.view", "custom.system-capability.hh-bqjxg0"):
+            with self.subTest(value=value):
+                out = self._run("project", {CAPABILITY: value})
+                tests.assert_validation_deny(self, out, self._deny_msg("project", f'capability "{value}"'))
+
+    def test_namespace_role_may_not_take_cluster_capabilities(self):
+        out = self._run("namespace", {CAPABILITY: "system-capability.deckhouse.manage"}, name="d8:custom:namespace:role-a")
+        tests.assert_validation_deny(
+            self,
+            out,
+            self._deny_msg("namespace", 'capability "system-capability.deckhouse.manage"', name="d8:custom:namespace:role-a"),
+        )
+
+    def test_tenant_role_may_not_take_a_system_lineage(self):
+        out = self._run("project", {"rbac.deckhouse.io/aggregate-to-security-as": "viewer"})
+        tests.assert_validation_deny(self, out, self._deny_msg("project", 'the "security" lineage'))
+
+    def test_tenant_role_takes_a_tenant_lineage(self):
+        out = self._run("project", {"rbac.deckhouse.io/aggregate-to-namespace-as": "admin"})
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_cluster_role_may_take_namespace_capabilities(self):
+        """The asymmetry: the other direction is allowed on purpose."""
+        for scope in ("system", "subsystem"):
+            with self.subTest(scope=scope):
+                out = self._run(scope, {CAPABILITY: "namespace-capability.kubernetes.view_logs"}, name="d8:custom:security:role-a")
+                tests.assert_validation_allowed(self, out, None)
+
+    def test_cluster_role_takes_cluster_capabilities(self):
+        out = self._run("system", {CAPABILITY: "system-capability.deckhouse.manage"}, name="d8:custom:system:role-a")
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_role_without_a_scope_is_treated_as_tenant(self):
+        """It is bindable by a project role binding, so it is judged by the stricter rule."""
+        out = self._run(None, {CAPABILITY: "system-capability.deckhouse.manage"})
+        tests.assert_validation_deny(self, out, self._deny_msg("<unset>", 'capability "system-capability.deckhouse.manage"'))
+
+    def test_capability_without_aggregation_is_untouched(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:project-capability:cap-a",
+                labels={"rbac.deckhouse.io/kind": "custom-capability", "rbac.deckhouse.io/scope": "project"},
+                rules=SOME_RULES,
+            )
+        )
         tests.assert_validation_allowed(self, out, None)
 
 
