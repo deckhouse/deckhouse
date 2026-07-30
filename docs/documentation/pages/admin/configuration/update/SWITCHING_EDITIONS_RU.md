@@ -5,20 +5,6 @@ description: "Переключение между редакциями Deckhouse
 lang: ru
 ---
 
-Эта инструкция описывает шаги, необходимые для смены редакции Deckhouse Kubernetes Platform в работающем кластере. Выполняйте их последовательно по разделам.
-
-В зависимости от способа работы с хранилищем образов процесс переключения отличается. Выбираете подходящий для вашего кластера способ и следуйте инструкциям.
-
-При переключении на DKP BE/SE/SE+/EE/CSE необходим действующий лицензионный ключ. При переключении на DKP CE он не требуется.
-
-{% alert level="warning" %}
-Инструкция не подходит для переключения **с** DKP CSE на другие редакции, но подходит для переключения **на** DKP CSE с DKP EE.
-
-Инструкция подразумевает использование публичного хранилища образов контейнеров (`registry-cse.deckhouse.ru` для DKP CSE, и `registry.deckhouse.ru` в остальных случаях). При использовании другого адреса хранилища образов измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего хранилища образов контейнеров](../registry/third-party.html).
-
-Выполняйте все команды на master-узле существующего кластера под пользователем `root`.
-{% endalert %}
-
 {% capture wait_queue %}
 
 ```bash
@@ -36,40 +22,6 @@ Summary:
 
 {% endofftopic %}
 {% endcapture %}
-
-## Подготовка к переключению
-
-Перед переключением между редакциями выполните следующие действия:
-
-1. Убедитесь, что [очереди DKP пусты](#проверка-очереди).
-1. Определите [текущую редакцию и версию DKP](#определение-текущей-редакции-и-версии).
-1. Убедитесь в возможности переключения [с текущей редакции на желаемую](#определение-возможности-переключения-на-желаемую-редакцию).
-
-### Проверка очереди
-
-Убедитесь, что очереди DKP пусты, и в них нет выполняющихся задач, которые могут помешать переключению:
-
-{{ wait_queue }}
-
-### Определение текущей редакции и версии
-
-Чтобы быть уверенным в корректности дальнейших действий, определите текущую редакцию DKP, используемую в кластере. Это поможет избежать ошибок при переключении и убедиться в поддержке необходимых модулей и функциональных возможностей в новой редакции.
-
-Узнать используемые в кластере редакцию и версию DKP можно на главной странице веб-интерфейса DKP, либо с помощью CLI-команд:
-
-- получение текущей редакции DKP:
-
-  ```bash
-  d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values -o yaml | yq '.deckhouseEdition'
-  ```
-
-- получение текущей версии DKP:
-
-  ```bash
-  d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}'
-  ```
-
-### Определение возможности переключения на желаемую редакцию
 
 {% capture take_care_of_the_internal_modules %}
 1. Определите список внутренних модулей, которые используются в кластере и не поддерживаются в DKP новой редакции. Для этого выполните следующие шаги:
@@ -207,15 +159,11 @@ Summary:
 
       ```bash
       DKP_REPO=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F':' '{print $1}')
-      DKP_IMG=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image')
+      DKP_TAG=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F':' '{print $2}')
 
-      d8 k run dkp-image --image=$DKP_IMG --command sleep -- infinity
+      d8 k run dkp-image --image=$DKP_REPO/install:$DKP_TAG --command sleep -- infinity
       d8 k wait --for=condition=ready pod/dkp-image --timeout=300s
 
-      DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec dkp-image -- cat /deckhouse/modules/images_digests.json | jq -r ".common.kubeRbacProxy")
-      DECKHOUSE_INIT=$(d8 k exec dkp-image -- cat /deckhouse/modules/images_digests.json | jq -r ".deckhouse.init")
-
-      # Либо
       DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec dkp-image -- cat /deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
       DECKHOUSE_INIT=$(d8 k exec dkp-image -- cat /deckhouse/candi/images_digests.json | jq -r ".deckhouse.init")
 
@@ -241,6 +189,366 @@ Summary:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 {% endcapture %}
+
+{% capture bashible_sync_wait %}
+Дождитесь синхронизации сервиса bashible (значение в колонке `UPTODATE` у NodeGroup должно совпадать с `NODES`):
+
+```shell
+d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate
+```
+
+В логе bashible должно быть `Configuration is in sync, nothing to do`:
+
+```shell
+journalctl -u bashible -n 5
+```
+
+{% endcapture %}
+
+{% capture check_old_pods %}
+
+```shell
+d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+```
+
+{% endcapture %}
+
+{% capture enable_chrony_cse %}
+
+```shell
+d8 system module enable chrony
+```
+
+{% endcapture %}
+
+{% capture enable_release_channel_cse %}
+
+```shell
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    releaseChannel: LTS
+    ...
+```
+
+{% endcapture %}
+
+{% capture disable_release_channel_cse %}
+
+```shell
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    #  releaseChannel
+    ...
+```
+
+{% endcapture %}
+
+{% capture change_registry_mc_deckhouse_unmanaged %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+<!REMOVE_FOR_CE>
+        license: <ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
+<!/REMOVE_FOR_CE>
+        checkMode: <РЕЖИМ_ПРОВЕРКИ>
+        imagesRepo: <REGISTRY_HOST>/deckhouse/<КОД_РЕДАКЦИИ>
+        scheme: HTTPS
+```
+
+{% endcapture %}
+
+{% capture registry_status_cmd %}
+
+```shell
+d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml) | {"conditions": [.conditions[] | select(.type == "Ready" or .type == "RegistryContainsRequiredImages")]}'
+```
+
+{% endcapture %}
+
+{% capture registry_status_example %}
+
+```yaml
+conditions:
+  - lastTransitionTime: "2026-05-05T13:53:23Z"
+    message: |-
+      Mode: Default
+      <REGISTRY_HOST>: all 182 items are checked
+    reason: Ready
+    status: "True"
+    type: RegistryContainsRequiredImages
+  - lastTransitionTime: "2026-05-05T13:54:49Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: Ready
+```
+
+{% endcapture %}
+
+{% capture alert_additional_registry %}
+{% alert level="info" %}
+Если необходимо добавить конфигурации для дополнительного registry в containerd, воспользуйтесь инструкцией из раздела [«Как добавить конфигурацию для дополнительного registry в containerd»](/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry).
+{% endalert %}
+{% endcapture %}
+
+{% capture ngc_auth_registry %}
+{{ alert_additional_registry }}
+
+```shell
+AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+d8 k apply -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-$NEW_EDITION-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 30
+  content: |
+    _on_containerd_config_changed() {
+      bb-flag-set containerd-need-restart
+    }
+    bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
+            auth = "$AUTH_STRING"
+    EOF_TOML
+EOF
+```
+
+{% endcapture %}
+
+{% capture change_registry_helper_ce %}
+
+```shell
+DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
+--new-deckhouse-tag=$DECKHOUSE_VERSION \
+registry.deckhouse.ru/deckhouse/ce \
+```
+
+{% endcapture %}
+
+{% capture change_registry_helper_commercial %}
+
+```shell
+DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+
+AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.ru\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
+
+d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry \
+--type merge \
+--patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"
+
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
+--user=license-token \
+--password=$LICENSE_TOKEN \
+--new-deckhouse-tag=$DECKHOUSE_VERSION \
+registry.deckhouse.ru/deckhouse/$NEW_EDITION
+```
+
+{% endcapture %}
+
+{% capture ngc_cleanup_registry %}
+
+```shell
+d8 k delete ngc containerd-$NEW_EDITION-config.sh
+d8 k apply -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: del-temp-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 90
+  content: |
+    if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
+      rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
+    fi
+EOF
+d8 k delete ngc del-temp-config.sh
+```
+
+{% endcapture %}
+
+{% capture ngc_auth_cse %}
+{{ alert_additional_registry }}
+
+```shell
+AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+d8 k apply -f - <<EOF
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-cse-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 30
+  content: |
+    _on_containerd_config_changed() {
+      bb-flag-set containerd-need-restart
+    }
+    bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/cse-registry.toml - containerd-config-file-changed << "EOF_TOML"
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry-cse.deckhouse.ru"]
+              endpoint = ["https://registry-cse.deckhouse.ru"]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."registry-cse.deckhouse.ru".auth]
+              auth = "$AUTH_STRING"
+    EOF_TOML
+EOF
+```
+
+{% endcapture %}
+
+{% capture cse_digests_from_pod %}
+
+```shell
+d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
+d8 k wait --for=condition=ready pod/cse-image --timeout=300s
+CSE_SANDBOX_IMAGE=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
+CSE_K8S_API_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+```
+
+{% endcapture %}
+
+{% capture cse_set_image_158 %}
+
+```shell
+d8 k -n d8-system set image deployment/deckhouse \
+kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
+deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+```
+
+{% endcapture %}
+
+{% capture cse_set_image_164_plus %}
+
+```shell
+CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+d8 k -n d8-system set image deployment/deckhouse \
+init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER \
+kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
+deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+```
+
+{% endcapture %}
+
+{% capture cse_cleanup %}
+
+```shell
+d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+d8 k delete pod cse-image --ignore-not-found
+d8 k apply -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: del-temp-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 90
+  content: |
+    rm -f /etc/containerd/conf.d/cse-registry.toml /etc/containerd/conf.d/cse-sandbox.toml
+EOF
+d8 k delete ngc del-temp-config.sh
+```
+
+{% endcapture %}
+
+Эта инструкция описывает шаги, необходимые для смены редакции Deckhouse Kubernetes Platform в работающем кластере. Выполняйте их последовательно по разделам.
+
+В зависимости от способа работы с хранилищем образов процесс переключения отличается. Выбираете подходящий для вашего кластера способ и следуйте инструкциям.
+
+При переключении на DKP BE/SE/SE+/EE/CSE необходим действующий лицензионный ключ. При переключении на DKP CE он не требуется.
+
+{% alert level="warning" %}
+Инструкция не подходит для переключения **с** DKP CSE на другие редакции, но подходит для переключения **на** DKP CSE с DKP EE.
+
+Инструкция подразумевает использование публичного хранилища образов контейнеров (`registry-cse.deckhouse.ru` для DKP CSE, и `registry.deckhouse.ru` в остальных случаях). При использовании другого адреса хранилища образов измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего хранилища образов контейнеров](../registry/third-party.html).
+
+Выполняйте все команды на master-узле существующего кластера под пользователем `root`.
+{% endalert %}
+
+## Подготовка к переключению
+
+Перед переключением между редакциями выполните следующие действия:
+
+1. Убедитесь, что [очереди DKP пусты](#проверка-очереди).
+1. Определите [текущую редакцию и версию DKP](#определение-текущей-редакции-и-версии).
+1. Убедитесь в возможности переключения [с текущей редакции на желаемую](#определение-возможности-переключения-на-желаемую-редакцию).
+
+### Проверка очереди
+
+Убедитесь, что очереди DKP пусты, и в них нет выполняющихся задач, которые могут помешать переключению:
+
+{{ wait_queue }}
+
+### Определение текущей редакции и версии
+
+Чтобы быть уверенным в корректности дальнейших действий, определите текущую редакцию DKP, используемую в кластере. Это поможет избежать ошибок при переключении и убедиться в поддержке необходимых модулей и функциональных возможностей в новой редакции.
+
+Узнать используемые в кластере редакцию и версию DKP можно на главной странице веб-интерфейса DKP, либо с помощью CLI-команд:
+
+- получение текущей редакции DKP:
+
+  ```bash
+  d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values -o yaml | yq '.deckhouseEdition'
+  ```
+
+- получение текущей версии DKP:
+
+  ```bash
+  d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}'
+  ```
+
+### Определение возможности переключения на желаемую редакцию
 
 Редакции DKP различаются набором модулей, поддерживаемых версий Kubernetes и функциональными возможностями. Важно понимать, какие изменения в функциональности произойдут при переключении, какие возможности станут недоступными. Это поможет вам подготовиться к процессу переключения.
 
@@ -379,7 +687,7 @@ Summary:
 
 Существует два способа работы с хранилищем образов контейнеров DKP:
 
-- С использованием модуля [`registry`](/modules/registry/) — **(рекомендованный способ)**, конфигурация работы с хранилищем образов DKP задана в секции [`registry`](/modules/deckhouse/configuration.html#parameters-registry) параметров модуля `deckhouse` (ModuleConfig `deckhouse`). Это обеспечивает более плавный процесс перехода и автоматическую проверку наличия необходимых образов. Если в кластере используется этот способ работы с хранилищем образов контейнеров DKP, для переключения редакции воспользуйтесь разделом [«Переключение с помощью модуля registry»](#переключение-с-помощью-модуля-registry).
+- С использованием модуля [`registry`](/modules/registry/) — конфигурация работы с хранилищем образов DKP задана в секции [`registry`](/modules/deckhouse/configuration.html#parameters-registry) параметров модуля `deckhouse` (ModuleConfig `deckhouse`). Это обеспечивает более плавный процесс перехода и автоматическую проверку наличия необходимых образов. Если в кластере используется этот способ работы с хранилищем образов контейнеров DKP, для переключения редакции воспользуйтесь разделом [«Переключение с помощью модуля registry»](#переключение-с-помощью-модуля-registry).
 
 - Без использования модуля `registry` — конфигурация работы с хранилищем образов DKP задаётся при установке кластера [в `InitConfiguration`](../../../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), параметр [`registry.mode`](/modules/deckhouse/configuration.html#parameters-registry-mode) модуля `deckhouse` (ModuleConfig `deckhouse`) установлен в `Unmanaged`, параметр [`registry.unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged) модуля `deckhouse` не задан.
 
@@ -389,128 +697,11 @@ Summary:
 
 Перед выполнением дальнейших шагов выполните подготовительные действия, описанные в разделе [«Подготовка к переключению»](#подготовка-к-переключению).
 
-{% capture bashible_sync_wait %}
-Дождитесь синхронизации сервиса bashible (значение в колонке `UPTODATE` у NodeGroup должно совпадать с `NODES`):
-
-```shell
-d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate
-```
-
-В логе bashible должно быть `Configuration is in sync, nothing to do`:
-
-```shell
-journalctl -u bashible -n 5
-```
-
-{% endcapture %}
-
-{% capture check_old_pods_unmanaged %}
-
-```shell
-d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
-```
-
-{% endcapture %}
-
-{% capture enable_chrony_cse %}
-
-```shell
-d8 system module enable chrony
-```
-
-{% endcapture %}
-
-{% capture enable_release_channel_cse %}
-
-```shell
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  enabled: true
-  settings:
-    releaseChannel: LTS
-    ...
-```
-
-{% endcapture %}
-
-{% capture disable_release_channel_cse %}
-
-```shell
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  enabled: true
-  settings:
-    #  releaseChannel
-    ...
-```
-
-{% endcapture %}
-
 ### Переключение с помощью модуля registry
 
 {% alert level="warning" %}
 Не подходит для managed Kubernetes (EKS, AKS, GKE) и для DKP CSE **ниже** 1.73.
 {% endalert %}
-
-{% capture change_registry_mc_deckhouse_unmanaged %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  enabled: true
-  settings:
-    registry:
-      mode: Unmanaged
-      unmanaged:
-<!REMOVE_FOR_CE>
-        license: <ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
-<!/REMOVE_FOR_CE>
-        checkMode: <РЕЖИМ_ПРОВЕРКИ>
-        imagesRepo: <REGISTRY_HOST>/deckhouse/<КОД_РЕДАКЦИИ>
-        scheme: HTTPS
-```
-
-{% endcapture %}
-
-{% capture registry_status_cmd %}
-
-```shell
-d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml) | {"conditions": [.conditions[] | select(.type == "Ready" or .type == "RegistryContainsRequiredImages")]}'
-```
-
-{% endcapture %}
-
-{% capture registry_status_example %}
-
-```yaml
-conditions:
-  - lastTransitionTime: "2026-05-05T13:53:23Z"
-    message: |-
-      Mode: Default
-      <REGISTRY_HOST>: all 182 items are checked
-    reason: Ready
-    status: "True"
-    type: RegistryContainsRequiredImages
-  - lastTransitionTime: "2026-05-05T13:54:49Z"
-    message: ""
-    reason: ""
-    status: "True"
-    type: Ready
-```
-
-{% endcapture %}
 
 1. Убедитесь, что в кластере используется модуль registry. В moduleConfig `deckhouse` должны быть указаны параметры registry предыдущей редакции DKP в `Unmanaged` режиме работы. Если это не так, выполните [миграцию на использование модуля registry](../registry/managing-interaction.html#миграция-на-формат-управления-настройками-хранилища-образов-с-использованием-модуля-registry).
 
@@ -584,7 +775,7 @@ conditions:
 
    Пример успешного вывода:
 
-   {% tabs switch-registry-status-example-3 %}
+   {% tabs switch-registry-status-example-1 %}
    {% tab "CE/BE/SE/SE+/EE" %}
       {{
          registry_status_example
@@ -601,7 +792,7 @@ conditions:
       }}
    {% endtab %}
    {% endtabs %}
-   
+
 1. **Только для DKP CSE** — удалите поле `releaseChannel` в moduleConfig `deckhouse`:
 
    {{ disable_release_channel_cse | regex_replace: "^", "   " }}
@@ -616,7 +807,7 @@ conditions:
 
    Выберите пример для вашей редакции:
 
-   {% tabs switch-registry-edition %}
+   {% tabs switch-registry-edition-2 %}
    {% tab "DKP CE" %}
       {{
          change_registry_mc_deckhouse_unmanaged
@@ -719,9 +910,22 @@ conditions:
 
    Пример успешного вывода:
 
-   {% tabs switch-registry-status-example %}
-   {% tab "CE/BE/SE/SE+/EE" %}{{ registry_status_example | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "^", "   " }}{% endtab %}
-   {% tab "CSE" %}{{ registry_status_example | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "^", "   " }}{% endtab %}
+   {% tabs switch-registry-status-example-3 %}
+   {% tab "CE/BE/SE/SE+/EE" %}
+      {{
+         registry_status_example
+         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "CSE" %}
+      {{
+         registry_status_example
+         | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
    {% endtabs %}
 
 1. Проверьте наличие подов с ошибками загрузки образов:
@@ -739,8 +943,8 @@ conditions:
 
 1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
 
-   {{ check_old_pods_unmanaged }}
-   
+   {{ check_old_pods }}
+
 1. **Только для DKP CSE** — установите `releaseChannel` в moduleConfig `deckhouse`:
 
    {{ enable_release_channel_cse | regex_replace: "^", "   " }}
@@ -751,184 +955,6 @@ conditions:
 
 ### Переключение без использования модуля registry
 
-{% capture alert_additional_registry %}
-{% alert level="info" %}
-Если необходимо добавить конфигурации для дополнительного registry в containerd, воспользуйтесь инструкцией из раздела [«Как добавить конфигурацию для дополнительного registry в containerd»](/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry).
-{% endalert %}
-{% endcapture %}
-
-{% capture ngc_auth_registry %}
-{{ alert_additional_registry }}
-
-```shell
-AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-$NEW_EDITION-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 30
-  content: |
-    _on_containerd_config_changed() {
-      bb-flag-set containerd-need-restart
-    }
-    bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".registry.configs]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
-            auth = "$AUTH_STRING"
-    EOF_TOML
-EOF
-```
-
-{% endcapture %}
-
-{% capture change_registry_helper_ce %}
-
-```shell
-DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
-```
-
-{% endcapture %}
-
-{% capture change_registry_helper_commercial %}
-
-```shell
-DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.ru\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
-d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
-```
-
-{% endcapture %}
-
-{% capture ngc_cleanup_registry %}
-
-```shell
-d8 k delete ngc containerd-$NEW_EDITION-config.sh
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: del-temp-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 90
-  content: |
-    if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
-      rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
-    fi
-EOF
-d8 k delete ngc del-temp-config.sh
-```
-
-{% endcapture %}
-
-{% capture ngc_auth_cse %}
-{{ alert_additional_registry }}
-
-```shell
-AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-d8 k apply -f - <<EOF
----
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-cse-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 30
-  content: |
-    _on_containerd_config_changed() {
-      bb-flag-set containerd-need-restart
-    }
-    bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/cse-registry.toml - containerd-config-file-changed << "EOF_TOML"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".registry]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry-cse.deckhouse.ru"]
-              endpoint = ["https://registry-cse.deckhouse.ru"]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs."registry-cse.deckhouse.ru".auth]
-              auth = "$AUTH_STRING"
-    EOF_TOML
-EOF
-```
-
-{% endcapture %}
-
-{% capture cse_digests_from_pod %}
-
-```shell
-d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
-d8 k wait --for=condition=ready pod/cse-image --timeout=300s
-CSE_SANDBOX_IMAGE=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
-CSE_K8S_API_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
-CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
-```
-
-{% endcapture %}
-
-{% capture cse_set_image_158 %}
-
-```shell
-d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
-```
-
-{% endcapture %}
-
-{% capture cse_set_image_164_plus %}
-
-```shell
-CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
-```
-
-{% endcapture %}
-
-{% capture cse_cleanup %}
-
-```shell
-d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
-d8 k delete pod cse-image --ignore-not-found
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: del-temp-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 90
-  content: |
-    rm -f /etc/containerd/conf.d/cse-registry.toml /etc/containerd/conf.d/cse-sandbox.toml
-EOF
-d8 k delete ngc del-temp-config.sh
-```
-
-{% endcapture %}
-
 {% alert level="warning" %}
 Перед применением, убедитесь, что модуль registry не используется в кластере. В moduleConfig `deckhouse` должны отсутствовать параметры registry. Модуль `registry` должен быть выключен. Если это не так, выполните [миграция на устаревший формат управления настройками registry](../registry/managing-interaction.html#миграция-на-устаревший-формат-управления-настройками-хранилища-образов-компонентов-dkp-без-модуля-registry).
 {% endalert %}
@@ -936,111 +962,174 @@ d8 k delete ngc del-temp-config.sh
 Выберите целевую редакцию:
 
 {% tabs switch-without-registry %}
-{% tab "DKP CE" %}
-1. Переключите хранилище образов контейнеров:
-
-   {{ change_registry_helper_ce | regex_replace: "^", "   " }}
-
-1. Дождитесь готовности DKP:
-
-   {{ wait_queue | regex_replace: "^", "   " }}
-
-1. Проверьте, не остались ли использоваться образы от предыдущей редакции (укажите код **предыдущей** редакции):
-
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
-{% endtab %}
-{% tab "DKP BE" %}
+{% tab "DKP CE/BE/SE/SE+/EE" %}
 1. Выполните команду для указания данных аутентификации в хранилище образов:
 
-   {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "be" | regex_replace: "^", "   " }}
+   {% tabs without-registry-auth %}
+   {% tab "DKP CE" %}
+      Для DKP CE данный шаг не требуется.
+   {% endtab %}
 
-   {{ bashible_sync_wait | regex_replace: "^", "   " }}
+   {% tab "DKP BE" %}
+      {{
+         ngc_auth_registry
+         | regex_replace: "\$NEW_EDITION", "be"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE" %}
+      {{
+         ngc_auth_registry
+         | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE+" %}
+      {{
+         ngc_auth_registry
+         | regex_replace: "\$NEW_EDITION", "se-plus"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP EE" %}
+      {{
+         ngc_auth_registry
+         | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+   {% endtabs %}
 
 1. Переключите хранилище образов контейнеров:
 
-   {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "be" | regex_replace: "^", "   " }}
+   {% tabs without-registry-switch %}
+   {% tab "DKP CE" %}
+      {{
+         change_registry_helper_ce
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP BE" %}
+      {{
+         change_registry_helper_commercial
+         | regex_replace: "\$NEW_EDITION", "be"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE" %}
+      {{
+         change_registry_helper_commercial
+         | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE+" %}
+      {{
+         change_registry_helper_commercial
+         | regex_replace: "\$NEW_EDITION", "se-plus"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP EE" %}
+      {{
+         change_registry_helper_commercial
+         | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+   {% endtabs %}
+
+{{ take_care_deckhuse_imagepullbackoff }}
 
 1. Дождитесь готовности DKP:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 
-1. Проверьте, не остались ли использоваться образы от предыдущей редакции (укажите код **предыдущей** редакции):
+1. Проверьте наличие подов с ошибками загрузки образов:
 
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
+   ```shell
+   d8 k get pods -A | awk 'NR==1 || /^d8-/' | grep -E 'ImagePullBackOff|ErrImagePull'
+   ```
+
+   Для каждого проблемного модуля **на всех master-узлах** выполните следующие команды, указав имя модуля:
+
+   ```shell
+   rm -rf /var/lib/deckhouse/downloaded/<ИМЯ_МОДУЛЯ>/
+   d8 k rollout restart deploy -n d8-system deckhouse
+   ```
+
+1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
+
+   {{ check_old_pods }}
 
 1. Выполните очистку:
 
-   {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "be" | regex_replace: "^", "   " }}
+   {% tabs without-registry-cleanup %}
+   {% tab "DKP CE" %}
+      Для DKP CE данный шаг не требуется.
+   {% endtab %}
+
+   {% tab "DKP BE" %}
+      {{
+         ngc_cleanup_registry
+         | regex_replace: "\$NEW_EDITION", "be"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE" %}
+      {{
+         ngc_cleanup_registry
+         | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE+" %}
+      {{
+         ngc_cleanup_registry
+         | regex_replace: "\$NEW_EDITION", "se-plus"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP EE" %}
+      {{
+         ngc_cleanup_registry
+         | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+   {% endtabs %}
 {% endtab %}
-{% tab "DKP SE" %}
-1. Выполните команду для указания данных аутентификации в хранилище образов:
 
-   {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "se" | regex_replace: "^", "   " }}
-
-   {{ bashible_sync_wait | regex_replace: "^", "   " }}
-
-1. Переключите хранилище образов контейнеров:
-
-   {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "se" | regex_replace: "^", "   " }}
-
-1. Дождитесь готовности DKP:
-
-   {{ wait_queue | regex_replace: "^", "   " }}
-
-1. Проверьте, не остались ли использоваться образы от предыдущей редакции (укажите код **предыдущей** редакции):
-
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
-
-1. Выполните очистку:
-
-   {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "se" | regex_replace: "^", "   " }}
-{% endtab %}
-{% tab "DKP SE+" %}
-1. Выполните команду для указания данных аутентификации в хранилище образов:
-
-   {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "se-plus" | regex_replace: "^", "   " }}
-
-   {{ bashible_sync_wait | regex_replace: "^", "   " }}
-
-1. Переключите хранилище образов контейнеров:
-
-   {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "se-plus" | regex_replace: "^", "   " }}
-
-1. Дождитесь готовности DKP:
-
-   {{ wait_queue | regex_replace: "^", "   " }}
-
-1. Проверьте, не остались ли использоваться образы от предыдущей редакции (укажите код **предыдущей** редакции):
-
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
-
-1. Выполните очистку:
-
-   {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "se-plus" | regex_replace: "^", "   " }}
-{% endtab %}
-{% tab "DKP EE" %}
-1. Выполните команду для указания данных аутентификации в хранилище образов:
-
-   {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "ee" | regex_replace: "^", "   " }}
-
-   {{ bashible_sync_wait | regex_replace: "^", "   " }}
-
-1. Переключите хранилище образов контейнеров:
-
-   {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "ee" | regex_replace: "^", "   " }}
-
-1. Дождитесь готовности DKP:
-
-   {{ wait_queue | regex_replace: "^", "   " }}
-
-1. Проверьте, не остались ли использоваться образы от предыдущей редакции (укажите код **предыдущей** редакции):
-
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
-
-1. Выполните очистку:
-
-   {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "ee" | regex_replace: "^", "   " }}
-{% endtab %}
 {% tab "DKP CSE" %}
 1. Укажите версию DKP CSE, которую вы хотите использовать:
 
@@ -1091,6 +1180,9 @@ d8 k delete ngc del-temp-config.sh
 
 1. Настройте образы на узлах:
 
+   {% tabs cse-set-sha-images %}
+   {% tab "CSE 1.58 / 1.64 / 1.67" %}
+
    ```shell
    d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
@@ -1116,6 +1208,14 @@ d8 k delete ngc del-temp-config.sh
 
    {{ bashible_sync_wait | regex_replace: "^", "   " }}
 
+   {% endtab %}
+   {% tab "CSE 1.73" %}
+
+   Для CSE 1.73 данный шаг не требуется.
+
+   {% endtab %}
+   {% endtabs %}
+
 1. Обновите данные аутентификации для доступа к хранилищу образов:
 
    ```shell
@@ -1133,10 +1233,17 @@ d8 k delete ngc del-temp-config.sh
 
    {% tabs cse-set-deckhouse-image %}
    {% tab "CSE 1.58" %}
-   {{ cse_set_image_158 | regex_replace: "^", "   " }}
+      {{
+         cse_set_image_158
+         | regex_replace: "^", "   "
+      }}
    {% endtab %}
+
    {% tab "CSE 1.64 / 1.67 / 1.73" %}
-   {{ cse_set_image_164_plus | regex_replace: "^", "   " }}
+      {{
+         cse_set_image_164_plus
+         | regex_replace: "^", "   "
+      }}
    {% endtab %}
    {% endtabs %}
 
@@ -1144,11 +1251,9 @@ d8 k delete ngc del-temp-config.sh
 
    {{ wait_queue | regex_replace: "^", "   " }}
 
-1. Проверьте, не остались ли использоваться образы от DKP EE:
+1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
 
-   ```shell
-   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort -u
-   ```
+   {{ check_old_pods }}
 
 1. Установите `releaseChannel` в moduleConfig `deckhouse`:
 
@@ -1161,5 +1266,6 @@ d8 k delete ngc del-temp-config.sh
 1. Выполните очистку:
 
    {{ cse_cleanup | regex_replace: "^", "   " }}
+
 {% endtab %}
 {% endtabs %}

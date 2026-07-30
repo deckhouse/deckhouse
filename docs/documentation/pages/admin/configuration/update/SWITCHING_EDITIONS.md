@@ -4,18 +4,6 @@ permalink: en/admin/configuration/update/switching-editions.html
 description: "Switching between Deckhouse Kubernetes Platform editions. Migration from Community Edition to Enterprise Edition and license management."
 ---
 
-This guide describes the steps required to switch the Deckhouse Kubernetes Platform edition in a running cluster. Follow the sections in order.
-
-The switching process differs depending on how you work with the image registry. Choose the method that applies to your cluster and follow the instructions.
-
-A valid license key is required when switching to DKP BE/SE/SE+/EE. It is not required when switching to DKP CE.
-
-{% alert level="warning" %}
-This guide assumes the use of a public container image registry (`registry.deckhouse.io`). If you use a different registry address, adjust the commands or refer to the [guide for switching Deckhouse to a third-party container image registry](../registry/third-party.html).
-
-Execute all commands on the master node of the existing cluster as the `root` user.
-{% endalert %}
-
 {% capture wait_queue %}
 
 ```bash
@@ -33,40 +21,6 @@ Summary:
 
 {% endofftopic %}
 {% endcapture %}
-
-## Pre-switch preparation
-
-Before switching between revisions, follow these steps:
-
-1. Make sure that [the DKP queues are empty](#pre-switch-preparation).
-1. Determine the [current DKP revision and version](#determining-the-current-edition-and-version).
-1. Verify that you can switch [from the current version to the desired one](#checking-whether-switching-to-the-desired-edition-is-possible).
-
-### Queue check
-
-Make sure the DKP queues are empty and there are no running tasks that could interfere with the switch:
-
-{{ wait_queue }}
-
-### Determining the current edition and version
-
-To ensure the correctness of further steps, determine the current DKP edition used in the cluster. This helps avoid errors during the switch and confirms that the required modules and features are supported in the new edition.
-
-You can find the edition and version currently used in the cluster on the main page of the DKP web interface, or by using CLI commands:
-
-- edition:
-
-  ```bash
-  d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values -o yaml | yq '.deckhouseEdition'
-  ```
-
-- version:
-
-  ```bash
-  d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}'
-  ```
-
-### Checking whether switching to the desired edition is possible
 
 {% capture take_care_of_the_internal_modules %}
 1. Determine the list of internal modules used in the cluster that are not supported in DKP new edition. To do this, follow these steps:
@@ -203,15 +157,11 @@ You can find the edition and version currently used in the cluster on the main p
 
       ```bash
       DKP_REPO=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F':' '{print $1}')
-      DKP_IMG=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image')
+      DKP_TAG=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F':' '{print $2}')
 
-      d8 k run dkp-image --image=$DKP_IMG --command sleep -- infinity
+      d8 k run dkp-image --image=$DKP_REPO/install:$DKP_TAG --command sleep -- infinity
       d8 k wait --for=condition=ready pod/dkp-image --timeout=300s
 
-      DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec dkp-image -- cat /deckhouse/modules/images_digests.json | jq -r ".common.kubeRbacProxy")
-      DECKHOUSE_INIT=$(d8 k exec dkp-image -- cat /deckhouse/modules/images_digests.json | jq -r ".deckhouse.init")
-
-      # Alternatively
       DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec dkp-image -- cat /deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
       DECKHOUSE_INIT=$(d8 k exec dkp-image -- cat /deckhouse/candi/images_digests.json | jq -r ".deckhouse.init")
 
@@ -237,6 +187,225 @@ You can find the edition and version currently used in the cluster on the main p
 
    {{ wait_queue | regex_replace: "^", "   " }}
 {% endcapture %}
+
+{% capture bashible_sync_wait %}
+Wait for the bashible service to synchronize (the `UPTODATE` column value for a NodeGroup must match `NODES`):
+
+```shell
+d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate
+```
+
+The bashible log should contain `Configuration is in sync, nothing to do`:
+
+```shell
+journalctl -u bashible -n 5
+```
+
+{% endcapture %}
+
+{% capture check_old_pods_unmanaged %}
+
+```shell
+d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<PREVIOUS_EDITION_CODE>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+```
+
+{% endcapture %}
+
+{% capture change_registry_mc_deckhouse_unmanaged %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+<!REMOVE_FOR_CE>
+        license: <LICENSE_KEY>
+<!/REMOVE_FOR_CE>
+        checkMode: <CHECK_MODE>
+        imagesRepo: <REGISTRY_HOST>/deckhouse/<EDITION_CODE>
+        scheme: HTTPS
+```
+
+{% endcapture %}
+
+{% capture registry_status_cmd %}
+
+```shell
+d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml) | {"conditions": [.conditions[] | select(.type == "Ready" or .type == "RegistryContainsRequiredImages")]}'
+```
+
+{% endcapture %}
+
+{% capture registry_status_example %}
+
+```yaml
+conditions:
+  - lastTransitionTime: "2026-05-05T13:53:23Z"
+    message: |-
+      Mode: Default
+      registry.deckhouse.io: all 182 items are checked
+    reason: Ready
+    status: "True"
+    type: RegistryContainsRequiredImages
+  - lastTransitionTime: "2026-05-05T13:54:49Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: Ready
+```
+
+{% endcapture %}
+
+{% capture alert_additional_registry %}
+{% alert level="info" %}
+If you need to add configuration for an additional registry in containerd, refer to the [How to add configuration for an additional registry in containerd](/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry-in-containerd) section.
+{% endalert %}
+{% endcapture %}
+
+{% capture ngc_auth_registry %}
+{{ alert_additional_registry }}
+
+```shell
+AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+d8 k apply -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-$NEW_EDITION-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 30
+  content: |
+    _on_containerd_config_changed() {
+      bb-flag-set containerd-need-restart
+    }
+    bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
+            auth = "$AUTH_STRING"
+    EOF_TOML
+EOF
+```
+
+{% endcapture %}
+
+{% capture change_registry_helper_ce %}
+
+```shell
+DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
+--new-deckhouse-tag=$DECKHOUSE_VERSION \
+registry.deckhouse.io/deckhouse/ce \
+```
+
+{% endcapture %}
+
+{% capture change_registry_helper_commercial %}
+
+```shell
+DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+
+AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.io\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
+
+d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry \
+--type merge \
+--patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"
+
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
+--user=license-token \
+--password=$LICENSE_TOKEN \
+--new-deckhouse-tag=$DECKHOUSE_VERSION \
+registry.deckhouse.io/deckhouse/$NEW_EDITION
+```
+
+{% endcapture %}
+
+{% capture ngc_cleanup_registry %}
+
+```shell
+d8 k delete ngc containerd-$NEW_EDITION-config.sh
+d8 k apply -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: del-temp-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 90
+  content: |
+    if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
+      rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
+    fi
+EOF
+d8 k delete ngc del-temp-config.sh
+```
+
+{% endcapture %}
+
+This guide describes the steps required to switch the Deckhouse Kubernetes Platform edition in a running cluster. Follow the sections in order.
+
+The switching process differs depending on how you work with the image registry. Choose the method that applies to your cluster and follow the instructions.
+
+A valid license key is required when switching to DKP BE/SE/SE+/EE. It is not required when switching to DKP CE.
+
+{% alert level="warning" %}
+This guide assumes the use of a public container image registry (`registry.deckhouse.io`). If you use a different registry address, adjust the commands or refer to the [guide for switching Deckhouse to a third-party container image registry](../registry/third-party.html).
+
+Execute all commands on the master node of the existing cluster as the `root` user.
+{% endalert %}
+
+## Pre-switch preparation
+
+Before switching between revisions, follow these steps:
+
+1. Make sure that [the DKP queues are empty](#pre-switch-preparation).
+1. Determine the [current DKP revision and version](#determining-the-current-edition-and-version).
+1. Verify that you can switch [from the current version to the desired one](#checking-whether-switching-to-the-desired-edition-is-possible).
+
+### Queue check
+
+Make sure the DKP queues are empty and there are no running tasks that could interfere with the switch:
+
+{{ wait_queue }}
+
+### Determining the current edition and version
+
+To ensure the correctness of further steps, determine the current DKP edition used in the cluster. This helps avoid errors during the switch and confirms that the required modules and features are supported in the new edition.
+
+You can find the edition and version currently used in the cluster on the main page of the DKP web interface, or by using CLI commands:
+
+- edition:
+
+  ```bash
+  d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values -o yaml | yq '.deckhouseEdition'
+  ```
+
+- version:
+
+  ```bash
+  d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}'
+  ```
+
+### Checking whether switching to the desired edition is possible
 
 Different DKP editions support different sets of modules, Kubernetes versions, and features. It is important to understand what functional changes will occur during the switch and which capabilities will become unavailable. This will help you prepare for the switching process.
 
@@ -345,86 +514,11 @@ There are two ways to work with the DKP container image registry:
 
 Before proceeding, complete the preparatory steps described in the [Pre-switch preparation](#pre-switch-preparation) section.
 
-{% capture bashible_sync_wait %}
-Wait for the bashible service to synchronize (the `UPTODATE` column value for a NodeGroup must match `NODES`):
-
-```shell
-d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate
-```
-
-The bashible log should contain `Configuration is in sync, nothing to do`:
-
-```shell
-journalctl -u bashible -n 5
-```
-
-{% endcapture %}
-
-{% capture check_old_pods_unmanaged %}
-
-```shell
-d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<PREVIOUS_EDITION_CODE>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
-```
-
-{% endcapture %}
-
 ### Switching using the registry module
 
 {% alert level="warning" %}
 Not applicable for managed Kubernetes (EKS, AKS, GKE).
 {% endalert %}
-
-{% capture change_registry_mc_deckhouse_unmanaged %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  enabled: true
-  settings:
-    registry:
-      mode: Unmanaged
-      unmanaged:
-<!REMOVE_FOR_CE>
-        license: <LICENSE_KEY>
-<!/REMOVE_FOR_CE>
-        checkMode: <CHECK_MODE>
-        imagesRepo: <REGISTRY_HOST>/deckhouse/<EDITION_CODE>
-        scheme: HTTPS
-```
-
-{% endcapture %}
-
-{% capture registry_status_cmd %}
-
-```shell
-d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml) | {"conditions": [.conditions[] | select(.type == "Ready" or .type == "RegistryContainsRequiredImages")]}'
-```
-
-{% endcapture %}
-
-{% capture registry_status_example %}
-
-```yaml
-conditions:
-  - lastTransitionTime: "2026-05-05T13:53:23Z"
-    message: |-
-      Mode: Default
-      registry.deckhouse.io: all 182 items are checked
-    reason: Ready
-    status: "True"
-    type: RegistryContainsRequiredImages
-  - lastTransitionTime: "2026-05-05T13:54:49Z"
-    message: ""
-    reason: ""
-    status: "True"
-    type: Ready
-```
-
-{% endcapture %}
 
 1. Make sure the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the previous DKP edition in `Unmanaged` mode. If this is not the case, perform the [migration to using the registry module](../registry/managing-interaction.html#migration-to-registry-management-format-using-the-registry-module).
 
@@ -599,92 +693,6 @@ conditions:
 
 ### Switching without the registry module
 
-{% capture alert_additional_registry %}
-{% alert level="info" %}
-If you need to add configuration for an additional registry in containerd, refer to the [How to add configuration for an additional registry in containerd](/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry-in-containerd) section.
-{% endalert %}
-{% endcapture %}
-
-{% capture ngc_auth_registry %}
-{{ alert_additional_registry }}
-
-```shell
-AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-$NEW_EDITION-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 30
-  content: |
-    _on_containerd_config_changed() {
-      bb-flag-set containerd-need-restart
-    }
-    bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".registry.configs]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
-            auth = "$AUTH_STRING"
-    EOF_TOML
-EOF
-```
-
-{% endcapture %}
-
-{% capture change_registry_helper_ce %}
-
-```shell
-DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
-```
-
-{% endcapture %}
-
-{% capture change_registry_helper_commercial %}
-
-```shell
-DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.io\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
-d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
-```
-
-{% endcapture %}
-
-{% capture ngc_cleanup_registry %}
-
-```shell
-d8 k delete ngc containerd-$NEW_EDITION-config.sh
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: del-temp-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 90
-  content: |
-    if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
-      rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
-    fi
-EOF
-d8 k delete ngc del-temp-config.sh
-```
-
-{% endcapture %}
-
 {% alert level="warning" %}
 Before proceeding, make sure that the `registry` module is not used in the cluster. ModuleConfig `deckhouse` must not contain registry parameters. The `registry` module must be disabled. If this is not the case, perform the [migration to the deprecated registry management format (without the registry module)](../registry/managing-interaction.html#migration-to-the-deprecated-registry-management-format-without-the-registry-module).
 {% endalert %}
@@ -692,109 +700,171 @@ Before proceeding, make sure that the `registry` module is not used in the clust
 Choose the target edition:
 
 {% tabs switch-without-registry %}
-{% tab "DKP CE" %}
-1. Switch the registry:
-
-   {{ change_registry_helper_ce | regex_replace: "^", "   " }}
-
-1. Wait for DKP to be ready:
-
-   {{ wait_queue | regex_replace: "^", "   " }}
-
-1. Check that images from the previous edition are no longer in use (specify the code of the **previous** edition):
-
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
-{% endtab %}
-{% tab "DKP BE" %}
+{% tab "DKP CE/BE/SE/SE+/EE" %}
 1. Run the command to set the authentication credentials for the image registry:
 
-   {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "be" | regex_replace: "^", "   " }}
+   {% tabs without-registry-auth %}
+   {% tab "DKP CE" %}
+      Not required for DKP CE.
+   {% endtab %}
 
-   {{ bashible_sync_wait | regex_replace: "^", "   " }}
+   {% tab "DKP BE" %}
+      {{
+         ngc_auth_registry
+         | regex_replace: "\$NEW_EDITION", "be"
+         | regex_replace: "^", "   "
+      }}
 
-1. Switch the registry:
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
 
-   {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "be" | regex_replace: "^", "   " }}
+   {% tab "DKP SE" %}
+      {{
+         ngc_auth_registry
+         | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE+" %}
+      {{
+         ngc_auth_registry
+         | regex_replace: "\$NEW_EDITION", "se-plus"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP EE" %}
+      {{
+         ngc_auth_registry
+         | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+   {% endtabs %}
+
+1. Switch the container image registry:
+
+   {% tabs without-registry-switch %}
+   {% tab "DKP CE" %}
+      {{
+         change_registry_helper_ce
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP BE" %}
+      {{
+         change_registry_helper_commercial
+         | regex_replace: "\$NEW_EDITION", "be"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE" %}
+      {{
+         change_registry_helper_commercial
+         | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP SE+" %}
+      {{
+         change_registry_helper_commercial
+         | regex_replace: "\$NEW_EDITION", "se-plus"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+
+   {% tab "DKP EE" %}
+      {{
+         change_registry_helper_commercial
+         | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+   {% endtabs %}
+
+{{ take_care_deckhuse_imagepullbackoff }}
 
 1. Wait for DKP to be ready:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 
-1. Check that images from the previous edition are no longer in use (specify the code of the **previous** edition):
+1. Check for pods with image pull errors:
 
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
+   ```shell
+   d8 k get pods -A | awk 'NR==1 || /^d8-/' | grep -E 'ImagePullBackOff|ErrImagePull'
+   ```
+
+   For each problematic module, run the following commands **on all master nodes**, specifying the module name:
+
+   ```shell
+   rm -rf /var/lib/deckhouse/downloaded/<MODULE_NAME>/
+   d8 k rollout restart deploy -n d8-system deckhouse
+   ```
+
+1. Check for pods using the old registry:
+
+   {{ check_old_pods_unmanaged }}
 
 1. Perform cleanup:
 
-   {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "be" | regex_replace: "^", "   " }}
-{% endtab %}
-{% tab "DKP SE" %}
-1. Run the command to set the authentication credentials for the image registry:
+   {% tabs without-registry-cleanup %}
+   {% tab "DKP CE" %}
+      Not required for DKP CE.
+   {% endtab %}
 
-   {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "se" | regex_replace: "^", "   " }}
+   {% tab "DKP BE" %}
+      {{
+         ngc_cleanup_registry
+         | regex_replace: "\$NEW_EDITION", "be"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
 
-   {{ bashible_sync_wait | regex_replace: "^", "   " }}
+   {% tab "DKP SE" %}
+      {{
+         ngc_cleanup_registry
+         | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
 
-1. Switch the registry:
+   {% tab "DKP SE+" %}
+      {{
+         ngc_cleanup_registry
+         | regex_replace: "\$NEW_EDITION", "se-plus"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
 
-   {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "se" | regex_replace: "^", "   " }}
-
-1. Wait for DKP to be ready:
-
-   {{ wait_queue | regex_replace: "^", "   " }}
-
-1. Check that images from the previous edition are no longer in use (specify the code of the **previous** edition):
-
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
-
-1. Perform cleanup:
-
-   {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "se" | regex_replace: "^", "   " }}
-{% endtab %}
-{% tab "DKP SE+" %}
-1. Run the command to set the authentication credentials for the image registry:
-
-   {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "se-plus" | regex_replace: "^", "   " }}
-
-   {{ bashible_sync_wait | regex_replace: "^", "   " }}
-
-1. Switch the registry:
-
-   {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "se-plus" | regex_replace: "^", "   " }}
-
-1. Wait for DKP to be ready:
-
-   {{ wait_queue | regex_replace: "^", "   " }}
-
-1. Check that images from the previous edition are no longer in use (specify the code of the **previous** edition):
-
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
-
-1. Perform cleanup:
-
-   {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "se-plus" | regex_replace: "^", "   " }}
-{% endtab %}
-{% tab "DKP EE" %}
-1. Run the command to set the authentication credentials for the image registry:
-
-   {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "ee" | regex_replace: "^", "   " }}
-
-   {{ bashible_sync_wait | regex_replace: "^", "   " }}
-
-1. Switch the registry:
-
-   {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "ee" | regex_replace: "^", "   " }}
-
-1. Wait for DKP to be ready:
-
-   {{ wait_queue | regex_replace: "^", "   " }}
-
-1. Check that images from the previous edition are no longer in use (specify the code of the **previous** edition):
-
-   {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
-
-1. Perform cleanup:
-
-   {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "ee" | regex_replace: "^", "   " }}
+   {% tab "DKP EE" %}
+      {{
+         ngc_cleanup_registry
+         | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "   "
+      }}
+   {% endtab %}
+   {% endtabs %}
 {% endtab %}
 {% endtabs %}
