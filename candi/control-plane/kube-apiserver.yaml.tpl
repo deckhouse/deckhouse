@@ -33,6 +33,9 @@
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $runtimeConfigList = append $runtimeConfigList "resource.k8s.io/v1beta1=true" -}}
 {{- end }}
+{{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
+  {{- $runtimeConfigList = append $runtimeConfigList "resource.k8s.io/v1alpha3=true" -}}
+{{- end }}
 {{- $runtimeConfig := join "," $runtimeConfigList -}}
 {{- $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" -}}
 {{- if .apiserver.admissionPlugins -}}
