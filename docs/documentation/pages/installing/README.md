@@ -951,8 +951,6 @@ You can check the current status of versions in the release channels at [release
   /home/user/d8-bundle
   ```
 
-  Quote the whole `--include-module` value when the constraint uses `>=` or `<=`. Unquoted, the shell takes `>` as an output redirection.
-
   Example command to download `stronghold` module with semver `^` constraint from version 1.2.0:
 
   ```shell
@@ -972,6 +970,8 @@ You can check the current status of versions in the release channels at [release
   --include-module secrets-store-integration@~1.1.0 \
   /home/user/d8-bundle
   ```
+
+  Quote the whole `--include-module` value when the constraint uses `>=` or `<=`. Unquoted, the shell takes `>` as an output redirection.
 
   Example command to download the `console` module with semver `>=` constraint from version 1.43.2:
 
