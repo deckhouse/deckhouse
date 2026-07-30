@@ -254,6 +254,34 @@ spec:
               image: busybox
               name: debugger
               volumeMounts:
+              - mountPath: /tmp/debug
+                name: debug-data
+            volumes:
+            - name: debug-data
+              emptyDir: {}
+    - name: 007-disallowed-automount-false-with-sa-volume
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.automountServiceAccountToken
+        scenario: negative
+      - path: spec.containers[].volumeMounts[].mountPath
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              app: nginx
+            name: nginx-false-sa-volume
+          spec:
+            automountServiceAccountToken: false
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
               - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
                 name: serviceaccount-token
             volumes:

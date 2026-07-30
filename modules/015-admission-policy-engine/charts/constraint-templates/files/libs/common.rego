@@ -172,27 +172,6 @@ pod_template_metadata_labels_for_kind(obj, kind) := labels if {
   labels := object.get(obj, ["spec", "template", "metadata", "labels"], {})
 }
 
-# Merge two label maps; values from override take precedence.
-merge_labels(base, override) := merged if {
-  all_keys := {k | base[k]} | {k | override[k]}
-  merged := {k: v |
-    k := all_keys[_]
-    v := merge_label_value(base, override, k)
-  }
-}
-
-# Override takes precedence
-merge_label_value(base, override, k) := v if {
-  override[k]
-  v := override[k]
-}
-
-# Fall back to base when override doesn't have the key
-merge_label_value(base, override, k) := v if {
-  not override[k]
-  v := base[k]
-}
-
 # Effective labels for SPE resolution from input.review.object.
 # For Pods: uses the pod's own metadata.labels.
 # For controllers (Deployment, etc.): uses ONLY the pod template's
@@ -294,12 +273,4 @@ effective_metadata := meta if {
   kind := object.get(obj, "kind", "")
   kind != "Pod"
   meta := pod_template_metadata
-}
-
-merge_metadata(base, override) := merged if {
-  all_keys := {k | base[k]} | {k | override[k]}
-  merged := {k: v |
-    k := all_keys[_]
-    v := merge_label_value(base, override, k)
-  }
 }

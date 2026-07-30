@@ -329,35 +329,3 @@ test_effective_labels_template_precedence if {
   not result["app"]
   result["security.deckhouse.io/security-policy-exception"] == "spe-template"
 }
-
-# merge_labels: override takes precedence over base
-
-test_merge_labels_override_precedence if {
-  base := {"a": "base-a", "b": "base-b"}
-  override := {"b": "override-b", "c": "override-c"}
-  result := common.merge_labels(base, override)
-  result["a"] == "base-a"
-  result["b"] == "override-b"
-  result["c"] == "override-c"
-}
-
-# merge_labels: works with empty base
-
-test_merge_labels_empty_base if {
-  result := common.merge_labels({}, {"key": "val"})
-  result["key"] == "val"
-}
-
-# merge_labels: works with empty override
-
-test_merge_labels_empty_override if {
-  result := common.merge_labels({"key": "val"}, {})
-  result["key"] == "val"
-}
-
-# merge_labels: works with both empty
-
-test_merge_labels_both_empty if {
-  result := common.merge_labels({}, {})
-  count(result) == 0
-}
