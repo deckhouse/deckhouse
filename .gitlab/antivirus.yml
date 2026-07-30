@@ -12,11 +12,9 @@
   echo "registry dev"
   registry_host="${DECKHOUSE_DEV_REGISTRY_HOST}"
   CONTAINER_NAME="registry_${AV_NAME}"
-  GID="$(id -g)"
   SCAN_ID+="-${CONTAINER_NAME}"
-  SCAN_DIR="/opt/actions-runners/scans/${AV_NAME}"
   echo "SCAN_ID=${SCAN_ID}" > av.env
-  echo "SCAN_DIR=${SCAN_DIR}" >> av.env
+  echo "CONTAINER_NAME=${CONTAINER_NAME}" >> av.env
   echo "skipped=false" >> av.env
   echo "${CONTAINER_NAME}"
   ONLY_IMAGES="$(cat only_images.json 2>/dev/null || echo '[]')"
@@ -44,11 +42,14 @@
     docker exec "${CONTAINER_NAME}" \
       scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
   fi
-  docker exec "${CONTAINER_NAME}" chown -R "${UID}:${GID}" "scans/${SCAN_ID}"
-  if [[ -f "${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md" ]]; then
-    THREAT_COUNT="$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' "${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md" | head -1)"
-    ERRORS_COUNT="$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' "${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md" | head -1)"
-    cp -a "${SCAN_DIR}/${SCAN_ID}" "av-results/"
+  # Results live inside the scanner container (no host bind-mount here), so pull
+  # them into the workspace for artifacts and for reading the summary below.
+  WORKDIR="$(docker inspect -f '{{.Config.WorkingDir}}' "${CONTAINER_NAME}")"
+  docker cp "${CONTAINER_NAME}:${WORKDIR:-/}/scans/${SCAN_ID}" av-results/
+  RESULTS="av-results/${SCAN_ID}/scan_results_threats.md"
+  if [[ -f "${RESULTS}" ]]; then
+    THREAT_COUNT="$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' "${RESULTS}" | head -1)"
+    ERRORS_COUNT="$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' "${RESULTS}" | head -1)"
     if [[ -n "${THREAT_COUNT}" && "${THREAT_COUNT}" -gt 0 ]]; then
       echo "❌ THREATS DETECTED: ${THREAT_COUNT} images contain threats!"
       exit 1
