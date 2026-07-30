@@ -74,7 +74,7 @@ The module interacts with the following components:
 1. **Kube-apiserver**:
 
    * Works with Cluster API custom resources.
-   * Manages Node resources.
+   * Manages Node and NodeGroup resources.
    * Authorizes metric requests.
 
 1. Node filesystem:

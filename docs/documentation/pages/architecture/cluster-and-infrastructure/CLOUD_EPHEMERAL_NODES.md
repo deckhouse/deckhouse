@@ -88,7 +88,7 @@ The module interacts with the following components:
 
    * Retrieves the `kube-system/d8-node-manager-cloud-provider` Secret for cloud connectivity.
    * Works with Cluster API custom resources.
-   * Manages Node resources.
+   * Manages Node and NodeGroup resources.
    * Monitors node load.
    * Performs node autoscaling.
    * Authorizes metric requests.

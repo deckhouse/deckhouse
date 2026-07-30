@@ -62,7 +62,7 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-   * Manages Node resources.
+   * Manages Node and NodeGroup resources.
    * Authorizes metric requests.
 
 1. Node filesystem:
