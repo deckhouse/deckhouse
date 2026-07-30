@@ -49,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -213,12 +214,14 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		// r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	}
 
-	// update modules settings in the package manager
-	r.packageManager.UpdateModulesSettings(
-		moduleConfig.Name,
-		moduleConfig.Spec.Version,
-		moduleConfig.Spec.Settings.GetMap(),
-		moduleConfig.Spec.Enabled)
+	if !app.ModulePackagesEnabled() {
+		// update modules settings in the package manager
+		r.packageManager.UpdateModulesSettings(
+			moduleConfig.Name,
+			moduleConfig.Spec.Version,
+			moduleConfig.Spec.Settings.GetMap(),
+			moduleConfig.Spec.Enabled)
+	}
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{Requeue: true}, nil
