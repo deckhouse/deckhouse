@@ -283,9 +283,9 @@
       export WERF_REPO="${DEV_REGISTRY_PATH}"
 
       if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
-        IMAGE_TAG="pr${CI_MERGE_REQUEST_IID}${REPO_SUFFIX:+-${REPO_SUFFIX}}"
+        IMAGE_TAG="pr${CI_MERGE_REQUEST_IID}-tests${REPO_SUFFIX:+-${REPO_SUFFIX}}"
       else
-        IMAGE_TAG="${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}"
+        IMAGE_TAG="${CI_COMMIT_REF_SLUG}-tests${REPO_SUFFIX:+-${REPO_SUFFIX}}"
       fi
 
       type werf && source "$(werf ci-env gitlab --verbose --as-file)"

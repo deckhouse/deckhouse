@@ -1,5 +1,5 @@
 # Post-build tests that run inside the published `tests` image (k8s executor).
-# Image tag is predictable (prIID / ref slug) — published by build_tests via publish_image.
+# Image tag is predictable (prIID-tests / ref-slug-tests) — published by build_tests via publish_image.
 # DOCKER_AUTH_CONFIG is built from Vault secrets (resolved before job start / image pull).
 
 .needs_build_tests:
@@ -159,7 +159,7 @@ security_scan_images:
     - .rules:on_test
   variables:
     IMAGE: ${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss
-    TAG: ${TESTS_IMAGE_TAG}
+    TAG: ${DEV_IMAGE_TAG}
   script:
     - echo "⚓️ 🏎 Running default user validation on ${TAG}..."
     - make cve-base-images-check-default-user
