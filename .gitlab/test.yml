@@ -77,7 +77,7 @@ dhctl_tests:
     - .needs_build_tests
     - .rules:on_test
   script:
-    - echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
+    - 'echo "Tests image tag: ${TESTS_IMAGE_TAG}"'
     - cd "${CI_PROJECT_DIR}/dhctl"
     - make ci
 
@@ -87,6 +87,7 @@ golint:
     - .needs_build_tests
     - .rules:on_test
   script:
+    - 'echo "Tests image tag: ${TESTS_IMAGE_TAG}"'
     - |
       if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
         export DIFF_BASE="${CI_MERGE_REQUEST_DIFF_BASE_SHA}"
@@ -96,7 +97,6 @@ golint:
         export DIFF_BASE="$(git rev-parse HEAD^)"
       fi
       echo "DIFF_BASE=${DIFF_BASE}"
-    - echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
     - make lint-changed
 
 openapi_test_cases:
@@ -105,7 +105,7 @@ openapi_test_cases:
     - .needs_build_tests
     - .rules:on_test
   script:
-    - echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
+    - 'echo "Tests image tag: ${TESTS_IMAGE_TAG}"'
     - ginkgo -vet=off ./testing/openapi_cases/
 
 validators:
@@ -114,7 +114,7 @@ validators:
     - .needs_build_tests
     - .rules:on_test
   script:
-    - echo "Tests image tag: '${TESTS_IMAGE_TAG}'"
+    - 'echo "Tests image tag: ${TESTS_IMAGE_TAG}"'
     - go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout="${TEST_TIMEOUT}" ./testing/...
 
 # Rootless / default-user scan on built FE images (needs docker + crane on host).
