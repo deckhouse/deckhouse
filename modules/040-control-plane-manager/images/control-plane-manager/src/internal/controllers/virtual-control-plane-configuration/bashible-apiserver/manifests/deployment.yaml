@@ -60,5 +60,8 @@ spec:
             name: bashible-apiserver-files
         - name: kubeconfig
           secret:
-            secretName: bashible-apiserver-kubeconfig
+            secretName: d8-kubeconfig-virtual-clients
+            items:
+            - key: bashible-apiserver.conf
+              path: bashible-apiserver.conf
       

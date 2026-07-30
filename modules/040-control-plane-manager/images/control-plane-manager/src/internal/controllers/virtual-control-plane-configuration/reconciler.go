@@ -125,6 +125,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	if _, res, err := r.reconcileClientsKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret, externalEndpoint); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	if err := r.reconcileStatus(ctx, vcp, externalEndpoint); err != nil {
 		return reconcile.Result{}, fmt.Errorf("update status: %w", err)
 	}
@@ -159,7 +163,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, apiserverService, pkiSecret, adminSecret, joinToken); err != nil || !res.IsZero() {
+	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, pkiSecret, adminSecret, joinToken); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -427,6 +431,17 @@ func (r *reconciler) reconcileAdminKubeconfigSecret(
 	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, name, adminKubeconfigFiles, endpoint)
 }
 
+func (r *reconciler) reconcileClientsKubeconfigSecret(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiserverService *corev1.Service,
+	pkiSecret *corev1.Secret,
+	endpoint string,
+) (*corev1.Secret, reconcile.Result, error) {
+	name := constants.VirtualResourceName(constants.VirtualClientsKubeconfigSecretName, vcp.Name)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, name, clientsKubeconfigFiles, endpoint)
+}
+
 func (r *reconciler) reconcileKubeconfigSecretFiles(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
@@ -501,7 +516,16 @@ func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane, 
 
 var componentKubeconfigFiles = []kubeconfig.File{kubeconfig.ControllerManager, kubeconfig.Scheduler}
 
-var adminKubeconfigFiles = []kubeconfig.File{kubeconfig.SuperAdmin}
+// admin.conf is identity for vcp admin; super-admin.conf stays as break-glass for controller itself.
+var adminKubeconfigFiles = []kubeconfig.File{kubeconfig.Admin, kubeconfig.SuperAdmin}
+
+// clientsKubeconfigFiles are the host-side clients of the tenant apiserver.
+var clientsKubeconfigFiles = []kubeconfig.File{
+	kubeconfig.CiliumOperator,
+	kubeconfig.KonnectivityServer,
+	kubeconfig.Deckhouse,
+	kubeconfig.BashibleApiserver,
+}
 
 func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret *corev1.Secret, kubeconfigFiles []kubeconfig.File, endpoint string) (map[string][]byte, error) {
 	clusterIP := apiserverService.Spec.ClusterIP

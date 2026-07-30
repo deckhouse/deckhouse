@@ -30,7 +30,6 @@ import (
 	bashibleapiserver "control-plane-manager/internal/controllers/virtual-control-plane-configuration/bashible-apiserver"
 
 	pkiconstants "github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 	dhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,7 +57,7 @@ const (
 	bashibleSecurePort        = 4221
 	bashibleNestedServicePort = 443
 
-	bashibleKubeconfigSecretName  = "bashible-apiserver-kubeconfig"
+	bashibleKubeconfigSecretName  = constants.VirtualClientsKubeconfigSecretName
 	bashibleContextSecretName     = "bashible-apiserver-context"
 	bashibleRegistrySecretName    = "deckhouse-registry"
 	bashibleRegistrySecretNS      = "d8-system"
@@ -80,16 +79,10 @@ func (r *reconciler) reconcileBashibleApiserver(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	configSecret *corev1.Secret,
-	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
 	adminSecret *corev1.Secret,
 	joinToken string,
 ) (reconcile.Result, error) {
-	// 1. Parent: Exclusive kubeconfig for bashible-apiserver that provides access to the nested kube-apiserver.
-	if _, res, err := r.reconcileBashibleKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
-		return res, err
-	}
-
 	// 2. Build a nested client that provides access to the nested cluster.
 	nestedClient, err := bashibleapiserver.BuildNestedClient(adminSecret)
 	if err != nil {
@@ -159,23 +152,6 @@ func (r *reconciler) reconcileBashibleApiserver(
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *reconciler) reconcileBashibleKubeconfigSecret(
-	ctx context.Context,
-	vcp *controlplanev1alpha1.VirtualControlPlane,
-	apiserverService *corev1.Service,
-	pkiSecret *corev1.Secret,
-) (*corev1.Secret, reconcile.Result, error) {
-	return r.reconcileKubeconfigSecretFiles(
-		ctx,
-		vcp,
-		apiserverService,
-		pkiSecret,
-		constants.VirtualResourceName(bashibleKubeconfigSecretName, vcp.Name),
-		[]kubeconfig.File{kubeconfig.BashibleApiserver},
-		apiServerHTTPSURL(apiserverService.Spec.ClusterIP),
-	)
 }
 
 //go:embed bashible-apiserver/manifests/rbac.yaml
