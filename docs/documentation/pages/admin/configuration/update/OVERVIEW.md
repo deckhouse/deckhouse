@@ -16,6 +16,9 @@ For details on each channel, refer to the [Architecture](../../../architecture/u
 DKP does not support version downgrades.
 After a release is installed, rolling the platform back to an earlier minor or patch version is not possible.
 
+When [switching to a more stable channel](../../../architecture/updating.html#switching-to-a-more-stable-channel),
+the platform remains on the current release until a newer version becomes available on that channel.
+
 Rolling back by one minor version applies only to the
 [Kubernetes (control plane) version](../platform-scaling/control-plane/updating-and-versioning.html),
 not to the DKP version.

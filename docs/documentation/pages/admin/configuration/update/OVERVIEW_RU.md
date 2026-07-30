@@ -12,6 +12,8 @@ search: update overview, update management, platform updates, управлени
 {% alert level="warning" %}
 DKP не поддерживает понижение версии (downgrade). После установки релиза откат платформы на более раннюю минорную или патч-версию невозможен.
 
+При [переключении на более стабильный канал](../../../architecture/updating.html#процесс-переключения-на-более-стабильный-канал) платформа остаётся на текущем релизе до появления более новой версии на этом канале.
+
 Откат на одну минорную версию назад относится только к [версии Kubernetes (control plane)](../platform-scaling/control-plane/updating-and-versioning.html), а не к версии DKP.
 {% endalert %}
 
