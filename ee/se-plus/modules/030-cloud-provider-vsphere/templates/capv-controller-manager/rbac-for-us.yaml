@@ -29,12 +29,21 @@ rules:
   - configmaps
   - namespaces
   - nodes
-  - secrets
   - serviceaccounts
   - services
   verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - apiextensions.k8s.io
