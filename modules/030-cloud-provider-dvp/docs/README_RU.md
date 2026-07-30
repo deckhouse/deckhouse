@@ -15,5 +15,5 @@ description: "Интеграция Deckhouse Kubernetes Platform с платфо
 Если кластер был установлен со схемой DVPClusterConfiguration, необходима миграция на конфигурацию через ModuleConfig.
 Пока миграция не выполнена, может срабатывать алерт `D8CloudProviderDVPMigrationPending`, а обновление Deckhouse — блокироваться.
 
-Инструкция: [Как мигрировать облачный провайдер на конфигурацию через ModuleConfig](/products/kubernetes-platform/documentation/v1/faq.html#subsystem-cluster_infrastructure).
+Инструкция: [Как мигрировать облачный провайдер на конфигурацию через ModuleConfig](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
 {% endalert %}

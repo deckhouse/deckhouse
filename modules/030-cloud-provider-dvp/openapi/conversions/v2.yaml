@@ -19,14 +19,12 @@ conversions:
   - if .storage.parameters == null then .storage.parameters = {} end
 description:
   ru: |
-    Переход на новую схему ModuleConfig для `cloud-provider-dvp`.
     * Перенесите `provider.namespace` в `provider.parameters.namespace`.
     * Перенесите `zones` в `nodes.parameters.zones`.
     * Удалите `provider.kubeconfigDataBase64`. Kubeconfig хранится в секрете типа `cloud-provider.deckhouse.io/credentials`.
     * Задайте `nodes.parameters.layout` (по умолчанию — `Standard`).
     * Замените плейсхолдер в `nodes.parameters.sshPublicKey` на реальный публичный SSH-ключ.
   en: |
-    Migration to the new ModuleConfig schema for `cloud-provider-dvp`.
     * Move `provider.namespace` to `provider.parameters.namespace`.
     * Move `zones` to `nodes.parameters.zones`.
     * Delete `provider.kubeconfigDataBase64`. The kubeconfig is stored in a Secret of type `cloud-provider.deckhouse.io/credentials`.
