@@ -41,7 +41,7 @@ periodSeconds: 10
 {{- /* + hostNetwork (optional, default: `false`) — enables host networking for the Pod. */ -}}
 {{- /* + dnsPolicy (optional, default: `nil`) — Pod DNS policy; if not set, the field is omitted. */ -}}
 {{- /* + nodeSelectorStrategy (optional, default: `"master"`) — strategy passed to helm_lib_node_selector. */ -}}
-{{- /* + tolerationsStrategies (optional, default: `["any-node", "uninitialized"]`) — arguments passed to helm_lib_tolerations. */ -}}
+{{- /* + tolerationsStrategies (optional, default: `["any-node", "with-uninitialized"]`) — arguments passed to helm_lib_tolerations. */ -}}
 {{- /* + livenessProbe (optional, default: `{httpGet: {path: /healthz, port: 8081}, initialDelaySeconds: 15, periodSeconds: 20}`) — liveness probe configuration for the main container. */ -}}
 {{- /* + readinessProbe (optional, default: `{httpGet: {path: /readyz, port: 8081}, initialDelaySeconds: 5, periodSeconds: 10}`) — readiness probe configuration for the main container. */ -}}
 {{- /* + additionalArgs (optional, default: `[]`) — extra args for the main container. */ -}}
@@ -75,7 +75,7 @@ periodSeconds: 10
   {{- $hostNetwork := dig "hostNetwork" false $config -}}
   {{- $dnsPolicy := dig "dnsPolicy" nil $config -}}
   {{- $nodeSelectorStrategy := dig "nodeSelectorStrategy" "master" $config -}}
-  {{- $tolerationsStrategies := dig "tolerationsStrategies" (list "any-node" "uninitialized") $config -}}
+  {{- $tolerationsStrategies := dig "tolerationsStrategies" (list "any-node" "with-uninitialized") $config -}}
   {{- $livenessProbe := dig "livenessProbe" (include "capi_controller_manager_liveness_probe" $context | fromYaml) $config }}
   {{- $readinessProbe := dig "readinessProbe" (include "capi_controller_manager_readiness_probe" $context | fromYaml) $config }}
   {{- $additionalArgs := dig "additionalArgs" (list) $config -}}

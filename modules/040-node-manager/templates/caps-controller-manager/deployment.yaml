@@ -36,7 +36,7 @@
   {{- $_ := set $capsConfig "capiProviderName" "infrastructure-static" -}}
   {{- $_ := set $capsConfig "serviceAccountName" "caps-controller-manager" -}}
   {{- $_ := set $capsConfig "nodeSelectorStrategy" "master" -}}
-  {{- $_ := set $capsConfig "tolerationsStrategies" (list "any-node" "uninitialized") -}}
+  {{- $_ := set $capsConfig "tolerationsStrategies" (list "any-node" "with-uninitialized") -}}
   {{- $_ := set $capsConfig "terminationGracePeriodSeconds" 10 -}}
   {{- $_ := set $capsConfig "additionalArgs" (include "static_controller_manager_args" . | fromYamlArray) -}}
   {{- $_ := set $capsConfig "additionalPorts" (include "static_controller_manager_ports" . | fromYamlArray) -}}

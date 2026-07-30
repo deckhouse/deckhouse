@@ -36,7 +36,7 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
 {{- $_ := set $capiConfig "image" (include "helm_lib_module_image" (list . "capdvpControllerManager")) -}}
 {{- $_ := set $capiConfig "capiProviderName" "infrastructure-dvp" -}}
 {{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
-{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "uninitialized") -}}
+{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "with-uninitialized") -}}
 {{- $_ := set $capiConfig "additionalArgs" (include "capdvp_controller_manager_args" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalEnv" (include "capdvp_controller_manager_envs" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalPodAnnotations" (include "capdvp_controller_manager_pod_annotations" . | fromYaml) -}}
