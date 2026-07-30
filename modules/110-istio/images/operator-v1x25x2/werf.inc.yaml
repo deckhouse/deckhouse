@@ -4,19 +4,19 @@
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/operator/docker/Dockerfile.operator
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/operator/out/operator
   to: /usr/local/bin/operator
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/manifests
   to: /var/lib/istio/manifests
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/operator/resources
   to: /var/lib/sail-operator/resources
   after: setup
@@ -31,7 +31,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
 from: {{ index $.Images "builder/golang" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/operator
   to: /src/operator
   before: install
@@ -57,7 +57,7 @@ shell:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches

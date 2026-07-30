@@ -6,7 +6,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -34,7 +34,7 @@ git:
     setup:
     - '**/*'
 import:
-- image: common/kubernetes-artifact-{{ $image_version }}
+- from: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubelet
   to: /kubelet
   before: setup
@@ -57,7 +57,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
   add: /out
   to: /
   includePaths:
@@ -76,7 +76,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
 final: false
 from: {{ index $.Images "builder/distroless" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
   add: /kubelet
   to: /sysext/opt/deckhouse/bin/kubelet
   before: install

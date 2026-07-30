@@ -8,19 +8,19 @@ git:
   to: /patch-modules-list.sh
 import:
 # Static files of embedded modules
-- image: {{ .ModuleName }}/modules-embedded/static-artifact
+- from: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /app/_site/
   to: /embedded-modules
   before: setup
   includePaths:
   - en
   - ru
-- image: {{ .ModuleName }}/modules-embedded/static-artifact
+- from: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /srv/jekyll-data/documentation/_data/modules/embedded_modules_list.json
   to: /embedded-modules/embedded_modules_list.json
   before: setup
 # Static files of documentation
-- image: {{ .ModuleName }}/{{ .ImageName }}/static
+- from: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site
   to: /documentation
   before: setup

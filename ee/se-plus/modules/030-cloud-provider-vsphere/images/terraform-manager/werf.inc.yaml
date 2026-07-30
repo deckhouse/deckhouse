@@ -16,7 +16,7 @@ git:
     install:
     - '**/*'
 import:
-- image: terraform-provider-vsphere
+- from: terraform-provider-vsphere
   add: /terraform-provider-vsphere
   to: /terraform-manager/terraform-provider-vsphere
   before: setup
@@ -27,7 +27,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 fromCacheVersion: "2025-02-05.03"
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -52,7 +52,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

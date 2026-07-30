@@ -1,22 +1,22 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 imageSpec:
   config:
     entrypoint: ["/node-controller"]
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /node-controller
   to: /node-controller
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-crds-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-crds-artifact
   add: /crds
   to: /crds
   before: setup
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/src
@@ -49,11 +49,11 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /go_lib/dependency/k8s/drain
   to: /go_lib/dependency/k8s/drain
   before: install
@@ -71,13 +71,10 @@ shell:
   - chmod 0700 /node-controller
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-crds-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/crds
   to: /crds
   includePaths:
   - "*.yaml"
-  stageDependencies:
-    install:
-    - "*.yaml"

@@ -2,9 +2,9 @@
 {{- $version_common := "v0.5.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /dynamix-cloud-controller-manager
   to: /dynamix-cloud-controller-manager
   before: setup
@@ -14,7 +14,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 secrets:
 - id: CLOUD_PROVIDERS_SOURCE_REPO
   value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
@@ -34,7 +34,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

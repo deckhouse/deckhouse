@@ -17,7 +17,7 @@ git:
     install:
     - '**/*'
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /out
   to: /
   before: install

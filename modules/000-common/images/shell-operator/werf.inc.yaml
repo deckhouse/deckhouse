@@ -4,21 +4,21 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 final: false
 from: {{ index $.Images "base/distroless" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
   to: /shell-operator
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell_lib.sh
   to: /shell_lib.sh
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/frameworks
   to: /frameworks
   before: setup
 {{- $k8sVersion := index (index .k8sVersions 0) "kubectl" }}
 {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-- image: common/kubernetes-artifact-{{ $image_version }}
+- from: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
   before: setup
@@ -29,7 +29,7 @@ import:
   add: /usr/bin/bash
   to: /bin/bash
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/sh
   to: /bin/sh
   before: setup
@@ -184,7 +184,7 @@ final: false
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

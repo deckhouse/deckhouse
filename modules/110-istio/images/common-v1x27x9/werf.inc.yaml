@@ -4,7 +4,7 @@
 {{- $kialiVersion := printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-27" $ )) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -37,7 +37,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-kiali-frontend-build-artifact
 from: {{ index $.Images "builder/node-alpine-22.16" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/kiali/frontend
   to: /src/kiali/frontend
   before: install

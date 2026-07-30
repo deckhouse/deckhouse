@@ -1,9 +1,9 @@
 {{ $ratifyVersion := include "get_oss_version_by_id" (list "ratify" $ ) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /ratify
   to: /ratify
   before: setup
@@ -13,7 +13,7 @@ imageSpec:
     entrypoint: [ "/ratify" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -27,7 +27,7 @@ git:
     install:
     - '**/*'
   includePaths:
-  - ratify/*.yaml    
+  - ratify/*.yaml
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -38,15 +38,15 @@ shell:
   - git apply /patches/*.patch --verbose --allow-empty
   - rm -rf .git
   # check if module crds/ratify are the same as ratify crds
-  - | 
+  - |
     echo "Checking if module crds/ratify are the same as ratify crds"
-    diff -qr "/src/config/crd/bases" "/module_crds/ratify"   
+    diff -qr "/src/config/crd/bases" "/module_crds/ratify"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang-1.26" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

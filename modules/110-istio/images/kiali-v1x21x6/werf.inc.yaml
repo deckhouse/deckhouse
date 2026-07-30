@@ -5,13 +5,13 @@
 ---
 # Based on https://github.com/kiali/kiali/blob/v1.81.0/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
   to: /opt/kiali/kiali
   before: install
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-kiali-frontend-build-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-kiali-frontend-build-artifact
   add: /src/kial-frontend-assets/static
   to: /opt/kiali/console
   before: install
@@ -28,7 +28,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/kiali
   to: /src/kiali
   before: setup

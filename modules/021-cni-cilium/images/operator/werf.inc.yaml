@@ -6,7 +6,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/bin-cilium-src-artifact
+- from: {{ .ModuleName }}/bin-cilium-src-artifact
   add: /src
   to: /src
   before: install
@@ -38,9 +38,9 @@ shell:
   - rm -rf /src/cilium/vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /out/linux/amd64/usr/bin/cilium-operator
   to: /usr/bin/cilium-operator
   before: install

@@ -1,17 +1,17 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 imageSpec:
   config:
     entrypoint: ["/integrity-controller"]
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /integrity-controller
   to: /integrity-controller
   before: setup
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/src
@@ -33,7 +33,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

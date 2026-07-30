@@ -7,7 +7,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -36,7 +36,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -77,7 +77,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
@@ -106,7 +106,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
   add: /out
   to: /
   includePaths:
@@ -125,7 +125,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
 final: false
 from: {{ index $.Images "builder/distroless" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
   add: /
   to: /sysext/opt/deckhouse/bin
   includePaths:

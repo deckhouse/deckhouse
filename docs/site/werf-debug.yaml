@@ -80,7 +80,7 @@ git:
       install: 'go.mod'
       setup: '**/*'
 import:
-  - image: web-static
+  - from: web-static
     add: /app/_site
     to: /app/root
     before: setup
@@ -97,7 +97,7 @@ shell:
       {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
       EOD
 import:
-- image: web-static
+- from: web-static
   add: /app/_site
   to: /app
   before: setup

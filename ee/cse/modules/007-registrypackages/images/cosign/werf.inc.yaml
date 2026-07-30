@@ -3,7 +3,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /
   to: /
   includePaths:
@@ -27,7 +27,7 @@ git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /
 import:
-- image: {{ index $.Images "tools/cosign" }} 
+- from: {{ index $.Images "tools/cosign" }}
   add: /usr/bin/cosign
   to: /cosign
   before: install

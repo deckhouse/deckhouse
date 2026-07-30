@@ -1,12 +1,12 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/kube-rbac-proxy
+from: common/kube-rbac-proxy
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
   add: /relocate/bin/true
   to: /bin/true
   before: setup
-- image: common/pause
+- from: common/pause
   add: /pause
   to: /pause
   before: install
@@ -18,7 +18,7 @@ imageSpec:
 {{- $binaries := "/bin/true" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
-fromImage: common/relocate-artifact
+from: common/relocate-artifact
 final: false
 shell:
  setup:

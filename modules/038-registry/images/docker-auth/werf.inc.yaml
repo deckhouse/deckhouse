@@ -1,7 +1,7 @@
 {{- $version := "v1.14.0-deckhouse.7"}}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -24,7 +24,7 @@ image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
     add: /src/docker_auth
     before: install
 mount:
@@ -44,24 +44,24 @@ shell:
     - mv ./auth_server /auth_server
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+- from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
   add: /src/scripts
   to: /
   includePaths:
   - install
   - uninstall
   before: setup
-- image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+- from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
   add: /src/tmp
   to: /tmp
   before: setup
-- image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+- from: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
   add: /auth_server
   to: /auth_server
   before: setup
-- image: common/pause
+- from: common/pause
   add: /pause
   to: /pause
   before: setup

@@ -3,7 +3,7 @@
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (builder stage)
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -23,14 +23,14 @@ shell:
   - rm -rf /src/cilium/.git
 ---
 image: {{ .ModuleName }}/cilium-artifact
-fromImage: {{ .ModuleName }}/base-cilium-dev
+from: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
-- image: {{ .ModuleName }}/llvm-artifact
+- from: {{ .ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
   before: install
@@ -38,15 +38,15 @@ import:
   - clang
   - llc
   - llvm-objcopy
-- image: {{ .ModuleName }}/bpftool-artifact
+- from: {{ .ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- image: {{ .ModuleName }}/cni-plugins-artifact
+- from: {{ .ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
-- image: {{ .ModuleName }}/gops-artifact
+- from: {{ .ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install

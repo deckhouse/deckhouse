@@ -4,15 +4,15 @@
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/operator/docker/Dockerfile.operator
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/operator
   to: /usr/local/bin/operator
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/manifests
   to: /var/lib/istio/manifests
   after: setup
@@ -31,7 +31,7 @@ git:
     install:
     - '**/*'
 import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
   before: install

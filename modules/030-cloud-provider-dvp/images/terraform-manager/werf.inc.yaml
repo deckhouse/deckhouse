@@ -8,31 +8,22 @@ git:
   excludePaths:
   - '**/terraform_versions.yml'
   - '**/plan_rules.yml'
-  stageDependencies:
-    install:
-    - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
-  stageDependencies:
-    install:
-    - '**/*'
 # plan_rules.yml must sit next to terraform_versions.yml: dhctl reads the pair
 # straight from the unpacked bundle, and the rules describe that versions file.
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/plan_rules.yml
   to: /terraform-manager/plan_rules.yml
-  stageDependencies:
-    install:
-    - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/openapi/
   to: /candi/module-openapi
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/crds/instance_class.yaml
   to: /crd/instance_class.yaml
 import:
-- image: terraform-provider-kubernetes
+- from: terraform-provider-kubernetes
   add: /terraform-provider-kubernetes
   to: /terraform-manager/terraform-provider-kubernetes
   before: setup
-- image: {{ $.ModuleName }}/validator
+- from: {{ $.ModuleName }}/validator
   add: /dhctl-provider-dvp
   to: /validator
   before: setup
@@ -40,7 +31,7 @@ import:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -66,7 +57,7 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
