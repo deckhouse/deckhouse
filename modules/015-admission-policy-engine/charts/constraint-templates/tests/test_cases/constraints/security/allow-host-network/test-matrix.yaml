@@ -1564,11 +1564,12 @@ spec:
             base: admissionDeployment
             merge:
               metadata:
-                labels:
-                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-tcp-25000
                 name: controller-allowed-by-spe-on-top-level-metadata
               spec:
                 template:
+                  metadata:
+                    labels:
+                      security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-tcp-25000
                   spec:
                     containers:
                       - image: nginx

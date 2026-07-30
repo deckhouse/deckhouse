@@ -548,11 +548,12 @@ spec:
             base: admissionDeployment
             merge:
               metadata:
-                labels:
-                  security.deckhouse.io/security-policy-exception: allow-hostpid-true
                 name: controller-allowed-by-spe-on-top-level-metadata
               spec:
                 template:
+                  metadata:
+                    labels:
+                      security.deckhouse.io/security-policy-exception: allow-hostpid-true
                   spec:
                     hostPID: true
  
