@@ -365,5 +365,100 @@ class TestClusterRolesValidation(unittest.TestCase):
         tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
 
 
+DELEGATABLE = {"rbac.deckhouse.io/kind": "custom-role", "rbac.deckhouse.io/delegatable": "true"}
+CAPABILITY = "rbac.deckhouse.io/capability"
+
+DELEGATABLE_DENY_MSG = (
+    'ClusterRole "d8:custom:project:role-a" must not be labeled "rbac.deckhouse.io/delegatable: true": '
+    "a role bindable inside a project may aggregate namespace and project capabilities only."
+)
+
+
+class TestDelegatableCustomRole(unittest.TestCase):
+    """
+    The delegatable label is what lets a role reach a project namespace, so it may only be claimed
+    by a role assembled from namespace/project capabilities. The lineage check next to it does not
+    cover this: it reads the "aggregate-to-<lineage>-as" selectors, while a role built from
+    individual capabilities selects them by the capability label instead.
+    """
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def _run(self, selector_values, labels=None):
+        return self.run_hook(
+            binding_context(
+                "d8:custom:project:role-a",
+                labels=labels if labels is not None else DELEGATABLE,
+                selector_labels=[{CAPABILITY: value} for value in selector_values],
+            )
+        )
+
+    def test_namespace_capabilities_may_be_delegatable(self):
+        out = self._run(["namespace-capability.kubernetes.view_logs", "namespace-capability.cert-manager.view"])
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_project_capabilities_may_be_delegatable(self):
+        out = self._run(["project-capability.multitenancy-manager.view"])
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_custom_tenant_capabilities_may_be_delegatable(self):
+        out = self._run(["custom.project-capability.extra-a1b2c3", "custom.namespace-capability.extra-d4e5f6"])
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_system_capability_may_not_be_delegatable(self):
+        out = self._run(["namespace-capability.kubernetes.view_logs", "system-capability.deckhouse.manage"])
+        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+
+    def test_subsystem_capability_may_not_be_delegatable(self):
+        out = self._run(["subsystem-capability.security.view"])
+        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+
+    def test_custom_system_capability_may_not_be_delegatable(self):
+        out = self._run(["custom.system-capability.hh-bqjxg0"])
+        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+
+    def test_unreadable_capability_value_may_not_be_delegatable(self):
+        out = self._run(["whatever"])
+        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+
+    def test_tenant_lineage_selector_may_be_delegatable(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:project:role-a",
+                labels=DELEGATABLE,
+                selector_labels=[{"rbac.deckhouse.io/aggregate-to-namespace-as": "admin"}],
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_system_lineage_selector_may_not_be_delegatable(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:project:role-a",
+                labels=DELEGATABLE,
+                selector_labels=[{"rbac.deckhouse.io/aggregate-to-security-as": "viewer"}],
+            )
+        )
+        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+
+    def test_selector_by_another_label_may_not_be_delegatable(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:project:role-a",
+                labels=DELEGATABLE,
+                selector_labels=[{"some.other/label": "value"}],
+            )
+        )
+        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+
+    def test_same_role_without_the_label_is_untouched(self):
+        out = self._run(
+            ["system-capability.deckhouse.manage"],
+            labels={"rbac.deckhouse.io/kind": "custom-role"},
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+
 if __name__ == "__main__":
     unittest.main()
