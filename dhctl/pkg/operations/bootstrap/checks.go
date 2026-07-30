@@ -22,24 +22,37 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
+
+// ErrClusterUUIDCheckTransient marks a transport/API-level failure while reading the
+// cluster-UUID configmap, as opposed to the permanent business-rule violations below
+// (empty or mismatched UUID) that fail identically on every attempt.
+var ErrClusterUUIDCheckTransient = fmt.Errorf("cluster UUID check: transient error, may succeed on retry")
 
 func CheckPreventBreakAnotherBootstrappedCluster(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	config *config.DeckhouseInstaller,
 ) error {
-	return retry.NewSilentLoop("Check to prevent breaking another bootstrapped cluster", 45, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Check to prevent breaking another bootstrapped cluster"),
+		retry.WithAttempts(45),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(ErrClusterUUIDCheckTransient),
+	)
+
+	return retry.NewSilentLoopWithParams(loopParams).RunContext(ctx, func() error {
 		var uuidInCluster string
 		cmInCluster, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(ctx, manifests.ClusterUUIDCm, metav1.GetOptions{})
 		if err != nil && !apierrors.IsNotFound(err) {
-			return err
+			return fmt.Errorf("%w: %w", ErrClusterUUIDCheckTransient, err)
 		}
 
 		if err == nil {

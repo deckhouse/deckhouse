@@ -25,7 +25,7 @@ each has its own primary resource, watches and reconcile loop. All share the
 |---|---|
 | **Primary** | `NodeGroup` |
 | **Watches** | MCM `MachineDeployment` (v1alpha1) + CAPI `MachineDeployment` (v1beta2), both mapped to a NodeGroup by the `node-group` label |
-| **Reads** | cloud-provider Secret `d8-node-manager-cloud-provider`, `d8-cluster-configuration`, ConfigMap `d8-cluster-uuid` (see [Data source keys](#data-source-keys)) |
+| **Reads** | `global` ModuleConfig (prefix), cloud-provider Secret `d8-node-manager-cloud-provider`, `d8-cluster-configuration`, ConfigMap `d8-cluster-uuid` (see [Data source keys](#data-source-keys)) |
 | **Output** | one or more `MachineDeployment` per NodeGroup (CAPI or MCM) |
 
 Reconciles the desired set of MachineDeployments (or MCM replica counts) for one NodeGroup.
@@ -207,7 +207,7 @@ Referenced by `capi-machine-deployment` and `capi-cluster-resources`:
 | Value | Resource | Key |
 |-------|----------|-----|
 | `clusterUUID` | ConfigMap `d8-cluster-uuid` (kube-system) | `cluster-uuid` |
-| `instancePrefix` | Secret `d8-cluster-configuration` (kube-system) | `cluster-configuration.yaml` → `cloud.prefix` |
+| `instancePrefix` | `global` ModuleConfig `spec.settings.prefix`, else Secret `d8-cluster-configuration` (kube-system) | `spec.settings.prefix`; fallback `cluster-configuration.yaml` → `cloud.prefix` |
 | `capiClusterName`, `capiClusterKind`, `capiClusterAPIVersion` | Secret `d8-node-manager-cloud-provider` (kube-system) | same keys |
 | `capiMachineTemplateKind`, `capiMachineTemplateAPIVersion` | same Secret | same keys |
 | `zones` | Secret `d8-node-manager-cloud-provider` or NodeGroup | `zones` / `spec.cloudInstances.zones` |

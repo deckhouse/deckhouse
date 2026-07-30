@@ -154,6 +154,48 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
+	// The module is enabled by the module manager, so deploying its release also
+	// creates the ModuleDocumentation resource.
+	suite.Run("module documentation created", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("module-documentation-create.yaml"))
+
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+	})
+
+	// A ModuleDocumentation left over from the previous release must be updated
+	// to the version, checksum and path of the newly deployed release.
+	suite.Run("module documentation updated", func() {
+		suite.setupReleaseController(suite.fetchTestFileData("module-documentation-update.yaml"))
+
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+	})
+
+	// The module is served by its embedded copy (source == Embedded, the copy is
+	// still on disk), so the release is only staged and no ModuleDocumentation is
+	// created for it - documentation for embedded modules is handled elsewhere.
+	suite.Run("module documentation skipped for embedded module", func() {
+		suite.setupReleaseController(
+			suite.fetchTestFileData("module-documentation-embedded.yaml"),
+			withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return true },
+			}),
+		)
+
+		repeatTest(func() {
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+	})
+
 	// The module was still embedded but its embedded copy is no longer on disk
 	// (IsEmbeddedPresent == false), so the release is activated (Install) and the
 	// active source is switched off the "Embedded" sentinel to the real source.
@@ -1031,6 +1073,12 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) clien
 		require.NoError(suite.T(), err)
 		obj = module
 
+	case v1alpha1.ModuleDocumentationGVK.Kind:
+		documentation := new(v1alpha1.ModuleDocumentation)
+		err = yaml.Unmarshal(raw, documentation)
+		require.NoError(suite.T(), err)
+		obj = documentation
+
 	case "Secret":
 		secret := new(corev1.Secret)
 		err = yaml.Unmarshal(raw, secret)
@@ -1065,6 +1113,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"),
 			v1alpha1.SchemeGroupVersion.WithKind("Module"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleDocumentation"),
 		},
 		ObjectNormalizers: []reconcilertest.ObjectNormalizer{stripDeletionTimestamp},
 	})

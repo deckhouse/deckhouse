@@ -2,6 +2,7 @@
   "monitoring/prometheus-rules/caps-nodes.tpl"
   "monitoring/prometheus-rules/cloud-data-discovery.tpl"
   "monitoring/prometheus-rules/migrate-to-tofu.yaml"
+  "monitoring/prometheus-rules/mc-migration.yaml"
   "monitoring/prometheus-rules/node-group-deprecate.yaml"
   "monitoring/prometheus-rules/node-group.tpl"
   "monitoring/prometheus-rules/node-unmanaged.tpl"
