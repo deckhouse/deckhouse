@@ -162,6 +162,46 @@ read:
     - batch/cronjobs
     - batch/jobs
     - configmaps
+    - connection.gatekeeper.sh/connections
+    - constraints.gatekeeper.sh/*
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
+    - deckhouse.io/applications
+    - deckhouse.io/awsinstanceclasses
+    - deckhouse.io/azureinstanceclasses
+    - deckhouse.io/deckhousereleases
+    - deckhouse.io/deschedulers
+    - deckhouse.io/dexauthenticators
+    - deckhouse.io/dexclients
+    - deckhouse.io/dvpinstanceclasses
+    - deckhouse.io/dynamixinstanceclasses
+    - deckhouse.io/gcpinstanceclasses
+    - deckhouse.io/huaweicloudinstanceclasses
+    - deckhouse.io/hubblemonitoringconfigs
+    - deckhouse.io/instances
+    - deckhouse.io/keepalivedinstances
+    - deckhouse.io/localpathprovisioners
+    - deckhouse.io/moduledocumentations
+    - deckhouse.io/modulepulloverrides
+    - deckhouse.io/modulereleases
+    - deckhouse.io/modules
+    - deckhouse.io/modulesettingsdefinitions
+    - deckhouse.io/modulesources
+    - deckhouse.io/moduleupdatepolicies
+    - deckhouse.io/nodegroups
+    - deckhouse.io/openstackinstanceclasses
+    - deckhouse.io/operationpolicies
+    - deckhouse.io/packagerepositories
+    - deckhouse.io/packagerepositoryoperations
+    - deckhouse.io/projects
+    - deckhouse.io/projecttemplates
+    - deckhouse.io/securitypolicies
+    - deckhouse.io/securitypolicyexceptions
+    - deckhouse.io/vcdaffinityrules
+    - deckhouse.io/vcdinstanceclasses
+    - deckhouse.io/vsphereinstanceclasses
+    - deckhouse.io/yandexinstanceclasses
+    - deckhouse.io/zvirtinstanceclasses
     - discovery.k8s.io/endpointslices
     - endpoints
     - events
