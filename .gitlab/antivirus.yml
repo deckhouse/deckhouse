@@ -74,9 +74,7 @@
     echo "scan_id is empty, nothing to clean up"
     exit 0
   fi
-  if [[ -d "${SCAN_DIR}/${SCAN_ID}" ]]; then
-    rm -rf "${SCAN_DIR}/${SCAN_ID}" || true
-  fi
+  docker exec "${CONTAINER_NAME}" rm -rf "scans/${SCAN_ID}" || true
 
 .antivirus_base:
   stage: test
