@@ -44,12 +44,9 @@
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse
     TEST_TIMEOUT: 15m
-    HOME: "/tmp"
-    # Image GOPATH (/go) is root-owned; unprivileged jobs need a writable one
-    # for the module cache, the checksum-db cache and `go install` output.
-    GOPATH: ${HOME}/go
-    GOMODCACHE: ${HOME}/go/pkg/mod
-    GOCACHE: ${HOME}/.cache/go-build
+    GOPATH: ${CI_PROJECT_DIR}/.go
+    GOMODCACHE: ${CI_PROJECT_DIR}/.go/pkg/mod
+    GOCACHE: ${CI_PROJECT_DIR}/.cache/go-build
     # username/password form — no base64; if pull fails, switch to "auth" field.
     DOCKER_AUTH_CONFIG: "{\"auths\":{\"${DECKHOUSE_DEV_REGISTRY_HOST}\":{\"username\":\"${DECKHOUSE_DEV_REGISTRY_USER}\",\"password\":\"${DECKHOUSE_DEV_REGISTRY_PASSWORD}\"}}}"
   id_tokens:
