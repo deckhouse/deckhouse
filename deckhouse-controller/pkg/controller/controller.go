@@ -303,6 +303,11 @@ func NewDeckhouseController(
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
+	pkgRuntime, err := packageruntime.New(runtimeManager.GetClient(), edition, operator.ModuleManager, dc, operator.MetricStorage, logger)
+	if err != nil {
+		return nil, fmt.Errorf("create package operator: %w", err)
+	}
+
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
 
@@ -314,7 +319,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, conversionsStore, edition, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
+	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, pkgRuntime, conversionsStore, edition, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
@@ -342,11 +347,6 @@ func NewDeckhouseController(
 	err = objectkeeper.RegisterController(runtimeManager, dc, logger.Named("objectkeeper-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
-	}
-
-	pkgRuntime, err := packageruntime.New(runtimeManager.GetClient(), edition, operator.ModuleManager, dc, operator.MetricStorage, logger)
-	if err != nil {
-		return nil, fmt.Errorf("create package operator: %w", err)
 	}
 
 	// package should not run before converge done
