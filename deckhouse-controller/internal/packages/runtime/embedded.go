@@ -137,10 +137,6 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 				return fmt.Errorf("new module by config: %w", err)
 			}
 
-			if module.GetName() == "node-manager" {
-				return nil
-			}
-
 			// lifecycle.Store is not thread-safe, so guard it (and the module map)
 			// with r.mu; status.Service is internally synchronized.
 			r.mu.Lock()
@@ -154,10 +150,6 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 			r.status.SetConditionTrue(module.GetName(), status.ConditionReadyOnFilesystem)
 			r.status.SetConditionTrue(module.GetName(), status.ConditionLoaded)
 			r.status.UpdateVersion(module.GetName(), module.GetVersion().String())
-
-			if err := r.scheduler.AddNode(module); err != nil {
-				return fmt.Errorf("add node to scheduler: %w", err)
-			}
 
 			return nil
 		})
