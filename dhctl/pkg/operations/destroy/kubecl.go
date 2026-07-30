@@ -45,7 +45,7 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 	if err != nil {
 		return nil, err
 	}
-	return &client.KubernetesClient{KubeClient: kubeCl}, nil
+	return client.FromProvider(p.kubeProvider, kubeCl), nil
 }
 
 func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {

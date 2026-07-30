@@ -77,7 +77,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		if err != nil {
 			return err
 		}
-		kubeCl := &client.KubernetesClient{KubeClient: kube}
+		kubeCl := client.FromProvider(kubeProvider, kube)
 
 		confirm := func(l *v1.Lease) error {
 			if opts.Global.SanityCheck {

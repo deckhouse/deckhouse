@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	dh_config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -121,6 +122,8 @@ func SecretEdit(
 				retry.WithWhitelist(errSecretEditTransient),
 			)
 
+			ctx = kubeCl.AuthModeCtx(ctx)
+
 			return retry.NewLoopWithParams(loopParams).
 				Run(func() error {
 					_, err = kubeCl.CoreV1().Secrets(namespace).Update(ctx, config, metav1.UpdateOptions{})
@@ -128,10 +131,10 @@ func SecretEdit(
 					case errors.IsNotFound(err):
 						dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating new Secret %s in namespace %s", secret, namespace))
 						if _, err = kubeCl.CoreV1().Secrets(namespace).Create(ctx, config, metav1.CreateOptions{}); err != nil {
-							return wrapSecretEditErr(err)
+							return wrapSecretEditErr(ctx, err)
 						}
 					case err != nil:
-						return wrapSecretEditErr(err)
+						return wrapSecretEditErr(ctx, err)
 					}
 
 					if editOpts.SanityCheck {
@@ -144,7 +147,7 @@ func SecretEdit(
 					}
 
 					if err != nil {
-						return wrapSecretEditErr(err)
+						return wrapSecretEditErr(ctx, err)
 					}
 
 					return nil
@@ -154,8 +157,8 @@ func SecretEdit(
 
 // wrapSecretEditErr tags err as transient unless it is a permanent authorization/admission
 // failure, so the retry loop can whitelist errSecretEditTransient.
-func wrapSecretEditErr(err error) error {
-	if errors.IsForbidden(err) || errors.IsUnauthorized(err) || errors.IsInvalid(err) {
+func wrapSecretEditErr(ctx context.Context, err error) error {
+	if kubeerrors.IsPermanentAuthError(ctx, err) || errors.IsInvalid(err) {
 		return err
 	}
 	return fmt.Errorf("%w: %w", errSecretEditTransient, err)

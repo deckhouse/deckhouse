@@ -84,6 +84,20 @@ type KubeClientProviderWithCtx interface {
 	KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error)
 }
 
+// AuthModeCtx returns ctx carrying the auth mode of the client getter hands out, for retry loops
+// that only hold a getter and resolve the client per attempt. Providers cache their client, so
+// this costs nothing beyond the connection the loop is about to use anyway. When the client cannot
+// be obtained yet the context is returned unchanged, which keeps auth failures retriable — the
+// loop's first attempt will report the real reason.
+func AuthModeCtx(ctx context.Context, getter KubeClientProviderWithCtx) context.Context {
+	kubeCl, err := getter.KubeClientCtx(ctx)
+	if err != nil || kubeCl == nil {
+		return ctx
+	}
+
+	return kubeCl.AuthModeCtx(ctx)
+}
+
 var (
 	_ KubeClientProvider        = &SimpleKubeClientGetter{}
 	_ KubeClientProviderWithCtx = &SimpleKubeClientGetter{}

@@ -39,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -119,13 +120,15 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 		retry.WithWhitelist(errInfraStateListTransient),
 	)
 
+	ctx = kubeCl.AuthModeCtx(ctx)
+
 	err = retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		timeoutCtx, cancel := defaultRequestTimeoutCtx(ctx)
 		defer cancel()
 
 		nodeStateSecrets, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).List(timeoutCtx, listOpts)
 		if err != nil {
-			if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+			if kubeerrors.IsPermanentAuthError(ctx, err) {
 				// A permission failure will not resolve by retrying.
 				return err
 			}
@@ -324,6 +327,8 @@ func SaveNodeInfrastructureState(
 		retry.WithWhitelist(actions.ErrManifestTaskTransient),
 	)
 
+	ctx = kubeCl.AuthModeCtx(ctx)
+
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
 }
 
@@ -393,6 +398,8 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		retry.WithWhitelist(actions.ErrManifestTaskTransient),
 	)
 
+	ctx = kubeCl.AuthModeCtx(ctx)
+
 	return retry.NewLoopWithParams(loopParams).RunContext(
 		ctx,
 		func() error {
@@ -443,6 +450,8 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		retry.WithWait(1*time.Second),
 		retry.WithWhitelist(actions.ErrManifestTaskTransient),
 	)
+
+	ctx = kubeCl.AuthModeCtx(ctx)
 
 	err := retry.NewLoopWithParams(loopParams).
 		RunContext(

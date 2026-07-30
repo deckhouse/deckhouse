@@ -118,7 +118,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
-			kubeCl := &client.KubernetesClient{KubeClient: kube}
+			kubeCl := client.FromProvider(kubeProvider, kube)
 
 			return deckhouse.WaitForReadiness(ctx, kubeCl, opts.Bootstrap.DeckhouseTimeout)
 		})

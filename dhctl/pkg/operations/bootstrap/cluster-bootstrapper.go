@@ -718,7 +718,7 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 		BeforeDeckhouseTask: func() error {
 			return createResources(
 				ctx,
-				&client.KubernetesClient{KubeClient: kubeCl},
+				client.FromProvider(b.KubeProvider, kubeCl),
 				bctx.resourcesToCreateBefore,
 				nil,
 				true,
@@ -729,7 +729,7 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 		DeckhouseTimeout: b.Options.Bootstrap.DeckhouseTimeout,
 	}
 
-	installDeckhouseResult, err := InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, bctx.deckhouseInstallConfig, installParams)
+	installDeckhouseResult, err := InstallDeckhouse(ctx, client.FromProvider(b.KubeProvider, kubeCl), bctx.deckhouseInstallConfig, installParams)
 	if err != nil {
 		return err
 	}
@@ -737,7 +737,7 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallDeckhouseSubPhaseInstall)
 
-	err = WaitForFirstMasterNodeBecomeReady(ctx, &client.KubernetesClient{KubeClient: kubeCl})
+	err = WaitForFirstMasterNodeBecomeReady(ctx, client.FromProvider(b.KubeProvider, kubeCl))
 	if err != nil {
 		return err
 	}
@@ -769,7 +769,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 
 			return lock.NewInLockLocalRunner(
 				ctx,
-				kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}),
+				kubernetes.NewSimpleKubeClientGetter(client.FromProvider(b.KubeProvider, kubeCl)),
 				"local-bootstraper",
 				b.Options.SSH.User,
 			).Run(ctx, action)
@@ -778,7 +778,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 		err = localBootstraper(func() error {
 			return bootstrapAdditionalNodesForCloudCluster(
 				ctx,
-				&client.KubernetesClient{KubeClient: kubeCl},
+				client.FromProvider(b.KubeProvider, kubeCl),
 				bctx.metaConfig,
 				bctx.masterAddressesForSSH,
 				b.InfrastructureContext,
@@ -798,7 +798,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 		return err
 	}
 
-	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl})).IsReadyAll(ctx); err != nil {
+	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(client.FromProvider(b.KubeProvider, kubeCl))).IsReadyAll(ctx); err != nil {
 		return err
 	}
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallAdditionalMastersAndStaticNodesSubPhaseWait)
@@ -820,7 +820,7 @@ func (b *ClusterBootstrapper) bootstrapCreateResources(ctx context.Context, bctx
 
 	err = createResources(
 		ctx,
-		&client.KubernetesClient{KubeClient: kubeCl},
+		client.FromProvider(b.KubeProvider, kubeCl),
 		bctx.resourcesToCreateAfter,
 		bctx.installDeckhouseResult,
 		false,
@@ -866,7 +866,7 @@ func (b *ClusterBootstrapper) bootstrapFinalize(ctx context.Context, bctx *boots
 		return err
 	}
 
-	if err := RunPostInstallTasks(ctx, &client.KubernetesClient{KubeClient: kubeCl}, bctx.installDeckhouseResult); err != nil {
+	if err := RunPostInstallTasks(ctx, client.FromProvider(b.KubeProvider, kubeCl), bctx.installDeckhouseResult); err != nil {
 		return err
 	}
 
@@ -1121,7 +1121,7 @@ func createResources(
 					retry.WithWhitelist(actions.ErrManifestTaskTransient),
 				)
 
-				return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+				return retry.NewLoopWithParams(loopParams).RunContext(kubeCl.AuthModeCtx(ctx), func() error {
 					return task.Do(kubeCl)
 				})
 			}

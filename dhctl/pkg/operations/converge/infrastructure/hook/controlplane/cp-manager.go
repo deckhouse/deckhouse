@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -80,6 +81,8 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 		retry.WithWhitelist(ErrControlPlaneReadinessCheckTransient),
 	)
 
+	ctx = kubeClient.AuthModeCtx(ctx)
+
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		msg, err := checkControlPlaneNodesReady(ctx, kubeClient)
 
@@ -125,9 +128,11 @@ func checkControlPlaneNodesReady(ctx context.Context, kubeClient client.KubeClie
 		LabelSelector: "node.deckhouse.io/group=master",
 	})
 	if err != nil {
-		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+		if kubeerrors.IsPermanentAuthError(ctx, err) {
 			// A permission failure will not resolve by retrying: leave it untagged
 			// so the caller's whitelist stops the loop instead of exhausting attempts.
+			// Auth failures a restarting apiserver produces (impersonation denials and
+			// friends) are not permanent and fall through to the transient branch.
 			return "", fmt.Errorf("get nodes count: %w", err)
 		}
 		return "", fmt.Errorf("%w: get nodes count: %w", ErrControlPlaneReadinessCheckTransient, err)
@@ -186,7 +191,7 @@ func getControlPlaneNodeConditions(ctx context.Context, kubeClient client.KubeCl
 		Resource: "controlplanenodes",
 	}).Namespace("kube-system").Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+		if kubeerrors.IsPermanentAuthError(ctx, err) {
 			// A permission failure will not resolve by retrying: leave it untagged
 			// so the caller's whitelist stops the loop instead of exhausting attempts.
 			return nil, fmt.Errorf("get ControlPlaneNode %s: %w", nodeName, err)

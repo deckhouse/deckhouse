@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 )
 
@@ -78,12 +79,14 @@ func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*ima
 		retry.WithWhitelist(ErrRegistryDataTransient),
 	)
 
+	ctx = kubeCl.AuthModeCtx(ctx)
+
 	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		secret, err := kubeCl.CoreV1().
 			Secrets(d8RppSecretNamespace).
 			Get(ctx, d8RppSecretName, metav1.GetOptions{})
 		if err != nil {
-			if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+			if kubeerrors.IsPermanentAuthError(ctx, err) {
 				return err
 			}
 			return fmt.Errorf("%w: %w", ErrRegistryDataTransient, err)

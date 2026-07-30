@@ -41,6 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 )
 
@@ -163,6 +164,8 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 		retry.WithWhitelist(errCreateNodeGroupTransient),
 	)
 
+	ctx = kubeCl.AuthModeCtx(ctx)
+
 	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			res, err := kubeCl.Dynamic().
@@ -183,7 +186,7 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 					Resource(nodeGroupResource).
 					Patch(ctx, doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 				if err != nil {
-					if errors.IsForbidden(err) || errors.IsUnauthorized(err) {
+					if kubeerrors.IsPermanentAuthError(ctx, err) {
 						return err
 					}
 					return fmt.Errorf("%w: %w", errCreateNodeGroupTransient, err)
@@ -192,7 +195,7 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 				return nil
 			}
 
-			if errors.IsForbidden(err) || errors.IsUnauthorized(err) {
+			if kubeerrors.IsPermanentAuthError(ctx, err) {
 				return err
 			}
 			return fmt.Errorf("%w: %w", errCreateNodeGroupTransient, err)

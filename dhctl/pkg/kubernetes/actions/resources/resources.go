@@ -262,6 +262,8 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 		retry.WithWhitelist(actions.ErrManifestTaskTransient),
 	)
 
+	ctx = c.kubeCl.AuthModeCtx(ctx)
+
 	return retry.NewSilentLoopWithParams(loopParams).RunContext(ctx, func() error {
 		gvr, docCopy := resourceToGVR(resource, apires)
 		namespace := docCopy.GetNamespace()
@@ -312,6 +314,8 @@ func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfig
 		retry.WithWait(1*time.Second),
 		retry.WithWhitelist(actions.ErrManifestTaskTransient),
 	)
+
+	ctx = c.kubeCl.AuthModeCtx(ctx)
 
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		return task.Do(c.kubeCl)

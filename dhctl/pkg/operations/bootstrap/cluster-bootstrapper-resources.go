@@ -64,12 +64,12 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 				return err
 			}
 
-			checkers, err := resources.GetCheckers(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, nil)
+			checkers, err := resources.GetCheckers(ctx, client.FromProvider(b.KubeProvider, kubeCl), resourcesToCreate, nil)
 			if err != nil {
 				return err
 			}
 
-			return resources.CreateResourcesLoop(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, checkers, nil, b.Options.Bootstrap.ResourcesTimeout)
+			return resources.CreateResourcesLoop(ctx, client.FromProvider(b.KubeProvider, kubeCl), resourcesToCreate, checkers, nil, b.Options.Bootstrap.ResourcesTimeout)
 		})
 	}
 

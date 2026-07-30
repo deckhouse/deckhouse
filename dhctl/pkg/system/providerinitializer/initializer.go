@@ -29,6 +29,7 @@ import (
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
@@ -135,12 +136,16 @@ func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) libcon.Kub
 		return nil
 	}
 
+	// An empty kube.Config names no credentials, so this provider connects the default way:
+	// an SSH tunnel to the impersonating kubectl proxy on a master.
 	cfg := &kube.Config{}
 	runnerInterface, err := provider.GetRunnerInterface(ctx, cfg, i.baseProviderSettings, i)
 	if err != nil {
 		return nil
 	}
-	return provider.NewDefaultKubeProvider(i.baseProviderSettings, cfg, runnerInterface)
+	kubeProvider := provider.NewDefaultKubeProvider(i.baseProviderSettings, cfg, runnerInterface)
+
+	return client.NewAuthModeAwareProvider(kubeProvider, authModeForKubeConfig(cfg))
 }
 
 func (i *SSHProviderInitializer) GetSettings() *settings.BaseProviders {

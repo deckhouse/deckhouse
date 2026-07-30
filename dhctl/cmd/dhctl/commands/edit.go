@@ -70,7 +70,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			return err
 		}
 
-		kubeCl := &client.KubernetesClient{KubeClient: kube}
+		kubeCl := client.FromProvider(kubeProvider, kube)
 
 		return operations.SecretEdit(
 			ctx,

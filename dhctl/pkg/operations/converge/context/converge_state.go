@@ -29,6 +29,7 @@ import (
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
@@ -72,6 +73,10 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 		retry.WithWhitelist(errConvergeStateTransient),
 	)
 
+	// Every attempt below gets a fresh per-request context from ctx.WithTimeout, so the grace
+	// budget for authorization failures is held in a context of its own that spans the whole loop.
+	authCtx := kubeClient.AuthModeCtx(ctx.Ctx())
+
 	err = retry.NewLoopWithParams(loopParams).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
@@ -82,7 +87,7 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 				return nil
 			}
 
-			if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+			if kubeerrors.IsPermanentAuthError(authCtx, err) {
 				return fmt.Errorf("failed to get secret: %w", err)
 			}
 
@@ -115,6 +120,8 @@ func (s *inSecretStateStore) Delete(ctx *Context) error {
 		retry.WithWhitelist(errConvergeStateTransient),
 	)
 
+	authCtx := kubeClient.AuthModeCtx(ctx.Ctx())
+
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
@@ -125,7 +132,7 @@ func (s *inSecretStateStore) Delete(ctx *Context) error {
 				return nil
 			}
 
-			if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+			if kubeerrors.IsPermanentAuthError(authCtx, err) {
 				return fmt.Errorf("failed to delete state secret: %w", err)
 			}
 
@@ -183,11 +190,13 @@ func (s *inSecretStateStore) SetState(convergeCtx *Context, state *State) error 
 		retry.WithWhitelist(actions.ErrManifestTaskTransient),
 	)
 
+	authCtx := kubeClient.AuthModeCtx(convergeCtx.Ctx())
+
 	return retry.NewLoopWithParams(loopParams).
 		RunContext(
 			convergeCtx.Ctx(),
 			func() error {
-				return task.CreateOrUpdate(convergeCtx.Ctx())
+				return task.CreateOrUpdate(authCtx)
 			},
 		)
 }

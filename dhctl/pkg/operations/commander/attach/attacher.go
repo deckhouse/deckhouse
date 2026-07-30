@@ -209,7 +209,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		if err != nil {
 			return fmt.Errorf("connect to kubernetes api: %w", err)
 		}
-		kubeClient = &client.KubernetesClient{KubeClient: kubeCl}
+		kubeClient = client.FromProvider(i.Params.KubeProvider, kubeCl)
 
 		metaConfig, err = config.ParseConfigInCluster(
 			ctx,
