@@ -33,6 +33,9 @@
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $runtimeConfigList = append $runtimeConfigList "resource.k8s.io/v1beta1=true" -}}
 {{- end }}
+{{- /* DRADeviceTaints (enabled above for >=1.33 <1.36) requires resource.k8s.io/v1alpha3 API to be
+       explicitly turned on — otherwise scheduler informer for DeviceTaintRule 404s and blocks the
+       WaitForCacheSync before leader election. Keep the version range in sync with DRADeviceTaints. */ -}}
 {{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
   {{- $runtimeConfigList = append $runtimeConfigList "resource.k8s.io/v1alpha3=true" -}}
 {{- end }}
