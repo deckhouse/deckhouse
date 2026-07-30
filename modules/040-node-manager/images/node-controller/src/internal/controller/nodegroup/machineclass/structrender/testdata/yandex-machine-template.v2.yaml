@@ -1,0 +1,52 @@
+# v2 machine-template for yandex — PoC. The provider ships the skeleton and the bindings;
+# node-controller sets metadata (name/namespace/labels/checksum annotation) itself.
+object:
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: YandexMachineTemplate
+  spec:
+    template:
+      spec: {}
+bindings:
+  - path: spec.template.spec.zoneID
+    value: {from: zone, required: true}
+  - path: spec.template.spec.platformID
+    value: {from: instanceClass.platformID, default: standard-v3}
+  - path: spec.template.spec.resources.cores
+    value: {from: instanceClass.cores, required: true}
+  - path: spec.template.spec.resources.coreFraction
+    value: {from: instanceClass.coreFraction, default: 100}
+  - path: spec.template.spec.resources.memory
+    value: {from: instanceClass.memory, format: "%dMi", required: true}
+  - path: spec.template.spec.resources.gpus
+    value: {from: instanceClass.gpus, default: 0}
+  - path: spec.template.spec.bootDisk.typeID
+    value: {from: instanceClass.diskType, default: network-hdd}
+  - path: spec.template.spec.bootDisk.size
+    value: {from: instanceClass.diskSizeGB, default: 50, format: "%dGi"}
+  - path: spec.template.spec.bootDisk.imageID
+    value:
+      from: instanceClass.imageID
+      defaultFrom: {from: cloudProvider.yandex.instanceClassDefaults.imageID}
+      required: true
+  - path: spec.template.spec.networkInterfaces
+    value:
+      list:
+        - object:
+            subnetID:
+              from: instanceClass.mainSubnet
+              defaultFrom:
+                lookup:
+                  map: cloudProvider.yandex.zoneToSubnetIdMap
+                  key: {from: zone}
+              required: true
+            hasPublicIP:
+              from: instanceClass.assignPublicIPAddress
+              defaultFrom: {from: cloudProvider.yandex.shouldAssignPublicIPAddress}
+        - forEach: instanceClass.additionalSubnets
+          element:
+            object:
+              subnetID: {from: item}
+  - path: spec.template.spec.metadata.ssh-keys
+    value: {from: cloudProvider.yandex.sshKey, format: "user:%s", required: true}
+  - path: spec.template.spec.metadata.node-network-cidr
+    value: {from: cloudProvider.yandex.nodeNetworkCIDR, required: true}

@@ -1,0 +1,33 @@
+# v2 machine-template for dvp — PoC.
+object:
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: DeckhouseMachineTemplate
+  spec:
+    template:
+      spec: {}
+bindings:
+  - path: spec.template.spec.vmClassName
+    value: {from: instanceClass.virtualMachine.virtualMachineClassName, default: generic}
+  - path: spec.template.spec.rootDiskStorageClass
+    value: {from: instanceClass.rootDisk.storageClass}
+  - path: spec.template.spec.cpu.cores
+    value: {from: instanceClass.virtualMachine.cpu.cores}
+  - path: spec.template.spec.cpu.cpuFraction
+    value: {from: instanceClass.virtualMachine.cpu.coreFraction}
+  - path: spec.template.spec.memory
+    value: {from: instanceClass.virtualMachine.memory.size}
+  - path: spec.template.spec.rootDiskSize
+    value: {from: instanceClass.rootDisk.size}
+  - path: spec.template.spec.additionalDisks
+    value:
+      forEach: instanceClass.additionalDisks
+      element:
+        object:
+          size: {from: item.size}
+          storageClass: {from: item.storageClass}
+  - path: spec.template.spec.bootloader
+    value: {from: instanceClass.virtualMachine.bootloader}
+  - path: spec.template.spec.bootDiskImageRef.kind
+    value: {from: instanceClass.rootDisk.image.kind}
+  - path: spec.template.spec.bootDiskImageRef.name
+    value: {from: instanceClass.rootDisk.image.name}
