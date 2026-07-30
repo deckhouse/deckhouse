@@ -1,12 +1,12 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
+- from: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
   add: /admission-controller
   to: /admission-controller
   before: setup
-{{- include "image mount points" . }}  
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/admission-controller"]

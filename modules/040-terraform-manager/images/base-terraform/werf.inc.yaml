@@ -3,7 +3,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
 import:
-- image: terraform
+- from: terraform
   add: /terraform/terraform
   to: /terraform
   before: setup

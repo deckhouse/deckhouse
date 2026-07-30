@@ -1,11 +1,11 @@
 {{- if not (and (index . "HasAvailableModules") (not (hasKey (index . "AvailableModulesDict") "cloud-provider-vsphere"))) }}
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "vsphere") }}'
+from: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "vsphere") }}'
 git:
 - add: /{{ .ModulePath }}modules/030-cloud-provider-vsphere/candi
   to: /deckhouse/candi/cloud-providers/vsphere
 import:
-- image: cloud-provider-vsphere/terraform-manager
+- from: cloud-provider-vsphere/terraform-manager
   add: /terraform-manager/terraform-provider-vsphere
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "vsphere") }}/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vsphere
   before: setup

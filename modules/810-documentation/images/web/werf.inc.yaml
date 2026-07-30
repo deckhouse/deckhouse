@@ -14,10 +14,10 @@
 # Nginx for serving documentation static files
 # Image documentation/web (for website)
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/nginx-static
+from: common/nginx-static
 import:
 {{- include "image mount points" . }}
-- image: {{ .ModuleName }}/{{ .ImageName }}/static
+- from: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
   to: /app/docs-dkp
   before: setup
@@ -27,7 +27,7 @@ import:
   - search-index.json
   - '*/sitemap*.xml'
   - '*/robots.txt'
-- image: {{ .ModuleName }}/modules-embedded/static-artifact
+- from: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /app/_site/
   to: /app/embedded-modules
   before: setup

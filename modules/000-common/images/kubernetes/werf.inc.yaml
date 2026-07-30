@@ -33,7 +33,7 @@
   {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 
 {{- if $hasPatches }}
@@ -92,7 +92,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace 
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
   add: /src
   to: /src
   before: install

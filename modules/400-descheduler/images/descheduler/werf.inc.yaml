@@ -2,7 +2,7 @@
 {{- $version = printf "v%s" $version }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/400-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -25,7 +25,7 @@ image: {{ .ModuleName }}/build-artifact
 final: false
 from: {{ index $.Images "builder/golang" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -46,7 +46,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
 import:
-- image: {{ .ModuleName }}/build-artifact
+- from: {{ .ModuleName }}/build-artifact
   add: /descheduler
   to: /descheduler
   before: setup

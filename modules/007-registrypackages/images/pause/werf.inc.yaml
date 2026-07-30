@@ -3,7 +3,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
@@ -25,7 +25,7 @@ git:
     setup:
     - '**/*'
 import:
-- image: common/crane
+- from: common/crane
   add: /crane
   to: /crane
   before: setup

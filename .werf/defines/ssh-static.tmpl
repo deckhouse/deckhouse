@@ -8,7 +8,7 @@
 ---
 image: ssh-static-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -21,7 +21,7 @@ image: ssh-static
 final: false
 from: {{ index $.Images "builder/alpine-3.21" }}
 import:
-- image: ssh-static-src-artifact
+- from: ssh-static-src-artifact
   add: /src
   to: /src
   before: install

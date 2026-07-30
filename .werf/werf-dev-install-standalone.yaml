@@ -21,7 +21,7 @@ image: install-standalone-builder
 final: false
 from: {{ index $.Images "builder/alpine" }}
 import:
-- image: install-standalone-builder-content
+- from: install-standalone-builder-content
   add: /
   to: /image
   before: setup

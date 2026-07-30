@@ -9,7 +9,7 @@ git:
     - '**/*'
 import:
 {{- include "image mount points" . }}
-- image: {{ .ModuleName }}/etcd-artifact
+- from: {{ .ModuleName }}/etcd-artifact
   add: /etcdctl
   to: /bin/etcdctl
   before: setup

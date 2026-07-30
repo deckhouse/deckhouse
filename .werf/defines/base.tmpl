@@ -10,7 +10,7 @@
   before: setup
   {{- range $k8s := $context.k8sVersions }}
     {{- $image_version := printf "%s.%d" $k8s.kubectl (index $context.CandiVersionMap "k8s" $k8s.kubectl "patch") | replace "." "-" }}
-- image: common/kubernetes-artifact-{{ $image_version }}
+- from: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl-{{ $k8s.kubectl }}
   before: setup
@@ -70,7 +70,7 @@ image: common-base-python-artifact
 final: false
 from: {{ index $.Images "base/python-3.12" }}
 import:
-- image: common/wheel-artifact
+- from: common/wheel-artifact
   add: /wheels
   to: /wheels
   before: install
@@ -82,7 +82,7 @@ shell:
 image: common-base
 from: {{ index $.Images "base/distroless" }}
 import:
-- image: common-base-python-artifact
+- from: common-base-python-artifact
   add: /
   to: /
   before: setup
@@ -95,7 +95,7 @@ import:
   - usr/lib/python*/site-packages/pip-25.3*
   - usr/lib/python*/test
 {{ include "base components imports" (dict "Images" $context.Images "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
-- image: registrypackages/d8-curl-artifact-8-9-1
+- from: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
   before: install

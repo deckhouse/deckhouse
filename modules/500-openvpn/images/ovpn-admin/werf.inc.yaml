@@ -2,7 +2,7 @@
 {{- $binaries := "/bin/bash" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 git:
 - add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/templates
   to: /app/templates
@@ -11,23 +11,23 @@ git:
       - '**/*'
 import:
 {{- include "image mount points" . }}
-- image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
   add: /src/ovpn-admin
   to: /app/ovpn-admin
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/version
   to: /app/version
   before: setup
-- image: {{ .ModuleName }}/openvpn-artifact
+- from: {{ .ModuleName }}/openvpn-artifact
   add: /src/openvpn/src/openvpn/openvpn
   to: /usr/sbin/openvpn
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
   add: /src/frontend/static
   to: /app/frontend/static
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
@@ -40,7 +40,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
@@ -65,7 +65,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
 final: false
 from: {{ index $.Images "builder/golang" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -87,7 +87,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
 final: false
 from: {{ .Images.BASE_NODE_16_ALPINE }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -100,9 +100,9 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 final: false
-fromImage: common/relocate-artifact
+from: common/relocate-artifact
 import:
-- image: {{ .ModuleName }}/openssl-artifact
+- from: {{ .ModuleName }}/openssl-artifact
   add: /openssl
   to: /openssl
   before: install

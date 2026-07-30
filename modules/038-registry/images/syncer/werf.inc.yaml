@@ -1,6 +1,6 @@
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -21,7 +21,7 @@ image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
     add: /src/app
     to: /app
     before: install
@@ -40,16 +40,16 @@ shell:
     - chmod 0755 /syncer
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
     add: /src/scripts
     to: /
     includePaths:
     - install
     - uninstall
     before: setup
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /syncer
     to: /syncer
     before: setup

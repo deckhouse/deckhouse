@@ -1,9 +1,9 @@
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-basic-auth-proxy-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-basic-auth-proxy-artifact
     add: /src/basic-auth-proxy
     to: /basic-auth-proxy
     before: setup
@@ -12,7 +12,7 @@ imageSpec:
     entrypoint: [ "/basic-auth-proxy" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basic-auth-proxy-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/app
@@ -34,7 +34,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-basic-auth-proxy-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-basic-auth-proxy-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-basic-auth-proxy-src-artifact
   add: /src
   to: /src
   before: install
