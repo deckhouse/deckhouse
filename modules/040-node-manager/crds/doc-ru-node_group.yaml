@@ -31,7 +31,7 @@ spec:
                     description: |
                         Тип container runtime.
 
-                        Если не указан, используется значение параметра `defaultCRI` общих параметров кластера (ClusterConfiguration).
+                        Если не указан, используется значение параметра `defaultCRI` ModuleConfig `node-manager`.
 
                         > **Внимание.** Поддержка Docker считается устаревшей.
                     containerd:
@@ -344,7 +344,7 @@ spec:
                       description: |
                         Тип container runtime.
 
-                        Если не указан, используется значение параметра `defaultCRI` общих параметров кластера (ClusterConfiguration).
+                        Если не указан, используется значение параметра `defaultCRI` ModuleConfig `node-manager`.
 
                         > **Внимание.** Поддержка Docker считается устаревшей.
                     containerd:
@@ -735,7 +735,7 @@ spec:
                       description: |
                         Тип container runtime.
 
-                        Если не указан, используется значение параметра `defaultCRI` ClusterConfiguration.
+                        Если не указан, используется значение параметра `defaultCRI` ModuleConfig `node-manager`.
 
                         > **Внимание.** Поддержка Docker считается устаревшей.
                     containerd:

@@ -33,6 +33,8 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
+const kubeSystemNamespace = "kube-system"
+
 // uniqueNG yields a unique cluster-scoped NodeGroup name per spec. NodeGroups are cluster-scoped
 // and envtest namespaces never truly delete, so each spec uses its own name for isolation.
 func uniqueNG(base string) string { return testenv.UniqueName(base) }
@@ -93,11 +95,61 @@ func createGroupNode(name, ngName string, ready bool, checksum string, extraAnno
 	return node
 }
 
+// createAPIServerPod creates a kube-apiserver static pod carrying the version annotation
+// control-plane-manager stamps on the real manifest. The labels match the Pod cache scope, so
+// the controller sees it through its informer exactly as it would in a cluster.
+func createAPIServerPod(name, version string) *corev1.Pod {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Namespace:   kubeSystemNamespace,
+			Labels:      map[string]string{"component": "kube-apiserver", "tier": "control-plane"},
+			Annotations: map[string]string{"control-plane-manager.deckhouse.io/kubernetes-version": version},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{Name: "kube-apiserver", Image: "kube-apiserver:" + version}},
+		},
+	}
+	Expect(k8sClient.Create(suiteCtx, pod)).To(Succeed())
+	return pod
+}
+
+// createControlPlaneNode creates a master Node reporting kubeletVersion. It exists to prove the
+// clamp ignores it: a kubelet-derived clamp would pin the effective version to this value.
+func createControlPlaneNode(name, kubeletVersion string) *corev1.Node {
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
+		},
+	}
+	Expect(k8sClient.Create(suiteCtx, node)).To(Succeed())
+
+	node.Status.NodeInfo = corev1.NodeSystemInfo{KubeletVersion: kubeletVersion}
+	Expect(k8sClient.Status().Update(suiteCtx, node)).To(Succeed())
+	return node
+}
+
+func createClusterConfigurationSecret(kubernetesVersion string) *corev1.Secret {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: kubeSystemNamespace},
+		Data: map[string][]byte{
+			"cluster-configuration.yaml": []byte("kubernetesVersion: \"" + kubernetesVersion + "\"\n"),
+		},
+	}
+	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, secret))).To(Succeed())
+	return secret
+}
+
 func createChecksumSecret(ngName, checksum string) *corev1.Secret {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.ConfigurationChecksumsSecretName,
 			Namespace: common.MachineNamespace,
+			// bashible-apiserver owns and labels this secret in production; the production
+			// cache scopes machine-namespace Secret informers by that label, so cached reads
+			// (and the checksum watch) see the fixture only when it carries the label.
+			Labels: map[string]string{"app": "bashible-apiserver"},
 		},
 		Data: map[string][]byte{ngName: []byte(checksum)},
 	}
@@ -162,17 +214,19 @@ func conditionStatus(ng *v1.NodeGroup, condType string) metav1.ConditionStatus {
 	return ""
 }
 
-// processedDeckhouse reads the unstructured status.deckhouse the processed-status service writes
-// (synced flag and processed.checkSum); these fields are not on the typed NodeGroupStatus.
-func processedDeckhouse(name string) (synced, processedCheckSum string) {
+// processedDeckhouse reads the unstructured status.deckhouse the status controller writes
+// (synced flag, observed.checkSum and processed.checkSum); these fields are not on the typed
+// NodeGroupStatus.
+func processedDeckhouse(name string) (synced, observedCheckSum, processedCheckSum string) {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(v1.GroupVersion.WithKind("NodeGroup"))
 	if err := k8sClient.Get(suiteCtx, types.NamespacedName{Name: name}, u); err != nil {
-		return "", ""
+		return "", "", ""
 	}
 	synced, _, _ = unstructured.NestedString(u.Object, "status", "deckhouse", "synced")
+	observedCheckSum, _, _ = unstructured.NestedString(u.Object, "status", "deckhouse", "observed", "checkSum")
 	processedCheckSum, _, _ = unstructured.NestedString(u.Object, "status", "deckhouse", "processed", "checkSum")
-	return synced, processedCheckSum
+	return synced, observedCheckSum, processedCheckSum
 }
 
 // User story: As a platform user, I want my NodeGroup's status to accurately report node/ready/
@@ -284,20 +338,59 @@ var _ = Describe("NodeGroup status controller", func() {
 		})
 	})
 
+	Context("effective Kubernetes version", func() {
+		It("clamps by the kube-apiserver version, not by the control-plane kubelet version", func() {
+			// The clamp keeps nodes from running ahead of the control plane, and its value is
+			// what bashible installs as the kubelet package — master NodeGroup included. Reading
+			// it from the control-plane Nodes' kubeletVersion would make it bound itself:
+			// control-plane-manager refuses to advance the control plane past the node kubelets,
+			// so neither side could ever move and no minor upgrade would complete. The apiserver
+			// legitimately runs one minor ahead, which is what this spec pins: kubelet 1.30,
+			// apiserver 1.32, target 1.33 -> 1.32.
+			createClusterConfigurationSecret("1.33")
+			createAPIServerPod("kube-apiserver-master-0", "1.32")
+			createControlPlaneNode(uniqueNG("cp-node"), "v1.30.4")
+
+			name := uniqueNG("kubever")
+			createNodeGroup(staticNodeGroup(name))
+
+			Eventually(func(g Gomega) {
+				ng := &v1.NodeGroup{}
+				g.Expect(k8sClient.Get(suiteCtx, client.ObjectKey{Name: name}, ng)).To(Succeed())
+				g.Expect(ng.Status.KubernetesVersion).To(Equal("1.32"))
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		})
+
+		It("takes the lowest apiserver version while the control plane is mid-roll", func() {
+			createClusterConfigurationSecret("1.33")
+			createAPIServerPod("kube-apiserver-master-0", "1.32")
+			createAPIServerPod("kube-apiserver-master-1", "1.31")
+			createAPIServerPod("kube-apiserver-master-2", "1.31")
+
+			name := uniqueNG("kubever-min")
+			createNodeGroup(staticNodeGroup(name))
+
+			Eventually(func(g Gomega) {
+				ng := &v1.NodeGroup{}
+				g.Expect(k8sClient.Get(suiteCtx, client.ObjectKey{Name: name}, ng)).To(Succeed())
+				g.Expect(ng.Status.KubernetesVersion).To(Equal("1.31"))
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		})
+	})
+
 	Context("processed status", func() {
-		It("writes status.deckhouse.processed and a synced flag after reconciliation", func() {
+		It("records observed and processed and settles synced=True after reconciliation", func() {
 			name := uniqueNG("processed")
 			createNodeGroup(staticNodeGroup(name))
 
-			// The controller computes a checksum of the filtered NodeGroup into
-			// status.deckhouse.processed.checkSum and sets synced=False until an external
-			// component records a matching status.deckhouse.observed.checkSum (not present in
-			// envtest). So the controller-observable result is: a non-empty processed checksum
-			// and synced=False.
+			// The controller records the observed spec and the processed spec from the same
+			// reconcile (get_crds used to write observed BeforeHelm; without a writer synced
+			// stayed False forever). Both checksums match, so synced settles True.
 			Eventually(func(g Gomega) {
-				synced, processedCheckSum := processedDeckhouse(name)
+				synced, observedCheckSum, processedCheckSum := processedDeckhouse(name)
 				g.Expect(processedCheckSum).NotTo(BeEmpty())
-				g.Expect(synced).To(Equal("False"))
+				g.Expect(observedCheckSum).To(Equal(processedCheckSum))
+				g.Expect(synced).To(Equal("True"))
 			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 		})
 	})
@@ -345,7 +438,21 @@ func cleanupNodeGroupEnv() {
 			_ = client.IgnoreNotFound(k8sClient.Delete(suiteCtx, secret))
 		}
 
+		// The version inputs live in kube-system and would otherwise leak into later specs.
+		podList := &corev1.PodList{}
+		g.Expect(k8sClient.List(suiteCtx, podList, client.InNamespace(kubeSystemNamespace))).To(Succeed())
+		for i := range podList.Items {
+			_ = client.IgnoreNotFound(k8sClient.Delete(suiteCtx, &podList.Items[i]))
+		}
+
+		clusterCfg := &corev1.Secret{}
+		if err := k8sClient.Get(suiteCtx, types.NamespacedName{
+			Namespace: kubeSystemNamespace, Name: "d8-cluster-configuration"}, clusterCfg); err == nil {
+			_ = client.IgnoreNotFound(k8sClient.Delete(suiteCtx, clusterCfg))
+		}
+
 		g.Expect(ngList.Items).To(BeEmpty())
+		g.Expect(podList.Items).To(BeEmpty())
 		g.Expect(nodeList.Items).To(BeEmpty())
 		g.Expect(mcmList.Items).To(BeEmpty())
 		g.Expect(mdList.Items).To(BeEmpty())

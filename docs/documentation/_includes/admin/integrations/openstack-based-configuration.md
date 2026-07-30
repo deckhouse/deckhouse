@@ -97,7 +97,7 @@ nodeGroups:
     # is no DHCP in the network that is used as a default gateway.
     configDrive: false
     # Required, the gateway of this network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
@@ -188,7 +188,7 @@ nodeGroups:
     # gateway.
     configDrive: false
     # Required, the gateway of the network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                          # Optional.
     - office

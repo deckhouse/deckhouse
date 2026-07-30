@@ -137,6 +137,10 @@ linters-settings:
           name: node-manager:kubernetes-api-proxy
         - kind: RoleBinding
           name: node-manager:kubernetes-api-proxy
+        - kind: Role
+          name: d8:node-manager:node-controller:bashible-context
+        - kind: RoleBinding
+          name: d8:node-manager:node-controller:bashible-context
   module:
     conversions:
       disable: true

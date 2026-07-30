@@ -25,9 +25,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 const (
@@ -38,7 +38,13 @@ const (
 	conditionTypeReady = "Ready"
 )
 
-// WaitForRegistryReady waits for the registry to become ready.
+// errRegistryCheckTransient marks a transport/API-level failure while reading or deleting the
+// registry init/state secrets, as opposed to a permanent parse failure or authorization error
+// that will fail identically on every attempt.
+var errRegistryCheckTransient = fmt.Errorf("registry check: transient error, may succeed on retry")
+
+// WaitForRegistryInitialization waits for the registry to become fully initialized and ready.
+// After successful initialization, the initSecret will be removed.
 // Parameters:
 //   - ctx: context for cancellation and timeouts
 //   - kubeClient: Kubernetes client for API operations
@@ -153,12 +159,13 @@ func getConditions(ctx context.Context, kubeClient client.KubeClient) ([]metav1.
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return conditions, nil
+			// No status reported yet: equivalent to no conditions being ready.
+			return nil, nil
 		}
-		return nil, fmt.Errorf(
-			"get secret '%s/%s': %w",
-			secretsNamespace, stateSecretName, err,
-		)
+		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+			return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
+		}
+		return nil, fmt.Errorf("%w: get secret '%s/%s': %w", errRegistryCheckTransient, secretsNamespace, stateSecretName, err)
 	}
 
 	rawConditions, exists := secret.Data["conditions"]

@@ -32,9 +32,9 @@ import (
 	kuberetry "k8s.io/client-go/util/retry"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func labelKey(name string) string {

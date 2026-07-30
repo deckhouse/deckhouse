@@ -42,6 +42,7 @@ spec:
     metadata:
       labels:
         app: snat
+        security.deckhouse.io/security-policy-exception: snat
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
     spec:
@@ -62,12 +63,7 @@ spec:
       containers:
       - name: snat
          # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
-        {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
-          readOnlyRootFilesystem: true
-          capabilities:
-            add:
-            - NET_RAW
-            - NET_ADMIN
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW" "NET_ADMIN")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "snat") }}
         command: ["/usr/bin/python3", "/iptables-loop.py"]
         env:

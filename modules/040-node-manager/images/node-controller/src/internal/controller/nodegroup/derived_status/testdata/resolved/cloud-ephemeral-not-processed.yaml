@@ -1,0 +1,22 @@
+cloudInstances:
+  classReference:
+    kind: AWSInstanceClass
+    name: worker
+  zones:
+  - eu-west-1a
+cri:
+  type: Containerd
+engine: MCM
+kubelet:
+  containerLogMaxFiles: 4
+  containerLogMaxSize: 50Mi
+  resourceReservation:
+    mode: Auto
+  topologyManager: {}
+kubernetesVersion: ""
+manualRolloutID: ""
+name: worker-unprocessed
+nodeType: CloudEphemeral
+serializedLabels: node.deckhouse.io/group=worker-unprocessed
+serializedTaints: ""
+updateEpoch: "1008"

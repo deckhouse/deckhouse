@@ -106,4 +106,20 @@ spec:
 		})
 	})
 
+	Context("With global.prefix and no instancePrefix", func() {
+		fp := HookExecutionConfigInit(`{"global":{"prefix":"mcprefix"},"nodeManager":{"internal":{}}}`, `{}`)
+		fp.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			fp.BindingContexts.Set(fp.KubeStateSet(ngsWithPriorities))
+			fp.RunHook()
+		})
+
+		It("uses global.prefix (global ModuleConfig) in the priority patterns", func() {
+			Expect(fp).To(ExecuteSuccessfully())
+			m := fp.ValuesGet("nodeManager.internal.clusterAutoscalerPriorities").String()
+			Expect(m).To(Equal(`{"1":[".*"],"20":[".*mcprefix-ng1-[0-9a-zA-Z]+$"],"50":[".*mcprefix-ng2-[0-9a-zA-Z]+$"]}`))
+		})
+	})
+
 })
