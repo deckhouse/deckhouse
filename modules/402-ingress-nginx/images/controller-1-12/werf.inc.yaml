@@ -53,10 +53,8 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - mkdir -p /src
-  - cd /src
-  - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
-  - cd /src/ingress-nginx
+  - mkdir -p /src && cd /src
+  - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git && cd /src/ingress-nginx
   - git apply /patches/*.patch --verbose
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
