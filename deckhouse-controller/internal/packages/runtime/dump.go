@@ -172,7 +172,6 @@ func (r *Runtime) collectQueues(name string) []string {
 		for _, q := range app.GetHooksQueues() {
 			queues = append(queues, filepath.Join(name, q))
 			queues = append(queues, filepath.Join(name, q, "sync"))
-			queues = append(queues, filepath.Join(name, q, "crd"))
 		}
 	}
 
@@ -181,8 +180,10 @@ func (r *Runtime) collectQueues(name string) []string {
 		for _, q := range mod.GetHooksQueues() {
 			queues = append(queues, filepath.Join(name, q))
 			queues = append(queues, filepath.Join(name, q, "sync"))
-			queues = append(queues, filepath.Join(name, q, "crd"))
 		}
+		// The CRD subtask queue is spawned once per module by the global run task,
+		// as "<name>/crd" — it is not a per-hook-queue subqueue.
+		queues = append(queues, filepath.Join(name, "crd"))
 	}
 
 	return queues

@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
@@ -143,7 +144,7 @@ func (t *task) Execute(ctx context.Context) error {
 		}
 
 		sub := taskensurecrd.NewTask(pkg, t.crd.Install, t.status, t.logger)
-		t.queue.Enqueue(ctx, pkg.GetName()+"/crd", sub, queue.WithWait(wg))
+		t.queue.Enqueue(ctx, filepath.Join(pkg.GetName(), "crd"), sub, queue.WithWait(wg))
 	}
 
 	wg.Wait()
