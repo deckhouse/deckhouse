@@ -16,8 +16,8 @@ package runtime
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"path/filepath"
 
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
@@ -96,7 +96,7 @@ func (r *Runtime) routeKubeEvent(ctx context.Context, src hookProvider, kubeEven
 				slog.String("name", src.GetName()),
 				slog.String("event", kubeEvent.String()))
 
-			queueName := fmt.Sprintf("%s/%s", src.GetName(), info.QueueName)
+			queueName := filepath.Join(src.GetName(), info.QueueName)
 			t := taskhookrun.NewTask(src, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
 			res[queueName] = append(res[queueName], t)
 		})
@@ -157,7 +157,7 @@ func (r *Runtime) routeScheduleEvent(ctx context.Context, src hookProvider, cron
 				slog.String("event", crontab))
 
 			// queue = <name>/<queue>
-			queueName := fmt.Sprintf("%s/%s", src.GetName(), info.QueueName)
+			queueName := filepath.Join(src.GetName(), info.QueueName)
 			t := taskhookrun.NewTask(src, hook.GetName(), info.BindingContext, r.scheduler.Reschedule, r.nelmService, r.status, r.logger)
 
 			res[queueName] = append(res[queueName], t)

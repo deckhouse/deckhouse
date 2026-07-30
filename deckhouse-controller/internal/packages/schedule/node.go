@@ -44,6 +44,9 @@ type Package interface {
 	GetName() string
 	GetVersion() *semver.Version
 	GetConstraints() Constraints
+}
+
+type packageWithScript interface {
 	GetEnabledScriptDescriptor() *script.Descriptor
 }
 
@@ -206,10 +209,11 @@ func (s *Scheduler) addNode(pkg Package) {
 	//     a soft Enable that turns on a module the bundle ignores; a disable intent
 	//     is a hard Forbid, so an explicit user disable is final — it beats the
 	//     bundle enable and short-circuits resolution before the script even runs.
-	//   - script: the module's enabled script. A true result is a soft Enable that
-	//     can turn the module on; a false result or a script that cannot be
-	//     evaluated vetoes it via Forbid. It is appended last, but placement does
-	//     not affect a user disable, which the dynamic Forbid already settled.
+	//   - script: the module's enabled script. It is veto-only: a true result is
+	//     no opinion (Undefined) and cannot turn the module on, while a false
+	//     result or a script that cannot be evaluated vetoes it via Forbid. It is
+	//     appended last, but placement does not affect a user disable, which the
+	//     dynamic Forbid already settled.
 	if isModule {
 		if s.bundleChecker != nil {
 			n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
@@ -219,7 +223,9 @@ func (s *Scheduler) addNode(pkg Package) {
 			n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
 		}
 
-		n.rules = append(n.rules, script.NewRule(pkg, s.logger))
+		if pkgWithScript, ok := pkg.(packageWithScript); ok {
+			n.rules = append(n.rules, script.NewRule(pkgWithScript, s.logger))
+		}
 	}
 
 	s.nodes[pkg.GetName()] = n
