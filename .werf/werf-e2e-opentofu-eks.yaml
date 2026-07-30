@@ -3,38 +3,38 @@
 image: e2e-opentofu-eks
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-fromImage: common/alt-p11-artifact
+from: common/alt-p11-artifact
 import:
   {{- $k8sVersion := index (index .k8sVersions 0) "kubectl" }}
   {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-  - image: common/kubernetes-artifact-{{ $image_version }}
+  - from: common/kubernetes-artifact-{{ $image_version }}
     add: /src/_output/bin/kubectl
     to: /usr/local/bin/kubectl
     before: setup
-  - image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  - from: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
     add: /opentofu/opentofu
     to: /image/bin/opentofu
     before: setup
   {{- if ne $.Env "CSE" }}
   {{- $tf := index $.TF "aws" }}
-  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
+  - from: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
     add: /{{ $tf.artifactBinary }}
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
     before: setup
   {{- end }}
-  - image: e2e-eks-terraform-plugins
+  - from: e2e-eks-terraform-plugins
     add: /terraform-provider-random
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
     before: setup
-  - image: e2e-eks-terraform-plugins
+  - from: e2e-eks-terraform-plugins
     add: /terraform-provider-tls
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
     before: setup
-  - image: e2e-eks-terraform-plugins
+  - from: e2e-eks-terraform-plugins
     add: /terraform-provider-cloudinit
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
     before: setup
-  - image: e2e-eks-terraform-plugins
+  - from: e2e-eks-terraform-plugins
     add: /terraform-provider-kubernetes
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
     before: setup
@@ -58,7 +58,7 @@ shell:
 ---
 image: e2e-eks-terraform-plugins-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -73,7 +73,7 @@ image: e2e-eks-terraform-plugins
 final: false
 from: {{ index $.Images "builder/golang-alpine" }}
 import:
-- image: e2e-eks-terraform-plugins-src-artifact
+- from: e2e-eks-terraform-plugins-src-artifact
   add: /src
   to: /src
   before: install

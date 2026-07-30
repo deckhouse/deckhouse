@@ -15,7 +15,7 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 secrets:
 - id: SOURCE_REPO
@@ -30,10 +30,10 @@ shell:
   - rm -rf /src/linux/.git
 ---
 image: {{ .ModuleName }}/bpftool-artifact
-fromImage: {{ .ModuleName }}/base-cilium-dev
+from: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

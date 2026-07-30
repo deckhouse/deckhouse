@@ -27,9 +27,9 @@ shell:
 ---
 image: deckhouse-controller-artifact
 final: false
-fromImage: base-for-go
+from: base-for-go
 import:
-- image: deckhouse-controller-src-artifact
+- from: deckhouse-controller-src-artifact
   add: /deckhouse
   to: /deckhouse
   before: install

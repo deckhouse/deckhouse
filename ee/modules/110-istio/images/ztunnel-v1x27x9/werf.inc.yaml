@@ -2,9 +2,9 @@
 {{- $istioVersion := "1.27.9" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/ztunnel/bin/ztunnel
     to: /usr/local/bin/ztunnel
     owner: 1337
@@ -33,15 +33,15 @@ import:
 imageSpec:
   config:
     user: "1337:1337"
-    env:  
+    env:
       ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     entrypoint: ["/usr/local/bin/ztunnel"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: common/alt-p11-artifact
+from: common/alt-p11-artifact
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/ztunnel
   to: /src/ztunnel
   before: install
@@ -69,14 +69,14 @@ shell:
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - |
     cargo build \
-    --release 
+    --release
   - strip /src/ztunnel/out/rust/release/ztunnel
   - mkdir -p /src/ztunnel/bin
   - mv /src/ztunnel/out/rust/release/ztunnel /src/ztunnel/bin/ztunnel
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - url: {{ .SOURCE_REPO }}/istio/ztunnel

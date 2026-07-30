@@ -2,19 +2,19 @@
 {{- $version_common := "v0.5.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 imageSpec:
   config:
     entrypoint: ["/capd-controller-manager"]
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /capd-controller-manager
   to: /capd-controller-manager
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 fromCacheVersion: "2025-02-14.1"
 secrets:
 - id: CLOUD_PROVIDERS_SOURCE_REPO
@@ -36,7 +36,7 @@ fromCacheVersion: "2025-02-14.2"
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

@@ -4,11 +4,11 @@
 {{- define "candi_generic_imports" }}
 {{- $context := . -}}
 
-- image: dev/candi
+- from: dev/candi
   add: /deckhouse
   to: /deckhouse
   before: setup
-- image: dev-prebuild
+- from: dev-prebuild
   add: /deckhouse
   to: /deckhouse
   includePaths:
@@ -16,7 +16,7 @@
   - global-hooks/openapi/config-values.yaml
   - candi/terraform_versions.yml
   after: setup
-- image: version-map-artifact
+- from: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   before: setup

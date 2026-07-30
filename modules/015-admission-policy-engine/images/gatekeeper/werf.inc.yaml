@@ -1,9 +1,9 @@
 {{ $gatekeeperVersion := include "get_oss_version_by_id" (list "gatekeeper" $ ) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /gatekeeper
   to: /bin/gatekeeper
   before: setup
@@ -13,7 +13,7 @@ imageSpec:
     entrypoint: [ "/bin/gatekeeper" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -27,7 +27,7 @@ git:
   - gatekeeper/*.yaml
   stageDependencies:
     install:
-    - '**/*'    
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -39,15 +39,15 @@ shell:
   - rm -rf website
   - rm -rf .git
   # check if module crds/gatekeeper are the same as gatekeeper crds
-  - | 
+  - |
     echo "Checking if module crds/gatekeeper are the same as gatekeeper crds"
-    diff -qr "/src/charts/gatekeeper/crds" "/module_crds/gatekeeper" 
+    diff -qr "/src/charts/gatekeeper/crds" "/module_crds/gatekeeper"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

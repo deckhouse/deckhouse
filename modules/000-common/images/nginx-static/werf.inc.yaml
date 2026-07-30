@@ -2,7 +2,7 @@
 {{- $OpenSSLVersion := "3.3.2" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 secrets:
 - id: SOURCE_REPO
@@ -17,7 +17,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -41,10 +41,10 @@ shell:
   - chmod 0700 /opt/nginx-static/sbin/nginx
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /opt/nginx-static
   to: /opt/nginx-static
   before: setup

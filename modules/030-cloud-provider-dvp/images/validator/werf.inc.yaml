@@ -2,14 +2,14 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /dhctl-provider-dvp
   to: /dhctl-provider-dvp
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src/validator/src
@@ -78,7 +78,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/golang" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

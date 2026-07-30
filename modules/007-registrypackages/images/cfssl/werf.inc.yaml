@@ -2,7 +2,7 @@
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -25,7 +25,7 @@ image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
     add: /src/cfssl
     before: install
 mount:
@@ -45,16 +45,16 @@ shell:
     - mv ./bin/* /
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}"
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
     add: /src/scripts
     to: /
     includePaths:
     - install
     - uninstall
     before: setup
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
     add: /
     to: /
     includePaths:

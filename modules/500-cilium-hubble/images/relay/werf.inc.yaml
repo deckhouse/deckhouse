@@ -5,7 +5,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: cni-cilium/bin-cilium-src-artifact
+- from: cni-cilium/bin-cilium-src-artifact
   add: /src/cilium
   to: /src/cilium
   before: install
@@ -30,13 +30,13 @@ shell:
 # Distroless Main Image
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /out/linux/amd64/usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
-- image: cni-cilium/gops-artifact
+- from: cni-cilium/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install

@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/shell-operator
+from: common/shell-operator
 import:
 - from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
@@ -10,19 +10,19 @@ import:
   add: /usr/bin/semver
   to: /usr/bin/semver
   before: setup
-- image: common/promtool-artifact
+- from: common/promtool-artifact
   add: /promtool
   to: /usr/local/bin/promtool
   before: setup
-- image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
+- from: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
   add: /label-converter
   to: /usr/local/bin/label-converter
   before: setup
-- image: {{ $.ModuleName }}/{{ .ImageName }}-webhook-operator-artifact
+- from: {{ $.ModuleName }}/{{ .ImageName }}-webhook-operator-artifact
   add: /webhook-operator
   to: /
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
   before: install
@@ -78,7 +78,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/label-converter
   to: /src
@@ -101,7 +101,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
   add: /src
   to: /src
   before: install
@@ -126,7 +126,7 @@ git:
     install:
     - '**/*'
 import:
-- image: common/wheel-artifact
+- from: common/wheel-artifact
   add: /wheels
   to: /wheels
   before: install
@@ -141,7 +141,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-src-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-src-artifact
     add: /src
     to: /operator
     before: install
@@ -160,7 +160,7 @@ shell:
     - chmod 0700 /webhook-operator
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-webhook-operator-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 shell:
   install:

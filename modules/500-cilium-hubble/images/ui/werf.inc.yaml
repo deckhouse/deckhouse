@@ -7,7 +7,7 @@
 # and on https://github.com/cilium/hubble-ui/blob/v0.13.5/backend/Dockerfile
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -38,7 +38,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/hubble-ui
   to: /src/hubble-ui
   before: install
@@ -62,7 +62,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-frontend
 from: {{ index $.Images "base/nginx" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/server/public
   to: /app
   before: install
@@ -72,9 +72,9 @@ imageSpec:
     entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
   add: /src/hubble-ui/backend/backend
   to: /usr/local/bin/hubble-ui-backend
   before: install

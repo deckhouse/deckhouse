@@ -13,27 +13,27 @@
 # Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
   to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/gcp_envoy_bootstrap.json
   to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
   add: /src/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
   add: /src/proxy/bin/envoy
   to: /usr/local/bin/envoy
   owner: 1337
@@ -51,22 +51,22 @@ import:
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- from: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- image: common/iptables-wrapper
+- from: common/iptables-wrapper
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-- image: registrypackages/d8-curl-artifact-8-9-1
+- from: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
@@ -84,7 +84,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
 from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
   before: install
@@ -123,14 +123,14 @@ shell:
   - chown 1337:1337 /src/istio/out/pilot-agent
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
-fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
+from: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/proxy
   to: /src/proxy
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
   add: /opt/libcxx
   to: /opt/libcxx
   before: install
@@ -184,10 +184,10 @@ shell:
   - mv /src/proxy/bazel-bin/envoy /src/proxy/bin/
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
-fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
+from: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/llvm
   to: /src/llvm
   before: install
@@ -222,7 +222,7 @@ shell:
   - rm -rf /opt/libcxx/include
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: common/relocate-artifact
+from: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
@@ -261,7 +261,7 @@ mount:
 - from: tmp_dir
   to: /root/.cache/bazel
 import:
-- image: {{ .ModuleName }}/golang-artifact
+- from: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
   to: /usr/local/go
   before: install
@@ -338,7 +338,7 @@ imageSpec:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches

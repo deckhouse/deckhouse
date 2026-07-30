@@ -34,12 +34,12 @@ mount:
 - from: tmp_dir
   to: /root/.cache/bazel
 import:
-- image: {{ .ModuleName }}/golang-artifact
+- from: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
   to: /usr/local/go
   before: install
 {{- if eq $.SVACE_ENABLED "true" }}
-- image: {{ .ModuleName }}/golang-artifact
+- from: {{ .ModuleName }}/golang-artifact
   add: /
   to: /
   includePaths:
