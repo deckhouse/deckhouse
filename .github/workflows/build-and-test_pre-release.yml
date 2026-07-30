@@ -248,25 +248,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -655,25 +643,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -844,25 +820,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -1010,25 +974,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -1429,25 +1381,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -1848,25 +1788,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -2267,25 +2195,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -2686,25 +2602,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -3105,25 +3009,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -3460,25 +3352,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -4504,25 +4384,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -4642,25 +4510,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -4835,25 +4691,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
