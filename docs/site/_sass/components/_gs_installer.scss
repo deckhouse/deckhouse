@@ -1,0 +1,26 @@
+.download-btn {
+  display: inline-block;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: 28px;
+  padding: 0 15px;
+  margin-left: 12px;
+  border: 2px solid rgba(0, 102, 255, 0.1);
+  border-radius: 10px;
+  box-sizing: border-box;
+  background-color: white;
+  color: #0066ff;
+  font-size: 14px;
+  font-weight: 600;
+  font-style: normal;
+  font-stretch: normal;
+  letter-spacing: normal;
+  line-height: 24px;
+  text-decoration: none !important;
+
+  &:hover {
+    background-color: #06f;
+    color: white;
+  }
+}
