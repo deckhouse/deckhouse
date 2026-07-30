@@ -215,8 +215,8 @@ spec:
                       memory: 256Mi
       exception: ''
       exceptionRef: ''
-    - name: controller-allowed-deployment-without-resources
-      violations: 'no'
+    - name: controller-disallowed-deployment-without-resources
+      violations: 'yes'
       assertionMessage: ''
       fields:
       - path: spec.template.spec.containers[].resources
