@@ -92,6 +92,10 @@ entries:
           ru: Pull-зеркалирование
         url: /code/documentation/user/pull-mirroring.html
       - title:
+          en: DefectDojo
+          ru: DefectDojo
+        url: /code/documentation/user/defect-dojo.html
+      - title:
           en: Approval rules
           ru: Правила апрувов
         url: /code/documentation/user/approval-rules.html
