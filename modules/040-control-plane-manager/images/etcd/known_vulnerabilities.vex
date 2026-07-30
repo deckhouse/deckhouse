@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-6f8aac734bc48eff1b66a4a70617115b764e90917b6c26eb8f5ac10b75b62c58",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -255,8 +255,162 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость CVE-2026-46597 невозможно эксплуатировать в etcd в рамках Deckhouse: декодер AES-GCM SSH-пакетов не задействуется; шифрование peer/client трафика etcd — TLS/mTLS, не SSH. Пакет x/crypto/ssh отсутствует в зависимостях бинарника.",
       "timestamp": "2026-07-21T10:25:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-25680 (чрезмерное потребление CPU при разборе HTML в golang.org/x/net/html, DoS) неэксплуатируема в etcd: пакет golang.org/x/net/html не входит в граф зависимостей, разбора произвольного HTML нет.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/sys"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39824 (integer overflow в NewNTUnicodeString, golang.org/x/sys/windows) неэксплуатируема в etcd: уязвимый код специфичен для Windows; компонент собирается и исполняется только под Linux, пакет golang.org/x/sys/windows в бинарник не входит.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39827"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39827 (DoS в golang.org/x/crypto/ssh: неограниченный рост памяти при Reject() отклонённых каналов на SSH-сервере) неэксплуатируема в etcd: пакет golang.org/x/crypto/ssh не входит в граф зависимостей бинарника; компонент не поднимает SSH-сервер и не обрабатывает SSH-каналы.",
+      "timestamp": "2026-07-30T14:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39833"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39833 (необеспечение ограничения ConfirmBeforeUse в golang.org/x/crypto/ssh/agent) неэксплуатируема в etcd: пакет golang.org/x/crypto/ssh/agent не импортируется, компонент не создаёт in-memory keyring через NewKeyring и не использует SSH-agent.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39834"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-39834 (integer overflow при записи в SSH-канал >4GB, зацикливание/DoS) неэксплуатируема в etcd: пакет golang.org/x/crypto/ssh не входит в граф зависимостей бинарника; компонент не устанавливает SSH-соединений и не пишет в SSH-каналы.",
+      "timestamp": "2026-07-30T14:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42502"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42502 (XSS через непредвиденное HTML-дерево при golang.org/x/net/html Render) неэксплуатируема в etcd: пакет golang.org/x/net/html не импортируется, цепочки Parse->Render над недоверенной разметкой нет.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-42506 (XSS через разбор произвольного HTML в golang.org/x/net/html) неэксплуатируема в etcd: пакет golang.org/x/net/html не импортируется, санитизации и Render недоверенного HTML нет.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46598"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46598 (panic из-за ed25519.PrivateKey, собранного из некорректных байтов, в golang.org/x/crypto/ssh/agent) неэксплуатируема в etcd: пакет golang.org/x/crypto/ssh/agent не используется, разбора ключей SSH-agent нет.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-46600 (panic при разборе некорректной SVCB/HTTPS RR в golang.org/x/net/dns/dnsmessage) неэксплуатируема в etcd: пакет golang.org/x/net/dns/dnsmessage не используется, компонент не парсит недоверенные DNS-ответы.",
+      "timestamp": "2026-07-29T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-56852 (зацикливание norm.Iter на некорректном UTF-8 в golang.org/x/text/unicode/norm) неэксплуатируема в etcd: unicode/norm тянется транзитивно через golang.org/x/net/idna, но не применяется к вводу, контролируемому злоумышленником (сеть etcd — gRPC/HTTP поверх mTLS и rafthttp); путь norm.Iter над невалидным UTF-8 недостижим.",
+      "timestamp": "2026-07-30T14:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932: пакет golang.org/x/crypto/openpgp не сопровождается и небезопасен по дизайну. В etcd он не импортируется — компонент не выполняет операций OpenPGP, поэтому уязвимость неэксплуатируема.",
+      "timestamp": "2026-07-29T10:00:00Z"
     }
   ],
   "timestamp": "2025-12-29T21:11:59Z",
-  "last_updated": "2026-07-21T10:25:00Z"
+  "last_updated": "2026-07-30T14:00:00Z"
 }
