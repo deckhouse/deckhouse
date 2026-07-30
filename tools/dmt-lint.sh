@@ -16,45 +16,13 @@
 
 set -euo pipefail
 
-DMT_VERSION=0.1.95
+# VALIDATION ONLY (deckhouse/dmt#438): build dmt from the PR commit instead of a
+# released binary, to run the actualized nelm renderer (public action.ChartRender)
+# over all modules. Revert to `DMT_VERSION=<release>` + the curl install before merge.
+DMT_REF=97a4944663b412c51dcc7e35a4df3ba2d668c2fc
 
 function install_dmt() {
-  platform_name=$(uname -m)
-  os_name=$(uname)
-
-  case "$os_name" in
-    Linux)
-      local platform="linux"
-      ;;
-    Darwin)
-      local platform="darwin"
-      ;;
-    *)
-      echo "Unsupported OS: $os_name"
-      return 1
-      ;;
-  esac
-
-  case "$platform_name" in
-    x86_64)
-      local arch="amd64"
-      ;;
-    arm64)
-      local arch="arm64"
-      ;;
-    aarch64)
-      local arch="arm64"
-      ;;
-    *)
-      echo "Unsupported architecture: $platform_name"
-      return 1
-      ;;
-  esac
-
-  curl -sSfL https://github.com/deckhouse/dmt/releases/download/v${DMT_VERSION}/dmt-${DMT_VERSION}-"${platform}"-${arch}.tar.gz | tar -zx --strip-components 1 -C /tmp
-  mv /tmp/dmt /usr/local/bin/dmt
-  chmod +x /usr/local/bin/dmt
-
+  GOBIN=/usr/local/bin go install "github.com/deckhouse/dmt/cmd/dmt@${DMT_REF}"
 }
 
 function structure_prepare {
