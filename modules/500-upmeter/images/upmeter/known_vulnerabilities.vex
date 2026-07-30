@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-upmeter-upmeter",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-07-28T12:00:00.000000+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42154"
+      },
+      "timestamp": "2026-07-28T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v2.5.0+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42154 (GHSA-8rm2-7qqf-34qm, CWE-400) относится к endpoint удалённого чтения /api/v1/read сервера Prometheus: некорректная валидация декодированной длины snappy-payload приводит к чрезмерным аллокациям памяти и может вызвать OOM-падение процесса. Согласно официальному advisory, уязвимость затрагивает сервер Prometheus версий < 3.5.3 и < 3.11.3 (фикс в 3.5.3/3.11.3, upstream v0.311.3). Бинарь upmeter использует библиотеку github.com/prometheus/prometheus исключительно как источник protobuf-типов пакета github.com/prometheus/prometheus/prompb (файлы pkg/server/remotewrite/exporter.go, syncer.go, timeseries.go) для СЕРИАЛИЗАЦИИ собственных remote-write payload'ов, которые upmeter как клиент отправляет во внешнее хранилище метрик. upmeter не запускает Prometheus-сервер, не импортирует пакеты storage/remote и не обслуживает endpoint /api/v1/read, поэтому уязвимый декодер snappy на стороне сервера в исполняемый путь не входит и не компилируется в бинарь. Обновление зависимости невозможно без миграции: upmeter закреплён на github.com/prometheus/prometheus v2.5.0+incompatible, тогда как исправление доступно только в схеме модуля v0.x (Prometheus 3.x, v0.311.3), что представляет собой мажорную несовместимую смену API. Эксплуатация в рамках данного образа недоступна."
+    }
+  ]
+}

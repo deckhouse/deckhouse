@@ -65,5 +65,7 @@ import:
   add: /upmeter
   to: /upmeter
   before: setup
-git:  
-{{- include "image mount points" . }}  
+git:
+{{- include "image mount points" . }}
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

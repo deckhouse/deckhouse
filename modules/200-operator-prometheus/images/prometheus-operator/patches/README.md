@@ -47,4 +47,19 @@ go mod tidy
 git diff
 ```
 
-`
+Additionally bump `golang.org/x/crypto` to v0.53.0, `golang.org/x/net` to v0.56.0, `golang.org/x/sys`
+to v0.46.0, `golang.org/x/text` to v0.39.0 (and their transitive `golang.org/x/sync`,
+`golang.org/x/term`) and `go.mongodb.org/mongo-driver` to v1.17.7 to fix CVEs reported by Trivy
+against the embedded Go dependencies of `/bin/operator` and `/bin/prometheus-config-reloader`:
+- `golang.org/x/crypto`: CVE-2026-39828/39829/39830/39831/39832/39835, CVE-2026-42508, CVE-2026-46595/46597
+- `golang.org/x/net`: CVE-2026-25680/25681/27136/33814/39821, CVE-2026-42502/42506, CVE-2026-46600
+- `golang.org/x/sys`: CVE-2026-39824
+- `golang.org/x/text`: CVE-2026-56852
+- `go.mongodb.org/mongo-driver`: CVE-2026-2303
+
+``` sh
+go get golang.org/x/crypto@v0.53.0 golang.org/x/net@v0.56.0 golang.org/x/sys@v0.46.0 golang.org/x/text@v0.39.0 go.mongodb.org/mongo-driver@v1.17.7
+go mod tidy
+git diff go.mod go.sum
+```
+
