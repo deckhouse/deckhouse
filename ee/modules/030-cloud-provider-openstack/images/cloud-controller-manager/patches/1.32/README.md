@@ -18,3 +18,8 @@ Planned Node deletion is not affected — those components remove Nodes directly
 - Nodes of type **CloudEphemeral (CAPI engine)** — CAPI controller removes the Node on Machine deletion.
 
 Nodes that remain in the `NotReady` state for an extended period can be tracked using the `K8SNodeNotReady` alert — it fires when a node is `NotReady` for more than 10 minutes.
+
+## 004-support-load-balancer-address-annotation.patch
+
+Allows using `loadbalancer.openstack.org/load-balancer-address` as an input annotation for a predefined floating IP.
+The annotation takes precedence over the deprecated `Service.spec.loadBalancerIP` field.

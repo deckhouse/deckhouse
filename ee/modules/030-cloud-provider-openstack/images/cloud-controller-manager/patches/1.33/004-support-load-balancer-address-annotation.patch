@@ -1,0 +1,38 @@
+diff --git a/pkg/openstack/loadbalancer.go b/pkg/openstack/loadbalancer.go
+index 9d30cd9d..c9408eb9 100644
+--- a/pkg/openstack/loadbalancer.go
++++ b/pkg/openstack/loadbalancer.go
+@@ -269,8 +269,8 @@ func (lbaas *LbaasV2) createOctaviaLoadBalancer(ctx context.Context, name, clust
+ 	}
+ 
+ 	// For external load balancer, the LoadBalancerIP is a public IP address.
+-	loadBalancerIP := service.Spec.LoadBalancerIP
++	loadBalancerIP := getLoadBalancerIP(service)
+ 	if loadBalancerIP != "" {
+ 		if svcConf.internal || (svcConf.preferredIPFamily == corev1.IPv6Protocol) {
+ 			createOpts.VipAddress = loadBalancerIP
+ 		}
+@@ -401,6 +401,13 @@ func getStringFromServiceAnnotation(service *corev1.Service, annotationKey strin
+ 	return defaultSetting
+ }
+ 
++func getLoadBalancerIP(service *corev1.Service) string {
++	if loadBalancerIP := getStringFromServiceAnnotation(service, ServiceAnnotationLoadBalancerAddress, ""); loadBalancerIP != "" {
++		return loadBalancerIP
++	}
++	return service.Spec.LoadBalancerIP
++}
++
+ // getIntFromServiceAnnotation searches a given v1.Service for a specific annotationKey and either returns the annotation's integer value or a specified defaultSetting
+ func getIntFromServiceAnnotation(service *corev1.Service, annotationKey string, defaultSetting int) int {
+ 	klog.V(4).Infof("getIntFromServiceAnnotation(%s/%s, %v, %v)", service.Namespace, service.Name, annotationKey, defaultSetting)
+@@ -681,8 +688,8 @@ func (lbaas *LbaasV2) ensureFloatingIP(ctx context.Context, clusterName string,
+ 	}
+ 
+ 	// second attempt: fetch floating IP specified in service Spec.LoadBalancerIP
+ 	// if found, associate floating IP with loadbalancer's VIP port
+-	loadBalancerIP := service.Spec.LoadBalancerIP
++	loadBalancerIP := getLoadBalancerIP(service)
+ 	if floatIP == nil && loadBalancerIP != "" {
+ 		opts := floatingips.ListOpts{
+ 			FloatingIP: loadBalancerIP,
