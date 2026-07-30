@@ -1,6 +1,8 @@
 # Pipeline creation rules.
 # Pipeline runs only for: tags, main, merge requests, release-x.xx branches.
 workflow:
+  auto_cancel:
+    on_new_commit: interruptible
   rules:
     # 1) Tag creation
     - if: $CI_COMMIT_TAG
