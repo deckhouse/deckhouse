@@ -144,36 +144,37 @@ func TestDescribeRole_CustomTitleOverridesShippedOne(t *testing.T) {
 
 func TestIsSuperadminRole(t *testing.T) {
 	tests := []struct {
-		name       string
-		descriptor v1alpha1.RoleDescriptor
-		expected   bool
+		name     string
+		roleName string
+		expected bool
 	}{
-		{
-			name:       "namespace superadmin",
-			descriptor: v1alpha1.RoleDescriptor{Scope: "namespace", Level: "superadmin"},
-			expected:   true,
-		},
-		{
-			name:       "system superadmin",
-			descriptor: v1alpha1.RoleDescriptor{Scope: "system", Level: "superadmin"},
-			expected:   true,
-		},
-		{
-			name:       "admin is not superadmin",
-			descriptor: v1alpha1.RoleDescriptor{Scope: "namespace", Level: "admin"},
-			expected:   false,
-		},
-		{
-			name:       "superadmin of an unknown scope does not count",
-			descriptor: v1alpha1.RoleDescriptor{Level: "superadmin"},
-			expected:   false,
-		},
+		{name: "namespace superadmin", roleName: "d8:namespace:superadmin", expected: true},
+		{name: "project superadmin", roleName: "d8:project:superadmin", expected: true},
+		{name: "system superadmin", roleName: "d8:system:superadmin", expected: true},
+		{name: "admin is not superadmin", roleName: "d8:namespace:admin", expected: false},
+		// The webhook names three roles and no more. A subsystem superadmin reads like one of them,
+		// and a custom role can carry the very same labels, but neither is let through -- so neither
+		// may be reported as bypassing.
+		{name: "subsystem superadmin is not one of them", roleName: "d8:subsystem:security:superadmin", expected: false},
+		{name: "custom role imitating the name", roleName: "d8:custom:project:superadmin", expected: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, IsSuperadminRole(tt.descriptor))
+			assert.Equal(t, tt.expected, IsSuperadminRole(tt.roleName))
 		})
+	}
+}
+
+func TestIsBypassGroup(t *testing.T) {
+	for _, group := range []string{"system:masters", "kubeadm:cluster-admins", "superadmins", "system:sudousers"} {
+		assert.True(t, IsBypassGroup(group), group)
+	}
+
+	// Cluster components bypass the webhook too, but a report is never built for them, and calling a
+	// workload an administrator would only misread the result.
+	for _, group := range []string{"system:nodes", "system:authenticated", "netops"} {
+		assert.False(t, IsBypassGroup(group), group)
 	}
 }
 

@@ -341,6 +341,63 @@ func TestReport_SuperadminCaveat(t *testing.T) {
 	assert.Equal(t, []string{"team-b"}, adminScope.Caveat.RestrictedNamespaces)
 }
 
+// The webhook drops its checks for the administrator groups before it looks at any binding, so a
+// member of system:masters is unrestricted no matter which roles they hold -- including none.
+// Reporting a restriction the webhook never applies is the failure direction that matters here.
+func TestReport_BypassGroupIsSuperadminEverywhere(t *testing.T) {
+	objs := []runtime.Object{
+		clusterRole("d8:namespace:admin", map[string]string{labelRoleKind: "role", labelRoleScope: "namespace"},
+			rule([]string{""}, []string{"pods"}, []string{"get", "delete"})),
+		roleBinding("admin", "team-b", "ClusterRole", "d8:namespace:admin", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}),
+	}
+
+	resolver := setupSubjectAccessResolver(t, objs, nil)
+
+	status, err := resolver.Report(context.Background(), userRequest("alice", "system:masters"))
+	require.NoError(t, err)
+
+	scope := findScope(t, status, "team-b")
+	assert.True(t, scope.Caveat.Superadmin)
+	assert.Empty(t, scope.Caveat.RestrictedNamespaces)
+}
+
+// Discovery goes incomplete whenever an aggregated APIService flaps, and the snapshot then answers
+// "unknown" for whole API groups. Unknown must not read as cluster-scoped here: dropping those rows
+// would quietly shrink the report, and the caller has no way to tell an omission from a real absence.
+func TestReport_UnknownResourceSurvivesAPartialSnapshot(t *testing.T) {
+	objs := []runtime.Object{
+		clusterRole("widget-reader", nil,
+			rule([]string{"flapping.example.com"}, []string{"widgets"}, []string{"get"}),
+			rule([]string{""}, []string{"nodes"}, []string{"get"})),
+		roleBinding("widgets", "team-a", "ClusterRole", "widget-reader", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}),
+	}
+
+	resolver := setupSubjectAccessResolver(t, objs, nil)
+	resolver.scopeCache.mu.Lock()
+	resolver.scopeCache.partial = true
+	resolver.scopeCache.mu.Unlock()
+
+	status, err := resolver.Report(context.Background(), userRequest("alice"))
+	require.NoError(t, err)
+
+	scope := findScope(t, status, "team-a")
+	assert.True(t, hasResource(scope, "flapping.example.com", "widgets"), "resource unknown to discovery was dropped")
+	// nodes is positively known to be cluster-scoped, so a RoleBinding grant on it stays unreportable.
+	assert.False(t, hasResource(scope, "", "nodes"), "cluster-scoped resource leaked into a namespace scope")
+
+	assert.Contains(t, status.Notes, "the discovery snapshot is incomplete: wildcard rules may have been expanded to fewer resources than they actually grant")
+}
+
+func hasResource(scope v1alpha1.AccessScope, group, resource string) bool {
+	for _, access := range scope.Resources {
+		if access.Group == group && access.Resource == resource {
+			return true
+		}
+	}
+
+	return false
+}
+
 func TestReport_RoleDescriptorIsAttached(t *testing.T) {
 	role := clusterRole("d8:subsystem:networking:manager", map[string]string{
 		labelRoleKind:  "role",
@@ -523,14 +580,18 @@ func TestReport_ContextCancellation(t *testing.T) {
 
 func TestExpandVerbs(t *testing.T) {
 	tests := []struct {
-		name     string
-		verbs    []string
-		expected []string
+		name         string
+		verbs        []string
+		expected     []string
+		wildcardFlag bool
 	}{
 		{
-			name:     "wildcard expands to the standard set",
-			verbs:    []string{"*"},
-			expected: standardVerbs,
+			name:  "wildcard expands to the standard set",
+			verbs: []string{"*"},
+			// The standard set is a readable sample, not the whole truth: the same rule also grants
+			// escalate, bind, impersonate and proxy. The flag is what keeps that from being silent.
+			expected:     standardVerbs,
+			wildcardFlag: true,
 		},
 		{
 			name:     "explicit verbs keep the reading order",
@@ -543,15 +604,46 @@ func TestExpandVerbs(t *testing.T) {
 			expected: []string{"get", "bind", "impersonate"},
 		},
 		{
-			name:     "duplicates collapse",
-			verbs:    []string{"get", "get", "*"},
-			expected: standardVerbs,
+			name:         "duplicates collapse",
+			verbs:        []string{"get", "get", "*"},
+			expected:     standardVerbs,
+			wildcardFlag: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, expandVerbs(tt.verbs))
+			verbs, viaWildcard := expandVerbs(tt.verbs)
+			assert.Equal(t, tt.expected, verbs)
+			assert.Equal(t, tt.wildcardFlag, viaWildcard)
 		})
+	}
+}
+
+// An eight-verb row from verbs: ["*"] must not read like an explicit eight-verb grant: the wildcard
+// also covers escalate, bind, impersonate and proxy, and an audit is usually run for exactly those.
+func TestReport_VerbWildcardIsMarked(t *testing.T) {
+	objs := []runtime.Object{
+		clusterRole("all-verbs", nil, rule([]string{"rbac.authorization.k8s.io"}, []string{"clusterroles"}, []string{"*"})),
+		clusterRole("named-verbs", nil, rule([]string{""}, []string{"pods"}, []string{"get", "list"})),
+		clusterRoleBinding("all", "all-verbs", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}),
+		clusterRoleBinding("named", "named-verbs", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}),
+	}
+
+	resolver := setupSubjectAccessResolver(t, objs, nil)
+
+	status, err := resolver.Report(context.Background(), userRequest("alice"))
+	require.NoError(t, err)
+
+	scope := findScope(t, status, "")
+	for _, access := range scope.Resources {
+		switch access.Resource {
+		case "clusterroles":
+			assert.True(t, access.ViaVerbWildcard)
+			require.NotEmpty(t, access.Sources)
+			assert.True(t, access.Sources[0].ViaVerbWildcard)
+		case "pods":
+			assert.False(t, access.ViaVerbWildcard)
+		}
 	}
 }

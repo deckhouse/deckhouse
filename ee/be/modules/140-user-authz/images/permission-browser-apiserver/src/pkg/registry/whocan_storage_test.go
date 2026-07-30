@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 
@@ -109,6 +110,51 @@ func TestWhoCanStorage_Create_EmptySpecIsRejected(t *testing.T) {
 
 	_, err := storage.Create(context.Background(), wc, nil, nil)
 	require.Error(t, err)
+}
+
+// "Who can do X" needs an X. Each of these used to be answered confidently: an empty
+// resourceAttributes matches every wildcard rule and returns all cluster administrators, and a spec
+// carrying both blocks has its non-resource half dropped without a word.
+func TestWhoCanStorage_Create_MeaninglessSpecIsRejected(t *testing.T) {
+	tests := []struct {
+		name string
+		spec v1alpha1.WhoCanSpec
+	}{
+		{
+			name: "empty resourceAttributes",
+			spec: v1alpha1.WhoCanSpec{ResourceAttributes: &v1alpha1.ResourceAttributes{}},
+		},
+		{
+			name: "resource without a verb",
+			spec: v1alpha1.WhoCanSpec{ResourceAttributes: &v1alpha1.ResourceAttributes{Resource: "pods"}},
+		},
+		{
+			name: "verb without a resource",
+			spec: v1alpha1.WhoCanSpec{ResourceAttributes: &v1alpha1.ResourceAttributes{Verb: "get"}},
+		},
+		{
+			name: "non-resource without a path",
+			spec: v1alpha1.WhoCanSpec{NonResourceAttributes: &v1alpha1.NonResourceAttributes{Verb: "get"}},
+		},
+		{
+			name: "both blocks at once",
+			spec: v1alpha1.WhoCanSpec{
+				ResourceAttributes:    &v1alpha1.ResourceAttributes{Verb: "get", Resource: "pods"},
+				NonResourceAttributes: &v1alpha1.NonResourceAttributes{Verb: "get", Path: "/healthz"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resolver := &mockWhoCanResolver{}
+			storage := NewWhoCanStorage(resolver)
+
+			_, err := storage.Create(context.Background(), &v1alpha1.WhoCan{Spec: tt.spec}, nil, nil)
+			require.Error(t, err)
+			assert.True(t, apierrors.IsBadRequest(err), "expected 400, got %v", err)
+		})
+	}
 }
 
 func TestWhoCanStorage_Create_WrongType(t *testing.T) {

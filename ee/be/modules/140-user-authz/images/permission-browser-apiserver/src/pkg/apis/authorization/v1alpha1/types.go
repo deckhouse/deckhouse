@@ -531,6 +531,15 @@ type ResourceAccess struct {
 	// +optional
 	// +listType=atomic
 	Sources []AccessSource `json:"sources,omitempty" protobuf:"bytes,6,rep,name=sources"`
+
+	// ViaVerbWildcard is true when the access comes from a "verbs: [*]" rule.
+	// Verbs above then lists the common verbs the wildcard covers, not all of
+	// them: the rule also grants the privileged ones RBAC checks separately
+	// (escalate and bind on roles, impersonate on subjects, proxy on nodes).
+	// Without this flag such a row would be indistinguishable from an explicit
+	// grant of exactly those verbs.
+	// +optional
+	ViaVerbWildcard bool `json:"viaVerbWildcard,omitempty" protobuf:"varint,7,opt,name=viaVerbWildcard"`
 }
 
 // NonResourceAccess is the set of verbs the subject may use on a non-resource URL.
@@ -546,6 +555,10 @@ type NonResourceAccess struct {
 	// +optional
 	// +listType=atomic
 	Sources []AccessSource `json:"sources,omitempty" protobuf:"bytes,3,rep,name=sources"`
+
+	// ViaVerbWildcard is true when the access comes from a "verbs: [*]" rule.
+	// +optional
+	ViaVerbWildcard bool `json:"viaVerbWildcard,omitempty" protobuf:"varint,4,opt,name=viaVerbWildcard"`
 }
 
 // AccessSource attributes a slice of the access to the binding and role that
@@ -577,6 +590,12 @@ type AccessSource struct {
 
 	// Role carries display metadata of the referenced role.
 	Role RoleDescriptor `json:"role" protobuf:"bytes,8,opt,name=role"`
+
+	// ViaVerbWildcard is true when this source grants the access through a
+	// "verbs: [*]" rule, so its verbs are a readable sample rather than the
+	// complete list.
+	// +optional
+	ViaVerbWildcard bool `json:"viaVerbWildcard,omitempty" protobuf:"varint,9,opt,name=viaVerbWildcard"`
 }
 
 // AccessCaveat describes restrictions applied on top of RBAC by admission

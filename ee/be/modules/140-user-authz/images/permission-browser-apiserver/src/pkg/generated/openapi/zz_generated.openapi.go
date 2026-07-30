@@ -2972,6 +2972,13 @@ func schema_pkg_apis_authorization_v1alpha1_AccessSource(ref common.ReferenceCal
 							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleDescriptor"),
 						},
 					},
+					"viaVerbWildcard": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ViaVerbWildcard is true when this source grants the access through a \"verbs: [*]\" rule, so its verbs are a readable sample rather than the complete list.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"verbs", "bindingKind", "bindingName", "roleKind", "roleName", "matchedBy", "role"},
 			},
@@ -3297,6 +3304,13 @@ func schema_pkg_apis_authorization_v1alpha1_NonResourceAccess(ref common.Referen
 							},
 						},
 					},
+					"viaVerbWildcard": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ViaVerbWildcard is true when the access comes from a \"verbs: [*]\" rule.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"path", "verbs"},
 			},
@@ -3527,6 +3541,13 @@ func schema_pkg_apis_authorization_v1alpha1_ResourceAccess(ref common.ReferenceC
 									},
 								},
 							},
+						},
+					},
+					"viaVerbWildcard": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ViaVerbWildcard is true when the access comes from a \"verbs: [*]\" rule. Verbs above then lists the common verbs the wildcard covers, not all of them: the rule also grants the privileged ones RBAC checks separately (escalate and bind on roles, impersonate on subjects, proxy on nodes). Without this flag such a row would be indistinguishable from an explicit grant of exactly those verbs.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},

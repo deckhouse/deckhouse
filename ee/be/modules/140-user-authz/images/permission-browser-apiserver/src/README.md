@@ -10,6 +10,10 @@ This server provides:
 
 2. **AccessibleNamespace**: A computed, ACL-filtered list of namespaces accessible to the requesting user. This is similar to OpenShift's Project API concept - it allows UI applications to show users only the namespaces they have access to, without requiring cluster-wide `list namespaces` permission.
 
+3. **WhoCan**: The reverse RBAC lookup - given an action, which subjects may perform it.
+
+4. **SubjectAccessReport**: The forward counterpart of `WhoCan` - given a subject, everything it may do, assembled from its bindings instead of probed one review at a time.
+
 ## API
 
 ### Resource: `AccessibleNamespace`
@@ -211,6 +215,147 @@ spec:
 EOF
 ```
 
+### Resource: `SubjectAccessReport`
+
+- **Group**: `authorization.deckhouse.io`
+- **Version**: `v1alpha1`
+- **Kind**: `SubjectAccessReport`
+- **Endpoints**:
+  - `POST /apis/authorization.deckhouse.io/v1alpha1/subjectaccessreports`
+  - `POST /apis/authorization.deckhouse.io/v1alpha1/subjectaccessreports/nonself`
+
+Answers "what can this subject do". A `SubjectAccessReview` answers one yes/no
+question at a time, so building this picture from reviews means guessing which
+questions to ask; the report instead walks the subject's bindings once and
+reports what they grant.
+
+The resource is ephemeral - it is not stored, only created.
+
+#### Request/Response Schema
+
+```yaml
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: SubjectAccessReport
+spec:
+  # Omit to report on the caller itself (self mode).
+  subject:
+    kind: User          # User | Group | ServiceAccount
+    name: alice
+    namespace: ""       # ServiceAccount only
+  # Extra groups to attribute to the subject. Ignored in self mode: the caller's
+  # own token is the source of truth for its groups.
+  groups: ["netops"]
+  # Namespaces to report on. Empty means every namespace the subject is bound in.
+  namespaces: []
+  resolveGroups: true   # resolve group membership through the group catalog
+  expandWildcards: true # expand "*" rules against the discovery snapshot
+
+status:
+  subject:
+    kind: User
+    name: alice
+    groups: ["netops", "d8:platform"]   # implicit, requested and resolved
+  # Every binding that matched, flat, before any aggregation.
+  roleAssignments:
+    - bindingKind: RoleBinding
+      bindingName: alice-admin
+      namespace: myproject
+      roleKind: ClusterRole
+      roleName: d8:namespace:admin
+      matchedBy: {kind: User, name: alice}
+      role: {scope: namespace, level: admin, title: "Namespace Admin"}
+  # Access grouped into scopes: the cluster-wide one, then one per set of
+  # namespaces whose access is identical (a project reads as one section).
+  scopes:
+    - namespaces: ["myproject"]
+      resources:
+        - group: ""
+          resource: pods
+          verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+          viaWildcard: false
+          viaVerbWildcard: false
+          sources:
+            - bindingKind: RoleBinding
+              bindingName: alice-admin
+              roleKind: ClusterRole
+              roleName: d8:namespace:admin
+              matchedBy: {kind: User, name: alice}
+              verbs: ["get", "list", "..."]
+      caveat:
+        protectedVerbs: true
+        superadmin: false
+        restrictedNamespaces: ["myproject"]
+  notes: []
+  evaluationError: ""
+  truncated: false
+```
+
+#### How It Works
+
+Everything is served from the informer caches: one pass over ClusterRoleBindings
+plus one over RoleBindings, regardless of how many resources the cluster has.
+
+1. **Identity**: the subject plus its groups. Group membership is resolved
+   through the group catalog (`deckhouse.io` Groups), following nested groups
+   with a cycle guard. In self mode the caller's token is used as-is.
+2. **Bindings**: every binding listing the identity is collected, along with
+   which subject entry matched - so a client can show access with and without
+   group membership.
+3. **Rules**: the referenced roles' rules are expanded into rows. `verbs: ["*"]`
+   is expanded to the common verbs and the row is marked `viaVerbWildcard`,
+   because the rule also grants the privileged verbs RBAC checks separately
+   (`escalate`, `bind`, `impersonate`, `proxy`). Resource wildcards are expanded
+   against the discovery snapshot and marked `viaWildcard`.
+4. **Scopes**: namespaces whose access is identical are merged into one scope.
+
+#### Caveats
+
+RBAC is not the only thing standing between a subject and an object, and a
+report that showed RBAC alone would overstate what the subject can actually do.
+`scopes[].caveat` carries the difference:
+
+- `protectedVerbs`: the scope grants verbs the system-resource admission webhook
+  restricts on Deckhouse-owned objects.
+- `superadmin` / `superadminNamespaces`: the subject bypasses that webhook, either
+  by holding one of its superadmin roles, by holding `cluster-admin`, or by
+  belonging to one of its bypass groups (`system:masters` and friends).
+- `restrictedNamespaces`: where the restriction does apply.
+
+The role and group sets used here are the webhook's own, asserted by a contract
+test against `modules/140-user-authz/webhooks/validating/system_resources.py`.
+A report claiming a restriction the webhook does not apply - or missing one it
+does - is worse than no report.
+
+#### Security
+
+- **Self mode** (no `spec.subject`) is granted to `system:authenticated` through
+  `d8:user-authz:self-subject-access-checker`. It discloses nothing the caller
+  cannot already obtain from `SelfSubjectRulesReview`. `spec.groups` is therefore
+  ignored in this mode: honouring it would hand out any named group's permission
+  map to anybody.
+- **Non-self mode** requires `create` on the `subjectaccessreports/nonself`
+  subresource, granted by `d8:user-authz:subject-access-checker`. It must be
+  bound explicitly, and never to an administrator whose
+  `ClusterAuthorizationRule` carries namespace filters: the resource is
+  cluster-scoped, so the answer is not confined to the namespaces such an
+  administrator may see.
+
+#### Example Usage
+
+```bash
+# What can alice do?
+cat <<EOF | kubectl create -f - -o yaml
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: SubjectAccessReport
+metadata:
+  name: alice-report
+spec:
+  subject:
+    kind: User
+    name: alice
+EOF
+```
+
 ## Modes of Operation
 
 ### Self Mode
@@ -299,6 +444,14 @@ make test
 - **RBAC-only result**: Subjects are derived from (Cluster)RoleBindings. Multi-tenancy restrictions are NOT applied to filter the returned subjects (a returned subject may still be denied by multi-tenancy at actual request time).
 - **Role explainability not included**: The result lists subjects but not which specific (Cluster)Role/(Cluster)RoleBinding granted each one (kept out for simplicity; may be added later).
 - **Computed resource**: Results are calculated at request time from informer caches, not stored. Changes propagate after informer cache sync (up to 30 minutes).
+
+### SubjectAccessReport
+- **RBAC plus caveats, not an authorization decision**: the report says what the bindings grant and flags where admission narrows it; it does not replace a `SubjectAccessReview` for a specific request.
+- **Multi-tenancy is reported, not applied per row**: a `ClusterAuthorizationRule` narrowing the subject is surfaced through `status.notes`, not by removing individual rows.
+- **Wildcard verbs are sampled**: a `verbs: ["*"]` row lists the common verbs and sets `viaVerbWildcard`; the privileged verbs (`escalate`, `bind`, `impersonate`, `proxy`) are covered by the rule but not enumerated.
+- **Degraded discovery is reported, not hidden**: when the discovery snapshot is incomplete, wildcard expansion covers fewer resources and `status.notes` says so. Resources unknown to the snapshot are kept rather than dropped - an audit report should never quietly undercount.
+- **Bounded output**: namespaces, resource rows, sources per row and role assignments are capped; `status.truncated` reports that a cap was hit.
+- **Computed resource**: built at request time from informer caches, not stored.
 
 ### General
 - The server caches RBAC rules and namespace information; changes may take up to 30 minutes to propagate

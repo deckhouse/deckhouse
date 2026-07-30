@@ -72,8 +72,8 @@ func (s *WhoCanStorage) Create(ctx context.Context, obj runtime.Object, createVa
 		return nil, apierrors.NewBadRequest("object is not a WhoCan")
 	}
 
-	if wc.Spec.ResourceAttributes == nil && wc.Spec.NonResourceAttributes == nil {
-		return nil, apierrors.NewBadRequest("spec must set either resourceAttributes or nonResourceAttributes")
+	if err := validateWhoCanSpec(wc.Spec); err != nil {
+		return nil, err
 	}
 
 	if createValidation != nil {
@@ -111,6 +111,33 @@ func (s *WhoCanStorage) Create(ctx context.Context, obj runtime.Object, createVa
 		len(wc.Status.Users), len(wc.Status.Groups), len(wc.Status.ServiceAccounts))
 
 	return wc, nil
+}
+
+// validateWhoCanSpec rejects the requests whose answer would be meaningless.
+//
+// The question is "who can do X", so X has to be stated. An empty
+// resourceAttributes matches every rule with a wildcard and answers with every
+// cluster administrator -- an answer that looks real and was never asked for.
+// Setting both blocks is a different misunderstanding with the same outcome:
+// resolution reads the resource one and drops the other silently.
+func validateWhoCanSpec(spec v1alpha1.WhoCanSpec) error {
+	switch {
+	case spec.ResourceAttributes == nil && spec.NonResourceAttributes == nil:
+		return apierrors.NewBadRequest("spec must set either resourceAttributes or nonResourceAttributes")
+
+	case spec.ResourceAttributes != nil && spec.NonResourceAttributes != nil:
+		return apierrors.NewBadRequest("spec must set only one of resourceAttributes and nonResourceAttributes")
+
+	case spec.ResourceAttributes != nil:
+		if spec.ResourceAttributes.Verb == "" || spec.ResourceAttributes.Resource == "" {
+			return apierrors.NewBadRequest("spec.resourceAttributes must set verb and resource")
+		}
+
+	case spec.NonResourceAttributes.Verb == "" || spec.NonResourceAttributes.Path == "":
+		return apierrors.NewBadRequest("spec.nonResourceAttributes must set verb and path")
+	}
+
+	return nil
 }
 
 // toServiceAccountReferences maps engine results to API types.
