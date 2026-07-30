@@ -420,6 +420,40 @@ d8 system module enable chrony
 
 {% endcapture %}
 
+{% capture enable_release_channel_cse %}
+
+```shell
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    releaseChannel: LTS
+    ...
+```
+
+{% endcapture %}
+
+{% capture disable_release_channel_cse %}
+
+```shell
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    #  releaseChannel
+    ...
+```
+
+{% endcapture %}
+
 ### Переключение с помощью модуля registry
 
 {% alert level="warning" %}
@@ -567,6 +601,10 @@ conditions:
       }}
    {% endtab %}
    {% endtabs %}
+   
+1. **Только для DKP CSE** — удалите поле `releaseChannel` в moduleConfig `deckhouse`:
+
+   {{ disable_release_channel_cse | regex_replace: "^", "   " }}
 
 1. В ModuleConfig [`deckhouse`](/modules/deckhouse/configuration.html#parameters-registry) укажите `imagesRepo` целевой редакции и `checkMode: Relax`:
 
@@ -702,6 +740,10 @@ conditions:
 1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
 
    {{ check_old_pods_unmanaged }}
+   
+1. **Только для DKP CSE** — установите `releaseChannel` в moduleConfig `deckhouse`:
+
+   {{ enable_release_channel_cse | regex_replace: "^", "   " }}
 
 1. **Только для DKP CSE** — включите модуль `chrony`:
 
@@ -1033,6 +1075,10 @@ d8 k delete ngc del-temp-config.sh
    {% endtab %}
    {% endtabs %}
 
+1. Удалите поле `releaseChannel` в moduleConfig `deckhouse`:
+
+   {{ disable_release_channel_cse | regex_replace: "^", "   " }}
+
 1. Выполните команду для указания данных аутентификации в хранилище образов:
 
    {{ ngc_auth_cse | regex_replace: "^", "   " }}
@@ -1103,6 +1149,10 @@ d8 k delete ngc del-temp-config.sh
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort -u
    ```
+
+1. Установите `releaseChannel` в moduleConfig `deckhouse`:
+
+   {{ enable_release_channel_cse | regex_replace: "^", "   " }}
 
 1. Включите модуль `chrony`:
 
