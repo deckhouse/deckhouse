@@ -40,6 +40,10 @@ CAPABILITY_SELECTOR_LABEL = "rbac.deckhouse.io/capability"
 # must never travel into a project through a delegatable custom role.
 TENANT_CAPABILITY_SCOPES = {"namespace-capability", "project-capability"}
 SCOPE_LABEL = "rbac.deckhouse.io/scope"
+SUBSYSTEM_LABEL = "rbac.deckhouse.io/subsystem"
+# The segment a custom object's name must carry for a given scope: "d8:custom:<segment>:<name>".
+# A subsystem role is the exception -- its segment is the subsystem id, so it is checked separately.
+NAME_SEGMENT_BY_SCOPE = {"namespace": "namespace", "project": "project", "system": "system"}
 # Scopes of a role that is granted inside a namespace or a project. The containment goes one way:
 # such a role must not reach for cluster-level capabilities, whereas a system/subsystem role may
 # well include namespace-level ones -- a platform administrator holds those anyway.
@@ -131,6 +135,36 @@ def _capability_scope(value: str) -> str:
     if value.startswith("custom."):
         value = value[len("custom.") :]
     return value.split(".", 1)[0]
+
+
+def _name_segment(name: str) -> str:
+    """The <segment> of "d8:custom:<segment>:<name>"; "" when the name has fewer parts."""
+    parts = name.split(":")
+
+    return parts[2] if len(parts) > 3 else ""
+
+
+def _expected_name_segment(kind_label: str, scope: str, subsystem: str) -> Optional[str]:
+    """
+    The name segment the object must carry, or None when nothing can be required of it.
+
+    The name is what people read in a binding, in an audit log and in the console, while the scope
+    label is what the checks judge by, so the two must not tell different stories. Only a declared
+    scope is enforced: an object that claims no scope claims nothing, and it is already judged by
+    the stricter tenant rules.
+    """
+    if not scope:
+        return None
+
+    if kind_label == "custom-capability":
+        return f"{scope}-capability"
+
+    if scope == "subsystem":
+        # The segment is the subsystem id itself ("d8:custom:security:auditor"), so it can only be
+        # checked against the label that names it.
+        return subsystem or None
+
+    return NAME_SEGMENT_BY_SCOPE.get(scope)
 
 
 def _cluster_level_selector(selectors) -> Optional[str]:
@@ -263,6 +297,14 @@ def validate(ctx: DotMap) -> Optional[str]:
             return (
                 f'ClusterRole "{name}" must not aggregate the "{system_side}" lineage together with '
                 f'the "{tenant_side}" lineage: mixing system and namespace/project scopes is forbidden.'
+            )
+
+        # The name must not contradict the declared scope.
+        expected_segment = _expected_name_segment(kind_label, labels.get(SCOPE_LABEL, ""), labels.get(SUBSYSTEM_LABEL, ""))
+        if expected_segment is not None and _name_segment(name) != expected_segment:
+            return (
+                f'ClusterRole "{name}" with "{SCOPE_LABEL}: {labels.get(SCOPE_LABEL)}" must be named '
+                f'"d8:custom:{expected_segment}:<name>": the name and the scope must not disagree.'
             )
 
         # A role granted inside a namespace or a project must stay within that world. The check
