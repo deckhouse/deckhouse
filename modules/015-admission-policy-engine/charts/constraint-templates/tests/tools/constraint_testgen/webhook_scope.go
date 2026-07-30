@@ -30,7 +30,9 @@ type webhookFinding struct {
 }
 
 // runWebhookScope scans the admission-policy-engine Helm templates for known
-// webhook scope anti-patterns.
+// webhook scope anti-patterns. It also scans test constraint fixture files so
+// that drift between the workload_kinds helper and fixture match.kinds is
+// caught.
 //
 // T4: Validate the webhook blast radius and constraint match.kinds scope.
 // Catches: H2 (ReplicaSet in scope, DELETE on controllers), L1 (duplicated
@@ -40,6 +42,16 @@ func runWebhookScope(templatesRoot string) error {
 	if err != nil {
 		return err
 	}
+
+	// Also scan test constraint fixtures for ReplicaSet drift — the fixture
+	// files under tests/test_cases/constraints/**/constraints/*.yaml declare
+	// match.kinds and may still reference kinds removed from the helper.
+	fixtureFindings, err := lintTestConstraintFixtures(templatesRoot)
+	if err != nil {
+		return err
+	}
+	findings = append(findings, fixtureFindings...)
+
 	if len(findings) == 0 {
 		fmt.Println("constraint_testgen webhook-scope: OK (no scope issues found)")
 		return nil
@@ -48,6 +60,65 @@ func runWebhookScope(templatesRoot string) error {
 		fmt.Fprintf(os.Stderr, "webhook-scope: %s:%d [%s] %s\n", f.File, f.Line, f.Rule, f.Message)
 	}
 	return fmt.Errorf("webhook-scope: %d issue(s) found", len(findings))
+}
+
+// lintTestConstraintFixtures walks the test_cases/constraints directory for
+// constraint fixture files (constraints/*.yaml) and checks for ReplicaSet in
+// match.kinds, which was removed from the workload_kinds helper.
+func lintTestConstraintFixtures(templatesRoot string) ([]webhookFinding, error) {
+	var findings []webhookFinding
+	abs, err := filepath.Abs(templatesRoot)
+	if err != nil {
+		return nil, err
+	}
+	// templatesRoot is .../templates; test fixtures live under
+	// .../tests/test_cases/constraints/
+	testsRoot := filepath.Join(filepath.Dir(filepath.Dir(abs)), "tests", "test_cases", "constraints")
+	if _, err := os.Stat(testsRoot); os.IsNotExist(err) {
+		return nil, nil
+	}
+	err = filepath.Walk(testsRoot, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		dirName := filepath.Base(filepath.Dir(p))
+		if dirName != "constraints" {
+			return nil
+		}
+		if !strings.HasSuffix(p, ".yaml") {
+			return nil
+		}
+		data, readErr := os.ReadFile(p)
+		if readErr != nil {
+			return readErr
+		}
+		content := string(data)
+		fileFindings := lintFixtureContent(p, content)
+		findings = append(findings, fileFindings...)
+		return nil
+	})
+	return findings, err
+}
+
+// lintFixtureContent checks a test constraint fixture for ReplicaSet in
+// match.kinds.
+func lintFixtureContent(file, content string) []webhookFinding {
+	var findings []webhookFinding
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		if strings.Contains(line, "ReplicaSet") {
+			findings = append(findings, webhookFinding{
+				File:    file,
+				Line:    i + 1,
+				Rule:    "replicaset-in-test-fixture",
+				Message: "ReplicaSet in test fixture match.kinds — ReplicaSet was removed from the workload_kinds helper; update this fixture to match (see PR #21556 review N4)",
+			})
+		}
+	}
+	return findings
 }
 
 // lintWebhookTemplates walks the admission-policy-engine templates directory

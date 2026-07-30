@@ -8,7 +8,7 @@ metadata:
     security.deckhouse.io: security-policy
   annotations:
     metadata.gatekeeper.sh/title: "Allowed cluster roles"
-    metadata.gatekeeper.sh/version: 1.1.0
+    metadata.gatekeeper.sh/version: 1.0.0
     description: >-
       Controls what cluster roles are allowed to be bind to users.
 spec:
