@@ -22,11 +22,21 @@ import (
 	"text/template"
 )
 
-func buildChecksumElement(instanceClass map[string]interface{}, manualRolloutID string) map[string]interface{} {
+func buildChecksumElement(instanceClass interface{}, manualRolloutID string) map[string]interface{} {
 	return map[string]interface{}{
 		"instanceClass":   instanceClass,
 		"manualRolloutID": manualRolloutID,
 	}
+}
+
+// RenderChecksumForInstanceClass renders the checksum from the only two inputs the checksum
+// contract allows: the instance class and the manualRolloutID. Production code must use this
+// instead of passing the whole resolved NodeGroup map — a provider template reaching for any
+// other field (updateEpoch, kubernetesVersion, zones) then fails to render instead of silently
+// changing the checksum on unrelated edits, which renames the immutable MachineClass /
+// MachineTemplate and rolls every node in the group.
+func RenderChecksumForInstanceClass(templateContent []byte, instanceClass interface{}, manualRolloutID string, cloudProvider map[string]interface{}) (string, error) {
+	return RenderChecksum(templateContent, buildChecksumElement(instanceClass, manualRolloutID), cloudProvider)
 }
 
 // RenderChecksum renders a provider instance-class checksum template. Every template reads

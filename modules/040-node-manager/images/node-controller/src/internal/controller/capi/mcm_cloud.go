@@ -100,7 +100,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng
 	// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
 	// only, so the resolved NodeGroup is serialized here and nowhere else.
 	nodeGroupValues := resolved.ToMap()
-	checksum, err := machineclass.RenderChecksum(checksumTemplate, nodeGroupValues, cloudProvider)
+	checksum, err := machineclass.RenderChecksumForInstanceClass(checksumTemplate, resolved.InstanceClass, resolved.ManualRolloutID, cloudProvider)
 	if err != nil {
 		return fmt.Errorf("render checksum for NodeGroup %s: %w", ng.Name, err)
 	}

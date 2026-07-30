@@ -35,6 +35,20 @@ func FuncMap() template.FuncMap {
 	delete(f, "env")
 	delete(f, "expandenv")
 
+	// Non-deterministic functions must not be reachable from provider templates: the
+	// checksum names the immutable MachineClass/MachineTemplate, so a template that
+	// renders differently on every pass would silently roll every node in the group
+	// each resync. Deleting them makes such a template fail at Parse instead.
+	for _, name := range []string{
+		"now", "ago", // clock
+		"randAlphaNum", "randAlpha", "randNumeric", "randAscii", "randInt", "randBytes", "shuffle", // math/rand
+		"uuidv4", "genPrivateKey", "genCA", "genCAWithKey", "genSelfSignedCert", "genSelfSignedCertWithKey",
+		"genSignedCert", "genSignedCertWithKey", "bcrypt", "htpasswd", // crypto/rand
+		"getHostByName", // network
+	} {
+		delete(f, name)
+	}
+
 	extra := template.FuncMap{
 		"toToml":        toTOML,
 		"toYaml":        toYAML,

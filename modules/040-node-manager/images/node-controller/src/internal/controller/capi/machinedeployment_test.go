@@ -272,3 +272,32 @@ func TestDesiredReplicas(t *testing.T) {
 		})
 	}
 }
+
+// A zone name with YAML-significant characters must not change the patch structure: the
+// substitution happens after the parse, inside string values only.
+func TestApplyMachineDeploymentSpecPatchHostileZone(t *testing.T) {
+	for _, zone := range []string{"ru: 3a", "!ru-3a", "a\nb", "{x: y}"} {
+		spec := map[string]interface{}{}
+		rawPatch := "template:\n  spec:\n    failureDomain: ${zone}\n"
+		if err := applyMachineDeploymentSpecPatch(spec, rawPatch, map[string]string{"zone": zone}); err != nil {
+			t.Fatalf("zone %q: unexpected error: %v", zone, err)
+		}
+		got := spec["template"].(map[string]interface{})["spec"].(map[string]interface{})["failureDomain"]
+		if got != zone {
+			t.Fatalf("zone %q: failureDomain=%v — value must be the literal zone string", zone, got)
+		}
+	}
+}
+
+// Placeholders inside list items are substituted too.
+func TestApplyMachineDeploymentSpecPatchListValues(t *testing.T) {
+	spec := map[string]interface{}{}
+	rawPatch := "template:\n  spec:\n    tags:\n    - \"zone-${zone}\"\n    - plain\n"
+	if err := applyMachineDeploymentSpecPatch(spec, rawPatch, map[string]string{"zone": "ru-3a"}); err != nil {
+		t.Fatal(err)
+	}
+	tags := spec["template"].(map[string]interface{})["spec"].(map[string]interface{})["tags"].([]interface{})
+	if tags[0] != "zone-ru-3a" || tags[1] != "plain" {
+		t.Fatalf("tags=%v", tags)
+	}
+}

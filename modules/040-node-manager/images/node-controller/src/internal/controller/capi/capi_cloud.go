@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -329,7 +328,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
 	// only, so the resolved NodeGroup is serialized here and nowhere else.
 	nodeGroupValues := resolved.ToMap()
-	checksum, err := machineclass.RenderChecksum(checksumTpl, nodeGroupValues, cloudProvider)
+	checksum, err := machineclass.RenderChecksumForInstanceClass(checksumTpl, resolved.InstanceClass, resolved.ManualRolloutID, cloudProvider)
 	if err != nil {
 		return fmt.Errorf("render CAPI instance-class checksum for NodeGroup %s: %w", ng.Name, err)
 	}
@@ -497,37 +496,56 @@ func (r *MachineDeploymentReconciler) reconcileStaticMDRendered(ctx context.Cont
 	return nil
 }
 
+// applyMachineDeploymentSpecPatch merges the provider spec-patch into the MachineDeployment
+// spec. ${var} placeholders are substituted AFTER the YAML parse, inside string values only:
+// substituting into the raw text would let a zone name containing ":" or a leading "!" change
+// the YAML structure, and the mis-typed value would land in spec.template and roll the group.
 func applyMachineDeploymentSpecPatch(spec map[string]interface{}, rawPatch string, vars map[string]string) error {
 	if strings.TrimSpace(rawPatch) == "" {
 		return nil
 	}
 
 	patch := map[string]interface{}{}
-	if err := sigsyaml.Unmarshal([]byte(substitutePatchVariables(rawPatch, vars)), &patch); err != nil {
+	if err := sigsyaml.Unmarshal([]byte(rawPatch), &patch); err != nil {
 		return fmt.Errorf("unmarshal spec patch: %w", err)
 	}
 
+	substituteInStrings(patch, vars)
 	deepMergeMaps(spec, patch)
 	return nil
 }
 
-func substitutePatchVariables(raw string, vars map[string]string) string {
+// substituteInStrings replaces ${key} inside every string value of a parsed YAML tree.
+// Keys are not substituted — a placeholder only makes sense as (part of) a value.
+func substituteInStrings(node interface{}, vars map[string]string) {
 	if len(vars) == 0 {
-		return raw
+		return
 	}
-
-	keys := make([]string, 0, len(vars))
-	for k := range vars {
-		keys = append(keys, k)
+	switch v := node.(type) {
+	case map[string]interface{}:
+		for k, child := range v {
+			if s, ok := child.(string); ok {
+				v[k] = substituteVars(s, vars)
+				continue
+			}
+			substituteInStrings(child, vars)
+		}
+	case []interface{}:
+		for i, child := range v {
+			if s, ok := child.(string); ok {
+				v[i] = substituteVars(s, vars)
+				continue
+			}
+			substituteInStrings(child, vars)
+		}
 	}
-	sort.Strings(keys)
+}
 
-	replacements := make([]string, 0, len(keys)*2)
-	for _, k := range keys {
-		replacements = append(replacements, "${"+k+"}", vars[k])
+func substituteVars(s string, vars map[string]string) string {
+	for k, val := range vars {
+		s = strings.ReplaceAll(s, "${"+k+"}", val)
 	}
-
-	return strings.NewReplacer(replacements...).Replace(raw)
+	return s
 }
 
 func deepMergeMaps(dst, src map[string]interface{}) {
