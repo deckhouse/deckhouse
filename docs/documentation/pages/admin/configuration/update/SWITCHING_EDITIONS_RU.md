@@ -319,40 +319,6 @@ conditions:
 {% endalert %}
 {% endcapture %}
 
-{% capture ngc_auth_registry %}
-{{ alert_additional_registry }}
-
-```shell
-AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-$NEW_EDITION-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 30
-  content: |
-    _on_containerd_config_changed() {
-      bb-flag-set containerd-need-restart
-    }
-    bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".registry.configs]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
-            auth = "$AUTH_STRING"
-    EOF_TOML
-EOF
-```
-
-{% endcapture %}
-
 {% capture change_registry_helper_ce %}
 
 ```shell
@@ -365,7 +331,7 @@ registry.deckhouse.ru/deckhouse/ce \
 
 {% endcapture %}
 
-{% capture change_registry_helper_commercial %}
+{% capture change_registry_helper %}
 
 ```shell
 DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
@@ -386,10 +352,75 @@ registry.deckhouse.ru/deckhouse/$NEW_EDITION
 
 {% endcapture %}
 
-{% capture ngc_cleanup_registry %}
+{% capture ngc_auth_registry %}
+{{ alert_additional_registry }}
+
+Для ContainerdV1:
 
 ```shell
-d8 k delete ngc containerd-$NEW_EDITION-config.sh
+AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+d8 k apply -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerdv1-$NEW_EDITION-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 0
+  content: |
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - << "EOF"
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.deckhouse.ru"]
+              endpoint = ["https://registry.deckhouse.ru"]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
+            auth = "$AUTH_STRING"
+    EOF
+EOF
+```
+
+Для ContainerdV2:
+
+```shell
+d8 k apply -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerdv2-$NEW_EDITION-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 0
+  content: |
+    mkdir -p /etc/containerd/registry.d/registry.deckhouse.ru
+    bb-sync-file /etc/containerd/registry.d/registry.deckhouse.ru/hosts.toml - << "EOF"
+    [host]
+
+      [host."https://registry.deckhouse.ru"]
+         capabilities = ["pull", "resolve"]
+         [host."https://registry.deckhouse.ru".auth]
+            username = "license-token"
+            password = "${LICENSE_TOKEN}"
+    EOF
+EOF
+```
+
+{% endcapture %}
+
+{% capture ngc_cleanup_registry %}
+
+Для ContainerdV1
+
+```shell
+d8 k delete ngc containerdv1-$NEW_EDITION-config.sh
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -400,7 +431,7 @@ spec:
   - '*'
   bundles:
   - '*'
-  weight: 90
+  weight: 0
   content: |
     if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
       rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
@@ -409,101 +440,10 @@ EOF
 d8 k delete ngc del-temp-config.sh
 ```
 
-{% endcapture %}
-
-{% capture ngc_auth_cse %}
-{{ alert_additional_registry }}
+Для ContainerdV2
 
 ```shell
-AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-d8 k apply -f - <<EOF
----
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-cse-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 30
-  content: |
-    _on_containerd_config_changed() {
-      bb-flag-set containerd-need-restart
-    }
-    bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/cse-registry.toml - containerd-config-file-changed << "EOF_TOML"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".registry]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry-cse.deckhouse.ru"]
-              endpoint = ["https://registry-cse.deckhouse.ru"]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs."registry-cse.deckhouse.ru".auth]
-              auth = "$AUTH_STRING"
-    EOF_TOML
-EOF
-```
-
-{% endcapture %}
-
-{% capture cse_digests_from_pod %}
-
-```shell
-d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
-d8 k wait --for=condition=ready pod/cse-image --timeout=300s
-CSE_SANDBOX_IMAGE=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
-CSE_K8S_API_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
-CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
-```
-
-{% endcapture %}
-
-{% capture cse_set_image_158 %}
-
-```shell
-d8 k -n d8-system set image deployment/deckhouse \
-kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
-deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
-```
-
-{% endcapture %}
-
-{% capture cse_set_image_164_plus %}
-
-```shell
-CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-d8 k -n d8-system set image deployment/deckhouse \
-init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER \
-kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
-deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
-```
-
-{% endcapture %}
-
-{% capture cse_cleanup %}
-
-```shell
-d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
-d8 k delete pod cse-image --ignore-not-found
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: del-temp-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 90
-  content: |
-    rm -f /etc/containerd/conf.d/cse-registry.toml /etc/containerd/conf.d/cse-sandbox.toml
-EOF
-d8 k delete ngc del-temp-config.sh
+d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
 ```
 
 {% endcapture %}
@@ -1041,7 +981,7 @@ d8 k delete ngc del-temp-config.sh
 
    {% tab "DKP BE" %}
       {{
-         change_registry_helper_commercial
+         change_registry_helper
          | regex_replace: "\$NEW_EDITION", "be"
          | regex_replace: "^", "   "
       }}
@@ -1049,7 +989,7 @@ d8 k delete ngc del-temp-config.sh
 
    {% tab "DKP SE" %}
       {{
-         change_registry_helper_commercial
+         change_registry_helper
          | regex_replace: "\$NEW_EDITION", "se"
          | regex_replace: "^", "   "
       }}
@@ -1057,7 +997,7 @@ d8 k delete ngc del-temp-config.sh
 
    {% tab "DKP SE+" %}
       {{
-         change_registry_helper_commercial
+         change_registry_helper
          | regex_replace: "\$NEW_EDITION", "se-plus"
          | regex_replace: "^", "   "
       }}
@@ -1065,7 +1005,7 @@ d8 k delete ngc del-temp-config.sh
 
    {% tab "DKP EE" %}
       {{
-         change_registry_helper_commercial
+         change_registry_helper
          | regex_replace: "\$NEW_EDITION", "ee"
          | regex_replace: "^", "   "
       }}
@@ -1136,7 +1076,71 @@ d8 k delete ngc del-temp-config.sh
    {% endtabs %}
 {% endtab %}
 
-{% tab "DKP CSE" %}
+{% tab "DKP CSE v1.73" %}
+1. Укажите версию DKP CSE, которую вы хотите использовать:
+
+   ```shell
+   DECKHOUSE_VERSION=v1.73.3
+   ```
+
+1. Выполните команду для указания данных аутентификации в хранилище образов:
+
+ {{
+  ngc_auth_registry
+  | regex_replace: "\$NEW_EDITION", "cse"
+  | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+  | regex_replace: "^", "   "
+ }}
+
+ {{
+  bashible_sync_wait
+  | regex_replace: "^", "   "
+ }}
+
+1. Переключите хранилище образов контейнеров:
+
+ {{
+  change_registry_helper
+  | regex_replace: "\$NEW_EDITION", "cse"
+  | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+  | regex_replace: "^", "   "
+ }}
+
+{{ take_care_deckhuse_imagepullbackoff }}
+
+1. Дождитесь готовности DKP:
+
+   {{ wait_queue | regex_replace: "^", "   " }}
+
+1. Проверьте наличие подов с ошибками загрузки образов:
+
+   ```shell
+   d8 k get pods -A | awk 'NR==1 || /^d8-/' | grep -E 'ImagePullBackOff|ErrImagePull'
+   ```
+
+   Для каждого проблемного модуля **на всех master-узлах** выполните следующие команды, указав имя модуля:
+
+   ```shell
+   rm -rf /var/lib/deckhouse/downloaded/<ИМЯ_МОДУЛЯ>/
+   d8 k rollout restart deploy -n d8-system deckhouse
+   ```
+
+1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
+
+   {{ check_old_pods | regex_replace: "^", "   " }}
+
+1. Выполните очистку:
+
+ {{
+  ngc_cleanup_registry
+  | regex_replace: "\$NEW_EDITION", "cse"
+  | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+  | regex_replace: "^", "   "
+ }}
+
+{% endtab %}
+
+{% tab "DKP CSE < v1.73" %}
 1. Укажите версию DKP CSE, которую вы хотите использовать:
 
    {% tabs cse-switch-deckhouse-version %}
@@ -1161,13 +1165,6 @@ d8 k delete ngc del-temp-config.sh
    ```
 
    {% endtab %}
-   {% tab "CSE 1.73" %}
-
-   ```shell
-   DECKHOUSE_VERSION=v1.73.3
-   ```
-
-   {% endtab %}
    {% endtabs %}
 
 1. Удалите поле `releaseChannel` в moduleConfig `deckhouse`:
@@ -1176,18 +1173,55 @@ d8 k delete ngc del-temp-config.sh
 
 1. Выполните команду для указания данных аутентификации в хранилище образов:
 
-   {{ ngc_auth_cse | regex_replace: "^", "   " }}
+   {{ alert_additional_registry | regex_replace: "^", "   " }}
+
+   ```shell
+   AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+   d8 k apply -f - <<EOF
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-cse-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/cse-registry.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           [plugins."io.containerd.grpc.v1.cri".registry]
+             [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+               [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry-cse.deckhouse.ru"]
+                 endpoint = ["https://registry-cse.deckhouse.ru"]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs]
+               [plugins."io.containerd.grpc.v1.cri".registry.configs."registry-cse.deckhouse.ru".auth]
+                 auth = "$AUTH_STRING"
+       EOF_TOML
+   EOF
+   ```
 
    {{ bashible_sync_wait | regex_replace: "^", "   " }}
 
 1. Получите дайджесты образов (переменные будут использоваться в следующих шагах):
 
-   {{ cse_digests_from_pod | regex_replace: "^", "   " }}
+   ```shell
+   d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   d8 k wait --for=condition=ready pod/cse-image --timeout=300s
+   CSE_SANDBOX_IMAGE=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
+   CSE_K8S_API_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+   CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+   ```
 
 1. Настройте образы на узлах:
-
-   {% tabs cse-set-sha-images %}
-   {% tab "CSE 1.58 / 1.64 / 1.67" %}
 
    ```shell
    d8 k apply -f - <<EOF
@@ -1214,14 +1248,6 @@ d8 k delete ngc del-temp-config.sh
 
    {{ bashible_sync_wait | regex_replace: "^", "   " }}
 
-   {% endtab %}
-   {% tab "CSE 1.73" %}
-
-   Для CSE 1.73 данный шаг не требуется.
-
-   {% endtab %}
-   {% endtabs %}
-
 1. Обновите данные аутентификации для доступа к хранилищу образов:
 
    ```shell
@@ -1239,17 +1265,23 @@ d8 k delete ngc del-temp-config.sh
 
    {% tabs cse-set-deckhouse-image %}
    {% tab "CSE 1.58" %}
-      {{
-         cse_set_image_158
-         | regex_replace: "^", "   "
-      }}
+ ```shell
+ d8 k -n d8-system set image deployment/deckhouse \
+ kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
+ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+ ```
+
    {% endtab %}
 
-   {% tab "CSE 1.64 / 1.67 / 1.73" %}
-      {{
-         cse_set_image_164_plus
-         | regex_replace: "^", "   "
-      }}
+   {% tab "CSE 1.64 / 1.67" %}
+ ```shell
+ CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+ d8 k -n d8-system set image deployment/deckhouse \
+ init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER \
+ kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
+ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+ ```
+
    {% endtab %}
    {% endtabs %}
 
@@ -1271,7 +1303,25 @@ d8 k delete ngc del-temp-config.sh
 
 1. Выполните очистку:
 
-   {{ cse_cleanup | regex_replace: "^", "   " }}
+   ```shell
+   d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+   d8 k delete pod cse-image --ignore-not-found
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: del-temp-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 90
+     content: |
+       rm -f /etc/containerd/conf.d/cse-registry.toml /etc/containerd/conf.d/cse-sandbox.toml
+   EOF
+   d8 k delete ngc del-temp-config.sh
+   ```
 
 {% endtab %}
 {% endtabs %}

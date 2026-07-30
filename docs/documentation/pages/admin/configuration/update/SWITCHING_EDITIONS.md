@@ -278,32 +278,61 @@ If you need to add configuration for an additional registry in containerd, refer
 {% capture ngc_auth_registry %}
 {{ alert_additional_registry }}
 
+For ContainerdV1:
+
 ```shell
 AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: containerd-$NEW_EDITION-config.sh
+  name: containerdv1-$NEW_EDITION-config.sh
 spec:
   nodeGroups:
   - '*'
   bundles:
   - '*'
-  weight: 30
+  weight: 0
   content: |
-    _on_containerd_config_changed() {
-      bb-flag-set containerd-need-restart
-    }
-    bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
     mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - containerd-config-file-changed << "EOF_TOML"
+    bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - << "EOF"
     [plugins]
       [plugins."io.containerd.grpc.v1.cri"]
         [plugins."io.containerd.grpc.v1.cri".registry.configs]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.deckhouse.io"]
+              endpoint = ["https://registry.deckhouse.io"]
           [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
             auth = "$AUTH_STRING"
-    EOF_TOML
+    EOF
+EOF
+```
+
+For ContainerdV2:
+
+```shell
+d8 k apply -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerdv2-$NEW_EDITION-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 0
+  content: |
+    mkdir -p /etc/containerd/registry.d/registry.deckhouse.io
+    bb-sync-file /etc/containerd/registry.d/registry.deckhouse.io/hosts.toml - << "EOF"
+    [host]
+
+      [host."https://registry.deckhouse.io"]
+         capabilities = ["pull", "resolve"]
+         [host."https://registry.deckhouse.io".auth]
+            username = "license-token"
+            password = "${LICENSE_TOKEN}"
+    EOF
 EOF
 ```
 
@@ -321,7 +350,7 @@ registry.deckhouse.io/deckhouse/ce \
 
 {% endcapture %}
 
-{% capture change_registry_helper_commercial %}
+{% capture change_registry_helper %}
 
 ```shell
 DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
@@ -344,8 +373,10 @@ registry.deckhouse.io/deckhouse/$NEW_EDITION
 
 {% capture ngc_cleanup_registry %}
 
+For ContainerdV1
+
 ```shell
-d8 k delete ngc containerd-$NEW_EDITION-config.sh
+d8 k delete ngc containerdv1-$NEW_EDITION-config.sh
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -356,13 +387,19 @@ spec:
   - '*'
   bundles:
   - '*'
-  weight: 90
+  weight: 0
   content: |
     if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
       rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
     fi
 EOF
 d8 k delete ngc del-temp-config.sh
+```
+
+For ContainerdV2
+
+```shell
+d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
 ```
 
 {% endcapture %}
@@ -779,7 +816,7 @@ Choose the target edition:
 
    {% tab "DKP BE" %}
       {{
-         change_registry_helper_commercial
+         change_registry_helper
          | regex_replace: "\$NEW_EDITION", "be"
          | regex_replace: "^", "   "
       }}
@@ -787,7 +824,7 @@ Choose the target edition:
 
    {% tab "DKP SE" %}
       {{
-         change_registry_helper_commercial
+         change_registry_helper
          | regex_replace: "\$NEW_EDITION", "se"
          | regex_replace: "^", "   "
       }}
@@ -795,7 +832,7 @@ Choose the target edition:
 
    {% tab "DKP SE+" %}
       {{
-         change_registry_helper_commercial
+         change_registry_helper
          | regex_replace: "\$NEW_EDITION", "se-plus"
          | regex_replace: "^", "   "
       }}
@@ -803,7 +840,7 @@ Choose the target edition:
 
    {% tab "DKP EE" %}
       {{
-         change_registry_helper_commercial
+         change_registry_helper
          | regex_replace: "\$NEW_EDITION", "ee"
          | regex_replace: "^", "   "
       }}
