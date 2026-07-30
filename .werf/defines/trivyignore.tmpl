@@ -89,57 +89,6 @@ dependencies:
     targetEnv: IMAGE_REPO
 shell:
   install:
-  - export REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)"
-  - export REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)"
-{{- if $isVault }}
-  - export VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)"
-  - export VAULT_ROLE="$(cat /run/secrets/VAULT_ROLE)"
-  - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/TRANSIT_SECRET_ENGINE_PATH)"
-  - VAULT_KEY=$(cat /run/secrets/VAULT_KEY)
-  - export VAULT_KEY="hashivault://${VAULT_KEY#hashivault://}"
-{{- if ne $actionsIdToken "" }}
-  - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
-  - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
-  - export VAULT_AUTH_PATH="github"
-  - >
-    export VAULT_JWT=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-  - >
-    if [ -n "${VAULT_JWT}" ]; then
-      echo "Received Actions token";
-    else
-      echo "Actions token empty";
-    fi
-{{- else }}
-  - export VAULT_AUTH_PATH="fox"
-  - export VAULT_JWT="$(cat /run/secrets/VAULT_JWT)"
-{{- end }}
-  - >
-    export VAULT_TOKEN="$(curl -fX POST "${VAULT_ADDR}/v1/auth/${VAULT_AUTH_PATH}/login" -d '{"role":"'${VAULT_ROLE}'","jwt":"'${VAULT_JWT}'"}' | jq -r '.auth.client_token')"
-  - >
-    if [ -n "${VAULT_TOKEN}" ]; then
-      echo "Received Vault token";
-    else
-      echo "Vault token empty";
-    fi
-  - echo "Using predicate known_vulnerabilities.vex"
-{{- else }}
-  - |
-    echo -e "\033[33mWARNING!!! Cosign will sign attestation with self-generated key pair!\033[0m"
-    export COSIGN_PASSWORD=""
-    cosign generate-key-pair
-    export VAULT_KEY="cosign.key"
-{{- end }}
   - echo "Using predicate .trivyignore.yaml"
-  - |
-    cosign attest \
-      --replace \
-      --registry-username="${REGISTRY_USER}" \
-      --registry-password="${REGISTRY_PASSWORD}" \
-      --predicate /.trivyignore.yaml \
-      --type custom \
-      --key ${VAULT_KEY} \
-      --tlog-upload=false \
-      -y -d \
-      "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
 {{- end }}
