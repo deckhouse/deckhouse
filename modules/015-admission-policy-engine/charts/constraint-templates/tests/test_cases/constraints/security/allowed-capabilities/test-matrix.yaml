@@ -838,11 +838,12 @@ spec:
         base: admissionDeployment
         merge:
           metadata:
-            labels:
-              security.deckhouse.io/security-policy-exception: allow-capabilities-spe-top
             name: controller-allowed-by-spe-on-top-level-metadata
           spec:
             template:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-capabilities-spe-top
               spec:
                 containers:
                 - image: nginx
