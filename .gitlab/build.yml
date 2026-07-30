@@ -33,6 +33,7 @@
     expire_in: 1 week
     paths:
       - images_tags_werf.json
+      - only_images.json
     reports:
       dotenv: build.env
   variables:
@@ -201,10 +202,20 @@
       if [[ "${BUILD_MODE}" == "dev" && "${WERF_ENV,,}" == "fe" ]]; then
         regctl image get-file "${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss:${IMAGE_TAG_BASE}" \
           /deckhouse/modules/images_digests.json > images_digests.json
+        if [[ -n "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}" ]]; then
+          export GITHUB_BASE_REF="origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
+        fi
         BUILD_REPORT_PATH=./images_tags_werf.json \
           IMAGES_DIGESTS_PATH=./images_digests.json \
           OUTPUT_CHANGED=./changed_images.json \
           python3 .github/scripts/python/changed_images.py
+        CHANGED_COUNT="$(jq 'length' changed_images.json)"
+        jq -c '[.[].compact_keys[]?] | unique' changed_images.json > only_images.json
+        echo "CHANGED_COUNT=${CHANGED_COUNT}" >> build.env
+        rm -f images_digests.json changed_images.json
+      else
+        echo "[]" > only_images.json
+        echo "CHANGED_COUNT=0" >> build.env
       fi
 
       egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
