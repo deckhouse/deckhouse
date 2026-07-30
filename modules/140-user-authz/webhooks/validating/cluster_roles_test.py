@@ -460,5 +460,73 @@ class TestDelegatableCustomRole(unittest.TestCase):
         tests.assert_validation_allowed(self, out, None)
 
 
+AGGREGATED_RULES = [{"apiGroups": [""], "resources": ["pods"], "verbs": ["get"]}]
+CUSTOM_ROLE_LABELS = {"rbac.deckhouse.io/kind": "custom-role"}
+AGGREGATION = {"clusterRoleSelectors": [{"matchLabels": {"rbac.deckhouse.io/capability": "namespace-capability.kubernetes.view_logs"}}]}
+
+NO_RULES_MSG = (
+    'ClusterRole "d8:custom:project:role-a" with "rbac.deckhouse.io/kind: custom-role" must not define rules. '
+    "Move the rules to a custom-capability and aggregate it."
+)
+
+
+class TestAggregatedCustomRoleIsEditable(unittest.TestCase):
+    """
+    After creation .rules belongs to the aggregation controller, so every later write carries rules
+    the user never authored — a plain "kubectl label" sends them straight back. Objecting to those
+    would make an aggregated custom role uneditable, which is why UPDATE compares with the old
+    object instead of just looking at the presence of rules.
+    """
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def _role(self, labels=None, rules=None):
+        return _cr(
+            "d8:custom:project:role-a",
+            labels=labels if labels is not None else CUSTOM_ROLE_LABELS,
+            rules=rules,
+            aggregation=AGGREGATION,
+        )
+
+    def test_create_with_rules_is_still_denied(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:project:role-a",
+                labels=CUSTOM_ROLE_LABELS,
+                rules=AGGREGATED_RULES,
+                selector_labels=[{"rbac.deckhouse.io/capability": "namespace-capability.kubernetes.view_logs"}],
+            )
+        )
+        tests.assert_validation_deny(self, out, NO_RULES_MSG)
+
+    def test_labeling_an_aggregated_role_is_allowed(self):
+        old = self._role(rules=AGGREGATED_RULES)
+        new = self._role(
+            labels={**CUSTOM_ROLE_LABELS, "rbac.deckhouse.io/delegatable": "true"},
+            rules=AGGREGATED_RULES,
+        )
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_changing_the_rules_of_an_aggregated_role_is_denied(self):
+        old = self._role(rules=AGGREGATED_RULES)
+        new = self._role(rules=AGGREGATED_RULES + [{"apiGroups": [""], "resources": ["secrets"], "verbs": ["*"]}])
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, NO_RULES_MSG)
+
+    def test_adding_rules_to_a_role_that_had_none_is_denied(self):
+        old = self._role()
+        new = self._role(rules=AGGREGATED_RULES)
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, NO_RULES_MSG)
+
+    def test_dropping_the_rules_is_allowed(self):
+        old = self._role(rules=AGGREGATED_RULES)
+        new = self._role()
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_allowed(self, out, None)
+
+
 if __name__ == "__main__":
     unittest.main()
