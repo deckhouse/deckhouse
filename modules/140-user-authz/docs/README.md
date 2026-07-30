@@ -243,6 +243,7 @@ read:
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases
     - deckhouse.io/modules
+    - deckhouse.io/modulesettingsdefinitions
     - deckhouse.io/modulesources
     - deckhouse.io/moduleupdatepolicies
     - deckhouse.io/nodegroups
