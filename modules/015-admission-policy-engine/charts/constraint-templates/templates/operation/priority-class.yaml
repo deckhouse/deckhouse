@@ -36,6 +36,7 @@ spec:
               package d8.operation_policies
 
               import data.lib.common.pod_spec
+              import data.lib.common.has_field
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
