@@ -383,10 +383,11 @@ def delegatable_labels(scope):
         "rbac.deckhouse.io/delegatable": "true",
     }
 
-DELEGATABLE_DENY_MSG = (
-    'ClusterRole "d8:custom:project:role-a" must not be labeled "rbac.deckhouse.io/delegatable: true": '
-    "a role bindable inside a project may aggregate namespace and project capabilities only."
-)
+def delegatable_deny_msg(scope):
+    return (
+        f'ClusterRole "d8:custom:{scope}:role-a" must not be labeled "rbac.deckhouse.io/delegatable: true": '
+        "a role bindable inside a project may aggregate namespace and project capabilities only."
+    )
 
 
 class TestDelegatableCustomRole(unittest.TestCase):
@@ -403,7 +404,7 @@ class TestDelegatableCustomRole(unittest.TestCase):
     def _run(self, selector_values, labels=None, scope="project"):
         return self.run_hook(
             binding_context(
-                "d8:custom:project:role-a",
+                f"d8:custom:{scope}:role-a",
                 labels=labels if labels is not None else delegatable_labels(scope),
                 selector_labels=[{CAPABILITY: value} for value in selector_values],
             )
@@ -423,25 +424,25 @@ class TestDelegatableCustomRole(unittest.TestCase):
 
     def test_system_capability_may_not_be_delegatable(self):
         out = self._run(["namespace-capability.kubernetes.view_logs", "system-capability.deckhouse.manage"], scope="system")
-        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+        tests.assert_validation_deny(self, out, delegatable_deny_msg("system"))
 
     def test_subsystem_capability_may_not_be_delegatable(self):
         out = self._run(["subsystem-capability.security.view"], scope="system")
-        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+        tests.assert_validation_deny(self, out, delegatable_deny_msg("system"))
 
     def test_custom_system_capability_may_not_be_delegatable(self):
         out = self._run(["custom.system-capability.hh-bqjxg0"], scope="system")
-        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+        tests.assert_validation_deny(self, out, delegatable_deny_msg("system"))
 
     def test_unreadable_capability_value_may_not_be_delegatable(self):
         out = self._run(["whatever"], scope="system")
-        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+        tests.assert_validation_deny(self, out, delegatable_deny_msg("system"))
 
     def test_tenant_lineage_selector_may_be_delegatable(self):
         out = self.run_hook(
             binding_context(
                 "d8:custom:project:role-a",
-                labels=delegatable_labels("system"),
+                labels=delegatable_labels("project"),
                 selector_labels=[{"rbac.deckhouse.io/aggregate-to-namespace-as": "admin"}],
             )
         )
@@ -450,27 +451,28 @@ class TestDelegatableCustomRole(unittest.TestCase):
     def test_system_lineage_selector_may_not_be_delegatable(self):
         out = self.run_hook(
             binding_context(
-                "d8:custom:project:role-a",
+                "d8:custom:system:role-a",
                 labels=delegatable_labels("system"),
                 selector_labels=[{"rbac.deckhouse.io/aggregate-to-security-as": "viewer"}],
             )
         )
-        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+        tests.assert_validation_deny(self, out, delegatable_deny_msg("system"))
 
     def test_selector_by_another_label_may_not_be_delegatable(self):
         out = self.run_hook(
             binding_context(
-                "d8:custom:project:role-a",
+                "d8:custom:system:role-a",
                 labels=delegatable_labels("system"),
                 selector_labels=[{"some.other/label": "value"}],
             )
         )
-        tests.assert_validation_deny(self, out, DELEGATABLE_DENY_MSG)
+        tests.assert_validation_deny(self, out, delegatable_deny_msg("system"))
 
     def test_same_role_without_the_label_is_untouched(self):
         out = self._run(
             ["system-capability.deckhouse.manage"],
             labels={"rbac.deckhouse.io/kind": "custom-role", "rbac.deckhouse.io/scope": "system"},
+            scope="system",
         )
         tests.assert_validation_allowed(self, out, None)
 
@@ -553,10 +555,12 @@ class TestTenantRoleStaysWithinItsWorld(unittest.TestCase):
     def run_hook(self, ctx):
         return hook.testrun(cluster_roles.main, [ctx])
 
-    def _run(self, scope, selector, name="d8:custom:project:role-a"):
+    def _run(self, scope, selector, name="d8:custom:project:role-a", subsystem=None):
         labels = {"rbac.deckhouse.io/kind": "custom-role"}
         if scope is not None:
             labels["rbac.deckhouse.io/scope"] = scope
+        if subsystem is not None:
+            labels["rbac.deckhouse.io/subsystem"] = subsystem
 
         return self.run_hook(binding_context(name, labels=labels, selector_labels=[selector]))
 
@@ -596,9 +600,9 @@ class TestTenantRoleStaysWithinItsWorld(unittest.TestCase):
 
     def test_cluster_role_may_take_namespace_capabilities(self):
         """The asymmetry: the other direction is allowed on purpose."""
-        for scope in ("system", "subsystem"):
+        for scope, name, subsystem in (("system", "d8:custom:system:role-a", None), ("subsystem", "d8:custom:security:role-a", "security")):
             with self.subTest(scope=scope):
-                out = self._run(scope, {CAPABILITY: "namespace-capability.kubernetes.view_logs"}, name="d8:custom:security:role-a")
+                out = self._run(scope, {CAPABILITY: "namespace-capability.kubernetes.view_logs"}, name=name, subsystem=subsystem)
                 tests.assert_validation_allowed(self, out, None)
 
     def test_cluster_role_takes_cluster_capabilities(self):
@@ -619,6 +623,98 @@ class TestTenantRoleStaysWithinItsWorld(unittest.TestCase):
             )
         )
         tests.assert_validation_allowed(self, out, None)
+
+
+class TestNameMatchesScope(unittest.TestCase):
+    """
+    The name is what people read in a binding, in an audit log and in the console, while the checks
+    judge by the scope label. A role called "d8:custom:project:foo" that declares itself
+    system-scoped tells two different stories, so it is refused.
+    """
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def _run(self, name, kind="custom-role", scope=None, subsystem=None):
+        labels = {"rbac.deckhouse.io/kind": kind}
+        if scope is not None:
+            labels["rbac.deckhouse.io/scope"] = scope
+        if subsystem is not None:
+            labels["rbac.deckhouse.io/subsystem"] = subsystem
+
+        return self.run_hook(
+            binding_context(
+                name,
+                labels=labels,
+                selector_labels=[{CAPABILITY: "namespace-capability.kubernetes.view_logs"}],
+            )
+        )
+
+    def _deny_msg(self, name, scope, expected):
+        return (
+            f'ClusterRole "{name}" with "rbac.deckhouse.io/scope: {scope}" must be named '
+            f'"d8:custom:{expected}:<name>": the name and the scope must not disagree.'
+        )
+
+    def test_matching_names_are_allowed(self):
+        for name, scope in (
+            ("d8:custom:namespace:role-a", "namespace"),
+            ("d8:custom:project:role-a", "project"),
+            ("d8:custom:system:role-a", "system"),
+        ):
+            with self.subTest(scope=scope):
+                tests.assert_validation_allowed(self, self._run(name, scope=scope), None)
+
+    def test_a_project_name_may_not_claim_the_system_scope(self):
+        out = self._run("d8:custom:project:role-a", scope="system")
+        tests.assert_validation_deny(self, out, self._deny_msg("d8:custom:project:role-a", "system", "system"))
+
+    def test_a_system_name_may_not_claim_a_tenant_scope(self):
+        out = self._run("d8:custom:system:role-a", scope="project")
+        tests.assert_validation_deny(self, out, self._deny_msg("d8:custom:system:role-a", "project", "project"))
+
+    def test_subsystem_role_is_named_after_its_subsystem(self):
+        tests.assert_validation_allowed(
+            self, self._run("d8:custom:security:role-a", scope="subsystem", subsystem="security"), None
+        )
+
+    def test_subsystem_role_named_after_another_subsystem_is_denied(self):
+        out = self._run("d8:custom:storage:role-a", scope="subsystem", subsystem="security")
+        tests.assert_validation_deny(self, out, self._deny_msg("d8:custom:storage:role-a", "subsystem", "security"))
+
+    def test_subsystem_role_without_the_subsystem_label_is_not_judged_by_name(self):
+        """Nothing names the expected segment, so there is nothing to compare the name against."""
+        tests.assert_validation_allowed(self, self._run("d8:custom:whatever:role-a", scope="subsystem"), None)
+
+    def test_capability_is_named_after_its_scope(self):
+        tests.assert_validation_allowed(
+            self,
+            self.run_hook(
+                binding_context(
+                    "d8:custom:project-capability:cap-a",
+                    labels={"rbac.deckhouse.io/kind": "custom-capability", "rbac.deckhouse.io/scope": "project"},
+                    rules=SOME_RULES,
+                )
+            ),
+            None,
+        )
+
+    def test_capability_named_after_another_scope_is_denied(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:namespace-capability:cap-a",
+                labels={"rbac.deckhouse.io/kind": "custom-capability", "rbac.deckhouse.io/scope": "system"},
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_deny(
+            self, out, self._deny_msg("d8:custom:namespace-capability:cap-a", "system", "system-capability")
+        )
+
+    def test_a_role_without_a_scope_claims_nothing(self):
+        """It declares no scope, so there is no second story to contradict — and the containment
+        rule already judges it as tenant-scoped."""
+        tests.assert_validation_allowed(self, self._run("d8:custom:system:role-a"), None)
 
 
 if __name__ == "__main__":
