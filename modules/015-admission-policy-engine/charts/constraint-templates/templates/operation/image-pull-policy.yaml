@@ -38,6 +38,7 @@ spec:
               package d8.operation_policies
 
               import data.lib.common.pod_spec
+              import data.lib.common.has_field
 
               # Image pull policy is only meaningful for regular containers.
               # We check only pod_spec.containers (not initContainers/ephemeralContainers)

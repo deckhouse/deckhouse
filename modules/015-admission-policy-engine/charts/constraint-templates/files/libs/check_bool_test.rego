@@ -121,6 +121,7 @@ test_container_bool_spe_denies if {
 # Pod-level SPE denies value with context
 test_pod_bool_spe_denies_with_context if {
   pod := {
+    "kind": "Pod",
     "metadata": {"labels": {"security.deckhouse.io/security-policy-exception": "spe"}, "namespace": "default"},
     "spec": {"hostPID": true}
   }
@@ -146,6 +147,7 @@ test_pod_bool_spe_denies_with_context if {
 # Pod-level boolean with SPE
 test_pod_bool_spe_allows if {
   pod := {
+    "kind": "Pod",
     "metadata": {"labels": {"security.deckhouse.io/security-policy-exception": "spe"}, "namespace": "default"},
     "spec": {"hostPID": true}
   }

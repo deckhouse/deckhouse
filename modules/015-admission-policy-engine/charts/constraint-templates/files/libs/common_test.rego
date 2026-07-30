@@ -150,9 +150,9 @@ test_object_labels_pod if {
   result["security.deckhouse.io/security-policy-exception"] == "spe-pod"
 }
 
-# object_labels merges top-level and pod template labels for Deployment
+# object_labels returns only pod template labels for Deployment (not top-level)
 
-test_object_labels_deployment_merges if {
+test_object_labels_deployment_template_only if {
   result := common.object_labels with input as {
     "review": {
       "object": {
@@ -171,8 +171,8 @@ test_object_labels_deployment_merges if {
       }
     }
   }
-  result["app"] == "myapp"
-  result["security.deckhouse.io/security-policy-exception"] == "spe-top"
+  not result["app"]
+  not result["security.deckhouse.io/security-policy-exception"]
   result["security.deckhouse.io/security-policy-exception.container.nginx"] == "spe-container"
 }
 
@@ -200,9 +200,9 @@ test_object_labels_template_precedence if {
   result["security.deckhouse.io/security-policy-exception"] == "spe-template"
 }
 
-# object_labels merges for CronJob with deep pod template path
+# object_labels returns only pod template labels for CronJob (not top-level)
 
-test_object_labels_cronjob_merges if {
+test_object_labels_cronjob_template_only if {
   result := common.object_labels with input as {
     "review": {
       "object": {
@@ -225,7 +225,7 @@ test_object_labels_cronjob_merges if {
       }
     }
   }
-  result["app"] == "cron"
+  not result["app"]
   result["security.deckhouse.io/security-policy-exception"] == "spe-cron"
 }
 
@@ -271,7 +271,7 @@ test_object_namespace_empty if {
   result == ""
 }
 
-# effective_labels merges top-level and pod template labels for any object
+# effective_labels returns only pod template labels for controllers
 
 test_effective_labels_deployment if {
   obj := {
@@ -289,7 +289,7 @@ test_effective_labels_deployment if {
     }
   }
   result := common.effective_labels(obj)
-  result["app"] == "test"
+  not result["app"]
   result["security.deckhouse.io/security-policy-exception"] == "spe-dep"
 }
 
@@ -308,7 +308,7 @@ test_effective_labels_pod if {
   count(result) == 1
 }
 
-# effective_labels: pod template takes precedence
+# effective_labels: pod template labels for controllers (top-level not merged)
 
 test_effective_labels_template_precedence if {
   obj := {
@@ -326,7 +326,7 @@ test_effective_labels_template_precedence if {
     }
   }
   result := common.effective_labels(obj)
-  result["app"] == "sts"
+  not result["app"]
   result["security.deckhouse.io/security-policy-exception"] == "spe-template"
 }
 
