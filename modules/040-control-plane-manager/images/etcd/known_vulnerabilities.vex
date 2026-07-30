@@ -295,8 +295,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость CVE-2026-39827 (DoS в golang.org/x/crypto/ssh: неограниченный рост памяти при повторных отклонённых открытиях каналов) неэксплуатируема в etcd: компонент не поднимает SSH-сервер и не линкует пакет golang.org/x/crypto/ssh; x/crypto присутствует только транзитивно, серверного пути обработки SSH-каналов нет.",
-      "timestamp": "2026-07-29T10:00:00Z"
+      "impact_statement": "Уязвимость CVE-2026-39827 (DoS в golang.org/x/crypto/ssh: неограниченный рост памяти при Reject() отклонённых каналов на SSH-сервере) неэксплуатируема в etcd: пакет golang.org/x/crypto/ssh не входит в граф зависимостей бинарника; компонент не поднимает SSH-сервер и не обрабатывает SSH-каналы.",
+      "timestamp": "2026-07-30T14:00:00Z"
     },
     {
       "vulnerability": {
@@ -323,8 +323,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость CVE-2026-39834 (integer overflow при записи в SSH-канал >4GB, зацикливание/DoS) неэксплуатируема в etcd: golang.org/x/crypto/ssh не входит в граф зависимостей, компонент не устанавливает SSH-соединений и не пишет в SSH-каналы.",
-      "timestamp": "2026-07-29T10:00:00Z"
+      "impact_statement": "Уязвимость CVE-2026-39834 (integer overflow при записи в SSH-канал >4GB, зацикливание/DoS) неэксплуатируема в etcd: пакет golang.org/x/crypto/ssh не входит в граф зависимостей бинарника; компонент не устанавливает SSH-соединений и не пишет в SSH-каналы.",
+      "timestamp": "2026-07-30T14:00:00Z"
     },
     {
       "vulnerability": {
@@ -393,8 +393,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость CVE-2026-56852 (зацикливание norm.Iter на некорректном UTF-8 в golang.org/x/text) неэксплуатируема в etcd: golang.org/x/text/unicode/norm применяется только к доверенным строкам конфигурации и объектов Kubernetes, а не к вводу, контролируемому злоумышленником; путь norm.Iter над невалидным UTF-8 недостижим.",
-      "timestamp": "2026-07-29T10:00:00Z"
+      "impact_statement": "Уязвимость CVE-2026-56852 (зацикливание norm.Iter на некорректном UTF-8 в golang.org/x/text/unicode/norm) неэксплуатируема в etcd: unicode/norm тянется транзитивно через golang.org/x/net/idna, но не применяется к вводу, контролируемому злоумышленником (сеть etcd — gRPC/HTTP поверх mTLS и rafthttp); путь norm.Iter над невалидным UTF-8 недостижим.",
+      "timestamp": "2026-07-30T14:00:00Z"
     },
     {
       "vulnerability": {
@@ -412,5 +412,5 @@
     }
   ],
   "timestamp": "2025-12-29T21:11:59Z",
-  "last_updated": "2026-07-29T10:00:00Z"
+  "last_updated": "2026-07-30T14:00:00Z"
 }

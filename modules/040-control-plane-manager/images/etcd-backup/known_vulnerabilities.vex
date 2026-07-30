@@ -155,10 +155,10 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость CVE-2026-56852 (зацикливание norm.Iter на некорректном UTF-8 в golang.org/x/text) неэксплуатируема в etcd-backup: golang.org/x/text/unicode/norm применяется только к доверенным строкам конфигурации и объектов Kubernetes, а не к вводу, контролируемому злоумышленником; путь norm.Iter над невалидным UTF-8 недостижим.",
-      "timestamp": "2026-07-29T10:00:00Z"
+      "impact_statement": "Уязвимость CVE-2026-56852 (зацикливание norm.Iter на некорректном UTF-8 в golang.org/x/text/unicode/norm) неэксплуатируема в etcd-backup: unicode/norm тянется транзитивно через golang.org/x/net/idna, но CronJob вызывает только etcdctl snapshot save против литерального endpoint https://127.0.0.1:2379 без преобразования недоверенных IDN/hostname; вход, контролируемый злоумышленником, в norm.Iter не попадает.",
+      "timestamp": "2026-07-30T14:00:00Z"
     }
   ],
   "timestamp": "2026-03-24T14:32:07Z",
-  "last_updated": "2026-07-29T10:00:00Z"
+  "last_updated": "2026-07-30T14:00:00Z"
 }
