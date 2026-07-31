@@ -221,7 +221,7 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 	project.SetTemplateGeneration(projectTemplate.Generation)
 
 	m.logger.Info("validate the project spec", "project", project.Name, "template", projectTemplate.Name)
-	if err = validate.Project(project, legacyTemplate(projectTemplate)); err != nil {
+	if err = validate.Project(project, LegacyTemplate(projectTemplate)); err != nil {
 		m.logger.Error(err, "failed to validate the project spec", "project", project.Name, "template", projectTemplate.Name)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectValidated, err.Error())
@@ -283,7 +283,7 @@ func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Projec
 		return outcome.Filtered, outcome.RoleRefs, nil
 	}
 
-	legacy := legacyTemplate(template)
+	legacy := LegacyTemplate(template)
 	outcome, err := m.helmClient.Upgrade(ctx, project, legacy)
 	if err != nil {
 		return false, nil, err

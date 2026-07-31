@@ -23,12 +23,16 @@ import (
 	"testing"
 
 	"github.com/itchyny/gojq"
+	"github.com/stretchr/testify/assert"
 )
 
 // conversionHook is the shell hook whose jq programs are under test. The programs are read out of the
 // shipped file rather than copied here: a copy would drift, and the thing worth pinning is what runs
 // in the cluster.
-const conversionHook = "../webhooks/conversion/projects"
+const (
+	conversionHook         = "../webhooks/conversion/projects"
+	templateConversionHook = "../webhooks/conversion/projecttemplates"
+)
 
 // A project version round-trip has to return the object it started from. The two conversions are
 // written independently, in jq, against a quota whose shape is only partly nesting -- "requests.cpu"
@@ -153,11 +157,63 @@ func TestProjectQuotaDropsNestedObjects(t *testing.T) {
 	}
 }
 
-// convert runs one conversion function of the shell hook over a single object and returns it.
+// A ProjectTemplate keeps its fields across the version bump. v1alpha1 is not served -- the
+// structured fields it cannot describe are pruned on the way down and cannot come back, which is why
+// -- but the CRD still declares the conversion and the apiserver still asks for it, so it has to
+// answer. It once did not: removing this hook left a live cluster failing about one conversion a
+// second.
+func TestProjectTemplateVersionBump(t *testing.T) {
+	t.Parallel()
+
+	template := map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha2",
+		"kind":       "ProjectTemplate",
+		"metadata":   map[string]any{"name": "test"},
+		"spec": map[string]any{
+			"description":       "a template",
+			"resourcesTemplate": "---\napiVersion: v1\nkind: Namespace\n",
+			"parametersSchema":  map[string]any{"openAPIV3Schema": map[string]any{"type": "object"}},
+		},
+	}
+
+	down := convertWith(t, templateConversionHook, "v1alpha2_to_v1alpha1", template)
+	assert.Equal(t, "deckhouse.io/v1alpha1", down["apiVersion"])
+	assert.Equal(t, specField(template, "description"), specField(down, "description"))
+	assert.Equal(t, specField(template, "resourcesTemplate"), specField(down, "resourcesTemplate"))
+
+	up := convertWith(t, templateConversionHook, "v1alpha1_to_v1alpha2", down)
+	assert.Equal(t, "deckhouse.io/v1alpha2", up["apiVersion"])
+	assert.Equal(t, template["spec"], up["spec"])
+}
+
+// A structured template has neither of the two fields the v1alpha1 schema requires, and the apiserver
+// validates what a conversion returns, so they are backfilled rather than left missing.
+func TestProjectTemplateBackfillsWhatV1alpha1Requires(t *testing.T) {
+	t.Parallel()
+
+	structured := map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha2",
+		"kind":       "ProjectTemplate",
+		"metadata":   map[string]any{"name": "test"},
+		"spec":       map[string]any{"description": "structured only"},
+	}
+
+	down := convertWith(t, templateConversionHook, "v1alpha2_to_v1alpha1", structured)
+	assert.Equal(t, "", specField(down, "resourcesTemplate"))
+	assert.Equal(t, map[string]any{"openAPIV3Schema": map[string]any{}}, specField(down, "parametersSchema"))
+}
+
+// convert runs one conversion function of the projects hook over a single object and returns it.
 func convert(t *testing.T, function string, object map[string]any) map[string]any {
 	t.Helper()
 
-	query, err := gojq.Parse(jqProgram(t, function))
+	return convertWith(t, conversionHook, function, object)
+}
+
+func convertWith(t *testing.T, hook, function string, object map[string]any) map[string]any {
+	t.Helper()
+
+	query, err := gojq.Parse(jqProgram(t, hook, function))
 	if err != nil {
 		t.Fatalf("the jq program of %s does not parse: %v", function, err)
 	}
@@ -189,12 +245,12 @@ func convert(t *testing.T, function string, object map[string]any) map[string]an
 // jqProgram extracts the jq source of one conversion function from the shell hook. The programs are
 // single-quoted bash strings, which cannot themselves contain a single quote, so the quotes delimit
 // them unambiguously.
-func jqProgram(t *testing.T, function string) string {
+func jqProgram(t *testing.T, hookPath, function string) string {
 	t.Helper()
 
-	hook, err := os.ReadFile(conversionHook)
+	hook, err := os.ReadFile(hookPath)
 	if err != nil {
-		t.Fatalf("reading the conversion hook: %v", err)
+		t.Fatalf("reading %s: %v", hookPath, err)
 	}
 
 	body := string(hook)

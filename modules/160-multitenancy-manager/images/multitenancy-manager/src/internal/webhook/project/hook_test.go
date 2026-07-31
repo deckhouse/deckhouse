@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
@@ -85,13 +86,40 @@ func TestValidateStandardFields(t *testing.T) {
 func newValidator(t *testing.T, objs ...client.Object) *validator {
 	t.Helper()
 	scheme := runtime.NewScheme()
-	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, v1alpha3.AddToScheme} {
+	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
 		}
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 	return &validator{client: c}
+}
+
+// The template is read at the version the API serves, and only projected onto the legacy shape
+// afterwards. Reading it at v1alpha1 worked only while that version was served -- the apiserver
+// converted the stored object on every call -- and the day it stopped being served, every project
+// write was denied with "no matches for kind ProjectTemplate in version deckhouse.io/v1alpha1".
+func TestProjectTemplateByName(t *testing.T) {
+	schema := map[string]any{"type": "object"}
+	stored := &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "simple"},
+		Spec: v1alpha2.ProjectTemplateSpec{
+			Description:      "a template",
+			ParametersSchema: v1alpha2.ParametersSchema{OpenAPIV3Schema: schema},
+		},
+	}
+
+	v := newValidator(t, stored)
+
+	template, err := v.projectTemplateByName(context.Background(), "simple")
+	require.NoError(t, err)
+	require.NotNil(t, template, "the template was not found at the served version")
+	assert.Equal(t, "a template", template.Spec.Description)
+	assert.Equal(t, schema, template.Spec.ParametersSchema.OpenAPIV3Schema)
+
+	missing, err := v.projectTemplateByName(context.Background(), "absent")
+	require.NoError(t, err)
+	assert.Nil(t, missing)
 }
 
 func managedProject(parameters map[string]any) *v1alpha3.Project {

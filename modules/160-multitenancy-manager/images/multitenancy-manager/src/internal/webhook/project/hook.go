@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
@@ -202,13 +203,21 @@ func validateStandardFields(project *v1alpha3.Project) string {
 	return ""
 }
 
+// projectTemplateByName reads the template and projects it onto the legacy shape the validation and
+// the helm render take.
+//
+// The read is at v1alpha2, the served version. Asking for v1alpha1 -- which this did -- worked only
+// while that version was served: the apiserver converted the stored object on every call, and once
+// v1alpha1 stopped being served the lookup began failing with "no matches for kind ProjectTemplate in
+// version deckhouse.io/v1alpha1", which denied every project write.
 func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
-	template := new(v1alpha1.ProjectTemplate)
+	template := new(v1alpha2.ProjectTemplate)
 	if err := v.client.Get(ctx, client.ObjectKey{Name: name}, template); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get the '%s' project template: %w", name, err)
 	}
-	return template, nil
+
+	return projectmanager.LegacyTemplate(template), nil
 }

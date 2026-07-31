@@ -50,7 +50,7 @@ func TestLegacyTemplate(t *testing.T) {
 		},
 	}
 
-	out := legacyTemplate(in)
+	out := LegacyTemplate(in)
 	assert.Equal(t, "tmpl", out.Name)
 	assert.EqualValues(t, 4, out.Generation)
 	assert.Equal(t, "desc", out.Spec.Description)
