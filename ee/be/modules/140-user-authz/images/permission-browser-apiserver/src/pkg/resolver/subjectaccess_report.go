@@ -254,8 +254,14 @@ func (b *reportBuilder) targetsOf(rule rbacv1.PolicyRule, namespaced bool) []res
 				// snapshot goes incomplete whenever an aggregated APIService
 				// flaps, and an audit report that omits a grant is a worse
 				// answer than one that lists a grant nobody can exercise.
+				//
+				// A subresource is judged by its base. Discovery never lists
+				// subresources -- ServerPreferredResources skips every name
+				// holding a slash -- so asking the snapshot about "nodes/proxy"
+				// answers "unknown" forever, and the row would survive although
+				// it can no more be exercised in a namespace than "nodes".
 				base, _, _ := strings.Cut(resource, "/")
-				if b.isKnownClusterScoped(group, base) && b.isKnownClusterScoped(group, resource) {
+				if b.isKnownClusterScoped(group, base) {
 					continue
 				}
 			}
