@@ -17,3 +17,26 @@ metadata:
     heritage: deckhouse
 spec:
   enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: operator-prometheus
+  labels:
+    heritage: deckhouse
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+  labels:
+    heritage: deckhouse
+spec:
+  enabled: true
+  version: 2
+  settings:
+    # TODO: Add cert-manager, ingress/alb modules
+    https:
+      mode: Disabled

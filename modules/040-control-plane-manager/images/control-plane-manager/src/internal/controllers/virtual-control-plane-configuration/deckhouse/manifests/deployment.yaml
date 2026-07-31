@@ -88,6 +88,11 @@ spec:
               value: "true"
             - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
               value: "false"
+            # This pod has neither /dev nor privileges, so the erofs/dm-verity
+            # installer cannot work here; without the gate it is still picked
+            # whenever the parent node kernel happens to know erofs.
+            - name: DECKHOUSE_DISABLE_VERITY
+              value: "true"
             - name: DECKHOUSE_HA
               value: "false"
             - name: DECKHOUSE_BUNDLE
