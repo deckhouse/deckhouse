@@ -9,6 +9,8 @@ The [`descheduler`](/modules/descheduler/) module provides [Descheduler](https:/
 
 The `descheduler` module periodically analyzes the cluster state and evicts pods that match conditions defined in active [strategies](/modules/descheduler/#strategies). Evicted pods are then scheduled again according to the current cluster state. This helps redistribute workloads in line with the selected strategy.
 
+The `descheduler` module retrieves current resource consumption through the [Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md) if such an API service is registered in the cluster.
+
 Strategy parameters are configured using the [Descheduler](/modules/descheduler/cr.html#descheduler) custom resource. A module hook processes these resources and recreates configuration for Descheduler.
 
 ## Module architecture
@@ -40,4 +42,4 @@ The module interacts with the **kube-apiserver** component:
 * Evicts running pods to match active strategies.
 * Authorizes requests for metrics.
 
-The **Prometheus** component interacts with the module by collecting module metrics.
+The **prometheus** component interacts with the module by collecting module metrics.
