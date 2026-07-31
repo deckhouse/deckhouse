@@ -34,11 +34,14 @@ func isStructured(t *v1alpha2.ProjectTemplate) bool {
 	return strings.TrimSpace(t.Spec.ResourcesTemplate) == ""
 }
 
-// legacyTemplate projects a v1alpha2 ProjectTemplate onto the v1alpha1 shape used for two purposes:
+// LegacyTemplate projects a v1alpha2 ProjectTemplate onto the v1alpha1 shape used for two purposes:
 // validating Project.spec.parameters against the parametersSchema (both paths) and rendering the
 // legacy resourcesTemplate through the helm engine (resourcesTemplate path only). Structured fields
 // are intentionally dropped: they never feed the helm engine — they are rendered natively.
-func legacyTemplate(t *v1alpha2.ProjectTemplate) *v1alpha1.ProjectTemplate {
+//
+// This is a projection of an object already read, never a way to ask the API for one: v1alpha1 is not
+// served, and a live read at that version fails.
+func LegacyTemplate(t *v1alpha2.ProjectTemplate) *v1alpha1.ProjectTemplate {
 	return &v1alpha1.ProjectTemplate{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
