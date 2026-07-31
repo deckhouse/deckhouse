@@ -19,7 +19,10 @@
  - The `local-path-provisioner` Pod is restarted during the update. PV provisioning/teardown briefly pauses while the new Pod becomes Ready; existing volumes are not affected.
  - The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
  - The cni-cilium components (cilium agent, operator) will restart after the update.
+ - The coredns and kube-dns components will restart after the update.
  - The metallb components (controller, speaker, l2lb) will restart after the update.
+ - The node-local-dns components will restart after the update.
+ - The service-with-healthchecks components (controller, agent) will restart after the update.
  - This update triggers a rolling update of the flannel pods.
  - This update triggers a rolling update of the kube-proxy pods.
  - This update triggers a rolling update of the network-policy-engine pods.
@@ -213,6 +216,7 @@
  - **[cloud-provider-dvp]** fix LoadBalancer stuck in pending state — retry on conflict when updating ServiceWithHealthchecks and propagate IP to child cluster service status [#19609](https://github.com/deckhouse/deckhouse/pull/19609)
  - **[cloud-provider-dvp]** fix dvp kubernetes dependency mismatch [#21367](https://github.com/deckhouse/deckhouse/pull/21367)
  - **[cloud-provider-dvp]** refactored CreateVolume to improve idempotency when disk.status.capacity is not yet reported and standardized gRPC error handling [#17826](https://github.com/deckhouse/deckhouse/pull/17826)
+ - **[cloud-provider-dvp]** skip foreign nodes in cloud controller manager [#21779](https://github.com/deckhouse/deckhouse/pull/21779)
  - **[cloud-provider-dynamix]** Fix DynamixInstanceClass access for users with user-authz ClusterAdmin role [#21483](https://github.com/deckhouse/deckhouse/pull/21483)
     Users with accessLevel ClusterAdmin in ClusterAuthorizationRule gain read and write access to DynamixInstanceClass objects; previously all access was denied.
  - **[cloud-provider-gcp]** Fixed CVEs in `cloud-provider-gcp`. [#18095](https://github.com/deckhouse/deckhouse/pull/18095)
@@ -279,6 +283,7 @@
  - **[deckhouse-controller]** Fixed showing warnings while errors during kubectl edit. [#21288](https://github.com/deckhouse/deckhouse/pull/21288)
  - **[deckhouse-controller]** Fixed validation for switching ClusterConfiguration kubernetesVersion from an explicit version to Automatic. [#20331](https://github.com/deckhouse/deckhouse/pull/20331)
  - **[deckhouse-controller]** Force embedded modules back to the "Embedded" source on startup, healing a stale external source that previously stuck until the Module resource was deleted manually. [#21473](https://github.com/deckhouse/deckhouse/pull/21473)
+ - **[deckhouse-controller]** ModuleDocumentation will not be created for embedded modules. [#21652](https://github.com/deckhouse/deckhouse/pull/21652)
  - **[deckhouse-controller]** add werf dependency to webhook [#20970](https://github.com/deckhouse/deckhouse/pull/20970)
  - **[deckhouse-controller]** added extra validation for kubernets version multiple downgrades scenario [#18794](https://github.com/deckhouse/deckhouse/pull/18794)
  - **[deckhouse]** Allow updating scanInterval on the deckhouse ModuleSource. [#19277](https://github.com/deckhouse/deckhouse/pull/19277)
@@ -347,6 +352,8 @@
     All ingress-nginx pods will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19865](https://github.com/deckhouse/deckhouse/pull/19865)
     All Ingress-nginx controller pods will be restarted.
+ - **[ingress-nginx]** Nginx version is updated to 1.30.4. [#21666](https://github.com/deckhouse/deckhouse/pull/21666)
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20200](https://github.com/deckhouse/deckhouse/pull/20200)
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Node-specific parameters are excluded from config hash. [#18489](https://github.com/deckhouse/deckhouse/pull/18489)
@@ -375,6 +382,8 @@
  - **[istio]** fixed discovery_operator_versions_to_install.go hook to migrate from 1.21 to 1.25 [#19648](https://github.com/deckhouse/deckhouse/pull/19648)
  - **[istio]** ingressGateway advertise FQDN does not create a ServiceEntry due to an error [#19528](https://github.com/deckhouse/deckhouse/pull/19528)
  - **[keepalived]** Excluded vulnerable pip-25.3 from keepalived final image to fix CVE-2026-1703 [#19111](https://github.com/deckhouse/deckhouse/pull/19111)
+ - **[kube-dns]** Bump Go dependencies in the sts-pods-hosts-appender-webhook and coredns images to fix known CVEs. [#21627](https://github.com/deckhouse/deckhouse/pull/21627)
+    The coredns and kube-dns components will restart after the update.
  - **[kube-proxy]** Fixed CVE-2026-33186 and CVE-2026-24051 in kube-proxy dependencies. [#19002](https://github.com/deckhouse/deckhouse/pull/19002)
     This update triggers a rolling update of the kube-proxy pods.
  - **[local-path-provisioner]** Bump `local-path-provisioner` to `v0.0.34` to fix CVE-2025-62878 (path traversal via `StorageClass.parameters.pathPattern`, CVSS 10.0). [#19345](https://github.com/deckhouse/deckhouse/pull/19345)
@@ -395,6 +404,8 @@
     This update triggers a rolling update of the network-policy-engine pods.
  - **[network-policy-engine]** Reverted module stage from Deprecated back to General Availability to stop false deprecation alerts. [#20305](https://github.com/deckhouse/deckhouse/pull/20305)
  - **[node-local-dns]** Adapt node-local-dns for air-gapped environments. [#18643](https://github.com/deckhouse/deckhouse/pull/18643)
+ - **[node-local-dns]** Bump Go dependencies in the safe-updater and stale-dns-connections-cleaner images to fix known CVEs. [#21627](https://github.com/deckhouse/deckhouse/pull/21627)
+    The node-local-dns components will restart after the update.
  - **[node-local-dns]** Fix name of registry secret in safe-updater deployment [#18673](https://github.com/deckhouse/deckhouse/pull/18673)
  - **[node-local-dns]** Fix werf manifest [#18738](https://github.com/deckhouse/deckhouse/pull/18738)
  - **[node-local-dns]** Return stale-dns-connections-cleaner [#18707](https://github.com/deckhouse/deckhouse/pull/18707)
@@ -437,6 +448,8 @@
     Registry pods will be restarted.
  - **[registrypackages]** Added vex with CVE-2026-33186. [#18680](https://github.com/deckhouse/deckhouse/pull/18680)
  - **[registrypackages]** Replace symlinks with actual files in kubernetes artifacts for werf 2.57.1 compatibility [#18662](https://github.com/deckhouse/deckhouse/pull/18662)
+ - **[service-with-healthchecks]** Bump Go dependencies in the service-with-healthchecks image to fix known CVEs. [#21592](https://github.com/deckhouse/deckhouse/pull/21592)
+    The service-with-healthchecks components (controller, agent) will restart after the update.
  - **[upmeter]** Add proper securityContext to the upmeter probe to meet the restricted security profile constraints. [#18492](https://github.com/deckhouse/deckhouse/pull/18492)
  - **[upmeter]** Switched smoke-mini checks to full service FQDN to reduce unnecessary requests. Added request/session timeouts to prevent hanging probe calls. [#20406](https://github.com/deckhouse/deckhouse/pull/20406)
     upmeter probes
@@ -446,6 +459,7 @@
  - **[upmeter]** observability probes no longer fail when run.ID() produces a digits-only hash of the node name [#20327](https://github.com/deckhouse/deckhouse/pull/20327)
  - **[user-authn]** Add "cache" get parameter to prevent stale caches from breaking login page [#18976](https://github.com/deckhouse/deckhouse/pull/18976)
  - **[user-authn]** Disable implicit flow due to security concerns. [#18288](https://github.com/deckhouse/deckhouse/pull/18288)
+ - **[user-authn]** Fix Dex token refresh with upstream providers that rotate refresh tokens (GitLab), which logged users out every `idTokenTTL`. [#21687](https://github.com/deckhouse/deckhouse/pull/21687)
  - **[user-authn]** Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior. [#20089](https://github.com/deckhouse/deckhouse/pull/20089)
  - **[user-authn]** Preserve Dex Password fields (notably groups) when resetting password, locking or unlocking a user, so users are no longer locked out after these operations. [#21235](https://github.com/deckhouse/deckhouse/pull/21235)
  - **[user-authn]** Restore ContinueOnConnectorFailure flag handling in Dex configuration [#18219](https://github.com/deckhouse/deckhouse/pull/18219)
@@ -493,6 +507,7 @@
  - **[deckhouse-controller]** bump nelm to v1.27.2 [#21530](https://github.com/deckhouse/deckhouse/pull/21530)
  - **[deckhouse-controller]** convert MPO CRD v1alpha1 to not served. [#18010](https://github.com/deckhouse/deckhouse/pull/18010)
  - **[deckhouse]** Add settings check. [#19116](https://github.com/deckhouse/deckhouse/pull/19116)
+ - **[deckhouse]** Allow ClusterAdmin manage ModuleSettingsDefinitions with RBAC. [#21753](https://github.com/deckhouse/deckhouse/pull/21753)
  - **[deckhouse]** Enable packages. [#18529](https://github.com/deckhouse/deckhouse/pull/18529)
  - **[deckhouse]** Replace config-values.yaml with settings.yaml. [#19241](https://github.com/deckhouse/deckhouse/pull/19241)
  - **[descheduler]** Grant RBAC for PersistentVolumeClaims so the descheduler can list and watch PVCs [#18787](https://github.com/deckhouse/deckhouse/pull/18787)
