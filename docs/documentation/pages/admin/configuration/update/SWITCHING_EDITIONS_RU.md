@@ -1305,6 +1305,9 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       | regex_replace: "^", "   "
    }}
 
+   {% endtab %}
+   {% endtabs %}
+
 1. Настройте образы на узлах:
 
    ```shell
