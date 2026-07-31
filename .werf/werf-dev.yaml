@@ -18,6 +18,12 @@ git:
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 {{ include "dev_prebuild_images_imports" (dict "Images" .Images "Env" .Env) }}
+- from: deckhouse-controller-src-artifact
+  add: /version
+  to: /deckhouse/version
+  before: setup
+  owner: deckhouse
+  group: deckhouse
 shell:
   install:
   - set -e

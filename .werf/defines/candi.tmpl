@@ -20,15 +20,10 @@
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   before: setup
-{{- end }}
-
-# render shell scripts for preparing candi image
-# . is dict with keys:
-#   CI_COMMIT_TAG - CI_COMMIT_TAG env
-{{- define "candi_prepare_with_shell" }}
-{{- $context := . -}}
-
-shell:
-  install:
-  - echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
+- from: deckhouse-controller-src-artifact
+  add: /version
+  to: /deckhouse/version
+  before: setup
+  owner: deckhouse
+  group: deckhouse
 {{- end }}

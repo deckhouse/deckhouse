@@ -30,6 +30,12 @@ import:
   - deckhouse
   - plugins
   - dhctl
+- from: deckhouse-controller-src-artifact
+  add: /version
+  to: /image/deckhouse/version
+  before: setup
+  owner: deckhouse
+  group: deckhouse
 shell:
   setup:
   {{ include "installer_standalone_setup_script" (dict "CI_COMMIT_TAG" .CI_COMMIT_TAG "Env" $.Env) | nindent 2 }}

@@ -73,6 +73,7 @@ shell:
           CI_COMMIT_TAG=${new_version}
       fi
       export CI_COMMIT_TAG
+      echo $CI_COMMIT_TAG > /version
     fi
   - cd /deckhouse
   - export GOPROXY=$(cat /run/secrets/GOPROXY)

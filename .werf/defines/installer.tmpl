@@ -19,6 +19,12 @@
   add: /deckhouse/deckhouse-controller/crds/module-config.yaml
   to: /deckhouse/crds/module-config.yaml
   after: setup
+- from: deckhouse-controller-src-artifact
+  add: /version
+  to: /deckhouse/version
+  before: setup
+  owner: deckhouse
+  group: deckhouse
 - image: images-digests
   add: /images_digests.json
   to: /deckhouse/candi/images_digests.json
@@ -380,7 +386,6 @@ shell:
     EOD
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-    echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
     echo '{{- $context.Env | default "unknown" }}' > /deckhouse/edition
 
     # add bash envsubst
@@ -468,7 +473,6 @@ shell:
 {{- define "installer_standalone_setup_script" }}
 {{- $context := . -}}
 
-- echo '{{- $context.CI_COMMIT_TAG }}' > /image/deckhouse/version
 - echo '{{- $context.Env | default "unknown" }}' > /image/deckhouse/edition
 - cd /image
 - tar -czf /dhctl-{{- $context.CI_COMMIT_TAG }}.x86_64.tar.gz *
