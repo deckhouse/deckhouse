@@ -20,6 +20,7 @@
  - The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
  - The cni-cilium components (cilium agent, operator) will restart after the update.
  - The coredns and kube-dns components will restart after the update.
+ - The egress-gateway-agent component will restart after the update.
  - The metallb components (controller, speaker, l2lb) will restart after the update.
  - The node-local-dns components will restart after the update.
  - The service-with-healthchecks components (controller, agent) will restart after the update.
@@ -247,6 +248,8 @@
  - **[cloud-provider-zvirt]** fix CVEs in cloud-provider-zvirt [#18257](https://github.com/deckhouse/deckhouse/pull/18257)
  - **[cni-cilium]** Bump Go dependencies and backport upstream cilium security patches to fix known CVEs. [#21507](https://github.com/deckhouse/deckhouse/pull/21507)
     The cni-cilium components (cilium agent, operator) will restart after the update.
+ - **[cni-cilium]** Bump Go dependencies in the egress-gateway-agent image to fix known CVEs. [#21608](https://github.com/deckhouse/deckhouse/pull/21608)
+    The egress-gateway-agent component will restart after the update.
  - **[cni-cilium]** Fixed CVE-2026-33186, CVE-2026-27142, and CVE-2026-27139 by updating grpc dependency and Go version, and resolved build compatibility issues. [#18553](https://github.com/deckhouse/deckhouse/pull/18553)
  - **[cni-cilium]** Fixed CVE-2026-41520 for cilium-bugtool util [#20240](https://github.com/deckhouse/deckhouse/pull/20240)
  - **[cni-cilium]** Fixed constant `invalid sysctl parameter: "net.ipv4.conf..rp_filter"` errors in cilium-agent logs when using Egress Gateway with a Virtual IP. [#18952](https://github.com/deckhouse/deckhouse/pull/18952)
