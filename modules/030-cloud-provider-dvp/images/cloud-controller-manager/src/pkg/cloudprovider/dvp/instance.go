@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"dvp-common/api"
 
@@ -53,6 +52,13 @@ func (c *Cloud) NodeAddressesByProviderID(ctx context.Context, providerID string
 func (c *Cloud) InstanceID(ctx context.Context, nodeName types.NodeName) (string, error) {
 	vm, err := c.getVMByNodeName(ctx, nodeName)
 	if err != nil {
+		if errors.Is(err, cloudprovider.InstanceNotFound) {
+			// A node without a providerID cannot be attributed to DVP by its
+			// name alone. Returning InstanceNotFound here makes the cloud node
+			// lifecycle controller delete it before another provider can claim it.
+			return "", fmt.Errorf("DVP virtual machine for node %q was not found", nodeName)
+		}
+
 		return "", err
 	}
 
@@ -79,7 +85,7 @@ func (c *Cloud) InstanceExistsByProviderID(ctx context.Context, providerID strin
 	// Nodes managed by another cloud provider are outside DVP's responsibility.
 	// Report them as existing so that the cloud node lifecycle controller does
 	// not delete them, and avoid making a lookup against the DVP API.
-	if !strings.HasPrefix(providerID, providerName+"://") {
+	if !IsManagedProviderID(providerID) {
 		return true, nil
 	}
 
@@ -96,6 +102,10 @@ func (c *Cloud) InstanceExistsByProviderID(ctx context.Context, providerID strin
 }
 
 func (c *Cloud) InstanceShutdownByProviderID(ctx context.Context, providerID string) (bool, error) {
+	if !IsManagedProviderID(providerID) {
+		return false, nil
+	}
+
 	vm, err := c.getVMByProviderID(ctx, providerID)
 	if err != nil {
 		return false, err

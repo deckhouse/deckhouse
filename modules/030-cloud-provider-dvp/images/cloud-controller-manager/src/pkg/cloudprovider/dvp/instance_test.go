@@ -22,13 +22,33 @@ import (
 )
 
 func TestInstanceExistsByProviderIDSkipsForeignProvider(t *testing.T) {
+	// A nil dvpService is intentional: foreign provider IDs must return before
+	// any request to the DVP API is attempted.
 	cloud := &Cloud{}
 
-	exists, err := cloud.InstanceExistsByProviderID(context.Background(), "other://instance")
-	if err != nil {
-		t.Fatalf("InstanceExistsByProviderID() returned an unexpected error: %v", err)
+	for _, providerID := range []string{"other://instance", "", "dvp://"} {
+		t.Run(providerID, func(t *testing.T) {
+			exists, err := cloud.InstanceExistsByProviderID(context.Background(), providerID)
+			if err != nil {
+				t.Fatalf("InstanceExistsByProviderID() returned an unexpected error: %v", err)
+			}
+			if !exists {
+				t.Fatal("InstanceExistsByProviderID() returned false for an unmanaged provider ID")
+			}
+		})
 	}
-	if !exists {
-		t.Fatal("InstanceExistsByProviderID() returned false for a foreign provider")
+}
+
+func TestInstanceShutdownByProviderIDSkipsForeignProvider(t *testing.T) {
+	// A nil dvpService is intentional: foreign provider IDs must return before
+	// any request to the DVP API is attempted.
+	cloud := &Cloud{}
+
+	shutdown, err := cloud.InstanceShutdownByProviderID(context.Background(), "other://instance")
+	if err != nil {
+		t.Fatalf("InstanceShutdownByProviderID() returned an unexpected error: %v", err)
+	}
+	if shutdown {
+		t.Fatal("InstanceShutdownByProviderID() returned true for a foreign provider")
 	}
 }
