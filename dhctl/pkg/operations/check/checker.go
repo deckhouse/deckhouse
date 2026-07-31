@@ -336,7 +336,7 @@ func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, 
 	if err != nil {
 		return nil, err
 	}
-	return client.FromProvider(c.KubeProvider, kubeCl), nil
+	return &client.KubernetesClient{KubeClient: kubeCl}, nil
 }
 
 func (c *Checker) switchPhase(ctx context.Context, s phases.OperationPhase) func() {

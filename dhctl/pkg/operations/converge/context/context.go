@@ -132,7 +132,7 @@ func (c *Context) KubeProvider() kubernetes.KubeClientProviderWithCtx {
 
 func (c *Context) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
 	kubeClient, err := c.kubeProvider.Client(c.ctx)
-	return client.FromProvider(c.kubeProvider, kubeClient), err
+	return &client.KubernetesClient{KubeClient: kubeClient}, err
 }
 
 func (c *Context) ClientSwitcher() MultiMasterClientSwitcher {

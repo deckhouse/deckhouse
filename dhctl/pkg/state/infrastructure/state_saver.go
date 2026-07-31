@@ -101,8 +101,6 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 		retry.WithWhitelist(actions.ErrManifestTaskTransient),
 	)
 
-	ctx = kubernetes.AuthModeCtx(ctx, s.getter)
-
 	err := retry.NewSilentLoopWithParams(loopParams).Run(
 		func() error {
 			return task.Patch(ctx)
@@ -185,8 +183,6 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 		retry.WithWait(1*time.Second),
 		retry.WithWhitelist(actions.ErrManifestTaskTransient),
 	)
-
-	ctx = kubernetes.AuthModeCtx(ctx, s.getter)
 
 	err = retry.NewSilentLoopWithParams(loopParams).Run(func() error {
 		return task.PatchOrCreate(ctx)

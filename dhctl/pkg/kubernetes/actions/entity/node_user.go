@@ -67,8 +67,6 @@ func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeCli
 			retry.WithWhitelist(errNodeUserSaveTransient),
 		)
 
-	ctx = kubernetes.AuthModeCtx(ctx, kubeProvider)
-
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
 		if err != nil {

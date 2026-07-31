@@ -30,8 +30,6 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 )
 
 type providerOptions struct {
@@ -113,19 +111,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	}
 	kubeProvider := provider.NewDefaultKubeProvider(baseProviderSettings, cfg, runnerInterface)
 
-	return sshProviderInitializer, client.NewAuthModeAwareProvider(kubeProvider, authModeForKubeConfig(cfg)), nil
-}
-
-// authModeForKubeConfig maps the resolved kube settings onto what an authorization failure from
-// this connection means. cfg.OverSSH() is true exactly when no kube flags were given, i.e. when
-// lib-connection tunnels to a kubectl proxy that impersonates system:masters — see
-// kubeerrors.AuthModeKubeProxy. Anything else runs as the credentials dhctl was handed.
-func authModeForKubeConfig(cfg *kube.Config) kubeerrors.AuthMode {
-	if cfg != nil && cfg.OverSSH() {
-		return kubeerrors.AuthModeKubeProxy
-	}
-
-	return kubeerrors.AuthModeOwnCredentials
+	return sshProviderInitializer, kubeProvider, nil
 }
 
 // resolveKubeConfig returns the kube.Config GetProviders should use.

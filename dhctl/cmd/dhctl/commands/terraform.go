@@ -71,7 +71,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 		if err != nil {
 			return err
 		}
-		kubeCl := client.FromProvider(kubeProvider, kube)
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		exporter := operations.NewConvergeExporter(operations.ExporterParams{
 			Address:       opts.Converge.ListenAddress,
@@ -124,7 +124,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		if err != nil {
 			return err
 		}
-		kubeCl := client.FromProvider(kubeProvider, kube)
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,

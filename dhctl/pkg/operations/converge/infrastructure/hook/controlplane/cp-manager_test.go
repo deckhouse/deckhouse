@@ -46,12 +46,11 @@ func statusErr(code int32, reason metav1.StatusReason, message string) error {
 }
 
 // newFakeKubeClientFailingNodeList returns a client whose Nodes().List() always fails with
-// listErr, reporting the given auth mode.
-func newFakeKubeClientFailingNodeList(t *testing.T, mode kubeerrors.AuthMode, listErr error) *client.KubernetesClient {
+// listErr.
+func newFakeKubeClientFailingNodeList(t *testing.T, listErr error) *client.KubernetesClient {
 	t.Helper()
 
 	kubeCl := client.NewFakeKubernetesClient()
-	kubeCl.AuthMode = mode
 
 	clientset, ok := kubeCl.KubeClient.(*klient.Client).Interface.(*k8sfake.Clientset)
 	require.True(t, ok, "fake kube client is not backed by a fake clientset")
@@ -82,9 +81,10 @@ func TestCheckControlPlaneNodesReadyAuthErrors(t *testing.T) {
 		// Over the SSH tunnel dhctl is system:masters, so the denial is the apiserver not being
 		// ready to answer: keep polling.
 		t.Run(tt.name+" is retriable over kube-proxy", func(t *testing.T) {
-			kubeCl := newFakeKubeClientFailingNodeList(t, kubeerrors.AuthModeKubeProxy, tt.listErr)
+			kubeCl := newFakeKubeClientFailingNodeList(t, tt.listErr)
+			ctx := kubeerrors.WithAuthMode(t.Context(), kubeerrors.AuthModeKubeProxy)
 
-			_, err := checkControlPlaneNodesReady(kubeCl.AuthModeCtx(t.Context()), kubeCl)
+			_, err := checkControlPlaneNodesReady(ctx, kubeCl)
 
 			require.ErrorIs(t, err, ErrControlPlaneReadinessCheckTransient)
 		})
@@ -92,9 +92,10 @@ func TestCheckControlPlaneNodesReadyAuthErrors(t *testing.T) {
 		// With --kubeconfig the same answer is a verdict about those credentials, so the loop
 		// must stop instead of spending its 500 attempts.
 		t.Run(tt.name+" stops the loop with own credentials", func(t *testing.T) {
-			kubeCl := newFakeKubeClientFailingNodeList(t, kubeerrors.AuthModeOwnCredentials, tt.listErr)
+			kubeCl := newFakeKubeClientFailingNodeList(t, tt.listErr)
+			ctx := kubeerrors.WithAuthMode(t.Context(), kubeerrors.AuthModeOwnCredentials)
 
-			_, err := checkControlPlaneNodesReady(kubeCl.AuthModeCtx(t.Context()), kubeCl)
+			_, err := checkControlPlaneNodesReady(ctx, kubeCl)
 
 			require.Error(t, err)
 			require.NotErrorIs(t, err, ErrControlPlaneReadinessCheckTransient)
@@ -106,10 +107,11 @@ func TestCheckControlPlaneNodesReadyTransportError(t *testing.T) {
 	// A transport failure is transient regardless of how we authenticate.
 	for _, mode := range []kubeerrors.AuthMode{kubeerrors.AuthModeKubeProxy, kubeerrors.AuthModeOwnCredentials} {
 		t.Run(mode.String(), func(t *testing.T) {
-			kubeCl := newFakeKubeClientFailingNodeList(t, mode,
+			kubeCl := newFakeKubeClientFailingNodeList(t,
 				errors.New("dial tcp 127.0.0.1:6445: connect: connection refused"))
+			ctx := kubeerrors.WithAuthMode(t.Context(), mode)
 
-			_, err := checkControlPlaneNodesReady(kubeCl.AuthModeCtx(t.Context()), kubeCl)
+			_, err := checkControlPlaneNodesReady(ctx, kubeCl)
 
 			require.ErrorIs(t, err, ErrControlPlaneReadinessCheckTransient)
 		})
@@ -137,14 +139,15 @@ func TestIsReadyAllRidesOutImpersonationDenial(t *testing.T) {
 
 	checker := NewManagerReadinessChecker(fakeKubeClientGetter{kubeCl: kubeCl})
 
-	require.NoError(t, checker.IsReadyAll(t.Context()))
+	ctx := kubeerrors.WithAuthMode(t.Context(), kubeerrors.AuthModeKubeProxy)
+
+	require.NoError(t, checker.IsReadyAll(ctx))
 	require.Greater(t, attempts, failedAttempts)
 }
 
 // The same loop with --kubeconfig credentials gives up on the first denial.
 func TestIsReadyAllStopsOnDenialWithOwnCredentials(t *testing.T) {
 	kubeCl := client.NewFakeKubernetesClient()
-	kubeCl.AuthMode = kubeerrors.AuthModeOwnCredentials
 
 	clientset, ok := kubeCl.KubeClient.(*klient.Client).Interface.(*k8sfake.Clientset)
 	require.True(t, ok, "fake kube client is not backed by a fake clientset")
@@ -158,7 +161,9 @@ func TestIsReadyAllStopsOnDenialWithOwnCredentials(t *testing.T) {
 
 	checker := NewManagerReadinessChecker(fakeKubeClientGetter{kubeCl: kubeCl})
 
-	require.Error(t, checker.IsReadyAll(t.Context()))
+	ctx := kubeerrors.WithAuthMode(t.Context(), kubeerrors.AuthModeOwnCredentials)
+
+	require.Error(t, checker.IsReadyAll(ctx))
 	require.Equal(t, 1, attempts, "a permission verdict must not be retried")
 }
 

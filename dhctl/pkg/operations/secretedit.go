@@ -122,8 +122,6 @@ func SecretEdit(
 				retry.WithWhitelist(errSecretEditTransient),
 			)
 
-			ctx = kubeCl.AuthModeCtx(ctx)
-
 			return retry.NewLoopWithParams(loopParams).
 				Run(func() error {
 					_, err = kubeCl.CoreV1().Secrets(namespace).Update(ctx, config, metav1.UpdateOptions{})

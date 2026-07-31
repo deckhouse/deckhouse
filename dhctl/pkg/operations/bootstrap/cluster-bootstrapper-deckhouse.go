@@ -74,7 +74,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 			return err
 		}
 
-		_, err = InstallDeckhouse(ctx, client.FromProvider(b.KubeProvider, kubeCl), installConfig, InstallDeckhouseParams{
+		_, err = InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, installConfig, InstallDeckhouseParams{
 			BeforeDeckhouseTask: func() error { return nil },
 			State:               NewBootstrapState(cache.Global()),
 			DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,

@@ -243,8 +243,6 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		retry.WithWhitelist(hook.ErrNotReady, ErrControlPlaneReadinessCheckTransient),
 	)
 
-	ctx = kubernetes.AuthModeCtx(ctx, h.kubeGetter)
-
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
 		if err != nil {
@@ -311,8 +309,6 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 		retry.WithWait(1*time.Second),
 		retry.WithWhitelist(actions.ErrManifestTaskTransient),
 	)
-
-	ctx = kubernetes.AuthModeCtx(ctx, h.kubeGetter)
 
 	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {

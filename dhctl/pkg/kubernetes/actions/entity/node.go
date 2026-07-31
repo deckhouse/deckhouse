@@ -164,8 +164,6 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 		retry.WithWhitelist(errCreateNodeGroupTransient),
 	)
 
-	ctx = kubeCl.AuthModeCtx(ctx)
-
 	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			res, err := kubeCl.Dynamic().

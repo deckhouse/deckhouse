@@ -34,7 +34,6 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/local"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 )
 
 type KubeClient interface {
@@ -51,11 +50,6 @@ type KubernetesClient struct {
 	KubeClient
 	NodeInterface libcon.Interface
 	KubeProxy     libcon.KubeProxy
-
-	// AuthMode records how this client authenticates, so retry loops can tell an apiserver that
-	// is not ready to answer from credentials that will never be allowed. Build clients with
-	// FromProvider to fill it in; the zero value keeps auth failures retriable.
-	AuthMode kubeerrors.AuthMode
 }
 
 type KubernetesInitParams struct {
@@ -98,10 +92,6 @@ func (k *KubernetesClient) initContext(ctx context.Context, params *KubernetesIn
 	kubeClient := klient.New()
 	kubeClient.WithRateLimiterSettings(30, 60)
 	_, isLocalRun := k.NodeInterface.(*local.NodeInterface)
-
-	// The switch below picks the connection; the mode records what that choice means for
-	// authorization failures. Both read the same inputs, so they stay in step.
-	k.AuthMode = AuthModeForInitParams(params, isLocalRun)
 
 	switch {
 	case params.KubeConfigInCluster:

@@ -64,7 +64,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		if err != nil {
 			return fmt.Errorf("open kubernetes connection: %w", err)
 		}
-		kubeCl := client.FromProvider(kubeProvider, kube)
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		checker := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))
 		ready, err := checker.IsReady(ctx, opts.ControlPlane.Hostname)
@@ -115,7 +115,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 		if err != nil {
 			return fmt.Errorf("open kubernetes connection: %w", err)
 		}
-		kubeCl := client.FromProvider(kubeProvider, kube)
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		nodeToHostForChecks := map[string]string{opts.ControlPlane.Hostname: opts.ControlPlane.IP}
 

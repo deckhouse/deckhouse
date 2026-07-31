@@ -71,7 +71,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
 
-			kubeCl := client.FromProvider(kubeProvider, kube)
+			kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 			return deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
 		})
@@ -147,7 +147,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
 
-			kubeCl := client.FromProvider(kubeProvider, kube)
+			kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 			if err := deckhouse.CreateDeckhouseDeployment(ctx, kubeCl, installConfig); err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)

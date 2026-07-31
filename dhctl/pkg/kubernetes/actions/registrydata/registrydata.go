@@ -79,8 +79,6 @@ func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*ima
 		retry.WithWhitelist(ErrRegistryDataTransient),
 	)
 
-	ctx = kubeCl.AuthModeCtx(ctx)
-
 	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		secret, err := kubeCl.CoreV1().
 			Secrets(d8RppSecretNamespace).

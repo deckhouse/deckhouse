@@ -73,11 +73,9 @@ func (m AuthMode) String() string {
 
 type authModeKey struct{}
 
-// WithAuthMode returns a context carrying the auth mode of the kube client whose errors will be
-// classified with it. Call it before starting a retry loop:
-//
-//	ctx = kubeCl.AuthModeCtx(ctx)
-//	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error { ... })
+// WithAuthMode returns a context carrying the mode its retry loops classify auth failures with.
+// It is stamped once per invocation, on the context every operation runs under — see
+// providerinitializer.WithKubeAuthMode — so no retry loop has to plumb it itself.
 func WithAuthMode(ctx context.Context, mode AuthMode) context.Context {
 	return context.WithValue(ctx, authModeKey{}, mode)
 }

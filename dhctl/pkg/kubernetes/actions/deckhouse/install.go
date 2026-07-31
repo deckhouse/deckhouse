@@ -279,12 +279,10 @@ func CreateDeckhouseManifests(
 				retry.WithWhitelist(actions.ErrManifestTaskTransient),
 			)
 
-			taskCtx := kubeCl.AuthModeCtx(ctx)
-
 			return retry.NewSilentLoopWithParams(loopParams).RunContext(
-				taskCtx,
+				ctx,
 				func() error {
-					return task.CreateOrUpdate(taskCtx)
+					return task.CreateOrUpdate(ctx)
 				},
 			)
 		}

@@ -81,8 +81,6 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 		retry.WithWhitelist(ErrControlPlaneReadinessCheckTransient),
 	)
 
-	ctx = kubeClient.AuthModeCtx(ctx)
-
 	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		msg, err := checkControlPlaneNodesReady(ctx, kubeClient)
 
