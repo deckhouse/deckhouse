@@ -31,8 +31,11 @@ import:
   - plugins
   - dhctl
 - from: deckhouse-controller-artifact
-  add: /version
-  to: /image/deckhouse/version
+  add: /
+  to: /image/deckhouse
+  includePaths:
+  - version
+  - edition
   before: setup
   owner: deckhouse
   group: deckhouse

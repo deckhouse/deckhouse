@@ -62,10 +62,6 @@
 {{- define "dev_prebuild_setup_script_general_part" }}
 {{- $context := . -}}
 
-# Add edition info
-cat <<"EOD" > /deckhouse/edition
-{{ $context.Env | default "unknown"}}
-EOD
 # Create symlink to grant entrypoint.sh write permission
 ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
 # Run deckhouse from dedicated user

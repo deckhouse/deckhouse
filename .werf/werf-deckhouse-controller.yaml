@@ -75,6 +75,7 @@ shell:
       export CI_COMMIT_TAG
     fi
     echo $CI_COMMIT_TAG > /version
+  - echo '{{- .Env | default "unknown" }}' > /edition
   - cd /deckhouse
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   # Generate hooks imports for particular edition

@@ -19,8 +19,11 @@ git:
 import:
 {{ include "dev_prebuild_images_imports" (dict "Images" .Images "Env" .Env) }}
 - from: deckhouse-controller-artifact
-  add: /version
-  to: /deckhouse/version
+  add: /
+  to: /deckhouse
+  includePaths:
+  - version
+  - edition
   before: setup
   owner: deckhouse
   group: deckhouse
