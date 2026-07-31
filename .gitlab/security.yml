@@ -18,7 +18,7 @@ gitleaks_scan:
         --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
         -o gitleaks.base.toml \
         "${GITLEAKS_BASE_CONFIG_URL}"
-      test -s gitleaks.base.toml
+    - cat gitleaks.base.toml
     - |
       if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
         LOG_OPTS="${CI_MERGE_REQUEST_DIFF_BASE_SHA}..${CI_COMMIT_SHA}"
