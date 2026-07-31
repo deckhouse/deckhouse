@@ -29,7 +29,8 @@ spec:
           - ALL
       metadata:
         description: |
-          NET_ADMIN/NET_RAW are required to program SNAT iptables rules on the node.
+          NET_ADMIN/NET_RAW are required to program SNAT iptables rules on the node
+          and by iptables-wrapper-init.
   network:
     hostNetwork:
       allowedValue: true
