@@ -108,6 +108,10 @@ entries:
           ru: Внешние проверки статуса
         url: /code/documentation/user/external-status-checks.html
       - title:
+          en: Vulnerability report
+          ru: Отчёт об уязвимостях
+        url: /code/documentation/user/vulnerability-report.html
+      - title:
           en: OmniAuth & LDAP
           ru: OmniAuth и LDAP
         url: /code/documentation/user/oauth-and-ldap.html

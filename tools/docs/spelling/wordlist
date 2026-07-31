@@ -516,6 +516,7 @@ NOERROR
 NSX
 NTP
 NUMA
+NVD
 NVMe
 Namespaced
 Namespase
@@ -697,6 +698,7 @@ S3
 SAML
 SANs
 SASL
+SAST
 SBOM
 SCM
 SCP
@@ -2230,6 +2232,7 @@ zoneTagCategory
 межузлового
 межузловой
 мейнтейнер
+мейнтейнерам
 менятьcя
 меняться
 мержит
@@ -2352,9 +2355,12 @@ zoneTagCategory
 офлайн
 п
 пагинация
+пайплайн
 пайплайна
 пайплайнами
+пайплайне
 пайплайнов
+пайплайну
 пайплайны
 паравиртуализации
 парсер
@@ -2708,6 +2714,7 @@ zoneTagCategory
 уязвимостей
 уязвимостям
 уязвимостями
+уязвимостях
 файл
 фейловер
 фикстур
@@ -2788,3 +2795,8 @@ zoneTagCategory
 юзера
 юнит
 юнита
+permalink
+deeplink
+occurrences
+snippet
+regex
