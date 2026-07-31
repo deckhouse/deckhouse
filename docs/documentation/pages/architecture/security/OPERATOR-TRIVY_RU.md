@@ -6,13 +6,15 @@ search: operator-trivy,
 description: Архитектура модуля operator-trivy в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`operator-trivy`](/modules/operator-trivy/) обеспечивает сканирование пользовательских образов в рантайм на известные CVE (Common Vulnerabilities and Exposures), включая уязвимости Astra Linux, ALT Linux и РЕД ОС. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), обогащаемые базами Astra Linux, ALT Linux и РЕД ОС.
+Модуль [`operator-trivy`](/modules/operator-trivy/) обеспечивает сканирование пользовательских образов в рантайм на известные CVE (Common Vulnerabilities and Exposures), включая уязвимости Astra Linux, ALT Linux и РЕД ОС. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), обогащаемые базами Astra Linux, ALT Linux и РЕД ОС, а также БДУ ФСТЭК.
 
 Также модуль производит анализ соответствия кластера Kubernetes требованиям CIS (Center for Internet Security) Kubernetes Benchmark.
 
+Дополнительно модуль `operator-trivy` обеспечивает возможность собирать поведенческие модели рабочей нагрузки при использовании опционального компонента node-agent.
+
 Модуль `operator-trivy` работает с кастомными ресурсами API-групп `spdx.softwarecomposition.kubescape.io` и `trivy.deckhouse.io`.
 
-   В API-группу `trivy.deckhouse.io` входят следующие ресурсы:
+В API-группу `trivy.deckhouse.io` входят следующие ресурсы:
 - [ClusterComplianceReport](/modules/operator-trivy/cr.html#clustercompliancereport) — хранит сводный отчёт о соответствии кластера требованиям безопасности (например, CIS Kubernetes Benchmark);
 - ClusterConfigAuditReport — хранит результаты аудита конфигурации Kubernetes-объектов на уровне кластера;
 - ClusterInfraAssessmentReport — хранит результаты проверок безопасности инфраструктуры Kubernetes на уровне кластера;
@@ -29,7 +31,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 - [SbomReport](/modules/operator-trivy/cr.html#sbomreport) — хранит SBOM, то есть состав ПО и зависимостей в образе контейнера;
 - [VulnerabilityReport](/modules/operator-trivy/cr.html#vulnerabilityreport) — хранит результаты сканирования уязвимостей в образе контейнера.
 
-   В API-группу `spdx.softwarecomposition.kubescape.io` входят следующие ресурсы:
+В API-группу `spdx.softwarecomposition.kubescape.io` входят следующие ресурсы:
 - ApplicationProfiles — хранит профиль поведения приложения в рантайме (системные вызовы, запускаемые процессы, доступ к файлам, HTTP-эндпоинты);
 - CollapseConfigurations — задаёт кластерные пороги агрегации динамических путей, эндпоинтов и сетевых адресов при формировании профилей;
 - ConfigurationScanSummaries — хранит сводку результатов проверок конфигурации для группы рабочих нагрузок в заданной области (например, неймспейсе);
@@ -105,7 +107,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
    Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.denyVulnerableImages.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-denyvulnerableimages-enabled) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`) и включен компонент Gatekeeper модуля [`admission-policy-engine`](/modules/admission-policy-engine/).
 
-1. **Report-updater** (Deployment) — опциональный контроллер, состоящий из одного контейнера **report-updater**, реализует MutatingWebhook и обеспечивает обогащение кастомного ресурса VulnerabilityReport идентификаторами BDU. Словарь BDU регулярно (каждые 6 часов) обновляется из OCI-образа.
+1. **Report-updater** (Deployment) — опциональный контроллер, состоящий из одного контейнера **report-updater**, реализует MutatingWebhook и обеспечивает обогащение кастомного ресурса VulnerabilityReport идентификаторами БДУ. Словарь БДУ регулярно (каждые 6 часов) обновляется из OCI-образа.
 
    Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.linkCVEtoBDU`](/modules/operator-trivy/stable/configuration.html#parameters-linkcvetobdu) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`).
 
@@ -118,7 +120,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 1. **Security-storage** (Deployment) — контроллер, состоящий из одного контейнера **apiserver**, является расширением API Kubernetes и выполняет обработку CRUD-операций, watch-запросов и list-запросов к кастомным ресурсам API-групп `spdx.softwarecomposition.kubescape.io` и `trivy.deckhouse.io`.
 
    Также security-storage реализует бэкенд для хранения этих ресурсов:
-   - метаданные сохраняются в SQLite базе данных;
+   - метаданные сохраняются в базе данных SQLite;
    - тело объектов сохраняется в gob-формате в каталоге `/data`.
 
 1. **Node-agent** (DaemonSet) — опциональный компонент, состоящий из одного контейнера **node-agent**, запускается на всех узлах кластера в привилегированном режиме и через eBPF наблюдает за поведением контейнеров и формирует рантайм-профили.
@@ -156,17 +158,17 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
 1. **Kube-apiserver**:
 
-- работа с кастомными ресурсами API-группы `trivy.deckhouse.io/*`;
-- отслеживание ресурсов Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob и Job;
-- создание, обновление и удаление ресурсов Secret, Job.
+   - работа с кастомными ресурсами API-группы `trivy.deckhouse.io/*`;
+   - отслеживание ресурсов Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob и Job;
+   - создание, обновление и удаление ресурсов Secret, Job.
 
-1. **Distribution** — загрузка OCI-образов с базой уязвимостей и BDU базой.
+1. **Distribution** — загрузка OCI-образов с базой уязвимостей и базой БДУ.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
 1. **Kube-apiserver**:
 
-- обработка ресурсов Kubernetes, указанных в кастомных ресурсах из API-групп `spdx.softwarecomposition.kubescape.io/*` и `trivy.deckhouse.io`;
-— мутация кастомных ресурсов VulnerabilityReport.
+   - обработка ресурсов Kubernetes, указанных в кастомных ресурсах из API-групп `spdx.softwarecomposition.kubescape.io/*` и `trivy.deckhouse.io`;
+   - мутация кастомных ресурсов VulnerabilityReport.
 
 1. **Prometheus-main** — сбор метрик модуля.
