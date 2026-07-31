@@ -269,12 +269,12 @@ properties:
 
           Whenever a DNS is generated:
 
-          - First key is replaced with the component name.
-          - Second key is replaced with the application instance name.
+          - First key is replaced with the application instance name.
+          - Second key is replaced with the application's namespace.
 
           The Deckhouse ecosystem applications use this template when creating Ingress resources.
 
-          For example, given the template `%s.%s.kube.company.my`, the `web` component of an application instance named `grafana` will get an Ingress resource at the address `web.grafana.kube.company.my`.
+          For example, given the template `%s.%s.kube.company.my`, the application instance named `grafana` running in the `monitoring` namespace will get an Ingress resource at the address `grafana.monitoring.kube.company.my`.
 
           **Usage notes:**
 
@@ -282,7 +282,7 @@ properties:
           - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](cr.html#clusterconfiguration-clusterdomain) parameter. Changing the `clusterDomain` value is not recommended unless necessary.
           - Before using the template, configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the service web interfaces.
           - If the template domain matches the domain of the node network, use only A records to assign addresses of the frontend nodes to the platform service web interfaces.
-          For example, if the nodes are registered under the `company.my` zone, the template must be `%s.%s.%s.company.my`.
+          For example, if the nodes are registered under the `company.my` zone, the template must be `%s.%s.company.my`.
         x-doc-examples: [ "%s.%s.company.my", "%s.%s.kube.company.my" ]
         x-examples: [ "%s.%s.kube.company.my" ]
       https:
