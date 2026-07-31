@@ -43,7 +43,7 @@ shell:
   setup:
     - cd /src
     - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - | 
+    - |
       {{- $buildContext := deepCopy $ -}}
       {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
       {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o /egress-gateway-agent cmd/main.go` -}}
