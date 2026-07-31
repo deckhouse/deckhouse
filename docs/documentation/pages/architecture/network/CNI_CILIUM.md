@@ -73,7 +73,7 @@ The module consists of the following components:
    * **agent**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing authorized access to agent metrics (described above).
 
-1. **Cilium-cni**: Executable file run by the containerd component that passes certain commands as an argument in accordance with the [CNI specification](https://www.cni.dev/docs/spec/#cni-operations ), for example, ADD when starting the container and DEL when deleting it. Cilium-cni executable interacts with the Cilium agent API via a Unix socket and initiates a datapath configuration to provide network connectivity, load balancing, and network policies for pod. Datapath in Cilium is a component that runs in the Linux kernel and is responsible for real low—level processing of network packets in a Kubernetes cluster. Simply put, this is the "road" along which data travels: how packets travel from one pod to another, how they are routed, how network policies and load balancing are applied.
+1. **Cilium-cni**: Executable file run by the containerd component that passes certain commands as an argument in accordance with the [CNI specification](https://www.cni.dev/docs/spec/#cni-operations ), for example, ADD when starting the container and DEL when deleting it. Cilium-cni executable interacts with the Cilium agent API via a Unix socket and initiates a datapath configuration to provide network connectivity, load balancing, and network policies for pod. Datapath in Cilium is a component that runs in the Linux kernel and is responsible for real low-level processing of network packets in a Kubernetes cluster. Simply put, this is the "road" along which data travels: how packets travel from one pod to another, how they are routed, how network policies and load balancing are applied.
 
 1. **Safe-agent-updater** (DaemonSet): A special application designed to eliminate disruptive situations that may occur when updating the version of the Cilium agent and lead to problems with the network availability of DKP components.
 
@@ -102,9 +102,12 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
+   * Manages Cilium custom resources.
+   * Watches changes to standard Kubernetes API resources and Cilium custom resources.
+   * Monitors status of pods running on the node, reads network policies.
    * Requests the IP ranges of cluster nodes via the `PodCidr`/`podCIDRs` attributes of the Node resource specification.
    * Authorizes requests for agent and operator metrics.
-   * Manages Cilium custom resources.
+
 
 The following external components interact with the module:
 
