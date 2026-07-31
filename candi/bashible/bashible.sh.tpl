@@ -370,7 +370,14 @@ function main() {
     source "/var/lib/bashible/telemetry.env"
   fi
 
-  if [ -z "${is_local-}" ]; then
+  {{- /*
+    Only the child pass (BASHIBLE_SKIP_UPDATE=yes) runs the steps that need these
+    binaries. The self-update pass must not depend on them: the rpp-get digest is
+    baked into the bashible.sh already on disk, so it is the first thing to rot out
+    of the registry, and failing here pins the node to an outdated bashible.sh with
+    no way to ever fetch a newer one.
+  */}}
+  if [ -z "${is_local-}" ] && [ -n "${BASHIBLE_SKIP_UPDATE-}" ]; then
 {{- if ne .runType "Normal" }}
     bb-minget-install
 {{- end }}
