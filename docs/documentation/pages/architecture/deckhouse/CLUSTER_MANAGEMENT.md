@@ -144,7 +144,7 @@ The module consists of the following components:
 
 1. **Redis** (Deployment): A component with a single **redis** container that provides a dedicated [Redis](https://github.com/redis/redis) database instance for storing task queue data and commander session states.
 
-1. **Console-frontend** (Deployment): Provides the DKP cluster administration web interface.
+1. **Console-frontend** (Deployment): Provides the managed DKP cluster administration web interface.
 
    Contains the following containers:
 
@@ -152,7 +152,7 @@ The module consists of the following components:
     * **wait-migrations**: An init container that waits for all database migrations to complete.
     * **nginx**: The main container.
 
-1. **Console-backend** (Deployment): An administration API backend for the DKP cluster that serves requests from the cluster-manager component.
+1. **Console-backend** (Deployment): An administration API backend for the managed DKP cluster that serves requests from the cluster-manager component.
 
    Console-backend uses Secret and Service resources created by cluster-manager to connect to the control plane of a managed DKP cluster.
 
@@ -200,7 +200,7 @@ The module consists of the following components:
 
 #### Optional components
 
-1. **Billing-prometheus** (StatefulSet): Runs [Deckhouse Prom++](/products/prompp/) in `remote_write` metrics ingestion mode.
+1. **Billing-prometheus** (StatefulSet): Runs [Deckhouse Prom++](/products/prompp/) in metrics ingestion mode over the [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) protocol.
 
    The [`prometheus`](/modules/prometheus/) module in a managed DKP cluster sends metrics. The component stores resource usage history for all managed clusters, which is an important data source for billing reports.
 
@@ -234,7 +234,9 @@ The module consists of the following components:
     * **promxy**: A sidecar container based on [Promxy](https://github.com/jacksontj/promxy). It proxies requests to `billing-prometheus` and provides a single endpoint for accessing data from multiple [Deckhouse Prom++](/products/prompp/) instances.
     * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
+{% alert level="info" %}
 The billing-prometheus, billing-reports, billing-schedules-reporter, and billing-aggregating-proxy components are created by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module if [`.settings.featureFlags.billingEnabled`](/modules/commander/alpha/admin_guide.html#billing-and-cost-management--billingenabled) is set to `true`.
+{% endalert %}
 
 ### Module interactions
 

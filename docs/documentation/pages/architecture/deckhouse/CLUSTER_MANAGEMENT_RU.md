@@ -142,7 +142,7 @@ description: Архитектура модулей commander и commander-agent 
 
 1. **Redis** (Deployment) — компонент состоит из одного контейнера **redis** и реализует отдельный экземпляр базы данных [Redis](https://github.com/redis/redis), отвечающий за хранение данных об очередях задач и состояниях сессий commander.
 
-1. **Console-frontend** (Deployment) — предоставляет веб-интерфейс администрирования кластера DKP.
+1. **Console-frontend** (Deployment) — предоставляет веб-интерфейс администрирования управляемого кластера DKP.
 
    Состоит из следующих контейнеров:
 
@@ -150,7 +150,7 @@ description: Архитектура модулей commander и commander-agent 
     * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
     * **nginx** — основной контейнер.
 
-1. **Console-backend** (Deployment) — API-бэкенд администрирования кластера DKP, обслуживающий запросы от компонента cluster-manager.
+1. **Console-backend** (Deployment) — API-бэкенд администрирования управляемого кластера DKP, обслуживающий запросы от компонента cluster-manager.
 
    Console-backend использует ресурсы Secret и Service, создаваемые компонентом cluster-manager, для подключения к control plane управляемого кластера DKP.
 
@@ -198,7 +198,7 @@ description: Архитектура модулей commander и commander-agent 
 
 #### Опциональные компоненты
 
-1. **Billing-prometheus** (StatefulSet) — компонент запускает [Deckhouse Prom++](/products/prompp/) в режиме приёма метрик по `remote_write`.
+1. **Billing-prometheus** (StatefulSet) — компонент запускает [Deckhouse Prom++](/products/prompp/) в режиме приёма метрик по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/).
 
    Модуль [`prometheus`](/modules/prometheus/), установленный в управляемом кластере DKP, отправляет метрики. Компонент хранит историю потребления ресурсов всеми управляемыми кластерами, что является важным источником данных для формирования отчётов по биллингу.
 
@@ -232,7 +232,9 @@ description: Архитектура модулей commander и commander-agent 
     * **promxy** — сайдкар-контейнер, реализованный на базе [Promxy](https://github.com/jacksontj/promxy), проксирует запросы к компоненту billing-prometheus и предоставляет единый эндпоинт для доступа к данным нескольких экземпляров [Deckhouse Prom++](/products/prompp/);
     * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
+{% alert level="info" %}
 Компоненты billing-prometheus, billing-reports, billing-schedules-reporter и billing-aggregating-proxy создаются контроллером Deckhouse модуля [`deckhouse`](/modules/deckhouse/) в случае, если в параметре модуля [`.settings.featureFlags.billingEnabled`](/modules/commander/alpha/admin_guide.html#биллинг-и-управление-расходами--billingenabled) задано значение `true`.
+{% endalert %}
 
 ### Взаимодействия модуля
 
