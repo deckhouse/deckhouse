@@ -191,7 +191,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "not in the cluster's availableVersions")
 	})
 
-	t.Run("п.2: clearing MC override falls back to stale CC pin and is rejected", func(t *testing.T) {
+	t.Run("case 2: clearing MC override falls back to stale CC pin and is rejected", func(t *testing.T) {
 		handler := withObjs(t,
 			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
 			newClusterConfigurationSecret("1.32"),
@@ -209,7 +209,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "not in the cluster's availableVersions")
 	})
 
-	t.Run("п.2: clearing MC override when CC is in availableVersions is allowed", func(t *testing.T) {
+	t.Run("case 2: clearing MC override when CC is in availableVersions is allowed", func(t *testing.T) {
 		handler := withObjs(t,
 			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
 			newClusterConfigurationSecret("1.34"),
@@ -223,7 +223,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	t.Run("п.2: clearing MC override to Automatic CC is allowed", func(t *testing.T) {
+	t.Run("case 2: clearing MC override to Automatic CC is allowed", func(t *testing.T) {
 		handler := withObjs(t,
 			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
 			newClusterConfigurationSecret("Automatic"),

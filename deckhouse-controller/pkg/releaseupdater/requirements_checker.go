@@ -49,8 +49,8 @@ const (
 	// updateMode stays "Automatic"; the kubernetesVersion sentinel becomes "Default".
 	// Today both dictionaries share the same string, so one constant works by accident
 	// (compared at :227/:257 for updateMode and :311/:369 for kubernetesVersion).
-	k8sAutomaticUpdateMode = "Automatic"
-	reqCheckerServiceName  = "requirements-checker"
+	k8sAutomaticUpdateMode              = "Automatic"
+	reqCheckerServiceName               = "requirements-checker"
 	MigratedModulesRequirementFieldName = "migratedModules"
 )
 
@@ -268,7 +268,7 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 // error here would propagate through newKubernetesVersionCheck up to the DeckhouseRelease
 // controller, which turns it into a Pending release — i.e. one transient read error would stop
 // Deckhouse from updating at all.
-func (c *kubernetesVersionCheck) readUpdateModeFromConfigMap(ctx context.Context) (mode string, found bool) {
+func (c *kubernetesVersionCheck) readUpdateModeFromConfigMap(ctx context.Context) (string, bool) {
 	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterKubernetesConfigMap}
 	cm := new(corev1.ConfigMap)
 	if err := c.k8sclient.Get(ctx, key, cm); err != nil {
@@ -334,7 +334,7 @@ func (c *kubernetesVersionCheck) isAutomaticFromModuleAndClusterConfig(ctx conte
 // readModuleConfigKubernetesVersion returns the raw setting, or "" when the ModuleConfig is absent
 // or does not carry kubernetesVersion. Only the value matters to the caller — an existing
 // ModuleConfig without the setting is indistinguishable from a missing one.
-func (c *kubernetesVersionCheck) readModuleConfigKubernetesVersion(ctx context.Context) (version string, err error) {
+func (c *kubernetesVersionCheck) readModuleConfigKubernetesVersion(ctx context.Context) (string, error) {
 	mc := new(v1alpha1.ModuleConfig)
 	if err := c.k8sclient.Get(ctx, client.ObjectKey{Name: controlPlaneManagerModuleConfigName}, mc); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -345,11 +345,11 @@ func (c *kubernetesVersionCheck) readModuleConfigKubernetesVersion(ctx context.C
 	if mc.Spec.Settings == nil {
 		return "", nil
 	}
-	version, _ = mc.Spec.Settings.GetMap()["kubernetesVersion"].(string)
+	version, _ := mc.Spec.Settings.GetMap()["kubernetesVersion"].(string)
 	return version, nil
 }
 
-func (c *kubernetesVersionCheck) readClusterConfigurationKubernetesVersion(ctx context.Context) (version string, found bool, err error) {
+func (c *kubernetesVersionCheck) readClusterConfigurationKubernetesVersion(ctx context.Context) (string, bool, error) {
 	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterConfigurationSecret}
 	secret := new(corev1.Secret)
 	if err := c.k8sclient.Get(ctx, key, secret); err != nil {

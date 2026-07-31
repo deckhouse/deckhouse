@@ -276,7 +276,7 @@ func rawModuleConfigSettings(cfg *v1alpha1.ModuleConfig) map[string]interface{} 
 
 // readAvailableKubernetesVersions returns status.availableVersions from
 // kube-system/d8-cluster-kubernetes. ok=false means fail-open (missing/empty/error).
-func (v *moduleConfigValidator) readAvailableKubernetesVersions(ctx context.Context) (versions []string, ok bool) {
+func (v *moduleConfigValidator) readAvailableKubernetesVersions(ctx context.Context) ([]string, bool) {
 	cm := &v1.ConfigMap{}
 	if err := v.client.Get(ctx, client.ObjectKey{
 		Name:      clusterKubernetesConfigMapName,
@@ -331,7 +331,7 @@ func (v *moduleConfigValidator) readClusterConfigurationSecret(ctx context.Conte
 // readRawClusterConfigurationVersion returns the literal kubernetesVersion from the
 // d8-cluster-configuration Secret. Used only when resolving fallback after clearing an MC pin.
 // ok=false means fail-open.
-func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.Context) (version string, ok bool) {
+func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.Context) (string, bool) {
 	secret, ok := v.readClusterConfigurationSecret(ctx)
 	if !ok {
 		return "", false

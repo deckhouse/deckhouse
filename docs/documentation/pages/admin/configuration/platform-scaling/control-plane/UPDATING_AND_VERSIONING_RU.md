@@ -46,7 +46,6 @@ lang: ru
 Не задавайте `kubernetesVersion` в [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — поле устарело. Явный пин в ClusterConfiguration без переноса в ModuleConfig `control-plane-manager` приводит к алерту [D8ObsoleteKubernetesVersionInClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8obsoletekubernetesversioninclusterconfiguration).
 {% endalert %}
 
-
 ## Мониторинг процесса обновления Kubernetes
 
 Модуль [`control-plane-manager`](/modules/control-plane-manager/) включает компонент `update-observer`, который предоставляет актуальную информацию о процессе обновления Kubernetes в кластере.

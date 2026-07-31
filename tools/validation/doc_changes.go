@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -147,8 +148,19 @@ while related language file '%s' is absent.`, otherName))
 	}
 	defer file.Close()
 
+	relatedInDiff := map[string]struct{}{otherName: {}}
+	// Symlinked doc-ru-* (e.g. ee/cse → candi/modules) counts as changed when the target path is in the diff.
+	if target, err := os.Readlink(otherName); err == nil {
+		resolved := filepath.Clean(filepath.Join(filepath.Dir(otherName), target))
+		relatedInDiff[resolved] = struct{}{}
+		relatedInDiff[filepath.ToSlash(resolved)] = struct{}{}
+	}
+
 	for _, fileInfo := range diffInfo.Files {
-		if fileInfo.NewFileName == otherName {
+		if _, ok := relatedInDiff[fileInfo.NewFileName]; ok {
+			return NewOK(origName)
+		}
+		if _, ok := relatedInDiff[filepath.Clean(fileInfo.NewFileName)]; ok {
 			return NewOK(origName)
 		}
 	}

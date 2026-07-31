@@ -45,7 +45,6 @@ You can downgrade only one minor version from the highest version ever used in t
 Do not set `kubernetesVersion` in [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — the field is deprecated. Keeping an explicit pin there without migrating it to ModuleConfig `control-plane-manager` triggers the [D8ObsoleteKubernetesVersionInClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8obsoletekubernetesversioninclusterconfiguration) alert.
 {% endalert %}
 
-
 ## Monitoring Kubernetes update progress
 
 The [`control-plane-manager`](/modules/control-plane-manager/) module includes the `update-observer` component, which provides up-to-date information about the Kubernetes version update process in the cluster.
