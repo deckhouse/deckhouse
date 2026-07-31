@@ -484,12 +484,15 @@ fetch_bootstrap() {
   esac
 }
 get_phase2() {
-  local token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   local out="${TMPDIR}/phase2-response.json"
   local path="/apis/bashible.deckhouse.io/v1alpha1/bootstrap/{{ .nodeGroup.name }}"
-  local count_401=0
-  local rc server url
+  local rejected_timeout="${BOOTSTRAP_TOKEN_REJECTED_TIMEOUT:-300}"
+  local rejected_since=0
+  local token rc server url attempted rejected now
   while :; do
+    token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
+    attempted=0
+    rejected=0
     for server in {{ .Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
       url="https://${server}${path}"
       if fetch_bootstrap "$url" "$token" "$out"; then
@@ -499,15 +502,27 @@ get_phase2() {
         rc=$?
       fi
       rm -f "$out"
+      attempted=$((attempted + 1))
       if (( rc == 2 )); then
-        ((count_401++))
-        if (( count_401 >= 6 )); then
-          return 1
-        fi
+        rejected=$((rejected + 1))
       else
         >&2 echo "Failed to get bootstrap from ${url} (exit code $rc)"
       fi
     done
+
+    if (( attempted > 0 && rejected == attempted )); then
+      now="$(date +%s)"
+      if (( rejected_since == 0 )); then
+        rejected_since="$now"
+        >&2 echo "Bootstrap token rejected by every master; retrying for up to ${rejected_timeout}s in case the API servers are still starting"
+      elif (( now - rejected_since >= rejected_timeout )); then
+        >&2 echo "Bootstrap token rejected by every master for ${rejected_timeout}s, giving up"
+        return 1
+      fi
+    else
+      rejected_since=0
+    fi
+
     sleep 10
   done
 }
