@@ -89,10 +89,7 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	result.UpdateEpoch = calculateUpdateEpoch(epochTimestampAccessor(), clusterUUID, ng.Name)
 
 	clusterConfigurationTarget, defaultCRI, deckhouseDefault := s.readClusterConfiguration(ctx)
-	targetVersion, err := s.readTargetKubernetesVersion(ctx, clusterConfigurationTarget, deckhouseDefault)
-	if err != nil {
-		return result, err
-	}
+	targetVersion := s.readTargetKubernetesVersion(ctx, clusterConfigurationTarget, deckhouseDefault)
 	// The node-manager ModuleConfig is the new home for defaultCRI. An explicitly
 	// set value always wins over the deprecated ClusterConfiguration.defaultCRI —
 	// reading the ModuleConfig object directly lets us tell "set" from "unset"

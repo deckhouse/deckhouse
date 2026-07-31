@@ -24,14 +24,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
-
-var moduleConfigGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"}
 
 func serviceWithMC(t *testing.T, objs ...client.Object) *Service {
 	t.Helper()

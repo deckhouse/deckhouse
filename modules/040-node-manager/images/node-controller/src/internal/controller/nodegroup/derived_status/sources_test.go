@@ -57,8 +57,7 @@ func resolvedTarget(t *testing.T, objects ...client.Object) string {
 	t.Helper()
 	service := newTestService(t, objects...)
 	ccTarget, _, deckhouseDefault := service.readClusterConfiguration(context.Background())
-	target, err := service.readTargetKubernetesVersion(context.Background(), ccTarget, deckhouseDefault)
-	require.NoError(t, err)
+	target := service.readTargetKubernetesVersion(context.Background(), ccTarget, deckhouseDefault)
 	require.NotNil(t, target)
 	return semverMajMin(target)
 }
@@ -89,6 +88,33 @@ func TestReadTargetKubernetesVersion(t *testing.T) {
 	t.Run("ClusterConfiguration remains the final compatibility fallback", func(t *testing.T) {
 		assert.Equal(t, "1.31", resolvedTarget(t,
 			kubernetesSourceSecret("1.31", "1.34"),
+		))
+	})
+
+	// A source anyone with kube-system write access can corrupt must not be able to stop the
+	// derived status of every NodeGroup in the cluster — it may only disqualify itself.
+	t.Run("unparsable ConfigMap spec degrades to the next source", func(t *testing.T) {
+		configMap := kubernetesSourceConfigMap("1.35")
+		configMap.Data["spec"] = "desiredVersion: [broken\n"
+
+		assert.Equal(t, "1.33", resolvedTarget(t,
+			kubernetesSourceSecret("1.31", "1.34"),
+			kubernetesSourceModuleConfig("1.33"),
+			configMap,
+		))
+	})
+
+	t.Run("invalid desiredVersion degrades to the next source", func(t *testing.T) {
+		assert.Equal(t, "1.31", resolvedTarget(t,
+			kubernetesSourceSecret("1.31", "1.34"),
+			kubernetesSourceConfigMap("not-a-version"),
+		))
+	})
+
+	t.Run("invalid ModuleConfig kubernetesVersion degrades to ClusterConfiguration", func(t *testing.T) {
+		assert.Equal(t, "1.31", resolvedTarget(t,
+			kubernetesSourceSecret("1.31", "1.34"),
+			kubernetesSourceModuleConfig("not-a-version"),
 		))
 	})
 }

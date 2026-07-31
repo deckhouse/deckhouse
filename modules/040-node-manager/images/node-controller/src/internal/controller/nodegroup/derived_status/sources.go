@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -31,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/capacity"
@@ -157,10 +157,19 @@ func parseSecretKubernetesVersion(raw string) *semver.Version {
 // readTargetKubernetesVersion mirrors global discovery:
 // d8-cluster-kubernetes is the primary hand-off from addon-operator; MC/CC are fallback sources
 // for the startup window before the sync hook has written the ConfigMap.
+//
+// Every source is best-effort, like the rest of the read* helpers here: a malformed value only
+// disqualifies that one source and resolution moves on. It must not fail compute() — this runs for
+// every NodeGroup, so a single bad key in a ConfigMap anyone with kube-system write access can
+// edit would otherwise freeze the derived status (kubelet version, CRI, capacity) of the whole
+// cluster.
 func (s *Service) readTargetKubernetesVersion(
 	ctx context.Context,
 	clusterConfigurationTarget, deckhouseDefault *semver.Version,
-) (*semver.Version, error) {
+) *semver.Version {
+	logger := log.FromContext(ctx)
+
+	// Served from the kube-system ConfigMap informer, see common.CacheOptions.
 	configMap := &corev1.ConfigMap{}
 	if err := s.Client.Get(ctx, types.NamespacedName{
 		Namespace: clusterConfigSecretNamespace,
@@ -168,40 +177,45 @@ func (s *Service) readTargetKubernetesVersion(
 	}, configMap); err == nil {
 		if rawSpec := configMap.Data["spec"]; rawSpec != "" {
 			var spec clusterKubernetesSpec
-			if err := sigsyaml.Unmarshal([]byte(rawSpec), &spec); err != nil {
-				return nil, fmt.Errorf("parse %s ConfigMap spec: %w", clusterKubernetesConfigMapName, err)
-			}
-			if spec.DesiredVersion != "" {
+			switch err := sigsyaml.Unmarshal([]byte(rawSpec), &spec); {
+			case err != nil:
+				logger.Error(err, "ignoring configMap as a kubernetes version source: cannot parse spec",
+					"configMap", clusterKubernetesConfigMapName)
+			case spec.DesiredVersion != "":
 				version, err := semver.NewVersion(spec.DesiredVersion)
-				if err != nil {
-					return nil, fmt.Errorf("parse %s ConfigMap desiredVersion: %w", clusterKubernetesConfigMapName, err)
+				if err == nil {
+					return version
 				}
-				return version, nil
+				logger.Error(err, "ignoring configMap as a kubernetes version source: invalid desiredVersion",
+					"configMap", clusterKubernetesConfigMapName, "desiredVersion", spec.DesiredVersion)
 			}
 		}
 	}
 
+	// Live read: the ModuleConfig informer is scoped to "global" (see common.CacheOptions), and
+	// widening it would make this controller watch every ModuleConfig in the cluster. This branch
+	// is only reached before the ConfigMap carries a desiredVersion, i.e. during bootstrap.
 	moduleConfig := &unstructured.Unstructured{}
 	moduleConfig.SetGroupVersionKind(moduleConfigGVK)
-	if err := s.Client.Get(ctx, types.NamespacedName{Name: controlPlaneManagerModuleName}, moduleConfig); err == nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Name: controlPlaneManagerModuleName}, moduleConfig); err == nil {
 		versionRaw, found, err := unstructured.NestedString(moduleConfig.Object, "spec", "settings", "kubernetesVersion")
-		if err != nil {
-			return nil, fmt.Errorf("read control-plane-manager ModuleConfig kubernetesVersion: %w", err)
-		}
 		switch {
+		case err != nil:
+			logger.Error(err, "ignoring control-plane-manager ModuleConfig as a kubernetes version source")
 		case versionRaw == automaticKubernetesVersion:
 			// Presence wins: an explicit Automatic in MC ignores a leftover CC pin.
-			return deckhouseDefault, nil
+			return deckhouseDefault
 		case found && versionRaw != "":
 			version, err := semver.NewVersion(versionRaw)
-			if err != nil {
-				return nil, fmt.Errorf("parse control-plane-manager ModuleConfig kubernetesVersion: %w", err)
+			if err == nil {
+				return version
 			}
-			return version, nil
+			logger.Error(err, "ignoring control-plane-manager ModuleConfig as a kubernetes version source: invalid kubernetesVersion",
+				"kubernetesVersion", versionRaw)
 		}
 	}
 
-	return clusterConfigurationTarget, nil
+	return clusterConfigurationTarget
 }
 
 // readDefaultCRIFromModuleConfig returns spec.settings.defaultCRI from the
