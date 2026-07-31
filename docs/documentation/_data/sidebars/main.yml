@@ -1643,6 +1643,10 @@ entries:
                 ru: Модуль observability
               url: /architecture/observability/observability.html
             - title:
+                en: Upmeter module
+                ru: Модуль upmeter
+              url: /architecture/observability/upmeter.html
+            - title:
                 en: Logging modules
                 ru: Модули логирования
               url: /architecture/observability/logging.html
