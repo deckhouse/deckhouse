@@ -99,7 +99,7 @@ var _ = BeforeSuite(func() {
 	testEnv, cfg, k8sClient, err = testenv.Start(
 		scheme,
 		append(
-			testenv.CRDPaths(testenv.WithNodeGroupCRDFile()),
+			testenv.CRDPaths(testenv.WithNodeGroupCRDFile(), testenv.WithMachineSetCRDFile()),
 			filepath.Join(testdataDir(), "dvpinstanceclass-crd.yaml"),
 			filepath.Join(testdataDir(), "deckhousemachinetemplate-crd.yaml"),
 		)...,

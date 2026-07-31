@@ -19,6 +19,7 @@ package capi
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -413,6 +414,42 @@ template: |
 			g.Expect(err).NotTo(HaveOccurred())
 			return spec
 		}, 5*time.Second, poll).Should(Equal(map[string]any{"vmClassName": "generic"}))
+	})
+
+	// The snapshot on a superseded generation is the only durable record of what a rollout changed
+	// once the NodeGroup event has expired, so the pruner keeps a few of them instead of deleting
+	// each one the moment CAPI retires its MachineSet.
+	It("keeps the last few superseded generations and prunes the ones behind them", func() {
+		ng, icName := setUp("v2-history", []string{"vmClassName"}, map[string]any{"vmClassName": "gen1"})
+
+		Eventually(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+			eventually, poll).Should(HaveSuffix("-gen1"))
+
+		for _, class := range []string{"gen2", "gen3", "gen4"} {
+			updateInstanceClass(icName, map[string]any{"vmClassName": class})
+			Eventually(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+				eventually, poll).Should(HaveSuffix("-" + class))
+		}
+
+		Eventually(func(g Gomega) []string {
+			names := []string{}
+			for _, template := range machineTemplates(g, ng.Name) {
+				names = append(names, template.GetName())
+			}
+			return names
+		}, eventually, poll).Should(HaveLen(keptGenerations),
+			"the current generation plus the ones kept for their snapshots, nothing older")
+
+		By("and what survives is the newest, with its diff still readable")
+		Eventually(func(g Gomega) []string {
+			suffixes := []string{}
+			for _, template := range machineTemplates(g, ng.Name) {
+				name := template.GetName()
+				suffixes = append(suffixes, name[strings.LastIndex(name, "-gen"):])
+				g.Expect(template.GetAnnotations()).To(HaveKey(machinetemplate.AppliedInstanceClassAnnotation))
+			}
+			return suffixes
+		}, eventually, poll).Should(ConsistOf("-gen2", "-gen3", "-gen4"))
 	})
 
 	// Rolling a Deckhouse release back to a version without the v2 engine is a rollout: the v1

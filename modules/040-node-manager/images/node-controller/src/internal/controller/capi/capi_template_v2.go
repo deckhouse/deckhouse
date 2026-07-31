@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -50,7 +51,39 @@ const (
 	// MachineDeployment was deleted). Reaching the bound means something else is writing these
 	// objects, which is worth an error rather than an infinite loop.
 	maxGenerationAttempts = 8
+
+	// keptGenerations is how many superseded generations survive the prune, per zone.
+	//
+	// The snapshot on a generation object is the only durable record of what a rollout changed:
+	// the NodeGroup event carrying the same diff is dropped by Kubernetes after about an hour,
+	// while the object used to disappear as soon as CAPI retired its MachineSet. An operator
+	// asking "why did my machines roll last night" needs something to read. These objects have no
+	// controller and cost a few kilobytes each.
+	keptGenerations = 3
 )
+
+// recentGenerations returns the generations to keep for their snapshot alone: the newest
+// keptGenerations of each zone. Names from the v1 era carry no generation and are not ranked —
+// they are pruned as before, once nothing references them.
+func recentGenerations(names []string) map[string]struct{} {
+	byZone := map[string][]string{}
+	for _, name := range names {
+		if generationOf(name) == 0 {
+			continue
+		}
+		zone := name[:strings.LastIndex(name, generationSuffix)]
+		byZone[zone] = append(byZone[zone], name)
+	}
+
+	keep := map[string]struct{}{}
+	for _, generations := range byZone {
+		slices.SortFunc(generations, func(a, b string) int { return generationOf(b) - generationOf(a) })
+		for _, name := range generations[:min(len(generations), keptGenerations)] {
+			keep[name] = struct{}{}
+		}
+	}
+	return keep
+}
 
 // readMachineTemplateContract returns the parsed v2 contract, or nil when the provider still ships
 // the v1 trio (machine-template.yaml + instance-class.checksum + machine-deployment-spec-patch).

@@ -344,6 +344,15 @@ harness in `internal/machinetemplate/provider_parity_test.go`, which renders arc
 v1 files (`internal/machinetemplate/testdata/v1/`) and compares both the rendered object and the
 rollout decision, field by field.
 
+### Old generations are kept for a while
+
+The pruner deletes a superseded generation only once no MachineSet references it any more — that is
+what keeps a rollout from stalling (kubernetes-sigs/cluster-api#6588) — and then keeps the newest
+few anyway (`keptGenerations`). The snapshot annotation on those objects is the only durable record
+of what a rollout changed: the NodeGroup event carrying the same diff is dropped by Kubernetes after
+about an hour, so without them "why did my machines roll last night" has no answer. They have no
+controller and cost a few kilobytes each.
+
 ### Direction matters: forward is free, backward rolls once
 
 Moving a live cluster **to** v2 touches nothing: node-controller adopts the checksum-named template

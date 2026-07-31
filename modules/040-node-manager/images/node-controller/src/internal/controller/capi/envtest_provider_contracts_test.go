@@ -421,6 +421,15 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 			live.Object["spec"] = spec
 			Expect(k8sClient.Update(suiteCtx, live)).To(Succeed())
 
+			// In production node-controller watches the provider's InstanceClass kind, discovered
+			// when the manager starts. Here the CRD is installed by this very spec, long after
+			// that discovery, so the edit above wakes nothing — nudge the NodeGroup instead of
+			// waiting out the resync.
+			fresh := &deckhousev1.NodeGroup{}
+			Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: ngName}, fresh)).To(Succeed())
+			fresh.SetAnnotations(map[string]string{"test.deckhouse.io/nudge": "1"})
+			Expect(k8sClient.Update(suiteCtx, fresh)).To(Succeed())
+
 			Eventually(func(g Gomega) string { return referenced(g) },
 				eventually, poll).Should(HaveSuffix("-gen1"))
 		})

@@ -47,3 +47,61 @@ func TestGenerationOf(t *testing.T) {
 		})
 	}
 }
+
+// The pruner keeps a few superseded generations so their snapshots outlive the NodeGroup event.
+// Ranking is per zone: one zone's history must not push another zone's out.
+func TestRecentGenerations(t *testing.T) {
+	tests := []struct {
+		name    string
+		objects []string
+		expKept []string
+	}{
+		{
+			name:    "fewer than the limit: all kept",
+			objects: []string{"worker-a1b2c3d4-gen1", "worker-a1b2c3d4-gen2"},
+			expKept: []string{"worker-a1b2c3d4-gen1", "worker-a1b2c3d4-gen2"},
+		},
+		{
+			name: "more than the limit: the newest survive",
+			objects: []string{
+				"worker-a1b2c3d4-gen1", "worker-a1b2c3d4-gen2",
+				"worker-a1b2c3d4-gen3", "worker-a1b2c3d4-gen4",
+			},
+			expKept: []string{"worker-a1b2c3d4-gen2", "worker-a1b2c3d4-gen3", "worker-a1b2c3d4-gen4"},
+		},
+		{
+			name: "each zone keeps its own",
+			objects: []string{
+				"worker-a1b2c3d4-gen1", "worker-a1b2c3d4-gen2", "worker-a1b2c3d4-gen3", "worker-a1b2c3d4-gen4",
+				"worker-e5f6a7b8-gen1", "worker-e5f6a7b8-gen2",
+			},
+			expKept: []string{
+				"worker-a1b2c3d4-gen2", "worker-a1b2c3d4-gen3", "worker-a1b2c3d4-gen4",
+				"worker-e5f6a7b8-gen1", "worker-e5f6a7b8-gen2",
+			},
+		},
+		{
+			name:    "double-digit generations sort as numbers, not strings",
+			objects: []string{"worker-a1b2c3d4-gen9", "worker-a1b2c3d4-gen10", "worker-a1b2c3d4-gen11", "worker-a1b2c3d4-gen12"},
+			expKept: []string{"worker-a1b2c3d4-gen10", "worker-a1b2c3d4-gen11", "worker-a1b2c3d4-gen12"},
+		},
+		{
+			// A v1 checksum-named object has no generation to rank, so it is pruned the moment
+			// nothing references it — exactly as before v2.
+			name:    "v1 names are not kept",
+			objects: []string{"worker-8ad9c341", "worker-a1b2c3d4-gen1"},
+			expKept: []string{"worker-a1b2c3d4-gen1"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			kept := recentGenerations(tc.objects)
+			names := make([]string, 0, len(kept))
+			for name := range kept {
+				names = append(names, name)
+			}
+			assert.ElementsMatch(t, tc.expKept, names)
+		})
+	}
+}
