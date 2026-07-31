@@ -72,6 +72,56 @@ func TestValidate_ManagedByProtection(t *testing.T) {
 	assert.True(t, resp.Allowed)
 }
 
+// The marking and the change it forbids can arrive in one request, so the incoming object alone is
+// not enough to judge by: an UPDATE that drops the label would otherwise be judged as unmarked.
+func TestResolveManagedBy(t *testing.T) {
+	managed := map[string]string{v1alpha3.ResourceLabelManagedBy: v1alpha3.ManagedByController}
+
+	tests := []struct {
+		name      string
+		operation admissionv1.Operation
+		object    map[string]string
+		oldObject map[string]string
+		expected  string
+	}{
+		{name: "marked", operation: admissionv1.Update, object: managed, expected: v1alpha3.ManagedByController},
+		{name: "unmarked", operation: admissionv1.Update, object: map[string]string{}, expected: ""},
+		{
+			name:      "the marking stripped in the same update",
+			operation: admissionv1.Update,
+			object:    map[string]string{},
+			oldObject: managed,
+			expected:  v1alpha3.ManagedByController,
+		},
+		{
+			name:      "the marking replaced in the same update",
+			operation: admissionv1.Update,
+			object:    map[string]string{v1alpha3.ResourceLabelManagedBy: "somebody-else"},
+			oldObject: managed,
+			expected:  v1alpha3.ManagedByController,
+		},
+		{
+			// There is no old object to read, and a binding created with the marking is judged by it.
+			name:      "created with the marking",
+			operation: admissionv1.Create,
+			object:    managed,
+			expected:  v1alpha3.ManagedByController,
+		},
+		{
+			name:      "another value is carried through as it is",
+			operation: admissionv1.Update,
+			object:    map[string]string{v1alpha3.ResourceLabelManagedBy: "somebody-else"},
+			expected:  "somebody-else",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, ResolveManagedBy(tt.operation, tt.object, tt.oldObject))
+		})
+	}
+}
+
 func TestValidate_Delete(t *testing.T) {
 	c := newClient(t)
 	// delete of a non-managed binding is always allowed (no role checks)

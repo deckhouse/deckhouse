@@ -53,6 +53,15 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	// The old object is read for its labels alone, and only where it exists: an UPDATE that strips
+	// the managed-by marking must not thereby escape it.
+	old := new(v1alpha3.ProjectRoleBinding)
+	if req.Operation == admissionv1.Update {
+		if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+	}
+
 	// The "binding must live in the main namespace of an existing, non-virtual project" check only
 	// guards the *placement* of a binding, so it is enforced on CREATE alone. Enforcing it on UPDATE
 	// would deadlock project teardown: the controller removes the PRB finalizer with an Update, and
@@ -81,6 +90,6 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		RoleRefName: prb.Spec.RoleRef.Name,
 		Subjects:    prb.Spec.Subjects,
 		Namespace:   req.Namespace,
-		ManagedBy:   prb.Labels[v1alpha3.ResourceLabelManagedBy],
+		ManagedBy:   rolebindingwebhook.ResolveManagedBy(req.Operation, prb.Labels, old.Labels),
 	})
 }

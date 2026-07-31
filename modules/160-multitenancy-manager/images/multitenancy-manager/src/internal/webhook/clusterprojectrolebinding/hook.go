@@ -51,11 +51,20 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	// The old object is read for its labels alone, and only where it exists: an UPDATE that strips
+	// the managed-by marking must not thereby escape it.
+	old := new(v1alpha3.ClusterProjectRoleBinding)
+	if req.Operation == admissionv1.Update {
+		if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+	}
+
 	return rolebindingwebhook.Validate(ctx, v.client, req, rolebindingwebhook.Input{
 		RoleRefKind: cprb.Spec.RoleRef.Kind,
 		RoleRefName: cprb.Spec.RoleRef.Name,
 		Subjects:    cprb.Spec.Subjects,
 		Namespace:   "",
-		ManagedBy:   cprb.Labels[v1alpha3.ResourceLabelManagedBy],
+		ManagedBy:   rolebindingwebhook.ResolveManagedBy(req.Operation, cprb.Labels, old.Labels),
 	})
 }
