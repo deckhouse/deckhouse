@@ -24,15 +24,16 @@ In addition to policies that prohibit using parameters different from the set re
 Depending on how pods are created, there are differences in how the API generates messages regarding validation failures (violations of established policies):
 
 - If a pod is created directly, the validation error is returned in the API response indicating a validation failure (policy violation).
-- If pods are created via Deployment, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
+- If pods are created via a Deployment and the pods potentially violate a policy, the creation of such Deployment will be rejected.
+- If pods are created via a Deployment that already existed before the policy was enabled, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
 
 ## Controller-level validation
 
-In addition to Pods, policies validate pod-creating controllers at CREATE and UPDATE time. This provides early feedback when a workload is created or updated, before any Pod is launched.
+Policies validate pod-creating controllers at CREATE and UPDATE time. This provides early feedback when a workload is created or updated, before any Pod is launched, and also surfaces creation denials when deploying via CI (CI rarely creates Pods directly, and Pod creation errors from controllers are often not displayed).
 
-The following object types are intercepted:
+The following objects are validated:
 
-| API group | Kind                               | Operations     |
+| API group | Resource kind                      | Operations     |
 | --------- | ---------------------------------- | -------------- |
 | (core)    | Pod                                | CREATE, UPDATE |
 | apps      | Deployment, StatefulSet, DaemonSet | CREATE, UPDATE |
@@ -41,21 +42,23 @@ The following object types are intercepted:
 | (core)    | pods/exec, pods/attach             | CONNECT        |
 
 {% alert level="warning" %}
-Controller-level checks evaluate the **un-mutated pod template** (`spec.template`), not the final Pod. A Pod reaching Gatekeeper has already passed through mutating admission (e.g. LimitRange injecting default `resources`, or a mutating webhook injecting `securityContext`); a controller's pod template has not.
+Controller-level checks run against the **original pod template** (`spec.template`), not the manifest after all mutations. Whereas pod-level validation happens after all mutating actions (for example, LimitRange adds default `resources`, or a mutating webhook adds `securityContext`);
+Keep this in mind when using security policies.
 {% endalert %}
 
-A workload whose template omits fields normally supplied by LimitRange or a mutating webhook may be **denied at the controller level** even though the resulting Pods would be compliant. Review your policies against controller pod templates, not just running Pods.
+
 
 ### labelSelector semantics for controllers
 
-Gatekeeper's `match.labelSelector` evaluates against the reviewed object's own `metadata.labels`. For Pods this is the pod's labels. For controllers (Deployment, StatefulSet, etc.) this is the controller's **top-level** `metadata.labels`, not the pod template's `metadata.labels` (`spec.template.metadata.labels`). Users who write `labelSelector` thinking about pod labels should be aware of the following:
+When building policies that are applied based on object labels (`match.labelSelector`), keep in mind that selection is performed against the `metadata.labels` of the reviewed object. For Pods these are the pod's labels. For controllers (Deployment, StatefulSet, etc.) these are the controller's **top-level** `metadata.labels`, not the pod template's `metadata.labels` (`spec.template.metadata.labels`).
+Users creating label-based policies should be aware that:
 
-- A positive selector not mirrored at the controller top level will result in no controller-level check at all (the feature is silently not delivered).
-- An exclusion-style selector (`NotIn`/`DoesNotExist`) used to exempt a workload will stop exempting at the controller level — a previously allowed workload may get denied.
+- If the policy's labelSelector matches the pods created by a controller, it does not automatically trigger a controller-level check if the controller itself is not matched by the labelSelector.
+- An exclusion selector (`NotIn`/`DoesNotExist`) used to exclude pods from a policy may not work at the controller level if the controller itself is not matched by the labelSelector.
 
 ### SecurityPolicyException label resolution for controllers
 
-For controller kinds, SecurityPolicyException (SPE) labels and annotations are resolved from the **pod template's metadata** (`spec.template.metadata`), not from the controller's top-level metadata. This ensures SPEs apply to the pods the controller creates, not to the controller object itself.
+For controller kinds, SecurityPolicyException (SPE) labels and annotations are taken from the **pod template's metadata** (`spec.template.metadata`), not from the controller's top-level metadata. This ensures SPEs apply to the pods the controller creates, not to the controller object itself.
 
 ## Pod validation when policies are modified or new ones are added
 
