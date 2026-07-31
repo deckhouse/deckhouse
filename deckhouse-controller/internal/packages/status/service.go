@@ -170,7 +170,7 @@ func (s *Service) ModuleQueue() workqueue.TypedRateLimitingInterface[string] {
 // name that splits into exactly two dot-separated parts belongs to an
 // application; anything else is a module name.
 func (s *Service) queueFor(name string) workqueue.TypedRateLimitingInterface[string] {
-	if len(strings.Split(name, ".")) == appNameParts {
+	if strings.Count(name, ".")+1 >= appNameParts {
 		return s.appQueue
 	}
 
