@@ -1,0 +1,121 @@
+{{- define "fencing_controller_resources" }}
+cpu: 10m
+memory: 50Mi
+{{- end }}
+
+{{- $healthPort := 4292 }}
+{{- $metricsPort := 4291 }}
+
+{{- $fencingEnabled := false }}
+{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{- $mode := dig "fencing" "mode" "" $ng }}
+  {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
+    {{- $fencingEnabled = true }}
+  {{- end }}
+{{- end }}
+
+{{- if $fencingEnabled }}
+  {{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: fencing-controller
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: fencing-controller
+  updatePolicy:
+    updateMode: "InPlaceOrRecreate"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "fencing-controller"
+      minAllowed:
+        {{- include "fencing_controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 128Mi
+  {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fencing-controller
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+spec:
+  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: fencing-controller
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fencing-controller
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-controller")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: fencing-controller
+  template:
+    metadata:
+      labels:
+        app: fencing-controller
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "fencing-controller")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: fencing-controller
+      terminationGracePeriodSeconds: 10
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: fencing-controller
+        image: {{ include "helm_lib_module_image" (list . "fencingController") }}
+        imagePullPolicy: IfNotPresent
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        command:
+        - /fencing-controller
+        args:
+        - --health-probe-bind-address=0.0.0.0:{{ $healthPort }}
+        - --metrics-bind-address=127.0.0.1:{{ $metricsPort }}
+        - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
+        - -v=4
+        env:
+        - name: LOG_LEVEL
+          value: info
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ $healthPort }}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ $healthPort }}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "fencing_controller_resources" . | nindent 12 }}
+{{- end }}
