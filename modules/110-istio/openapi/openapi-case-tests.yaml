@@ -50,6 +50,22 @@ positive:
           envoyExtAuthzGrpc:
             service: authservice.d8-istio.svc.cluster.local
             port: 10003
+    - ca:
+        secretRef:
+          name: my-istio-ca
+          namespace: my-pki
+    - ca:
+        secretRef:
+          name: my-istio-ca
+    - ca:
+        cert: "---CERT PEM---"
+        key: "---KEY PEM---"
+    - ca:
+        cert: "---CERT PEM---"
+        key: "---KEY PEM---"
+        chain: "---CHAIN PEM---"
+        root: "---ROOT PEM---"
+    - ca: {}
   values:
     - {}
 negative:
@@ -76,3 +92,28 @@ negative:
           envoyExtAuthzGrpc:
             service: authservice.istio-system.svc.cluster.local
             port: "10003"
+  # cert and secretRef are mutually exclusive
+    - ca:
+        cert: "---CERT PEM---"
+        key: "---KEY PEM---"
+        secretRef:
+          name: my-istio-ca
+  # secretRef requires name
+    - ca:
+        secretRef:
+          namespace: my-pki
+  # inline cert requires key
+    - ca:
+        cert: "---CERT PEM---"
+  # inline key requires cert
+    - ca:
+        key: "---KEY PEM---"
+  # chain/root without cert are not allowed
+    - ca:
+        chain: "---CHAIN PEM---"
+        root: "---ROOT PEM---"
+  # secretRef must not be combined with any inline field
+    - ca:
+        root: "---ROOT PEM---"
+        secretRef:
+          name: my-istio-ca
