@@ -157,6 +157,36 @@ func getFileSpec(kind File, opt *options) (*fileSpec, error) {
 			CAKey:                   opt.CertProvider.CAKey(),
 			EncryptionAlgorithm:     opt.EncryptionAlgorithm,
 		}, nil
+	case CiliumOperator:
+		return &fileSpec{
+			ClusterName:         opt.ClusterName,
+			APIServer:           opt.LocalAPIEndpoint,
+			ClientName:          "cilium-operator",
+			ClientCertNotAfter:  opt.CertProvider.NotAfter(),
+			CACert:              opt.CertProvider.CACert(),
+			CAKey:               opt.CertProvider.CAKey(),
+			EncryptionAlgorithm: opt.EncryptionAlgorithm,
+		}, nil
+	case KonnectivityServer:
+		return &fileSpec{
+			ClusterName:         opt.ClusterName,
+			APIServer:           opt.LocalAPIEndpoint,
+			ClientName:          "konnectivity-server",
+			ClientCertNotAfter:  opt.CertProvider.NotAfter(),
+			CACert:              opt.CertProvider.CACert(),
+			CAKey:               opt.CertProvider.CAKey(),
+			EncryptionAlgorithm: opt.EncryptionAlgorithm,
+		}, nil
+	case Deckhouse:
+		return &fileSpec{
+			ClusterName:         opt.ClusterName,
+			APIServer:           opt.ControlPlaneEndpoint,
+			ClientName:          "deckhouse",
+			ClientCertNotAfter:  opt.CertProvider.NotAfter(),
+			CACert:              opt.CertProvider.CACert(),
+			CAKey:               opt.CertProvider.CAKey(),
+			EncryptionAlgorithm: opt.EncryptionAlgorithm,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported kind %s", kind)
 	}

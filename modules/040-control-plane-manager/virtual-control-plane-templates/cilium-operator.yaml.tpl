@@ -408,7 +408,7 @@ spec:
           name: ${CILIUM_CONFIG_NAME}
       - name: nested-kubeconfig
         secret:
-          secretName: ${ADMIN_KUBECONFIG_SECRET_NAME}
+          secretName: ${CLIENTS_KUBECONFIG_SECRET_NAME}
           items:
-          - key: super-admin.conf
+          - key: cilium-operator.conf
             path: kubeconfig

@@ -125,6 +125,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	if _, res, err := r.reconcileClientsKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret, externalEndpoint); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	if err := r.reconcileStatus(ctx, vcp, externalEndpoint); err != nil {
 		return reconcile.Result{}, fmt.Errorf("update status: %w", err)
 	}
@@ -159,7 +163,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, apiserverService, pkiSecret, adminSecret, joinToken); err != nil || !res.IsZero() {
+	if res, err := r.reconcileBashibleApiserver(ctx, vcp, configSecret, pkiSecret, adminSecret, joinToken); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -427,6 +431,17 @@ func (r *reconciler) reconcileAdminKubeconfigSecret(
 	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, name, adminKubeconfigFiles, endpoint)
 }
 
+func (r *reconciler) reconcileClientsKubeconfigSecret(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiserverService *corev1.Service,
+	pkiSecret *corev1.Secret,
+	endpoint string,
+) (*corev1.Secret, reconcile.Result, error) {
+	name := constants.VirtualResourceName(constants.VirtualClientsKubeconfigSecretName, vcp.Name)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, name, clientsKubeconfigFiles, endpoint)
+}
+
 func (r *reconciler) reconcileKubeconfigSecretFiles(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
@@ -441,18 +456,20 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 		return nil, reconcile.Result{}, err
 	}
 
-	data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files, endpoint)
+	current, err := r.getSecret(ctx, target.Namespace, target.Name)
+	notFound := apierrors.IsNotFound(err)
+	if err != nil && !notFound {
+		return nil, reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", name, err)
+	}
+	// getSecret always returns a Secret, so on NotFound Data is nil and nothing is reused
+	data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files, endpoint, current.Data)
 	if err != nil {
 		return nil, reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", name, err)
 	}
 	target.Data = data
 
-	current, err := r.getSecret(ctx, target.Namespace, target.Name)
-	if apierrors.IsNotFound(err) {
+	if notFound {
 		return target, reconcile.Result{}, r.createSecret(ctx, target)
-	}
-	if err != nil {
-		return nil, reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", name, err)
 	}
 
 	if equality.Semantic.DeepEqual(current.Data, target.Data) && !ownerReferencesDiffer(current, target) {
@@ -501,9 +518,18 @@ func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane, 
 
 var componentKubeconfigFiles = []kubeconfig.File{kubeconfig.ControllerManager, kubeconfig.Scheduler}
 
-var adminKubeconfigFiles = []kubeconfig.File{kubeconfig.SuperAdmin}
+// admin.conf is identity for vcp admin; super-admin.conf stays as break-glass for controller itself.
+var adminKubeconfigFiles = []kubeconfig.File{kubeconfig.Admin, kubeconfig.SuperAdmin}
 
-func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret *corev1.Secret, kubeconfigFiles []kubeconfig.File, endpoint string) (map[string][]byte, error) {
+// clientsKubeconfigFiles are the host-side clients of the tenant apiserver.
+var clientsKubeconfigFiles = []kubeconfig.File{
+	kubeconfig.CiliumOperator,
+	kubeconfig.KonnectivityServer,
+	kubeconfig.Deckhouse,
+	kubeconfig.BashibleApiserver,
+}
+
+func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret *corev1.Secret, kubeconfigFiles []kubeconfig.File, endpoint string, currentData map[string][]byte) (map[string][]byte, error) {
 	clusterIP := apiserverService.Spec.ClusterIP
 	if clusterIP == "" || clusterIP == corev1.ClusterIPNone {
 		return nil, fmt.Errorf("apiserver Service has no ClusterIP")
@@ -524,6 +550,17 @@ func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret
 		return nil, fmt.Errorf("create temp out dir: %w", err)
 	}
 	defer os.RemoveAll(outDir)
+
+	for _, file := range kubeconfigFiles {
+		data, ok := currentData[string(file)]
+		if !ok {
+			continue
+		}
+
+		if err := os.WriteFile(filepath.Join(outDir, string(file)), data, 0o600); err != nil {
+			return nil, fmt.Errorf("seed current %s: %w", file, err)
+		}
+	}
 
 	if _, err := kubeconfig.CreateKubeconfigFiles(kubeconfigFiles,
 		kubeconfig.WithCertificatesDir(caDir),
