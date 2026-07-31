@@ -112,14 +112,12 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
-	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/lib-connection v0.14.0 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-openapi/swag v0.26.0 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.0 // indirect
 	github.com/go-openapi/swag/fileutils v0.26.0 // indirect
