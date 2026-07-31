@@ -73,8 +73,8 @@ shell:
           CI_COMMIT_TAG=${new_version}
       fi
       export CI_COMMIT_TAG
-      echo $CI_COMMIT_TAG > /version
     fi
+    echo $CI_COMMIT_TAG > /version
   - cd /deckhouse
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   # Generate hooks imports for particular edition
