@@ -104,6 +104,11 @@ CLUSTER_ADMIN_ROLES = {
 
 PRIVILEGED_ROLES = SUPERADMIN_ROLES | CLUSTER_ADMIN_ROLES
 
+# What the denials below name. Spelling the set out by hand is how the messages came to promise a
+# narrower one than the code accepts, and to send people looking for a role that would not have
+# helped them.
+PRIVILEGED_ROLES_HINT = ", ".join(sorted(PRIVILEGED_ROLES))
+
 # Identities that author/reconcile system and controller-managed objects; they bypass all checks.
 PRIVILEGED_USERS = {
     "system:apiserver",
@@ -291,11 +296,72 @@ def _kubectl_get(resource: str, name: str = "", namespace: str = "") -> Optional
     return json.loads(proc.stdout)
 
 
+# Field and record separators for the projection below. Control characters, because a subject name
+# is arbitrary text and a delimiter it could contain would silently corrupt the answer.
+_FIELD_SEPARATOR = "\x1f"
+_RECORD_SEPARATOR = "\x1e"
+
+
+def _binding_template() -> str:
+    """A go-template projecting the bindings down to what the decision is made of.
+
+    Whole objects were being asked for, serialized, piped and parsed inside a handler that requests
+    100Mi -- with the forked kubectl in the same cgroup -- when only the role name and the subjects
+    are ever read. The privileged roles are matched here as well, so a cluster whose thousands of
+    bindings are almost all ordinary sends back the handful that are not.
+    """
+    privileged = " ".join(f'(eq $role "{role}")' for role in sorted(PRIVILEGED_ROLES))
+
+    return (
+        "{{range .items}}{{$role := .roleRef.name}}{{if or " + privileged + "}}{{$role}}"
+        "{{range .subjects}}" + _FIELD_SEPARATOR + "{{.kind}}"
+        + _FIELD_SEPARATOR + "{{.name}}"
+        + _FIELD_SEPARATOR + "{{if .namespace}}{{.namespace}}{{end}}{{end}}"
+        + _RECORD_SEPARATOR + "{{end}}{{end}}"
+    )
+
+
+def _parse_bindings(output: str) -> list:
+    """Rebuild the binding shape the callers expect from the projection above."""
+    bindings = []
+    for record in output.split(_RECORD_SEPARATOR):
+        if not record:
+            continue
+
+        fields = record.split(_FIELD_SEPARATOR)
+        subjects = [
+            {"kind": fields[i], "name": fields[i + 1], "namespace": fields[i + 2]}
+            for i in range(1, len(fields) - 2, 3)
+        ]
+        bindings.append({"roleRef": {"name": fields[0]}, "subjects": subjects})
+
+    return bindings
+
+
+def _kubectl_bindings(resource: str, namespace: str = "") -> list:
+    """Live-list the privileged (Cluster)RoleBindings of `resource` through the projection above."""
+    cmd = [_KUBECTL, "get", resource]
+    if namespace:
+        cmd += ["--namespace", namespace]
+    cmd += ["--output", "go-template=" + _binding_template()]
+
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, timeout=_API_TIMEOUT_SECONDS, check=False
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"kubectl get {' '.join(cmd[2:3])} failed: {(proc.stderr or '').strip()}")
+
+    return _parse_bindings(proc.stdout)
+
+
 def _privileged_bindings(resource: str, namespace: str = "") -> list:
-    """Live-list the (Cluster)RoleBindings of `resource`, keeping only those bound to a role that
-    confers superadmin or cluster-admin."""
-    items = (_kubectl_get(resource, namespace=namespace) or {}).get("items") or []
-    return [b for b in items if (b.get("roleRef") or {}).get("name") in PRIVILEGED_ROLES]
+    """The (Cluster)RoleBindings of `resource` bound to a role that confers superadmin or
+    cluster-admin. The filtering happens in the projection; this keeps it true of whatever the
+    projection returns."""
+    return [
+        b for b in _kubectl_bindings(resource, namespace=namespace)
+        if (b.get("roleRef") or {}).get("name") in PRIVILEGED_ROLES
+    ]
 
 
 def _subject_matches(subject: dict, username: str, groups: set) -> bool:
@@ -400,8 +466,8 @@ def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
         return (
             f'{kind} "{name}" is a Deckhouse system resource '
             f'(label {SYSTEM_RESOURCE_LABEL}={SYSTEM_RESOURCE_VALUE}) placed in this '
-            "namespace. It can be modified or deleted only by a superadmin "
-            "(d8:namespace:superadmin / d8:project:superadmin)."
+            "namespace. It can be modified or deleted only by a superadmin of this namespace or "
+            f"project, a system superadmin or a cluster administrator ({PRIVILEGED_ROLES_HINT})."
         )
 
     return None
@@ -422,8 +488,8 @@ def validate_exec(request: DotMap, username: str, groups: set) -> Optional[str]:
     return (
         f'Pod "{pod_name}" is a Deckhouse system resource '
         f'(label {SYSTEM_RESOURCE_LABEL}={SYSTEM_RESOURCE_VALUE}); '
-        f'{action} into it is allowed only for a superadmin '
-        "(d8:namespace:superadmin / d8:project:superadmin)."
+        f'{action} into it is allowed only for a superadmin of this namespace or project, '
+        f"a system superadmin or a cluster administrator ({PRIVILEGED_ROLES_HINT})."
     )
 
 

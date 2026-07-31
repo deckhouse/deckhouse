@@ -717,5 +717,101 @@ class TestNameMatchesScope(unittest.TestCase):
         tests.assert_validation_allowed(self, self._run("d8:custom:system:role-a"), None)
 
 
+class TestDelegatableOutsideTheFramework(unittest.TestCase):
+    """
+    The grant registry admits a ClusterRole into a project by one label and nothing else: it excludes
+    everything without rbac.deckhouse.io/delegatable and admits everything with it. So the label has
+    to answer for itself, whatever the object calls itself otherwise — a role that carried it without
+    the framework labels used to be bindable in every project and validated by nothing.
+    """
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def _deny_msg(self, name):
+        return (
+            f'ClusterRole "{name}" must not be labeled "rbac.deckhouse.io/delegatable: true": '
+            "a role bindable inside a project may aggregate namespace and project capabilities only."
+        )
+
+    def test_own_rules_without_the_kind_label(self):
+        out = self.run_hook(
+            binding_context(
+                "team-a-role",
+                labels={"rbac.deckhouse.io/delegatable": "true"},
+                rules=[{"apiGroups": ["*"], "resources": ["*"], "verbs": ["*"]}],
+            )
+        )
+        tests.assert_validation_deny(self, out, self._deny_msg("team-a-role"))
+
+    def test_system_lineage_without_the_kind_label(self):
+        out = self.run_hook(
+            binding_context(
+                "team-a-role",
+                labels={"rbac.deckhouse.io/delegatable": "true"},
+                selector_labels=[{"rbac.deckhouse.io/aggregate-to-security-as": "manager"}],
+            )
+        )
+        tests.assert_validation_deny(self, out, self._deny_msg("team-a-role"))
+
+    def test_tenant_capabilities_without_the_kind_label_are_fine(self):
+        """The label is not a framework membership card: what it demands is tenant capabilities."""
+        out = self.run_hook(
+            binding_context(
+                "team-a-role",
+                labels={"rbac.deckhouse.io/delegatable": "true"},
+                selector_labels=[{CAPABILITY: "namespace-capability.kubernetes.view_logs"}],
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_a_role_without_the_label_is_none_of_this_business(self):
+        out = self.run_hook(
+            binding_context("team-a-role", rules=[{"apiGroups": ["*"], "resources": ["*"], "verbs": ["*"]}])
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+
+class TestCustomNameWithoutTheKindLabel(unittest.TestCase):
+    """A d8:custom: name is a claim of its own, and the rules about what such a name may mean apply
+    to it whether or not the object also carries the framework label."""
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def test_mixing_lineages(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:project:role-a",
+                labels={},
+                selector_labels=[
+                    {"rbac.deckhouse.io/aggregate-to-project-as": "user"},
+                    {"rbac.deckhouse.io/aggregate-to-security-as": "manager"},
+                ],
+            )
+        )
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "d8:custom:project:role-a" must not aggregate the "security" lineage together '
+            'with the "project" lineage: mixing system and namespace/project scopes is forbidden.',
+        )
+
+    def test_the_name_must_not_contradict_the_scope(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:project:role-a",
+                labels={"rbac.deckhouse.io/scope": "system"},
+                selector_labels=[{"rbac.deckhouse.io/aggregate-to-system-as": "manager"}],
+            )
+        )
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "d8:custom:project:role-a" with "rbac.deckhouse.io/scope: system" must be named '
+            '"d8:custom:system:<name>": the name and the scope must not disagree.',
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -62,11 +62,14 @@ class FakeAPI:
         self.clusterrolebindings = clusterrolebindings or []
         self.pods = pods or {}
 
-    def get(self, resource, name="", namespace=""):
+    def bindings(self, resource, namespace=""):
         if resource == "clusterrolebindings":
-            return {"items": self.clusterrolebindings}
+            return self.clusterrolebindings
         if resource == "rolebindings":
-            return {"items": self.rolebindings_by_ns.get(namespace, [])}
+            return self.rolebindings_by_ns.get(namespace, [])
+        raise AssertionError(f"unexpected kubectl resource: {resource}")
+
+    def get(self, resource, name="", namespace=""):
         if resource == "pods":
             key = (namespace, name)
             if key not in self.pods:
@@ -120,7 +123,9 @@ def exec_context(pod_name, *, namespace=NS, username=USER, groups=None, subresou
 
 
 def _run(ctx, api=None):
-    with mock.patch.object(system_resources, "_kubectl_get", (api or FakeAPI()).get):
+    api = api or FakeAPI()
+    with mock.patch.object(system_resources, "_kubectl_get", api.get), \
+            mock.patch.object(system_resources, "_kubectl_bindings", api.bindings):
         return hook.testrun(system_resources.main, [ctx])
 
 
@@ -138,8 +143,8 @@ def expected_system_deny(kind, name):
     return (
         f'{kind} "{name}" is a Deckhouse system resource '
         f'(label {system_resources.SYSTEM_RESOURCE_LABEL}={system_resources.SYSTEM_RESOURCE_VALUE}) placed in this '
-        "namespace. It can be modified or deleted only by a superadmin "
-        "(d8:namespace:superadmin / d8:project:superadmin)."
+        "namespace. It can be modified or deleted only by a superadmin of this namespace or "
+        f"project, a system superadmin or a cluster administrator ({system_resources.PRIVILEGED_ROLES_HINT})."
     )
 
 
@@ -147,9 +152,53 @@ def expected_exec_deny(name, action):
     return (
         f'Pod "{name}" is a Deckhouse system resource '
         f'(label {system_resources.SYSTEM_RESOURCE_LABEL}={system_resources.SYSTEM_RESOURCE_VALUE}); '
-        f'{action} into it is allowed only for a superadmin '
-        "(d8:namespace:superadmin / d8:project:superadmin)."
+        f'{action} into it is allowed only for a superadmin of this namespace or project, '
+        f"a system superadmin or a cluster administrator ({system_resources.PRIVILEGED_ROLES_HINT})."
     )
+
+
+class TestBindingProjection(unittest.TestCase):
+    """The bindings are read through a go-template instead of whole objects, so the parser and the
+    template have to agree about the shape. Verified against a live cluster as well: the projection
+    returned exactly the bindings the full JSON did, in 663 bytes instead of 630 KB."""
+
+    def _project(self, records):
+        fs, rs = system_resources._FIELD_SEPARATOR, system_resources._RECORD_SEPARATOR
+        return rs.join(fs.join(fields) for fields in records) + (rs if records else "")
+
+    def test_a_binding_with_several_subjects(self):
+        parsed = system_resources._parse_bindings(self._project([
+            ["d8:namespace:superadmin", "User", "alice", "", "ServiceAccount", "robot", "team-a"],
+        ]))
+        self.assertEqual(parsed, [{
+            "roleRef": {"name": "d8:namespace:superadmin"},
+            "subjects": [
+                {"kind": "User", "name": "alice", "namespace": ""},
+                {"kind": "ServiceAccount", "name": "robot", "namespace": "team-a"},
+            ],
+        }])
+
+    def test_a_binding_without_subjects(self):
+        parsed = system_resources._parse_bindings(self._project([["cluster-admin"]]))
+        self.assertEqual(parsed, [{"roleRef": {"name": "cluster-admin"}, "subjects": []}])
+
+    def test_no_bindings_at_all(self):
+        self.assertEqual(system_resources._parse_bindings(""), [])
+
+    def test_the_template_names_every_privileged_role(self):
+        template = system_resources._binding_template()
+        for role in system_resources.PRIVILEGED_ROLES:
+            self.assertIn(f'(eq $role "{role}")', template, role)
+
+
+class TestDenyMessage(unittest.TestCase):
+    """The message is what a user acts on, and it used to name a narrower set than the gate accepts,
+    sending people after a role that would not have helped them."""
+
+    def test_every_role_the_gate_accepts_is_named(self):
+        for role in system_resources.PRIVILEGED_ROLES:
+            self.assertIn(role, expected_system_deny("Pod", "p"), role)
+            self.assertIn(role, expected_exec_deny("p", "exec"), role)
 
 
 class TestSystemResourceEdit(unittest.TestCase):

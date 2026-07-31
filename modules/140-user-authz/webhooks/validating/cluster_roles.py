@@ -253,8 +253,22 @@ def validate(ctx: DotMap) -> Optional[str]:
             'Use "custom-role" or "custom-capability" instead.'
         )
 
-    if kind_label in ("custom-role", "custom-capability"):
-        if not name.startswith("d8:custom:"):
+    # The delegatable label is judged on its own, before anything below, because the grant registry
+    # judges it that way: modules/160-multitenancy-manager/templates/cluster-objects-controller/
+    # grantable-resources.yaml excludes every ClusterRole without this label and admits every
+    # ClusterRole with it, whatever else the object carries. A role that claimed the label without
+    # the framework labels was therefore bindable in every project and validated by nothing at all.
+    if labels.get(DELEGATABLE_LABEL) == "true" and not _aggregates_only_tenant_capabilities(selectors):
+        return (
+            f'ClusterRole "{name}" must not be labeled "{DELEGATABLE_LABEL}: true": '
+            "a role bindable inside a project may aggregate namespace and project capabilities only."
+        )
+
+    # The rest applies to anything that presents itself as a custom object -- by its framework label
+    # or by its name. Judging by the label alone let a "d8:custom:" role skip every rule about what
+    # such a name is allowed to mean.
+    if kind_label in ("custom-role", "custom-capability") or name.startswith("d8:custom:"):
+        if kind_label in ("custom-role", "custom-capability") and not name.startswith("d8:custom:"):
             return (
                 f'ClusterRole "{name}" labeled "{KIND_LABEL}: {kind_label}" '
                 'must be named with the "d8:custom:" prefix.'
@@ -319,16 +333,6 @@ def validate(ctx: DotMap) -> Optional[str]:
                     f'ClusterRole "{name}" with "{SCOPE_LABEL}: {scope or "<unset>"}" must not aggregate {offending}: '
                     "a role granted in a namespace or a project may only aggregate namespace and project capabilities."
                 )
-
-        # The delegatable label is what lets a role be bound inside a project, so it may only be
-        # claimed by a role built entirely from namespace/project capabilities. The check above is
-        # not enough: it only reads the "aggregate-to-<lineage>-as" selectors, while a role
-        # assembled from individual capabilities selects them by the capability label instead.
-        if labels.get(DELEGATABLE_LABEL) == "true" and not _aggregates_only_tenant_capabilities(selectors):
-            return (
-                f'ClusterRole "{name}" must not be labeled "{DELEGATABLE_LABEL}: true": '
-                "a role bindable inside a project may aggregate namespace and project capabilities only."
-            )
 
     return None
 
