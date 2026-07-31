@@ -661,10 +661,8 @@ func isPinnedKubernetesVersion(version string) bool {
 // ModuleConfig.spec.enabled and ModuleConfig.spec.version — dhctl rejects ModuleConfigs
 // without them (see load.go ModuleConfig validation).
 //
-// TODO(kubernetesVersion-deprecation): T+1 add — dhctl should warn when an
-// install config still sets ClusterConfiguration.kubernetesVersion. Today the only deprecation
-// signal is an alert in an already running cluster, so someone bootstrapping from an old install
-// config creates exactly the state that alert then complains about.
+// NOTE(kubernetesVersion-deprecation): keep — dhctl already warns about the deprecated field via
+// deprecation.go, which reads "x-doc-deprecated" from the schema. Do not add a second warning here.
 //
 // TODO(kubernetesVersion-deprecation): T+2 remove — drop the ccVersion lookup and
 // the isPinnedKubernetesVersion branch below — bootstrap then reads the version from ModuleConfig
