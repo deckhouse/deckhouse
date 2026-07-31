@@ -31,6 +31,7 @@ tests:
     TEST_TIMEOUT: 15m
     TESTS_TIMEOUT: 15m
     CGO_ENABLED: "1"
+    GIT_CLONE_PATH: /builds/deckhouse/deckhouse
   script:
     - make tests-controller tests-modules
 
