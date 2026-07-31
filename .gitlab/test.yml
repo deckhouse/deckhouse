@@ -1,5 +1,6 @@
 # Post-build tests that run inside the published `tests` image (k8s executor).
-# Image tag is predictable (prIID-tests / ref-slug-tests) — published by build_tests via publish_image.
+# TESTS_IMAGE_TAG / DEV_IMAGE_TAG come from build_tests / build_fe dotenv
+# (include REPO_SUFFIX for deckhouse-* test repos, e.g. main-tests-test-1).
 # DOCKER_AUTH_CONFIG is built from Vault secrets (resolved before job start / image pull).
 
 .needs_build_tests:
@@ -68,7 +69,7 @@ dhctl_tests:
   extends:
     - .test_base
     - .needs_build_tests
-    - .rules:on_test
+    - .rules:on_validate
   script:
     - 'echo "Tests image tag: ${TESTS_IMAGE_TAG}"'
     - cd "${CI_PROJECT_DIR}/dhctl"
@@ -78,7 +79,7 @@ golint:
   extends:
     - .test_base
     - .needs_build_tests
-    - .rules:on_test
+    - .rules:on_validate
   script:
     - 'echo "Tests image tag: ${TESTS_IMAGE_TAG}"'
     - |
@@ -96,7 +97,7 @@ openapi_test_cases:
   extends:
     - .test_base
     - .needs_build_tests
-    - .rules:on_test
+    - .rules:on_validate
   script:
     - 'echo "Tests image tag: ${TESTS_IMAGE_TAG}"'
     - ginkgo -vet=off ./testing/openapi_cases/
@@ -105,7 +106,7 @@ validators:
   extends:
     - .test_base
     - .needs_build_tests
-    - .rules:on_test
+    - .rules:on_validate
   script:
     - 'echo "Tests image tag: ${TESTS_IMAGE_TAG}"'
     - go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout="${TEST_TIMEOUT}" ./testing/...

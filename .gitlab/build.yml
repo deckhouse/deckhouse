@@ -198,9 +198,11 @@
       TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
       echo "TESTS_IMAGE_NAME=${TESTS_IMAGE_NAME}" > build.env
+      # Same tag naming as publish (includes REPO_SUFFIX for deckhouse-* test repos).
+      echo "DEV_IMAGE_TAG=${IMAGE_TAG}" >> build.env
 
       if [[ "${BUILD_MODE}" == "dev" && "${WERF_ENV,,}" == "fe" ]]; then
-        regctl image get-file "${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss:${IMAGE_TAG_BASE}" \
+        regctl image get-file "${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss:${IMAGE_TAG}" \
           /deckhouse/modules/images_digests.json > images_digests.json
         if [[ -n "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}" ]]; then
           export GITHUB_BASE_REF="origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
@@ -312,6 +314,7 @@
       rm -f images_tags_werf.json
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
       echo "TESTS_IMAGE_NAME=${TESTS_IMAGE_NAME}" > build.env
+      echo "TESTS_IMAGE_TAG=${IMAGE_TAG}" >> build.env
 
 # ---------------------------------------------------------------------------
 # Tag: all editions + tests — automatic

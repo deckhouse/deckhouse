@@ -6,20 +6,16 @@ workflow:
   auto_cancel:
     on_new_commit: interruptible
   rules:
-    # 1) Tag creation
     - if: $CI_COMMIT_TAG
-    # 2) Push to main
     - if: $CI_COMMIT_BRANCH == "main"
-    # 3) Merge request
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    # 4) Push to release-x.xx (e.g. release-1.76)
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
-    # 5) Sheduled pipelines
     - if: $CI_PIPELINE_SOURCE == "schedule"
-    # Fallback: block all other pipeline sources by default
     - when: never
 
 # Reusable job-level rules (use via: extends: .rules:...)
+
+# --- single-context -----------------------------------------------------------
 
 .rules:on_tag:
   rules:
@@ -52,48 +48,29 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: manual
 
-# Pre-build unit/lint jobs and doc_web: PR + main + release-x.xx
-# (matches GH build-and-test_{dev,main,pre-release}; not on tags).
+# --- composites ---------------------------------------------------------------
+
+# PR + main + release-x.xx (validate, unit/lint, tests, doc_web).
 .rules:on_validate:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
 
-# Post-build tests that need the published tests image (same contexts as on_validate).
-.rules:on_test:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      variables:
-        TESTS_IMAGE_TAG: ${CI_COMMIT_REF_SLUG}-tests
-        DEV_IMAGE_TAG: $CI_COMMIT_REF_SLUG
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      variables:
-        TESTS_IMAGE_TAG: pr${CI_MERGE_REQUEST_IID}-tests
-        DEV_IMAGE_TAG: pr$CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
-      variables:
-        TESTS_IMAGE_TAG: ${CI_COMMIT_REF_SLUG}-tests
-        DEV_IMAGE_TAG: $CI_COMMIT_REF_SLUG
-
-# PR + main only (GH security_scan / main_web_build).
+# PR + main only (security_scan, main_web_build).
 .rules:on_pr_main:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-      variables:
-        DEV_IMAGE_TAG: $CI_COMMIT_REF_SLUG
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      variables:
-        DEV_IMAGE_TAG: pr$CI_MERGE_REQUEST_IID
 
-# node-controller tests: PR only when those paths change (GH paths-filter).
+# --- path-filtered (MR only) --------------------------------------------------
+
 .rules:on_merge_request_node_controller:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - modules/040-node-manager/images/node-controller/**/*
 
-# Docs spellcheck: PR when documentation-related paths change (GH docs filter).
 .rules:on_merge_request_docs:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
