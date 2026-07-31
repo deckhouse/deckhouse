@@ -365,7 +365,7 @@ DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec
 
 d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
 --new-deckhouse-tag=$DECKHOUSE_VERSION \
-registry.deckhouse.io/deckhouse/ce \
+registry.deckhouse.io/deckhouse/ce
 ```
 
 {% endcapture %}
