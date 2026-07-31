@@ -1,5 +1,5 @@
 # Source security scan (GitHub security-scan-src.yml subset). PR-only.
-# Mirrors deckhouse/modules-actions gitleaks@v15 diff mode (no JS action).
+# Diff mode; base config from internal modules-gitlab-ci repo.
 
 gitleaks_scan:
   stage: validate
@@ -9,19 +9,15 @@ gitleaks_scan:
   variables:
     GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
-    GITLEAKS_VERSION: "8.28.0"
-    GITLEAKS_ACTION_REF: v15
-  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+    GITLEAKS_CONFIG_REF: "v15.0"
+    GITLEAKS_BASE_CONFIG_URL: "${CI_SERVER_URL}/deckhouse/3p/deckhouse/modules-gitlab-ci/-/raw/${GITLEAKS_CONFIG_REF}/gitleaks/config/gitleaks.base.toml"
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/gitleaks:${CI_IMAGES_TAG}
   script:
     - |
-      curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-        | tar -xz -C /tmp gitleaks
-      chmod +x /tmp/gitleaks
-      /tmp/gitleaks version
-    - |
-      # Same centralized base config the GitHub composite action vendors into the workspace.
-      curl -sSfL -o gitleaks.base.toml \
-        "https://raw.githubusercontent.com/deckhouse/modules-actions/${GITLEAKS_ACTION_REF}/gitleaks/config/gitleaks.base.toml"
+      curl -sSfL \
+        --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+        -o gitleaks.base.toml \
+        "${GITLEAKS_BASE_CONFIG_URL}"
       test -s gitleaks.base.toml
     - |
       if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
@@ -32,7 +28,7 @@ gitleaks_scan:
         LOG_OPTS="${CI_COMMIT_SHA}^..${CI_COMMIT_SHA}"
       fi
       echo "gitleaks diff range: ${LOG_OPTS}"
-      /tmp/gitleaks detect \
+      gitleaks detect \
         --source "${CI_PROJECT_DIR}" \
         --config "${CI_PROJECT_DIR}/.gitleaks.toml" \
         --log-opts "${LOG_OPTS}" \
