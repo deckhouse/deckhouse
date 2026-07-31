@@ -119,14 +119,25 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		return res, nil
 	}
 
+	// The maxUsed floor runs unconditionally, not only when availableVersions is missing.
+	//
+	// It covers two different gaps. First, status.availableVersions only exists once update-observer
+	// has published it — not on a fresh cluster, not right after the ConfigMap was recreated, not
+	// while status is empty or corrupt. Second, even when the list is present it can stop encoding
+	// "no more than one minor below maxUsed": VersionSettings.Available returns the whole supported
+	// list when maxUsed is not found in it, which happens after a Deckhouse downgrade or an edition
+	// switch. Membership alone would then accept a pin far below the version the cluster has run.
+	//
+	// The two checks cannot contradict each other in the normal case, because the supported list is
+	// contiguous in every edition's version_map, so its "one index below maxUsed" and this "one
+	// minor below maxUsed" are the same version.
+	if res, err := v.rejectKubernetesVersionBelowMaxUsed(ctx, effective, fromFallback); res != nil || err != nil {
+		return res, err
+	}
+
 	available, ok := v.readAvailableKubernetesVersions(ctx)
 	if !ok || len(available) == 0 {
-		// availableVersions is the richer signal, but it only exists once update-observer has
-		// published status — not on a fresh cluster, not after the ConfigMap was recreated, and
-		// not while status is empty or corrupt. Those are exactly the moments a pin far below the
-		// running version would slip through, so fall back to the Secret bookkeeping, which
-		// control-plane-manager has been maintaining since long before this ConfigMap existed.
-		return v.rejectKubernetesVersionBelowMaxUsed(ctx, effective, fromFallback)
+		return nil, nil
 	}
 
 	if !slices.Contains(available, effective) {

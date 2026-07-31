@@ -436,6 +436,26 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "more than one minor below")
 	})
 
+	// VersionSettings.Available returns the whole supported list when maxUsed is not among the
+	// supported versions — which happens after a Deckhouse downgrade or an edition switch. The
+	// published list then no longer means "not more than one minor below maxUsed", so membership
+	// alone would accept a deep downgrade; the floor has to catch it.
+	t.Run("membership passes but maxUsed floor still rejects", func(t *testing.T) {
+		handler := withObjs(t,
+			newClusterKubernetesConfigMap([]string{"1.33", "1.34", "1.35", "1.36"}),
+			newClusterConfigurationSecretWithMaxUsed("1.36", "1.38"),
+		)
+
+		newCfg := newControlPlaneManagerConfig("1.33")
+		oldCfg := newControlPlaneManagerConfig("1.36")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "more than one minor below")
+	})
+
 	t.Run("empty availableVersions falls through to the maxUsed guard", func(t *testing.T) {
 		handler := withObjs(t,
 			newClusterKubernetesConfigMap(nil),
