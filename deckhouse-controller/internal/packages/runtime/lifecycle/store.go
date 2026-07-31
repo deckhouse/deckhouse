@@ -40,10 +40,8 @@ func NewStore() *Store {
 // NeedUpdate reports whether the package needs processing: true if the package
 // is new, the version changed, the settings checksum differs, the settings
 // schema version changed, or the maintenance mode changed.
-// Used as a fast-path check before the more expensive Update call.
-//
-// It cannot see content changes behind a mutable tag, so callers that know the
-// image itself changed skip this check and pass force to Update instead.
+// Used as a fast-path check before the more expensive Update call. It cannot see content
+// changes behind a mutable tag: those callers skip it and pass force to Update.
 func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, maintenance string) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
@@ -74,10 +72,8 @@ func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, 
 // Returns a new root context (EventUpdate) when:
 //  1. Package not in store → creates entry, returns root context
 //  2. Version differs → cancels all in-flight tasks, returns new root context
-//  3. force is set → same as a version change, for callers that know the version
-//     is stale even though it did not change: a mutable tag (a dev tag pinned by a
-//     ModulePullOverride) can be re-pushed with different content under the same
-//     version, and that content still has to be redeployed
+//  3. force is set → same as a version change, for callers that know the content behind
+//     an unchanged version is stale (a mutable tag re-pushed under the same version)
 //
 // Returns nil when only settings, settingsVersion or maintenance changed (no new
 // context needed — the new values are stored and will be picked up by the scheduler

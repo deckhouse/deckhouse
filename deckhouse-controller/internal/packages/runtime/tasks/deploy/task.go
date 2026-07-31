@@ -48,9 +48,8 @@ type task struct {
 }
 
 // NewModuleTask creates a Deploy task for a Module package.
-// force discards the locally cached copy of version before downloading it again,
-// and is set when the image digest changed under an unchanged version. It exists for
-// modules only, while module tags are still mutable, and is expected to go away.
+// force discards the cached copy of version before downloading it again, and is set when
+// the image digest changed under an unchanged version.
 func NewModuleTask(name, version string, repo registry.Remote, force bool, deployer deployerI, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		name:        name,
@@ -65,9 +64,7 @@ func NewModuleTask(name, version string, repo registry.Remote, force bool, deplo
 }
 
 // NewAppTask creates a Deploy task for an Application package.
-// Applications are versioned by immutable tags, so their cached copies are always
-// reused (force=false). Application instances can also share a version directory,
-// which a forced download would not survive — see symlink.Deployer.download.
+// Applications have immutable tags and may share a version directory, so they never force.
 func NewAppTask(instance, name, version string, repo registry.Remote, deployer deployerI, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		name:        instance,

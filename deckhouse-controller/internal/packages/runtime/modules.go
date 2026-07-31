@@ -45,7 +45,7 @@ type Module struct {
 	Definition      modules.Definition
 	Settings        addonutils.Values
 	SettingsVersion int // schema version from ModuleConfig.Spec.Version
-	Maintaince      string
+	Maintenance     string
 }
 
 // UpdateModulesSettings applies a settings-and-enabled change to an
@@ -94,15 +94,10 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 // Reschedule to re-apply settings through the scheduler's schedule pipeline.
 // See UpdateApp for detailed flow documentation.
 //
-// force runs the full pipeline even when nothing the runtime tracks changed, and
-// additionally makes the Deploy task discard the locally cached copy of the version
-// instead of reusing it. It is meant for callers that resolved the image digest and
-// found it changed: a module tag is not necessarily immutable — a dev tag pinned by
-// a ModulePullOverride can be re-pushed with different content under an unchanged
-// version, which the runtime cannot detect on its own.
-//
-// It is a transitional flag: once module tags are immutable, a version change is the
-// only thing that can invalidate a deployed module and force goes away.
+// force runs the pipeline even when nothing the runtime tracks changed and makes the
+// Deploy task discard the cached copy of the version. It is for callers that resolved the
+// image digest and found it changed under a tag the runtime still sees as unchanged, and
+// is transitional: it goes away once module tags are immutable.
 func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -116,14 +111,13 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 	name := module.Name
 	version := module.Definition.Version
 
-	// A forced update skips the change detection it would fail anyway: the version and
-	// the settings are the same, only the content behind the tag differs.
+	// a forced update skips change detection it would fail anyway
 	// Modules do not support maintenance mode, so it is always empty here.
-	if !force && !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintaince) {
+	if !force && !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintaince, force)
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, force)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
@@ -225,9 +219,8 @@ func (r *Runtime) RemoveModule(name string) {
 	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
 }
 
-// GetModuleDigest returns the digest the module tag currently resolves to. Callers use
-// it to tell a re-pushed mutable tag from an unchanged one and pass the answer back as
-// UpdateModule's force flag.
+// GetModuleDigest returns the digest the module tag currently resolves to. Callers compare
+// it against the last known one and pass the answer back as UpdateModule's force flag.
 func (r *Runtime) GetModuleDigest(ctx context.Context, remote registry.Remote, name, tag string) (string, error) {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "GetModuleDigest")
 	defer span.End()

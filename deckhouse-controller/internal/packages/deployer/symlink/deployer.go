@@ -342,10 +342,8 @@ func normalizePath(path string) string {
 // download fetches a package image into a versioned directory via an atomic temporary directory rename.
 // A cached version directory is reused unless force is set, in which case it is replaced by a fresh download.
 //
-// force is set for modules only, and is transitional. It is unsafe for packages that
-// share a version directory: several deployed names can point at one
-// <repo>/<packageName>/<version> (application instances built from the same definition),
-// and replacing it would pull the directory out from under the other names' symlinks.
+// force is unsafe for packages that share a version directory, since replacing it breaks
+// the other deployed names symlinked to it. Only modules set it, and only transitionally.
 func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDir, name, version string, force bool) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "download")
 	defer span.End()
@@ -373,8 +371,6 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	default:
 	}
 
-	// A forced download keeps the cached copy until the fresh one is in place, so a
-	// failed download leaves the package on its previous content instead of nothing.
 	versionPath := filepath.Join(packageDir, version)
 	cached := false
 
@@ -416,8 +412,8 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 		return status.NewError(conditionReasonDownloadFailed, err)
 	}
 
-	// Rename cannot publish over a populated directory, so the stale copy goes away
-	// only now that the replacement is fully downloaded.
+	// rename cannot publish over a populated directory; dropping the stale copy only now
+	// keeps a failed download on the previous content
 	if cached {
 		logger.Info("remove stale package version", slog.String("path", versionPath))
 		if err = os.RemoveAll(versionPath); err != nil {

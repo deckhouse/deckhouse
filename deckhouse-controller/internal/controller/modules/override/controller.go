@@ -183,11 +183,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	// set condition overridden for the module
-	//
-	// Skipped when the condition already holds: SetConditionTrue restamps LastProbeTime
-	// on every call, so an unconditional update would write the module status on every
-	// scan and wake every Module watcher with it.
+	// set condition overridden for the module, only on transition: SetConditionTrue
+	// restamps LastProbeTime, so an unconditional update writes status on every scan
 	err := utils.UpdateStatus(ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
 			return false
@@ -284,8 +281,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 }
 
 // scanInterval returns the delay before the next digest check. A non-positive interval
-// reads as "do not requeue" to controller-runtime, which would silently stop scanning
-// the override, so it falls back to the CRD default.
+// reads as "do not requeue", which would silently stop scanning the override.
 func scanInterval(mpo *v1alpha2.ModulePullOverride) time.Duration {
 	if mpo.Spec.ScanInterval.Duration <= 0 {
 		return defaultScanInterval
@@ -295,16 +291,11 @@ func scanInterval(mpo *v1alpha2.ModulePullOverride) time.Duration {
 }
 
 // deployPackage registers the overridden module in the package runtime, carrying over
-// the settings from its module config. A module config is optional: without one the
-// module deploys with empty settings, and the config controller pushes them later if
-// one appears.
+// the settings from its module config, which is optional.
 //
-// The update is forced: an override pins a mutable tag, so the runtime sees an
-// unchanged version and would reuse the copy it already deployed. Only the digest
-// comparison in handleCreateOrUpdate, which gates this call, can tell that the image
-// behind that tag is new.
+// The update is forced: an override pins a mutable tag, so the runtime sees an unchanged
+// version and would reuse the copy it already deployed.
 func (r *reconciler) deployPackage(ctx context.Context, source *v1alpha1.ModuleSource, mpo *v1alpha2.ModulePullOverride) error {
-	// A not-found config stays zero-valued, and Settings.GetMap handles a nil receiver.
 	config := new(v1alpha1.ModuleConfig)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(mpo), config); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("get module config: %w", err)
@@ -316,7 +307,7 @@ func (r *reconciler) deployPackage(ctx context.Context, source *v1alpha1.ModuleS
 			Version: mpo.Spec.ImageTag,
 		},
 		Settings:        config.Spec.Settings.GetMap(),
-		Maintaince:      config.Spec.Maintenance,
+		Maintenance:     config.Spec.Maintenance,
 		SettingsVersion: config.Spec.Version,
 	}, true)
 
