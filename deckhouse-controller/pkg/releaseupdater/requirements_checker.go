@@ -244,9 +244,7 @@ type clusterConfKubernetesVersion struct {
 // Automatic cluster does not silently skip autoK8sVersion. Managed clusters without either
 // source stay non-Automatic (fail-open), matching the pre-migration Secret-NotFound behaviour.
 func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Context) error {
-	if mode, found, err := c.readUpdateModeFromConfigMap(ctx); err != nil {
-		return err
-	} else if found {
+	if mode, found := c.readUpdateModeFromConfigMap(ctx); found {
 		c.clusterKubernetesUpdateMode = mode
 		return nil
 	}
@@ -261,33 +259,41 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 	return nil
 }
 
-func (c *kubernetesVersionCheck) readUpdateModeFromConfigMap(ctx context.Context) (mode string, found bool, err error) {
+// readUpdateModeFromConfigMap never fails the whole check: an unreadable or malformed ConfigMap
+// only means "this source has nothing to say", and resolution continues with MC/CC. Returning an
+// error here would propagate through newKubernetesVersionCheck up to the DeckhouseRelease
+// controller, which turns it into a Pending release — i.e. one transient read error would stop
+// Deckhouse from updating at all.
+func (c *kubernetesVersionCheck) readUpdateModeFromConfigMap(ctx context.Context) (mode string, found bool) {
 	key := client.ObjectKey{Namespace: app.NamespaceKubeSystem, Name: deckhouseClusterKubernetesConfigMap}
 	cm := new(corev1.ConfigMap)
 	if err := c.k8sclient.Get(ctx, key, cm); err != nil {
-		if apierrors.IsNotFound(err) {
-			return "", false, nil
+		if !apierrors.IsNotFound(err) {
+			log.Warn("falling back to ModuleConfig/ClusterConfiguration: cannot read the ConfigMap",
+				slog.String("name", deckhouseClusterKubernetesConfigMap), log.Err(err))
 		}
-		return "", false, fmt.Errorf("failed to get the %q ConfigMap: %w", deckhouseClusterKubernetesConfigMap, err)
+		return "", false
 	}
 
 	specRaw, ok := cm.Data["spec"]
 	if !ok || specRaw == "" {
-		return "", false, nil
+		return "", false
 	}
 
 	spec := new(clusterKubernetesSpec)
 	if err := yaml.Unmarshal([]byte(specRaw), spec); err != nil {
-		return "", false, fmt.Errorf("failed to unmarshal %q ConfigMap spec: %w", deckhouseClusterKubernetesConfigMap, err)
+		log.Warn("falling back to ModuleConfig/ClusterConfiguration: cannot parse the ConfigMap spec",
+			slog.String("name", deckhouseClusterKubernetesConfigMap), log.Err(err))
+		return "", false
 	}
 	if spec.UpdateMode == "" {
-		return "", false, nil
+		return "", false
 	}
-	return spec.UpdateMode, true, nil
+	return spec.UpdateMode, true
 }
 
 func (c *kubernetesVersionCheck) isAutomaticFromModuleAndClusterConfig(ctx context.Context) (bool, error) {
-	mcVersion, mcFound, err := c.readModuleConfigKubernetesVersion(ctx)
+	mcVersion, err := c.readModuleConfigKubernetesVersion(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -301,27 +307,34 @@ func (c *kubernetesVersionCheck) isAutomaticFromModuleAndClusterConfig(ctx conte
 	if err != nil {
 		return false, err
 	}
-	// Neither source exists — managed cluster / not bootstrapped yet. Keep the historical
+	// ModuleConfig said nothing, so ClusterConfiguration decides — and if it does not exist either
+	// (managed cluster / not bootstrapped yet) there is no source at all. Keep the historical
 	// Secret-NotFound fail-open: do not treat as Automatic, so autoK8sVersion is not enforced.
-	if !mcFound && !ccFound {
+	// A ModuleConfig that merely exists without a kubernetesVersion is not a source: treating it
+	// as one flipped managed clusters (no ClusterConfiguration Secret at all) to Automatic and
+	// enforced autoK8sVersion on them, blocking their Deckhouse updates.
+	if !ccFound {
 		return false, nil
 	}
 	return !isPinnedKubernetesVersion(ccVersion), nil
 }
 
-func (c *kubernetesVersionCheck) readModuleConfigKubernetesVersion(ctx context.Context) (version string, found bool, err error) {
+// readModuleConfigKubernetesVersion returns the raw setting, or "" when the ModuleConfig is absent
+// or does not carry kubernetesVersion. Only the value matters to the caller — an existing
+// ModuleConfig without the setting is indistinguishable from a missing one.
+func (c *kubernetesVersionCheck) readModuleConfigKubernetesVersion(ctx context.Context) (version string, err error) {
 	mc := new(v1alpha1.ModuleConfig)
 	if err := c.k8sclient.Get(ctx, client.ObjectKey{Name: controlPlaneManagerModuleConfigName}, mc); err != nil {
 		if apierrors.IsNotFound(err) {
-			return "", false, nil
+			return "", nil
 		}
-		return "", false, fmt.Errorf("failed to get ModuleConfig %q: %w", controlPlaneManagerModuleConfigName, err)
+		return "", fmt.Errorf("failed to get ModuleConfig %q: %w", controlPlaneManagerModuleConfigName, err)
 	}
 	if mc.Spec.Settings == nil {
-		return "", true, nil
+		return "", nil
 	}
 	version, _ = mc.Spec.Settings.GetMap()["kubernetesVersion"].(string)
-	return version, true, nil
+	return version, nil
 }
 
 func (c *kubernetesVersionCheck) readClusterConfigurationKubernetesVersion(ctx context.Context) (version string, found bool, err error) {

@@ -37,6 +37,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -186,6 +187,16 @@ func NewDeckhouseController(
 					Namespaces: map[string]cache.Config{
 						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
+						},
+						// d8-cluster-kubernetes carries the Kubernetes version contract:
+						// spec.updateMode for the DeckhouseRelease requirements checker and
+						// status.availableVersions for the ModuleConfig admission webhook.
+						// Both read it through this manager's client, and a namespace missing
+						// from this map does not degrade to NotFound — controller-runtime
+						// fails the Get with "unknown namespace for the cache", which would
+						// stall every DeckhouseRelease and silently disable the webhook guard.
+						app.NamespaceKubeSystem: {
+							FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-cluster-kubernetes"}),
 						},
 					},
 				},

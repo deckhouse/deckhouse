@@ -224,6 +224,13 @@ func TestKubernetesVersionCheck_AutomaticDetection(t *testing.T) {
 		}
 	}
 
+	controlPlaneMCWithoutSettings := func() *v1alpha1.ModuleConfig {
+		return &v1alpha1.ModuleConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: controlPlaneManagerModuleConfigName},
+			Spec:       v1alpha1.ModuleConfigSpec{Enabled: ptr.To(true), Version: 1},
+		}
+	}
+
 	tests := []struct {
 		name          string
 		objects       []client.Object
@@ -269,6 +276,24 @@ func TestKubernetesVersionCheck_AutomaticDetection(t *testing.T) {
 			name:          "nothing present (managed cluster) → not Automatic, fail-open",
 			objects:       nil,
 			wantAutomatic: false,
+		},
+		{
+			// A ModuleConfig that merely exists is not a version source. Counting it as one made
+			// managed clusters (no ClusterConfiguration Secret) look Automatic and enforced
+			// autoK8sVersion on them.
+			name:          "managed cluster with an empty control-plane-manager MC → not Automatic",
+			objects:       []client.Object{controlPlaneMCWithoutSettings()},
+			wantAutomatic: false,
+		},
+		{
+			name:          "empty MC with a pinned CC → not Automatic",
+			objects:       []client.Object{controlPlaneMCWithoutSettings(), clusterConfigSecret("1.34")},
+			wantAutomatic: false,
+		},
+		{
+			name:          "empty MC with an Automatic CC → Automatic",
+			objects:       []client.Object{controlPlaneMCWithoutSettings(), clusterConfigSecret("Automatic")},
+			wantAutomatic: true,
 		},
 	}
 
