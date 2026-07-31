@@ -22,6 +22,13 @@ rules:
       - list
       - watch
   - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
       - node-manager.deckhouse.io
     resources:
       - fencingfailednodestates
@@ -39,13 +46,14 @@ rules:
       - get
       - update
       - patch
+  # The agent reads its own profile once at startup and never watches it: a profile
+  # change reaches the agent through a pod restart, so get is sufficient.
   - apiGroups:
-      - ""
+      - node-manager.deckhouse.io
     resources:
-      - events
+      - fencingslaprofiles
     verbs:
-      - create
-      - patch
+      - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
