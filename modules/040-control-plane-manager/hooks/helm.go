@@ -130,9 +130,11 @@ func init() {
 // gates DeckhouseRelease installation, would keep a stale answer for up to an hour after an
 // operator switches the version between Automatic and a pin. Both objects change rarely, so this
 // costs no extra helm-release scans in practice.
+//
+// OnStartup must not be combined with Kubernetes bindings (addon-operator panics); Synchronization
+// of these bindings already fires the hook at startup.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:     moduleQueue + "/helm-releases-scan",
-	OnStartup: &go_hook.OrderedConfig{Order: 10},
+	Queue: moduleQueue + "/helm-releases-scan",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "helm_releases",

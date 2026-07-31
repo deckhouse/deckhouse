@@ -168,32 +168,32 @@ func TestProgress_UpgradeOneVersionAtATime(t *testing.T) {
 }
 
 func TestProgress_UpgradeThreeHops(t *testing.T) {
-	// Upgrading from 1.30 to 1.34: 3 hops
+	// Upgrading from 1.31 to 1.34: 3 hops (Hops = abs(minor diff)).
 	// 1 master + 1 worker = 5 trackable components (3 CP pods + 2 node kubelets)
 	// totalSteps = 3 * 5 = 15
 
 	t.Run("nothing updated yet — 0%", func(t *testing.T) {
 		nodes := []corev1.Node{
-			makeNode("master-0", "v1.30.0"),
-			makeNode("worker-0", "v1.30.0"),
+			makeNode("master-0", "v1.31.0"),
+			makeNode("worker-0", "v1.31.0"),
 		}
-		pods := masterPods("master-0", "v1.30.0", "v1.30.0", "v1.30.0")
+		pods := masterPods("master-0", "v1.31.0", "v1.31.0", "v1.31.0")
 
-		state := buildState(t, defaultCfg, nodes, pods, "1.30")
+		state := buildState(t, defaultCfg, nodes, pods, "1.31")
 
 		assert.Equal(t, "0%", state.Progress)
 	})
 
-	t.Run("all CP at 1.32, nodes at 1.30 — 20%", func(t *testing.T) {
+	t.Run("all CP at 1.32, nodes at 1.31 — 20%", func(t *testing.T) {
 		// completedSteps: 3 CP(1 each) + 2 nodes(0 each) = 3
 		// 3/15 = 20%
 		nodes := []corev1.Node{
-			makeNode("master-0", "v1.30.0"),
-			makeNode("worker-0", "v1.30.0"),
+			makeNode("master-0", "v1.31.0"),
+			makeNode("worker-0", "v1.31.0"),
 		}
 		pods := masterPods("master-0", "v1.32.0", "v1.32.0", "v1.32.0")
 
-		state := buildState(t, defaultCfg, nodes, pods, "1.30")
+		state := buildState(t, defaultCfg, nodes, pods, "1.31")
 
 		assert.Equal(t, "20%", state.Progress)
 	})
@@ -207,7 +207,7 @@ func TestProgress_UpgradeThreeHops(t *testing.T) {
 		}
 		pods := masterPods("master-0", "v1.33.0", "v1.33.0", "v1.33.0")
 
-		state := buildState(t, defaultCfg, nodes, pods, "1.30")
+		state := buildState(t, defaultCfg, nodes, pods, "1.31")
 
 		assert.Equal(t, "53%", state.Progress)
 	})
@@ -221,7 +221,7 @@ func TestProgress_UpgradeThreeHops(t *testing.T) {
 		}
 		pods := masterPods("master-0", "v1.34.0", "v1.34.0", "v1.34.0")
 
-		state := buildState(t, defaultCfg, nodes, pods, "1.30")
+		state := buildState(t, defaultCfg, nodes, pods, "1.31")
 
 		assert.Equal(t, "86%", state.Progress)
 	})
@@ -234,7 +234,7 @@ func TestProgress_UpgradeThreeHops(t *testing.T) {
 		}
 		pods := masterPods("master-0", "v1.34.0", "v1.34.0", "v1.34.0")
 
-		state := buildState(t, defaultCfg, nodes, pods, "1.30")
+		state := buildState(t, defaultCfg, nodes, pods, "1.31")
 
 		assert.Equal(t, "100%", state.Progress)
 		assert.Equal(t, Phase(ClusterUpToDate), state.Phase)
