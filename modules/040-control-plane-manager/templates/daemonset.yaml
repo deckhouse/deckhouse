@@ -336,8 +336,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: KUBERNETES_VERSION
-          value: {{ $.Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
         - name: AUTOMATIC_KUBERNETES_VERSION

@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +31,13 @@ import (
 // clusterConfigurationSecretSnapshot is the binding name every hook in this package uses for the
 // kube-system/d8-cluster-configuration Secret when it needs the raw, unresolved kubernetesVersion.
 const clusterConfigurationSecretSnapshot = "cluster_configuration_secret"
+
+// controlPlaneManagerModuleConfigSnapshot is the binding name for this module's own ModuleConfig,
+// and controlPlaneManagerModuleConfigName is the object it selects.
+const (
+	controlPlaneManagerModuleConfigSnapshot = "control_plane_manager_module_config"
+	controlPlaneManagerModuleConfigName     = "control-plane-manager"
+)
 
 // automaticKubernetesVersion is the sentinel meaning "let Deckhouse pick the version".
 const automaticKubernetesVersion = "Automatic"
@@ -65,6 +74,17 @@ func sdkvFilterRawClusterConfigurationVersion(unstructured *unstructured.Unstruc
 	}
 
 	return cc.KubernetesVersion, nil
+}
+
+// sdkvFilterModuleConfigKubernetesVersion returns the raw kubernetesVersion setting from this
+// module's ModuleConfig, or "" when unset. Used by hooks that only need the object as an event
+// source; the resolved answer lives in global.discovery.
+func sdkvFilterModuleConfigKubernetesVersion(unstructuredObj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	version, _, err := unstructured.NestedString(unstructuredObj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
+	if err != nil {
+		return "", fmt.Errorf("nested string kubernetesVersion: %w", err)
+	}
+	return version, nil
 }
 
 // rawClusterConfigurationVersion returns the unresolved kubernetesVersion captured from the

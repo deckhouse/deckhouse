@@ -34,6 +34,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/golang/protobuf/proto" // nolint: staticcheck
 	"helm.sh/helm/v3/pkg/releaseutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -123,6 +124,12 @@ func init() {
 	}
 }
 
+// The two Kubernetes bindings below are triggers only — the hook reads the resolved answer from
+// global.discovery.kubernetesVersionIsAutomatic, not from these snapshots. They exist because
+// Values are not an event source: without them the K8sVersionsWithDeprecations requirement, which
+// gates DeckhouseRelease installation, would keep a stale answer for up to an hour after an
+// operator switches the version between Automatic and a pin. Both objects change rarely, so this
+// costs no extra helm-release scans in practice.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:     moduleQueue + "/helm-releases-scan",
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
@@ -130,6 +137,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:    "helm_releases",
 			Crontab: "0 * * * *", // every hour
+		},
+	},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       controlPlaneManagerModuleConfigSnapshot,
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ModuleConfig",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{controlPlaneManagerModuleConfigName},
+			},
+			FilterFunc: sdkvFilterModuleConfigKubernetesVersion,
+		},
+		{
+			Name:              clusterConfigurationSecretSnapshot,
+			ApiVersion:        "v1",
+			Kind:              "Secret",
+			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
+			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
+			FilterFunc:        sdkvFilterRawClusterConfigurationVersion,
 		},
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))

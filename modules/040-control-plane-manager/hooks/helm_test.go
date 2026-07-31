@@ -34,6 +34,9 @@ import (
 
 var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 	f := HookExecutionConfigInit(`{"global" : {"discovery": {"kubernetesVersion": "1.22.3"}}}`, "")
+	// The hook keeps a ModuleConfig binding purely as a re-run trigger, so the kind must be known
+	// to the fake cluster even though no test here creates a ModuleConfig.
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 	Context("helm3 release with deprecated versions", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -277,6 +280,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 
 var _ = Describe("helm :: hooks :: automatic kubernetes version ::", func() {
 	f := HookExecutionConfigInit("{\"global\": {\"discovery\": {\"kubernetesVersion\": \"1.21.3\"}}}", "{}")
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 	Context("helm3 release with deprecated versions", func() {
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
