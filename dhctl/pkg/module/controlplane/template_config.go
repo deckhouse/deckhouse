@@ -20,12 +20,17 @@ import "maps"
 
 // ControlPlaneTemplateConfig is the data passed to control-plane template rendering.
 //
-// Settings holds ModuleConfig control-plane-manager spec.settings (authoritative when pinned).
+// Settings holds ModuleConfig control-plane-manager spec.settings (authoritative source).
 // ClusterConfiguration holds legacy ClusterConfiguration data (fallback during migration).
-// Templates prefer a pinned settings.kubernetesVersion over clusterConfiguration; Automatic
-// in settings is not a pin (same rule as global resolveTargetKubernetesVersion).
-// ClusterConfigMap publishes the resolved pinned MC → pinned CC → Default version into
-// clusterConfiguration.kubernetesVersion for bashible and template fallback.
+// Templates choose the source explicitly: `coalesce .settings.field .clusterConfiguration.field`.
+// ToMap is the only boundary with the Go template engine.
+//
+// kubernetesVersion is the exception: templates never read it out of settings. It reaches them
+// already resolved (pinned MC → pinned CC → Default) in clusterConfiguration.kubernetesVersion,
+// published by MetaConfig.ClusterConfigMap here and overwritten with the throttled effective
+// version by the control-plane-manager DaemonSet template in a running cluster. Resolving it a
+// second time inside the templates would let a ModuleConfig pin bypass that throttling and pick
+// a control-plane image a minor ahead of what the cluster is allowed to run.
 type TemplateConfig struct {
 	RunType    string                 `json:"runType"`
 	NodeIP     string                 `json:"nodeIP"`

@@ -1,8 +1,3 @@
-{{- /* Pinned MC settings win; Automatic is not a pin — keep resolved clusterConfiguration. */ -}}
-{{- $kubernetesVersion := .clusterConfiguration.kubernetesVersion -}}
-{{- if and .settings .settings.kubernetesVersion (ne .settings.kubernetesVersion "Automatic") -}}
-  {{- $kubernetesVersion = .settings.kubernetesVersion -}}
-{{- end -}}
 {{- $etcdName := .nodeName | default "etcd-member" -}}
 {{- $nodeIP := .nodeIP | default "127.0.0.1" -}}
 {{- $advertiseClient := printf "https://%s:2379" $nodeIP -}}
@@ -44,7 +39,7 @@ spec:
     {{- end }}
     {{- end }}
     {{- end }}
-    {{- if semverCompare "< 1.34" $kubernetesVersion }}
+    {{- if semverCompare "< 1.34" .clusterConfiguration.kubernetesVersion }}
     - --feature-gates=InitialCorruptCheck=true
     {{- end }}
     - --watch-progress-notify-interval=5s
