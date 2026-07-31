@@ -119,7 +119,7 @@ Summary:
       check_external_modules() {
          local repo="$1"
 
-         local modules=$(kubectl get modulerelease -o json | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.kind=="ModuleSource" and .name=="deckhouse")) | "\(.spec.moduleName) \(.spec.version)"')
+         local modules=$(d8 k get modulerelease -o json | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.kind=="ModuleSource" and .name=="deckhouse")) | "\(.spec.moduleName) \(.spec.version)"')
          [[ -z "$modules" ]] && return 0
          local registry_modules=$(d8-crane ls "$repo" 2>/dev/null)
 
@@ -168,16 +168,12 @@ Summary:
       d8 k delete pod dkp-image
       ```
 
-      Apply for the `kube-rbac-proxy` image:
+      Apply images:
 
       ```bash
-      d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=$DKP_REPO@$DECKHOUSE_KUBE_RBAC_PROXY
-      ```
-
-      Apply for the `initContainer` image:
-
-      ```bash
-      d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=$DKP_REPO@$DECKHOUSE_INIT
+      d8 k -n d8-system set image deployment/deckhouse \
+      kube-rbac-proxy=$DKP_REPO@$DECKHOUSE_KUBE_RBAC_PROXY \
+      init-downloaded-modules=$DKP_REPO@$DECKHOUSE_INIT
       ```
 
    1. Make sure there is no image download error:
@@ -295,6 +291,39 @@ If you need to add configuration for an additional registry in containerd, refer
 {% endalert %}
 {% endcapture %}
 
+{% capture change_registry_helper_ce %}
+
+```shell
+DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
+--new-deckhouse-tag=$DECKHOUSE_VERSION \
+registry.deckhouse.io/deckhouse/ce
+```
+
+{% endcapture %}
+
+{% capture change_registry_helper %}
+
+```shell
+DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+
+AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.io\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
+
+d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry \
+--type merge \
+--patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"
+
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
+--user=license-token \
+--password=$LICENSE_TOKEN \
+--new-deckhouse-tag=$DECKHOUSE_VERSION \
+registry.deckhouse.io/deckhouse/$NEW_EDITION
+```
+
+{% endcapture %}
+
 {% capture ngc_auth_registry %}
 {{ alert_additional_registry }}
 
@@ -354,39 +383,6 @@ spec:
             password = "${LICENSE_TOKEN}"
     EOF
 EOF
-```
-
-{% endcapture %}
-
-{% capture change_registry_helper_ce %}
-
-```shell
-DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
---new-deckhouse-tag=$DECKHOUSE_VERSION \
-registry.deckhouse.io/deckhouse/ce
-```
-
-{% endcapture %}
-
-{% capture change_registry_helper %}
-
-```shell
-DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-
-AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.io\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
-
-d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry \
---type merge \
---patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"
-
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry \
---user=license-token \
---password=$LICENSE_TOKEN \
---new-deckhouse-tag=$DECKHOUSE_VERSION \
-registry.deckhouse.io/deckhouse/$NEW_EDITION
 ```
 
 {% endcapture %}

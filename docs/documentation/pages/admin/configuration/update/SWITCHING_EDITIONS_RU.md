@@ -120,7 +120,7 @@ Summary:
       check_external_modules() {
          local repo="$1"
 
-         local modules=$(kubectl get modulerelease -o json | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.kind=="ModuleSource" and .name=="deckhouse")) | "\(.spec.moduleName) \(.spec.version)"')
+         local modules=$(d8 k get modulerelease -o json | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.kind=="ModuleSource" and .name=="deckhouse")) | "\(.spec.moduleName) \(.spec.version)"')
          [[ -z "$modules" ]] && return 0
          local registry_modules=$(d8-crane ls "$repo" 2>/dev/null)
 
@@ -170,16 +170,12 @@ Summary:
       d8 k delete pod dkp-image
       ```
 
-      Применение для образа `kube-rbac-proxy`:
+      Применение образов:
 
       ```bash
-      d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=$DKP_REPO@$DECKHOUSE_KUBE_RBAC_PROXY
-      ```
-
-      Применение для образа `initContainer`:
-
-      ```bash
-      d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=$DKP_REPO@$DECKHOUSE_INIT
+      d8 k -n d8-system set image deployment/deckhouse \
+      kube-rbac-proxy=$DKP_REPO@$DECKHOUSE_KUBE_RBAC_PROXY \
+      init-downloaded-modules=$DKP_REPO@$DECKHOUSE_INIT
       ```
 
    1. Убедитесь, в отсутствии ошибки скачивания образа:
@@ -215,48 +211,6 @@ journalctl -u bashible -n 5
 
 ```shell
 d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
-```
-
-{% endcapture %}
-
-{% capture enable_chrony_cse %}
-
-```shell
-d8 system module enable chrony
-```
-
-{% endcapture %}
-
-{% capture enable_release_channel_cse %}
-
-```shell
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  enabled: true
-  settings:
-    releaseChannel: LTS
-    ...
-```
-
-{% endcapture %}
-
-{% capture disable_release_channel_cse %}
-
-```shell
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  enabled: true
-  settings:
-    #  releaseChannel
-    ...
 ```
 
 {% endcapture %}
@@ -372,6 +326,21 @@ registry.deckhouse.ru/deckhouse/$NEW_EDITION
 
 {% endcapture %}
 
+{% capture change_registry_helper_cse %}
+
+```shell
+AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+d8 k -n d8-system create secret generic deckhouse-registry \
+   --from-literal=".dockerconfigjson"="{\"auths\": { \"registry-cse.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\": \"$AUTH_STRING\" }}}" \
+   --from-literal="address"=registry-cse.deckhouse.ru \
+   --from-literal="path"=/deckhouse/cse \
+   --from-literal="scheme"=https \
+   --type=kubernetes.io/dockerconfigjson \
+   --dry-run=client -o yaml | d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- d8 k replace -f -
+```
+
+{% endcapture %}
+
 {% capture ngc_auth_registry %}
 {{ alert_additional_registry }}
 
@@ -467,6 +436,78 @@ d8 k --as=system:sudouser delete ngc del-temp-config.sh
 
 ```shell
 d8 k --as=system:sudouser delete ngc containerdv2-$NEW_EDITION-config.sh
+```
+
+{% endcapture %}
+
+{% capture enable_chrony_cse %}
+
+```shell
+d8 system module enable chrony
+```
+
+{% endcapture %}
+
+{% capture enable_release_channel_cse %}
+
+```shell
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    releaseChannel: LTS
+    ...
+```
+
+{% endcapture %}
+
+{% capture disable_release_channel_cse %}
+
+```shell
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    #  releaseChannel
+    ...
+```
+
+{% endcapture %}
+
+{% capture cse_images %}
+
+```shell
+d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
+d8 k wait --for=condition=ready pod/cse-image --timeout=300s
+CSE_SANDBOX_IMAGE=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
+CSE_K8S_API_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+<!REMOVE_FOR_CSE_1_58>
+CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+<!/REMOVE_FOR_CSE_1_58>
+
+d8 k delete cse-image
+```
+
+{% endcapture %}
+
+{% capture cse_set_deckhouse_images %}
+
+```shell
+d8 k -n d8-system set image deployment/deckhouse \
+<!REMOVE_FOR_CSE_1_58>
+init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER \
+<!/REMOVE_FOR_CSE_1_58>
+kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
+deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 ```
 
 {% endcapture %}
@@ -1120,16 +1161,25 @@ d8 k --as=system:sudouser delete ngc containerdv2-$NEW_EDITION-config.sh
       | regex_replace: "^", "   "
    }}
 
-1. Переключите хранилище образов контейнеров:
+1. Получите дайджесты образов (переменные будут использоваться в следующих шагах):
 
    {{
-      change_registry_helper
-      | regex_replace: "\$NEW_EDITION", "cse"
-      | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+      cse_images
+      | regex_replace: "<!/?REMOVE_FOR_CSE_1_58>\n?", ""
       | regex_replace: "^", "   "
    }}
 
-   {{ take_care_deckhuse_imagepullbackoff }}
+1. Обновите данные аутентификации для доступа к хранилищу образов:
+
+   {{ change_registry_helper_cse | regex_replace: "^", "   " }}
+
+1. Смените образ DKP CSE:
+
+   {{
+      cse_set_deckhouse_images
+      | regex_replace: "<!/?REMOVE_FOR_CSE_1_58>\n?", ""
+      | regex_replace: "^", "   "
+   }}
 
 1. Дождитесь готовности DKP:
 
@@ -1236,13 +1286,24 @@ d8 k --as=system:sudouser delete ngc containerdv2-$NEW_EDITION-config.sh
 
 1. Получите дайджесты образов (переменные будут использоваться в следующих шагах):
 
-   ```shell
-   d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
-   d8 k wait --for=condition=ready pod/cse-image --timeout=300s
-   CSE_SANDBOX_IMAGE=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
-   CSE_K8S_API_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
-   CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
-   ```
+   {% tabs cse-get-deckhouse-image %}
+   {% tab "CSE 1.58" %}
+
+   {{
+      cse_images
+      | regex_replace: "(?m)<!REMOVE_FOR_CSE_1_58>.+?<!/REMOVE_FOR_CSE_1_58>\n?", ""
+      | regex_replace: "^", "   "
+   }}
+
+   {% endtab %}
+
+   {% tab "CSE 1.64 / 1.67" %}
+
+   {{
+      cse_images
+      | regex_replace: "<!/?REMOVE_FOR_CSE_1_58>\n?", ""
+      | regex_replace: "^", "   "
+   }}
 
 1. Настройте образы на узлах:
 
@@ -1273,39 +1334,28 @@ d8 k --as=system:sudouser delete ngc containerdv2-$NEW_EDITION-config.sh
 
 1. Обновите данные аутентификации для доступа к хранилищу образов:
 
-   ```shell
-   AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-   d8 k -n d8-system create secret generic deckhouse-registry \
-     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry-cse.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\": \"$AUTH_STRING\" }}}" \
-     --from-literal="address"=registry-cse.deckhouse.ru \
-     --from-literal="path"=/deckhouse/cse \
-     --from-literal="scheme"=https \
-     --type=kubernetes.io/dockerconfigjson \
-     --dry-run=client -o yaml | d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- d8 k replace -f -
-   ```
+   {{ change_registry_helper_cse | regex_replace: "^", "   " }}
 
 1. Смените образ DKP CSE:
 
    {% tabs cse-set-deckhouse-image %}
    {% tab "CSE 1.58" %}
 
-   ```shell
-   d8 k -n d8-system set image deployment/deckhouse \
-   kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
-   deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
-   ```
+   {{
+      cse_set_deckhouse_images
+      | regex_replace: "(?m)<!REMOVE_FOR_CSE_1_58>.+?<!/REMOVE_FOR_CSE_1_58>\n?", ""
+      | regex_replace: "^", "   "
+   }}
 
    {% endtab %}
 
    {% tab "CSE 1.64 / 1.67" %}
 
-   ```shell
-   CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-   d8 k -n d8-system set image deployment/deckhouse \
-   init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER \
-   kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY \
-   deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
-   ```
+   {{
+      cse_set_deckhouse_images
+      | regex_replace: "<!/?REMOVE_FOR_CSE_1_58>\n?", ""
+      | regex_replace: "^", "   "
+   }}
 
    {% endtab %}
    {% endtabs %}
