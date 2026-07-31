@@ -79,7 +79,14 @@ If the cluster uses `cilium` in VXLAN mode, make sure security groups allow inte
 
 1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
-   The network name matches the `prefix` field of [the ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource. It can be retrieved using the following command:
+   The network name matches the [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) parameter of the ModuleConfig `global`.
+   You can retrieve it using the following command:
+
+   ```bash
+   d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+   ```
+
+   If the value is empty, use the deprecated command:
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \

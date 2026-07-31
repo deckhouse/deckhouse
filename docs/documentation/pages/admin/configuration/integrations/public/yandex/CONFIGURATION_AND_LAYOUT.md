@@ -500,11 +500,17 @@ Read through the [security group specifics in Yandex Cloud](https://yandex.cloud
 
 1. Identify the cloud network used by the DKP cluster.
 
-   The network name matches the `prefix` field in the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource.
+   The network name matches the [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) parameter of the ModuleConfig `global`.
    You can retrieve it using the following command:
 
    ```bash
-   kubectl get secrets -n kube-system d8-cluster-configuration -ojson | \
+   d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+   ```
+
+   If the value is empty, use the deprecated command:
+
+   ```bash
+   d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 

@@ -81,7 +81,14 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
 
-   Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). Его можно узнать с помощью команды:
+   Название сети совпадает с параметром [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) ModuleConfig `global`.
+   Его можно узнать с помощью команды:
+
+   ```bash
+   d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+   ```
+
+   Если значение пустое, используйте устаревший способ:
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \

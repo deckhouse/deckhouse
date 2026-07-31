@@ -86,6 +86,12 @@ To add a pre-created VM as a node to a cluster, follow these steps:
    * You can find out `prefix` using the command:
 
      ```shell
+     d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+     ```
+
+     If the value is empty, use the deprecated command:
+
+     ```shell
      d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
        | base64 -d | grep prefix
      ```

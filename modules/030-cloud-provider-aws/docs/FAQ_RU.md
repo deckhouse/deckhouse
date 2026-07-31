@@ -87,6 +87,12 @@ title: "Cloud provider — AWS: FAQ"
    * Узнать `prefix` можно с помощью команды:
 
      ```shell
+     d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+     ```
+
+     Если значение пустое, используйте устаревший способ:
+
+     ```shell
      d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
        | base64 -d | grep prefix
      ```

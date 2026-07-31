@@ -13,7 +13,13 @@ title: "Cloud provider — GCP: FAQ"
 
 К виртуальным машинам, которые вы хотите добавить к кластеру в качестве узлов, добавьте `Network Tag`, аналогичный префиксу кластера.
 
-Префикс кластера можно узнать, воспользовавшись следующей командой:
+Префикс кластера можно узнать с помощью команды:
+
+```shell
+d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+```
+
+Если значение пустое, используйте устаревший способ:
 
 ```shell
 d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \

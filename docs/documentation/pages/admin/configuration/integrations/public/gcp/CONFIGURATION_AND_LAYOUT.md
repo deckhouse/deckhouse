@@ -288,6 +288,12 @@ To add manually created virtual machines to the cluster as nodes, add a `Network
 You can find the cluster prefix by running the following command:
 
 ```shell
-kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+```
+
+If the value is empty, use the deprecated command:
+
+```shell
+d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
   | base64 -d | grep prefix
 ```
