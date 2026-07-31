@@ -8,6 +8,13 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-kube-proxy")) | nindent 2 }}
 spec:
   securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          kube-proxy must run privileged to write host network sysctls under /proc/sys
+          (conntrack timeouts, route_localnet) and to manage iptables/nftables rules
+          for ClusterIP/NodePort services.
     runAsNonRoot:
       allowedValue: false
       metadata:
@@ -29,8 +36,8 @@ spec:
           - ALL
       metadata:
         description: |
-          NET_ADMIN/NET_RAW are required to program service NAT and filtering rules
-          via iptables (kube-proxy mode=iptables) and to set up the iptables-wrapper.
+          NET_ADMIN/NET_RAW are required by iptables-wrapper-init to set up the iptables
+          wrapper used by kube-proxy (mode=iptables).
   network:
     hostNetwork:
       allowedValue: true
