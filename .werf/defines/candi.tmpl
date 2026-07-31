@@ -20,7 +20,7 @@
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   before: setup
-- from: deckhouse-controller-src-artifact
+- from: deckhouse-controller-artifact
   add: /version
   to: /deckhouse/version
   before: setup

@@ -30,7 +30,7 @@ import:
   - deckhouse
   - plugins
   - dhctl
-- from: deckhouse-controller-src-artifact
+- from: deckhouse-controller-artifact
   add: /version
   to: /image/deckhouse/version
   before: setup

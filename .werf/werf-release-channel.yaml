@@ -13,7 +13,7 @@ import:
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: install
-- from: deckhouse-controller-src-artifact
+- from: deckhouse-controller-artifact
   add: /version
   before: install
 shell:
