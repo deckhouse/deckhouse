@@ -19,7 +19,8 @@ package helm
 import (
 	"errors"
 	"fmt"
-	"sort"
+	"reflect"
+	"slices"
 	"strings"
 
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -34,11 +35,11 @@ import (
 // manifests but becomes part of their structure.
 var ErrParameterInjection = errors.New("a project parameter changes the structure of the rendered manifests")
 
-// lineBreakChars are the characters that end a YAML scalar. A parameter carrying one of them can
-// close the value it was substituted into and have the rest of itself read as manifest structure --
-// a new key, or, after a document separator, a whole new object. The rendered manifests are applied
-// by a ServiceAccount bound to cluster-admin, so such an object is applied with cluster-admin.
-const lineBreakChars = "\n\r\u0085\u2028\u2029"
+// lineBreakToSpace replaces the characters that end a YAML scalar. A parameter carrying one of them
+// can close the value it was substituted into and have the rest of itself read as manifest structure
+// -- a new key, or, after a document separator, a whole new object. The rendered manifests are
+// applied by a ServiceAccount bound to cluster-admin, so such an object is applied with cluster-admin.
+var lineBreakToSpace = strings.NewReplacer("\n", " ", "\r", " ", "\u0085", " ", "\u2028", " ", "\u2029", " ")
 
 // ensureParametersStayValues refuses parameters that render into structure instead of into values.
 //
@@ -55,12 +56,21 @@ const lineBreakChars = "\n\r\u0085\u2028\u2029"
 // in that value alone, and the replacement makes them equal again. What is left is the case where the
 // value produced structure, and that is exactly what is refused.
 func (c *Client) ensureParametersStayValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) error {
-	if !carriesLineBreak(project.Spec.Parameters) {
+	// A project without parameters has nothing that could become structure. Checked separately
+	// because the rewrite below turns no parameters into empty ones, which do not compare equal.
+	if len(project.Spec.Parameters) == 0 {
+		return nil
+	}
+
+	parameters := rewriteStringsIn(project.Spec.Parameters, lineBreakToSpace.Replace)
+	if reflect.DeepEqual(parameters, project.Spec.Parameters) {
+		// Nothing in them can end a scalar, so nothing in them can produce structure and the second
+		// render would be the same as the first.
 		return nil
 	}
 
 	sanitized := project.DeepCopy()
-	sanitized.Spec.Parameters = replaceLineBreaksIn(project.Spec.Parameters)
+	sanitized.Spec.Parameters = parameters
 
 	actual, err := c.renderTemplate(project, template)
 	if err != nil {
@@ -75,12 +85,12 @@ func (c *Client) ensureParametersStayValues(project *v1alpha3.Project, template 
 		return fmt.Errorf("%w: %w", ErrParameterInjection, err)
 	}
 
-	actualObjects, err := objectDigests(actual)
+	actualObjects, err := canonicalObjects(actual)
 	if err != nil {
 		return fmt.Errorf("read the rendered manifests: %w", err)
 	}
 
-	expectedObjects, err := objectDigests(expected)
+	expectedObjects, err := canonicalObjects(expected)
 	if err != nil {
 		// The manifests parse only while the line breaks are there. A substitution that needs them
 		// to produce valid YAML is an unquoted one, which is the whole problem.
@@ -97,20 +107,20 @@ func (c *Client) ensureParametersStayValues(project *v1alpha3.Project, template 
 // extraObjects describes every object the first render produces that the second one does not.
 func extraObjects(actual, expected map[string]string) []string {
 	var extra []string
-	for digest, description := range actual {
-		if _, ok := expected[digest]; !ok {
+	for canonical, description := range actual {
+		if _, ok := expected[canonical]; !ok {
 			extra = append(extra, description)
 		}
 	}
-	sort.Strings(extra)
+	slices.Sort(extra)
 
 	return extra
 }
 
-// objectDigests maps every rendered object to a canonical form of itself, keyed so that duplicates
-// of one object collapse the same way in both renders.
-func objectDigests(manifests string) (map[string]string, error) {
-	digests := make(map[string]string)
+// canonicalObjects maps the canonical form of every rendered object to a description of it. Keying
+// by the form itself makes duplicates of one object collapse the same way in both renders.
+func canonicalObjects(manifests string) (map[string]string, error) {
+	objects := make(map[string]string)
 
 	for _, raw := range releaseutil.SplitManifests(manifests) {
 		object := new(unstructured.Unstructured)
@@ -121,51 +131,26 @@ func objectDigests(manifests string) (map[string]string, error) {
 			continue
 		}
 
-		canonical, err := yaml.Marshal(collapseWhitespaceIn(object.Object))
+		canonical, err := yaml.Marshal(rewriteStringsIn(object.Object, collapseSpace))
 		if err != nil {
 			return nil, fmt.Errorf("canonicalize the %s %q: %w", object.GetKind(), object.GetName(), err)
 		}
 
-		digests[string(canonical)] = fmt.Sprintf("%s %s/%s", object.GetKind(), object.GetAPIVersion(), object.GetName())
+		objects[string(canonical)] = fmt.Sprintf("%s %s/%s", object.GetKind(), object.GetAPIVersion(), object.GetName())
 	}
 
-	return digests, nil
+	return objects, nil
 }
 
-// collapseWhitespace rebuilds the value with the whitespace of every string collapsed.
+// collapseSpace makes every run of whitespace a single space.
 //
 // Comparing the two renders needs the strings on both sides to survive a YAML round trip the same
 // way, and they do not: a multi-line value comes back from a block scalar without its final line
 // break, while the same value with its line breaks already replaced comes back as a plain scalar
 // that kept the space in their place. That difference is whitespace and nothing else, whereas
 // injection shows up as keys, list items and objects -- structure, which this leaves alone.
-func collapseWhitespace(value any) any {
-	return rewriteStrings(value, func(s string) string {
-		return strings.Join(strings.Fields(s), " ")
-	})
-}
-
-// collapseWhitespaceIn is collapseWhitespace for an object, which is always a map.
-func collapseWhitespaceIn(object map[string]any) map[string]any {
-	return rewriteStringsIn(object, func(s string) string {
-		return strings.Join(strings.Fields(s), " ")
-	})
-}
-
-// replaceLineBreaksIn rebuilds the parameters with every line break in every string, key or value,
-// replaced by a space.
-func replaceLineBreaksIn(parameters map[string]any) map[string]any {
-	return rewriteStringsIn(parameters, spaceOutLineBreaks)
-}
-
-func spaceOutLineBreaks(s string) string {
-	return strings.Map(func(r rune) rune {
-		if strings.ContainsRune(lineBreakChars, r) {
-			return ' '
-		}
-
-		return r
-	}, s)
+func collapseSpace(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
 
 // rewriteStringsIn walks a decoded YAML map and applies rewrite to every string in it, keys
@@ -195,26 +180,4 @@ func rewriteStrings(value any, rewrite func(string) string) any {
 	}
 
 	return value
-}
-
-// carriesLineBreak reports whether any string anywhere in the parameters contains a line break.
-func carriesLineBreak(value any) bool {
-	switch typed := value.(type) {
-	case string:
-		return strings.ContainsAny(typed, lineBreakChars)
-	case map[string]any:
-		for key, nested := range typed {
-			if strings.ContainsAny(key, lineBreakChars) || carriesLineBreak(nested) {
-				return true
-			}
-		}
-	case []any:
-		for _, nested := range typed {
-			if carriesLineBreak(nested) {
-				return true
-			}
-		}
-	}
-
-	return false
 }

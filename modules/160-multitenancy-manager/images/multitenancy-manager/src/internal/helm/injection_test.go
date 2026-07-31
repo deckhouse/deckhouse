@@ -216,7 +216,7 @@ func TestPayloadRendersAsAValueAndNothingElse(t *testing.T) {
 	manifests, err := client.renderTemplate(project, shippedTemplate(t, "simple"))
 	require.NoError(t, err)
 
-	objects, err := objectDigests(manifests)
+	objects, err := canonicalObjects(manifests)
 	require.NoError(t, err)
 	require.Len(t, objects, 1)
 	for _, description := range objects {
@@ -224,59 +224,83 @@ func TestPayloadRendersAsAValueAndNothingElse(t *testing.T) {
 	}
 }
 
-// Parameters without a line break cannot produce structure, so the second render is skipped and the
-// ordinary project pays nothing for the check.
-func TestCarriesLineBreak(t *testing.T) {
+// A project the check has nothing to say about must not be rendered at all. The template here cannot
+// render, so anything but an immediate return would surface as an error.
+func TestNothingToCheckIsNotRendered(t *testing.T) {
+	t.Parallel()
+
+	client := injectionTestClient(t)
+	broken := customTemplate("owner", "{{ this is not a template")
+
+	for _, parameters := range []map[string]any{nil, {}, {"owner": "user@example.com"}} {
+		project := new(v1alpha3.Project)
+		project.Name = "test"
+		project.Spec.Parameters = parameters
+
+		require.NoError(t, client.ensureParametersStayValues(project, broken))
+	}
+}
+
+// The line breaks a parameter can carry, and what the rewrite makes of them. A clean value is left
+// untouched, which is exactly what lets the check skip its second render.
+func TestLineBreakRewrite(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name     string
-		value    any
-		expected bool
+		name       string
+		parameters map[string]any
+		expected   map[string]any
 	}{
-		{name: "an ordinary name", value: map[string]any{"owner": "user@example.com"}, expected: false},
-		{name: "a payload", value: map[string]any{"owner": clusterAdminPayload}, expected: true},
-		{name: "a break in a nested list", value: []any{map[string]any{"name": "evil\r"}}, expected: true},
-		{name: "a break in a map key", value: map[string]any{"evil\nkey": "value"}, expected: true},
-		// YAML ends a scalar on these as well, so a check that only knew about \n would miss them.
-		{name: "a line separator", value: map[string]any{"name": "evil\u2028---"}, expected: true},
-		{name: "a next line character", value: map[string]any{"name": "evil\u0085---"}, expected: true},
-		{name: "a value that is not a string", value: map[string]any{"count": int64(3)}, expected: false},
+		{
+			name:       "an ordinary name is left alone",
+			parameters: map[string]any{"owner": "user@example.com"},
+			expected:   map[string]any{"owner": "user@example.com"},
+		},
+		{
+			name:       "a break in a value",
+			parameters: map[string]any{"name": "first\nsecond"},
+			expected:   map[string]any{"name": "first second"},
+		},
+		{
+			name:       "a break in a map key, which is a break like any other",
+			parameters: map[string]any{"evil\nkey": "value"},
+			expected:   map[string]any{"evil key": "value"},
+		},
+		{
+			name:       "a break inside a nested list",
+			parameters: map[string]any{"list": []any{"a\rb"}},
+			expected:   map[string]any{"list": []any{"a b"}},
+		},
+		// YAML ends a scalar on these as well, so a rewrite that only knew about \n would miss them.
+		{
+			name:       "a line separator and a next line character",
+			parameters: map[string]any{"one": "evil\u2028---", "two": "evil\u0085---"},
+			expected:   map[string]any{"one": "evil ---", "two": "evil ---"},
+		},
+		{
+			name:       "values that are not strings",
+			parameters: map[string]any{"enabled": true, "count": int64(3)},
+			expected:   map[string]any{"enabled": true, "count": int64(3)},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.expected, carriesLineBreak(tt.value))
+			assert.Equal(t, tt.expected, rewriteStringsIn(tt.parameters, lineBreakToSpace.Replace))
 		})
 	}
 }
 
-func TestReplaceLineBreaksIn(t *testing.T) {
+// Only whitespace is touched: the round trip through YAML is what differs between the two renders,
+// and everything else has to stay comparable.
+func TestCollapseSpace(t *testing.T) {
 	t.Parallel()
 
-	stripped := replaceLineBreaksIn(map[string]any{
-		"name":     "first\nsecond",
-		"enabled":  true,
-		"count":    int64(3),
-		"list":     []any{"a\rb"},
-		"key\nbad": "value",
-	})
-
-	assert.Equal(t, "first second", stripped["name"])
-	assert.Equal(t, true, stripped["enabled"])
-	assert.Equal(t, int64(3), stripped["count"])
-	assert.Equal(t, []any{"a b"}, stripped["list"])
-	assert.Contains(t, stripped, "key bad", "a line break in a key is a break like any other")
-}
-
-func TestCollapseWhitespace(t *testing.T) {
-	t.Parallel()
-
-	// Only whitespace is touched: the round trip through YAML is what differs between the two
-	// renders, and everything else has to stay comparable.
-	assert.Equal(t, "a b c", collapseWhitespace("  a \n b\t\tc  "))
-	assert.Equal(t, map[string]any{"k": "a b"}, collapseWhitespace(map[string]any{"k": "a\nb"}))
-	assert.Equal(t, []any{"a b", int64(1)}, collapseWhitespace([]any{"a  b", int64(1)}))
+	assert.Equal(t, "a b c", collapseSpace("  a \n b\t\tc  "))
+	assert.Equal(t, map[string]any{"k": "a b"}, rewriteStringsIn(map[string]any{"k": "a\nb"}, collapseSpace))
+	assert.Equal(t,
+		map[string]any{"list": []any{"a b", int64(1)}},
+		rewriteStringsIn(map[string]any{"list": []any{"a  b", int64(1)}}, collapseSpace))
 }
