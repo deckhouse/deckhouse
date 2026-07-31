@@ -45,8 +45,12 @@ const (
 
 // clusterKubernetesStatus is the subset of ConfigMap d8-cluster-kubernetes data.status
 // needed for admission. Written by update-observer.
+//
+// The tag is `json`, not `yaml`: sigs.k8s.io/yaml converts YAML to JSON and then uses
+// encoding/json, so a `yaml` tag would be ignored here and the field would only match by
+// encoding/json's case-insensitive fallback.
 type clusterKubernetesStatus struct {
-	AvailableVersions []string `yaml:"availableVersions"`
+	AvailableVersions []string `json:"availableVersions"`
 }
 
 // validateControlPlaneManagerKubernetesVersion guards ModuleConfig control-plane-manager's

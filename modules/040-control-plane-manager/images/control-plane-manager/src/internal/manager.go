@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -51,6 +52,7 @@ import (
 	controlplanenode "control-plane-manager/internal/controllers/control-plane-node"
 	controlplaneoperation "control-plane-manager/internal/controllers/control-plane-operation"
 	operationsapprover "control-plane-manager/internal/controllers/operations-approver"
+	updateobservercommon "control-plane-manager/internal/controllers/update-observer/common"
 	updateobserver "control-plane-manager/internal/controllers/update-observer/controller"
 	updateobserverv1 "control-plane-manager/internal/controllers/update-observer/pkg/v1"
 )
@@ -140,9 +142,15 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 						constants.KubeSystemNamespace: {},
 					},
 				},
+				// Client reads of ConfigMaps bypass the cache entirely (DisableFor above), so this
+				// informer exists for exactly one consumer: the update-observer watch on
+				// d8-cluster-kubernetes. Scope it to that object — without the selector every
+				// control-plane node would watch and hold every kube-system ConfigMap.
 				&corev1.ConfigMap{}: {
 					Namespaces: map[string]cache.Config{
-						constants.KubeSystemNamespace: {},
+						constants.KubeSystemNamespace: {
+							FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": updateobservercommon.ConfigMapName}),
+						},
 					},
 				},
 				&controlplanev1alpha1.ControlPlaneOperation{}: {
