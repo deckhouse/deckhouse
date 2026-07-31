@@ -24,12 +24,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 // NewClusterStateSaver returns StateSaver that saves intermediate infrastructure state to Secret.
@@ -94,7 +94,14 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 	}
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "Saving intermediate base infra in cluster...")
-	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 45, 1*time.Second).Run(
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Save Cluster intermediate infrastructure state"),
+		retry.WithAttempts(45),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	err := retry.NewSilentLoopWithParams(loopParams).Run(
 		func() error {
 			return task.Patch(ctx)
 		},
@@ -169,7 +176,15 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 
 	taskName := fmt.Sprintf("Save intermediate infrastructure state for Node %q", s.nodeName)
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Saving intermediate state for node %s in cluster...", s.nodeName))
-	err = retry.NewSilentLoop(taskName, 45, 1*time.Second).Run(func() error {
+
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("%s", taskName),
+		retry.WithAttempts(45),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	err = retry.NewSilentLoopWithParams(loopParams).Run(func() error {
 		return task.PatchOrCreate(ctx)
 	})
 

@@ -1,3 +1,21 @@
+## Список необходимых сервисов OpenStack
+
+Для работы Deckhouse Kubernetes Platform должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
+
+| Сервис                     |                         Версия API                         |
+| :------------------------- | :--------------------------------------------------------: |
+| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
+| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
+| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
+
+* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
+
+{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
+Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+{% endif %}
+
 ## Схемы размещения
 
 Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре {{ site.data.admin.cloud-types.types[page.cloud_type].name }} и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
@@ -73,7 +91,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр, шлюз этой сети будет использован как шлюз по умолчанию.
-    # Совпадает с cloud.prefix в ресурсе ClusterConfiguration.
+    # Совпадает с параметром prefix в ModuleConfig global.
     mainNetwork: kube
     additionalNetworks:                         # Необязательный параметр.
     - office
@@ -165,7 +183,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр, шлюз этой сети будет использован как шлюз по умолчанию.
-    # Совпадает с cloud.prefix в ресурсе ClusterConfiguration.
+    # Совпадает с параметром prefix в ModuleConfig global.
     mainNetwork: kube
     additionalNetworks:                           # Необязательный параметр.
     - office
@@ -427,33 +445,21 @@ spec:
       owner: default
 ```
 
-### Список необходимых сервисов
-
-Список сервисов {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, необходимых для работы Deckhouse Kubernetes Platform в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
-
-| Сервис                           | Версия API |
-|:---------------------------------|:----------:|
-| Identity (Keystone)              | v3         |
-| Compute (Nova)                   | v2         |
-| Network (Neutron)                | v2         |
-| Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) *       | v2         |
-
-\* Если нужно заказывать Load Balancer.
-
-{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
-Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
-{% endif %}
-
 ### Настройка LoadBalancer
 
 {% alert level="warning" %}
 Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
 {% endalert %}
 
+Рекомендуется ограничивать список узлов, добавляемых в пул балансировщика, с помощью аннотации [`loadbalancer.openstack.org/node-selector`](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#load-balancer).
+
+Без ограничения по `node-selector` cloud-controller-manager может использовать в качестве таргетов балансировщика все подходящие узлы кластера. В результате добавление или удаление узлов, не связанных с обслуживаемой балансировщиком нагрузкой, может приводить к обновлению состава пула балансировщика. В крупных или часто изменяющихся кластерах такие обновления могут происходить регулярно, а в некоторых конфигурациях сопровождаться кратковременными нарушениями существующих соединений.
+
+С помощью `loadbalancer.openstack.org/node-selector` рекомендуется выбирать только те узлы, которые должны использоваться в качестве таргетов данного LoadBalancer.
+
 #### Пример IngressNginxController
 
-Ниже представлен простой пример конфигурации [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
+В примере поды Ingress-контроллера размещаются на frontend-узлах, а аннотация `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -465,6 +471,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
   nodeSelector:

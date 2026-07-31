@@ -63,6 +63,8 @@ function prepare_environment() {
   export INITIAL_IMAGE_TAG="$INITIAL_IMAGE_TAG"
   export DECKHOUSE_IMAGE_TAG="$DECKHOUSE_IMAGE_TAG"
   export PREFIX="$PREFIX"
+  export DECKHOUSE_REGISTRY_READ_RU_HOST="$DECKHOUSE_REGISTRY_READ_RU_HOST"
+  export DECKHOUSE_E2E_MODULES_DOCKERCFG="$DECKHOUSE_E2E_MODULES_DOCKERCFG"
   export EDITION=$(echo "${WERF_ENV:-FE}" | tr '[:upper:]' '[:lower:]')
 
   if [[ -z "$KUBERNETES_VERSION" ]]; then
@@ -127,6 +129,9 @@ function prepare_environment() {
   # shellcheck disable=SC2016
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" IMAGES_REPO="$IMAGES_REPO"\
       envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+  env DECKHOUSE_REGISTRY_READ_RU_HOST="$DECKHOUSE_REGISTRY_READ_RU_HOST" DECKHOUSE_E2E_MODULES_DOCKERCFG="$DECKHOUSE_E2E_MODULES_DOCKERCFG" \
+      envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" PREFIX="$PREFIX" \
       envsubst <"$cwd/infra.tf.tpl" >"$cwd/infra.tf"
@@ -348,12 +353,12 @@ function chmod_dirs_for_cleanup() {
 
   if [ -n $USER_RUNNER_ID ]; then
     echo "Fix temp directories owner before cleanup ..."
-    chown -R $USER_RUNNER_ID "$(pwd)" || true
+    # chown -R $USER_RUNNER_ID "$(pwd)" || true
     chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
     chown -R $USER_RUNNER_ID /tmp || true
   else
     echo "Fix temp directories permissions before cleanup ..."
-    chmod -f -R 777 "$(pwd)" || true
+    # chmod -f -R 777 "$(pwd)" || true
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi

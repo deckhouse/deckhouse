@@ -951,7 +951,7 @@ You can check the current status of versions in the release channels at [release
   /home/user/d8-bundle
   ```
 
-  Example command to download `stronghold` module with semver `^` constraint from version 1.2.0:
+  Example command to download `stronghold` module with semver `^` constraint (allows updates that don't change the leftmost non-zero digit) from version 1.2.0:
 
   ```shell
   d8 mirror pull \
@@ -961,13 +961,25 @@ You can check the current status of versions in the release channels at [release
   /home/user/d8-bundle
   ```
 
-  Example command to download `secrets-store-integration` module with semver `~` constraint from version 1.1.0:
+  Example command to download `secrets-store-integration` module with semver `~` constraint (allows updates that don't change the last specified digit's place) from version 1.1.0:
 
   ```shell
   d8 mirror pull \
   --license='<LICENSE_KEY>' \
   --no-platform --no-security-db \
   --include-module secrets-store-integration@~1.1.0 \
+  /home/user/d8-bundle
+  ```
+
+  Quote the `--include-module` flag value when it contains `>=` or `<=`. Unquoted, the shell treats it as an input/output redirection.
+
+  Example command to download the `console` module with semver `>=` constraint (any version from the specified one and above) from version 1.43.2:
+
+  ```shell
+  d8 mirror pull \
+  --license='<LICENSE_KEY>' \
+  --no-platform --no-security-db \
+  --include-module "console@>=1.43.2" \
   /home/user/d8-bundle
   ```
 
@@ -984,22 +996,40 @@ You can check the current status of versions in the release channels at [release
 {% offtopic title="Other command parameters available for use:" %}
 
 - `--no-pull-resume`: Force the download to start from the beginning.
+- `--force`: Overwrite existing packages if they conflict with the current pull operation.
+- `--ignore-suspend`: Ignore suspended release channels and continue mirroring. Use with caution.
 - `--no-platform`: Skip downloading the Deckhouse Kubernetes Platform image package (`platform.tar`).
 - `--no-modules`: Skip downloading module packages (`module-*.tar`).
 - `--no-security-db`: Skip downloading the vulnerability scanner database package (`security.tar`).
+- `--no-packages`: Skip downloading Deckhouse packages.
+- `--no-installer`: Skip downloading Deckhouse installer images.
+- `--only-extra-images`: Pull only extra module images without pulling main module images.
+- `--skip-vex-images`: Skip downloading VEX images.
+- `--include-platform` = `CONSTRAINT`: Download Deckhouse Kubernetes Platform releases by a semver constraint. Cannot be used together with `--since-version` and `--deckhouse-tag`. Always quote the constraint value: `>` and `<` are shell redirections. Examples: `--include-platform ">=1.64 <=1.68"`, `--include-platform "~1.65.0"`, `--include-platform "^1.65.0"`, `--include-platform "1.65.0"`, `--include-platform "=v1.65.3"`, or `--include-platform "=v1.65.3+stable"`.
 - `--include-module` / `-i` = `name[@Major.Minor]`: Download only a specific set of modules using a whitelist (and, if needed, their minimum versions). Use multiple times to add more modules to the whitelist. These flags are ignored if used with `--no-modules`.
 
-  The following syntax options are supported for specifying module versions:
+  The following syntax options are supported for specifying module versions. When using `>=` or `<=`, quote the whole flag value:
   - `module-name@1.3.0`: Pulls versions with semver ^ constraint (^1.3.0), including v1.3.0, v1.3.3, v1.4.1.
   - `module-name@~1.3.0`: Pulls versions with semver ~ constraint (>=1.3.0 <1.4.0), including only v1.3.0, v1.3.3.
+  - `"module-name@>=1.3.0"`: Pulls versions with semver `>=` constraint, including the explicitly specified version and newer versions matching the constraint.
+  - `"module-name@>=1.3.0 <=1.4.0"`: Pulls versions in the range, honoring both the lower and upper boundaries.
   - `module-name@=v1.3.0`: Pulls exact tag match v1.3.0, publishing to all release channels.
+  - `module-name@=v1.3.0+stable`: Pulls exact tag match v1.3.0, publishing to the stable release channel.
   - `module-name@=bobV1`: Pulls exact tag match "bobV1", publishing to all release channels.
 - `--exclude-module` / `-e` = `name`: Skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
+- `--include-package` = `name[@version]`: Download only a specific set of packages using a whitelist. Versions and semver constraints use the same syntax as `--include-module`, including quoting rules.
+- `--exclude-package` = `name[@version]`: Skip downloading a specific set of packages using a blacklist. Ignored if `--include-package` is used.
 - `--modules-path-suffix`: Change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (for example, the full path to the module repo will be `registry.deckhouse.io/deckhouse/EDITION/modules`).
 - `--since-version=X.Y`: Download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid release channel. Cannot be used with `--deckhouse-tag`.
 - `--deckhouse-tag`: Download only the specific DKP version (regardless of release channels). Cannot be used with `--since-version`.
+- `--installer-tag=TAG`: Download a specific Deckhouse installer tag. Defaults to `latest` if omitted.
+- `--proxy-registry`: Pull from a proxy/cache registry that does not support the registry catalog API. Requires `--include-platform` unless the platform is skipped with `--no-platform`, and at least one `--include-module` unless modules are skipped with `--no-modules`. Cannot be used together with `--deckhouse-tag` or `--since-version`.
+- `--dry-run`: Print what would be pulled without downloading images.
+- `--verbose-summary`: Print a detailed summary for every module and package with resolved versions.
 - `--gost-digest`: Calculate the checksum of the final DKP image bundle using the GOST R 34.11-2012 (Streebog) algorithm. The checksum will be displayed and written to a `.tar.gostsum` file in the folder containing the image tarball.
 - `--source-login` and `--source-password`: Authentication data to access the external registry.
+- `--tls-skip-verify`: Disable TLS certificate validation.
+- `--insecure`: Interact with registries over HTTP.
 - `--images-bundle-chunk-size=N`: The maximum file size (in GB) to split the image archive into. As a result, instead of one image archive, a set of CHUNK files will be created (for example, `d8.tar.NNNN.chunk`). To upload images from such a set, use the file name without the `.NNNN.chunk` suffix (for example, `d8.tar` for files `d8.tar.NNNN.chunk`).
 - `--tmp-dir`: Path to a directory for temporary files used during image download and upload. All processing is done in this directory. It must have enough free disk space to hold the entire image bundle. Defaults to the `.tmp` subdirectory in the image bundle directory.
 

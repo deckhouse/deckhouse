@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -23,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
@@ -33,7 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 // Module represents a module instance as received from the module controller.
@@ -67,14 +68,16 @@ type Module struct {
 // dropped — there is no per-package store to stash them in yet; the eventual
 // UpdateModule registers the package and supplies its settings. Either way, an
 // untracked package has no node to reschedule, so no Reschedule happens here.
-func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, enabled *bool) {
+func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.logger.Debug("update module settings", slog.String("name", name))
 
 	// Settings live in the per-package store; the ModuleConfig enabled intent
 	// lives in the global module (thread-safe for the scheduler's enabled getter).
 	// Reschedule if either actually changed.
-	settingsChanged := r.packages.UpdateSettings(name, settingsVersion, settings)
+	settingsChanged := r.packages.UpdateSettings(name, settingsVersion, settings, maintenance)
 	enabledChanged := r.global.SetConfigEnabled(name, enabled)
 
 	if settingsChanged || enabledChanged {
@@ -91,6 +94,8 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.logger.Debug("update module", slog.String("name", module.Name))
 
 	if len(module.Settings) == 0 {
 		module.Settings = make(addonutils.Values)

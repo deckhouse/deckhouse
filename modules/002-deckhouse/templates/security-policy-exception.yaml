@@ -1,0 +1,109 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: deckhouse
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          The Deckhouse controller runs module hooks that manage the node: it enters the
+          host filesystem in chroot mode, reads host devices and operates on host paths
+          on behalf of the modules it installs.
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Kubernetes rejects allowPrivilegeEscalation=false on a privileged container,
+          so it is implied by the privileged mode the controller requires.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Module hooks operate on root-owned host paths under /var/lib/deckhouse and on
+          host devices, and the init container prepares the downloaded modules directory.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for the host filesystem operations performed by module hooks
+          and by the init container that prepares /var/lib/deckhouse/downloaded.
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_ADMIN
+          - CHOWN
+          - FOWNER
+          - DAC_OVERRIDE
+        drop:
+          - all
+      metadata:
+        description: |
+          SYS_ADMIN is required by the controller in chroot mode to enter the node
+          filesystem namespace. CHOWN, FOWNER and DAC_OVERRIDE are required by the init
+          container to hand the downloaded modules directory over to the deckhouse user.
+    appArmorProfile:
+      allowedValues:
+        - unconfined
+      metadata:
+        description: |
+          The default AppArmor profile denies the mount and chroot operations the
+          controller performs in chroot mode.
+    seccompProfile:
+      allowedValues:
+        - ""
+        - undefined
+      metadata:
+        description: |
+          The controller container runs privileged, so the container runtime applies no
+          seccomp profile to it, and the syscalls used by shell module hooks are not
+          covered by RuntimeDefault.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Deckhouse reaches the API server through the node-local kubernetes-api-proxy on
+          127.0.0.1, which keeps it working while the cluster network is being configured.
+    hostPorts:
+      - port: 4222
+        protocol: TCP
+        metadata:
+          description: Addon-operator metrics and readiness endpoint.
+      - port: 4223
+        protocol: TCP
+        metadata:
+          description: Addon-operator admission (validating and conversion) webhook server.
+      - port: 4204
+        protocol: TCP
+        metadata:
+          description: Debug HTTP server exposed through kube-rbac-proxy.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          Deckhouse keeps downloaded module sources on the node and needs access to host
+          devices, so these volumes cannot be replaced with pod-local storage.
+    hostPath:
+      allowedValues:
+        - path: /dev
+          readOnly: false
+          metadata:
+            description: Host devices used by module hooks running in chroot mode.
+        - path: /var/lib/deckhouse
+          readOnly: false
+          metadata:
+            description: Node-local state directory prepared by the init container.
+        - path: /var/lib/deckhouse/downloaded
+          readOnly: false
+          metadata:
+            description: Node-local storage for downloaded module sources.
+{{- end }}

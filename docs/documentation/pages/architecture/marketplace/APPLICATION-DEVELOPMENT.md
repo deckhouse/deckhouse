@@ -120,7 +120,7 @@ The `openapi/` directory defines two schemas:
 ### Defaulting from cluster resource grants (`x-deckhouse-grantable-resource`)
 
 A `settings` field of `type: string` can be bound to a grantable cluster resource managed by the
-[multitenancy-manager](../../../modules/multitenancy-manager/) (for example a `StorageClass`). When the field is bound:
+[multitenancy-manager](/modules/multitenancy-manager/) (for example a `StorageClass`). When the field is bound:
 
 - if the user leaves it empty, the project's **default** granted name is injected into the values;
 - if the user provides a value, it is checked against the names **available** to the project, and rejected otherwise.

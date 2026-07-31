@@ -157,9 +157,9 @@ The table below shows the recommended amounts of space for the directories used 
 
 The system nodes are the nodes on which the DKP components are running. When adding such nodes to the cluster, keep in mind that they host the monitoring load, including:
 
-- [Prometheus](../../../modules/prometheus/);
-- [loki](../../../modules/loki/);
-- [upmeter](../../../modules/upmeter/) and other DKP components.
+- [Prometheus](/modules/prometheus/);
+- [loki](/modules/loki/);
+- [upmeter](/modules/upmeter/) and other DKP components.
 
 If monitoring data is stored locally on the nodes, it is recommended to additionally allocate ≥ 100 GB of free disk space for each system node.
 
@@ -195,7 +195,7 @@ In a DKP cluster, you can configure [local storage on nodes](../documentation/v1
 Requirements and placement procedure:
 
 - Free block devices (disk partitions) should be available on the node.
-- These devices will be used by the [sds-local-volume](../../../modules/sds-local-volume/) module to create a StorageClass.
+- These devices will be used by the [sds-local-volume](/modules/sds-local-volume/) module to create a StorageClass.
 - The amount of free space on the block device must correspond to the amount that is planned to be provided through the created StorageClass.
 
 {% include table-toggle-details.js %}

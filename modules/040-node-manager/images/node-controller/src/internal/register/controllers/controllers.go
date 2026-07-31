@@ -21,10 +21,13 @@ package controllers
 import (
 	_ "github.com/deckhouse/node-controller/internal/controller/bashiblecleanup"
 	_ "github.com/deckhouse/node-controller/internal/controller/capi"
+	_ "github.com/deckhouse/node-controller/internal/controller/clusterprefixmigration"
 	_ "github.com/deckhouse/node-controller/internal/controller/crdmigration"
+	_ "github.com/deckhouse/node-controller/internal/controller/defaultcrimigration"
 	_ "github.com/deckhouse/node-controller/internal/controller/draining"
 	_ "github.com/deckhouse/node-controller/internal/controller/instance"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
+	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodetemplate"
 	_ "github.com/deckhouse/node-controller/internal/controller/staticproviderid"
 	_ "github.com/deckhouse/node-controller/internal/controller/updateapproval"

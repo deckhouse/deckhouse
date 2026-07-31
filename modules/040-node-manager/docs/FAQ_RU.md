@@ -691,22 +691,20 @@ for node in $(d8 k get nodes -l node-role.kubernetes.io/<Название NodeGr
 Смена CRI возможна только между `Containerd` на `NotManaged` и обратно (параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type)).
 {% endalert %}
 
-Для изменения CRI для всего кластера, необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфигурационном файле `cluster-configuration`.
+Для изменения CRI для всего кластера необходимо отредактировать параметр `defaultCRI` в ModuleConfig `node-manager`.
 
 Также возможно выполнить эту операцию с помощью `d8 k patch`.
 
 * Для `Containerd`:
 
   ```shell
-  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
-  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  d8 k patch moduleconfig node-manager --type merge -p '{"spec":{"version":3,"settings":{"defaultCRI":"Containerd"}}}'
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
-  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  d8 k patch moduleconfig node-manager --type merge -p '{"spec":{"version":3,"settings":{"defaultCRI":"NotManaged"}}}'
   ```
 
 Если необходимо, чтобы отдельные NodeGroup использовали другой CRI, перед изменением `defaultCRI` необходимо установить CRI для этой NodeGroup,

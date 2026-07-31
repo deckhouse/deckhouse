@@ -77,3 +77,4 @@ shell:
   - cd /src/operator && git apply --verbose /patches/002-istio-operato-cni_status_restrict.patch
   - cd /src/operator && git apply --verbose /patches/003-istio-init-readonly-rootfs.patch
 ---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

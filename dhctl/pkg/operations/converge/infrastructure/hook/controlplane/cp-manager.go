@@ -28,14 +28,19 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var ErrControlPlaneIsNotReady = errors.New("control plane is not ready")
+
+// ErrControlPlaneReadinessCheckTransient marks conditions that may clear up on their own
+// (control-plane nodes genuinely not ready yet, or a transport-level failure listing them),
+// as opposed to a permanent authorization failure (RBAC/credentials) that retrying won't fix.
+var ErrControlPlaneReadinessCheckTransient = errors.New("control-plane readiness check: transient error, may succeed on retry")
 
 var requiredControlPlaneNodeConditions = []string{
 	"EtcdReady",
@@ -68,7 +73,14 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 	// (Etcd → APIServer → KCM → Scheduler → CertificatesHealthy) within a few
 	// seconds of each other, and the previous 10s granularity smeared 10-40s of
 	// false-wait on the critical path. Total budget unchanged (500 attempts × 1s = ~8 min).
-	return retry.NewLoop("Control-plane readiness", 500, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Control-plane readiness"),
+		retry.WithAttempts(500),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(ErrControlPlaneReadinessCheckTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		msg, err := checkControlPlaneNodesReady(ctx, kubeClient)
 
 		// all ControlPlaneNodes are ready
@@ -79,12 +91,12 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 
 		// some ControlPlaneNodes are not ready
 		if msg != "" {
-			return fmt.Errorf("%s", msg)
+			return fmt.Errorf("%w: %s", ErrControlPlaneReadinessCheckTransient, msg)
 		}
 
-		// some other error occurred
+		// some other error occurred (already tagged transient/permanent by checkControlPlaneNodesReady)
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Error while checking control-plane nodes readiness: %v", err))
-		return ErrControlPlaneIsNotReady
+		return err
 	})
 }
 
@@ -113,7 +125,12 @@ func checkControlPlaneNodesReady(ctx context.Context, kubeClient client.KubeClie
 		LabelSelector: "node.deckhouse.io/group=master",
 	})
 	if err != nil {
-		return "", fmt.Errorf("get nodes count: %w", err)
+		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+			// A permission failure will not resolve by retrying: leave it untagged
+			// so the caller's whitelist stops the loop instead of exhausting attempts.
+			return "", fmt.Errorf("get nodes count: %w", err)
+		}
+		return "", fmt.Errorf("%w: get nodes count: %w", ErrControlPlaneReadinessCheckTransient, err)
 	}
 
 	readyNodes := 0
@@ -169,7 +186,12 @@ func getControlPlaneNodeConditions(ctx context.Context, kubeClient client.KubeCl
 		Resource: "controlplanenodes",
 	}).Namespace("kube-system").Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("get ControlPlaneNode %s: %w", nodeName, err)
+		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+			// A permission failure will not resolve by retrying: leave it untagged
+			// so the caller's whitelist stops the loop instead of exhausting attempts.
+			return nil, fmt.Errorf("get ControlPlaneNode %s: %w", nodeName, err)
+		}
+		return nil, fmt.Errorf("%w: get ControlPlaneNode %s: %w", ErrControlPlaneReadinessCheckTransient, nodeName, err)
 	}
 
 	return controlPlaneNodeConditions(cpn)

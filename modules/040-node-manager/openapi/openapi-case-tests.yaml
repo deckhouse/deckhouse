@@ -47,11 +47,10 @@ positive:
                 zoneb: mysubnetidb
             tags:
               aaa: aaa
-        allowedBundles: ["ubuntu-lts", "centos", "debian", "opensuse"]
 
 
 negative:
   values:
     - internal:
         <<: *internalDefault
-        allowedBundles: "astra"
+        clusterMasterAddresses: "10.0.0.1:6443"

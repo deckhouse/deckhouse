@@ -1,0 +1,32 @@
+diff --git a/pkg/policy/api/icmp.go b/pkg/policy/api/icmp.go
+index a40bb882af..7ea13e7256 100644
+--- a/pkg/policy/api/icmp.go
++++ b/pkg/policy/api/icmp.go
+@@ -131,6 +131,10 @@ func (i *ICMPField) UnmarshalJSON(value []byte) error {
+ 		return err
+ 	}
+ 
++	if t.Type == nil {
++		return fmt.Errorf("ICMP type must be specified")
++	}
++
+ 	// If i.Type is ICMP type name, the value should be checked if it belongs to the map for the given family.
+ 	if t.Type.String() != "0" && t.Type.IntValue() == 0 {
+ 		name := t.Type.String()
+diff --git a/pkg/policy/api/icmp_test.go b/pkg/policy/api/icmp_test.go
+index c50112decc..35c980108a 100644
+--- a/pkg/policy/api/icmp_test.go
++++ b/pkg/policy/api/icmp_test.go
+@@ -37,4 +37,12 @@ func TestICMPFieldUnmarshal(t *testing.T) {
+ 	err = json.Unmarshal(value3, &i)
+ 
+ 	require.Error(t, err)
++
++	value4 := []byte("{\"family\": \"IPv4\", \"type\": null}")
++	err = json.Unmarshal(value4, &i)
++	require.Error(t, err)
++
++	value5 := []byte("{\"family\": \"IPv4\"}")
++	err = json.Unmarshal(value5, &i)
++	require.Error(t, err)
+ }

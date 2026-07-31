@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7bb761a58a11caa496221e01e7c02e2c7b45e3ba1a30404eb9d12aac0440c6eb",
-  "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -44,8 +44,22 @@
       "status": "fixed",
       "status_notes": "Устранено downstream-патчем modules/021-cni-cilium/images/bin-cilium/patches/018-bugtool-remove-sensitive-files.patch (verbatim cherry-pick cilium/cilium@3e26bef96e1ec6ea1b5034fee3f0bc6ddfabcae6, вошёл в релиз v1.17.15). Применяется ко всем бинарям cilium-стека в сборке Deckhouse.",
       "timestamp": "2026-05-22T14:18:47.138556373Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который является unmaintained и не имеет исправленной версии. В образе присутствует только модуль golang.org/x/crypto (используемый для SSH и других криптографических примитивов), тогда как сам пакет openpgp транзитивно не импортируется. Проверка govulncheck и go list -deps подтверждает, что openpgp отсутствует в графе импортов бинарного файла cilium-operator и уязвимый код не входит ни в один путь исполнения образа, поэтому уязвимость недостижима.",
+      "timestamp": "2026-07-23T17:30:41.979235508Z"
     }
   ],
   "timestamp": "2025-10-14T07:34:04Z",
-  "last_updated": "2026-05-22T14:20:09Z"
+  "last_updated": "2026-07-23T17:30:41Z"
 }

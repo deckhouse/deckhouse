@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"log/slog"
 	"path/filepath"
 	"slices"
 
@@ -67,6 +68,8 @@ type App struct {
 func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.logger.Debug("update app", slog.String("name", app.Name))
 
 	if len(app.Namespace) == 0 {
 		app.Namespace = defaultNamespace
@@ -164,6 +167,8 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 func (r *Runtime) RemoveApp(namespace, instance string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.logger.Debug("remove app", slog.String("namespace", namespace), slog.String("instance", instance))
 
 	name := apps.BuildName(namespace, instance)
 	r.scheduler.RemoveNode(name)

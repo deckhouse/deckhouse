@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
@@ -52,6 +53,7 @@ type Module interface {
 type crdService interface {
 	Install(ctx context.Context, name, path string) error
 	GetManagedGVKs(enabled []string) []string
+	HasCRDs(path string) error
 }
 
 // globalModule runs the global BeforeAll hooks and receives the enabled module
@@ -137,8 +139,12 @@ func (t *task) Execute(ctx context.Context) error {
 	names := make([]string, 0, len(t.modules))
 	for _, pkg := range t.modules {
 		names = append(names, pkg.GetName())
+		if err := t.crd.HasCRDs(pkg.GetPath()); err == nil {
+			names = append(names, fmt.Sprintf("%s-crd", pkg.GetName()))
+		}
+
 		sub := taskensurecrd.NewTask(pkg, t.crd.Install, t.status, t.logger)
-		t.queue.Enqueue(ctx, pkg.GetName()+"/crd", sub, queue.WithWait(wg))
+		t.queue.Enqueue(ctx, filepath.Join(pkg.GetName(), "crd"), sub, queue.WithWait(wg))
 	}
 
 	wg.Wait()

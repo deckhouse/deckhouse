@@ -45,6 +45,7 @@ spec:
       labels:
         tier: node
         app: flannel
+        security.deckhouse.io/security-policy-exception: flannel
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}

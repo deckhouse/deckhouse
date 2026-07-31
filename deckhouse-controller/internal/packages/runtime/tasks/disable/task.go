@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -93,13 +94,15 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("disable package '%s': %w", t.pkg.GetName(), err)
 	}
 
+	// Queue names must be built exactly as the enable task and the event routers
+	// build them (filepath.Join): hook queues are often absolute ("/modules/<name>"),
+	// and Join collapses the resulting double slash while Sprintf does not, so a
+	// hand-built name would not match the queue that was actually spawned.
 	for _, q := range t.pkg.GetHooksQueues() {
 		t.logger.Debug("remove package queue", slog.String("queue", q))
-		t.queueService.Remove(fmt.Sprintf("%s/%s", t.pkg.GetName(), q))
-		t.queueService.Remove(fmt.Sprintf("%s/%s/sync", t.pkg.GetName(), q))
+		t.queueService.Remove(filepath.Join(t.pkg.GetName(), q))
+		t.queueService.Remove(filepath.Join(t.pkg.GetName(), q, "sync"))
 	}
-
-	t.queueService.Remove(fmt.Sprintf("%s/sync", t.pkg.GetName()))
 
 	return nil
 }

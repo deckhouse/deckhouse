@@ -1,0 +1,38 @@
+cri:
+  type: Containerd
+disruptions:
+  approvalMode: Manual
+engine: CAPI
+fencing:
+  mode: Watchdog
+kubelet:
+  containerLogMaxFiles: 4
+  containerLogMaxSize: 50Mi
+  resourceReservation:
+    mode: Auto
+  topologyManager: {}
+kubernetesVersion: "1.32"
+manualRolloutID: ""
+name: static-full
+nodeTemplate:
+  annotations:
+    ann: value
+  labels:
+    role: worker
+  taints:
+  - effect: NoExecute
+    key: dedicated
+    value: worker
+nodeType: Static
+serializedLabels: node-role.kubernetes.io/static-full=,node.deckhouse.io/group=static-full,node.deckhouse.io/type=Static,role=worker
+serializedTaints: dedicated=worker:NoExecute
+static:
+  internalNetworkCIDRs:
+  - 172.18.200.0/24
+  - 10.0.0.0/8
+staticInstances:
+  count: 3
+  labelSelector:
+    matchLabels:
+      node-group: static-full
+updateEpoch: "1001"
