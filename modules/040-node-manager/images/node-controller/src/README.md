@@ -344,6 +344,18 @@ harness in `internal/machinetemplate/provider_parity_test.go`, which renders arc
 v1 files (`internal/machinetemplate/testdata/v1/`) and compares both the rendered object and the
 rollout decision, field by field.
 
+### Direction matters: forward is free, backward rolls once
+
+Moving a live cluster **to** v2 touches nothing: node-controller adopts the checksum-named template
+the MachineDeployment already references, writes the snapshot into its metadata and calls it the
+current generation (`envtest_machinetemplate_v2_test.go`, "adopts a checksum-named template …").
+
+Rolling a Deckhouse release **back** to a version without v2 does roll the machines once: the v1
+engine names templates by the checksum and has no notion of generations, so it creates its own
+object and switches the MachineDeployment to it. That is pinned by a spec ("switches back to a
+checksum-named template when the provider contract is withdrawn") so it is a known, tested
+consequence rather than a surprise during an incident.
+
 **When the last provider migrates**, deleting the v1 CAPI path means: the `contract == nil` branch
 in `reconcileCloudMDsRendered`, `applyCAPIMachineTemplate`, `applyMachineDeploymentSpecPatch` and
 the checksum machinery in `nodegroup/machineclass` used by CAPI. The parity harness and its

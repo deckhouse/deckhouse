@@ -419,6 +419,27 @@ template: |
 		}, 5*time.Second, poll).Should(Equal(map[string]any{"vmClassName": "generic"}))
 	})
 
+	// Rolling a Deckhouse release back to a version without the v2 engine is a rollout: the v1
+	// path names templates by the instance-class checksum and knows nothing about generations, so
+	// it creates its own object and switches the MachineDeployment to it. This spec pins that
+	// consequence rather than leaving it to be discovered on a live cluster — it is the price of a
+	// downgrade, it happens once, and the forward migration (adoption) is what must not roll.
+	It("switches back to a checksum-named template when the provider contract is withdrawn", func() {
+		ng, _ := setUp("v2-rollback", []string{"vmClassName"}, map[string]any{"vmClassName": "generic"})
+
+		var generation string
+		Eventually(func(g Gomega) string {
+			generation = referencedTemplateName(g, ng.Name)
+			return generation
+		}, eventually, poll).Should(HaveSuffix("-gen1"))
+
+		withdrawContract()
+		nudge(ng)
+
+		Eventually(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+			eventually, poll).ShouldNot(Equal(generation))
+	})
+
 	// If the object a live MachineDeployment references disappears, recreating it under a new
 	// name would roll every machine of the group for nothing.
 	It("recreates a deleted generation under the same name", func() {
