@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,6 +38,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
+	"github.com/deckhouse/node-controller/internal/machinetemplate"
 )
 
 type capiMDInput struct {
@@ -143,6 +145,10 @@ type existingCAPIMachineDeployment struct {
 	hasReplicas bool
 	// bootstrapSecretName is spec.template.spec.bootstrap.dataSecretName as stored today.
 	bootstrapSecretName string
+	// infraTemplateName is spec.template.spec.infrastructureRef.name: under the v2 contract this
+	// reference — not a recomputed hash — is what identifies the current generation, so an
+	// existing cluster keeps whatever name it already carries until something really changes.
+	infraTemplateName string
 }
 
 // readExistingCAPIMachineDeployment returns the MachineDeployment as it currently exists, or nil
@@ -176,6 +182,8 @@ func (r *MachineDeploymentReconciler) readExistingCAPIMachineDeployment(ctx cont
 	}
 	out.bootstrapSecretName, _, _ = unstructured.NestedString(obj.Object,
 		"spec", "template", "spec", "bootstrap", "dataSecretName")
+	out.infraTemplateName, _, _ = unstructured.NestedString(obj.Object,
+		"spec", "template", "spec", "infrastructureRef", "name")
 	return out, nil
 }
 
@@ -323,24 +331,46 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		return nil
 	}
 
-	// node-controller renders the infrastructure MachineTemplate and its instance-class
-	// checksum from the cloud-provider CAPI template secret (published at the 030 step),
-	// so it no longer waits for helm. The checksum must stay byte-identical to helm's
-	// former output, otherwise the template name changes and existing nodes roll.
-	machineTemplateTpl, err := r.readProviderTemplate(ctx, cloudType, engineCAPITemplates, "machine-template.yaml")
+	// A provider that ships capi/template.yaml is on the v2 contract; one that does not still
+	// ships the v1 trio and is served by the legacy engine below. Both live here until the last
+	// provider has migrated.
+	contract, err := r.readMachineTemplateContract(ctx, cloudType)
 	if err != nil {
 		return err
 	}
-	checksumTpl, err := r.readProviderTemplate(ctx, cloudType, engineCAPITemplates, "instance-class.checksum")
-	if err != nil {
-		return err
-	}
+
 	// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
 	// only, so the resolved NodeGroup is serialized here and nowhere else.
 	nodeGroupValues := resolved.ToMap()
-	checksum, err := machineclass.RenderChecksum(checksumTpl, nodeGroupValues, cloudProvider)
-	if err != nil {
-		return fmt.Errorf("render CAPI instance-class checksum for NodeGroup %s: %w", ng.Name, err)
+
+	// LEGACY (v1): node-controller renders the infrastructure MachineTemplate and its
+	// instance-class checksum from the cloud-provider CAPI template secret (published at the 030
+	// step), so it no longer waits for helm. The checksum must stay byte-identical to helm's
+	// former output, otherwise the template name changes and existing nodes roll.
+	var machineTemplateTpl []byte
+	var checksum string
+	if contract == nil {
+		machineTemplateTpl, err = r.readProviderTemplate(ctx, cloudType, engineCAPITemplates, "machine-template.yaml")
+		if err != nil {
+			return err
+		}
+		checksumTpl, err := r.readProviderTemplate(ctx, cloudType, engineCAPITemplates, "instance-class.checksum")
+		if err != nil {
+			return err
+		}
+		checksum, err = machineclass.RenderChecksum(checksumTpl, nodeGroupValues, cloudProvider)
+		if err != nil {
+			return fmt.Errorf("render CAPI instance-class checksum for NodeGroup %s: %w", ng.Name, err)
+		}
+	}
+
+	var instanceClassSpec map[string]interface{}
+	if contract != nil {
+		instanceClassSpec, _ = resolved.InstanceClass.(map[string]interface{})
+		if instanceClassSpec == nil {
+			logger.Info("skipping CAPI: InstanceClass is not resolved yet", "nodeGroup", ng.Name)
+			return nil
+		}
 	}
 
 	clusterUUID, err := r.readClusterUUID(ctx)
@@ -368,10 +398,11 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		drainTimeout = *ng.Spec.NodeDrainTimeoutSecond
 	}
 
-	infraAPIGroup := cloudConfig.capiMachineTemplateAPIVersion
-	if idx := strings.LastIndex(infraAPIGroup, "/"); idx >= 0 {
-		infraAPIGroup = infraAPIGroup[:idx]
+	infraGV, err := schema.ParseGroupVersion(cloudConfig.capiMachineTemplateAPIVersion)
+	if err != nil {
+		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.capiMachineTemplateAPIVersion, err)
 	}
+	infraAPIGroup := infraGV.Group
 
 	desiredMDNames := make(map[string]struct{}, len(zones))
 	desiredTemplateNames := make(map[string]struct{}, len(zones))
@@ -384,8 +415,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		}
 		desiredMDNames[mdName] = struct{}{}
 
-		templateName := fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone+checksum))
-		desiredTemplateNames[templateName] = struct{}{}
 		// helm renders the bootstrap Secret under a stable per-zone name, which mdSuffix
 		// reproduces ($ng-$zone_hash). resolveBootstrapSecretName may override it to keep an
 		// already-created MachineDeployment on its legacy name.
@@ -398,9 +427,39 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			return err
 		}
 
-		if err := r.applyCAPIMachineTemplate(ctx, machineTemplateTpl, cloudProvider, nodeGroupValues, clusterUUID, podSubnet, zone, templateName, checksum); err != nil {
-			return err
+		var templateName string
+		if contract != nil {
+			currentTemplateName := ""
+			if existingMD != nil {
+				currentTemplateName = existingMD.infraTemplateName
+			}
+			providerTree, _ := cloudProvider[cloudType].(map[string]interface{})
+			templateName, err = r.ensureMachineTemplateGeneration(ctx, machineTemplateGeneration{
+				ng:       ng,
+				contract: contract,
+				render: machinetemplate.RenderContext{
+					InstanceClass: instanceClassSpec,
+					Provider:      providerTree,
+					Zone:          zone,
+					NodeGroupName: ng.Name,
+					ClusterUUID:   clusterUUID,
+					PodSubnet:     podSubnet,
+				},
+				rolloutID:   resolved.ManualRolloutID,
+				currentName: currentTemplateName,
+				baseName:    fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone)),
+				gvk:         infraGV.WithKind(cloudConfig.capiMachineTemplateKind),
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+			templateName = fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone+checksum))
+			if err := r.applyCAPIMachineTemplate(ctx, machineTemplateTpl, cloudProvider, nodeGroupValues, clusterUUID, podSubnet, zone, templateName, checksum); err != nil {
+				return err
+			}
 		}
+		desiredTemplateNames[templateName] = struct{}{}
 
 		desired := desiredReplicas(existingMD, minReplicas, maxReplicas)
 
@@ -421,8 +480,18 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			drainTimeout:        drainTimeout,
 		})
 
+		mdSpec := md.Object["spec"].(map[string]interface{})
+		if contract != nil {
+			if err := applyMachineDeploymentAdditionalFields(mdSpec, contract, zone); err != nil {
+				return fmt.Errorf("apply provider MachineDeployment fields for %s: %w", mdName, err)
+			}
+		}
+		// The v1 spec patch is applied whatever the contract version: a provider that has migrated
+		// stops publishing capiMachineDeploymentSpecPatch, which makes this a no-op, and one that
+		// has not still needs it. Keeping the two independent is what lets a provider migrate the
+		// template without touching its registration secret in the same release.
 		if err := applyMachineDeploymentSpecPatch(
-			md.Object["spec"].(map[string]interface{}),
+			mdSpec,
 			cloudConfig.capiMachineDeploymentSpecPatch,
 			map[string]string{
 				"bootstrapSecretName": bootstrapSecretName,

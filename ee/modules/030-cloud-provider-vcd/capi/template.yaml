@@ -1,0 +1,71 @@
+version: v2
+
+# InstanceClass fields whose change requires recreating the machines.
+#
+# Note the deliberate difference from the v1 checksum: v1 hashed the *merged* metadata, so editing
+# the provider-wide `metadata` in the cloud-provider config rolled every machine. Under v2 the
+# provider config is not part of the rollout decision for any provider — a config change is frozen
+# into the current generation and reaches machines with the next rollout (or immediately via the
+# `manual-rollout-id` annotation). Only the InstanceClass side of the metadata is listed here.
+rolloutFields:
+  - storageProfile
+  - template
+  - rootDiskSizeGb
+  - sizingPolicy
+  - placementPolicy
+  - additionalMetadata
+
+template: |
+  {{- $metadata := dict -}}
+  {{- if get .provider "metadata" -}}
+    {{- $metadata = merge (deepCopy .provider.metadata) $metadata }}
+  {{- end -}}
+  {{- if get .instanceClass "additionalMetadata" -}}
+    {{- $metadata = merge (deepCopy .instanceClass.additionalMetadata) $metadata -}}
+  {{- end -}}
+
+  {{- $templateOrg := "" }}
+  {{- $catalog := "" }}
+  {{- $template := .instanceClass.template }}
+  {{- $templateParts := regexSplit "/" .instanceClass.template -1 }}
+  {{- if eq (len $templateParts) 2 }}
+    {{- $catalog = $templateParts | first }}
+    {{- $template = $templateParts | last }}
+  {{- else if eq (len $templateParts) 3 }}
+    {{- $templateOrg = (index $templateParts 0) }}
+    {{- $catalog = (index $templateParts 1) }}
+    {{- $template = (index $templateParts 2) }}
+  {{- end }}
+
+  apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+  kind: VCDMachineTemplate
+  spec:
+    template:
+      spec:
+      {{- if get .instanceClass "rootDiskSizeGb" }}
+        diskSize: {{ mul (.instanceClass.rootDiskSizeGb) 1024 1024 1024 }}
+      {{- end }}
+      {{- if get .instanceClass "sizingPolicy" }}
+        sizingPolicy: {{ .instanceClass.sizingPolicy | quote }}
+      {{- end }}
+      {{- if get .instanceClass "placementPolicy" }}
+        placementPolicy: {{ .instanceClass.placementPolicy | quote }}
+      {{- end }}
+        storageProfile: {{ .instanceClass.storageProfile | quote }}
+        template: {{ $template | quote }}
+      {{- if $templateOrg }}
+        templateOrg: {{ $templateOrg | quote }}
+      {{- end }}
+      {{- if $catalog }}
+        catalog: {{ $catalog | quote }}
+      {{- end }}
+      {{- if gt (len $metadata) 0 }}
+        metadata:
+        {{- range $key, $value := $metadata }}
+        - key: {{ $key | quote }}
+          value: {{ $value | quote }}
+          type: String
+          userAccess: READWRITE
+          isSystem: false
+        {{- end }}
+      {{- end }}

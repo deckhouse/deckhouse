@@ -38,7 +38,6 @@ func TestResolvedNodeGroup_ChecksumGoldens(t *testing.T) {
 	const (
 		awsMCMTemplate     = "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum"
 		yandexMCMTemplate  = "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum"
-		yandexCAPITemplate = "../../../../../../../../030-cloud-provider-yandex/capi/instance-class.checksum"
 	)
 
 	cases := []struct {
@@ -51,12 +50,6 @@ func TestResolvedNodeGroup_ChecksumGoldens(t *testing.T) {
 			name:     "yandex mcm",
 			fixture:  "cloud-ephemeral-processed-full",
 			template: yandexMCMTemplate,
-			want:     "81b2646a77c8ff6a1a58dcbe2ca96c8faeef29def5a369fcfe84bba5be81ba5f",
-		},
-		{
-			name:     "yandex capi",
-			fixture:  "cloud-ephemeral-processed-full",
-			template: yandexCAPITemplate,
 			want:     "81b2646a77c8ff6a1a58dcbe2ca96c8faeef29def5a369fcfe84bba5be81ba5f",
 		},
 		{

@@ -1,0 +1,453 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package capi
+
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
+	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/testenv"
+)
+
+// User story: As a cluster operator, I want a Deckhouse upgrade that switches my cloud provider to
+// the v2 machine-template contract to change nothing about my running machines, and from then on I
+// want machines to be recreated exactly when I change something that requires it — with the reason
+// written on the NodeGroup.
+//
+// These specs are the enforcement of that promise. The v1 engine is still exercised by the rest of
+// the suite; this file adds the v2 path by publishing the contract file into the same provider
+// secret (its presence is the switch) and removing it again afterwards.
+var _ = Describe("CAPI machine-template v2 contract", func() {
+	const (
+		clusterUUID = "11111111-2222-3333-4444-555555555555"
+		zone        = "zone-a"
+		eventually  = 20 * time.Second
+		poll        = 250 * time.Millisecond
+	)
+
+	// The contract used by these specs. It is deliberately not a provider's real file: what is
+	// under test is node-controller's generation machinery, not a provider's template.
+	v2Contract := func(rolloutFields []string) string {
+		fields := ""
+		for _, field := range rolloutFields {
+			fields += "  - " + field + "\n"
+		}
+		return `version: v2
+rolloutFields:
+` + fields + `machineDeployment:
+  additionalFields:
+    failureDomain: zone
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: DeckhouseMachineTemplate
+  spec:
+    template:
+      spec:
+        vmClassName: {{ .instanceClass.vmClassName }}
+        {{- if get .instanceClass "rootDiskSize" }}
+        rootDiskSize: {{ .instanceClass.rootDiskSize | quote }}
+        {{- end }}
+`
+	}
+
+	publishContract := func(contract string) {
+		secret := &corev1.Secret{}
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
+			Namespace: providerTemplateSecretNamespace, Name: "d8-cloud-provider-dvp-capi",
+		}, secret)).To(Succeed())
+		secret.Data[machineTemplateContractKey] = []byte(contract)
+		Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
+	}
+
+	withdrawContract := func() {
+		secret := &corev1.Secret{}
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
+			Namespace: providerTemplateSecretNamespace, Name: "d8-cloud-provider-dvp-capi",
+		}, secret)).To(Succeed())
+		delete(secret.Data, machineTemplateContractKey)
+		Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
+	}
+
+	newInstanceClass := func(name string, spec map[string]any) *unstructured.Unstructured {
+		ic := &unstructured.Unstructured{}
+		ic.SetAPIVersion("deckhouse.io/v1alpha1")
+		ic.SetKind("DVPInstanceClass")
+		ic.SetName(name)
+		ic.Object["spec"] = spec
+		return ic
+	}
+
+	newNodeGroup := func(name, icName string) *deckhousev1.NodeGroup {
+		ng := &deckhousev1.NodeGroup{}
+		ng.Name = name
+		ng.Spec.NodeType = deckhousev1.NodeTypeCloudEphemeral
+		ng.Spec.CloudInstances = &deckhousev1.CloudInstancesSpec{
+			ClassReference: deckhousev1.ClassReference{Kind: "DVPInstanceClass", Name: icName},
+			MinPerZone:     1,
+			MaxPerZone:     1,
+			Zones:          []string{zone},
+		}
+		return ng
+	}
+
+	machineTemplates := func(g Gomega, ngName string) []unstructured.Unstructured {
+		list := &unstructured.UnstructuredList{}
+		list.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
+		list.SetKind("DeckhouseMachineTemplateList")
+		g.Expect(k8sClient.List(suiteCtx, list, client.InNamespace(common.MachineNamespace),
+			client.MatchingLabels{"node-group": ngName})).To(Succeed())
+		return list.Items
+	}
+
+	machineDeployment := func(g Gomega, ngName string) *capiv1beta2.MachineDeployment {
+		list := &capiv1beta2.MachineDeploymentList{}
+		g.Expect(k8sClient.List(suiteCtx, list, client.InNamespace(common.MachineNamespace),
+			client.MatchingLabels{"node-group": ngName})).To(Succeed())
+		g.Expect(list.Items).To(HaveLen(1))
+		return &list.Items[0]
+	}
+
+	// referencedTemplateName is the single source of truth for "which generation is current" —
+	// exactly what node-controller itself reads.
+	referencedTemplateName := func(g Gomega, ngName string) string {
+		return machineDeployment(g, ngName).Spec.Template.Spec.InfrastructureRef.Name
+	}
+
+	// nudge triggers a reconcile of the NodeGroup. Needed after changing the provider contract:
+	// node-controller watches the cloud-provider discovery secret, not the per-provider template
+	// secret, so a contract edit alone would wait for the resync.
+	nudge := func(ng *deckhousev1.NodeGroup) {
+		fresh := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: ng.Name}, fresh)).To(Succeed())
+		annotations := fresh.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations["test.deckhouse.io/nudge"] = fmt.Sprintf("%d", len(annotations)+1)
+		fresh.SetAnnotations(annotations)
+		Expect(k8sClient.Update(suiteCtx, fresh)).To(Succeed())
+	}
+
+	setAnnotation := func(ng *deckhousev1.NodeGroup, key, value string) {
+		fresh := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: ng.Name}, fresh)).To(Succeed())
+		annotations := fresh.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations[key] = value
+		fresh.SetAnnotations(annotations)
+		Expect(k8sClient.Update(suiteCtx, fresh)).To(Succeed())
+	}
+
+	updateInstanceClass := func(name string, spec map[string]any) {
+		ic := &unstructured.Unstructured{}
+		ic.SetAPIVersion("deckhouse.io/v1alpha1")
+		ic.SetKind("DVPInstanceClass")
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: name}, ic)).To(Succeed())
+		ic.Object["spec"] = spec
+		Expect(k8sClient.Update(suiteCtx, ic)).To(Succeed())
+	}
+
+	// setUp publishes the contract, the InstanceClass and the NodeGroup, and waits until the
+	// first generation exists. It returns the NodeGroup and its InstanceClass name.
+	setUp := func(namePrefix string, rolloutFields []string, icSpec map[string]any) (*deckhousev1.NodeGroup, string) {
+		publishContract(v2Contract(rolloutFields))
+		DeferCleanup(withdrawContract)
+
+		icName := testenv.UniqueName(namePrefix + "-ic")
+		Expect(k8sClient.Create(suiteCtx, newInstanceClass(icName, icSpec))).To(Succeed())
+		DeferCleanup(func() {
+			ic := newInstanceClass(icName, icSpec)
+			_ = k8sClient.Delete(suiteCtx, ic)
+		})
+
+		ng := newNodeGroup(testenv.UniqueName(namePrefix), icName)
+		Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+		DeferCleanup(func() {
+			_ = k8sClient.Delete(suiteCtx, ng)
+			Eventually(func(g Gomega) int { return len(machineTemplates(g, ng.Name)) },
+				eventually, poll).Should(BeZero())
+		})
+		return ng, icName
+	}
+
+	It("names the first generation after the zone and gen1, and records the snapshot", func() {
+		ng, _ := setUp("v2-fresh", []string{"vmClassName"}, map[string]any{"vmClassName": "generic"})
+
+		var template unstructured.Unstructured
+		Eventually(func(g Gomega) {
+			templates := machineTemplates(g, ng.Name)
+			g.Expect(templates).To(HaveLen(1))
+			template = templates[0]
+			g.Expect(referencedTemplateName(g, ng.Name)).To(Equal(template.GetName()))
+		}, eventually, poll).Should(Succeed())
+
+		Expect(template.GetName()).To(Equal(fmt.Sprintf("%s-%s-gen1", ng.Name, sha256Hash(clusterUUID+zone))))
+
+		By("the snapshot holds the whole InstanceClass spec, not just the rolloutFields")
+		snapshot := map[string]any{}
+		Expect(json.Unmarshal([]byte(template.GetAnnotations()[appliedInstanceClassAnnotation]), &snapshot)).To(Succeed())
+		Expect(snapshot).To(Equal(map[string]any{"vmClassName": "generic"}))
+		Expect(template.GetAnnotations()).To(HaveKey(appliedRolloutIDAnnotation))
+
+		By("the template renders no metadata of its own: node-controller owns it")
+		Expect(template.GetLabels()).To(HaveKeyWithValue("node-group", ng.Name))
+		Expect(template.GetLabels()).To(HaveKeyWithValue("heritage", "deckhouse"))
+
+		By("machineDeployment.additionalFields reached the MachineDeployment")
+		Eventually(func(g Gomega) string {
+			return machineDeployment(g, ng.Name).Spec.Template.Spec.FailureDomain
+		}, eventually, poll).Should(Equal(zone))
+	})
+
+	// The migration promise: switching a live cluster to v2 must not touch a single machine.
+	It("adopts a checksum-named template from the v1 era instead of creating a generation", func() {
+		publishContract(v2Contract([]string{"vmClassName"}))
+		DeferCleanup(withdrawContract)
+
+		icName := testenv.UniqueName("v2-adopt-ic")
+		Expect(k8sClient.Create(suiteCtx, newInstanceClass(icName, map[string]any{"vmClassName": "generic"}))).To(Succeed())
+
+		ngName := testenv.UniqueName("v2-adopt")
+		legacyName := ngName + "-8ad9c341"
+
+		By("recreating what the v1 engine leaves in a cluster: a checksum-named template and an MD pointing at it")
+		legacy := &unstructured.Unstructured{}
+		legacy.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
+		legacy.SetKind("DeckhouseMachineTemplate")
+		legacy.SetName(legacyName)
+		legacy.SetNamespace(common.MachineNamespace)
+		legacy.SetLabels(map[string]string{"heritage": "deckhouse", "module": "node-manager", "node-group": ngName})
+		Expect(unstructured.SetNestedField(legacy.Object, "generic", "spec", "template", "spec", "vmClassName")).To(Succeed())
+		Expect(k8sClient.Create(suiteCtx, legacy)).To(Succeed())
+
+		md := &unstructured.Unstructured{}
+		md.SetAPIVersion("cluster.x-k8s.io/v1beta2")
+		md.SetKind("MachineDeployment")
+		md.SetName(fmt.Sprintf("%s-%s", ngName, sha256Hash(clusterUUID+zone)))
+		md.SetNamespace(common.MachineNamespace)
+		md.SetLabels(map[string]string{"heritage": "deckhouse", "module": "node-manager", "node-group": ngName})
+		Expect(unstructured.SetNestedMap(md.Object, map[string]any{
+			"clusterName": "dvp",
+			"replicas":    int64(1),
+			"selector":    map[string]any{"matchLabels": map[string]any{"node-group": ngName}},
+			"template": map[string]any{
+				"metadata": map[string]any{"labels": map[string]any{"node-group": ngName}},
+				"spec": map[string]any{
+					"clusterName": "dvp",
+					"bootstrap":   map[string]any{"dataSecretName": ngName + "-legacy-bootstrap"},
+					"infrastructureRef": map[string]any{
+						"apiGroup": "infrastructure.cluster.x-k8s.io",
+						"kind":     "DeckhouseMachineTemplate",
+						"name":     legacyName,
+					},
+				},
+			},
+		}, "spec")).To(Succeed())
+		Expect(k8sClient.Create(suiteCtx, md)).To(Succeed())
+
+		ng := newNodeGroup(ngName, icName)
+		Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+		DeferCleanup(func() {
+			_ = k8sClient.Delete(suiteCtx, ng)
+			Eventually(func(g Gomega) int { return len(machineTemplates(g, ngName)) }, eventually, poll).Should(BeZero())
+		})
+
+		By("the template is adopted: same object, snapshot written, no new generation")
+		Eventually(func(g Gomega) {
+			adopted := &unstructured.Unstructured{}
+			adopted.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
+			adopted.SetKind("DeckhouseMachineTemplate")
+			g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
+				Namespace: common.MachineNamespace, Name: legacyName,
+			}, adopted)).To(Succeed())
+			g.Expect(adopted.GetAnnotations()).To(HaveKey(appliedInstanceClassAnnotation))
+			g.Expect(adopted.GetUID()).To(Equal(legacy.GetUID()), "adoption must not recreate the object")
+		}, eventually, poll).Should(Succeed())
+
+		Consistently(func(g Gomega) []string {
+			names := []string{}
+			for _, template := range machineTemplates(g, ngName) {
+				names = append(names, template.GetName())
+			}
+			return names
+		}, 3*time.Second, poll).Should(ConsistOf(legacyName), "no second generation may appear")
+
+		Expect(referencedTemplateName(Default, ngName)).To(Equal(legacyName),
+			"the MachineDeployment must keep pointing at the adopted template — switching it rolls every machine")
+	})
+
+	It("does not create a generation when a field outside rolloutFields changes", func() {
+		ng, icName := setUp("v2-noroll", []string{"vmClassName"},
+			map[string]any{"vmClassName": "generic", "capacity": map[string]any{"cores": int64(4)}})
+
+		var first string
+		Eventually(func(g Gomega) string {
+			first = referencedTemplateName(g, ng.Name)
+			return first
+		}, eventually, poll).ShouldNot(BeEmpty())
+
+		updateInstanceClass(icName, map[string]any{"vmClassName": "generic", "capacity": map[string]any{"cores": int64(8)}})
+
+		Consistently(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+			5*time.Second, poll).Should(Equal(first))
+	})
+
+	It("creates the next generation when a rolloutField changes and says why on the NodeGroup", func() {
+		ng, icName := setUp("v2-roll", []string{"vmClassName"}, map[string]any{"vmClassName": "generic"})
+
+		var first string
+		Eventually(func(g Gomega) string {
+			first = referencedTemplateName(g, ng.Name)
+			return first
+		}, eventually, poll).Should(HaveSuffix("-gen1"))
+
+		updateInstanceClass(icName, map[string]any{"vmClassName": "bigger"})
+
+		Eventually(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+			eventually, poll).Should(HaveSuffix("-gen2"))
+
+		By("the previous generation is still there until the rollout finishes")
+		Eventually(func(g Gomega) []unstructured.Unstructured { return machineTemplates(g, ng.Name) },
+			eventually, poll).ShouldNot(BeEmpty())
+
+		By("the operator can read the reason on the NodeGroup")
+		Eventually(func(g Gomega) string {
+			events := &corev1.EventList{}
+			g.Expect(k8sClient.List(suiteCtx, events, client.InNamespace(""))).To(Succeed())
+			for _, event := range events.Items {
+				if event.InvolvedObject.Name == ng.Name && event.Reason == "MachinesRollout" {
+					return event.Message
+				}
+			}
+			return ""
+		}, eventually, poll).Should(ContainSubstring(`vmClassName "generic" → "bigger"`))
+	})
+
+	It("creates the next generation when the operator sets manual-rollout-id", func() {
+		ng, _ := setUp("v2-manual", []string{"vmClassName"}, map[string]any{"vmClassName": "generic"})
+
+		Eventually(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+			eventually, poll).Should(HaveSuffix("-gen1"))
+
+		setAnnotation(ng, "manual-rollout-id", "2026-07-31")
+
+		Eventually(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+			eventually, poll).Should(HaveSuffix("-gen2"))
+	})
+
+	// The snapshot stores facts (the whole spec), rolloutFields is policy applied at comparison
+	// time — so a provider release that changes the list cannot roll anybody's machines.
+	It("does not create a generation when the provider changes rolloutFields", func() {
+		ng, _ := setUp("v2-fields", []string{"vmClassName", "rootDiskSize"},
+			map[string]any{"vmClassName": "generic", "rootDiskSize": "50Gi"})
+
+		var first string
+		Eventually(func(g Gomega) string {
+			first = referencedTemplateName(g, ng.Name)
+			return first
+		}, eventually, poll).Should(HaveSuffix("-gen1"))
+
+		publishContract(v2Contract([]string{"vmClassName"}))
+		nudge(ng)
+
+		Consistently(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+			5*time.Second, poll).Should(Equal(first))
+	})
+
+	// A CAPI infrastructure template is read afresh on every Machine creation, so editing one in
+	// place does not roll machines — it silently changes what the old MachineSet builds from.
+	It("never rewrites the spec of an existing generation when the template text changes", func() {
+		ng, _ := setUp("v2-frozen", []string{"vmClassName"}, map[string]any{"vmClassName": "generic"})
+
+		var name string
+		Eventually(func(g Gomega) string {
+			name = referencedTemplateName(g, ng.Name)
+			return name
+		}, eventually, poll).Should(HaveSuffix("-gen1"))
+
+		publishContract(`version: v2
+rolloutFields:
+  - vmClassName
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: DeckhouseMachineTemplate
+  spec:
+    template:
+      spec:
+        vmClassName: {{ .instanceClass.vmClassName }}
+        rootDiskSize: "999Gi"
+`)
+		nudge(ng)
+
+		Consistently(func(g Gomega) map[string]any {
+			template := &unstructured.Unstructured{}
+			template.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
+			template.SetKind("DeckhouseMachineTemplate")
+			g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
+				Namespace: common.MachineNamespace, Name: name,
+			}, template)).To(Succeed())
+			spec, _, err := unstructured.NestedMap(template.Object, "spec", "template", "spec")
+			g.Expect(err).NotTo(HaveOccurred())
+			return spec
+		}, 5*time.Second, poll).Should(Equal(map[string]any{"vmClassName": "generic"}))
+	})
+
+	// If the object a live MachineDeployment references disappears, recreating it under a new
+	// name would roll every machine of the group for nothing.
+	It("recreates a deleted generation under the same name", func() {
+		ng, _ := setUp("v2-restore", []string{"vmClassName"}, map[string]any{"vmClassName": "generic"})
+
+		var name string
+		Eventually(func(g Gomega) string {
+			name = referencedTemplateName(g, ng.Name)
+			return name
+		}, eventually, poll).Should(HaveSuffix("-gen1"))
+
+		template := &unstructured.Unstructured{}
+		template.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
+		template.SetKind("DeckhouseMachineTemplate")
+		template.SetName(name)
+		template.SetNamespace(common.MachineNamespace)
+		Expect(k8sClient.Delete(suiteCtx, template)).To(Succeed())
+
+		nudge(ng)
+
+		Eventually(func(g Gomega) error {
+			restored := &unstructured.Unstructured{}
+			restored.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
+			restored.SetKind("DeckhouseMachineTemplate")
+			return k8sClient.Get(suiteCtx, types.NamespacedName{
+				Namespace: common.MachineNamespace, Name: name,
+			}, restored)
+		}, eventually, poll).Should(Succeed())
+
+		Expect(referencedTemplateName(Default, ng.Name)).To(Equal(name))
+	})
+})

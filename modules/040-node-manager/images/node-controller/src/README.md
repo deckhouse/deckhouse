@@ -305,6 +305,50 @@ Node-Controller uses controller-runtime library with native Kubernetes patterns.
 
 ---
 
+## CAPI machine templates: two engines, on purpose
+
+For cloud-ephemeral NodeGroups the CAPI reconciler must answer one question per zone — *does this
+change require recreating the machines?* — and, when it does, produce a new immutable
+infrastructure MachineTemplate under a new name (renaming the referenced template is how CAPI
+triggers a rollout). Two engines answer it, selected per provider by the contents of the provider's
+CAPI secret:
+
+| | v2 (`capi/template.yaml` present) | v1 legacy (no `template.yaml`) |
+|---|---|---|
+| Provider ships | one file: `rolloutFields` + template | `machine-template.yaml` + `instance-class.checksum` (+ `machine-deployment-spec-patch.yaml`) |
+| Template context | `.instanceClass`, `.provider`, `.zone`, `.nodeGroup.name`, `.cluster` | synthetic helm values tree (`.Values.nodeManager.internal.cloudProvider.<type>…`) |
+| "Did anything change?" | declared fields, compared **by value** against a snapshot on the object | sha256 over the **bytes** of a rendered checksum template |
+| Object name | `<ng>-<zone-hash>-gen<N>` | `<ng>-<sha(clusterUUID+zone+checksum)>` |
+| Writes to an existing object | never (create-only) | SSA apply on every reconcile |
+| Code | `internal/machinetemplate` + `capi/capi_template_v2.go` | `nodegroup/machineclass` + `capi/capi_template.go` |
+
+The contract for provider teams is documented in
+`modules/040-node-manager/docs/internal/MACHINE_TEMPLATE_CONTRACT.md`.
+
+### Why the legacy engine is still here
+
+All seven in-tree CAPI providers (dvp, yandex, openstack, huaweicloud, dynamix, vcd, zvirt) ship
+v2. The v1 path is nevertheless kept, for two reasons that are not about them:
+
+1. **Out-of-tree provider modules.** Since the *External cloud provider module* ADR a provider is
+   an independently released module that publishes its templates into a labelled secret. Deleting
+   the v1 path would break every such module the moment node-manager is upgraded, on a schedule
+   its authors do not control. It goes when they have migrated, not when we have.
+2. **MCM is still on it.** The same renderer (`nodegroup/machineclass`) serves the MCM
+   `machine-class.yaml` path and its checksums, which live until MCM itself is removed.
+
+What the legacy path costs is bounded and understood: it is not on the v2 code path (the two
+branch once, in `reconcileCloudMDsRendered`), it has no shared state with v2, and its guarantee —
+that a v2 provider file behaves exactly like the v1 file it replaced — is enforced by the parity
+harness in `internal/machinetemplate/provider_parity_test.go`, which renders archived copies of the
+v1 files (`internal/machinetemplate/testdata/v1/`) and compares both the rendered object and the
+rollout decision, field by field.
+
+**When the last provider migrates**, deleting the v1 CAPI path means: the `contract == nil` branch
+in `reconcileCloudMDsRendered`, `applyCAPIMachineTemplate`, `applyMachineDeploymentSpecPatch` and
+the checksum machinery in `nodegroup/machineclass` used by CAPI. The parity harness and its
+`testdata/v1` snapshots go at the same time — they exist to prove the transition, not the result.
+
 ## Key Differences
 
 ### Cache Architecture
