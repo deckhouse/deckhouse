@@ -97,6 +97,7 @@ func fallbackSplit(total, percent int64) int64 {
 func autotuneMetricNameFor(resourceName resourceKind) string {
 	return "d8-cpm-autotune-" + string(resourceName)
 }
+
 const (
 	controlPlanePercent     = 40                // %
 	configEveryNodeMilliCPU = 300               // 0.3 Cpu
@@ -207,6 +208,7 @@ func significantResourceChange(rec, applied int64) bool {
 	delta := float64(rec-applied) / float64(applied)
 	return delta > raiseThreshold || delta < -lowerThreshold
 }
+
 // controlPlaneAutotuneActive is true when prometheus and prometheus-metrics-adapter
 // are enabled — the custom.metrics.k8s.io path used by per-component autotune.
 func controlPlaneAutotuneActive(input *go_hook.HookInput) bool {
