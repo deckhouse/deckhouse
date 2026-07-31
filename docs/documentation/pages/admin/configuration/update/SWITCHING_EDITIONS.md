@@ -341,10 +341,10 @@ spec:
   - '*'
   bundles:
   - '*'
-  weight: 1
+  weight: 31
   content: |
-    mkdir -p /etc/containerd/registry.d/_default
-    bb-sync-file /etc/containerd/registry.d/_default/hosts.toml - << "EOF"
+    mkdir -p /etc/containerd/registry.d/registry.deckhouse.io
+    bb-sync-file "/etc/containerd/registry.d/registry.deckhouse.io/hosts.toml" - << "EOF"
     [host]
 
       [host."https://registry.deckhouse.io"]
@@ -423,26 +423,6 @@ For ContainerdV2
 
 ```shell
 d8 k --as=system:sudouser delete ngc containerdv2-$NEW_EDITION-config.sh
-d8 k --as=system:sudouser apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: del-temp-config.sh
-spec:
-  nodeGroups:
-  - '*'
-  bundles:
-  - '*'
-  weight: 1
-  content: |
-   if [ -d /etc/containerd/registry.d/_default ]; then
-      rm -rf /etc/containerd/registry.d/_default
-   fi
-EOF
-```
-
-```shell
-d8 k --as=system:sudouser delete ngc del-temp-config.sh
 ```
 
 {% endcapture %}
