@@ -30,13 +30,14 @@ const (
 )
 
 type deployerI interface {
-	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error
+	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string, force bool) error
 }
 
 type task struct {
 	name        string
 	packageName string
 	version     string
+	force       bool
 
 	repository registry.Remote
 
@@ -47,11 +48,14 @@ type task struct {
 }
 
 // NewModuleTask creates a Deploy task for a Module package.
-func NewModuleTask(name, version string, repo registry.Remote, deployer deployerI, status *status.Service, logger *log.Logger) queue.Task {
+// force discards the locally cached copy of version before downloading it again,
+// and is set when the image digest changed under an unchanged version.
+func NewModuleTask(name, version string, repo registry.Remote, force bool, deployer deployerI, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		name:        name,
 		packageName: name,
 		version:     version,
+		force:       force,
 		repository:  repo,
 		deployer:    deployer,
 		status:      status,
@@ -60,11 +64,14 @@ func NewModuleTask(name, version string, repo registry.Remote, deployer deployer
 }
 
 // NewAppTask creates a Deploy task for an Application package.
+// Applications are versioned by immutable tags, so their cached copies are always
+// reused (force=false).
 func NewAppTask(instance, name, version string, repo registry.Remote, deployer deployerI, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		name:        instance,
 		packageName: name,
 		version:     version,
+		force:       false,
 		repository:  repo,
 		deployer:    deployer,
 		status:      status,
@@ -81,11 +88,12 @@ func (t *task) Execute(ctx context.Context) error {
 		slog.String("name", t.name),
 		slog.String("repository", t.repository.Name),
 		slog.String("package", t.packageName),
-		slog.String("version", t.version))
+		slog.String("version", t.version),
+		slog.Bool("force", t.force))
 
 	// Cache package content locally and expose it at the path consumed by the load task.
 	logger.Debug("deploy package")
-	if err := t.deployer.Deploy(ctx, t.repository, t.packageName, t.name, t.version); err != nil {
+	if err := t.deployer.Deploy(ctx, t.repository, t.packageName, t.name, t.version, t.force); err != nil {
 		t.status.HandleError(t.name, status.ConditionReadyOnFilesystem, err)
 		return fmt.Errorf("deploy package: %w", err)
 	}

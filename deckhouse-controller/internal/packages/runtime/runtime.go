@@ -100,6 +100,7 @@ type Runtime struct {
 	healthService    *health.Service    // Resources health monitor
 	appDeployer      deployerI          // Deploys and undeploys application package images
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
+	registry         *registry.Service  // Registry service for managing package digests
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
@@ -129,7 +130,7 @@ type Runtime struct {
 
 // deployerI abstracts package image deployment to and removal from the filesystem.
 type deployerI interface {
-	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error
+	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string, force bool) error
 	Undeploy(ctx context.Context, deployedName string, keep bool) error
 	Cleanup(ctx context.Context, preserve []deployer.PreservePackage) error
 }
@@ -159,21 +160,21 @@ func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleMan
 	r.status = status.NewService()
 	r.edition = edition
 
-	reg := registry.NewService(dc, logger)
+	r.registry = registry.NewService(dc, logger)
 	downloadedDir := app.DownloadedModulesDir()
 
 	appsDir := filepath.Join(downloadedDir, "apps")
 	modulesDir := filepath.Join(downloadedDir, "modules")
 
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.appDeployer = symlinkdeploy.NewDeployer(reg, appsDir, logger)
-	r.moduleDeployer = symlinkdeploy.NewDeployer(reg, modulesDir, logger)
+	r.appDeployer = symlinkdeploy.NewDeployer(r.registry, appsDir, logger)
+	r.moduleDeployer = symlinkdeploy.NewDeployer(r.registry, modulesDir, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.appDeployer = erofsdeploy.NewDeployer(reg, appsDir, logger)
-		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
+		r.appDeployer = erofsdeploy.NewDeployer(r.registry, appsDir, logger)
+		r.moduleDeployer = erofsdeploy.NewDeployer(r.registry, modulesDir, logger)
 	}
 
 	// Build object patcher with optimized rate limits for batch operations

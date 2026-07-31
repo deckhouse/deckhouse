@@ -63,6 +63,7 @@ var legacyBashCompletion bool
 func main() {
 	app.SetShellOperatorVersion(ShellOperatorVersion)
 	app.SetAddonOperatorVersion(AddonOperatorVersion)
+	app.SetDeckhouseVersion(DeckhouseVersion)
 
 	// deckhouse-controller is the single source of truth for environment-driven
 	// configuration of addon-operator (and the shell-operator globals

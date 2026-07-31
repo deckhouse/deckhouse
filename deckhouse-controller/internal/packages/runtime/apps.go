@@ -87,7 +87,9 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance)
+	// Applications are versioned by immutable tags, so a version change is the only
+	// thing that can invalidate what is already deployed — never a forced update.
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance, false)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return

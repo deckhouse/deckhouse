@@ -19,6 +19,13 @@ import (
 	shapp "github.com/flant/shell-operator/pkg/app"
 )
 
+var Version string
+
+// SetDeckhouseVersion sets the version string reported by deckhouse-controller.
+func SetDeckhouseVersion(v string) {
+	Version = v
+}
+
 // SetAddonOperatorVersion sets the version string reported by addon-operator.
 func SetAddonOperatorVersion(v string) {
 	adapp.Version = v

@@ -78,13 +78,15 @@ func NewDeployer(reg registryService, workingDir string, logger *log.Logger) *De
 }
 
 // Deploy fetches a package image from the registry and exposes it at the deployed path.
-func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error {
+// force discards the locally cached copy of version and re-downloads it; callers set
+// it when the image digest changed under an unchanged version.
+func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string, force bool) error {
 	// the same package may be deployed by multiple apps concurrently; serialize to avoid duplicate work
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	packageDir := filepath.Join(d.workingDir, repo.Name, packageName)
-	if err := d.download(ctx, repo, packageDir, packageName, version); err != nil {
+	if err := d.download(ctx, repo, packageDir, packageName, version, force); err != nil {
 		return err
 	}
 
@@ -338,7 +340,8 @@ func normalizePath(path string) string {
 }
 
 // download fetches a package image into a versioned directory via an atomic temporary directory rename.
-func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDir, name, version string) error {
+// A cached version directory is reused unless force is set, in which case it is replaced by a fresh download.
+func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDir, name, version string, force bool) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "download")
 	defer span.End()
 
@@ -347,6 +350,7 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	span.SetAttributes(attribute.String("packageDir", packageDir))
 	span.SetAttributes(attribute.String("repository", repo.Name))
 	span.SetAttributes(attribute.String("registry", repo.Repository))
+	span.SetAttributes(attribute.Bool("force", force))
 
 	logger := d.logger.With(
 		slog.String("name", name),
@@ -364,10 +368,19 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	default:
 	}
 
+	// A forced download keeps the cached copy until the fresh one is in place, so a
+	// failed download leaves the package on its previous content instead of nothing.
 	versionPath := filepath.Join(packageDir, version)
-	if _, err := os.Stat(versionPath); err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
+	cached := false
+
+	switch _, err := os.Stat(versionPath); {
+	case err == nil:
+		if !force {
+			return nil
+		}
+
+		cached = true
+	case !os.IsNotExist(err):
 		return status.NewError(conditionReasonCheckVersionFailed, err)
 	}
 
@@ -396,6 +409,15 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	// download/extract into a temporary directory, then atomically publish it as <packageDir>/<version>
 	if err = d.registry.Download(ctx, repo, tempDir, name, version); err != nil {
 		return status.NewError(conditionReasonDownloadFailed, err)
+	}
+
+	// Rename cannot publish over a populated directory, so the stale copy goes away
+	// only now that the replacement is fully downloaded.
+	if cached {
+		logger.Info("remove stale package version", slog.String("path", versionPath))
+		if err = os.RemoveAll(versionPath); err != nil {
+			return status.NewError(conditionReasonRemoveOldVersionFailed, err)
+		}
 	}
 
 	if err = os.Rename(tempDir, versionPath); err != nil {
