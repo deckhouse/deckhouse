@@ -339,17 +339,31 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		return err
 	}
 
-	// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
-	// only, so the resolved NodeGroup is serialized here and nowhere else.
-	nodeGroupValues := resolved.ToMap()
-
-	// LEGACY (v1): node-controller renders the infrastructure MachineTemplate and its
-	// instance-class checksum from the cloud-provider CAPI template secret (published at the 030
-	// step), so it no longer waits for helm. The checksum must stay byte-identical to helm's
-	// former output, otherwise the template name changes and existing nodes roll.
-	var machineTemplateTpl []byte
-	var checksum string
-	if contract == nil {
+	var (
+		// v2 inputs.
+		instanceClassSpec map[string]interface{}
+		providerTree      map[string]interface{}
+		// v1 inputs.
+		machineTemplateTpl []byte
+		nodeGroupValues    map[string]interface{}
+		checksum           string
+	)
+	if contract != nil {
+		instanceClassSpec, _ = resolved.InstanceClass.(map[string]interface{})
+		if instanceClassSpec == nil {
+			logger.Info("skipping CAPI: InstanceClass is not resolved yet", "nodeGroup", ng.Name)
+			return nil
+		}
+		providerTree, _ = cloudProvider[cloudType].(map[string]interface{})
+	} else {
+		// LEGACY (v1): node-controller renders the infrastructure MachineTemplate and its
+		// instance-class checksum from the cloud-provider CAPI template secret (published at the
+		// 030 step), so it no longer waits for helm. The checksum must stay byte-identical to
+		// helm's former output, otherwise the template name changes and existing nodes roll.
+		//
+		// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
+		// only, so the resolved NodeGroup is serialized here and nowhere else.
+		nodeGroupValues = resolved.ToMap()
 		machineTemplateTpl, err = r.readProviderTemplate(ctx, cloudType, engineCAPITemplates, "machine-template.yaml")
 		if err != nil {
 			return err
@@ -361,15 +375,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		checksum, err = machineclass.RenderChecksum(checksumTpl, nodeGroupValues, cloudProvider)
 		if err != nil {
 			return fmt.Errorf("render CAPI instance-class checksum for NodeGroup %s: %w", ng.Name, err)
-		}
-	}
-
-	var instanceClassSpec map[string]interface{}
-	if contract != nil {
-		instanceClassSpec, _ = resolved.InstanceClass.(map[string]interface{})
-		if instanceClassSpec == nil {
-			logger.Info("skipping CAPI: InstanceClass is not resolved yet", "nodeGroup", ng.Name)
-			return nil
 		}
 	}
 
@@ -403,6 +408,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.capiMachineTemplateAPIVersion, err)
 	}
 	infraAPIGroup := infraGV.Group
+	infraGVK := infraGV.WithKind(cloudConfig.capiMachineTemplateKind)
 
 	desiredMDNames := make(map[string]struct{}, len(zones))
 	desiredTemplateNames := make(map[string]struct{}, len(zones))
@@ -427,28 +433,31 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			return err
 		}
 
+		renderCtx := machinetemplate.RenderContext{
+			InstanceClass: instanceClassSpec,
+			Provider:      providerTree,
+			Zone:          zone,
+			NodeGroupName: ng.Name,
+			ClusterUUID:   clusterUUID,
+			PodSubnet:     podSubnet,
+		}
+
 		var templateName string
 		if contract != nil {
 			currentTemplateName := ""
 			if existingMD != nil {
 				currentTemplateName = existingMD.infraTemplateName
 			}
-			providerTree, _ := cloudProvider[cloudType].(map[string]interface{})
 			templateName, err = r.ensureMachineTemplateGeneration(ctx, machineTemplateGeneration{
-				ng:       ng,
-				contract: contract,
-				render: machinetemplate.RenderContext{
-					InstanceClass: instanceClassSpec,
-					Provider:      providerTree,
-					Zone:          zone,
-					NodeGroupName: ng.Name,
-					ClusterUUID:   clusterUUID,
-					PodSubnet:     podSubnet,
-				},
+				ng:          ng,
+				contract:    contract,
+				render:      renderCtx,
 				rolloutID:   resolved.ManualRolloutID,
 				currentName: currentTemplateName,
-				baseName:    fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone)),
-				gvk:         infraGV.WithKind(cloudConfig.capiMachineTemplateKind),
+				// The zone suffix is the one the MachineDeployment already carries, so the two
+				// line up by eye in kubectl output.
+				baseName: mdSuffix,
+				gvk:      infraGVK,
 			})
 			if err != nil {
 				return err
@@ -482,7 +491,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 
 		mdSpec := md.Object["spec"].(map[string]interface{})
 		if contract != nil {
-			if err := applyMachineDeploymentAdditionalFields(mdSpec, contract, zone); err != nil {
+			if err := machinetemplate.ApplyMachineDeploymentFields(mdSpec, contract, renderCtx); err != nil {
 				return fmt.Errorf("apply provider MachineDeployment fields for %s: %w", mdName, err)
 			}
 		}

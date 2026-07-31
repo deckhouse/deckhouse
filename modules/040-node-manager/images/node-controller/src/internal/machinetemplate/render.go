@@ -19,8 +19,10 @@ package machinetemplate
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
 
@@ -73,13 +75,8 @@ func parseTemplate(text string) (*template.Template, error) {
 // rejected instead of being silently overwritten — under v1 that freedom is what left dead
 // `helm.sh/resource-policy: keep` annotations and hardcoded namespaces in every provider file.
 func Render(c *Contract, rc RenderContext) (map[string]any, error) {
-	t, err := parseTemplate(c.Template)
-	if err != nil {
-		return nil, err
-	}
-
 	var buf bytes.Buffer
-	if err := t.Execute(&buf, rc.toMap()); err != nil {
+	if err := c.parsed.Execute(&buf, rc.toMap()); err != nil {
 		return nil, fmt.Errorf("render machine template: %w", err)
 	}
 
@@ -104,4 +101,25 @@ func Render(c *Contract, rc RenderContext) (map[string]any, error) {
 	}
 
 	return obj, nil
+}
+
+// ApplyMachineDeploymentFields writes the provider's machineDeployment.additionalFields into the
+// spec of the generic MachineDeployment node-controller builds. Both halves of what a provider
+// file produces — the machine template and these fields — are rendered here, so the controller
+// only ever deals with Kubernetes objects.
+//
+// It replaces the v1 machine-deployment-spec-patch.yaml: a raw YAML patch with ${zone} substituted
+// into it by string replacement.
+func ApplyMachineDeploymentFields(spec map[string]any, c *Contract, rc RenderContext) error {
+	for path, tmpl := range c.MachineDeployment.parsedFields {
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, rc.toMap()); err != nil {
+			return fmt.Errorf("render machineDeployment.additionalFields[%s]: %w", path, err)
+		}
+		fields := append([]string{"template", "spec"}, strings.Split(path, ".")...)
+		if err := unstructured.SetNestedField(spec, buf.String(), fields...); err != nil {
+			return fmt.Errorf("set MachineDeployment field %s: %w", path, err)
+		}
+	}
+	return nil
 }

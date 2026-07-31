@@ -20,16 +20,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/node-controller/internal/machinetemplate"
 )
 
-// parseGeneration decides the number of the next generation, so a wrong answer here either
-// re-uses a live generation's name (Create fails, or worse, the object is reused with the wrong
-// spec) or skips numbers for no reason.
-func TestParseGeneration(t *testing.T) {
+// generationOf recovers the counter for the two objects whose snapshot cannot supply it: a v1
+// checksum-named object being adopted, and a generation object being recreated after deletion.
+// A wrong answer re-uses a live generation's name or skips numbers for no reason.
+func TestGenerationOf(t *testing.T) {
 	tests := []struct {
 		name   string
 		object string
@@ -47,75 +43,7 @@ func TestParseGeneration(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expGen, parseGeneration(tc.object))
+			assert.Equal(t, tc.expGen, generationOf(tc.object))
 		})
 	}
-}
-
-func TestMachineTemplateSnapshotRoundTrip(t *testing.T) {
-	spec := map[string]any{
-		"vmClassName": "generic",
-		"rootDisk":    map[string]any{"size": "50Gi"},
-	}
-
-	annotations, err := machineTemplateSnapshot(spec, "2026-07-31")
-	require.NoError(t, err)
-
-	obj := &unstructured.Unstructured{}
-	obj.SetAnnotations(annotations)
-
-	stored, rolloutID, ok := readMachineTemplateSnapshot(obj)
-	require.True(t, ok)
-	assert.Equal(t, "2026-07-31", rolloutID)
-
-	changes, err := machinetemplate.Changes(stored, spec, []string{"vmClassName", "rootDisk.size"})
-	require.NoError(t, err)
-	assert.Empty(t, changes, "a snapshot read back must compare equal to what was stored")
-}
-
-// A snapshot that cannot be parsed must not be read as "everything changed": that would recreate
-// the template and roll the machines because of a corrupted annotation.
-func TestUnreadableSnapshotIsTreatedAsAbsent(t *testing.T) {
-	obj := &unstructured.Unstructured{}
-	obj.SetAnnotations(map[string]string{appliedInstanceClassAnnotation: "{not json"})
-
-	_, _, ok := readMachineTemplateSnapshot(obj)
-	assert.False(t, ok, "an unparsable snapshot must fall back to re-adoption, not to a rollout")
-}
-
-func TestApplyMachineDeploymentAdditionalFields(t *testing.T) {
-	contract, err := machinetemplate.ParseContract([]byte(`version: v2
-rolloutFields: [flavorName]
-machineDeployment:
-  additionalFields:
-    failureDomain: zone
-template: |
-  apiVersion: v1
-  kind: X
-  spec: {}
-`))
-	require.NoError(t, err)
-
-	spec := map[string]interface{}{
-		"template": map[string]interface{}{
-			"spec": map[string]interface{}{"clusterName": "openstack"},
-		},
-	}
-	require.NoError(t, applyMachineDeploymentAdditionalFields(spec, contract, "ru-1a"))
-
-	got, found, err := unstructured.NestedString(spec, "template", "spec", "failureDomain")
-	require.NoError(t, err)
-	require.True(t, found)
-	assert.Equal(t, "ru-1a", got)
-	assert.Equal(t, "openstack", spec["template"].(map[string]interface{})["spec"].(map[string]interface{})["clusterName"],
-		"existing fields must survive")
-}
-
-func TestApplyMachineDeploymentAdditionalFieldsNoop(t *testing.T) {
-	contract, err := machinetemplate.ParseContract([]byte("version: v2\nrolloutFields: [a]\ntemplate: |\n  kind: X\n"))
-	require.NoError(t, err)
-
-	spec := map[string]interface{}{"replicas": int64(1)}
-	require.NoError(t, applyMachineDeploymentAdditionalFields(spec, contract, "ru-1a"))
-	assert.Equal(t, map[string]interface{}{"replicas": int64(1)}, spec)
 }

@@ -19,15 +19,15 @@ limitations under the License.
 // rendered in, and the rollout decision made from the InstanceClass values.
 //
 // The package is deliberately self-contained (it does not reuse the legacy machineclass
-// renderer): the legacy engine emulates a helm values tree and is deleted once the last
-// provider migrates, while this one is also the library a provider team runs in its own CI
-// to check its template.
+// renderer): that engine emulates a helm values tree and is deleted once the last provider
+// migrates, and nothing here should have to be untangled from it on the way out.
 package machinetemplate
 
 import (
 	"fmt"
 	"slices"
 	"strings"
+	"text/template"
 
 	"sigs.k8s.io/yaml"
 )
@@ -54,21 +54,25 @@ type Contract struct {
 	// Template is the go-template of the infrastructure MachineTemplate. It renders
 	// apiVersion, kind and spec only — metadata is stamped by node-controller.
 	Template string `json:"template"`
+
+	// parsed is the compiled Template. It is compiled once, in ParseContract, both to validate the
+	// contract at load time and so that Render does not recompile it per zone.
+	parsed *template.Template
 }
 
 // MachineDeploymentContract carries what the provider needs in the generic MachineDeployment
 // that node-controller builds itself. It replaces the v1 machine-deployment-spec-patch.yaml,
 // whose ${zone} string substitution into a raw YAML patch was only ever used for one field.
 type MachineDeploymentContract struct {
-	// AdditionalFields maps a dot-path inside spec.template.spec to a context source name.
-	// Today the single known source is "zone" (openstack needs failureDomain: zone).
+	// AdditionalFields maps a dot-path inside spec.template.spec to a go-template rendered in the
+	// same sandbox, with the same context, as the machine template itself — so a provider that
+	// needs a second field does not need a node-controller release to name a new "source".
+	// Today one provider uses one entry: openstack's `failureDomain: "{{ .zone }}"`.
 	AdditionalFields map[string]string `json:"additionalFields"`
-}
 
-// MachineDeploymentFieldSourceZone is the only source an additionalFields entry may name.
-// Adding a source is a contract change: it must be documented in the contract spec first,
-// otherwise a template starts depending on data the spec does not promise.
-const MachineDeploymentFieldSourceZone = "zone"
+	// parsedFields are AdditionalFields compiled at parse time, keyed by the same dot-path.
+	parsedFields map[string]*template.Template
+}
 
 // ParseContract parses and validates capi/template.yaml. Every problem is reported as an error
 // rather than defaulted away: a provider file that does not say what it means must fail loudly at
@@ -100,27 +104,30 @@ func ParseContract(data []byte) (*Contract, error) {
 		seen[field] = struct{}{}
 	}
 
-	for path, source := range c.MachineDeployment.AdditionalFields {
+	c.MachineDeployment.parsedFields = make(map[string]*template.Template, len(c.MachineDeployment.AdditionalFields))
+	for path, value := range c.MachineDeployment.AdditionalFields {
 		if err := validateFieldPath(path); err != nil {
 			return nil, fmt.Errorf("machineDeployment.additionalFields: %w", err)
 		}
-		if source != MachineDeploymentFieldSourceZone {
-			return nil, fmt.Errorf("machineDeployment.additionalFields[%s]: unknown source %q, known sources: %s",
-				path, source, MachineDeploymentFieldSourceZone)
+		parsed, err := parseTemplate(value)
+		if err != nil {
+			return nil, fmt.Errorf("machineDeployment.additionalFields[%s]: %w", path, err)
 		}
+		c.MachineDeployment.parsedFields[path] = parsed
 	}
 
-	if _, err := parseTemplate(c.Template); err != nil {
+	parsed, err := parseTemplate(c.Template)
+	if err != nil {
 		return nil, err
 	}
+	c.parsed = parsed
 
 	return c, nil
 }
 
+// validateFieldPath rejects a path with an empty segment, which also covers the empty path itself
+// (strings.Split("", ".") is [""]).
 func validateFieldPath(path string) error {
-	if path == "" {
-		return fmt.Errorf("empty field path")
-	}
 	if slices.Contains(strings.Split(path, "."), "") {
 		return fmt.Errorf("malformed field path %q", path)
 	}

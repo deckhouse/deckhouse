@@ -17,7 +17,6 @@ limitations under the License.
 package machinetemplate
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
 	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
@@ -63,9 +63,11 @@ type providerFixture struct {
 	// providerConfig is this provider's subtree of the d8-node-manager-cloud-provider secret.
 	providerConfig map[string]any
 	instanceClass  map[string]any
-	// rolloutExceptions lists fields where v1 and v2 deliberately disagree about rolling, keyed by
-	// field path, with the reason as the value.
-	rolloutExceptions map[string]string
+	// manualRolloutIDIgnoredByV1 records that this provider's v1 checksum template never read
+	// manualRolloutID, so the operator's `manual-rollout-id` annotation did not roll its CAPI
+	// machines at all. v2 honours the lever for every provider, in node-controller rather than in
+	// each provider file; adoption stores the current id, so no migrating cluster rolls from it.
+	manualRolloutIDIgnoredByV1 bool
 }
 
 func providerFixtures() []providerFixture {
@@ -91,12 +93,7 @@ func providerFixtures() []providerFixture {
 				},
 				"etcdDisk": map[string]any{"size": "20Gi", "storageClass": "linstor-thin-r1"},
 			},
-			rolloutExceptions: map[string]string{
-				"manualRolloutID": "v1 dvp checksum ignored manualRolloutID, so the operator's " +
-					"`manual-rollout-id` annotation did not roll CAPI machines at all. v2 applies it " +
-					"uniformly for every provider — that is the fix, and adoption keeps the current " +
-					"id in the snapshot so migrating clusters do not roll.",
-			},
+			manualRolloutIDIgnoredByV1: true,
 		},
 		{
 			name:         "yandex",
@@ -172,7 +169,7 @@ func providerFixtures() []providerFixture {
 				"serverGroupID":      "sg-id",
 				"vipAddress":         "10.0.0.7",
 			},
-			rolloutExceptions: manualRolloutIDNotInV1Checksum(),
+			manualRolloutIDIgnoredByV1: true,
 		},
 		{
 			name:           "dynamix",
@@ -185,7 +182,7 @@ func providerFixtures() []providerFixture {
 				"rootDiskSizeGb":  float64(40),
 				"externalNetwork": "extnet",
 			},
-			rolloutExceptions: manualRolloutIDNotInV1Checksum(),
+			manualRolloutIDIgnoredByV1: true,
 		},
 		{
 			name:         "vcd",
@@ -213,18 +210,8 @@ func providerFixtures() []providerFixture {
 				"memory":         float64(8192),
 				"rootDiskSizeGb": float64(40),
 			},
-			rolloutExceptions: manualRolloutIDNotInV1Checksum(),
+			manualRolloutIDIgnoredByV1: true,
 		},
-	}
-}
-
-// manualRolloutIDNotInV1Checksum documents the providers whose v1 checksum template never read
-// manualRolloutID: on those clouds the operator's `manual-rollout-id` annotation did not roll CAPI
-// machines at all. v2 applies the lever uniformly, in node-controller rather than in each provider
-// file. Migrating clusters do not roll from this — adoption stores the current id.
-func manualRolloutIDNotInV1Checksum() map[string]string {
-	return map[string]string{
-		"manualRolloutID": "v1 checksum of this provider ignored manualRolloutID; v2 honours it for every provider",
 	}
 }
 
@@ -279,13 +266,6 @@ func TestProviderRolloutParity(t *testing.T) {
 					require.NoError(t, err)
 					v2Rolls := len(changes) > 0
 
-					if reason, documented := fixture.rolloutExceptions[path]; documented {
-						assert.NotEqual(t, v1Rolls, v2Rolls,
-							"%s is listed as a deliberate v1/v2 difference (%s), but both engines now agree — "+
-								"drop it from rolloutExceptions", path, reason)
-						return
-					}
-
 					assert.Equal(t, v1Rolls, v2Rolls,
 						"changing %s: v1 checksum rolls=%v, v2 rolloutFields rolls=%v — either fix "+
 							"rolloutFields or document the difference in rolloutExceptions",
@@ -309,15 +289,11 @@ func TestProviderManualRolloutIDParity(t *testing.T) {
 			v1Rolls := base != rolled
 
 			// v2 compares the stored manual-rollout-id for every provider, in node-controller
-			// rather than in the provider file — see ensureMachineTemplateGeneration.
-			const v2Rolls = true
-
-			if reason, documented := fixture.rolloutExceptions["manualRolloutID"]; documented {
-				assert.NotEqual(t, v1Rolls, v2Rolls, "documented difference no longer holds: %s", reason)
-				return
-			}
-			assert.Equal(t, v1Rolls, v2Rolls,
-				"manual-rollout-id must keep rolling machines the way it did")
+			// rather than in the provider file — see ensureMachineTemplateGeneration. So the only
+			// possible difference is a provider whose v1 checksum ignored the annotation, and each
+			// such provider has to say so in its fixture.
+			assert.Equal(t, !fixture.manualRolloutIDIgnoredByV1, v1Rolls,
+				"the v1 behaviour of manual-rollout-id changed: update the fixture or the migration notes")
 		})
 	}
 }
@@ -330,8 +306,7 @@ func TestProviderManualRolloutIDParity(t *testing.T) {
 // It cannot roll an existing cluster: on the first v2 reconcile node-controller adopts the live
 // template and stores the spec as it is, so nothing differs until the user really edits the field.
 func TestYandexDefaultDiskSizeDivergence(t *testing.T) {
-	fixture := providerFixtures()[1]
-	require.Equal(t, "yandex", fixture.name)
+	fixture := fixtureByName(t, "yandex")
 
 	contract := loadContract(t, fixture.contractPath)
 	checksumTemplate, err := os.ReadFile(fixture.legacyPath("instance-class.checksum"))
@@ -350,6 +325,17 @@ func TestYandexDefaultDiskSizeDivergence(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, changes, 1, "v2 sees an added field as a change")
 	assert.Equal(t, "diskSizeGB", changes[0].Path)
+}
+
+func fixtureByName(t *testing.T, name string) providerFixture {
+	t.Helper()
+	for _, fixture := range providerFixtures() {
+		if fixture.name == name {
+			return fixture
+		}
+	}
+	t.Fatalf("no provider fixture named %q", name)
+	return providerFixture{}
 }
 
 func loadContract(t *testing.T, path string) *Contract {
@@ -495,10 +481,5 @@ func mutatedValue(value any) any {
 
 func deepCopySpec(t *testing.T, spec map[string]any) map[string]any {
 	t.Helper()
-	data, err := json.Marshal(spec)
-	require.NoError(t, err)
-	out := map[string]any{}
-	require.NoError(t, json.Unmarshal(data, &out))
-	return out
+	return runtime.DeepCopyJSON(spec)
 }
-

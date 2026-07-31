@@ -14,11 +14,12 @@ rolloutFields:
   - additionalTags
 
 # failureDomain lives in the MachineDeployment, which node-controller builds itself — the provider
-# template renders the machine template only. Under v1 this single field needed a whole extra
+# template renders the machine template only. The value is a go-template with the same context and
+# the same sandbox as the machine template below. Under v1 this single field needed a whole extra
 # file (machine-deployment-spec-patch.yaml) with ${zone} substituted into raw YAML.
 machineDeployment:
   additionalFields:
-    failureDomain: zone
+    failureDomain: "{{ .zone }}"
 
 # Optional fields are read with `get`/`hasKey`: the sandbox runs with missingkey=error, so a direct
 # path to an absent key fails the render on purpose.

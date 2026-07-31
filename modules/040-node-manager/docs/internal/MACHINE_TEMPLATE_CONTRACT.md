@@ -38,10 +38,11 @@ rolloutFields:
 
 # Optional. Extra fields node-controller writes into the MachineDeployment it builds
 # (the MachineDeployment is generic — your template does not render it).
-# Key: dot-path inside spec.template.spec. Value: a context source name.
+# Key: dot-path inside spec.template.spec. Value: a go-template, same sandbox and
+# same context as the machine template below.
 machineDeployment:
   additionalFields:
-    failureDomain: zone
+    failureDomain: "{{ .zone }}"
 
 # Required. The go-template of your infrastructure MachineTemplate.
 template: |
@@ -125,7 +126,8 @@ rollout.
 How node-controller uses it:
 
 - The **whole** InstanceClass spec is stored on the generation object
-  (`node.deckhouse.io/applied-instance-class`), and `rolloutFields` is applied only when comparing.
+  (`node.deckhouse.io/applied-instance-class`, next to `applied-rollout-id` and
+  `applied-generation`), and `rolloutFields` is applied only when comparing.
   So **changing the list in a provider release never rolls machines by itself** — you can move the
   boundary freely between releases.
 - Comparison is **by value** after both sides are normalized: `50` is `50` no matter which Go type
@@ -146,17 +148,19 @@ Choosing the list:
 
 ## machineDeployment.additionalFields
 
-The MachineDeployment is built by node-controller, not by your template. If you need one extra
-field in it, declare it here: the key is a dot-path inside `spec.template.spec`, the value is a
-context source. The only source today is `zone`, which is what openstack needs:
+The MachineDeployment is built by node-controller, not by your template. If you need extra fields
+in it, declare them here: the key is a dot-path inside `spec.template.spec`, the value is a
+go-template rendered in the same sandbox, with the same five context roots, as the machine
+template. Today one provider uses one entry:
 
 ```yaml
 machineDeployment:
   additionalFields:
-    failureDomain: zone
+    failureDomain: "{{ .zone }}"
 ```
 
-Adding another source is a contract change: document it here first.
+The value is compiled at load time, so a broken expression fails the same way a broken machine
+template does. The result is always written as a string.
 
 ## Migrating from v1
 
@@ -179,7 +183,8 @@ the snapshot into its annotations and adopts it as the current generation. Gener
 
 ## Checking your template
 
-Provider teams run the same renderer node-controller runs. The parity harness in
+Every `capi/template.yaml` in the repository is parsed by a test that globs for it, so a new
+provider gets contract validation the moment it ships the file. Beyond that, the parity harness in
 `modules/040-node-manager/images/node-controller/src/internal/machinetemplate/provider_parity_test.go`
 takes one fixture per provider and requires:
 

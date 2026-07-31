@@ -19,7 +19,8 @@ package machinetemplate
 import (
 	"encoding/json"
 	"errors"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -61,8 +62,8 @@ func buildSandboxFuncMap() template.FuncMap {
 
 	// The YAML/JSON helpers helm adds on top of sprig. They are re-implemented here rather than
 	// imported from the legacy machineclass renderer: that package emulates a helm values tree and
-	// goes away with the last MCM provider, while this sandbox is also handed to provider teams as
-	// the library their CI renders templates with.
+	// goes away with the last MCM provider, taking its versions with it. They also differ on
+	// purpose — these return an error instead of hiding it in an "Error" key of the result.
 	f["toYaml"] = toYAML
 	f["fromYaml"] = fromYAML
 	f["toJson"] = toJSON
@@ -88,12 +89,7 @@ func buildSandboxFuncMap() template.FuncMap {
 // for the golden test that pins the sandbox surface: a sprig upgrade that adds a function must be
 // reviewed (is it deterministic?) instead of silently widening the contract.
 func SandboxFuncNames() []string {
-	names := make([]string, 0, len(sandboxFuncMap))
-	for name := range sandboxFuncMap {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return slices.Sorted(maps.Keys(sandboxFuncMap))
 }
 
 func toYAML(v any) (string, error) {

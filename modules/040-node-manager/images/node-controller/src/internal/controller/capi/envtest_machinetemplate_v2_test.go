@@ -31,6 +31,7 @@ import (
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/machinetemplate"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -61,7 +62,7 @@ var _ = Describe("CAPI machine-template v2 contract", func() {
 rolloutFields:
 ` + fields + `machineDeployment:
   additionalFields:
-    failureDomain: zone
+    failureDomain: "{{ .zone }}"
 template: |
   apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
   kind: DeckhouseMachineTemplate
@@ -91,6 +92,17 @@ template: |
 		}, secret)).To(Succeed())
 		delete(secret.Data, machineTemplateContractKey)
 		Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
+	}
+
+	newTemplateObject := func(name string) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		obj.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
+		obj.SetKind("DeckhouseMachineTemplate")
+		if name != "" {
+			obj.SetName(name)
+			obj.SetNamespace(common.MachineNamespace)
+		}
+		return obj
 	}
 
 	newInstanceClass := func(name string, spec map[string]any) *unstructured.Unstructured {
@@ -141,18 +153,6 @@ template: |
 	// nudge triggers a reconcile of the NodeGroup. Needed after changing the provider contract:
 	// node-controller watches the cloud-provider discovery secret, not the per-provider template
 	// secret, so a contract edit alone would wait for the resync.
-	nudge := func(ng *deckhousev1.NodeGroup) {
-		fresh := &deckhousev1.NodeGroup{}
-		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: ng.Name}, fresh)).To(Succeed())
-		annotations := fresh.GetAnnotations()
-		if annotations == nil {
-			annotations = map[string]string{}
-		}
-		annotations["test.deckhouse.io/nudge"] = fmt.Sprintf("%d", len(annotations)+1)
-		fresh.SetAnnotations(annotations)
-		Expect(k8sClient.Update(suiteCtx, fresh)).To(Succeed())
-	}
-
 	setAnnotation := func(ng *deckhousev1.NodeGroup, key, value string) {
 		fresh := &deckhousev1.NodeGroup{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: ng.Name}, fresh)).To(Succeed())
@@ -165,10 +165,14 @@ template: |
 		Expect(k8sClient.Update(suiteCtx, fresh)).To(Succeed())
 	}
 
+	nudges := 0
+	nudge := func(ng *deckhousev1.NodeGroup) {
+		nudges++
+		setAnnotation(ng, "test.deckhouse.io/nudge", fmt.Sprintf("%d", nudges))
+	}
+
 	updateInstanceClass := func(name string, spec map[string]any) {
-		ic := &unstructured.Unstructured{}
-		ic.SetAPIVersion("deckhouse.io/v1alpha1")
-		ic.SetKind("DVPInstanceClass")
+		ic := newInstanceClass(name, nil)
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: name}, ic)).To(Succeed())
 		ic.Object["spec"] = spec
 		Expect(k8sClient.Update(suiteCtx, ic)).To(Succeed())
@@ -212,9 +216,9 @@ template: |
 
 		By("the snapshot holds the whole InstanceClass spec, not just the rolloutFields")
 		snapshot := map[string]any{}
-		Expect(json.Unmarshal([]byte(template.GetAnnotations()[appliedInstanceClassAnnotation]), &snapshot)).To(Succeed())
+		Expect(json.Unmarshal([]byte(template.GetAnnotations()[machinetemplate.AppliedInstanceClassAnnotation]), &snapshot)).To(Succeed())
 		Expect(snapshot).To(Equal(map[string]any{"vmClassName": "generic"}))
-		Expect(template.GetAnnotations()).To(HaveKey(appliedRolloutIDAnnotation))
+		Expect(template.GetAnnotations()).To(HaveKey(machinetemplate.AppliedRolloutIDAnnotation))
 
 		By("the template renders no metadata of its own: node-controller owns it")
 		Expect(template.GetLabels()).To(HaveKeyWithValue("node-group", ng.Name))
@@ -238,11 +242,7 @@ template: |
 		legacyName := ngName + "-8ad9c341"
 
 		By("recreating what the v1 engine leaves in a cluster: a checksum-named template and an MD pointing at it")
-		legacy := &unstructured.Unstructured{}
-		legacy.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
-		legacy.SetKind("DeckhouseMachineTemplate")
-		legacy.SetName(legacyName)
-		legacy.SetNamespace(common.MachineNamespace)
+		legacy := newTemplateObject(legacyName)
 		legacy.SetLabels(map[string]string{"heritage": "deckhouse", "module": "node-manager", "node-group": ngName})
 		Expect(unstructured.SetNestedField(legacy.Object, "generic", "spec", "template", "spec", "vmClassName")).To(Succeed())
 		Expect(k8sClient.Create(suiteCtx, legacy)).To(Succeed())
@@ -281,13 +281,11 @@ template: |
 
 		By("the template is adopted: same object, snapshot written, no new generation")
 		Eventually(func(g Gomega) {
-			adopted := &unstructured.Unstructured{}
-			adopted.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
-			adopted.SetKind("DeckhouseMachineTemplate")
+			adopted := newTemplateObject("")
 			g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
 				Namespace: common.MachineNamespace, Name: legacyName,
 			}, adopted)).To(Succeed())
-			g.Expect(adopted.GetAnnotations()).To(HaveKey(appliedInstanceClassAnnotation))
+			g.Expect(adopted.GetAnnotations()).To(HaveKey(machinetemplate.AppliedInstanceClassAnnotation))
 			g.Expect(adopted.GetUID()).To(Equal(legacy.GetUID()), "adoption must not recreate the object")
 		}, eventually, poll).Should(Succeed())
 
@@ -334,8 +332,8 @@ template: |
 			eventually, poll).Should(HaveSuffix("-gen2"))
 
 		By("the previous generation is still there until the rollout finishes")
-		Eventually(func(g Gomega) []unstructured.Unstructured { return machineTemplates(g, ng.Name) },
-			eventually, poll).ShouldNot(BeEmpty())
+		Eventually(func(g Gomega) int { return len(machineTemplates(g, ng.Name)) },
+			eventually, poll).Should(Equal(2))
 
 		By("the operator can read the reason on the NodeGroup")
 		Eventually(func(g Gomega) string {
@@ -407,9 +405,7 @@ template: |
 		nudge(ng)
 
 		Consistently(func(g Gomega) map[string]any {
-			template := &unstructured.Unstructured{}
-			template.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
-			template.SetKind("DeckhouseMachineTemplate")
+			template := newTemplateObject("")
 			g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
 				Namespace: common.MachineNamespace, Name: name,
 			}, template)).To(Succeed())
@@ -451,19 +447,12 @@ template: |
 			return name
 		}, eventually, poll).Should(HaveSuffix("-gen1"))
 
-		template := &unstructured.Unstructured{}
-		template.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
-		template.SetKind("DeckhouseMachineTemplate")
-		template.SetName(name)
-		template.SetNamespace(common.MachineNamespace)
-		Expect(k8sClient.Delete(suiteCtx, template)).To(Succeed())
+		Expect(k8sClient.Delete(suiteCtx, newTemplateObject(name))).To(Succeed())
 
 		nudge(ng)
 
 		Eventually(func(g Gomega) error {
-			restored := &unstructured.Unstructured{}
-			restored.SetAPIVersion("infrastructure.cluster.x-k8s.io/v1alpha1")
-			restored.SetKind("DeckhouseMachineTemplate")
+			restored := newTemplateObject("")
 			return k8sClient.Get(suiteCtx, types.NamespacedName{
 				Namespace: common.MachineNamespace, Name: name,
 			}, restored)

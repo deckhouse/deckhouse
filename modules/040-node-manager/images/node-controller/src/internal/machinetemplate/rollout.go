@@ -20,8 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Change is one difference between the InstanceClass a generation was built from and the one in
@@ -45,10 +47,8 @@ func formatValue(v any) string {
 	if v == nil {
 		return "<none>"
 	}
-	data, err := json.Marshal(v)
-	if err != nil {
-		return "<unprintable>"
-	}
+	// The value already survived a json.Marshal in fieldValue, so this one cannot fail.
+	data, _ := json.Marshal(v)
 	s := string(data)
 	if len(s) > maxValueLen {
 		return s[:maxValueLen] + "…"
@@ -67,77 +67,48 @@ func formatValue(v any) string {
 // release that adds or removes a rolloutField therefore changes only the criterion, never the
 // recorded facts, and so cannot roll machines by itself.
 func Changes(oldSpec, newSpec map[string]any, fields []string) ([]Change, error) {
-	oldProjection, err := project(oldSpec, fields)
-	if err != nil {
-		return nil, fmt.Errorf("project stored InstanceClass: %w", err)
-	}
-	newProjection, err := project(newSpec, fields)
-	if err != nil {
-		return nil, fmt.Errorf("project current InstanceClass: %w", err)
-	}
-
 	changes := make([]Change, 0)
-	for _, field := range fields {
-		oldValue := oldProjection[field]
-		newValue := newProjection[field]
+	for _, field := range slices.Sorted(slices.Values(fields)) {
+		oldValue, err := fieldValue(oldSpec, field)
+		if err != nil {
+			return nil, fmt.Errorf("read %s of the stored InstanceClass: %w", field, err)
+		}
+		newValue, err := fieldValue(newSpec, field)
+		if err != nil {
+			return nil, fmt.Errorf("read %s of the current InstanceClass: %w", field, err)
+		}
 		if reflect.DeepEqual(oldValue, newValue) {
 			continue
 		}
 		changes = append(changes, Change{Path: field, Old: oldValue, New: newValue})
 	}
-	sort.Slice(changes, func(i, j int) bool { return changes[i].Path < changes[j].Path })
 	return changes, nil
 }
 
-// project extracts the rolloutFields from a spec into a flat path→value map. A field that is
-// absent is left out of the map, which makes "absent" and "explicit null" compare equal — the
-// provider CRDs default them the same way, and the v1 checksums treated them alike too.
-func project(spec map[string]any, fields []string) (map[string]any, error) {
-	normalized, err := normalize(spec)
-	if err != nil {
-		return nil, err
+// fieldValue reads one rolloutField out of a spec and normalizes it: an absent field and an
+// explicit null both come back as nil (the provider CRDs default them the same way, and the v1
+// checksums treated them alike), and a number is whatever json.Unmarshal would make of it, so that
+// int64 from the API and float64 from the snapshot annotation compare equal.
+//
+// Only the field is normalized, not the whole spec: this runs for every zone of every reconcile,
+// and the specs are much bigger than the handful of values being compared.
+func fieldValue(spec map[string]any, field string) (any, error) {
+	value, found, err := unstructured.NestedFieldNoCopy(spec, strings.Split(field, ".")...)
+	if err != nil || !found || value == nil {
+		// err means the path runs through a non-map, which is the same "the field is not there"
+		// answer as !found — the provider named a path its CRD does not have.
+		return nil, nil
 	}
-	root, _ := normalized.(map[string]any)
 
-	out := make(map[string]any, len(fields))
-	for _, field := range fields {
-		value, found := lookupPath(root, field)
-		if !found || value == nil {
-			continue
-		}
-		out[field] = value
-	}
-	return out, nil
-}
-
-func lookupPath(root map[string]any, path string) (any, bool) {
-	current := any(root)
-	for _, segment := range strings.Split(path, ".") {
-		m, ok := current.(map[string]any)
-		if !ok {
-			return nil, false
-		}
-		current, ok = m[segment]
-		if !ok {
-			return nil, false
-		}
-	}
-	return current, true
-}
-
-// normalize converts any nested value into what json.Unmarshal would produce, so that values
-// coming from the API (int64 inside unstructured) and values coming back from the snapshot
-// annotation (float64 inside JSON) compare equal.
-func normalize(v any) (any, error) {
-	data, err := json.Marshal(v)
+	data, err := json.Marshal(value)
 	if err != nil {
 		return nil, fmt.Errorf("marshal for comparison: %w", err)
 	}
-	var out any
-	if err := json.Unmarshal(data, &out); err != nil {
+	var normalized any
+	if err := json.Unmarshal(data, &normalized); err != nil {
 		return nil, fmt.Errorf("unmarshal for comparison: %w", err)
 	}
-	return out, nil
+	return normalized, nil
 }
 
 // FormatChanges renders the changes for a NodeGroup event.

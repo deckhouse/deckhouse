@@ -18,7 +18,6 @@ package capi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"strconv"
@@ -42,14 +41,8 @@ const (
 	// the provider Secret is what selects the v2 engine — see readMachineTemplateContract.
 	machineTemplateContractKey = "template.yaml"
 
-	// appliedInstanceClassAnnotation stores the whole InstanceClass spec a generation was built
-	// from, and appliedRolloutIDAnnotation the manual-rollout-id that was in force. The whole spec
-	// is stored, not only the rolloutFields: the snapshot is the facts, rolloutFields is the
-	// policy, and keeping them apart is what lets a provider add or drop a rolloutField in a
-	// release without rolling anybody's machines.
-	appliedInstanceClassAnnotation = "node.deckhouse.io/applied-instance-class"
-	appliedRolloutIDAnnotation     = "node.deckhouse.io/applied-rollout-id"
-
+	// generationSuffix makes the counter readable in the object name. The number that decides the
+	// next generation is read from the snapshot annotation, not from the name.
 	generationSuffix = "-gen"
 
 	// maxGenerationAttempts bounds the search for a free generation number when the computed name
@@ -130,7 +123,11 @@ func (r *MachineDeploymentReconciler) ensureMachineTemplateGeneration(ctx contex
 			// it can differ from the one that was deleted — the original content is not recoverable
 			// once the object is gone. That is the lesser evil: without the object the MachineSet
 			// cannot create replacement machines at all.
-			if err := r.createMachineTemplate(ctx, in, in.currentName); err != nil && !errors.IsAlreadyExists(err) {
+			obj, err := r.buildMachineTemplate(in, in.currentName, generationOf(in.currentName))
+			if err != nil {
+				return "", err
+			}
+			if err := r.Client.Create(ctx, obj); err != nil && !errors.IsAlreadyExists(err) {
 				return "", err
 			}
 			logger.Info("recreated missing CAPI MachineTemplate referenced by MachineDeployment",
@@ -138,7 +135,7 @@ func (r *MachineDeploymentReconciler) ensureMachineTemplateGeneration(ctx contex
 			return in.currentName, nil
 		}
 
-		storedSpec, storedRolloutID, hasSnapshot := readMachineTemplateSnapshot(current)
+		snapshot, hasSnapshot := machinetemplate.DecodeSnapshot(current.GetAnnotations())
 		if !hasSnapshot {
 			// First v2 reconcile of a cluster whose templates were named by the v1 checksum. The
 			// object is adopted as the current generation by writing the snapshot into its
@@ -152,16 +149,16 @@ func (r *MachineDeploymentReconciler) ensureMachineTemplateGeneration(ctx contex
 			return in.currentName, nil
 		}
 
-		changes, err := machinetemplate.Changes(storedSpec, in.render.InstanceClass, in.contract.RolloutFields)
+		changes, err := machinetemplate.Changes(snapshot.InstanceClass, in.render.InstanceClass, in.contract.RolloutFields)
 		if err != nil {
 			return "", fmt.Errorf("compare InstanceClass for NodeGroup %s: %w", in.ng.Name, err)
 		}
-		if len(changes) == 0 && storedRolloutID == in.rolloutID {
+		if len(changes) == 0 && snapshot.RolloutID == in.rolloutID {
 			return in.currentName, nil
 		}
 
-		reason = rolloutReason(changes, storedRolloutID, in.rolloutID)
-		nextGeneration = parseGeneration(in.currentName) + 1
+		reason = rolloutReason(changes, snapshot.RolloutID, in.rolloutID)
+		nextGeneration = snapshot.Generation + 1
 	}
 
 	name, created, err := r.createNextGeneration(ctx, in, nextGeneration)
@@ -200,9 +197,14 @@ func rolloutReason(changes []machinetemplate.Change, storedRolloutID, rolloutID 
 // reports whether an object was actually created.
 func (r *MachineDeploymentReconciler) createNextGeneration(ctx context.Context, in machineTemplateGeneration, generation int) (string, bool, error) {
 	for attempt := range maxGenerationAttempts {
-		name := fmt.Sprintf("%s%s%d", in.baseName, generationSuffix, generation+attempt)
+		number := generation + attempt
+		name := fmt.Sprintf("%s%s%d", in.baseName, generationSuffix, number)
 
-		err := r.createMachineTemplate(ctx, in, name)
+		obj, err := r.buildMachineTemplate(in, name, number)
+		if err != nil {
+			return "", false, err
+		}
+		err = r.Client.Create(ctx, obj)
 		if err == nil {
 			return name, true, nil
 		}
@@ -210,23 +212,11 @@ func (r *MachineDeploymentReconciler) createNextGeneration(ctx context.Context, 
 			return "", false, err
 		}
 
-		existing, getErr := r.getMachineTemplate(ctx, in.gvk, name)
-		if getErr != nil {
-			return "", false, getErr
+		reusable, err := r.holdsDesiredSnapshot(ctx, in, name)
+		if err != nil {
+			return "", false, err
 		}
-		if existing == nil {
-			// Deleted between the create and the read — try the same number again.
-			continue
-		}
-		storedSpec, storedRolloutID, hasSnapshot := readMachineTemplateSnapshot(existing)
-		if !hasSnapshot {
-			continue
-		}
-		changes, cmpErr := machinetemplate.Changes(storedSpec, in.render.InstanceClass, in.contract.RolloutFields)
-		if cmpErr != nil {
-			return "", false, cmpErr
-		}
-		if len(changes) == 0 && storedRolloutID == in.rolloutID {
+		if reusable {
 			return name, false, nil
 		}
 	}
@@ -234,16 +224,49 @@ func (r *MachineDeploymentReconciler) createNextGeneration(ctx context.Context, 
 		in.ng.Name, in.render.Zone, maxGenerationAttempts)
 }
 
-func (r *MachineDeploymentReconciler) createMachineTemplate(ctx context.Context, in machineTemplateGeneration, name string) error {
+// holdsDesiredSnapshot reports whether the named object already carries the snapshot the caller is
+// about to write — i.e. whether it is the generation we wanted rather than a leftover under the
+// same name.
+func (r *MachineDeploymentReconciler) holdsDesiredSnapshot(ctx context.Context, in machineTemplateGeneration, name string) (bool, error) {
+	existing, err := r.getMachineTemplate(ctx, in.gvk, name)
+	if err != nil || existing == nil {
+		return false, err
+	}
+	snapshot, hasSnapshot := machinetemplate.DecodeSnapshot(existing.GetAnnotations())
+	if !hasSnapshot {
+		return false, nil
+	}
+	changes, err := machinetemplate.Changes(snapshot.InstanceClass, in.render.InstanceClass, in.contract.RolloutFields)
+	if err != nil {
+		return false, err
+	}
+	return len(changes) == 0 && snapshot.RolloutID == in.rolloutID, nil
+}
+
+// buildMachineTemplate renders the provider template and stamps everything node-controller owns:
+// the name, the namespace, the labels every prune and cleanup selects on, and the snapshot.
+//
+// The object is created, never applied: it is immutable for the life of its generation, and an
+// apply would let a later reconcile write into it.
+func (r *MachineDeploymentReconciler) buildMachineTemplate(in machineTemplateGeneration, name string, generation int) (*unstructured.Unstructured, error) {
 	rendered, err := machinetemplate.Render(in.contract, in.render)
 	if err != nil {
-		return fmt.Errorf("render machine template for NodeGroup %s zone %s: %w", in.ng.Name, in.render.Zone, err)
+		return nil, fmt.Errorf("render machine template for NodeGroup %s zone %s: %w", in.ng.Name, in.render.Zone, err)
 	}
 
 	obj := &unstructured.Unstructured{Object: rendered}
 	if obj.GroupVersionKind() != in.gvk {
-		return fmt.Errorf("machine template of NodeGroup %s renders %s, but the cloud-provider secret declares %s",
+		return nil, fmt.Errorf("machine template of NodeGroup %s renders %s, but the cloud-provider secret declares %s",
 			in.ng.Name, obj.GroupVersionKind(), in.gvk)
+	}
+
+	annotations, err := machinetemplate.EncodeSnapshot(machinetemplate.Snapshot{
+		InstanceClass: in.render.InstanceClass,
+		RolloutID:     in.rolloutID,
+		Generation:    generation,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	obj.SetName(name)
@@ -253,22 +276,16 @@ func (r *MachineDeploymentReconciler) createMachineTemplate(ctx context.Context,
 		"module":     "node-manager",
 		"node-group": in.ng.Name,
 	})
-	annotations, err := machineTemplateSnapshot(in.render.InstanceClass, in.rolloutID)
-	if err != nil {
-		return err
-	}
 	obj.SetAnnotations(annotations)
-
-	// Create, never apply: the object is immutable for the life of its generation, and an apply
-	// would let a later reconcile write into it.
-	if err := r.Client.Create(ctx, obj); err != nil {
-		return err
-	}
-	return nil
+	return obj, nil
 }
 
 func (r *MachineDeploymentReconciler) adoptMachineTemplate(ctx context.Context, current *unstructured.Unstructured, in machineTemplateGeneration) error {
-	snapshot, err := machineTemplateSnapshot(in.render.InstanceClass, in.rolloutID)
+	snapshot, err := machinetemplate.EncodeSnapshot(machinetemplate.Snapshot{
+		InstanceClass: in.render.InstanceClass,
+		RolloutID:     in.rolloutID,
+		Generation:    generationOf(current.GetName()),
+	})
 	if err != nil {
 		return err
 	}
@@ -287,35 +304,10 @@ func (r *MachineDeploymentReconciler) adoptMachineTemplate(ctx context.Context, 
 	return nil
 }
 
-func machineTemplateSnapshot(instanceClass map[string]any, rolloutID string) (map[string]string, error) {
-	encoded, err := json.Marshal(instanceClass)
-	if err != nil {
-		return nil, fmt.Errorf("serialize InstanceClass snapshot: %w", err)
-	}
-	return map[string]string{
-		appliedInstanceClassAnnotation: string(encoded),
-		appliedRolloutIDAnnotation:     rolloutID,
-	}, nil
-}
-
-func readMachineTemplateSnapshot(obj *unstructured.Unstructured) (map[string]any, string, bool) {
-	annotations := obj.GetAnnotations()
-	raw, ok := annotations[appliedInstanceClassAnnotation]
-	if !ok {
-		return nil, "", false
-	}
-	spec := map[string]any{}
-	if err := json.Unmarshal([]byte(raw), &spec); err != nil {
-		// A corrupted snapshot must not roll the machines: treat it as "no snapshot", which
-		// re-adopts the object with the current values.
-		return nil, "", false
-	}
-	return spec, annotations[appliedRolloutIDAnnotation], true
-}
-
-// parseGeneration reads the generation number out of a template name. A v1 (checksum-named) object
-// has none, so the first generation created after it is 1.
-func parseGeneration(name string) int {
+// generationOf recovers the counter from a name for the two objects whose snapshot cannot supply
+// it: a v1 checksum-named object being adopted (no suffix — 0, so its successor is gen1) and a
+// generation object being recreated after someone deleted it.
+func generationOf(name string) int {
 	idx := strings.LastIndex(name, generationSuffix)
 	if idx < 0 {
 		return 0
@@ -340,21 +332,4 @@ func (r *MachineDeploymentReconciler) getMachineTemplate(ctx context.Context, gv
 		return nil, fmt.Errorf("get CAPI MachineTemplate %s: %w", name, err)
 	}
 	return obj, nil
-}
-
-// applyMachineDeploymentAdditionalFields writes the provider's machineDeployment.additionalFields
-// into the generic MachineDeployment node-controller builds. It replaces the v1
-// machine-deployment-spec-patch.yaml, a raw YAML patch with ${zone} substituted into it by string
-// replacement — one provider used it, for one field.
-func applyMachineDeploymentAdditionalFields(spec map[string]interface{}, contract *machinetemplate.Contract, zone string) error {
-	for path, source := range contract.MachineDeployment.AdditionalFields {
-		if source != machinetemplate.MachineDeploymentFieldSourceZone {
-			return fmt.Errorf("machineDeployment.additionalFields[%s]: unknown source %q", path, source)
-		}
-		fields := append([]string{"template", "spec"}, strings.Split(path, ".")...)
-		if err := unstructured.SetNestedField(spec, zone, fields...); err != nil {
-			return fmt.Errorf("set MachineDeployment field %s: %w", path, err)
-		}
-	}
-	return nil
 }

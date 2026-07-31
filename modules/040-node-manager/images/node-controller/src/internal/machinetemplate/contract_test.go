@@ -17,6 +17,8 @@ limitations under the License.
 package machinetemplate
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -80,9 +82,14 @@ func TestParseContractRejects(t *testing.T) {
 			expError: "malformed field path",
 		},
 		{
-			name:     "unknown additionalFields source",
-			contract: "version: v2\nrolloutFields: [a]\nmachineDeployment:\n  additionalFields:\n    failureDomain: region\ntemplate: |\n  kind: X\n",
-			expError: "unknown source \"region\"",
+			name:     "additionalFields value does not parse",
+			contract: "version: v2\nrolloutFields: [a]\nmachineDeployment:\n  additionalFields:\n    failureDomain: \"{{ .zone\"\ntemplate: |\n  kind: X\n",
+			expError: "machineDeployment.additionalFields[failureDomain]",
+		},
+		{
+			name:     "additionalFields value uses a nondeterministic function",
+			contract: "version: v2\nrolloutFields: [a]\nmachineDeployment:\n  additionalFields:\n    failureDomain: \"{{ now }}\"\ntemplate: |\n  kind: X\n",
+			expError: "function \"now\" not defined",
 		},
 		{
 			name:     "unknown top-level key",
@@ -109,17 +116,70 @@ func TestParseContractRejects(t *testing.T) {
 	}
 }
 
-// The contract file is what a provider ships and what node-controller trusts, so a template that
-// is only broken for some inputs must still be caught at load time — parsing happens in
-// ParseContract, not at the first render in a cluster.
-func TestParseContractParsesTemplateEagerly(t *testing.T) {
-	_, err := ParseContract([]byte("version: v2\nrolloutFields: [a]\ntemplate: |\n  kind: {{ if }}\n"))
-	require.ErrorContains(t, err, "parse machine template")
+// ApplyMachineDeploymentFields is the second half of what a provider file produces: the fields
+// node-controller writes into the generic MachineDeployment it builds.
+func TestApplyMachineDeploymentFields(t *testing.T) {
+	contract, err := ParseContract([]byte(`version: v2
+rolloutFields: [flavorName]
+machineDeployment:
+  additionalFields:
+    failureDomain: "{{ .zone }}"
+    "template.metadata.labels.zone": "zone-{{ .zone }}"
+template: |
+  apiVersion: v1
+  kind: X
+  spec: {}
+`))
+	require.NoError(t, err)
+
+	spec := map[string]any{
+		"template": map[string]any{"spec": map[string]any{"clusterName": "openstack"}},
+	}
+	require.NoError(t, ApplyMachineDeploymentFields(spec, contract, testRenderContext()))
+
+	assert.Equal(t, map[string]any{
+		"template": map[string]any{
+			"spec": map[string]any{
+				"clusterName":   "openstack",
+				"failureDomain": "ru-1a",
+				"template":      map[string]any{"metadata": map[string]any{"labels": map[string]any{"zone": "zone-ru-1a"}}},
+			},
+		},
+	}, spec)
 }
 
-func TestParseContractAcceptsZoneAdditionalField(t *testing.T) {
-	contract, err := ParseContract([]byte(
-		"version: v2\nrolloutFields: [a]\nmachineDeployment:\n  additionalFields:\n    failureDomain: zone\ntemplate: |\n  kind: X\n"))
+func TestApplyMachineDeploymentFieldsWithoutAny(t *testing.T) {
+	contract, err := ParseContract([]byte(minimalContract))
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{"failureDomain": "zone"}, contract.MachineDeployment.AdditionalFields)
+
+	spec := map[string]any{"replicas": int64(1)}
+	require.NoError(t, ApplyMachineDeploymentFields(spec, contract, testRenderContext()))
+	assert.Equal(t, map[string]any{"replicas": int64(1)}, spec)
+}
+
+// Every provider contract shipped in the repository must parse. This is the check a new provider
+// gets for free — the parity fixtures below have to be added by hand, this one does not.
+func TestShippedProviderContractsParse(t *testing.T) {
+	patterns := []string{
+		"../../../../../../030-cloud-provider-*/capi/template.yaml",
+		"../../../../../../../ee/modules/030-cloud-provider-*/capi/template.yaml",
+		"../../../../../../../ee/se-plus/modules/030-cloud-provider-*/capi/template.yaml",
+	}
+
+	found := 0
+	for _, pattern := range patterns {
+		matches, err := filepath.Glob(pattern)
+		require.NoError(t, err)
+		for _, path := range matches {
+			t.Run(filepath.Base(filepath.Dir(filepath.Dir(path))), func(t *testing.T) {
+				data, err := os.ReadFile(path)
+				require.NoError(t, err)
+				contract, err := ParseContract(data)
+				require.NoError(t, err, "a shipped provider contract must be valid")
+				assert.NotEmpty(t, contract.RolloutFields)
+			})
+			found++
+		}
+	}
+	assert.GreaterOrEqual(t, found, 7, "every in-tree CAPI provider ships a v2 contract")
 }
