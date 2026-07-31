@@ -157,6 +157,7 @@ shell:
   install:
   - mkdir -p /relocate/sbin
   - |
+    # Force nft for plain iptables* (RO rootfs: skip iptables-wrapper symlink rewrite). 2026-07-31 22:05
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
       ln -sf /sbin/xtables-nft-multi "/relocate/sbin/${cmd}"
     done
