@@ -133,6 +133,7 @@ Summary:
          done
       }
 
+      d8-crane --help > /dev/null 2>&1 && echo "OK" || echo "FAIL"
       <!REMOVE_FOR_CE>
       d8-crane-login "registry.deckhouse.io" "$LICENSE_TOKEN"
       <!/REMOVE_FOR_CE>
