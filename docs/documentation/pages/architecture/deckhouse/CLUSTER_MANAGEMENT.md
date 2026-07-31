@@ -296,6 +296,10 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**: Manages resources of the managed cluster.
 
+1. [**Prometheus**](/modules/prometheus/): Retrieves metrics from the managed cluster.
+
+1. [**Upmeter**](/modules/upmeter/): Retrieves availability information of the managed cluster.
+
 1. **Dex**: Synchronizes access tokens for Kubernetes API requests from the management cluster to the managed cluster.
 
 1. **Management cluster**:
