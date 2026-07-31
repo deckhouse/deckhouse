@@ -457,6 +457,9 @@ spec:
       rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
     fi
 EOF
+```
+
+```shell
 d8 k --as=system:sudouser delete ngc del-temp-config.sh
 ```
 
@@ -480,6 +483,9 @@ spec:
       rm -rf /etc/containerd/registry.d/_default
    fi
 EOF
+```
+
+```shell
 d8 k --as=system:sudouser delete ngc del-temp-config.sh
 ```
 
