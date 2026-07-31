@@ -139,6 +139,13 @@ func (c *Client) DebugLog(format string, args ...interface{}) {
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
 	ch := buildChart(c.templates, project.Name)
 
+	// Repeated here rather than left to admission: the release is applied with cluster-admin, and a
+	// project can reach this point without a passing admission check -- the webhook may be bypassed,
+	// and an object admitted before this check existed is reconciled just the same.
+	if err := c.ensureParametersStayValues(project, template); err != nil {
+		return err
+	}
+
 	versions, err := c.discoverAPI()
 	if err != nil {
 		return fmt.Errorf("discover api: %w", err)
@@ -361,6 +368,25 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 
 // ValidateRender tests project render
 func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+	manifests, err := c.renderTemplate(project, template)
+	if err != nil {
+		return fmt.Errorf("render chart: %w", err)
+	}
+
+	renderer := newPostRenderer(project, nil, c.logger, false)
+	if _, err = renderer.Run(bytes.NewBufferString(manifests)); err != nil {
+		return fmt.Errorf("post render: %w", err)
+	}
+
+	if err = c.ensureParametersStayValues(project, template); err != nil {
+		return err
+	}
+
+	return renderer.warning
+}
+
+// renderTemplate renders the project template without touching the cluster.
+func (c *Client) renderTemplate(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) (string, error) {
 	ch := buildChart(c.templates, project.Name)
 
 	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
@@ -368,23 +394,18 @@ func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.Pr
 		Namespace: project.Name,
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("render values: %w", err)
+		return "", fmt.Errorf("render values: %w", err)
 	}
 
 	rendered, err := engine.Render(ch, values)
 	if err != nil {
-		return fmt.Errorf("render chart: %w", err)
+		return "", err
 	}
 
-	buf := bytes.NewBuffer(nil)
+	buf := new(strings.Builder)
 	for _, file := range rendered {
 		buf.WriteString(file)
 	}
 
-	renderer := newPostRenderer(project, nil, c.logger, false)
-	if _, err = renderer.Run(buf); err != nil {
-		return fmt.Errorf("post render: %w", err)
-	}
-
-	return renderer.warning
+	return buf.String(), nil
 }

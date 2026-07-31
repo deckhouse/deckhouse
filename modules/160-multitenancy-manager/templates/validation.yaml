@@ -12,7 +12,11 @@ spec:
     resourceRules:
       - apiGroups:   ["*"]
         apiVersions: ["*"]
-        operations:  ["UPDATE", "DELETE"]
+        # CREATE is here for the same reason as the other two. The binding matches objects that carry
+        # this module's heritage label, and until now anybody could create one: the label is what the
+        # module and this policy use to tell a project's own objects apart, so a hand-made object
+        # wearing it was accepted as one of them and then protected from everyone by the rules below.
+        operations:  ["CREATE", "UPDATE", "DELETE"]
         resources:   ["*"]
         scope: "*"
   matchConditions:
@@ -21,7 +25,10 @@ spec:
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-restartedAt'
-      expression: '!((has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
+      # On CREATE there is no oldObject to compare against, and reading through it would fail the
+      # condition itself -- which, with failurePolicy: Fail, would deny the request instead of
+      # letting the rule below answer it.
+      expression: 'oldObject == null || !((has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
           && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata))
           && ((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
           && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
@@ -36,9 +43,13 @@ spec:
   validations:
     - expression: 'request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"'
       reason: Forbidden
+      # A cluster-scoped object has no namespace to name, and now that CREATE is matched it reaches
+      # this expression as well.
       messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed
             by '' + object.metadata.name + '' Project. Manual modification is forbidden.''
-            : ''This resource is managed by '' + object.metadata.namespace + '' Project. Manual modification is forbidden.'''
+            : (has(object.metadata.namespace) && object.metadata.namespace != ''''
+            ? ''This resource is managed by '' + object.metadata.namespace + '' Project. Manual modification is forbidden.''
+            : ''This resource is managed by the multitenancy-manager module. Manual modification is forbidden.'')'
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
