@@ -14,6 +14,8 @@ The control plane update process in DKP is fully automated.
 
 ### Changing the Kubernetes version
 
+You can downgrade only one minor version from the highest version ever used in the cluster. Upgrades proceed one minor version at a time.
+
 1. Open the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) editor:
 
    ```shell
