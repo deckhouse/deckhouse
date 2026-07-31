@@ -58,25 +58,154 @@ func TestProviderRolloutParityAgainstCRD(t *testing.T) {
 
 			baseChecksum := renderLegacyChecksum(t, fixture, checksumTemplate, fixture.instanceClass, "")
 
+			// Three mutations per field, because the ways a provider file can drift differ:
+			// a real new value, an empty one (the shape a GitOps template collapses to), and the
+			// field disappearing altogether.
+			mutations := []struct {
+				name  string
+				apply func(spec map[string]any, field crdField)
+			}{
+				{name: "set", apply: func(spec map[string]any, field crdField) {
+					setPath(spec, field.path, crdSampleValue(field.kind))
+				}},
+				{name: "empty", apply: func(spec map[string]any, field crdField) {
+					setPath(spec, field.path, crdZeroValue(field.kind))
+				}},
+				{name: "removed", apply: func(spec map[string]any, field crdField) {
+					deletePath(spec, field.path)
+				}},
+			}
+
 			for _, field := range fields {
-				t.Run(field.path, func(t *testing.T) {
-					mutated := deepCopySpec(t, fixture.instanceClass)
-					setPath(mutated, field.path, crdSampleValue(field.kind))
+				for _, mutation := range mutations {
+					t.Run(field.path+"/"+mutation.name, func(t *testing.T) {
+						if reason, documented := fixture.rolloutExceptions[field.path+"/"+mutation.name]; documented {
+							t.Skip(reason)
+						}
 
-					v1Rolls := renderLegacyChecksum(t, fixture, checksumTemplate, mutated, "") != baseChecksum
+						mutated := deepCopySpec(t, fixture.instanceClass)
+						mutation.apply(mutated, field)
 
-					changes, err := Changes(fixture.instanceClass, mutated, contract.RolloutFields)
-					require.NoError(t, err)
-					v2Rolls := len(changes) > 0
+						v1Rolls := renderLegacyChecksum(t, fixture, checksumTemplate, mutated, "") != baseChecksum
 
-					assert.Equal(t, v1Rolls, v2Rolls,
-						"changing %s (declared in the provider CRD): v1 checksum rolls=%v, rolloutFields roll=%v — "+
-							"either the field is missing from rolloutFields, or it is listed there while v1 ignored it",
-						field.path, v1Rolls, v2Rolls)
-				})
+						changes, err := Changes(fixture.instanceClass, mutated, contract.RolloutFields)
+						require.NoError(t, err)
+						v2Rolls := len(changes) > 0
+
+						assert.Equal(t, v1Rolls, v2Rolls,
+							"%s %s (declared in the provider CRD): v1 checksum rolls=%v, rolloutFields roll=%v — "+
+								"either the field is missing from rolloutFields, or it is listed there while v1 ignored it",
+							mutation.name, field.path, v1Rolls, v2Rolls)
+					})
+				}
 			}
 		})
 	}
+}
+
+// TestNoRolloutMeansNoChangeToTheObject is the invariant that matters most, and it does not appeal
+// to v1 at all: whenever node-controller decides NOT to create a generation, the object it would
+// render must be identical to the one already in the cluster.
+//
+// Break it and a user's edit is silently dropped — the machines keep running a configuration the
+// InstanceClass no longer describes, and nothing says so. It covers exactly what the v1-parity
+// harness cannot: `rolloutFields` that misses a field the template actually reads, and the
+// empty-value folding in fieldValue (an empty list treated as absent is only safe as long as the
+// template renders both the same way).
+//
+// Every field of every provider CRD is run in four shapes: a real value, an empty one, removed,
+// and added to a spec that did not have it.
+func TestNoRolloutMeansNoChangeToTheObject(t *testing.T) {
+	for _, fixture := range providerFixtures() {
+		t.Run(fixture.name, func(t *testing.T) {
+			contract := loadContract(t, fixture.contractPath)
+			fields := crdSpecFields(t, fixture.crdPath)
+			required := crdRequiredPaths(t, fixture.crdPath)
+			minimal := minimalSpec(t, fixture.instanceClass, required)
+
+			for _, field := range fields {
+				for _, base := range []struct {
+					name string
+					spec map[string]any
+				}{
+					{name: "from fixture", spec: fixture.instanceClass},
+					{name: "from minimal", spec: minimal},
+				} {
+					for _, value := range []struct {
+						name  string
+						apply func(spec map[string]any)
+					}{
+						{name: "set", apply: func(spec map[string]any) { setPath(spec, field.path, crdSampleValue(field.kind)) }},
+						{name: "empty", apply: func(spec map[string]any) { setPath(spec, field.path, crdZeroValue(field.kind)) }},
+						{name: "removed", apply: func(spec map[string]any) { deletePath(spec, field.path) }},
+					} {
+						t.Run(field.path+"/"+base.name+"/"+value.name, func(t *testing.T) {
+							before := deepCopySpec(t, base.spec)
+							after := deepCopySpec(t, before)
+							value.apply(after)
+
+							changes, err := Changes(before, after, contract.RolloutFields)
+							require.NoError(t, err)
+							if len(changes) > 0 {
+								return // a rollout was decided; whether the object changes is not this test's question
+							}
+
+							beforeObject, beforeErr := renderV2Spec(fixture, contract, before)
+							afterObject, afterErr := renderV2Spec(fixture, contract, after)
+							if beforeErr != nil || afterErr != nil {
+								// An InstanceClass the template refuses is not a shape a user can
+								// have — the reconcile fails before anything is created.
+								return
+							}
+
+							assert.Equal(t, beforeObject, afterObject,
+								"changing %s produced a different MachineTemplate, but node-controller decided not to roll: "+
+									"the user's change would never reach the machines", field.path)
+						})
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestEmptyValueDivergence pins the one place v2 rolls where v1 did not: writing an EMPTY value
+// into a field that had none.
+//
+// The v1 checksums gated such fields on truthiness, so `additionalTags: {}` hashed exactly like no
+// additionalTags at all. v2 compares values, and an empty map is not a missing one. Folding the
+// two together was tried and reverted: several templates (openstack's imageName/mainNetwork among
+// them) gate on hasKey, where an empty value renders a DIFFERENT object — folding would have meant
+// the user's edit never reaching the machines, which is the worse of the two failures.
+//
+// So this is a rollout the user did not strictly need, in exchange for never losing an edit. It
+// cannot hit an existing cluster on upgrade: adoption stores the spec as it is.
+func TestEmptyValueDivergence(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+	checksumTemplate, err := os.ReadFile(fixture.legacyPath("instance-class.checksum"))
+	require.NoError(t, err)
+
+	without := deepCopySpec(t, fixture.instanceClass)
+	delete(without, "additionalTags")
+	withEmpty := deepCopySpec(t, without)
+	withEmpty["additionalTags"] = map[string]any{}
+
+	assert.Equal(t,
+		renderLegacyChecksum(t, fixture, checksumTemplate, without, ""),
+		renderLegacyChecksum(t, fixture, checksumTemplate, withEmpty, ""),
+		"v1 hashed an empty map exactly like a missing field")
+
+	changes, err := Changes(without, withEmpty, contract.RolloutFields)
+	require.NoError(t, err)
+	assert.Len(t, changes, 1, "v2 sees the empty map as a change")
+
+	before, err := renderV2Spec(fixture, contract, without)
+	require.NoError(t, err)
+	after, err := renderV2Spec(fixture, contract, withEmpty)
+	require.NoError(t, err)
+	assert.Equal(t, before, after,
+		"and the object is identical, which is what makes this rollout unnecessary but harmless")
 }
 
 // TestProviderRenderParityOnEdgeSpecs runs both engines on the InstanceClass shapes a fixture
@@ -389,6 +518,19 @@ func crdSampleValue(kind string) any {
 	default:
 		return "crd-parity"
 	}
+}
+
+func deletePath(spec map[string]any, path string) {
+	segments := strings.Split(path, ".")
+	current := spec
+	for _, segment := range segments[:len(segments)-1] {
+		next, ok := current[segment].(map[string]any)
+		if !ok {
+			return
+		}
+		current = next
+	}
+	delete(current, segments[len(segments)-1])
 }
 
 func setPath(spec map[string]any, path string, value any) {

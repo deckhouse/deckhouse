@@ -68,6 +68,10 @@ type providerFixture struct {
 	// providerConfig is this provider's subtree of the d8-node-manager-cloud-provider secret.
 	providerConfig map[string]any
 	instanceClass  map[string]any
+	// rolloutExceptions lists "<field>/<mutation>" cases where v1 and v2 deliberately disagree,
+	// with the reason as the value. Keep it empty unless the difference is understood and cannot
+	// roll an existing cluster.
+	rolloutExceptions map[string]string
 	// manualRolloutIDIgnoredByV1 records that this provider's v1 checksum template never read
 	// manualRolloutID, so the operator's `manual-rollout-id` annotation did not roll its CAPI
 	// machines at all. v2 honours the lever for every provider, in node-controller rather than in

@@ -36,8 +36,8 @@ import (
 // the Go type of a number included, since toYaml renders float64 and int64 differently.
 func TestResolvedNodeGroup_ChecksumGoldens(t *testing.T) {
 	const (
-		awsMCMTemplate     = "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum"
-		yandexMCMTemplate  = "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum"
+		awsMCMTemplate    = "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum"
+		yandexMCMTemplate = "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum"
 	)
 
 	cases := []struct {

@@ -92,6 +92,16 @@ func TestParseContractRejects(t *testing.T) {
 			expError: "function \"now\" not defined",
 		},
 		{
+			name:     "additionalFields may not touch infrastructureRef",
+			contract: "version: v2\nrolloutFields: [a]\nmachineDeployment:\n  additionalFields:\n    \"infrastructureRef.name\": hijacked\ntemplate: |\n  kind: X\n",
+			expError: "belongs to node-controller",
+		},
+		{
+			name:     "additionalFields may not touch bootstrap",
+			contract: "version: v2\nrolloutFields: [a]\nmachineDeployment:\n  additionalFields:\n    \"bootstrap.dataSecretName\": mine\ntemplate: |\n  kind: X\n",
+			expError: "belongs to node-controller",
+		},
+		{
 			name:     "unknown top-level key",
 			contract: "version: v2\nrolloutFields: [a]\nrolloutField: [b]\ntemplate: |\n  kind: X\n",
 			expError: "unknown field",

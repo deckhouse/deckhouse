@@ -128,8 +128,11 @@ How node-controller uses it:
 - The **whole** InstanceClass spec is stored on the generation object
   (`node.deckhouse.io/applied-instance-class`, next to `applied-rollout-id` and
   `applied-generation`), and `rolloutFields` is applied only when comparing.
-  So **changing the list in a provider release never rolls machines by itself** — you can move the
-  boundary freely between releases.
+  So **removing** a field from the list never rolls machines. **Adding** one is free only while
+  that field has not changed since the current generation was created: the snapshot holds the value
+  from back then, and the widened criterion now compares against it. Add a field a user edited in
+  the meantime and the next reconcile rolls that NodeGroup — check before widening the list, or
+  pair it with a release note.
 - Comparison is **by value** after both sides are normalized: `50` is `50` no matter which Go type
   or serialization it arrived in. There are no byte-level goldens to be afraid of any more.
 - An absent field and an explicit `null` compare equal.

@@ -18,6 +18,7 @@ package machinetemplate
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"text/template"
@@ -44,17 +45,52 @@ type RenderContext struct {
 	PodSubnet     string
 }
 
-func (c RenderContext) toMap() map[string]any {
+// toMap builds the template context, handing the template its own copy of the two maps.
+//
+// The sandbox keeps sprig's set/unset/merge/mergeOverwrite, and those mutate their argument in
+// place. Without the copy a template could edit .instanceClass — and node-controller snapshots
+// that very map onto the object right after rendering, so the mutation would be recorded as "the
+// InstanceClass this generation was built from". Every later reconcile would then compare the real
+// spec against the mutated snapshot, find a difference, and create another generation: a full
+// rollout on every pass, forever. The same map is also reused for each zone of one reconcile, so a
+// mutation would leak across zones.
+//
+// Rendering happens only when a generation is created, so the copy is not on any hot path.
+func (c RenderContext) toMap() (map[string]any, error) {
+	instanceClass, err := deepCopy(c.InstanceClass)
+	if err != nil {
+		return nil, fmt.Errorf("copy InstanceClass for rendering: %w", err)
+	}
+	provider, err := deepCopy(c.Provider)
+	if err != nil {
+		return nil, fmt.Errorf("copy provider configuration for rendering: %w", err)
+	}
+
 	return map[string]any{
-		"instanceClass": c.InstanceClass,
-		"provider":      c.Provider,
+		"instanceClass": instanceClass,
+		"provider":      provider,
 		"zone":          c.Zone,
 		"nodeGroup":     map[string]any{"name": c.NodeGroupName},
 		"cluster": map[string]any{
 			"uuid":      c.ClusterUUID,
 			"podSubnet": c.PodSubnet,
 		},
+	}, nil
+}
+
+func deepCopy(m map[string]any) (map[string]any, error) {
+	if m == nil {
+		return nil, nil
 	}
+	data, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]any{}
+	if err := json.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func parseTemplate(text string) (*template.Template, error) {
@@ -75,8 +111,13 @@ func parseTemplate(text string) (*template.Template, error) {
 // rejected instead of being silently overwritten — under v1 that freedom is what left dead
 // `helm.sh/resource-policy: keep` annotations and hardcoded namespaces in every provider file.
 func Render(c *Contract, rc RenderContext) (map[string]any, error) {
+	context, err := rc.toMap()
+	if err != nil {
+		return nil, err
+	}
+
 	var buf bytes.Buffer
-	if err := c.parsed.Execute(&buf, rc.toMap()); err != nil {
+	if err := c.parsed.Execute(&buf, context); err != nil {
 		return nil, fmt.Errorf("render machine template: %w", err)
 	}
 
@@ -111,9 +152,17 @@ func Render(c *Contract, rc RenderContext) (map[string]any, error) {
 // It replaces the v1 machine-deployment-spec-patch.yaml: a raw YAML patch with ${zone} substituted
 // into it by string replacement.
 func ApplyMachineDeploymentFields(spec map[string]any, c *Contract, rc RenderContext) error {
+	if len(c.MachineDeployment.parsedFields) == 0 {
+		return nil
+	}
+	context, err := rc.toMap()
+	if err != nil {
+		return err
+	}
+
 	for path, tmpl := range c.MachineDeployment.parsedFields {
 		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, rc.toMap()); err != nil {
+		if err := tmpl.Execute(&buf, context); err != nil {
 			return fmt.Errorf("render machineDeployment.additionalFields[%s]: %w", path, err)
 		}
 		fields := append([]string{"template", "spec"}, strings.Split(path, ".")...)

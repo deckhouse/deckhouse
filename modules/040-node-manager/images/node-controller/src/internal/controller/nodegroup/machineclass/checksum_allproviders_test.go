@@ -34,12 +34,12 @@ import (
 // Their guarantee moved to internal/machinetemplate's parity harness, which still renders the v1
 // files (kept as a snapshot in its testdata) and requires the v2 answer to match them.
 var allChecksumTemplates = map[string]string{
-	"aws-mcm":          "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum",
-	"azure-mcm":        "../../../../../../../../030-cloud-provider-azure/cloud-instance-manager/machine-class.checksum",
-	"gcp-mcm":          "../../../../../../../../030-cloud-provider-gcp/cloud-instance-manager/machine-class.checksum",
-	"yandex-mcm":       "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum",
-	"openstack-mcm":    "../../../../../../../../../ee/modules/030-cloud-provider-openstack/cloud-instance-manager/machine-class.checksum",
-	"vsphere-mcm":      "../../../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager/machine-class.checksum",
+	"aws-mcm":       "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum",
+	"azure-mcm":     "../../../../../../../../030-cloud-provider-azure/cloud-instance-manager/machine-class.checksum",
+	"gcp-mcm":       "../../../../../../../../030-cloud-provider-gcp/cloud-instance-manager/machine-class.checksum",
+	"yandex-mcm":    "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum",
+	"openstack-mcm": "../../../../../../../../../ee/modules/030-cloud-provider-openstack/cloud-instance-manager/machine-class.checksum",
+	"vsphere-mcm":   "../../../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager/machine-class.checksum",
 }
 
 // everyProviderField is the union of the instanceClass fields the templates above read. Numbers

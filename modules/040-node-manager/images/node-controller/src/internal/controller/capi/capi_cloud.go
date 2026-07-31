@@ -354,7 +354,13 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 			logger.Info("skipping CAPI: InstanceClass is not resolved yet", "nodeGroup", ng.Name)
 			return nil
 		}
+		// A provider that needs no configuration of its own (dvp) publishes no subtree at all, so
+		// an empty map is a legitimate context: a template reaching into it fails on the specific
+		// key it wanted, which is the same error it would get for a typo.
 		providerTree, _ = cloudProvider[cloudType].(map[string]interface{})
+		if providerTree == nil {
+			providerTree = map[string]interface{}{}
+		}
 	} else {
 		// LEGACY (v1): node-controller renders the infrastructure MachineTemplate and its
 		// instance-class checksum from the cloud-provider CAPI template secret (published at the

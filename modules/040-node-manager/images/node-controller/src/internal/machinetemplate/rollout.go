@@ -97,6 +97,14 @@ func fieldValue(spec map[string]any, field string) (any, error) {
 	if err != nil || !found || value == nil {
 		// err means the path runs through a non-map, which is the same "the field is not there"
 		// answer as !found — the provider named a path its CRD does not have.
+		//
+		// Only nil folds into "absent". An EMPTY value (`imageName: ""`, `additionalTags: {}`)
+		// does not: several provider templates gate on hasKey rather than truthiness, so an empty
+		// value renders a different object than a missing one, and treating the two as equal would
+		// silently keep the machines on the old object. The v1 checksums did fold them together
+		// for the truthiness-gated fields, so writing an empty value where there was none rolls
+		// machines under v2 where v1 stayed put — the safe direction of the two, and pinned by
+		// TestEmptyValueDivergence.
 		return nil, nil
 	}
 

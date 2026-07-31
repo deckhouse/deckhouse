@@ -74,6 +74,12 @@ type MachineDeploymentContract struct {
 	parsedFields map[string]*template.Template
 }
 
+// reservedMachineDeploymentFields are the parts of spec.template.spec node-controller decides
+// itself. infrastructureRef in particular is the whole design: its name identifies the current
+// generation, so a provider able to write it could switch machines onto an object node-controller
+// knows nothing about.
+var reservedMachineDeploymentFields = []string{"infrastructureRef", "bootstrap", "clusterName"}
+
 // ParseContract parses and validates capi/template.yaml. Every problem is reported as an error
 // rather than defaulted away: a provider file that does not say what it means must fail loudly at
 // load time, not render something plausible into a cluster.
@@ -108,6 +114,10 @@ func ParseContract(data []byte) (*Contract, error) {
 	for path, value := range c.MachineDeployment.AdditionalFields {
 		if err := validateFieldPath(path); err != nil {
 			return nil, fmt.Errorf("machineDeployment.additionalFields: %w", err)
+		}
+		if root, _, _ := strings.Cut(path, "."); slices.Contains(reservedMachineDeploymentFields, root) {
+			return nil, fmt.Errorf("machineDeployment.additionalFields[%s]: %s belongs to node-controller and cannot be set by a provider",
+				path, root)
 		}
 		parsed, err := parseTemplate(value)
 		if err != nil {
