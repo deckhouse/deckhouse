@@ -179,9 +179,14 @@ func getFileSpec(kind File, opt *options) (*fileSpec, error) {
 		}, nil
 	case Deckhouse:
 		return &fileSpec{
-			ClusterName:         opt.ClusterName,
-			APIServer:           opt.ControlPlaneEndpoint,
-			ClientName:          "deckhouse",
+			ClusterName: opt.ClusterName,
+			APIServer:   opt.ControlPlaneEndpoint,
+			// The ValidatingAdmissionPolicies deckhouse installs into the cluster it
+			// manages (see 002-deckhouse/templates/validation.yaml) only exempt its own
+			// in-cluster ServiceAccount and the "dhctl" user, so an out-of-cluster
+			// deckhouse gets denied on system namespaces and heritage-labelled objects.
+			// TODO: authenticate as the real d8-system:deckhouse ServiceAccount instead.
+			ClientName:          "dhctl",
 			ClientCertNotAfter:  opt.CertProvider.NotAfter(),
 			CACert:              opt.CertProvider.CACert(),
 			CAKey:               opt.CertProvider.CAKey(),
