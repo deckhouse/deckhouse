@@ -45,8 +45,12 @@ const (
 	deckhouseClusterKubernetesConfigMap = "d8-cluster-kubernetes"
 	deckhouseClusterConfigurationSecret = "d8-cluster-configuration"
 	controlPlaneManagerModuleConfigName = "control-plane-manager"
-	k8sAutomaticUpdateMode              = "Automatic"
-	reqCheckerServiceName               = "requirements-checker"
+	// TODO(kubernetesVersion-deprecation): T+2 rewrite — split this into two constants.
+	// updateMode stays "Automatic"; the kubernetesVersion sentinel becomes "Default".
+	// Today both dictionaries share the same string, so one constant works by accident
+	// (compared at :227/:257 for updateMode and :311/:369 for kubernetesVersion).
+	k8sAutomaticUpdateMode = "Automatic"
+	reqCheckerServiceName  = "requirements-checker"
 	MigratedModulesRequirementFieldName = "migratedModules"
 )
 
