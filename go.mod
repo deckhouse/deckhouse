@@ -398,3 +398,8 @@ replace github.com/docker/docker => github.com/docker/docker v28.3.3+incompatibl
 replace github.com/docker/cli => github.com/docker/cli v28.3.3+incompatible
 
 replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlplane
+
+// Image sources under this tree are built inside third-party source trees
+// (see werf.inc.yaml) and are hidden from build/lint by build tags. go mod
+// tidy inspects imports under all build tags, so ignore the tree entirely.
+ignore ./ee/modules/110-istio/images
