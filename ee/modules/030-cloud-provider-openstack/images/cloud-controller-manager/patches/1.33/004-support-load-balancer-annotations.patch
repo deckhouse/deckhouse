@@ -1,16 +1,17 @@
 diff --git a/pkg/openstack/loadbalancer.go b/pkg/openstack/loadbalancer.go
-index 0a007e8..4c072d6 100644
+index a47d189..cab4bff 100644
 --- a/pkg/openstack/loadbalancer.go
 +++ b/pkg/openstack/loadbalancer.go
-@@ -89,6 +89,7 @@ const (
+@@ -89,6 +89,8 @@ const (
  	ServiceAnnotationLoadBalancerHealthMonitorMaxRetriesDown = "loadbalancer.openstack.org/health-monitor-max-retries-down"
  	ServiceAnnotationLoadBalancerLoadbalancerHostname        = "loadbalancer.openstack.org/hostname"
  	ServiceAnnotationLoadBalancerAddress                     = "loadbalancer.openstack.org/load-balancer-address"
 +	DeckhouseAnnotationLoadBalancerAddress                   = "loadbalancer.openstack.deckhouse.io/load-balancer-address"
++	DeckhouseAnnotationLoadBalancerID                        = "loadbalancer.openstack.deckhouse.io/load-balancer-id"
  	// revive:disable:var-naming
  	ServiceAnnotationTlsContainerRef = "loadbalancer.openstack.org/default-tls-container-ref"
  	// revive:enable:var-naming
-@@ -267,8 +268,8 @@ func (lbaas *LbaasV2) createOctaviaLoadBalancer(ctx context.Context, name, clust
+@@ -267,8 +269,8 @@ func (lbaas *LbaasV2) createOctaviaLoadBalancer(ctx context.Context, name, clust
  		}
  	}
  
@@ -21,7 +22,16 @@ index 0a007e8..4c072d6 100644
  	if loadBalancerIP != "" {
  		if svcConf.internal || (svcConf.preferredIPFamily == corev1.IPv6Protocol) {
  			createOpts.VipAddress = loadBalancerIP
-@@ -436,6 +437,13 @@ func getStringFromServiceAnnotation(service *corev1.Service, annotationKey strin
+@@ -332,7 +334,7 @@ func (lbaas *LbaasV2) createOctaviaLoadBalancer(ctx context.Context, name, clust
+ func (lbaas *LbaasV2) GetLoadBalancer(ctx context.Context, clusterName string, service *corev1.Service) (*corev1.LoadBalancerStatus, bool, error) {
+ 	name := lbaas.GetLoadBalancerName(ctx, clusterName, service)
+ 	legacyName := lbaas.getLoadBalancerLegacyName(service)
+-	lbID := getStringFromServiceAnnotation(service, ServiceAnnotationLoadBalancerID, "")
++	lbID := getLoadBalancerID(service)
+ 	var loadbalancer *loadbalancers.LoadBalancer
+ 	var err error
+ 
+@@ -436,6 +438,20 @@ func getStringFromServiceAnnotation(service *corev1.Service, annotationKey strin
  	return defaultSetting
  }
  
@@ -32,10 +42,17 @@ index 0a007e8..4c072d6 100644
 +	return service.Spec.LoadBalancerIP
 +}
 +
++func getLoadBalancerID(service *corev1.Service) string {
++	if loadBalancerID := getStringFromServiceAnnotation(service, DeckhouseAnnotationLoadBalancerID, ""); loadBalancerID != "" {
++		return loadBalancerID
++	}
++	return getStringFromServiceAnnotation(service, ServiceAnnotationLoadBalancerID, "")
++}
++
  // getIntFromServiceAnnotation searches a given v1.Service for a specific annotationKey and either returns the annotation's integer value or a specified defaultSetting
  func getIntFromServiceAnnotation(service *corev1.Service, annotationKey string, defaultSetting int) int {
  	klog.V(4).Infof("getIntFromServiceAnnotation(%s/%s, %v, %v)", service.Namespace, service.Name, annotationKey, defaultSetting)
-@@ -628,10 +636,10 @@ func (lbaas *LbaasV2) updateFloatingIP(ctx context.Context, floatingip *floating
+@@ -628,10 +644,10 @@ func (lbaas *LbaasV2) updateFloatingIP(ctx context.Context, floatingip *floating
  //     b) If the Service is not the owner of the LB it will not contiue to prevent accidental exposure of the
  //     possible internal Services already existing on that LB.
  //     c) If it's external Service, it will use that existing FIP.
@@ -49,7 +66,7 @@ index 0a007e8..4c072d6 100644
  //     the Neutron policy for regular users!
  func (lbaas *LbaasV2) ensureFloatingIP(ctx context.Context, clusterName string, service *corev1.Service, lb *loadbalancers.LoadBalancer, svcConf *serviceConfig, isLBOwner bool) (string, error) {
  	serviceName := fmt.Sprintf("%s/%s", service.Namespace, service.Name)
-@@ -679,9 +687,9 @@ func (lbaas *LbaasV2) ensureFloatingIP(ctx context.Context, clusterName string,
+@@ -679,9 +695,9 @@ func (lbaas *LbaasV2) ensureFloatingIP(ctx context.Context, clusterName string,
  			service.Namespace, service.Name)
  	}
  
@@ -61,11 +78,29 @@ index 0a007e8..4c072d6 100644
  	if floatIP == nil && loadBalancerIP != "" {
  		opts := floatingips.ListOpts{
  			FloatingIP: loadBalancerIP,
+@@ -1343,7 +1359,7 @@ func (lbaas *LbaasV2) checkServiceUpdate(ctx context.Context, service *corev1.Se
+ }
+ 
+ func (lbaas *LbaasV2) checkServiceDelete(ctx context.Context, service *corev1.Service, svcConf *serviceConfig) error {
+-	svcConf.lbID = getStringFromServiceAnnotation(service, ServiceAnnotationLoadBalancerID, "")
++	svcConf.lbID = getLoadBalancerID(service)
+ 	svcConf.supportLBTags = openstackutil.IsOctaviaFeatureSupported(ctx, lbaas.lb, openstackutil.OctaviaFeatureTags, lbaas.opts.LBProvider)
+ 
+ 	// This affects the protocol of listener and pool
+@@ -1538,7 +1554,7 @@ func (lbaas *LbaasV2) checkService(ctx context.Context, service *corev1.Service,
+ 
+ func (lbaas *LbaasV2) makeSvcConf(ctx context.Context, serviceName string, service *corev1.Service, svcConf *serviceConfig) error {
+ 	svcConf.connLimit = getIntFromServiceAnnotation(service, ServiceAnnotationLoadBalancerConnLimit, -1)
+-	svcConf.lbID = getStringFromServiceAnnotation(service, ServiceAnnotationLoadBalancerID, "")
++	svcConf.lbID = getLoadBalancerID(service)
+ 	svcConf.supportLBTags = openstackutil.IsOctaviaFeatureSupported(ctx, lbaas.lb, openstackutil.OctaviaFeatureTags, lbaas.opts.LBProvider)
+ 
+ 	// Get service node-selector annotations
 diff --git a/pkg/openstack/loadbalancer_test.go b/pkg/openstack/loadbalancer_test.go
-index 27304a4..b184f11 100644
+index b50c889..8ffc461 100644
 --- a/pkg/openstack/loadbalancer_test.go
 +++ b/pkg/openstack/loadbalancer_test.go
-@@ -1466,6 +1466,80 @@ func Test_getStringFromServiceAnnotation(t *testing.T) {
+@@ -1466,6 +1466,146 @@ func Test_getStringFromServiceAnnotation(t *testing.T) {
  	}
  }
  
@@ -139,6 +174,72 @@ index 27304a4..b184f11 100644
 +	for _, test := range tests {
 +		t.Run(test.name, func(t *testing.T) {
 +			assert.Equal(t, test.expected, getLoadBalancerIP(test.service))
++		})
++	}
++}
++
++func Test_getLoadBalancerID(t *testing.T) {
++	tests := []struct {
++		name     string
++		service  *corev1.Service
++		expected string
++	}{
++		{
++			name: "returns Deckhouse annotation value",
++			service: &corev1.Service{
++				ObjectMeta: v1.ObjectMeta{
++					Annotations: map[string]string{
++						DeckhouseAnnotationLoadBalancerID: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b",
++					},
++				},
++			},
++			expected: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b",
++		},
++		{
++			name: "Deckhouse annotation takes precedence over upstream annotation",
++			service: &corev1.Service{
++				ObjectMeta: v1.ObjectMeta{
++					Annotations: map[string]string{
++						DeckhouseAnnotationLoadBalancerID: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b",
++						ServiceAnnotationLoadBalancerID:   "56df5341-a099-4ca3-8dbe-7243c961c114",
++					},
++				},
++			},
++			expected: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b",
++		},
++		{
++			name: "falls back to upstream annotation",
++			service: &corev1.Service{
++				ObjectMeta: v1.ObjectMeta{
++					Annotations: map[string]string{
++						ServiceAnnotationLoadBalancerID: "56df5341-a099-4ca3-8dbe-7243c961c114",
++					},
++				},
++			},
++			expected: "56df5341-a099-4ca3-8dbe-7243c961c114",
++		},
++		{
++			name: "empty Deckhouse annotation falls back to upstream annotation",
++			service: &corev1.Service{
++				ObjectMeta: v1.ObjectMeta{
++					Annotations: map[string]string{
++						DeckhouseAnnotationLoadBalancerID: "",
++						ServiceAnnotationLoadBalancerID:   "56df5341-a099-4ca3-8dbe-7243c961c114",
++					},
++				},
++			},
++			expected: "56df5341-a099-4ca3-8dbe-7243c961c114",
++		},
++		{
++			name:     "returns empty string when unset",
++			service:  &corev1.Service{},
++			expected: "",
++		},
++	}
++
++	for _, test := range tests {
++		t.Run(test.name, func(t *testing.T) {
++			assert.Equal(t, test.expected, getLoadBalancerID(test.service))
 +		})
 +	}
 +}

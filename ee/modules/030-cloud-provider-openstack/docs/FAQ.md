@@ -14,7 +14,9 @@ Without a `node-selector` restriction, cloud-controller-manager may use all suit
 
 It is recommended to use `loadbalancer.openstack.org/node-selector` to select only the nodes that should be used as targets for the corresponding LoadBalancer.
 
-To assign a pre-created floating IP to the Ingress controller's LoadBalancer, specify the `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotation in the `annotations` field of the corresponding inlet configuration in the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource. DKP adds this annotation to the generated Service of the LoadBalancer type.
+To use a pre-created Octavia load balancer for the Ingress controller, specify the `loadbalancer.openstack.deckhouse.io/load-balancer-id` annotation in the `annotations` field of the corresponding inlet configuration in the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource. DKP adds this annotation to the generated Service of the LoadBalancer type. The load balancer must already exist in the cluster subnet and be `ACTIVE`.
+
+To assign a pre-created floating IP to the Ingress controller's LoadBalancer, specify the `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotation in the same `annotations` field.
 
 The floating IP must meet the following requirements:
 
@@ -24,13 +26,13 @@ The floating IP must meet the following requirements:
 
 If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the `Service`.
 
-The `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotation allows you to use a pre-allocated floating IP. To reuse an existing Octavia load balancer as a whole, specify its UUID in the `loadbalancer.openstack.org/load-balancer-id` annotation.
+If you use a pre-created load balancer with a custom name, attach the floating IP to its VIP port before creating the cluster.
 
 Do not add these annotations to application Ingress resources. They are processed by `openstack-cloud-controller-manager` on the Service object.
 
 ### IngressNginxController example
 
-In this example, the Ingress controller pods are scheduled on frontend nodes, the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes, and `loadbalancer.openstack.deckhouse.io/load-balancer-address` attaches a preallocated floating IP to the LoadBalancer:
+In this example, the Ingress controller pods are scheduled on frontend nodes, the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes, `loadbalancer.openstack.deckhouse.io/load-balancer-id` selects a precreated Octavia load balancer, and `loadbalancer.openstack.deckhouse.io/load-balancer-address` selects a preallocated floating IP:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -42,6 +44,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-id: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b"
       loadbalancer.openstack.deckhouse.io/load-balancer-address: "203.0.113.10"
       loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"

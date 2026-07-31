@@ -19,7 +19,7 @@ Planned Node deletion is not affected — those components remove Nodes directly
 
 Nodes that remain in the `NotReady` state for an extended period can be tracked using the `K8SNodeNotReady` alert — it fires when a node is `NotReady` for more than 10 minutes.
 
-## 004-support-load-balancer-address-annotation.patch
+## 004-support-load-balancer-annotations.patch
 
-Allows using `loadbalancer.openstack.deckhouse.io/load-balancer-address` as an input annotation for a predefined floating IP.
-The annotation takes precedence over the deprecated `Service.spec.loadBalancerIP` field, while the upstream `loadbalancer.openstack.org/load-balancer-address` annotation remains CCM-owned output.
+Allows using `loadbalancer.openstack.deckhouse.io/load-balancer-id` and `loadbalancer.openstack.deckhouse.io/load-balancer-address` as input annotations for a predefined load balancer and floating IP.
+Deckhouse annotations take precedence over deprecated or CCM-owned fields, while upstream `loadbalancer.openstack.org/load-balancer-id` and `loadbalancer.openstack.org/load-balancer-address` annotations remain CCM-owned output.
