@@ -23,7 +23,7 @@ import (
 
 	v1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/instanceclass/v1"
 	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/instanceclass/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/settings"
+	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/settings/v2"
 )
 
 // GenerateBundle generates all OpenAPI specs for the cloud-provider-yandex module.
@@ -42,14 +42,14 @@ func GenerateBundle(moduleRoot string) error {
 			name: "config-values",
 			path: filepath.Join(moduleRoot, "openapi", "config-values.yaml"),
 			gen: func() ([]byte, error) {
-				return openapigen.GenerateDeckhouseOpenAPISchema(settings.ModuleConfigSettings{})
+				return openapigen.GenerateDeckhouseOpenAPISchema(v2.ModuleConfigSettings{})
 			},
 		},
 		{
 			name: "doc-ru-config-values",
 			path: filepath.Join(moduleRoot, "openapi", "doc-ru-config-values.yaml"),
 			gen: func() ([]byte, error) {
-				return openapigen.GenerateDeckhouseDescriptionRu(settings.ModuleConfigSettings{})
+				return openapigen.GenerateDeckhouseDescriptionRu(v2.ModuleConfigSettings{})
 			},
 		},
 		{

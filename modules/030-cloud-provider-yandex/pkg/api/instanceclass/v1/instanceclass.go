@@ -19,6 +19,17 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+const (
+	YandexInstanceClassGroupName = "deckhouse.io"
+	YandexInstanceClassVersion   = "v1"
+	YandexInstanceClassKind      = "YandexInstanceClass"
+)
+
+var (
+	SchemeGroupVersion = schema.GroupVersion{Group: YandexInstanceClassGroupName, Version: YandexInstanceClassVersion}
 )
 
 // +kubebuilder:object:root=true
@@ -35,13 +46,13 @@ type YandexInstanceClass struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   InstanceClassSpec         `json:"spec"`
+	Spec   YandexInstanceClassSpec   `json:"spec"`
 	Status YandexInstanceClassStatus `json:"status,omitempty"`
 }
 
 // +deckhouse:ru:description:value="Определяет параметры виртуальной машины Yandex Compute Cloud."
-// InstanceClassSpec defines the desired state of the YandexInstanceClass.
-type InstanceClassSpec struct {
+// YandexInstanceClassSpec defines the desired state of the YandexInstanceClass.
+type YandexInstanceClassSpec struct {
 	// Amount of CPU cores to provision on a Yandex Compute Instance.
 	// +deckhouse:ru:description:value="Количество ядер CPU, выделяемых виртуальной машине."
 	// +deckhouse:XDocExamples:value="4"
@@ -167,6 +178,12 @@ type InstanceClassSpec struct {
 	// +kubebuilder:validation:Enum=Standard;SoftwareAccelerated
 	// +optional
 	NetworkType string `json:"networkType,omitempty"`
+
+	// Disk size for etcd is set only for InstanceClass intended for master NodeGroup. The value is specified in `GiB`.
+	// +deckhouse:ru:description:value="Размер диска для etcd, устанавливается только для InstanceClass, предназначенных для группы мастер-узлов. Значение указывается в `ГиБ`."
+	// +deckhouse:XDocExamples:value="20"
+	// +optional
+	EtcdDiskSizeGB *int `json:"etcdDiskSizeGB,omitempty" yaml:"etcdDiskSizeGB,omitempty"`
 }
 
 // +deckhouse:ru:description:value="Содержит информацию о группах узлов, использующих данный экземпляр класса."
