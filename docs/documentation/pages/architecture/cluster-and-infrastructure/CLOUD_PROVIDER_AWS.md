@@ -61,11 +61,12 @@ The module consists of the following components:
    * [ASG AZ Rebalance](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html)
    * [EC2 Instance Termination](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html)
 
-   Node-termination-handler performs drain and/or cordon of the corresponding node after receiving of the specified events.
-
    It consists of a single container:
 
    * **node-termination-handler**.
+
+   After receiving an event when it is necessary to drain and then to delete a node, for example, in case of a regular interruption of a spot instance, node-termination-handler sets the `aws-node-termination-handler/spot-itn` taint for the corresponding node.
+   A node drain itself, and then node removal are performed by the [`node-manager`](/modules/node-manager/) module using the [module hooks](../../module-development/structure/#hooks) mechanics.
 
 ## Module interactions
 
