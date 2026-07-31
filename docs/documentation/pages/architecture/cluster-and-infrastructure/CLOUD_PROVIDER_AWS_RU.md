@@ -62,11 +62,12 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
    * [ASG AZ Rebalance](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html);
    * [EC2 Instance Termination](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html).
 
-   При получении события, когда необходимо выполнить drain, а затем удаление узла, например, в случае штатного прерывания работы spot-инстанса, node-termination-handler устанавливает taint `aws-node-termination-handler/spot-itn` для соответствующего узла. Непосредственно drain, а затем удаление узла выполняется модулем [`node-manager`](/modules/node-manager/) через механику [хуков модуля](../../module-development/structure/#hooks).
-
    Состоит из одного контейнера:
 
    * **node-termination-handler**.
+
+   При получении события, требующего вывода узла из эксплуатации (drain), например при плановом прерывании работы spot-инстанса, node-termination-handler устанавливает на соответствующий узел taint `aws-node-termination-handler/spot-itn`.
+   Модуль [`node-manager`](/modules/node-manager/) обнаруживает этот taint и с помощью [хуков модуля](../../module-development/structure/#hooks) выполняет drain, а затем удаляет узел.
 
 ## Взаимодействия модуля
 
