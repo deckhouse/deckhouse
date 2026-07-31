@@ -1,0 +1,295 @@
+- name: d8.istio.config_analysis
+  rules:
+  - alert: D8IstioConfigAnalysisReferencedResourceNotFound
+    expr: |
+      sum by (revision, namespace, resource, code) (
+        d8_istio_config_analysis_issue{type="ReferencedResourceNotFound"}
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: istio
+      d8_component: config-analyzer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "revision,namespace,resource,code"
+      summary: Istio resource references a missing dependency (IST0101).
+      description: |
+        The Istio configuration analyzer found a missing reference in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`ReferencedResourceNotFound`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        An Istio object points to a Gateway, Service, ServiceEntry, or another dependency that does not exist (typo, wrong namespace, or resource not created yet). Traffic to that route may fail.
+
+        Steps to resolve:
+
+        1. Inspect the reported resource in namespace `{{$labels.namespace}}` and fix the broken reference (use FQDN for cross-namespace hosts, e.g. `reviews.backend.svc.cluster.local`).
+        2. Confirm the target object exists.
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0101/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="ReferencedResourceNotFound",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+  - alert: D8IstioConfigAnalysisSchemaValidationError
+    expr: |
+      sum by (revision, namespace, resource, code) (
+        d8_istio_config_analysis_issue{type="SchemaValidationError"}
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: istio
+      d8_component: config-analyzer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "revision,namespace,resource,code"
+      summary: Istio resource failed schema validation (IST0106).
+      description: |
+        The Istio configuration analyzer found a schema validation error in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`SchemaValidationError`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        The resource does not match the Istio API schema and may be ignored or rejected by the control plane.
+
+        Steps to resolve:
+
+        1. Inspect `{{$labels.resource}}` in namespace `{{$labels.namespace}}` and compare fields with the Istio API for your control plane version.
+        2. Fix invalid or unknown fields, then re-apply the manifest.
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0106/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="SchemaValidationError",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+  - alert: D8IstioConfigAnalysisConflictingGateways
+    expr: |
+      sum by (revision, namespace, resource, code) (
+        d8_istio_config_analysis_issue{type="ConflictingGateways"}
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: istio
+      d8_component: config-analyzer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "revision,namespace,resource,code"
+      summary: Conflicting Istio Gateways detected (IST0145).
+      description: |
+        The Istio configuration analyzer found conflicting Gateways in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`ConflictingGateways`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        Two or more Gateways share the same selector, port, and host match. Ingress traffic may be routed unpredictably or return 404.
+
+        Steps to resolve:
+
+        1. List Gateways and compare `spec.selector`, server ports, and hosts for overlaps involving `{{$labels.resource}}`.
+        2. Deduplicate or narrow hosts/ports so each combination is unique.
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0145/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="ConflictingGateways",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+  - alert: D8IstioConfigAnalysisInvalidGatewayCredential
+    expr: |
+      sum by (revision, namespace, resource, code) (
+        d8_istio_config_analysis_issue{type="InvalidGatewayCredential"}
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: istio
+      d8_component: config-analyzer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "revision,namespace,resource,code"
+      summary: Gateway TLS credential is invalid (IST0161).
+      description: |
+        The Istio configuration analyzer found an invalid Gateway credential in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`InvalidGatewayCredential`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        The Secret referenced by the Gateway for TLS is missing or does not contain a usable certificate/key. HTTPS listeners on that Gateway will fail.
+
+        Steps to resolve:
+
+        1. Open the Gateway `{{$labels.resource}}` in namespace `{{$labels.namespace}}` and note `credentialName` / TLS secret references.
+        2. Verify the Secret exists in the same namespace as the ingress Gateway workload and has valid `tls.crt` / `tls.key` (or the expected keys).
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0161/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="InvalidGatewayCredential",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+  - alert: D8IstioConfigAnalysisImageAutoWithoutInjection
+    expr: |
+      sum by (revision, namespace, resource, code) (
+        d8_istio_config_analysis_issue{type="ImageAutoWithoutInjectionError"}
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: istio
+      d8_component: config-analyzer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "revision,namespace,resource,code"
+      summary: Pod uses image auto without Istio injection (IST0147).
+      description: |
+        The Istio configuration analyzer found pods with `image: auto` that are not targeted for sidecar injection in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`ImageAutoWithoutInjectionError`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        `image: auto` is rewritten only when the Istio injector mutates the pod. Without injection the container image stays literally `auto` and the pod will not run correctly.
+
+        Steps to resolve:
+
+        1. Enable sidecar injection for the namespace or workload (`istio-injection=enabled` / `istio.io/rev={{$labels.revision}}`, or a matching RevisionTag).
+        2. Restart / recreate the affected pods after injection is enabled.
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0147/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="ImageAutoWithoutInjectionError",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+
+  # Catch-all for remaining Error/Warning codes (dedicated types above are excluded).
+  - alert: D8IstioConfigAnalysisError
+    expr: |
+      sum by (revision, type, namespace, resource, code) (
+        d8_istio_config_analysis_issue{severity="Error",type!~"ReferencedResourceNotFound|SchemaValidationError|ConflictingGateways|InvalidGatewayCredential|ImageAutoWithoutInjectionError"}
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: istio
+      d8_component: config-analyzer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "revision,type,namespace,resource,code"
+      summary: Istio configuration analysis detected an error-level issue.
+      description: |
+        The Istio configuration analyzer found an error in revision `{{$labels.revision}}`.
+
+        Type: `{{$labels.type}}` (`{{$labels.code}}`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        Inspect the reported resource in namespace `{{$labels.namespace}}`.
+
+        Documentation for analysis codes: https://istio.io/latest/docs/reference/config/analysis/
+
+        List analysis issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{revision="{{$labels.revision}}",severity="Error"}
+        ```
+
+        Check analyzer pods and logs:
+
+        ```bash
+        d8 k -n d8-istio get pods -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}}
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+  # InvalidApplicationUID (IST0144) is intentionally muted: Deckhouse Istio
+  # components (operator/pilot/…) run as UID 1337 by design, and application
+  # misuse of UID 1337 is already covered by IstioApplicationsUsingReservedUID.
+  - alert: D8IstioConfigAnalysisWarning
+    expr: |
+      sum by (revision, type, namespace, resource, code) (
+        d8_istio_config_analysis_issue{severity="Warning",type!="InvalidApplicationUID"}
+      ) > 0
+    for: 1h
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: istio
+      d8_component: config-analyzer
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "revision,type,namespace,resource,code"
+      summary: Istio configuration analysis detected a warning-level issue.
+      description: |
+        The Istio configuration analyzer found a warning in revision `{{$labels.revision}}`.
+
+        Type: `{{$labels.type}}` (`{{$labels.code}}`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        Inspect the reported resource in namespace `{{$labels.namespace}}`.
+
+        Documentation for analysis codes: https://istio.io/latest/docs/reference/config/analysis/
+
+        List analysis warnings in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{revision="{{$labels.revision}}",severity="Warning"}
+        ```
+
+        Check analyzer pods and logs:
+
+        ```bash
+        d8 k -n d8-istio get pods -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}}
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
