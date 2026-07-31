@@ -56,8 +56,25 @@ type Input struct {
 	Subjects []rbacv1.Subject
 	// Namespace is the request namespace for a ProjectRoleBinding; empty for a ClusterProjectRoleBinding.
 	Namespace string
-	// ManagedBy is the value of the projects.deckhouse.io/managed-by label on the object (or its old version on delete).
+	// ManagedBy is the managed-by marking to judge the object by, as resolved by ResolveManagedBy.
 	ManagedBy string
+}
+
+// ResolveManagedBy returns the managed-by marking the protection must be judged by.
+//
+// On UPDATE the old object counts as well. Reading only the incoming object would let one request
+// both strip the label and make the change the label exists to prevent, since by the time the
+// validation runs the marking is already gone. modules/140-user-authz/webhooks/validating/
+// system_resources.py reads its markings from both objects for the same reason.
+func ResolveManagedBy(operation admissionv1.Operation, object, oldObject map[string]string) string {
+	if object[v1alpha3.ResourceLabelManagedBy] == v1alpha3.ManagedByController {
+		return v1alpha3.ManagedByController
+	}
+	if operation == admissionv1.Update && oldObject[v1alpha3.ResourceLabelManagedBy] == v1alpha3.ManagedByController {
+		return v1alpha3.ManagedByController
+	}
+
+	return object[v1alpha3.ResourceLabelManagedBy]
 }
 
 // Validate runs the shared validation for PRB/CPRB admission requests.

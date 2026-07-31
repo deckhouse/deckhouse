@@ -76,6 +76,7 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/golang/protobuf v1.5.4
+	github.com/itchyny/gojq v0.12.18
 	github.com/jonboulle/clockwork v0.5.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/slok/kubewebhook/v2 v2.5.0
@@ -132,7 +133,6 @@ require (
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/gosimple/slug v1.15.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
-	github.com/itchyny/gojq v0.12.18 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/miekg/dns v1.1.61 // indirect
 	github.com/name212/govalue v1.1.0 // indirect

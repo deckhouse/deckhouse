@@ -31,7 +31,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 
   Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure-with-dedicated-nodes.yaml).
 
-The `default`, `secure`, and `secure-with-dedicated-nodes` templates are described in the [structured form](#structured-templates) (`deckhouse.io/v1alpha2`); the `simple` template is a minimal legacy (`v1alpha1`) template.
+The `default`, `secure`, and `secure-with-dedicated-nodes` templates are described in the [structured form](#structured-templates); the `simple` template is a minimal legacy template built on `resourcesTemplate`.
 
 To list all available parameters for a project template, execute the command:
 
@@ -43,7 +43,7 @@ d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parameters
 
 1. To create a project, create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha3-spec-projecttemplatename) field.
 1. Set the [standard fields](#standard-project-fields) — [.spec.administrators](cr.html#project-v1alpha3-spec-administrators) and [.spec.quota](cr.html#project-v1alpha3-spec-quota) — that are now managed directly by the Project resource regardless of the template.
-1. In the [.spec.parameters](cr.html#project-v1alpha3-spec-parameters) field of the Project resource, specify the parameter values suitable for the ProjectTemplate [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema).
+1. In the [.spec.parameters](cr.html#project-v1alpha3-spec-parameters) field of the Project resource, specify the parameter values suitable for the ProjectTemplate [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha2-spec-parametersschema-openapiv3schema).
 
    Example of creating a project using the [Project](cr.html#project) resource from the `default` [ProjectTemplate](cr.html#projecttemplate):
 
@@ -449,7 +449,7 @@ The `fromParam` references are validated when the template is created: a referen
 
 - A template used by at least one project cannot be deleted.
 - A change to a template is automatically applied to all projects created from it.
-- Legacy `deckhouse.io/v1alpha1` templates with the text `resourcesTemplate` field (Helm templating) keep working but are deprecated — create new templates in the structured form. `ResourceQuota` and `AuthorizationRule` resources from such templates are filtered out during rendering (see [standard project fields](#standard-project-fields)).
+- Legacy templates with the text `resourcesTemplate` field (Helm templating) keep working but are deprecated — create new templates in the structured form. `ResourceQuota` and `AuthorizationRule` resources from such templates are filtered out during rendering (see [standard project fields](#standard-project-fields)).
 
 ## Creating your own project template
 

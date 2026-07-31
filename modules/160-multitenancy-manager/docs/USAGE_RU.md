@@ -43,7 +43,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 1. Для создания проекта создайте ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha3-spec-projecttemplatename).
 1. Задайте [стандартные поля](#стандартные-поля-проекта) — [.spec.administrators](cr.html#project-v1alpha3-spec-administrators) и [.spec.quota](cr.html#project-v1alpha3-spec-quota), — которые теперь управляются непосредственно ресурсом Project независимо от шаблона.
-1. В параметре [.spec.parameters](cr.html#project-v1alpha3-spec-parameters) ресурса Project укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса ProjectTemplate.
+1. В параметре [.spec.parameters](cr.html#project-v1alpha3-spec-parameters) ресурса Project укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha2-spec-parametersschema-openapiv3schema) ресурса ProjectTemplate.
 
    Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
 
@@ -449,7 +449,7 @@ spec:
 
 - Шаблон, который используется хотя бы одним проектом, нельзя удалить.
 - Изменение шаблона автоматически применяется ко всем проектам, созданным из него.
-- Устаревшие шаблоны `deckhouse.io/v1alpha1` с текстовым полем `resourcesTemplate` (Helm-шаблонизация) продолжают работать, но признаны устаревшими — новые шаблоны создавайте в структурированном виде. Ресурсы `ResourceQuota` и `AuthorizationRule` из таких шаблонов отфильтровываются при рендеринге (см. [стандартные поля проекта](#стандартные-поля-проекта)).
+- Устаревшие шаблоны с текстовым полем `resourcesTemplate` (Helm-шаблонизация) продолжают работать, но признаны устаревшими — новые шаблоны создавайте в структурированном виде. Ресурсы `ResourceQuota` и `AuthorizationRule` из таких шаблонов отфильтровываются при рендеринге (см. [стандартные поля проекта](#стандартные-поля-проекта)).
 
 ## Создание собственного шаблона для проекта
 
