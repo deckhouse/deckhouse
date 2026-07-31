@@ -61,10 +61,12 @@ rules:
   - deletecollection
   - patch
   - update
-# Read-only audit access to internal Dex storage CRDs. Deliberately list-only:
+# Read-only audit access to internal Dex storage CRDs. Deliberately without `get`:
 # `passwords` contain bcrypt-hashed credentials, `offlinesessionses` carry refresh tokens —
-# `get` on a single object would return the same secret material, so we keep ClusterAdmin
-# at the listing level only (enough to enumerate sessions for incident response).
+# a named read would return the same secret material, so ClusterAdmin stays at the
+# collection level (enough to enumerate sessions for incident response).
+# `watch` is the same collection read delivered as a stream, so it discloses nothing `list`
+# does not; without it every client — kubectl -w, any informer — has to poll instead.
 # NOTE: plural is `offlinesessionses` (matches Dex CRD name in crds/external/offlinesessionses.yaml).
 - apiGroups:
   - dex.coreos.com
@@ -73,3 +75,4 @@ rules:
   - offlinesessionses
   verbs:
   - list
+  - watch
