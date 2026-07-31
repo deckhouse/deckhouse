@@ -52,7 +52,8 @@ const (
 
 	deckhouseServiceAccountName = "deckhouse"
 
-	deckhouseTokenTTL          = 30 * 24 * time.Hour
+	deckhouseTokenTTL          = 365 * 24 * time.Hour
+	deckhouseTokenIssuedAtKey  = "control-plane.deckhouse.io/token-issued-at"
 	deckhouseTokenExpiresAtKey = "control-plane.deckhouse.io/token-expires-at"
 
 	deckhouseClusterConfigurationSecretName = "d8-cluster-configuration"
@@ -453,6 +454,7 @@ func (r *reconciler) reconcileDeckhouseServiceAccountToken(
 				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 			Annotations: map[string]string{
+				deckhouseTokenIssuedAtKey:  time.Now().UTC().Format(time.RFC3339),
 				deckhouseTokenExpiresAtKey: expiresAt.UTC().Format(time.RFC3339),
 			},
 		},
@@ -480,8 +482,14 @@ func (r *reconciler) reconcileDeckhouseServiceAccountToken(
 	return r.patchSecret(ctx, base, current)
 }
 
+// deckhouseTokenNeedsRenewal reports whether half of the token lifetime has passed.
 func deckhouseTokenNeedsRenewal(secret *corev1.Secret) bool {
 	if len(secret.Data["token"]) == 0 {
+		return true
+	}
+
+	issuedAt, err := time.Parse(time.RFC3339, secret.Annotations[deckhouseTokenIssuedAtKey])
+	if err != nil {
 		return true
 	}
 
@@ -490,7 +498,7 @@ func deckhouseTokenNeedsRenewal(secret *corev1.Secret) bool {
 		return true
 	}
 
-	return time.Now().After(expiresAt.Add(-deckhouseTokenTTL / 2))
+	return time.Now().After(issuedAt.Add(expiresAt.Sub(issuedAt) / 2))
 }
 
 func requestTenantDeckhouseToken(ctx context.Context, tcs kubernetes.Interface) (string, time.Time, error) {
