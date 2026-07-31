@@ -28,5 +28,4 @@ const (
 
 	CiliumOperator     File = "cilium-operator.conf"
 	KonnectivityServer File = "konnectivity-server.conf"
-	Deckhouse          File = "deckhouse.conf"
 )

@@ -50,8 +50,6 @@ spec:
           command:
             - /usr/bin/deckhouse-controller
             - start
-            - --kube-config
-            - /kubeconfig.yaml
           workingDir: /deckhouse
           securityContext:
             readOnlyRootFilesystem: true
@@ -71,13 +69,8 @@ spec:
             periodSeconds: 5
             failureThreshold: 120
           env:
-            - name: KUBE_CONFIG
-              value: /kubeconfig.yaml
-            - name: KUBECONFIG
-              value: /kubeconfig.yaml
-            # The kubeconfig points at the tenant apiserver; these two make the
-            # in-cluster-config fallback paths land on the same apiserver (the
-            # per-VCP ALB routes :6443 to it) instead of the parent cluster's.
+            # The pod has no kubeconfig: it authenticates as a tenant
+            # ServiceAccount through the mounted token
             - name: KUBERNETES_SERVICE_HOST
               value: "${VCP_API_VIP}"
             - name: KUBERNETES_SERVICE_PORT
@@ -170,9 +163,11 @@ spec:
               mountPath: /root/.kube
             - name: downloaded
               mountPath: /deckhouse/downloaded
-            - name: kubeconfig
-              mountPath: /kubeconfig.yaml
-              subPath: deckhouse.conf
+            # Mounted as a directory on purpose: client-go re-reads the token
+            # through BearerTokenFile, and subPath mounts are never refreshed
+            # by kubelet, so a subPath here would break token rotation.
+            - name: sa-token
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
               readOnly: true
       volumes:
         - name: tmp
@@ -184,6 +179,6 @@ spec:
         # Downloadable modules are re-fetched after a pod restart; a PVC is a follow-up.
         - name: downloaded
           emptyDir: {}
-        - name: kubeconfig
+        - name: sa-token
           secret:
-            secretName: d8-kubeconfig-virtual-clients
+            secretName: ${TOKEN_SECRET_NAME}

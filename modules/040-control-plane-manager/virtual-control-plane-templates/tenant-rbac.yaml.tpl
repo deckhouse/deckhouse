@@ -99,8 +99,6 @@ roleRef:
   kind: ClusterRole
   name: cluster-admin
 subjects:
-# Matches the CN of deckhouse.conf, which deckhouse's own admission policies
-# require to be "dhctl" for an out-of-cluster controller (see go_lib kubeconfig).
-- kind: User
-  name: dhctl
-  apiGroup: rbac.authorization.k8s.io
+- kind: ServiceAccount
+  name: deckhouse
+  namespace: d8-system

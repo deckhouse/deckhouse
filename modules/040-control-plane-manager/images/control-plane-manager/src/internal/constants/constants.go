@@ -50,6 +50,7 @@ const (
 	VirtualKubeconfigSecretName               = "d8-kubeconfig-virtual"
 	VirtualAdminKubeconfigSecretName          = "d8-admin-kubeconfig-virtual"
 	VirtualClientsKubeconfigSecretName        = "d8-kubeconfig-virtual-clients"
+	VirtualDeckhouseTokenSecretName           = "d8-deckhouse-token-virtual"
 	VirtualAPIServerServiceName               = "kube-apiserver"
 	VirtualKonnectivityEgressConfigMapName    = "konnectivity-egress"
 	VirtualKonnectivityServerServiceName      = "konnectivity-server"

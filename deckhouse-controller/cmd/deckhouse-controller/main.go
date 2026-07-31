@@ -60,10 +60,16 @@ func version() string {
 // cfg.Kube.Config directly, but several client paths resolve their config
 // through the default clientcmd loading rules or Helm env settings instead:
 // helm3lib action configs, the `registry` subcommand (ctrl.GetConfigOrDie),
-// the `module enable/disable` debug subcommands and the dependency-container
-// client used by Go hooks. Exporting the standard env vars points all of
-// them at the same apiserver instead of silently falling back to the
-// in-cluster config.
+// the `module enable/disable` debug subcommands and the module-sdk
+// GetK8sClient used by Go hooks (it resolves through ctrl.GetConfig too).
+// Exporting the standard env vars points all of them at the same apiserver
+// instead of silently falling back to the in-cluster config.
+//
+// It does NOT cover the rest of the module-sdk dependency container:
+// GetClientConfig calls rest.InClusterConfig unconditionally, and
+// GetKubeToken/GetHTTPClient read the ServiceAccount token and CA straight
+// from /var/run/secrets/kubernetes.io/serviceaccount. Hooks taking those
+// paths need a real token file at that location.
 func propagateKubeconfigEnv(cfg *app.Config) {
 	if cfg.Kube.Config != "" {
 		os.Setenv("KUBECONFIG", cfg.Kube.Config)
