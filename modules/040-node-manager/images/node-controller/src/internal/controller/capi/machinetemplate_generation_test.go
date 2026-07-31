@@ -17,7 +17,6 @@ limitations under the License.
 package capi
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,11 +52,9 @@ func TestGenerationOf(t *testing.T) {
 // Ranking is per zone: one zone's history must not push another zone's out.
 func TestRecentGenerations(t *testing.T) {
 	tests := []struct {
-		name string
-		// objects are the templates the NodeGroup has; liveZones defaults to every zone present.
-		objects   []string
-		liveZones []string
-		expKept   []string
+		name    string
+		objects []string
+		expKept []string
 	}{
 		{
 			name:    "fewer than the limit: all kept",
@@ -95,30 +92,11 @@ func TestRecentGenerations(t *testing.T) {
 			objects: []string{"worker-8ad9c341", "worker-a1b2c3d4-gen1"},
 			expKept: []string{"worker-a1b2c3d4-gen1"},
 		},
-		{
-			// A zone removed from the NodeGroup has no history worth keeping, and keeping it
-			// would leak one object per removed zone for the life of the NodeGroup.
-			name:      "a zone that is gone keeps nothing",
-			objects:   []string{"worker-a1b2c3d4-gen1", "worker-deadbeef-gen1", "worker-deadbeef-gen2"},
-			liveZones: []string{"worker-a1b2c3d4"},
-			expKept:   []string{"worker-a1b2c3d4-gen1"},
-		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			live := map[string]struct{}{}
-			for _, zone := range tc.liveZones {
-				live[zone] = struct{}{}
-			}
-			if len(live) == 0 {
-				for _, name := range tc.objects {
-					if idx := strings.LastIndex(name, generationSuffix); idx > 0 {
-						live[name[:idx]] = struct{}{}
-					}
-				}
-			}
-			kept := recentGenerations(tc.objects, live)
+			kept := recentGenerations(tc.objects)
 			names := make([]string, 0, len(kept))
 			for name := range kept {
 				names = append(names, name)

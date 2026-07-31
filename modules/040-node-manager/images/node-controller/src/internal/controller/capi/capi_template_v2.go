@@ -63,20 +63,15 @@ const (
 )
 
 // recentGenerations returns the generations to keep for their snapshot alone: the newest
-// keptGenerations of each zone the NodeGroup still has. Names from the v1 era carry no generation
-// and are not ranked — they are pruned as before, once nothing references them.
-func recentGenerations(names []string, liveZones map[string]struct{}) map[string]struct{} {
+// keptGenerations of each zone. Names from the v1 era carry no generation and are not ranked —
+// they are pruned as before, once nothing references them.
+func recentGenerations(names []string) map[string]struct{} {
 	byZone := map[string][]string{}
 	for _, name := range names {
 		if generationOf(name) == 0 {
 			continue
 		}
 		zone := name[:strings.LastIndex(name, generationSuffix)]
-		if _, live := liveZones[zone]; !live {
-			// The zone is gone from the NodeGroup: keeping its history forever would leak an
-			// object per removed zone, and there is nothing left to explain.
-			continue
-		}
 		byZone[zone] = append(byZone[zone], name)
 	}
 

@@ -19,7 +19,6 @@ package capi
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -142,13 +141,7 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	for i := range tmplList.Items {
 		names = append(names, tmplList.Items[i].GetName())
 	}
-	liveZones := map[string]struct{}{}
-	for name := range desiredTemplates {
-		if idx := strings.LastIndex(name, generationSuffix); idx > 0 {
-			liveZones[name[:idx]] = struct{}{}
-		}
-	}
-	recent := recentGenerations(names, liveZones)
+	recent := recentGenerations(names)
 
 	for i := range tmplList.Items {
 		tmpl := &tmplList.Items[i]
