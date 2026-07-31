@@ -21,5 +21,5 @@ Nodes that remain in the `NotReady` state for an extended period can be tracked 
 
 ## 004-support-load-balancer-address-annotation.patch
 
-Allows using `loadbalancer.openstack.org/load-balancer-address` as an input annotation for a predefined floating IP.
-The annotation takes precedence over the deprecated `Service.spec.loadBalancerIP` field.
+Allows using `loadbalancer.openstack.deckhouse.io/load-balancer-address` as an input annotation for a predefined floating IP.
+The annotation takes precedence over the deprecated `Service.spec.loadBalancerIP` field, while the upstream `loadbalancer.openstack.org/load-balancer-address` annotation remains CCM-owned output.

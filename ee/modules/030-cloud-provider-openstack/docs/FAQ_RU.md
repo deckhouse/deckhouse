@@ -14,13 +14,13 @@ title: "Cloud provider — OpenStack: FAQ"
 
 С помощью `loadbalancer.openstack.org/node-selector` рекомендуется выбирать только те узлы, которые должны использоваться в качестве таргетов данного LoadBalancer.
 
-Чтобы использовать для LoadBalancer Ingress-контроллера заранее выделенный floating IP, добавьте `loadbalancer.openstack.org/load-balancer-address` в аннотации секции inlet ресурса `IngressNginxController`. Deckhouse передает эти аннотации в сгенерированный `Service` типа `LoadBalancer`. Если нужно переиспользовать существующий Octavia-балансировщик целиком, а не только выбрать его floating IP, используйте `loadbalancer.openstack.org/load-balancer-id` с UUID балансировщика.
+Чтобы использовать для LoadBalancer Ingress-контроллера заранее выделенный floating IP, добавьте `loadbalancer.openstack.deckhouse.io/load-balancer-address` в аннотации секции inlet ресурса `IngressNginxController`. Deckhouse передает эти аннотации в сгенерированный `Service` типа `LoadBalancer`. Floating IP должен быть заранее создан, не должен быть привязан к порту и должен находиться в floating-сети, настроенной для OpenStack CCM. Если указанный floating IP недоступен, CCM не назначит внешний адрес сервису. Если нужно переиспользовать существующий Octavia-балансировщик целиком, а не только выбрать его floating IP, используйте `loadbalancer.openstack.org/load-balancer-id` с UUID балансировщика.
 
 Не добавляйте эти OpenStack-аннотации на прикладные ресурсы `Ingress`: их обрабатывает `openstack-cloud-controller-manager` на объекте `Service`.
 
 ### Пример IngressNginxController
 
-В примере поды Ingress-контроллера размещаются на frontend-узлах, аннотация `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами, а `loadbalancer.openstack.org/load-balancer-address` подключает к LoadBalancer заранее выделенный floating IP:
+В примере поды Ingress-контроллера размещаются на frontend-узлах, аннотация `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами, а `loadbalancer.openstack.deckhouse.io/load-balancer-address` подключает к LoadBalancer заранее выделенный floating IP:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -32,8 +32,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
-      loadbalancer.openstack.org/load-balancer-address: "203.0.113.10"
-      loadbalancer.openstack.org/keep-floatingip: "true"
+      loadbalancer.openstack.deckhouse.io/load-balancer-address: "203.0.113.10"
       loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"

@@ -1,23 +1,32 @@
 diff --git a/pkg/openstack/loadbalancer.go b/pkg/openstack/loadbalancer.go
-index 9d30cd9d..c9408eb9 100644
+index 0a007e8..4c072d6 100644
 --- a/pkg/openstack/loadbalancer.go
 +++ b/pkg/openstack/loadbalancer.go
-@@ -269,8 +269,8 @@ func (lbaas *LbaasV2) createOctaviaLoadBalancer(ctx context.Context, name, clust
+@@ -89,6 +89,7 @@ const (
+ 	ServiceAnnotationLoadBalancerHealthMonitorMaxRetriesDown = "loadbalancer.openstack.org/health-monitor-max-retries-down"
+ 	ServiceAnnotationLoadBalancerLoadbalancerHostname        = "loadbalancer.openstack.org/hostname"
+ 	ServiceAnnotationLoadBalancerAddress                     = "loadbalancer.openstack.org/load-balancer-address"
++	DeckhouseAnnotationLoadBalancerAddress                   = "loadbalancer.openstack.deckhouse.io/load-balancer-address"
+ 	// revive:disable:var-naming
+ 	ServiceAnnotationTlsContainerRef = "loadbalancer.openstack.org/default-tls-container-ref"
+ 	// revive:enable:var-naming
+@@ -267,8 +268,8 @@ func (lbaas *LbaasV2) createOctaviaLoadBalancer(ctx context.Context, name, clust
+ 		}
  	}
  
- 	// For external load balancer, the LoadBalancerIP is a public IP address.
+-	// For external load balancer, the LoadBalancerIP is a public IP address.
 -	loadBalancerIP := service.Spec.LoadBalancerIP
++	// The requested load balancer IP is used as VIP address for internal or IPv6 load balancers.
 +	loadBalancerIP := getLoadBalancerIP(service)
  	if loadBalancerIP != "" {
  		if svcConf.internal || (svcConf.preferredIPFamily == corev1.IPv6Protocol) {
  			createOpts.VipAddress = loadBalancerIP
- 		}
-@@ -401,6 +401,13 @@ func getStringFromServiceAnnotation(service *corev1.Service, annotationKey strin
+@@ -436,6 +437,13 @@ func getStringFromServiceAnnotation(service *corev1.Service, annotationKey strin
  	return defaultSetting
  }
  
 +func getLoadBalancerIP(service *corev1.Service) string {
-+	if loadBalancerIP := getStringFromServiceAnnotation(service, ServiceAnnotationLoadBalancerAddress, ""); loadBalancerIP != "" {
++	if loadBalancerIP := getStringFromServiceAnnotation(service, DeckhouseAnnotationLoadBalancerAddress, ""); loadBalancerIP != "" {
 +		return loadBalancerIP
 +	}
 +	return service.Spec.LoadBalancerIP
@@ -26,13 +35,114 @@ index 9d30cd9d..c9408eb9 100644
  // getIntFromServiceAnnotation searches a given v1.Service for a specific annotationKey and either returns the annotation's integer value or a specified defaultSetting
  func getIntFromServiceAnnotation(service *corev1.Service, annotationKey string, defaultSetting int) int {
  	klog.V(4).Infof("getIntFromServiceAnnotation(%s/%s, %v, %v)", service.Namespace, service.Name, annotationKey, defaultSetting)
-@@ -681,8 +688,8 @@ func (lbaas *LbaasV2) ensureFloatingIP(ctx context.Context, clusterName string,
+@@ -628,10 +636,10 @@ func (lbaas *LbaasV2) updateFloatingIP(ctx context.Context, floatingip *floating
+ //     b) If the Service is not the owner of the LB it will not contiue to prevent accidental exposure of the
+ //     possible internal Services already existing on that LB.
+ //     c) If it's external Service, it will use that existing FIP.
+-//  2. Lookup FIP specified in Spec.LoadBalancerIP and try to assign it to the LB VIP port.
++//  2. Lookup FIP specified in DeckhouseAnnotationLoadBalancerAddress or Spec.LoadBalancerIP and try to assign it to the LB VIP port.
+ //  3. Try to create and assign a new FIP:
+-//     a) If Spec.LoadBalancerIP is not set, just create a random FIP in the external network and use that.
+-//     b) If Spec.LoadBalancerIP is specified, try to create a FIP with that address. By default this is not allowed by
++//     a) If requested load balancer IP is not set, just create a random FIP in the external network and use that.
++//     b) If requested load balancer IP is specified, try to create a FIP with that address. By default this is not allowed by
+ //     the Neutron policy for regular users!
+ func (lbaas *LbaasV2) ensureFloatingIP(ctx context.Context, clusterName string, service *corev1.Service, lb *loadbalancers.LoadBalancer, svcConf *serviceConfig, isLBOwner bool) (string, error) {
+ 	serviceName := fmt.Sprintf("%s/%s", service.Namespace, service.Name)
+@@ -679,9 +687,9 @@ func (lbaas *LbaasV2) ensureFloatingIP(ctx context.Context, clusterName string,
+ 			service.Namespace, service.Name)
  	}
  
- 	// second attempt: fetch floating IP specified in service Spec.LoadBalancerIP
+-	// second attempt: fetch floating IP specified in service Spec.LoadBalancerIP
++	// second attempt: fetch requested floating IP
  	// if found, associate floating IP with loadbalancer's VIP port
 -	loadBalancerIP := service.Spec.LoadBalancerIP
 +	loadBalancerIP := getLoadBalancerIP(service)
  	if floatIP == nil && loadBalancerIP != "" {
  		opts := floatingips.ListOpts{
  			FloatingIP: loadBalancerIP,
+diff --git a/pkg/openstack/loadbalancer_test.go b/pkg/openstack/loadbalancer_test.go
+index 27304a4..b184f11 100644
+--- a/pkg/openstack/loadbalancer_test.go
++++ b/pkg/openstack/loadbalancer_test.go
+@@ -1466,6 +1466,80 @@ func Test_getStringFromServiceAnnotation(t *testing.T) {
+ 	}
+ }
+ 
++func Test_getLoadBalancerIP(t *testing.T) {
++	tests := []struct {
++		name     string
++		service  *corev1.Service
++		expected string
++	}{
++		{
++			name: "returns Deckhouse annotation value",
++			service: &corev1.Service{
++				ObjectMeta: v1.ObjectMeta{
++					Annotations: map[string]string{
++						DeckhouseAnnotationLoadBalancerAddress: "203.0.113.10",
++					},
++				},
++			},
++			expected: "203.0.113.10",
++		},
++		{
++			name: "Deckhouse annotation takes precedence over spec loadBalancerIP",
++			service: &corev1.Service{
++				ObjectMeta: v1.ObjectMeta{
++					Annotations: map[string]string{
++						DeckhouseAnnotationLoadBalancerAddress: "203.0.113.10",
++					},
++				},
++				Spec: corev1.ServiceSpec{
++					LoadBalancerIP: "203.0.113.20",
++				},
++			},
++			expected: "203.0.113.10",
++		},
++		{
++			name: "falls back to spec loadBalancerIP",
++			service: &corev1.Service{
++				Spec: corev1.ServiceSpec{
++					LoadBalancerIP: "203.0.113.20",
++				},
++			},
++			expected: "203.0.113.20",
++		},
++		{
++			name: "empty Deckhouse annotation falls back to spec loadBalancerIP",
++			service: &corev1.Service{
++				ObjectMeta: v1.ObjectMeta{
++					Annotations: map[string]string{
++						DeckhouseAnnotationLoadBalancerAddress: "",
++					},
++				},
++				Spec: corev1.ServiceSpec{
++					LoadBalancerIP: "203.0.113.20",
++				},
++			},
++			expected: "203.0.113.20",
++		},
++		{
++			name: "ignores upstream load balancer address annotation",
++			service: &corev1.Service{
++				ObjectMeta: v1.ObjectMeta{
++					Annotations: map[string]string{
++						ServiceAnnotationLoadBalancerAddress: "203.0.113.10",
++					},
++				},
++			},
++			expected: "",
++		},
++	}
++
++	for _, test := range tests {
++		t.Run(test.name, func(t *testing.T) {
++			assert.Equal(t, test.expected, getLoadBalancerIP(test.service))
++		})
++	}
++}
++
+ func Test_nodeAddressForLB(t *testing.T) {
+ 	type testArgs struct {
+ 		node              *corev1.Node

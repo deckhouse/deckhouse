@@ -14,13 +14,13 @@ Without a `node-selector` restriction, cloud-controller-manager may use all suit
 
 It is recommended to use `loadbalancer.openstack.org/node-selector` to select only the nodes that should be used as targets for the corresponding LoadBalancer.
 
-To use a preallocated floating IP for the Ingress controller LoadBalancer, add `loadbalancer.openstack.org/load-balancer-address` to the annotations of the `IngressNginxController` inlet section. Deckhouse passes these annotations to the generated `Service` of type `LoadBalancer`. To reuse an existing Octavia load balancer instead of selecting only its floating IP, use `loadbalancer.openstack.org/load-balancer-id` with the load balancer UUID.
+To use a preallocated floating IP for the Ingress controller LoadBalancer, add `loadbalancer.openstack.deckhouse.io/load-balancer-address` to the annotations of the `IngressNginxController` inlet section. Deckhouse passes these annotations to the generated `Service` of type `LoadBalancer`. The floating IP must already exist, must not be attached to a port, and must belong to the floating network configured for OpenStack CCM. If the specified floating IP is unavailable, CCM will not assign an external address to the Service. To reuse an existing Octavia load balancer instead of selecting only its floating IP, use `loadbalancer.openstack.org/load-balancer-id` with the load balancer UUID.
 
 Do not put these OpenStack load balancer annotations on application `Ingress` resources: they are processed by `openstack-cloud-controller-manager` on the `Service` object.
 
 ### IngressNginxController example
 
-In this example, the Ingress controller pods are scheduled on frontend nodes, the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes, and `loadbalancer.openstack.org/load-balancer-address` attaches a preallocated floating IP to the LoadBalancer:
+In this example, the Ingress controller pods are scheduled on frontend nodes, the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes, and `loadbalancer.openstack.deckhouse.io/load-balancer-address` attaches a preallocated floating IP to the LoadBalancer:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -32,8 +32,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
-      loadbalancer.openstack.org/load-balancer-address: "203.0.113.10"
-      loadbalancer.openstack.org/keep-floatingip: "true"
+      loadbalancer.openstack.deckhouse.io/load-balancer-address: "203.0.113.10"
       loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
