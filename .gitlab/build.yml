@@ -4,7 +4,7 @@
 #   :tag     — FE + CE/EE/BE/SE/SE-plus automatic (no tests image, no CSE; GH release has no CSE)
 #   :main    — FE + tests auto; other editions manual
 #   :mr      — FE + tests auto; other editions manual
-#   :release — FE + tests + all editions automatic (incl. CSE)
+#   :release-branch — FE + tests + all editions automatic (incl. CSE)
 
 .publish_image: &publish_image |
   publish_image() {

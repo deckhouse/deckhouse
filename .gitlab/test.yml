@@ -11,7 +11,7 @@
     - job: build_tests:main
       optional: true
       artifacts: true
-    - job: build_tests:release
+    - job: build_tests:release-branch
       optional: true
       artifacts: true
 
@@ -26,7 +26,7 @@
     - job: build_fe:tag
       optional: true
       artifacts: true
-    - job: build_fe:release
+    - job: build_fe:release-branch
       optional: true
       artifacts: true
 
