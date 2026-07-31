@@ -219,6 +219,11 @@ spec:
                         description: Name of the subject.
                         type: string
                         minLength: 1
+                        # The name ends up in a RoleBinding subject and, for a project rendered from
+                        # a legacy resourcesTemplate, inside a manifest. A control character has no
+                        # meaning in a subject name and a line break there would end the value it is
+                        # written into, so the whole class is refused at the door.
+                        pattern: '^[^\x00-\x1f\x7f]+$'
                 quota:
                   description: |
                     Resource quota of the project, applied as a `ResourceQuota` named `d8-project-quota` in the project namespace.
