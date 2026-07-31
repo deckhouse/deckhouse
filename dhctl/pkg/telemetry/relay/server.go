@@ -17,6 +17,8 @@ package relay
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"sync"
@@ -27,15 +29,13 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
 type Server struct {
 	span   trace.Span
 	spanMu sync.Mutex
 
-	logger  log.Logger
+	logger  *slog.Logger
 	server  *http.Server
 	started bool
 	mu      sync.Mutex
@@ -46,7 +46,7 @@ type Server struct {
 
 func NewServer(
 	span trace.Span,
-	logger log.Logger,
+	logger *slog.Logger,
 	tracerName string,
 ) *Server {
 	return &Server{
@@ -158,7 +158,7 @@ func (s *Server) handleTraces(w http.ResponseWriter, r *http.Request) {
 
 	var req exportTraceServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.logger.ErrorF("Failed to decode OTLP JSON: %v", err)
+		s.logger.ErrorContext(context.Background(), fmt.Sprintf("Failed to decode OTLP JSON: %v", err))
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
@@ -170,14 +170,14 @@ func (s *Server) handleTraces(w http.ResponseWriter, r *http.Request) {
 
 				traceID, err := trace.TraceIDFromHex(sp.TraceID)
 				if err != nil {
-					s.logger.ErrorF("Failed to parse TraceID '%s': %v", sp.TraceID, err)
+					s.logger.ErrorContext(context.Background(), fmt.Sprintf("Failed to parse TraceID '%s': %v", sp.TraceID, err))
 				}
 
 				parentSpanIDToUse := trace.SpanID{}
 				if sp.ParentSpanID != "" {
 					parentSpanIDToUse, err = trace.SpanIDFromHex(sp.ParentSpanID)
 					if err != nil {
-						s.logger.ErrorF("Failed to parse ParentSpanID '%s': %v", sp.ParentSpanID, err)
+						s.logger.ErrorContext(context.Background(), fmt.Sprintf("Failed to parse ParentSpanID '%s': %v", sp.ParentSpanID, err))
 					}
 				}
 
@@ -200,7 +200,7 @@ func (s *Server) handleTraces(w http.ResponseWriter, r *http.Request) {
 						// Unix takes seconds and nanoseconds
 						startTime = time.Unix(0, nsec)
 					} else {
-						s.logger.ErrorF("Failed to parse StartTimeUnixNano '%s': %v", sp.StartTimeUnixNano, err)
+						s.logger.ErrorContext(context.Background(), fmt.Sprintf("Failed to parse StartTimeUnixNano '%s': %v", sp.StartTimeUnixNano, err))
 					}
 				}
 				if sp.EndTimeUnixNano != "" {

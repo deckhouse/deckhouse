@@ -15,24 +15,39 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/mod/semver"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sversion "k8s.io/apimachinery/pkg/version"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 )
 
-const gatewayAPICRDComplianceRetryInterval = time.Minute
+const (
+	gatewayAPICRDComplianceRetryInterval = time.Minute
+	gatewayAPIBundleVersionAnnotation    = "gateway.networking.k8s.io/bundle-version"
+)
 
 //go:embed crds_gateway_api/*.yaml
 var gatewayAPICRDManifests embed.FS
 
 type bundledGatewayAPICRD struct {
-	manifestPath   string
-	crd            *apiextensionsv1.CustomResourceDefinition
-	storageVersion string
+	manifestPath               string
+	crd                        *apiextensionsv1.CustomResourceDefinition
+	minimumBundleVersion       string
+	minimumServedVersion       string
+	requiredExactServedVersion string
+}
+
+// requiredGatewayAPIEndpoints lists API endpoints used directly by this
+// controller. Unlike the CRDs installed for the wider Gateway API ecosystem,
+// these must serve the exact version against which the controller is compiled.
+var requiredGatewayAPIEndpoints = map[string]string{
+	"gateways." + gatewayv1.GroupName: gatewayv1.GroupVersion.Version,
 }
 
 func WaitForGatewayAPICRDCompliance(ctx context.Context) error {
@@ -92,7 +107,8 @@ func ensureGatewayAPICRDComplianceOnce(ctx context.Context, clientset apiextensi
 		klog.V(4).InfoS(
 			"Checking Gateway API CRD",
 			"name", bundledCRD.crd.Name,
-			"expectedStorageVersion", bundledCRD.storageVersion,
+			"minimumBundleVersion", bundledCRD.minimumBundleVersion,
+			"minimumServedVersion", bundledCRD.minimumServedVersion,
 		)
 		clusterCRD, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Get(
 			ctx,
@@ -103,7 +119,8 @@ func ensureGatewayAPICRDComplianceOnce(ctx context.Context, clientset apiextensi
 			klog.V(1).InfoS(
 				"Gateway API CRD is missing from cluster and will be created",
 				"name", bundledCRD.crd.Name,
-				"expectedStorageVersion", bundledCRD.storageVersion,
+				"minimumBundleVersion", bundledCRD.minimumBundleVersion,
+				"minimumServedVersion", bundledCRD.minimumServedVersion,
 			)
 			continue
 		}
@@ -114,100 +131,123 @@ func ensureGatewayAPICRDComplianceOnce(ctx context.Context, clientset apiextensi
 		clusterCRDs[bundledCRD.crd.Name] = clusterCRD
 	}
 
-	toCreate, mismatches, err := evaluateGatewayAPICRDState(bundledCRDs, clusterCRDs)
-	if err != nil {
-		return "", err
-	}
+	toCreate, mismatches := evaluateGatewayAPICRDState(bundledCRDs, clusterCRDs)
 	if len(mismatches) > 0 {
 		return fmt.Sprintf(
-			"Gateway API CRD storage version mismatch detected, controller startup is blocked and will retry in %s: %s",
+			"incompatible Gateway API CRDs detected, controller startup is blocked and will retry in %s: %s",
 			gatewayAPICRDComplianceRetryInterval,
 			strings.Join(mismatches, "; "),
 		), nil
 	}
 
-	for _, crd := range toCreate {
-		storageVersion, err := storageVersionForCRD(crd)
-		if err != nil {
-			return "", fmt.Errorf("determine storage version for bundled Gateway API CRD %q before create: %w", crd.Name, err)
-		}
-
+	for _, bundledCRD := range toCreate {
 		klog.V(4).InfoS(
 			"Creating bundled Gateway API CRD",
-			"name", crd.Name,
-			"storageVersion", storageVersion,
+			"name", bundledCRD.crd.Name,
+			"minimumBundleVersion", bundledCRD.minimumBundleVersion,
 		)
 
-		_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Create(
+		_, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Create(
 			ctx,
-			crd,
+			bundledCRD.crd.DeepCopy(),
 			metav1.CreateOptions{},
 		)
 		if err == nil {
 			klog.V(1).InfoS(
 				"Created bundled Gateway API CRD",
-				"name", crd.Name,
-				"storageVersion", storageVersion,
+				"name", bundledCRD.crd.Name,
+				"minimumBundleVersion", bundledCRD.minimumBundleVersion,
 			)
 
 			continue
 		}
 		if apierrors.IsAlreadyExists(err) {
-			klog.V(4).InfoS(
-				"Gateway API CRD already exists while creating, continuing",
-				"name", crd.Name,
-			)
-
-			continue
+			// Another actor created the CRD after the read above. Do not assume it
+			// is compatible; make the next pass fetch and validate it.
+			return fmt.Sprintf(
+				"Gateway API CRD %q was created concurrently, controller startup is blocked until it is validated on the next retry in %s",
+				bundledCRD.crd.Name,
+				gatewayAPICRDComplianceRetryInterval,
+			), nil
 		}
 
-		return "", fmt.Errorf("create bundled Gateway API CRD %q: %w", crd.Name, err)
+		return "", fmt.Errorf("create bundled Gateway API CRD %q: %w", bundledCRD.crd.Name, err)
 	}
 
 	return "", nil
 }
 
-func evaluateGatewayAPICRDState(bundledCRDs []bundledGatewayAPICRD, clusterCRDs map[string]*apiextensionsv1.CustomResourceDefinition) ([]*apiextensionsv1.CustomResourceDefinition, []string, error) {
+func evaluateGatewayAPICRDState(bundledCRDs []bundledGatewayAPICRD, clusterCRDs map[string]*apiextensionsv1.CustomResourceDefinition) ([]bundledGatewayAPICRD, []string) {
 	var (
-		toCreate   []*apiextensionsv1.CustomResourceDefinition
+		toCreate   []bundledGatewayAPICRD
 		mismatches []string
 	)
 
 	for _, bundledCRD := range bundledCRDs {
 		clusterCRD, exists := clusterCRDs[bundledCRD.crd.Name]
 		if !exists {
-			toCreate = append(toCreate, bundledCRD.crd.DeepCopy())
+			toCreate = append(toCreate, bundledCRD)
 			continue
 		}
 
-		clusterStorageVersion, err := storageVersionForCRD(clusterCRD)
-		if err != nil {
-			return nil, nil, fmt.Errorf("determine storage version for cluster CRD %q: %w", clusterCRD.Name, err)
-		}
-		if clusterStorageVersion != bundledCRD.storageVersion {
-			klog.V(4).InfoS(
-				"Gateway API CRD storage version mismatch detected",
-				"name", clusterCRD.Name,
-				"clusterStorageVersion", clusterStorageVersion,
-				"expectedStorageVersion", bundledCRD.storageVersion,
-			)
+		clusterBundleVersion := clusterCRD.Annotations[gatewayAPIBundleVersionAnnotation]
+		if bundledCRD.requiredExactServedVersion != "" && !servesVersion(clusterCRD, bundledCRD.requiredExactServedVersion) {
 			mismatches = append(mismatches, fmt.Sprintf(
-				"%s (cluster=%s, bundled=%s)",
+				"%s (required API version %s is not served)",
 				clusterCRD.Name,
-				clusterStorageVersion,
-				bundledCRD.storageVersion,
+				bundledCRD.requiredExactServedVersion,
+			))
+			continue
+		}
+		if !servesVersionOrHigher(clusterCRD, bundledCRD.minimumServedVersion) {
+			mismatches = append(mismatches, fmt.Sprintf(
+				"%s (minimum API version %s or higher is not served)",
+				clusterCRD.Name,
+				bundledCRD.minimumServedVersion,
 			))
 			continue
 		}
 
-		klog.V(4).InfoS(
-			"Gateway API CRD storage version matches bundled manifest",
-			"name", clusterCRD.Name,
-			"storageVersion", clusterStorageVersion,
+		if semver.IsValid(clusterBundleVersion) {
+			if semver.Compare(clusterBundleVersion, bundledCRD.minimumBundleVersion) < 0 {
+				klog.V(4).InfoS(
+					"Gateway API CRD bundle version is older than bundled manifest",
+					"name", clusterCRD.Name,
+					"clusterBundleVersion", clusterBundleVersion,
+					"minimumBundleVersion", bundledCRD.minimumBundleVersion,
+				)
+				mismatches = append(mismatches, fmt.Sprintf(
+					"%s (cluster bundle=%s, minimum bundle=%s)",
+					clusterCRD.Name,
+					clusterBundleVersion,
+					bundledCRD.minimumBundleVersion,
+				))
+				continue
+			}
+
+			klog.V(4).InfoS(
+				"Gateway API CRD bundle version is compatible",
+				"name", clusterCRD.Name,
+				"clusterBundleVersion", clusterBundleVersion,
+				"minimumBundleVersion", bundledCRD.minimumBundleVersion,
+			)
+			continue
+		}
+
+		// The bundle-version annotation is metadata added by upstream release
+		// bundles, not part of the CRD's API contract. User- or vendor-supplied
+		// compatible CRDs may omit it, so accept the CRD based on the served API
+		// version validated above.
+		klog.Warningf(
+			"Gateway API CRD %q has missing or invalid %q annotation %q; accepting it because API version %q or higher is served",
+			clusterCRD.Name,
+			gatewayAPIBundleVersionAnnotation,
+			clusterBundleVersion,
+			bundledCRD.minimumServedVersion,
 		)
 	}
 
-	return toCreate, mismatches, nil
+	return toCreate, mismatches
 }
 
 func loadBundledGatewayAPICRDs() ([]bundledGatewayAPICRD, error) {
@@ -229,15 +269,21 @@ func loadBundledGatewayAPICRDs() ([]bundledGatewayAPICRD, error) {
 			return nil, fmt.Errorf("decode bundled Gateway API CRD manifest %q: %w", manifestPath, err)
 		}
 
-		storageVersion, err := storageVersionForCRD(crd)
+		bundleVersion, err := bundleVersionForCRD(crd)
 		if err != nil {
-			return nil, fmt.Errorf("determine storage version for bundled Gateway API CRD manifest %q: %w", manifestPath, err)
+			return nil, fmt.Errorf("determine bundle version for bundled Gateway API CRD manifest %q: %w", manifestPath, err)
+		}
+		minimumServedVersion, err := minimumServedVersionForCRD(crd)
+		if err != nil {
+			return nil, fmt.Errorf("determine minimum served version for bundled Gateway API CRD manifest %q: %w", manifestPath, err)
 		}
 
 		bundledCRDs = append(bundledCRDs, bundledGatewayAPICRD{
-			manifestPath:   manifestPath,
-			crd:            crd,
-			storageVersion: storageVersion,
+			manifestPath:               manifestPath,
+			crd:                        crd,
+			minimumBundleVersion:       bundleVersion,
+			minimumServedVersion:       minimumServedVersion,
+			requiredExactServedVersion: requiredGatewayAPIEndpoints[crd.Name],
 		})
 	}
 
@@ -246,6 +292,60 @@ func loadBundledGatewayAPICRDs() ([]bundledGatewayAPICRD, error) {
 	}
 
 	return bundledCRDs, nil
+}
+
+func bundleVersionForCRD(crd *apiextensionsv1.CustomResourceDefinition) (string, error) {
+	bundleVersion := crd.Annotations[gatewayAPIBundleVersionAnnotation]
+	if bundleVersion == "" {
+		return "", fmt.Errorf("CRD %q does not have the %q annotation", crd.Name, gatewayAPIBundleVersionAnnotation)
+	}
+	if !semver.IsValid(bundleVersion) {
+		return "", fmt.Errorf("CRD %q has invalid bundle version %q in the %q annotation", crd.Name, bundleVersion, gatewayAPIBundleVersionAnnotation)
+	}
+
+	return bundleVersion, nil
+}
+
+// minimumServedVersionForCRD returns the minimum API version a compatible
+// cluster CRD must serve. The storage version is used because it is unique per
+// CRD and makes the choice deterministic and independent of the ordering of
+// spec.versions. The bundled manifests always mark their storage version as
+// served; this is verified here so an invalid manifest fails fast at load time.
+func minimumServedVersionForCRD(crd *apiextensionsv1.CustomResourceDefinition) (string, error) {
+	storageVersion, err := storageVersionForCRD(crd)
+	if err != nil {
+		return "", err
+	}
+	if !servesVersion(crd, storageVersion) {
+		return "", fmt.Errorf("CRD %q does not serve its storage version %q", crd.Name, storageVersion)
+	}
+
+	return storageVersion, nil
+}
+
+func servesVersion(crd *apiextensionsv1.CustomResourceDefinition, requiredVersion string) bool {
+	for _, version := range crd.Spec.Versions {
+		if version.Name == requiredVersion && version.Served {
+			return true
+		}
+	}
+
+	return false
+}
+
+// servesVersionOrHigher reports whether the CRD serves an API version whose
+// Kubernetes version priority is equal to or higher than minimumVersion. This
+// is intentionally a compatibility heuristic, not a schema compatibility
+// guarantee: newer or more stable API versions are accepted without requiring
+// an exact version match.
+func servesVersionOrHigher(crd *apiextensionsv1.CustomResourceDefinition, minimumVersion string) bool {
+	for _, version := range crd.Spec.Versions {
+		if version.Served && k8sversion.CompareKubeAwareVersionStrings(version.Name, minimumVersion) >= 0 {
+			return true
+		}
+	}
+
+	return false
 }
 
 func storageVersionForCRD(crd *apiextensionsv1.CustomResourceDefinition) (string, error) {

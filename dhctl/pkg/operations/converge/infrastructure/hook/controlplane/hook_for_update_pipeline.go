@@ -28,6 +28,8 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -35,10 +37,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type ClientSwitcher interface {
@@ -115,7 +115,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	}
 
 	if !runner.HasVMDestruction() {
-		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
 		return false, nil
 	}
 
@@ -141,7 +141,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
 		h.oldMasterIPForSSH = ""
-		log.InfoF("Got empty master IP for ssh for node %s.\n", h.nodeToConverge)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s.", h.nodeToConverge))
 		return false, nil
 	}
 
@@ -158,7 +158,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.nodeToConverge, h.commanderMode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.kubeGetter, h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
@@ -177,7 +177,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	}
 
 	if !runner.HasVMDestruction() {
-		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
 		return nil
 	}
 
@@ -185,13 +185,9 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
-	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
 
 	if !h.commanderMode {
-		cl, err := h.sshProvider.Client(context.Background())
+		cl, err := h.sshProvider.Client(ctx)
 		if err != nil {
 			panic("Node interface is not ssh")
 		}
@@ -219,7 +215,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to wait for the master node '%s' to become Ready: %w", h.nodeToConverge, err)
 	}
 
-	err = waitEtcdHasMember(ctx, kubeClient.KubeClient.(libcon.KubeClient), h.nodeToConverge)
+	err = waitEtcdHasMember(ctx, h.kubeGetter, h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %w", h.nodeToConverge, err)
 	}
@@ -240,7 +236,14 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return err
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Check control-plane is ready on node '%s'", h.nodeToConverge), 450, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Check control-plane is ready on node '%s'", h.nodeToConverge),
+		retry.WithAttempts(450),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(hook.ErrNotReady, ErrControlPlaneReadinessCheckTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
 		if err != nil {
 			return fmt.Errorf("failed to check the master node '%s' readiness: %w", h.nodeToConverge, err)
@@ -259,7 +262,7 @@ func (h *HookForUpdatePipeline) IsReady() error {
 }
 
 func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context, devicePath string) error {
-	getDevicePathManifest := func() interface{} {
+	getDevicePathManifest := func() any {
 		return manifests.SecretMasterDevicePath(h.nodeToConverge, []byte(devicePath))
 	}
 
@@ -271,7 +274,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 		Manifest: getDevicePathManifest,
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeClient.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return err
@@ -279,7 +282,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 
 			return nil
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			data, err := json.Marshal(manifest.(*apiv1.Secret))
 			if err != nil {
 				return err
@@ -300,7 +303,14 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 450, 1*time.Second).
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Save Kubernetes data device path for node '%s'", h.nodeToConverge),
+		retry.WithAttempts(450),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			return task.CreateOrUpdate(ctx)
 		})

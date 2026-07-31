@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -33,7 +33,7 @@ const (
 var (
 	embeddedDeployedDir = "modules"
 
-	downloadedDir = d8env.GetDownloadedModulesDir()
+	downloadedDir = app.DownloadedModulesDir()
 
 	modulesDownloadedDir = filepath.Join(downloadedDir, "modules")
 	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "deployed")

@@ -22,9 +22,10 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var ErrNotReady = fmt.Errorf("Not ready.")
@@ -35,12 +36,13 @@ type NodeChecker interface {
 }
 
 func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName, sourceCommandName string) (bool, error) {
+	_ = sourceCommandName
 	title := fmt.Sprintf("Node %s readiness check", nodeName)
 	var lastErr error
 
 	err := retry.NewLoop(title, 300, 1*time.Second).RunContext(ctx, func() error {
 		for _, check := range checkers {
-			err := log.ProcessCtx(ctx, sourceCommandName, check.Name(), func(ctx context.Context) error {
+			err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), check.Name(), func(ctx context.Context) error {
 				isReady, err := check.IsReady(ctx, nodeName)
 				if err != nil {
 					return err

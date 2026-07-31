@@ -29,7 +29,7 @@
 # `.deckhouseImageRef`, ~200 MiB), deckhouse/*, cniCilium/*, coredns, nodeManager (minus
 # nvidia*/nodeFeatureDiscovery/stale clusterAutoscaler), current cloudProvider/*, common
 # runtime bits, kubeProxy, csi-sidecars, common misc, then chrony/*, registryPackagesProxy/*,
-# monitoringKubernetes/* and kubeDns/*.
+# and kubeDns/*.
 #
 # Each line is "<section>/<imageKey> <ref>"; pull_one splits on the first space.
 # Fire-and-forget: failures never block bashible; kubelet fetches anything missing later.
@@ -75,7 +75,7 @@ script_file="/run/ctr-prefetch.sh"
 {{- $base := $.registry.imagesBase }}
 {{- $caCurrent := printf "clusterAutoscaler%s" $k8s }}
 {{- $cpmNames := list "etcd" (printf "controlPlaneManager%s" $k8s) (printf "kubeApiserver%s" $k8s) (printf "kubeControllerManager%s" $k8s) (printf "kubeScheduler%s" $k8s) }}
-{{- $commonRest := list "kubeRbacProxy" "iptablesWrapper" "init" "shellOperator" "distroless" }}
+{{- $commonRest := list "kubeRbacProxy" "init" }}
 {{- $kpNames := list (printf "kubeProxy%s" $k8s) "iptablesWrapperInit" "initContainer" }}
 {{- $commonNamed := list (printf "csiExternalProvisioner%s" $k8s) (printf "csiExternalAttacher%s" $k8s) (printf "csiExternalResizer%s" $k8s) (printf "csiExternalSnapshotter%s" $k8s) (printf "csiLivenessprobe%s" $k8s) (printf "csiNodeDriverRegistrar%s" $k8s) "checkKernelVersion" "cniMigrationInitChecker" "vxlanOffloadingFixer" }}
 cat > "$script_file" <<'EOSCRIPT'
@@ -148,7 +148,7 @@ kubeProxy/{{ $name }} {{ $base }}@{{ $digest }}
 common/{{ $name }} {{ $base }}@{{ $digest }}
 {{- end }}
 {{- end }}
-{{- range $section := (list "chrony" "registryPackagesProxy" "monitoringKubernetes" "kubeDns") }}
+{{- range $section := (list "chrony" "registryPackagesProxy" "kubeDns") }}
 {{- range $name, $digest := (index $.images $section | default dict) }}
 {{ $section }}/{{ $name }} {{ $base }}@{{ $digest }}
 {{- end }}

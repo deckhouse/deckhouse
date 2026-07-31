@@ -180,7 +180,7 @@ spec:
     resourceRules:
     - apiGroups:   ["deckhouse.io"]
       apiVersions: ["v1alpha1"]
-      operations:  ["*"]
+      operations:  ["CREATE", "UPDATE"]
       resources:   ["moduleconfigs"]
   matchConditions:
     - name: {{ $policyName }}

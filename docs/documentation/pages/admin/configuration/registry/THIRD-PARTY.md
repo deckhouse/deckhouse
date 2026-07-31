@@ -1,18 +1,16 @@
 ---
-title: Switching a running DKP cluster to use an external registry
+title: Switching a Managed Kubernetes cluster to use third-party registry
 permalink: en/admin/configuration/registry/third-party.html
 ---
 
 {% alert level="warning" %}
-When using the [registry](/modules/registry/) module, change the address and parameters of the registry in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. An example of configuration is provided in the [`registry`](/modules/registry/examples.html) module documentation.
+This page applies only to Managed Kubernetes clusters. Registry management through the `registry` module is not available in these clusters.
+
+For clusters fully managed by Deckhouse Kubernetes Platform (DKP), registry settings are configured in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. For an example, see ["Managing the registry in DKP-managed clusters"](managing-interaction.html).
 {% endalert %}
 
 {% alert level="warning" %}
 Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of the Deckhouse Kubernetes Platform.
-{% endalert %}
-
-{% alert level="warning" %}
-If, during the switching process, the image of a module did not reload and the module did not reinstall, use the [instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
 {% endalert %}
 
 To switch the cluster to use an external registry, follow these steps:
@@ -67,7 +65,7 @@ To switch the cluster to use an external registry, follow these steps:
                      http - provide '--scheme' flag with http value
    ```
 
-1. Wait until the registry pod reaches the `Ready` status. If the pod is in the `ImagePullBackoff` state, restart it.
+1. Wait until the `registry` Pod reaches the `Ready` status. If the Pod is in the `ImagePullBackoff` state, restart it.
 1. Wait for bashible to apply the new settings on the master node.
 
    Check the bashible system service log on the master node, for example, using the following command:
@@ -81,18 +79,21 @@ To switch the cluster to use an external registry, follow these steps:
    Example of output when viewing the bashible service log:
 
    ```console
-   $ journalctl -u bashible -n 20
-   ...
    Aug 13 05:03:08 kube-master-0 systemd[1]: Started Bashible service.
    Aug 13 05:03:10 kube-master-0 bash[1847265]: Configuration is in sync, nothing to do.   <--
    Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Deactivated successfully.
    Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Consumed 1.075s CPU time.
    ```
 
-1. If you need to disable automatic registry updates via the external registry, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
+1. If you need to disable automatic DKP upgrades through the external registry, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
+   After that, automatic platform upgrades will be disabled, and you will need to manage the DKP version manually.
 1. Check if any pods in the cluster are still using the original registry address:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
+
+{% alert level="warning" %}
+If a module's image wasn't pulled and the module wasn't reinstalled during the switch, follow the [instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
+{% endalert %}

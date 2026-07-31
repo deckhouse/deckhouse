@@ -33,10 +33,11 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
 
@@ -47,7 +48,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 30},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cloud_provider_discovery_data",
@@ -71,9 +72,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &meta.LabelSelector{
 				MatchLabels: map[string]string{
 					"heritage": "deckhouse",
-					"module":   "cloud-provider-dvp",
+					"module":   dvpModuleName,
 				},
 			},
+			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 	},
 }, handleCloudProviderDiscoveryDataSecret)
@@ -99,6 +101,14 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
+	// On fresh install without a ModuleConfig, nodes/provider are absent; any Values.Set
+	// triggers full-object schema validation which rejects the patch. Defer to OnBeforeHelm
+	// where dvp_cluster_configuration.go (Order 20) has already populated required fields.
+	if _, ok := input.Values.GetOk("cloudProviderDvp.provider"); !ok {
+		input.Logger.Warn("cloudProviderDvp.provider not set, skipping discovery (will run on OnBeforeHelm)")
+		return nil
+	}
+
 	if len(input.Snapshots.Get("cloud_provider_discovery_data")) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
@@ -137,8 +147,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/candi/cloud-providers/dvp/openapi", "/deckhouse/modules/030-cloud-provider-dvp/candi/openapi"}, nil)
-	if err != nil {
+	if err := validation.ValidateData([]string{"/deckhouse/candi/cloud-providers/dvp/openapi", "/deckhouse/modules/030-cloud-provider-dvp/candi/openapi"}, &discoveryDataJSON); err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 

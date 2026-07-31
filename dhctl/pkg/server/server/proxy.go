@@ -37,9 +37,10 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
@@ -152,12 +153,10 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 
 		log.Info("started new dhctl instance")
 
-		d.wg.Add(1)
-		go func() {
-			defer d.wg.Done()
+		d.wg.Go(func() {
 			exitErr := cmd.Wait()
 			log.Info("stopped dhctl instance", logger.Err(exitErr))
-		}()
+		})
 
 		conn, err := createDHCTLServerConnRetried(ctx, log, address)
 		if err != nil {

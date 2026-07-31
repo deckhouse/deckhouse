@@ -18,7 +18,7 @@ limitations under the License.
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
-2. There are applications which must be deployed — cloud-controller-manager, azure-csi-driver, simple-bridge.
+2. There are applications which must be deployed — cloud-controller-manager, azure-csi-driver, cni-cilium.
 
 */
 
@@ -31,6 +31,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -191,9 +192,20 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-azure:cluster-admin")
 
 			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			cniSecret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
+
+			Expect(cniSecret.Exists()).To(BeTrue())
+			Expect(cniSecret.Field("data.cni").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("cilium"))))
+			actualCiliumConfig, err := base64.StdEncoding.DecodeString(cniSecret.Field("data.cilium").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(actualCiliumConfig)).To(MatchJSON(`{
+  "mode": "VXLAN",
+  "masqueradeMode": "BPF"
+}`))
+
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
 			Expect(userAuthzUser.Field("rules").String()).To(MatchYAML(`
@@ -282,6 +294,13 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			Expect(ccmCRB.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
 
+			// Fallback branch of helm_lib_cluster_prefix: global.prefix unset,
+			// so the CCM config falls back to ClusterConfiguration.cloud.prefix.
+			ccmCloudConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(gjson.Get(string(ccmCloudConfig), "securityGroupName").String()).To(Equal("myprefix"))
+			Expect(gjson.Get(string(ccmCloudConfig), "routeTableName").String()).To(Equal("myprefix"))
+
 			Expect(azureCSIDriver.Exists()).To(BeTrue())
 			Expect(azureNodePluginDS.Exists()).To(BeTrue())
 			Expect(azureNodePluginDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
@@ -321,6 +340,26 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			It("CSI controller should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("With global.prefix (global ModuleConfig) set", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
+				f.ValuesSet("global.prefix", "mcprefix")
+				f.HelmRender()
+			})
+
+			It("uses global.prefix over the deprecated ClusterConfiguration.cloud.prefix", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+				Expect(ccmSecret.Exists()).To(BeTrue())
+				cloudConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(gjson.Get(string(cloudConfig), "securityGroupName").String()).To(Equal("mcprefix"))
+				Expect(gjson.Get(string(cloudConfig), "routeTableName").String()).To(Equal("mcprefix"))
 			})
 		})
 	})
@@ -382,6 +421,31 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 
 			d := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 			Expect(d.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Azure with existing CNI secret data", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
+			f.ValuesSet("cloudProviderAzure.internal.cniSecretData", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`cni: %s
+flannel: %s
+`,
+				base64.StdEncoding.EncodeToString([]byte("flannel")),
+				base64.StdEncoding.EncodeToString([]byte(`{"podNetworkMode":"host-gw"}`)),
+			))))
+			f.HelmRender()
+		})
+
+		It("Should render CNI secret from internal value", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cniSecret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(cniSecret.Exists()).To(BeTrue())
+			Expect(cniSecret.Field("data.cni").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("flannel"))))
+			Expect(cniSecret.Field("data.flannel").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(`{"podNetworkMode":"host-gw"}`))))
+			Expect(cniSecret.Field("data.cilium").Exists()).To(BeFalse())
 		})
 	})
 })

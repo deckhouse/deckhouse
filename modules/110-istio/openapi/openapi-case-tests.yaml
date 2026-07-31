@@ -38,6 +38,20 @@ positive:
         enabled: true
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
+    - telemetryAPI:
+        enabled: true
+    - configAnalysis:
+        enabled: false
+    - jwksResolverAdditionalRootCA: |
+        -----BEGIN CERTIFICATE-----
+        MIIDXTCCAkWgAwIBAgIJAN...
+        -----END CERTIFICATE-----
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.d8-istio.svc.cluster.local
+            port: 10003
   values:
     - {}
 negative:
@@ -58,3 +72,9 @@ negative:
         enabled: true
       dataPlane:
         trafficRedirectionSetupMode: InitContainer
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.istio-system.svc.cluster.local
+            port: "10003"

@@ -37,8 +37,7 @@ func (t *AdditionalPropertiesTransformer) Transform(s *spec.Schema) *spec.Schema
 			prop.AdditionalProperties = &spec.SchemaOrBool{
 				Allows: false,
 			}
-			ts := prop
-			s.Properties[k] = *t.Transform(&ts)
+			s.Properties[k] = *t.Transform(new(prop))
 		}
 	}
 
@@ -47,8 +46,7 @@ func (t *AdditionalPropertiesTransformer) Transform(s *spec.Schema) *spec.Schema
 			s.Items.Schema = t.Transform(s.Items.Schema)
 		}
 		for i, item := range s.Items.Schemas {
-			ts := item
-			s.Items.Schemas[i] = *t.Transform(&ts)
+			s.Items.Schemas[i] = *t.Transform(new(item))
 		}
 	}
 

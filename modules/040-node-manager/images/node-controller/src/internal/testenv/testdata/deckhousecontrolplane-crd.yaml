@@ -1,0 +1,23 @@
+# TEST FIXTURE. Minimal DeckhouseControlPlane CRD: the production cache (common.CacheOptions)
+# scopes this provider-owned kind, so every envtest manager needs the CRD present even though
+# the node-controller repo does not ship it. Schema-free on purpose.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: deckhousecontrolplanes.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: DeckhouseControlPlane
+    listKind: DeckhouseControlPlaneList
+    plural: deckhousecontrolplanes
+    singular: deckhousecontrolplane
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          x-kubernetes-preserve-unknown-fields: true

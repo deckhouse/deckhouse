@@ -161,7 +161,6 @@ kind: ModuleConfig
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			out := input.CombineYAMLs(tt.in...)
 			assert.Equal(t, tt.out, out)

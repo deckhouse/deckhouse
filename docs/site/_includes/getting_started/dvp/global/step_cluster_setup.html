@@ -114,20 +114,25 @@
   </div>
 
   <div class="form__row">
-    <label class="label" title="Container image registry credentials, Base64-encoded">
-      Container image registry credentials, <strong>Base64-encoded</strong>.
+    <label class="label" title="The username for accessing the registry">
+      The username for accessing the registry.
     </label>
     <input
       class="textfield"
-      type="text" id="registryDockerCfg"
-      name="registryDockerCfg" placeholder=""
+      type="text" id="privateRegistryUser"
+      name="privateRegistryUser" placeholder=""
       autocomplete="off" />
-    <span class="info">
-      It is a string from the Docker client configuration file (in Linux it is usually <code>$HOME/.docker/config.json</code>), Base64-encoded.<br />Read more about the parameter in the <a href="/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg">InitConfiguration documentation</a>.
-    </span>
-    <span class="info">
-      If using anonymous access to the container registry, do not fill in this field.
-    </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="The password for accessing the registry">
+      The password for accessing the registry.
+    </label>
+    <input
+      class="textfield"
+      type="text" id="privateRegistryPassword"
+      name="privateRegistryPassword" placeholder=""
+      autocomplete="off" />
   </div>
 
   <div class="form__row">

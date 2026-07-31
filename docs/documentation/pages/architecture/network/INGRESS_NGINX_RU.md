@@ -25,7 +25,6 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
 Архитектура модуля [`ingress-nginx`](/modules/ingress-nginx/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля ingress-nginx](../../images/architecture/network/c4-l2-ingress-nginx.ru.png)
 
 ## Компоненты модуля
@@ -95,7 +94,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
 ## Способы приема трафика из внешней сети
 
-Способы приема трафика из внешней сети подробно описаны в параметре [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) кастомного ресурса IngressNginxController.
+Способы приема трафика из внешней сети подробно описаны в параметре [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) кастомного ресурса IngressNginxController.
 
 Для инлетов вида LoadBalancer, LoadBalancerWithProxyProtocol и LoadBalancerWithSSLPassthrough указанный на схеме балансировщик нагрузки автоматически предоставляется облачным провайдером (при развертывании DKP в облаке), либо может быть реализован при помощи MetalLB-контроллера (при установке на bare-metal-хостах). С настройками модуля `metallb` можно ознакомиться в [соответствующем разделе документации](/modules/metallb/configuration.html).
 
@@ -103,7 +102,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 
 ## Архитектура Ingress-контроллера с инлетом HostWithFailover
 
-При значении `HostWithFailover` параметра [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) кастомного ресурса IngressNginxController в кластере устанавливаются два Ingress-контроллера — основной и резервный (failover), а также proxy-failover-контроллер, который координирует переключение трафика между ними.
+При значении `HostWithFailover` параметра [`spec.inlet`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) кастомного ресурса IngressNginxController в кластере устанавливаются два Ingress-контроллера — основной и резервный (failover), а также proxy-failover-контроллер, который координирует переключение трафика между ними.
 
 Основной контроллер запускается в `hostNetwork`, в то время как failover-контроллер запускается в `podNetwork`. Если под основного контроллера становится недоступен на узле, proxy-failover начинает проксировать трафик в под failover-контроллера, используя `PROXY PROTOCOL` для сохранения информации об IP-адресе клиента.
 
@@ -111,7 +110,6 @@ description: Архитектура модуля ingress-nginx в Deckhouse Kube
 На следующей схеме не показана архитектура основного Ingress-контроллера, а также взаимодействия модуля, поскольку они подробно описаны на схеме выше.
 {% endalert %}
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля ingress-nginx с инлетом HostWithFailover](../../images/architecture/network/c4-l2-ingress-nginx-failover.ru.png)
 
 ### Компоненты failover Ingress-контроллера

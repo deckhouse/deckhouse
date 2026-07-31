@@ -3,6 +3,26 @@ IMG ?= registry.deckhouse.io/deckhouse/node-controller:latest
 BINARY_NAME ?= node-controller
 GOBIN ?= $(shell go env GOPATH)/bin
 
+# Location for locally-installed tooling (envtest assets, setup-envtest).
+LOCALBIN ?= $(shell pwd)/bin
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+# Kubebuilder assets version for the envtest integration suite.
+ENVTEST_K8S_VERSION ?= 1.34.1
+# gotestfmt (GoTestTools) renders go test -json into GitHub Actions collapsible groups.
+GOTESTFMT ?= $(LOCALBIN)/gotestfmt
+GOTESTFMT_VERSION ?= v2.5.0
+# CI sets GOTESTFMT_CI=github to emit ::group:: collapsible output; empty locally for plain output.
+GOTESTFMT_CI ?=
+# Custom gotestfmt templates (per-package groups) live under .github so they're treated as CI config,
+# not module source. Path is relative to this Makefile's dir (the module's fixed position in the repo).
+GOTESTFMT_TEMPLATE_DIR ?= ../../../../../.github/gotestfmt/node-controller
+# Raw go test -json logs, captured to files so the go test exit code survives (gotestfmt is only a
+# formatter; piping into it would otherwise mask a test failure behind gotestfmt's exit code).
+GOTEST_JSON_UNIT ?= /tmp/node-controller-unit.json
+GOTEST_JSON_ENVTEST ?= /tmp/node-controller-envtest.json
+# envtest integration suites are named Test<Name>ControllerEnvtest; this regex splits them from units.
+ENVTEST_RUN_REGEX ?= ControllerEnvtest$$
+
 # Go tools
 CONTROLLER_GEN = $(GOBIN)/controller-gen
 CONVERSION_GEN = $(GOBIN)/conversion-gen
@@ -35,8 +55,31 @@ lint: ## Run golangci-lint against code.
 	golangci-lint run ./...
 
 .PHONY: test
-test: ## Run tests.
-	go test ./... -coverprofile cover.out
+test: envtest gotestfmt ## Run unit + envtest in two labeled sections with GitHub-friendly output (CI: GOTESTFMT_CI=github).
+	@assets="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"; \
+		fmt='$(GOTESTFMT) $(if $(GOTESTFMT_CI),-template-dir $(GOTESTFMT_TEMPLATE_DIR) -ci $(GOTESTFMT_CI),) -hide successful-downloads'; \
+		echo ""; echo "🧪 UNIT TESTS"; echo ""; \
+		KUBEBUILDER_ASSETS="$$assets" go test -json -skip '$(ENVTEST_RUN_REGEX)' -coverprofile cover-unit.out ./... > $(GOTEST_JSON_UNIT) 2>&1; urc=$$?; \
+		eval $$fmt < $(GOTEST_JSON_UNIT); \
+		echo "📊 unit coverage: $$(go tool cover -func=cover-unit.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
+		echo ""; echo "☸️  ENVTEST (INTEGRATION) TESTS"; echo ""; \
+		envpkgs="$$(grep -rl 'RunSpecs' internal/controller --include=suite_test.go | xargs -n1 dirname | sort -u | sed 's#^#./#')"; \
+		KUBEBUILDER_ASSETS="$$assets" go test -json -v $$envpkgs -run '$(ENVTEST_RUN_REGEX)' -coverprofile cover-envtest.out -args -ginkgo.v > $(GOTEST_JSON_ENVTEST) 2>&1; erc=$$?; \
+		eval $$fmt < $(GOTEST_JSON_ENVTEST); \
+		echo "📊 envtest coverage: $$(go tool cover -func=cover-envtest.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
+		echo ""; echo "==> [test] go test cache: unit $$(grep -c '(cached)' $(GOTEST_JSON_UNIT) 2>/dev/null || true) pkg, envtest $$(grep -c '(cached)' $(GOTEST_JSON_ENVTEST) 2>/dev/null || true) pkg reused (changing a package's code invalidates only that package + its importers)"; \
+		rm -f $(GOTEST_JSON_UNIT) $(GOTEST_JSON_ENVTEST); \
+		test $$urc -eq 0 && test $$erc -eq 0
+
+.PHONY: test-envtest
+test-envtest: envtest ## Run every controller's envtest suite (ENVTEST_DEBUG=1 dumps state before/after each spec; ENVTEST_LOGS=1 adds controller logs).
+	@echo "==> [test-envtest] running each controller envtest suite live (ENVTEST_DEBUG=1 = state dumps, ENVTEST_LOGS=1 = controller logs)..."
+	@assets="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"; \
+	for pkg in $$(grep -rl 'RunSpecs' internal/controller --include=suite_test.go | xargs -n1 dirname | sort -u | sed 's#^#./#'); do \
+		echo ""; echo "==> $$pkg"; \
+		KUBEBUILDER_ASSETS="$$assets" go test $$pkg -run 'ControllerEnvtest$$' -v -ginkgo.v -count=1 || exit $$?; \
+	done
+	@echo "==> [test-envtest] done. (run a single suite, e.g. FOCUS, or 'make test' for coverage)"
 
 ##@ Build
 
@@ -87,6 +130,28 @@ conversion-gen: ## Download conversion-gen locally if necessary.
 .PHONY: gofumpt
 gofumpt: ## Download gofumpt locally if necessary.
 	@test -f $(GOFUMPT) || GOBIN=$(GOBIN) go install mvdan.cc/gofumpt@latest
+
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Install setup-envtest and download the kubebuilder assets (etcd, kube-apiserver, kubectl).
+	@echo "==> [envtest] kubebuilder assets (k8s $(ENVTEST_K8S_VERSION)): $$($(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"
+
+$(ENVTEST): $(LOCALBIN)
+	@test -s $(ENVTEST) || { \
+		echo "==> [envtest] installing setup-envtest..."; \
+		GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest; \
+	}
+
+.PHONY: gotestfmt
+gotestfmt: $(GOTESTFMT) ## Install gotestfmt locally if necessary.
+
+$(GOTESTFMT): $(LOCALBIN)
+	@test -s $(GOTESTFMT) || { \
+		echo "==> [gotestfmt] installing gotestfmt $(GOTESTFMT_VERSION)..."; \
+		GOBIN=$(LOCALBIN) go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@$(GOTESTFMT_VERSION); \
+	}
 
 ##@ Deployment
 

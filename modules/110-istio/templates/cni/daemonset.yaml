@@ -118,6 +118,8 @@ spec:
           securityContext:
             {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
             privileged: true
+            {{- else }}
+            allowPrivilegeEscalation: false
             {{- end }}
             readOnlyRootFilesystem: true
             runAsNonRoot: false
@@ -183,10 +185,12 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+                  divisor: "1"
             - name: GOMAXPROCS
               valueFrom:
                 resourceFieldRef:
                   resource: limits.cpu
+                  divisor: "1"
             - name: POD_NAME
               valueFrom:
                 fieldRef:

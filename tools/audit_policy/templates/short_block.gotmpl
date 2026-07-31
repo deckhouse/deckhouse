@@ -1,0 +1,12 @@
+{{ .AutogenBlockStart }}
+{{ .Note }}
+
+{{ .ListTitle }}
+{{- range .Rules }}
+- {{ . }}
+{{- end }}
+
+{{ .DetailsText }}
+- [{{ .DetailsFileName }}]({{ .DetailsLink }})
+
+{{ .AutogenBlockEnd }}

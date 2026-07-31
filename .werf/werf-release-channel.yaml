@@ -25,6 +25,7 @@ shell:
     yq eval '.requirements.k8s = "{{ .kubernetesVersions | first }}"' -i /deckhouse/release.yaml
     {{- if eq $.Env "CSE" }}
     yq eval '.requirements.migratedModules = .requirements.migratedModules + ",commander,commander-agent,console,csi-ceph,csi-nfs,csi-scsi-generic,csi-yadro-tatlin-unified,observability,prompp,sds-local-volume,sds-node-configurator,secrets-store-integration,snapshot-controller,storage-volume-data-manager,virtualization"' -i /deckhouse/release.yaml
+    yq eval '.requirements.disabledModules = .requirements.disabledModules + ",gost-integrity-controller"' -i /deckhouse/release.yaml
     {{- end }}
     yq eval '.version = env(version)' -i /deckhouse/release.yaml
     yq eval -j /deckhouse/release.yaml > version.json

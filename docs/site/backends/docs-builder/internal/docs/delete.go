@@ -30,6 +30,18 @@ func (svc *Service) Delete(moduleName string, channels []string) error {
 		svc.metrics.HistogramObserve(metrics.DocsBuilderDeleteDurationSeconds, dur, map[string]string{"status": status}, nil)
 	}()
 
+	if err := validateModuleName(moduleName); err != nil {
+		status = "fail"
+
+		return fmt.Errorf("validate module name: %w", err)
+	}
+
+	if err := validateChannels(channels); err != nil {
+		status = "fail"
+
+		return fmt.Errorf("validate channels: %w", err)
+	}
+
 	err := svc.cleanModulesFiles(moduleName, channels)
 	if err != nil {
 		status = "fail"

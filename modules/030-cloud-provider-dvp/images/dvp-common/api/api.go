@@ -33,6 +33,7 @@ import (
 var (
 	ErrNotFound            = errors.New("not found")
 	ErrDuplicateAttachment = errors.New("duplicate attachment")
+	ErrQuotaExceeded       = errors.New("quota exceeded")
 )
 
 type DVPCloudAPI struct {

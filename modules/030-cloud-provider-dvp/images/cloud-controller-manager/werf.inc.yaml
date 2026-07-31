@@ -52,4 +52,6 @@ shell:
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /dvp-cloud-controller-manager cmd/dvp-cloud-controller-manager/main.go
     - chown 64535:64535 /dvp-cloud-controller-manager
     - chmod 0755 /dvp-cloud-controller-manager
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
 

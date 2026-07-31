@@ -61,13 +61,6 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: monitoring-kubernetes-control-plane
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
   name: monitoring-deckhouse
 spec:
   enabled: true

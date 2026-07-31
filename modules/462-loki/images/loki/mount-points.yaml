@@ -1,4 +1,0 @@
-files:
-- /etc/loki/config.yaml
-dirs:
-- /loki

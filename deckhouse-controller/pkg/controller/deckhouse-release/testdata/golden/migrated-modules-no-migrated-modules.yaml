@@ -9,7 +9,6 @@ spec:
   version: v1.49.0
 status:
   approved: true
-  message: ""
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -27,7 +26,6 @@ spec:
   version: v1.50.0
 status:
   approved: false
-  message: ""
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -36,7 +34,7 @@ kind: Deployment
 metadata:
   name: deckhouse
   namespace: d8-system
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   replicas: 1
   selector:

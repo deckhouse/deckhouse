@@ -3,7 +3,7 @@ cpu: 15m
 memory: 50Mi
 {{- end }}
 
-{{- if eq (include "is_bgp_pool_exists" .) "true" }}
+{{- if .Values.metallb.internal.addressPools }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1

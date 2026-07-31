@@ -59,7 +59,7 @@ lang: ru
      spec:
        privateSSHKey: |
          -----BEGIN OPENSSH PRIVATE KEY-----
-         LS0tLS1CRUdJlhrdG...................VZLS0tLS0K
+         ...
          -----END OPENSSH PRIVATE KEY-----
        sshPort: 22
        sudoPassword: password

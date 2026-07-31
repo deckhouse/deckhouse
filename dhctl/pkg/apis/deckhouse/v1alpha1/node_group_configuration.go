@@ -24,7 +24,7 @@ const NodeGroupConfigurationDefaultWeight = 100
 
 type NodeGroupConfiguration struct {
 	metav1.TypeMeta   `json:",inline" yaml:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata" yaml:"metadata,omitempty"`
 	Spec              NodeGroupConfigurationSpec `json:"spec" yaml:"spec"`
 }
 

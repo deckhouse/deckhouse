@@ -1,0 +1,17 @@
+cloudInstances:
+  classReference:
+    kind: AWSInstanceClass
+    name: worker
+  zones: null
+cri:
+  type: Containerd
+engine: MCM
+instanceClass:
+  instanceType: m5.large
+kubernetesVersion: ""
+manualRolloutID: ""
+name: worker-nil-zones
+nodeType: CloudEphemeral
+serializedLabels: node.deckhouse.io/group=worker-nil-zones
+serializedTaints: ""
+updateEpoch: "1007"

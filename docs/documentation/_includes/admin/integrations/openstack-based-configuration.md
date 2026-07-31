@@ -1,3 +1,21 @@
+## List of required OpenStack services
+
+The following {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services must be available for Deckhouse Kubernetes Platform to operate:
+
+| Service                      |                         API Version                      |
+| :------------------------- | :--------------------------------------------------------: |
+| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
+| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
+| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
+
+\* If you need to order a Load Balancer.
+
+{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
+API endpoints and ports are listed in the [official documentation](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+{% endif %}
+
 ## Layouts
 
 This section describes the possible node placement layouts in {{ site.data.admin.cloud-types.types[page.cloud_type].name }} infrastructure and the related configuration options.
@@ -79,7 +97,7 @@ nodeGroups:
     # is no DHCP in the network that is used as a default gateway.
     configDrive: false
     # Required, the gateway of this network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
@@ -170,7 +188,7 @@ nodeGroups:
     # gateway.
     configDrive: false
     # Required, the gateway of the network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                          # Optional.
     - office
@@ -439,33 +457,21 @@ spec:
       owner: default
 ```
 
-### List of required services
-
-Below is the list of {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services required for DKP to operate in {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
-
-| Service                           | API version |
-|:---------------------------------|:----------:|
-| Identity (Keystone)              | v3         |
-| Compute (Nova)                   | v2         |
-| Network (Neutron)                | v2         |
-| Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) *       | v2         |
-
-\* If you need to provision a LoadBalancer.
-
-{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
-For the API endpoints and ports, refer to the [official documentation](https://cloud.vk.com/docs/en/tools-for-using-services/api/rest-api/endpoints).
-{% endif %}
-
 ### LoadBalancer configuration
 
 {% alert level="warning" %}
-To correctly detect client IP addresses, you must use a LoadBalancer that supports Proxy Protocol.
+To correctly determine the client IP address, use a LoadBalancer with Proxy Protocol support.
 {% endalert %}
 
-#### Example: IngressNginxController
+It is recommended to limit the list of nodes added to the load balancer pool using the [`loadbalancer.openstack.org/node-selector`](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#load-balancer) annotation.
 
-The following is a simple configuration example for an [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
+Without a `node-selector` restriction, cloud-controller-manager may use all suitable cluster nodes as load balancer targets. As a result, adding or removing nodes that are not related to the workload served by the load balancer may trigger an update of the load balancer pool membership. In large or frequently changing clusters, such updates may occur regularly and, in some configurations, may cause brief disruptions to existing connections.
+
+It is recommended to use `loadbalancer.openstack.org/node-selector` to select only the nodes that should be used as targets for the corresponding LoadBalancer.
+
+#### IngressNginxController example
+
+In this example, the Ingress controller pods are scheduled on frontend nodes, while the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -477,6 +483,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
   nodeSelector:
@@ -612,6 +619,14 @@ specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInsta
 Run the `openstack security group list` command.
 If you don’t receive any errors, it means that [security groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) are supported.
 
+### Cinder CSI resilience during re-authentication in OpenStack
+
+The Cinder CSI driver supports OpenStack re-authentication with service catalog refresh. This improves the reliability of volume operations in `cinder-csi-plugin` pods that have been running for a long time without being restarted.
+
+When a token expires or a `401 Unauthorized` response is received, the driver re-authenticates with OpenStack and updates the data used to access OpenStack API services. As a result, PersistentVolume operations, including volume attachment and detachment, continue without requiring CSI driver pods to be restarted.
+
+This behavior is especially important for clusters where `cinder-csi-plugin` pods run for a long time without being restarted, while the OpenStack service catalog may change between the initial authentication and subsequent API requests.
+
 ### Configuring online volume resize
 
 When resizing a disk via the OpenStack API, Cinder does not pass updated size information to Nova.
@@ -673,7 +688,7 @@ The resulting disk type depends on the combination of the following parameters:
 
 |                              | flavor disk size = 0                 | flavor disk size > 0                              |
 | ---------------------------- | ------------------------------------ | ------------------------------------------------- |
-| **`rootDiskSize` not set** | ❗️*Disk size must be specified*. VM creation will fail without it. | Local disk with size from the flavor.               |
+| **`rootDiskSize` not set** | ❗*Disk size must be specified*. VM creation will fail without it. | Local disk with size from the flavor.               |
 | **`rootDiskSize` set**    | Network-attached disk with size that equals `rootDiskSize`. | ❗ Both network-attached (`rootDiskSize`) and local (from flavor). Avoid this setup, as the cloud provider may charge for both. |
 
 {% if page.cloud_type != 'selectel' %}

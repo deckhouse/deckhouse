@@ -29,7 +29,9 @@ type BulkSubjectAccessReview struct {
 
 // BulkSubjectAccessReviewSpec is the specification for a bulk access review request
 type BulkSubjectAccessReviewSpec struct {
-	// User is the user to check access for. If empty, uses the authenticated user (self mode).
+	// User is the user to check access for. If empty, uses the authenticated
+	// user (self mode). A non-empty value additionally requires create on the
+	// bulksubjectaccessreviews/nonself subresource.
 	// +optional
 	User string
 

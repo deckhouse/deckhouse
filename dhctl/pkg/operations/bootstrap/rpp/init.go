@@ -16,10 +16,10 @@ package rpp
 
 import (
 	"context"
+	"log/slog"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -30,12 +30,12 @@ type Cleanup func()
 type InitOpt func(*RegistryPackagesProxy)
 
 type InitParams struct {
-	MetaConfig     *config.MetaConfig
-	Node           libcon.Interface
-	LoggerProvider log.LoggerProvider
-	SignCheck      bool
-	GlobalOpts     *options.GlobalOptions
-	Interactive    bool
+	MetaConfig  *config.MetaConfig
+	Node        libcon.Interface
+	Logger      *slog.Logger
+	SignCheck   bool
+	GlobalOpts  *options.GlobalOptions
+	Interactive bool
 }
 
 func noCleanup() {}
@@ -45,7 +45,7 @@ func Init(ctx context.Context, params InitParams, opts ...InitOpt) (Cleanup, err
 
 	clusterDomain := params.MetaConfig.GetClusterDomain()
 
-	rpp := NewRegistryPackagesProxy(clusterDomain, configGetter, params.LoggerProvider, params.Interactive).
+	rpp := NewRegistryPackagesProxy(clusterDomain, configGetter, params.Logger, params.Interactive).
 		WithSignCheck(params.SignCheck).
 		WithGlobalOptions(params.GlobalOpts)
 

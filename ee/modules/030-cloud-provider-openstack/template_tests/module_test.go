@@ -93,6 +93,10 @@ const moduleValues = `
   csiDriver:
     fsGroupPolicy: ReadWriteOnceWithFSType
   internal:
+    capoControllerManagerWebhookCert:
+      ca: myca
+      key: mykey
+      crt: mycrt
     storageClasses:
       - name: fastssd
         type: Fast HDD
@@ -126,6 +130,10 @@ const moduleValues = `
 
 const badModuleValues = `
   internal:
+    capoControllerManagerWebhookCert:
+      ca: myca
+      key: mykey
+      crt: mycrt
     connection:
       authURL: http://my.cloud.lalla/123/
       username: myuser
@@ -275,7 +283,7 @@ func openstackCheck(f *Config, k8sVer string) {
             "mainNetwork": "kube",
             "securityGroups": [
               "aaa",
-              "bbb"
+            "bbb"
             ],
             "sshKeyPairName": "mysshkeypairname"
           },
@@ -310,6 +318,18 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(len(providerSpecificBashibleBootstrapSecretData) >= 1).To(BeTrue())
 		Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0).To(BeTrue())
 
+		providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
+		Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+		Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("capi"))
+		Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+		providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
+		Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
+		Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
+		Expect(len(providerSpecificCAPISecretData["machine-template.yaml"].String()) > 0).To(BeTrue())
+
+		Expect(providerRegistrationSecret.Field("data.capiClusterKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("OpenStackCluster"))))
+		Expect(providerRegistrationSecret.Field("data.capiMachineTemplateKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("OpenStackMachineTemplate"))))
+
 		// user story #2
 		Expect(cinderCSIDriver.Exists()).To(BeTrue())
 		Expect(cinderNodePluginDS.Exists()).To(BeTrue())
@@ -332,6 +352,12 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(ccmCRB.Exists()).To(BeTrue())
 		Expect(ccmVPA.Exists()).To(BeTrue())
 		Expect(ccmDeploy.Exists()).To(BeTrue())
+		Expect(ccmDeploy.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(
+			And(
+				WithTransform(func(v gjson.Result) string { return v.Get("name").String() }, Equal("SKIP_NODE_DELETION")),
+				WithTransform(func(v gjson.Result) string { return v.Get("value").String() }, Equal("1")),
+			),
+		))
 		Expect(ccmSecret.Exists()).To(BeTrue())
 		ccmExpectedConfig := `
 [Global]
@@ -374,6 +400,16 @@ rescan-on-resize = true`
 		Expect(userAuthzUser.Exists()).To(BeTrue())
 		Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
 
+		capoDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capo-controller-manager")
+		capoWebhookService := f.KubernetesResource("Service", moduleNamespace, "capo-controller-manager-webhook-service")
+		capoWebhookConfig := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "capo-validating-webhook")
+		Expect(capoDeployment.Exists()).To(BeTrue())
+		Expect(capoWebhookService.Exists()).To(BeTrue())
+		Expect(capoWebhookConfig.Exists()).To(BeTrue())
+		Expect(capoWebhookConfig.Field("webhooks.1.clientConfig.service.namespace").String()).To(Equal(moduleNamespace))
+		Expect(capoDeployment.Field("spec.template.metadata.annotations").Map()["checksum/config"].String()).ToNot(BeEmpty())
+		Expect(capoDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+
 		Expect(scFast.Exists()).To(BeTrue())
 		Expect(scFast.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
@@ -407,6 +443,19 @@ storageclass.kubernetes.io/is-default-class: "true"
 		cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 		Expect(cddDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
 		Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, "cloud-data-discoverer").Exists()).To(BeFalse())
+	})
+
+	It("must ship CAPI machine template with allowed address pairs support", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
+		Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+
+		machineTemplateSource, err := base64.StdEncoding.DecodeString(providerSpecificCAPISecret.Field("data.machine-template\\.yaml").String())
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(string(machineTemplateSource)).To(ContainSubstring("allowedAddressPairs:"))
+		Expect(string(machineTemplateSource)).To(ContainSubstring(`ipAddress: {{ $.Values.global.discovery.podSubnet | quote }}`))
+		Expect(string(machineTemplateSource)).To(ContainSubstring(`eq $.Values.nodeManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled"`))
 	})
 }
 
@@ -486,6 +535,26 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Openstack with admission-policy-engine", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSet("global.enabledModules", []string{"vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "admission-policy-engine-crd"})
+			f.HelmRender()
+		})
+
+		It("Should render SecurityPolicyException for CAPO", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			spe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "capo-controller-manager")
+			Expect(spe.Exists()).To(BeTrue())
+
+			capoDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capo-controller-manager")
+			Expect(capoDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("capo-controller-manager"))
 		})
 	})
 

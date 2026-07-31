@@ -32,6 +32,10 @@ lang: ru
 - [Use-роли](#use-роли) — для назначения прав пользователям (например, разработчикам приложений) **в конкретном пространстве имён**.
 - [Manage-роли](#manage-роли) — для назначения прав администраторам.
 
+{% alert level="info" %}
+Если в кластере включен режим мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), ресурсы RoleBinding и ClusterAuthorizationRule можно использовать совместно для одного и того же пользователя. Подробнее — в документации модуля [`user-authz`](/modules/user-authz/#совместное-использование-clusterauthorizationrule-authorizationrule-и-rbac).
+{% endalert %}
+
 ## Use-роли
 
 {% alert level="warning" %}

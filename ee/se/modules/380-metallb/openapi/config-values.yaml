@@ -1,6 +1,5 @@
-x-config-version: 2
+x-config-version: 3
 type: object
-required: ["addressPools"]
 properties:
   loadBalancerClass:
     type: string
@@ -34,12 +33,15 @@ properties:
         value:
           type: string
   speaker:
+    # TODO: remove after 1.82. Speaker node selector moved to MetalLoadBalancerConfiguration CRD.
+    x-doc-deprecated: true
     type: object
-    required: ["nodeSelector"]
+    default: {}
     description: |
       Settings for the `speaker` component that implements the LoadBalancer's IPs publishing protocol for external infrastructure.
     properties:
       nodeSelector:
+        x-doc-deprecated: true
         type: object
         additionalProperties:
           type: string
@@ -68,6 +70,8 @@ properties:
             value:
               type: string
   bgpPeers:
+    # TODO: remove after 1.82. BGP configuration moved to separate CRDs.
+    x-doc-deprecated: true
     type: array
     default: []
     x-doc-d8Editions:
@@ -167,6 +171,8 @@ properties:
           description: |
             Authentication password for BGP-routers enforcing TCP MD5 authenticated sessions.
   addressPools:
+    # TODO: remove after 1.82. BGP configuration moved to separate CRDs.
+    x-doc-deprecated: true
     type: array
     default: []
     description: |
@@ -237,6 +243,8 @@ properties:
                   type: string
                 x-doc-example: [["no-advertise"]]
   bgpCommunities:
+    # TODO: remove after 1.82. BGP configuration moved to separate CRDs.
+    x-doc-deprecated: true
     type: object
     description: |
       The BGP communities list.
@@ -250,28 +258,5 @@ properties:
       description: |
         Map of `key: value` pairs.
 x-examples:
-  - bgpPeers:
-      - peer-address: 192.168.1.1
-        peer-asn: 1111
-        my-asn: 2222
-        source-address: 192.168.1.2
-        hold-time: 10s
-        node-selector:
-          matchLabels:
-            node: test
-    addressPools:
-      - name: my-pool-bgp
-        protocol: bgp
-        addresses:
-          - 192.168.100.1-192.168.100.10
-          - 192.168.101.0/24
-        bgp-advertisements:
-          - aggregation-length: 32
-            localpref: 100
-            communities:
-              - no-advertise
-    bgpCommunities:
-      no-advertise: 65535:65282
-    speaker:
-      nodeSelector:
-        mylabel: "speaker"
+  - nodeSelector:
+      node-role.deckhouse.io/control-plane: ""

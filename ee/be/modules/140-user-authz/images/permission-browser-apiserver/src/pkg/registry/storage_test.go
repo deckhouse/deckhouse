@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/request"
@@ -96,6 +98,7 @@ func TestBulkSARStorage_Create_SelfMode(t *testing.T) {
 
 func TestBulkSARStorage_Create_NonSelfMode(t *testing.T) {
 	mock := newMockAuthorizer()
+	mock.setDecision("create", "bulksubjectaccessreviews", "", authorizer.DecisionAllow, "non-self review allowed")
 	mock.setDecision("list", "secrets", "kube-system", authorizer.DecisionAllow, "admin access")
 
 	storage := NewBulkSARStorage(mock)
@@ -130,6 +133,29 @@ func TestBulkSARStorage_Create_NonSelfMode(t *testing.T) {
 
 	assert.Len(t, resultBSAR.Status.Results, 1)
 	assert.True(t, resultBSAR.Status.Results[0].Allowed)
+}
+
+func TestBulkSARStorage_Create_NonSelfModeRequiresAdditionalPermission(t *testing.T) {
+	mock := newMockAuthorizer()
+	mock.setDecision("list", "secrets", "kube-system", authorizer.DecisionAllow, "target allowed")
+	storage := NewBulkSARStorage(mock)
+	ctx := request.WithUser(context.Background(), &user.DefaultInfo{Name: "caller"})
+
+	_, err := storage.Create(ctx, &v1alpha1.BulkSubjectAccessReview{
+		Spec: v1alpha1.BulkSubjectAccessReviewSpec{
+			User: "other-user",
+			Requests: []v1alpha1.SubjectAccessReviewRequest{{
+				ResourceAttributes: &v1alpha1.ResourceAttributes{
+					Verb:      "list",
+					Resource:  "secrets",
+					Namespace: "kube-system",
+				},
+			}},
+		},
+	}, nil, &metav1.CreateOptions{})
+
+	require.Error(t, err)
+	assert.True(t, apierrors.IsForbidden(err))
 }
 
 func TestAccessAttributes(t *testing.T) {

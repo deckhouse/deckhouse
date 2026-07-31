@@ -1,0 +1,15 @@
+# In-cluster dhctl (terraform-auto-converger, terraform-state-exporter) cannot
+# embed real image digests: their own images are listed in images-digests, so
+# baking the digests into them would create a werf build cycle. Instead the
+# cluster's digests are mounted from this ConfigMap and dhctl reads them via
+# DHCTL_IMAGES_DIGESTS_FILE. External providers (e.g. DVP) rely on this to
+# resolve their terraform-manager bundle digest for the runtime download.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: terraform-manager-images-digests
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  images_digests.json: |
+    {{- .Values.global.modulesImages.digests | toJson | nindent 4 }}

@@ -9,7 +9,6 @@ spec:
   version: v1.27.10
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -23,7 +22,6 @@ spec:
   version: v1.27.11
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -37,7 +35,6 @@ spec:
   version: v1.27.12
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -51,7 +48,6 @@ spec:
   version: v1.27.13
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -65,7 +61,6 @@ spec:
   version: v1.27.14
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -79,7 +74,6 @@ spec:
   version: v1.27.5
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -93,7 +87,6 @@ spec:
   version: v1.27.6
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -107,7 +100,6 @@ spec:
   version: v1.27.7
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -121,7 +113,6 @@ spec:
   version: v1.27.8
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
@@ -135,6 +126,5 @@ spec:
   version: v1.27.9
 status:
   approved: false
-  message: ""
   phase: Superseded
   transitionTime: null

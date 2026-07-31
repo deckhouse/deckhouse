@@ -1,18 +1,26 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
 from: {{ index $.Images "builder/distroless" }}
 git:
 - add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/rootfs
-  to: /
-import:
-{{- include "image mount points" . }}
+  to: /out
 shell:
   beforeInstall:
-    - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl
-  install:
-    # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
-    - unlink /sbin
+  - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl -d /out
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "base/distroless-fin" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /out
+  to: /
+  before: install
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/sbin/iptables-wrapper"]
-
+shell:
+  install:
+  # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
+  - unlink /sbin

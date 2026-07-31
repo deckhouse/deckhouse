@@ -19,7 +19,6 @@ CSI-драйвер [`csi-s3`](https://github.com/yandex-cloud/k8s-csi-s3) — э
 
 Архитектура CSI-драйвера (`csi-s3`) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура CSI-драйвера (csi-s3)](../../../images/architecture/storage/c4-l2-csi-driver-s3.ru.png)
 
 ## Компоненты драйвера

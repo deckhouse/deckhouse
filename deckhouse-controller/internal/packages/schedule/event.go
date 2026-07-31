@@ -25,12 +25,14 @@ const (
 )
 
 // Event represents a single lifecycle transition in the scheduling graph.
-// Name identifies the affected node; Enabled is populated only for [EventGlobalDone].
+// Name identifies the affected node; Enabled carries the current enabled module
+// set on an [EventSchedule] for [GlobalName].
 type Event struct {
 	Kind    EventKind
 	Name    string
 	Reason  string
 	Message string
+	Enabled []string
 }
 
 // Ch returns a read-only channel that emits [Event] values as the graph

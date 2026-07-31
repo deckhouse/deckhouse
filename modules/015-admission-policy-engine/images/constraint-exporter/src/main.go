@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -28,7 +29,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"k8s.io/klog/v2"
 )
 
 var (
@@ -52,34 +52,36 @@ func init() {
 
 var (
 	ticker *time.Ticker
-	done   = make(chan bool)
+	stopCh = make(chan struct{})
 )
 
 func main() {
 	flag.Parse()
 
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+
 	ns := os.Getenv("POD_NAMESPACE")
 	if len(ns) == 0 {
-		klog.Fatal("Pod namespace is not set")
+		fatal("pod namespace is not set", nil)
 	}
 
 	exporter := NewExporter()
 	err := exporter.initKindTracker(ns, trackObjectsCMName)
 	if err != nil {
-		klog.Fatal(err)
+		fatal("init kind tracker failed", err)
 	}
 
 	clientGVR, err := exporter.createKubeClientGroupVersion()
 	if err != nil {
-		klog.Fatal(err)
+		fatal("create kube client failed", err)
 	}
 
 	go exporter.startScheduled(clientGVR, interval)
 	prometheus.Unregister(collectors.NewGoCollector())
 	prometheus.MustRegister(exporter)
 
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	mux := http.NewServeMux()
 	mux.Handle(metricsPath, promhttp.Handler())
@@ -91,13 +93,14 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			klog.Fatalf("listen: %s\n", err)
+			fatal("server start failed", err)
 		}
 	}()
-	klog.Info("Server Started")
+	slog.Info("server started", "listen_address", listenAddress, "metrics_path", metricsPath, "interval", interval.String())
 
-	<-done
-	klog.Info("Server Stopped")
+	<-signalCh
+	close(stopCh)
+	slog.Info("server stopping")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer func() {
@@ -106,6 +109,15 @@ func main() {
 	}()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		klog.Fatalf("Server Shutdown Failed:%+v", err)
+		fatal("server shutdown failed", err)
 	}
+}
+
+func fatal(message string, err error) {
+	if err != nil {
+		slog.Error(message, "error", err)
+	} else {
+		slog.Error(message)
+	}
+	os.Exit(1)
 }

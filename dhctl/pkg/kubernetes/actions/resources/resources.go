@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
@@ -30,12 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were created")
@@ -98,16 +98,16 @@ func (c *Creator) createAll(ctx context.Context) error {
 
 		for i, resource := range c.resources {
 			if _, ok := addedResourcesIndexes[i]; !ok {
-				log.DebugF("Remain resource %s\n", resource.String())
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Remain resource %s", resource.String()))
 				remainResources = append(remainResources, resource)
 			}
 		}
 
 		c.resources = remainResources
-		log.DebugF("Remain resources: %d\n", len(c.resources))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Remain resources: %d", len(c.resources)))
 	}()
 
-	log.DebugLn("start ensureRequiredNamespacesExist")
+	dhlog.FromContext(ctx).DebugContext(ctx, "start ensureRequiredNamespacesExist")
 
 	// resourcesToSkipInCurrentIteration connect with c.resources via resource slice index
 	resourcesToSkipInCurrentIteration, err := c.ensureRequiredNamespacesExist(ctx)
@@ -115,17 +115,17 @@ func (c *Creator) createAll(ctx context.Context) error {
 		return err
 	}
 
-	log.DebugLn("start single resource creation loop")
+	dhlog.FromContext(ctx).DebugContext(ctx, "start single resource creation loop")
 
 	for indx, resource := range c.resources {
 		if _, shouldSkip := resourcesToSkipInCurrentIteration[indx]; shouldSkip {
-			log.DebugF("Resource %s with index % should be skipped from creation in the current iteration because the namespace does not exist\n", resource.String())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resource %s with index %d should be skipped from creation in the current iteration because the namespace does not exist", resource.String(), indx))
 			continue
 		}
 
 		resourcesList, err := apiResourceGetter.Get(ctx, &resource.GVK)
 		if err != nil {
-			log.DebugF("apiResourceGetter returns error: %w\n", err)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("apiResourceGetter returns error: %v", err))
 			continue
 		}
 
@@ -162,7 +162,7 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 				// we can receive empty name space when user want to deploy in 'default' ns
 				// we keep it in our minds and skip verify therese resources because we think that
 				// default namespace always exist
-				log.DebugF("Namespace is empty for resource %s. Skipping ns check\n", res.String())
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace is empty for resource %s. Skipping ns check", res.String()))
 				continue
 			}
 
@@ -173,9 +173,9 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 					// if ns is existed then we will skip only
 					// if ns is not exists we should skip resource on current iteration and try to create on next iteration
 					resourcesToSkipInCurrentIteration[i] = struct{}{}
-					log.DebugF("Namespace not found but already processed for resource %s. Skipping resource creation in the current iteration\n", res.String())
+					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace not found but already processed for resource %s. Skipping resource creation in the current iteration", res.String()))
 				}
-				log.DebugF("Namespace was processed for resource %s. Skipping ns check\n", res.String())
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace was processed for resource %s. Skipping ns check", res.String()))
 				continue
 			}
 
@@ -189,12 +189,12 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 
 				resourcesToSkipInCurrentIteration[i] = struct{}{}
 				knownNamespaces[nsName] = false
-				log.DebugF("Namespace was not found for resource %s\n", res.String())
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace was not found for resource %s", res.String()))
 				continue
 			}
 			cancel()
 			knownNamespaces[nsName] = true
-			log.DebugF("Namespace found for resource %s\n", res.String())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace found for resource %s", res.String()))
 		}
 		return nil
 	})
@@ -255,19 +255,26 @@ func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*sch
 
 func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource, apires metav1.APIResource) error {
 	// Wait up to 10 minutes
-	return retry.NewSilentLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 600, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Create %s resources", resource.GVK.String()),
+		retry.WithAttempts(600),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	return retry.NewSilentLoopWithParams(loopParams).RunContext(ctx, func() error {
 		gvr, docCopy := resourceToGVR(resource, apires)
 		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
-			Manifest: func() interface{} { return nil },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return nil },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Create(ctx, docCopy, metav1.CreateOptions{})
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				content, err := docCopy.MarshalJSON()
 				if err != nil {
 					return err
@@ -299,7 +306,14 @@ func (c *Creator) invalidateDiscovery() {
 
 func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfigTask) error {
 	// Wait up to 10 minutes
-	return retry.NewLoop(task.Title, 300, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("%s", task.Title),
+		retry.WithAttempts(300),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		return task.Do(c.kubeCl)
 	})
 }
@@ -324,23 +338,26 @@ func CreateResourcesLoop(
 
 	waiter := NewWaiter(checkers)
 
-	gvks := make(map[string]struct{})
-	resourcesToCreate := make([]string, 0, len(resourceCreator.resources))
-	for _, resource := range resourceCreator.resources {
-		key := resource.DetailedGVKString()
-		if _, ok := gvks[key]; !ok {
-			gvks[key] = struct{}{}
-			resourcesToCreate = append(resourcesToCreate, key)
-		}
+	// List each object on its own line so operators see which resources are actually
+	// applied. The old output deduplicated by GVK, hiding distinct instances (a single
+	// "Kind=ModuleConfig" line stood in for 15 different ModuleConfigs).
+	labels := make([]string, len(resourceCreator.resources))
+	names := make([]string, len(resourceCreator.resources))
+
+	for i, resource := range resourceCreator.resources {
+		labels[i], names[i] = resourceListParts(resource)
 	}
 
-	_ = log.ProcessCtx(ctx, "Create Resources", "Resources to create", func(ctx context.Context) error {
-		log.InfoF("%s\n", strings.Join(resourcesToCreate, "\n"))
+	resourcesToCreate := alignedLines(labels, names)
+
+	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resources to create", func(ctx context.Context) error {
+		dhlog.FromContext(ctx).InfoContext(ctx, strings.Join(resourcesToCreate, "\n"))
 		return nil
 	})
 
 	attempt := 0
-	createdResources := make([]string, 0, len(resourceCreator.resources))
+	createdCheckers := make([]Checker, 0, len(checkers))
+
 	for {
 		iterCtx, iterSpan := telemetry.StartSpan(ctx, "createResources.iteration")
 		iterSpan.SetAttributes(otattribute.Int("attempt", attempt))
@@ -357,29 +374,22 @@ func CreateResourcesLoop(
 			return err
 		}
 
-		ready, res, remained, errWaiter := waiter.ReadyAllWithRes(iterCtx)
+		ready, readyNow, remained, errWaiter := waiter.ReadyAllWithRes(iterCtx)
 		if errWaiter != nil {
 			iterSpan.End()
 			return errWaiter
 		}
 
-		if len(res) > 0 {
-			createdResources = append(createdResources, res...)
-		}
+		createdCheckers = append(createdCheckers, readyNow...)
 
 		iterSpan.SetAttributes(
 			otattribute.Int("pending_count", len(remained)),
-			otattribute.Int("created_count", len(createdResources)),
+			otattribute.Int("created_count", len(createdCheckers)),
 			otattribute.Bool("all_ready", ready),
 		)
 
 		if len(remained) > 0 && attempt%10 == 0 {
-			msg := make(map[string][]string)
-			msg["remained"] = remained
-			if len(createdResources) > 0 {
-				msg["created"] = createdResources
-			}
-			logResources(iterCtx, msg)
+			logResources(iterCtx, remained, createdCheckers)
 		}
 		iterSpan.End()
 		if ready && err == nil {
@@ -391,10 +401,19 @@ func CreateResourcesLoop(
 			return ctx.Err()
 		case <-endChannel:
 			if len(resources) > 0 {
-				_ = log.ProcessCtx(ctx, "Create Resources", "Failed to create", func(ctx context.Context) error {
-					log.WarnF("%s\n", strings.Join(remained, "\n"))
+				_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resources failed to become ready", func(ctx context.Context) error {
+					// Print the reason next to the list so the bare resource names are not shown
+					// without context: installation did not finish cleanly, the wait timed out.
+					dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+						"Installation finished with an error: creating resources timed out after %s. "+
+							"The resources below did not become ready and were not fully created:\n%s\n\n"+
+							"This is usually caused by the absence of worker nodes in the cluster. "+
+							"Add at least one worker node or remove the taints from the master node "+
+							"(in the case of a single-node installation).",
+						timeout, strings.Join(checkerLines(remained), "\n")))
 					return nil
 				})
+
 				return fmt.Errorf(
 					"Creating resources timed out after %s: resources cannot become ready. "+
 						"This could be due to lack of worker nodes in the cluster. "+
@@ -410,36 +429,42 @@ func CreateResourcesLoop(
 	}
 }
 
-func logResources(ctx context.Context, res map[string][]string) {
-	_ = log.ProcessCtx(ctx, "Create Resources", "Resource readiness check", func(ctx context.Context) error {
-		remained, ok := res["remained"]
-		if ok {
-			for i, s := range remained {
-				if strings.Contains(s, "cluster") {
-					remained = slices.Delete(remained, i, i+1)
-				}
-			}
-			_ = log.ProcessCtx(ctx, "Create Resources", "Resource not ready", func(ctx context.Context) error {
-				log.InfoF("%s\n", strings.Join(remained, "\n"))
-				return nil
-			})
-		}
+func logResources(ctx context.Context, remained, created []Checker) {
+	remained, created = objectChecks(remained), objectChecks(created)
+	if len(remained) == 0 && len(created) == 0 {
+		return
+	}
 
-		created, ok := res["created"]
-		if ok {
-			for i, s := range created {
-				if strings.Contains(s, "cluster") {
-					created = slices.Delete(created, i, i+1)
-				}
-			}
-			_ = log.ProcessCtx(ctx, "Create Resources", "Resource ready", func(ctx context.Context) error {
-				log.InfoF("%s\n", strings.Join(created, "\n"))
-				return nil
-			})
-		}
-
+	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resource readiness check", func(ctx context.Context) error {
+		logCheckerList(ctx, "Resource not ready", remained)
+		logCheckerList(ctx, "Resource ready", created)
 		return nil
 	})
+}
+
+func logCheckerList(ctx context.Context, title string, checkers []Checker) {
+	if len(checkers) == 0 {
+		return
+	}
+
+	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), title, func(ctx context.Context) error {
+		dhlog.FromContext(ctx).InfoContext(ctx, strings.Join(checkerLines(checkers), "\n"))
+		return nil
+	})
+}
+
+// The readiness listings answer "how far along are my resources", so they drop the checks that
+// stand for no applied object. Returning a fresh slice is required: the caller's slices are owned
+// by CreateResourcesLoop and live across its iterations.
+func objectChecks(checkers []Checker) []Checker {
+	listed := make([]Checker, 0, len(checkers))
+	for _, c := range checkers {
+		if _, ok := c.(*resourceReadinessChecker); ok {
+			listed = append(listed, c)
+		}
+	}
+
+	return listed
 }
 
 func getUnstructuredName(obj *unstructured.Unstructured) string {
@@ -448,6 +473,57 @@ func getUnstructuredName(obj *unstructured.Unstructured) string {
 		return fmt.Sprintf("%s %s", obj.GetKind(), obj.GetName())
 	}
 	return fmt.Sprintf("%s %s/%s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
+}
+
+// resourceListParts splits one object into its type label and instance name for the
+// "Resources to create" listing. The label is "Kind[ (group/version)]:"; the group/version
+// is shown only for non-core groups, since core resources (Namespace, ServiceAccount, …)
+// are self-evident, but a custom resource's version can matter (e.g. across module API
+// migrations). The name is "[namespace/]name", namespaced only for namespaced objects.
+func resourceListParts(r *template.Resource) (string, string) {
+	label := r.GVK.Kind
+	if r.GVK.Group != "" {
+		label += " (" + r.GVK.Group + "/" + r.GVK.Version + ")"
+	}
+	label += ":"
+
+	name := r.Object.GetName()
+	if ns := r.Object.GetNamespace(); ns != "" {
+		name = ns + "/" + name
+	}
+	return label, name
+}
+
+func checkerLines(checkers []Checker) []string {
+	labels := make([]string, len(checkers))
+	names := make([]string, len(checkers))
+
+	for i, c := range checkers {
+		switch check := c.(type) {
+		case *resourceReadinessChecker:
+			labels[i], names[i] = resourceListParts(check.resource)
+		case *clusterIsBootstrapCheck:
+			// Waits for the d8-cluster-is-bootstraped ConfigMap, which Deckhouse creates once the
+			// first Ready non-master node has joined (global-hooks/cluster_is_bootstrapped.go).
+			labels[i], names[i] = "Cluster bootstrap:", "waiting for a Ready worker node"
+		}
+	}
+
+	return alignedLines(labels, names)
+}
+
+func alignedLines(labels, names []string) []string {
+	width := 0
+	for _, label := range labels {
+		width = max(width, len(label))
+	}
+
+	lines := make([]string, len(labels))
+	for i := range labels {
+		lines[i] = fmt.Sprintf("%-*s %s", width, labels[i], names[i])
+	}
+
+	return lines
 }
 
 func DeleteResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources) error {
@@ -480,7 +556,7 @@ func DeleteResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("unable to delete %s %s: %w", gvr.String(), name, err)
 			}
-			log.DebugF("Unable to delete resource: %s %s: %s\n", gvr.String(), name, err)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Unable to delete resource: %s %s: %s", gvr.String(), name, err))
 		}
 	}
 

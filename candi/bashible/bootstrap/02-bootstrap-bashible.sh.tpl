@@ -130,8 +130,23 @@ done
 {{- end }}
 
 # Get bashible script from secret
-get_bundle bashible "{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
-chmod +x $BOOTSTRAP_DIR/bashible.sh
+bashible_bundle="$(get_bundle bashible "{{ .nodeGroup.name }}")"
+
+printf '%s\n' "$bashible_bundle" | jq -r '.data."bashible.sh"' > "$BOOTSTRAP_DIR/bashible.sh"
+printf '%s\n' "$bashible_bundle" | jq -r '.data."cleanup_static_node.sh"' > "$BOOTSTRAP_DIR/cleanup_static_node.sh"
+
+if [ ! -s "$BOOTSTRAP_DIR/bashible.sh" ]; then
+  >&2 echo "ERROR: bashible.sh is empty"
+  exit 1
+fi
+
+if [ ! -s "$BOOTSTRAP_DIR/cleanup_static_node.sh" ]; then
+  >&2 echo "ERROR: cleanup_static_node.sh is empty"
+  exit 1
+fi
+
+chmod +x "$BOOTSTRAP_DIR/bashible.sh"
+chmod 700 "$BOOTSTRAP_DIR/cleanup_static_node.sh"
 
 # Bashible first run
 until bash --noprofile --norc -c /var/lib/bashible/bashible.sh; do

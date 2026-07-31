@@ -69,8 +69,6 @@ Before you begin, make sure that the following conditions are met:
    provider:
      server: <API_URL>
      apiToken: <API_TOKEN>
-     username: ""
-     password: ""
      insecure: false
    ```
 
@@ -172,7 +170,7 @@ Before you begin, make sure that the following conditions are met:
 - The following value is set in the VM advanced parameters in VCD:
 
   ```text
-  disk.EnableUUID = 1
+  disk.EnableUUID = TRUE
   ```
 
 - The virtual machine is connected to the VCD network used as the main network for the cluster's cloud nodes. Usually, this is the network specified in the [`mainNetwork`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-mainnetwork) parameter of the `cloud-provider-vcd` configuration or in the VCDInstanceClass being used.

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -29,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -51,7 +51,7 @@ func InstallDeckhouse(
 ) (*InstallDeckhouseResult, error) {
 	res := &InstallDeckhouseResult{}
 
-	return res, log.ProcessCtx(ctx, "bootstrap", "Install Deckhouse", func(ctx context.Context) error {
+	return res, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Install Deckhouse", func(ctx context.Context) error {
 		ctx, span := telemetry.StartSpan(ctx, "InstallDeckhouse")
 		defer span.End()
 
@@ -87,10 +87,7 @@ func InstallDeckhouse(
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
-		// Warning! This function must be called at the end of the Deckhouse installation phase.
-		// At the end of this function, the registry-init secret is deleted,
-		// which is used during DeckhouseInstall for certain registry operation modes.
-		err = registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
+		err = registry_config.WaitForRegistryReady(ctx, kubeCl, config.Registry)
 		if err != nil {
 			return fmt.Errorf("registry initialization: %v", err)
 		}
@@ -108,12 +105,12 @@ func applyPostBootstrapModuleConfigs(
 	defer span.End()
 
 	for _, task := range tasks {
-		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 		p := retry.NewEmptyParams(
 			retry.WithName("%s", task.Title),
 			retry.WithAttempts(75),
 			retry.WithWait(1*time.Second),
-			retry.WithLogger(extLogger()),
+			retry.WithLogger(dhlog.FromContext(ctx)),
+			retry.WithWhitelist(actions.ErrManifestTaskTransient),
 		)
 		err := retry.NewLoopWithParams(p).
 			Run(func() error {
@@ -132,11 +129,11 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	defer span.End()
 
 	if result == nil {
-		log.DebugF("Skipping post-install tasks because result is nil\n")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Skipping post-install tasks because result is nil")
 		return nil
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Run post bootstrap actions", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Run post bootstrap actions", func(ctx context.Context) error {
 		return applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }

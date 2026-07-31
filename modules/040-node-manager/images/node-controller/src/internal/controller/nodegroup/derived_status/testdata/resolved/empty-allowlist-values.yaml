@@ -1,0 +1,11 @@
+cri:
+  type: Containerd
+engine: None
+kubernetesVersion: ""
+manualRolloutID: ""
+name: empty-values
+nodeDrainTimeoutSecond: 0
+nodeType: Static
+serializedLabels: node.deckhouse.io/group=empty-values
+serializedTaints: ""
+updateEpoch: "1009"

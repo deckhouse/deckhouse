@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
       this.canvas = this.initializeCanvas();
       this.ctx = this.canvas.getContext('2d');
       this.nav = this.initializeNav();
+      this.bindResizeHandler();
     }
 
     initializeCanvas() {
@@ -72,19 +73,68 @@ document.addEventListener('DOMContentLoaded', () => {
       return nav;
     }
 
+    bindResizeHandler() {
+      let v = this;
+
+      window.addEventListener('resize', function () {
+        if (!v.pdfDoc) {
+          return;
+        };
+        
+        v.queueRenderPage(v.pageNum);
+      });
+    }
+
     renderPage(num) {
       let v = this;
+      const defaultWidth = 900;
       this.pageRendering = true;
+      // Using promise to fetch the page
       this.pdfDoc.getPage(num).then(function (page) {
-        const viewport = page.getViewport({ scale: 1 });
+        // Get the available width from the container or its parent .docs element
+        let containerElement = v.container.closest('.docs') || v.container.parentElement;
+        let availableWidth = defaultWidth; // default fallback
 
+        if (containerElement) {
+          // Use clientWidth which accounts for padding but not scrollbar
+          availableWidth = containerElement.clientWidth;
+
+          // If still 0, try getting computed style to account for any CSS constraints
+          if (availableWidth === 0) {
+            const computedStyle = window.getComputedStyle(containerElement);
+            const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+            const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+            availableWidth = containerElement.offsetWidth - paddingLeft - paddingRight;
+          }
+        }
+
+        // Final fallback if width is still invalid
+        if (!availableWidth || availableWidth <= 0) {
+          availableWidth = defaultWidth;
+        }
+
+        // Calculate scale based on available width
+        var _viewport = page.getViewport({ scale: 1 });
+        var scale = availableWidth / _viewport.width;
+        var viewport = page.getViewport({ scale: scale });
+
+        // Set canvas internal dimensions to match viewport
         v.canvas.height = viewport.height;
         v.canvas.width = viewport.width;
+
+        // Set canvas display size to match viewport (not multiplied by scale again!)
+        v.canvas.style.width = `${viewport.width}px`;
+        v.canvas.style.height = `${viewport.height}px`;
+
+        // Render PDF page into canvas context
 
         let renderContext = {
           canvasContext: v.ctx,
           viewport: viewport
         };
+
+        // Set navigation container width to match canvas width
+        v.nav.container.style.width = `${viewport.width + 2}px`;
 
         let renderTask = page.render(renderContext);
 

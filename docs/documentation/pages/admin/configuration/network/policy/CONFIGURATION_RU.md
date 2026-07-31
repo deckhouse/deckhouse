@@ -1,93 +1,61 @@
 ---
-title: "Настройка сетевых политик"
+title: "Сетевые политики"
 permalink: ru/admin/configuration/network/policy/configuration.html
 description: |
-  Настройка сетевых политик Deckhouse Kubernetes Platform. Условия для включения режимов туннелирования трафика подов.
+  Обзор реализаций сетевых политик в Deckhouse Kubernetes Platform: NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall.
 lang: ru
-search: network policy configuration, network policies, traffic tunneling, pod traffic, network security, настройка сетевых политик, сетевые политики, сетевая безопасность
+search: network policy, network policies, NetworkPolicy, CiliumNetworkPolicy, CiliumClusterwideNetworkPolicy, host firewall, сетевые политики, сетевая безопасность
+relatedLinks:
+  - title: "Network Policies — документация Kubernetes"
+    url: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+  - title: "Network Policy — документация Cilium"
+    url: https://docs.cilium.io/en/v1.17/network/kubernetes/policy/
+  - title: "Overview of Network Policy — документация Cilium"
+    url: https://docs.cilium.io/en/v1.17/security/policy/
+  - title: "Host Firewall — документация Cilium"
+    url: https://docs.cilium.io/en/v1.17/security/host-firewall/
 ---
 
-Если на уровне инфраструктуры, где работает Deckhouse Kubernetes Platform, есть требования для ограничения сетевого взаимодействия между серверами, то необходимо соблюсти следующие условия:
+Сетевые политики ограничивают сетевое взаимодействие подов друг с другом, с внешними системами и узлами кластера. В Deckhouse Kubernetes Platform (DKP) реализация сетевых политик зависит от выбранного CNI.
 
-* Включен режим туннелирования трафика между подами ([настройки](/modules/cni-cilium/configuration.html#parameters-tunnelmode) для CNI Cilium, [настройки](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) для CNI Flannel).
-* Разрешена передача трафика между [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr), инкапсулированного внутри VXLAN (если выполняется инспектирование и фильтрация трафика внутри VXLAN-туннеля).
-* В случае необходимости интеграции с внешними системами (например, LDAP, SMTP или прочие внешние API), с ними разрешено сетевое взаимодействие.
-* Локальное сетевое взаимодействие полностью разрешено в рамках каждого отдельно взятого узла кластера.
-* Разрешено взаимодействие между узлами по портам, приведенным в [списке сетевого взаимодействия компонентов платформы](../../../../reference/network_interaction.html). Обратите внимание, что большинство портов входит в диапазон 4200-4299. При добавлении новых компонентов платформы им будут назначаться порты из этого диапазона (при наличии возможности).
+## Реализация сетевых политик в DKP
 
-## Настройка сетевых политик стандартными средствами Kubernetes
+Доступные форматы политик и движок их обработки зависят от используемого в кластере модуля CNI:
 
-<!-- пример взят из обучающих материалов -->
+- В кластерах с модулем [`cni-cilium`](/modules/cni-cilium/) реализация встроена в Cilium и поддерживает три формата политик:
+  - стандартный [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) — namespaced-ресурс с правилами для уровней L3 и L4;
+  - [CiliumNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumnetworkpolicy) — namespaced-ресурс с правилами L3–L7;
+  - [CiliumClusterwideNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumclusterwidenetworkpolicy) — cluster-scoped-ресурс, дополнительно поддерживает `nodeSelector` для защиты узлов (host firewall).
+- В кластерах с модулем `cni-flannel` или другим CNI без поддержки политик обработку обеспечивает модуль [`network-policy-engine`](/modules/network-policy-engine/) на базе [kube-router](https://github.com/cloudnativelabs/kube-router). Поддерживается только стандартный NetworkPolicy уровней L3 и L4. Политики транслируются в правила `iptables` и `ipset` на каждом узле.
 
-### Пример настроек сетевой политики
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: test-network-policy
-  namespace: default
-spec:
-  podSelector:
-    matchLabels:
-      app: db
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:
-    - ipBlock:
-        cidr: 172.17.0.0/16
-        except:
-        - 172.17.1.0/24
-    - namespaceSelector:
-        matchLabels:
-          project: myproject
-    - podSelector:
-        matchLabels:
-          role: frontend
-    ports:
-    - protocol: TCP
-      port: 6379
-  egress:
-  - to:
-    - ipBlock:
-        cidr: 10.0.0.0/24
-    ports:
-    - protocol: TCP
-      port: 5978
-```
-
-## Настройка сетевых политик на уровне всего кластера с помощью CiliumClusterwideNetworkPolicy
-
-Для определения сетевых политик на уровне всего кластера в Deckhouse Kubernetes Platform можно использовать объекты CiliumClusterwideNetworkPolicy модуля [`cni-cilium`](/modules/cni-cilium/).
-
-<!-- перенесено с некоторыми изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/cni-cilium/#%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-ciliumclusterwidenetworkpolicies -->
-
-{% alert level="danger" %}
-Использование объектов CiliumClusterwideNetworkPolicy без включения параметра `policyAuditMode` в настройках модуля `cni-cilium` может привести к некорректной работе control plane или потере доступа ко всем узлам кластера по SSH.
+{% alert level="warning" %}
+Не включайте модули `cni-cilium` и `network-policy-engine` одновременно: в Cilium уже есть собственная реализация сетевых политик.
 {% endalert %}
 
-Для использования объектов CiliumClusterwideNetworkPolicy выполните следующие шаги:
+## Что доступно в зависимости от движка
 
-1. Примените первичный набор объектов CiliumClusterwideNetworkPolicy. Для этого в настройки модуля `cni-cilium` добавьте конфигурационную опцию [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
+При выборе формата политики учитывайте возможности движка:
 
-   Опция `policyAuditMode` может быть удалена после применения всех объектов CniliumClusterwideNetworkPolicy и проверки корректности их работы в Hubble UI.
+- стандартный NetworkPolicy (L3/L4, namespaced) — поддерживается обоими движками;
+- CiliumNetworkPolicy (L3–L7, FQDN, deny-правила, namespaced) — только при включённом `cni-cilium`;
+- CiliumClusterwideNetworkPolicy (L3–L7, FQDN, deny-правила, cluster-scoped) — только при включённом `cni-cilium`;
+- host firewall на узлах через CiliumClusterwideNetworkPolicy с `nodeSelector` — только при включённом `cni-cilium`;
+- режим аудита политик ([`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode)) — только при включённом `cni-cilium`.
 
-1. Примените правило политики сетевой безопасности:
+## Требования к сетевой инфраструктуре
 
-   ```yaml
-   apiVersion: "cilium.io/v2"
-   kind: CiliumClusterwideNetworkPolicy
-   metadata:
-     name: "allow-control-plane-connectivity"
-   spec:
-     ingress:
-     - fromEntities:
-       - kube-apiserver
-     nodeSelector:
-       matchLabels:
-         node-role.kubernetes.io/control-plane: ""
-   ```
+Если на уровне инфраструктуры есть требования по ограничению сетевого взаимодействия между серверами, при настройке кластера выполните следующие условия:
 
-В случае, если объекты CiliumClusterwideNetworkPolicy не применяются, control plane может некорректно работать до одной минуты во время перезагрузки подов `cilium-agent`. Это происходит из-за [сброса Conntrack-таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет избежать проблемы.
+- Включите режим туннелирования трафика подов: [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) для CNI Cilium, [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) для CNI Flannel. Дополнительно разрешите взаимодействие между узлами по VXLAN-порту из [списка сетевого взаимодействия компонентов платформы](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
+- Разрешите передачу трафика между подсетями подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)), инкапсулированного в VXLAN, если в сети выполняется инспектирование трафика.
+- Разрешите взаимодействие с внешними системами, с которыми интегрируется кластер (LDAP, SMTP, внешние API).
+- Разрешите локальное сетевое взаимодействие в рамках каждого узла.
+- Разрешите взаимодействие между узлами по портам из [списка сетевого взаимодействия компонентов платформы](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html). Большинство портов входит в диапазон 4200–4299; новым компонентам платформы порты выделяются из этого диапазона при наличии возможности.
+
+## Разделы
+
+- [Стандартный NetworkPolicy Kubernetes](kubernetes_networkpolicy.html) — модель изоляции, селекторы, default-политики, ограничения API.
+- [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) — расширения Cilium, entities, правила L7, FQDN, режим аудита.
+- [Host firewall на узлах](host_firewall.html) — защита самих узлов с помощью CiliumClusterwideNetworkPolicy и `nodeSelector`.
+- [Типовые примеры политик](examples.html) — рецепты для частых задач.
+- [Диагностика и наблюдаемость политик](troubleshooting.html) — как проверить применение политики и расследовать проблемы.

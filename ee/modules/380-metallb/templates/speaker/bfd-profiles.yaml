@@ -1,0 +1,31 @@
+{{- range $bfdProfile := .Values.metallb.internal.bfdProfiles }}
+---
+apiVersion: metallb.io/v1beta1
+kind: BFDProfile
+metadata:
+  name: {{ $bfdProfile.name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "speaker")) | nindent 2 }}
+spec:
+  {{- if $bfdProfile.receiveInterval }}
+  receiveInterval: {{ $bfdProfile.receiveInterval }}
+  {{- end }}
+  {{- if $bfdProfile.transmitInterval }}
+  transmitInterval: {{ $bfdProfile.transmitInterval }}
+  {{- end }}
+  {{- if $bfdProfile.detectMultiplier }}
+  detectMultiplier: {{ $bfdProfile.detectMultiplier }}
+  {{- end }}
+  {{- if $bfdProfile.echoInterval }}
+  echoInterval: {{ $bfdProfile.echoInterval }}
+  {{- end }}
+  {{- if $bfdProfile.echoMode }}
+  echoMode: {{ $bfdProfile.echoMode }}
+  {{- end }}
+  {{- if $bfdProfile.passiveMode }}
+  passiveMode: {{ $bfdProfile.passiveMode }}
+  {{- end }}
+  {{- if $bfdProfile.minimumTTL }}
+  minimumTtl: {{ $bfdProfile.minimumTTL }}
+  {{- end }}
+{{- end }}

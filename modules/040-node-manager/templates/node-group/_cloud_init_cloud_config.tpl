@@ -3,7 +3,7 @@
   {{- $ng := index . 1 }}
   {{- $bootstrap_token := index . 2 -}}
 #cloud-config
-  {{- if ($context.Values.global.enabledModules | has "cloud-provider-azure") }}
+  {{- if and (hasKey $context.Values.nodeManager.internal "cloudProvider") (eq $context.Values.nodeManager.internal.cloudProvider.type "azure") }}
 mounts:
 - [ ephemeral0, /mnt/resource ]
   {{- end }}

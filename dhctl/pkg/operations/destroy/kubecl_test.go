@@ -15,7 +15,6 @@
 package destroy
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,22 +23,20 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestCleanupsDoesNotPanic(t *testing.T) {
-	logger := libdhctl_log.NewDummyLogger(false)
-	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger)
-	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: false, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: options.DefaultTmpDir()}
+	params := settings.ProviderParams{Logger: dhlog.FromContext(t.Context()), IsDebug: false, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: options.DefaultTmpDir()}
 	baseProviderSettings := settings.NewBaseProviders(params)
 
 	sshProvider := testCreateDefaultTestSSHProvider(session.Host{Host: "host"}, false)
 	providerInitializer := provider.NewSimpleSSHProviderInitializer(sshProvider)
 	cfg := &kube.Config{}
-	runnerInterface, err := provider.GetRunnerInterface(context.Background(), cfg, baseProviderSettings, providerInitializer)
+	runnerInterface, err := provider.GetRunnerInterface(t.Context(), cfg, baseProviderSettings, providerInitializer)
 	require.NoError(t, err)
 	kubeProvider := provider.NewDefaultKubeProvider(baseProviderSettings, cfg, runnerInterface)
 	require.NoError(t, err)

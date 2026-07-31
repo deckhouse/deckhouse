@@ -46,11 +46,71 @@ Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regard
 
 ### namespace-list-acl-filtering.patch
 
-Allows users without cluster-wide `list/get namespaces` to receive an ACL-filtered response for `GET /api/v1/namespaces` and `GET /api/v1/namespaces/{name}`.
-The kube-apiserver authorization filter bypasses the initial 403 for these requests and delegates filtering to the Namespace storage.
-The storage queries the aggregated extension API `authorization.deckhouse.io/v1alpha1` resource `accessiblenamespaces` served by the `permission-browser-apiserver` APIService (`v1alpha1.authorization.deckhouse.io`) and returns only accessible namespaces.
+Two related mechanisms, both opt-in and both leaving default `list/get/watch`
+behavior for any client that doesn't ask otherwise completely unchanged:
 
-If `permission-browser-apiserver` is not present/unavailable (APIService is not `Available=True` or request fails), the behavior falls back to vanilla Kubernetes (403 for users without permissions). `watch namespaces` is not changed.
+**Namespaces (unconditional).** Users without cluster-wide `list/get/watch
+namespaces` receive an ACL-filtered response for `GET /api/v1/namespaces`,
+`GET /api/v1/namespaces/{name}` and `WATCH /api/v1/namespaces` instead of a
+flat 403. The kube-apiserver authorization filter bypasses the initial 403
+for these three verbs and delegates filtering to the Namespace storage, which
+queries the aggregated extension API `authorization.deckhouse.io/v1alpha1`
+resource `accessiblenamespaces` served by `permission-browser-apiserver`
+(APIService `v1alpha1.authorization.deckhouse.io`) and returns only
+accessible namespaces. `watch` synthesizes `ADDED`/`DELETED` events when the
+user's accessible-namespace set changes mid-watch (polling
+`accessiblenamespaces`, ~1s cadence) -- the canonical OpenShift
+`userProjectWatcher` pattern.
+
+**Generic `-A --scope=<kind>` (opt-in, every built-in namespaced resource).**
+The same mechanism generalized to arbitrary namespaced resources, gated by two
+request headers (`X-Deckhouse-Scope`, `X-Deckhouse-Project`) rather than being
+unconditional: absent header, absent bypass, byte-for-byte vanilla behavior.
+`scope=accessible` reproduces the namespaces mechanism's RBAC-floor
+semantics for any resource; `scope=projects|project:<name>` additionally
+classify by the `projects.deckhouse.io/project` namespace label
+(multitenancy-manager's Project CRD), and `scope=system` by a fixed name-based
+allowlist (`default`, `d8-*`, `kube-*`) independent of that label -- both
+resolved via a direct loopback `Namespace LIST` rather than a new
+permission-browser endpoint.
+
+Coverage is wired centrally in `pkg/controlplane/apiserver`'s `InstallAPIs`,
+which walks every built-in API group's storage map and attaches the filter to
+each namespaced, non-subresource resource backed by a `*genericregistry.Store`
+(via the promoted `DeckhouseScopeStore` method). No per-resource storage.go
+edits. `namespaces` is excluded structurally (it wraps rather than embeds its
+Store and keeps its own unconditional filter above).
+
+Namespaced **CustomResourceDefinitions** are covered too, wired analogously in
+apiextensions-apiserver's `crdHandler.getOrCreateServingInfoFor` as each CRD
+version's storage is built (`customresource.REST` also embeds
+`*genericregistry.Store` and does not override List/Get/Watch, so the same
+`store.ScopeFilter` hook applies); registration is dropped on CRD teardown.
+Because that wiring edits the same two apiextensions files that
+`010-x-kubernetes-sensitive-data` also edits, and the acl-filtering patch
+applies before `010` in the chain, patch `010` is shipped **regenerated** so
+its `customresource_handler.go` hunks apply cleanly on top of the CRD wiring —
+a context-only re-roll, no semantic change to `010` (see its README entry).
+Cluster-scoped CRDs are skipped (no namespace to classify/floor).
+
+This whole mechanism (namespaces + generic `--scope` + CRD coverage) is carried
+on every k8s version DKP builds — 1.32 through 1.36. The acl-filtering patch
+keeps its per-version number (`006` on 1.32, `005` on 1.33/1.34, `007` on
+1.35/1.36) since its position in each version's chain differs; the `010`
+re-roll applies per version too.
+
+The filter's `RBACFloor`/`Classify` loopback calls are served through a shared
+TTL cache (default 1s, `SCOPEFILTER_RESOLVE_CACHE_TTL` /
+`SCOPEFILTER_WATCH_POLL_INTERVAL` to tune) with singleflight de-duplication, so
+many concurrent `--scope` watches collapse to ~one `permission-browser` resolve
+per key per TTL instead of one per watch per poll tick.
+
+See `k8s.io/apiserver/pkg/registry/generic/scopefilter` (staging) for the
+shared implementation both mechanisms build on.
+
+If `permission-browser-apiserver` is not present/unavailable (APIService is
+not `Available=True` or a request fails), both mechanisms fall back to
+vanilla Kubernetes (403 for users without permissions).
 
 ### kubelet-inappropriate-manifest-name.patch
 
@@ -70,6 +130,13 @@ When set the API server will: encrypt the value at rest in etcd (using the same 
 See our KEP:
 - https://github.com/kubernetes/enhancements/pull/5937
 - https://github.com/kubernetes/enhancements/issues/5933
+
+> Note (Deckhouse): the `apiserver.go` / `customresource_handler.go` hunks of
+> this patch were regenerated so they apply cleanly on top of the CRD
+> scope-filter wiring added by `namespace-list-acl-filtering.patch` (which
+> applies earlier in the chain). This is a context-only re-roll — the
+> sensitive-data feature itself is unchanged. If you update this patch,
+> regenerate it against a tree that already has the earlier patch applied.
 
 ### 011-fix-stale-token-metrics.patch
 

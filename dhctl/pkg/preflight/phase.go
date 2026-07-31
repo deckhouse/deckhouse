@@ -21,3 +21,20 @@ const (
 	PhasePostInfra           Phase = "post-infra"
 	PhaseProviderConfigCheck Phase = "provider-config-check"
 )
+
+var phaseFormats = map[Phase]string{
+	PhasePreInfra:  "Settings preflights",
+	PhasePostInfra: "Infra preflights",
+}
+
+func (p Phase) String() string {
+	if f, ok := phaseFormats[p]; ok {
+		return f
+	}
+
+	return string(p)
+}
+
+func (p Phase) FormatString() string {
+	return p.String()
+}

@@ -11,7 +11,7 @@ rules:
   - "deployments/prometheus-metrics"
   resourceNames: ["capi-controller-manager"]
   verbs: ["get"]
-{{- if (.Values.global.enabledModules | has "prometheus") }}
+{{- if (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor") }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

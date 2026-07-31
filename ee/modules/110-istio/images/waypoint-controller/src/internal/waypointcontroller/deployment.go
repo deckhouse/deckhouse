@@ -12,7 +12,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	networkv1alpha1 "waypoint-controller/pkg/apis/network.deckhouse.io/v1alpha1"
@@ -131,6 +133,15 @@ func (r *WaypointController) mutateDeployment(deploy *appsv1.Deployment, instanc
 		return err
 	}
 	deploy.Spec.Template.Spec = podSpec
+
+	// Use a predictable one-pod-at-a-time rolling update strategy.
+	deploy.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RollingUpdateDeploymentStrategyType,
+		RollingUpdate: &appsv1.RollingUpdateDeployment{
+			MaxSurge:       ptr.To(intstr.FromInt32(1)),
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+		},
+	}
 
 	if err := controllerutil.SetControllerReference(instance, deploy, r.scheme); err != nil {
 		return err

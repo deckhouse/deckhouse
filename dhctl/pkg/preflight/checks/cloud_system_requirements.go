@@ -26,13 +26,6 @@ import (
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
-const (
-	minimumRequiredCPUCores       = 4
-	minimumRequiredMemoryMB       = 8192 - reservedMemoryThresholdMB
-	minimumRequiredRootDiskSizeGB = 50
-	reservedMemoryThresholdMB     = 512
-)
-
 type CloudSystemRequirementsCheck struct {
 	InstallConfig *config.DeckhouseInstaller
 }
@@ -52,6 +45,16 @@ func (CloudSystemRequirementsCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c CloudSystemRequirementsCheck) Run(_ context.Context) error {
+	// In the ModuleConfig-only flow (no <Provider>ClusterConfiguration in the
+	// input file) the master sizing lives in NodeGroup + InstanceClass resources
+	// resolved by the provider validator, not in PCC. Skip the legacy PCC-based
+	// check — the external validator performs its own checks.
+	if c.InstallConfig == nil || len(c.InstallConfig.ProviderClusterConfig) == 0 {
+		return nil
+	}
+
+	requirements := systemRequirementsForConfig(c.InstallConfig)
+
 	configObject := make(map[string]any)
 	configKind, err := unmarshalProviderClusterConfiguration(c.InstallConfig.ProviderClusterConfig, configObject)
 	if err != nil {
@@ -96,23 +99,20 @@ func (c CloudSystemRequirementsCheck) Run(_ context.Context) error {
 	case "HuaweiCloudClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
 
-	case "DVPClusterConfiguration":
-		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "virtualMachine", "cpu", "cores"}
-	// TODO: add checks for string values
-	// ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "virtualMachine", "memory", "size"}
-	// rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDisk", "size"}
-
 	default:
-		return fmt.Errorf("unknown provider cluster configuration kind: %s", configKind)
+		// External providers ship their own validator binary that checks master
+		// sizing from NodeGroup/InstanceClass; skip the dhctl PCC-based check for
+		// any kind not handled above.
+		return nil
 	}
 
-	if err = validateIntegerPropertyAtPath(configObject, rootDiskPropertyPath, minimumRequiredRootDiskSizeGB, true); err != nil {
+	if err = validateIntegerPropertyAtPath(configObject, rootDiskPropertyPath, requirements.rootDiskSizeGB, true); err != nil {
 		return fmt.Errorf("Root disk capacity: %v", err)
 	}
-	if err = validateIntegerPropertyAtPath(configObject, ramAmountPropertyPath, minimumRequiredMemoryMB, false); err != nil {
+	if err = validateIntegerPropertyAtPath(configObject, ramAmountPropertyPath, requirements.memoryMB, false); err != nil {
 		return fmt.Errorf("RAM amount: %v", err)
 	}
-	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, minimumRequiredCPUCores, false); err != nil {
+	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, requirements.cpuCores, false); err != nil {
 		return fmt.Errorf("CPU cores count: %v", err)
 	}
 

@@ -23,7 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -35,17 +34,16 @@ type Checker interface {
 }
 
 type constructorParams struct {
-	kubeProvider   kubernetes.KubeClientProviderWithCtx
-	metaConfig     *config.MetaConfig
-	loggerProvider log.LoggerProvider
+	kubeProvider kubernetes.KubeClientProviderWithCtx
+	metaConfig   *config.MetaConfig
 }
 
 // todo refact to pass parameters with kube and logger provider
-func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, metaConfig *config.MetaConfig) ([]Checker, error) {
+func GetCheckers(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, metaConfig *config.MetaConfig) ([]Checker, error) {
 	errRes := &multierror.Error{}
 
 	checkers := make([]Checker, 0)
-	singleConstructors := make(map[string]interface{})
+	singleConstructors := make(map[string]any)
 
 	tryToAppendCheck := func(check Checker, err error) {
 		if err != nil {
@@ -64,19 +62,15 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 		}
 	}
 
-	// todo pass logger as parameter
-	logger := log.GetDefaultLogger()
-
 	params := constructorParams{
-		kubeProvider:   kubernetes.NewSimpleKubeClientGetter(kubeCl),
-		metaConfig:     metaConfig,
-		loggerProvider: log.SimpleLoggerProvider(logger),
+		kubeProvider: kubernetes.NewSimpleKubeClientGetter(kubeCl),
+		metaConfig:   metaConfig,
 	}
 
 	staticNGSChecker := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params)
 	tryToAppendCheck(staticNGSChecker, nil)
 
-	type constructor func(resource *template.Resource, params constructorParams) (Checker, error)
+	type constructor func(ctx context.Context, resource *template.Resource, params constructorParams) (Checker, error)
 
 	constructors := []constructor{
 		tryToGetClusterIsBootstrappedChecker,
@@ -85,7 +79,7 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 
 	for _, r := range resources {
 		for _, crtor := range constructors {
-			check, err := crtor(r, params)
+			check, err := crtor(ctx, r, params)
 			tryToAppendCheck(check, err)
 		}
 	}
@@ -126,26 +120,26 @@ func (w *Waiter) ReadyAll(ctx context.Context) (bool, error) {
 	return len(w.checkers) == 0, nil
 }
 
-func (w *Waiter) ReadyAllWithRes(ctx context.Context) (bool, []string, []string, error) {
-	checkersToStay := make([]Checker, 0)
-	readyResources := make([]string, 0)
-	remainedResources := make([]string, 0)
+// The returned pending slice is the waiter's own list of remaining checks - read it, do not
+// append to or reorder it.
+func (w *Waiter) ReadyAllWithRes(ctx context.Context) (bool, []Checker, []Checker, error) {
+	readyCheckers := make([]Checker, 0)
+	remainedCheckers := make([]Checker, 0)
 
 	for _, c := range w.checkers {
 		ready, err := c.IsReady(ctx)
 		if err != nil {
-			return false, readyResources, remainedResources, err
+			return false, readyCheckers, remainedCheckers, err
 		}
 
 		if !ready {
-			checkersToStay = append(checkersToStay, c)
-			remainedResources = append(remainedResources, c.Name())
+			remainedCheckers = append(remainedCheckers, c)
 		} else {
-			readyResources = append(readyResources, c.Name())
+			readyCheckers = append(readyCheckers, c)
 		}
 	}
 
-	w.checkers = checkersToStay
+	w.checkers = remainedCheckers
 
-	return len(w.checkers) == 0, readyResources, remainedResources, nil
+	return len(w.checkers) == 0, readyCheckers, remainedCheckers, nil
 }

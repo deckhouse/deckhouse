@@ -190,7 +190,10 @@ func validateDefaultCRI(defaultCRI string, cli client.Client) (*kwhvalidating.Va
 	defer cancel()
 
 	switch defaultCRI {
-	case "Containerd":
+	// An empty value means defaultCRI is not set in ClusterConfiguration (the
+	// field is deprecated and no longer schema-defaulted); the built-in default
+	// (Containerd) or the node-manager ModuleConfig value applies instead.
+	case "", "Containerd":
 		return allowResult(nil)
 	case "ContainerdV2":
 		return checkCntrdV2Support(ctx, cli)
@@ -422,7 +425,7 @@ func validateClusterConfiguration(ctx context.Context, clusterConfiguration []by
 	_, err := config.ParseConfigFromData(
 		ctx,
 		string(clusterConfiguration),
-		config.DummyPreparatorProvider(),
+		config.DummyValidatorProvider(),
 		nil,
 		config.ValidateOptionOmitDocInError(true),
 		config.ValidateOptionStrictUnmarshal(true),

@@ -1,0 +1,67 @@
+properties:
+  email:
+    type: string
+  geo:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      id:
+        type: string
+      lat:
+        type: integer
+      lon:
+        type: string
+      ownerReference:
+        description: |
+          Объявление владельца геопозиции
+        nullable: true
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+        type: object
+      state:
+        type: string
+      zip:
+        type: string
+    type: object
+  good:
+    description: |
+      Объявление товара
+
+      Каждый товар может быть связан с несколькими пользователями
+    nullable: true
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      price:
+        type: integer
+    type: object
+  id:
+    description: |
+      Идентификатор пользователя
+
+      требуется UUID
+    type: string
+  name:
+    type: string
+  owner:
+    description: |
+      Объявление владельца
+    nullable: true
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  phone:
+    type: string
+type: object

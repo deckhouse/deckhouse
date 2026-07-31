@@ -1,0 +1,59 @@
+diff --git a/controllers/openstackmachine_controller.go b/controllers/openstackmachine_controller.go
+index 3ed0e9f847..d013666568 100644
+--- a/controllers/openstackmachine_controller.go
++++ b/controllers/openstackmachine_controller.go
+@@ -31,7 +31,6 @@ import (
+ 	"k8s.io/utils/ptr"
+ 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+-	ipamv1 "sigs.k8s.io/cluster-api/api/ipam/v1beta2"
+ 	"sigs.k8s.io/cluster-api/util"
+ 	"sigs.k8s.io/cluster-api/util/annotations"
+ 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+@@ -214,10 +213,6 @@ func (r *OpenStackMachineReconciler) SetupWithManager(ctx context.Context, mgr c
+ 		// with the ClusterUnpausedAndInfrastructureReady predicate. The only
+ 		// fields in OpenStackCluster we are interested in are dependent on
+ 		// InfrastructureReady, so we don't need to watch both.
+-		Watches(
+-			&ipamv1.IPAddressClaim{},
+-			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &infrav1.OpenStackMachine{}),
+-		).
+ 		Watches(
+ 			&infrav1alpha1.OpenStackServer{},
+ 			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &infrav1.OpenStackMachine{}),
+diff --git a/controllers/openstackserver_controller.go b/controllers/openstackserver_controller.go
+index 93a5a00d48..32296a5443 100644
+--- a/controllers/openstackserver_controller.go
++++ b/controllers/openstackserver_controller.go
+@@ -229,10 +229,6 @@ func (r *OpenStackServerReconciler) SetupWithManager(ctx context.Context, mgr ct
+ 			handler.EnqueueRequestsFromMapFunc(r.requeueOpenStackServersForCluster(ctx)),
+ 			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), log)),
+ 		).
+-		Watches(
+-			&ipamv1.IPAddressClaim{},
+-			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &infrav1alpha1.OpenStackServer{}),
+-		).
+ 		Complete(r)
+ }
+ 
+diff --git a/main.go b/main.go
+index cf37f8a1f7..1b3d1c97cd 100644
+--- a/main.go
++++ b/main.go
+@@ -378,16 +378,6 @@ func setupReconcilers(ctx context.Context, mgr ctrl.Manager, caCerts []byte) {
+ 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackMachine")
+ 		os.Exit(1)
+ 	}
+-	if err := (&controllers.OpenStackFloatingIPPoolReconciler{
+-		Client:         mgr.GetClient(),
+-		Recorder:       mgr.GetEventRecorderFor("floatingippool-controller"),
+-		ScopeFactory:   scopeFactory,
+-		Scheme:         mgr.GetScheme(),
+-		CaCertificates: caCerts,
+-	}).SetupWithManager(ctx, mgr); err != nil {
+-		setupLog.Error(err, "unable to create controller", "controller", "FloatingIPPool")
+-		os.Exit(1)
+-	}
+ 	if err := (&controllers.OpenStackServerReconciler{
+ 		Client:           mgr.GetClient(),
+ 		Recorder:         mgr.GetEventRecorderFor("openstackserver-controller"),

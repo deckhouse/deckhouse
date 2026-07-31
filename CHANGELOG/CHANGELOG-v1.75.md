@@ -17,6 +17,7 @@
  - If you have used certain features of `operator-trivy` before, a new alert named `VulnerableImagesDenialConfigNotMigrated` might start firing after update. In that case, you must manually move `denyVulnerableImages` section of settings from `admission-policy-engine` to `operator-trivy` module config. Alert message will provide necessary instructions on how to do so.
  - Istio version 1.19.7 has been removed because it is considered outdated. In this regard, errors may occur when updating the Deckhouse version. It is recommended to upgrade Istio from version 1.19.7 to version 1.21.6 before upgrading Deckhouse release.
  - Mode `Auto` is deprecated and will be removed in a future API version. Use explicit modes like `Recreate`, `Initial`, or `InPlaceOrRecreate` instead.
+ - Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
  - The default VPA mode for Loki components is changed from Auto to InPlaceOrRecreate.
     Loki pods will now prefer in-place resource updates when supported by the cluster,
     falling back to pod recreation only when required.
@@ -162,6 +163,7 @@
  - **[candi]** Updated the bashible step to include Linux kernel versions that address CVE-2025-37999 [#17300](https://github.com/deckhouse/deckhouse/pull/17300)
  - **[candi]** fix CVE in cloud-provider-azure [#18177](https://github.com/deckhouse/deckhouse/pull/18177)
  - **[candi]** fix cve node-manager and opentofu. [#19942](https://github.com/deckhouse/deckhouse/pull/19942)
+ - **[candi]** fix if node has bashible-uninitialized taint in race condition. [#20972](https://github.com/deckhouse/deckhouse/pull/20972)
  - **[candi]** remove excessive netcat calls from d8-shutdown-inhibitor [#17153](https://github.com/deckhouse/deckhouse/pull/17153)
  - **[cert-manager]** Disable SecurityPolicyExceptions for cert-manager namespace [#19280](https://github.com/deckhouse/deckhouse/pull/19280)
  - **[chrony]** Mitigated CVE-2025-58181. [#17959](https://github.com/deckhouse/deckhouse/pull/17959)
@@ -247,6 +249,7 @@
  - **[common]** Fixed CVE-2026-24051 in the CoreDNS image. [#18611](https://github.com/deckhouse/deckhouse/pull/18611)
  - **[common]** Fixed CVE-2026-33186 in the CoreDNS image. [#18722](https://github.com/deckhouse/deckhouse/pull/18722)
     CoreDNS pods will undergo a rolling restart.
+ - **[common]** Fixed CVE-2026-40898 in CoreDNS by updating the quic-go dependency. [#20768](https://github.com/deckhouse/deckhouse/pull/20768)
  - **[common]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
  - **[common]** Removed Python completely from the debug-container image as it is no longer needed, resolving corresponding CVEs, and silenced false positives for etcd binaries via VEX. [#18842](https://github.com/deckhouse/deckhouse/pull/18842)
@@ -262,9 +265,12 @@
  - **[dashboard]** Fixed CVE-2025-22868, CVE-2025-22870, CVE-2025-22872, CVE-2025-47914, CVE-2025-58181 [#17243](https://github.com/deckhouse/deckhouse/pull/17243)
  - **[dashboard]** Fixed CVE-2025-30204 by updating dashboard components [#16927](https://github.com/deckhouse/deckhouse/pull/16927)
  - **[deckhouse-controller]** A module that conditionally depends on another is no longer disabled when an incompatible version of that dependency is enabled; the enable is rejected instead. [#20345](https://github.com/deckhouse/deckhouse/pull/20345)
+ - **[deckhouse-controller]** Disabling modules with confirmation will be rejected without using the annotation. [#21178](https://github.com/deckhouse/deckhouse/pull/21178)
+ - **[deckhouse-controller]** Don't create an external module release for a module that is still shipped embedded, so it can't replace or duplicate the embedded copy. [#21129](https://github.com/deckhouse/deckhouse/pull/21129)
  - **[deckhouse-controller]** Exclude all service accounts from `d8-` namespaces in `d8ms-prefix` ValidatingAdmissionPolicy. [#17440](https://github.com/deckhouse/deckhouse/pull/17440)
  - **[deckhouse-controller]** Fix conversions for external modules [#16772](https://github.com/deckhouse/deckhouse/pull/16772)
  - **[deckhouse-controller]** Fix false DeckhouseUpdatingFailed alert on registries without version tags in release-channel repo [#18310](https://github.com/deckhouse/deckhouse/pull/18310)
+ - **[deckhouse-controller]** Fix maintenance state tracking — module no longer gets stuck in Unmanaged after removing maintenance. [#21427](https://github.com/deckhouse/deckhouse/pull/21427)
  - **[deckhouse-controller]** Fixed D8ModuleOutdatedByMajorVersion alert persist after update. [#17468](https://github.com/deckhouse/deckhouse/pull/17468)
  - **[deckhouse-controller]** Fixed `--insecure` flag being ignored in registry client operations. [#17554](https://github.com/deckhouse/deckhouse/pull/17554)
  - **[deckhouse-controller]** Fixed corner cases in d8-cluster-configuration webhook. [#17342](https://github.com/deckhouse/deckhouse/pull/17342)
@@ -281,16 +287,19 @@
  - **[deckhouse]** Allow updating scanInterval on the deckhouse ModuleSource. [#19417](https://github.com/deckhouse/deckhouse/pull/19417)
  - **[deckhouse]** Bump nelm version with deadlock fix. [#18586](https://github.com/deckhouse/deckhouse/pull/18586)
  - **[deckhouse]** Ensure heritage label on d8-system namespace via hook. [#19196](https://github.com/deckhouse/deckhouse/pull/19196)
+ - **[deckhouse]** Fix CVEs. [#21542](https://github.com/deckhouse/deckhouse/pull/21542)
  - **[deckhouse]** Fix exp modules auto enabling. [#19699](https://github.com/deckhouse/deckhouse/pull/19699)
  - **[deckhouse]** Fix module docs rendering. [#17245](https://github.com/deckhouse/deckhouse/pull/17245)
  - **[deckhouse]** Fix module enabling. [#17009](https://github.com/deckhouse/deckhouse/pull/17009)
  - **[deckhouse]** Fix module installer cleanup. [#17301](https://github.com/deckhouse/deckhouse/pull/17301)
  - **[deckhouse]** Fix module rerun. [#17478](https://github.com/deckhouse/deckhouse/pull/17478)
+ - **[deckhouse]** Fix nil pointer panic in resource and namespace informers by using each informer's own logger instead of the possibly-nil Monitor.Logger. [#21231](https://github.com/deckhouse/deckhouse/pull/21231)
  - **[deckhouse]** Fixed deckhouse-registry secret validation. [#17122](https://github.com/deckhouse/deckhouse/pull/17122)
  - **[deckhouse]** Fixed global configuration generation. [#19689](https://github.com/deckhouse/deckhouse/pull/19689)
  - **[deckhouse]** Fixed missing module stage in the Module CR, restoring experimental module warnings. [#17244](https://github.com/deckhouse/deckhouse/pull/17244)
  - **[deckhouse]** Overwrite currentReleaseImageName on mismatch. [#19416](https://github.com/deckhouse/deckhouse/pull/19416)
  - **[deckhouse]** Remove notified=false annotation reset from runReleaseDeploy in the module release controller. [#19182](https://github.com/deckhouse/deckhouse/pull/19182)
+ - **[deckhouse]** atomically install modules and re-download incomplete versions [#21459](https://github.com/deckhouse/deckhouse/pull/21459)
  - **[descheduler]** Fixed module queue hang when a v1alpha1 Descheduler CR with deprecated-only strategies is applied. [#17986](https://github.com/deckhouse/deckhouse/pull/17986)
  - **[descheduler]** Removed implicit default thresholds from Descheduler CRD and align behavior with upstream. [#17488](https://github.com/deckhouse/deckhouse/pull/17488)
     Thresholds and targetThresholds are no longer implicitly defaulted.
@@ -365,6 +374,8 @@
     All Ingress-NGINX controller pods will be restated.
  - **[ingress-nginx]** Nelm fixes are backported. [#18632](https://github.com/deckhouse/deckhouse/pull/18632)
     All Ingress-NGINX controller pods will be restarted.
+ - **[ingress-nginx]** Nginx is updated to 1.30.3. [#20786](https://github.com/deckhouse/deckhouse/pull/20786)
+    All ingress-nginx pods will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19862](https://github.com/deckhouse/deckhouse/pull/19862)
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20171](https://github.com/deckhouse/deckhouse/pull/20171)
@@ -486,6 +497,7 @@
     DexAuthenticator resources with IP addresses in domain fields will now be rejected at creation/update time with a clear error message. Previously, such resources were accepted but failed silently during Ingress creation.
  - **[user-authn]** Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior. [#20090](https://github.com/deckhouse/deckhouse/pull/20090)
  - **[user-authn]** Improved Dex LDAP Kerberos (SPNEGO) logs and error handling. [#17543](https://github.com/deckhouse/deckhouse/pull/17543)
+ - **[user-authn]** Preserve Dex Password fields (notably groups) when resetting password, locking or unlocking a user, so users are no longer locked out after these operations. [#21260](https://github.com/deckhouse/deckhouse/pull/21260)
  - **[user-authn]** Quote service names to prevent digit-only names from breaking yaml parser [#17020](https://github.com/deckhouse/deckhouse/pull/17020)
  - **[user-authn]** Restore ContinueOnConnectorFailure flag handling in Dex configuration [#18219](https://github.com/deckhouse/deckhouse/pull/18219)
  - **[user-authn]** Ships Dex Kubernetes storage CRDs with the module to prevent missing-CRD bootstrap failures. [#17885](https://github.com/deckhouse/deckhouse/pull/17885)
@@ -500,6 +512,8 @@
     the 4200–4299 range and does not take SecurityPolicyException into account.
  - **[user-authz]** Fixed SecurityPolicyException usage, added CR presence check. [#17660](https://github.com/deckhouse/deckhouse/pull/17660)
  - **[user-authz]** cache namespace label checks in the user-authz webhook via informer to avoid per-request apiserver GETs [#16920](https://github.com/deckhouse/deckhouse/pull/16920)
+ - **[user-authz]** user-authz-webhook now uses the node-local kube-apiserver endpoint for its discovery cache and liveness check, instead of resolving the "kubernetes.default" DNS name. [#21080](https://github.com/deckhouse/deckhouse/pull/21080)
+    Previously, a transient cluster DNS failure could cause the user-authz-webhook liveness probe to fail and restart the pod, which combined with the fail-closed authorization webhook (failurePolicy: Deny) could deny all API requests, including cluster-admins, until DNS recovered.
 
 ## Chore
 
@@ -589,6 +603,7 @@
  - **[istio]** Changed GO target version to 1.25. [#17981](https://github.com/deckhouse/deckhouse/pull/17981)
  - **[istio]** Changing the multi-network Istio documentation [#18591](https://github.com/deckhouse/deckhouse/pull/18591)
  - **[istio]** Fixed code in api-proxy and metadata-exporter images with linter recommendations. [#17763](https://github.com/deckhouse/deckhouse/pull/17763)
+ - **[istio]** Vex mitigation implementation [#20562](https://github.com/deckhouse/deckhouse/pull/20562)
  - **[istio]** Warning about the inability to use user 1337 for user applications [#18601](https://github.com/deckhouse/deckhouse/pull/18601)
  - **[istio]** added excludes for DMT lint [#19325](https://github.com/deckhouse/deckhouse/pull/19325)
  - **[istio]** changed vex CVE justifications in pilots images [#19583](https://github.com/deckhouse/deckhouse/pull/19583)

@@ -188,6 +188,7 @@ pull_request_info:
     labels: ${{ steps.pr_props.outputs.labels }}
     changes_docs: ${{ steps.changes.outputs.docs }}
     changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+    changes_node_controller: ${{ steps.changes.outputs.node_controller }}
 {!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
     build_{!{$werfEnv}!}: ${{ steps.pr_props.outputs.build_{!{$werfEnv}!} }}{!{ end }!}
 
@@ -387,6 +388,8 @@ pull_request_info:
             - './ee/candi/**/openapi/*'
           not_markdown:
             - '!./**/*.md'
+          node_controller:
+            - './modules/040-node-manager/images/node-controller/**'
 
     # Stop workflow if external PR contains dangerous changes.
     - name: Fail workflow on dangerous changes

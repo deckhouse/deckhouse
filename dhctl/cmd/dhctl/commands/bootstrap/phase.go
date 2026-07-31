@@ -20,18 +20,18 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -44,16 +44,15 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 	app.DefineDeckhouseInstallFlags(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
+	forceVerboseLogging(cmd, opts)
+
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
@@ -64,13 +63,12 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 			}
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+		bootstraper := bootstrap.NewClusterBootstrapper(ctx, &bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
-			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			Options:                opts,
 		})
@@ -86,16 +84,15 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 	app.DefineBashibleBundleFlags(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
+	forceVerboseLogging(cmd, opts)
+
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
@@ -103,11 +100,10 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 			}
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+		bootstraper := bootstrap.NewClusterBootstrapper(ctx, &bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
-			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
@@ -124,16 +120,15 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options)
 	app.DefineResourcesFlags(cmd, &opts.Bootstrap, false)
 	app.DefineKubeFlags(cmd, &opts.Kube)
 
+	forceVerboseLogging(cmd, opts)
+
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
@@ -144,11 +139,10 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options)
 			}
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+		bootstraper := bootstrap.NewClusterBootstrapper(ctx, &bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
-			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
@@ -173,10 +167,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
@@ -184,11 +175,10 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 			}
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+		bootstraper := bootstrap.NewClusterBootstrapper(ctx, &bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
-			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
@@ -197,18 +187,14 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {
-			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
-			if err != nil {
-				return err
-			}
+			progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Destroy cluster")
+			defer finishProgress()
 
 			onUpdateFunc := func(progress phases.Progress) error {
-				phasesChan <- progress
+				progressCh <- progress
 				return nil
 			}
 			bootstraper.OnProgressFunc = onUpdateFunc
-
-			defer onComplete()
 		}
 
 		if err = bootstraper.Abort(ctx, opts.Bootstrap.ForceAbortFromCache); err != nil {
@@ -227,16 +213,15 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 	app.DefineDropCacheFlags(cmd, &opts.Cache)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
+	forceVerboseLogging(cmd, opts)
+
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
@@ -244,11 +229,10 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 			}
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+		bootstraper := bootstrap.NewClusterBootstrapper(ctx, &bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
-			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
@@ -267,15 +251,15 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause, opts *options.Options
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefinePostBootstrapScriptFlags(cmd, &opts.Bootstrap)
 
+	forceVerboseLogging(cmd, opts)
+
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-		loggerProvider := log.ExternalLoggerProvider(logger)
-		params := app.ProviderParams(&opts.Global, loggerProvider)
+		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
@@ -283,11 +267,10 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause, opts *options.Options
 			}
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+		bootstraper := bootstrap.NewClusterBootstrapper(ctx, &bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
-			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			Options:                opts,
 			SSHProviderInitializer: sshProviderInitializer,
@@ -295,5 +278,14 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause, opts *options.Options
 		})
 
 		return bootstraper.ExecPostBootstrap(ctx)
+	})
+}
+
+// forceVerboseLogging makes the command behave as if -v/--verbose was passed,
+// regardless of what the user actually specified on the command line.
+func forceVerboseLogging(cmd *kingpin.CmdClause, opts *options.Options) {
+	cmd.PreAction(func(c *kingpin.ParseContext) error {
+		opts.Global.ShowProgress = true
+		return nil
 	})
 }

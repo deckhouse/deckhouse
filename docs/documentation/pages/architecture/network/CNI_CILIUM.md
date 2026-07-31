@@ -33,7 +33,7 @@ The module consists of the following components:
    * **Garbage collection for security identifiers**: Maintains a local cache of active identifiers (CiliumIdentity) and periodically scans it, deleting records about identifiers that have stopped signaling activity (heartbeat). This is important because identifiers are represented by a 16-bit integer, and running out of them (maximum 65536) can lead to problems.
 
    * **CiliumEndpointSlices (CES) Management**: Maintains up-to-date information about endpoints in the cluster, which is critical for the correct operation of network policies and load balancing.
-   
+
    It consists of the following containers:
 
    * **operator**: Main container.
@@ -50,12 +50,12 @@ The module consists of the following components:
    * **Datapath Orchestration**: Compiles, loads eBPF programs into the Linux kernel and binds them to network interfaces. It is these programs in the kernel that perform real packet processing: forwarding, policy filtering, connection tracking, NAT and load balancing.
 
    * **Service Load Balancing**: Configures load balancing rules for services in a cluster using eBPF capabilities.
-   
+
    * **Cluster event handling**: The Agent works according to the event model: it constantly monitors changes in the Kubernetes API (creating pods, updating services, changing Endpoints, updating custom resources) and updates the configuration of eBPF programs on the fly.
- 
+
    * **Oservability**: The agent runs a local Hubble server, which collects metrics and data on network flows. This allows you to monitor the network status, identify problems, and analyze traffic between pods. The Hubble server starts when the [`cilium-hubble`](/modules/cilium-hubble) module is enabled.
 
-   How it works: when an event occurs in the cluster (for example, a new pod starts), the agent receives a notification about it and, based on the current cluster status and policies, configures eBPF programs so that traffic for this pod passes correctly.   
+   How it works: when an event occurs in the cluster (for example, a new pod starts), the agent receives a notification about it and, based on the current cluster status and policies, configures eBPF programs so that traffic for this pod passes correctly.
 
    It consists of the following containers:
 
@@ -83,14 +83,14 @@ The module consists of the following components:
    * **check-linux-kernel**: Init container checking the Linux kernel version for compliance with the minimum requirements for working with CNI Cilium.
 
    * A set of init containers for prepulling new versions of images of the corresponding containers of the agent component:
-   
+
      * **prepull-image-cilium**.
      * **prepull-image-kube-rbac-proxy**.
-      
+
    * **safe-agent-updater**: Init container that compares the values of special annotations in the DaemonSet manifest of the updated Cilium agent with the values of the corresponding annotations in the metadata of the agent pod running on the node. In particular, the `safe-agent-updater-daemonset-generation` annotation stores the hash sum of the agent image. If the hash sums do not match, safe-agent-updater deletes the running pod and waits until the pod with the new agent version enters the `Ready` state.
-     
+
    * A set of sidecar containers for prepulling new versions of images of the corresponding containers of the agent component. Containers are on pause and perform only the function of storing images:
-   
+
      * **pause-cilium**.
      * **pause-check-linux-kernel**.
      * **pause-kube-rbac-proxy**.
@@ -109,4 +109,4 @@ The module interacts with the following components:
 The following external components interact with the module:
 
 1. **Prometheus-main**: Collects metrics from agent and operator.
-2. **Containerd**: Runs the cilium-cni executable file with certain commands according to the CNI specification, for example, ADD when starting the container and DEL when deleting it. 
+2. **Containerd**: Runs the cilium-cni executable file with certain commands according to the CNI specification, for example, ADD when starting the container and DEL when deleting it.

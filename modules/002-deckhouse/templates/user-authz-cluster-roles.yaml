@@ -15,6 +15,7 @@ rules:
   - modulepulloverrides
   - modulereleases
   - modules
+  - modulesettingsdefinitions
   - modulesources
   - moduleupdatepolicies
   - packagerepositories
@@ -59,8 +60,6 @@ rules:
   - update
 - apiGroups:
   - deckhouse.io
-  resourceNames:
-  - deckhouse
   resources:
   - moduleconfigs
   verbs:

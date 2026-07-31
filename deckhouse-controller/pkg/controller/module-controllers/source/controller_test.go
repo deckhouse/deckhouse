@@ -148,7 +148,7 @@ func (suite *ControllerTestSuite) SetupSuite() {
 }
 
 func (suite *ControllerTestSuite) BeforeTest(suiteName, testName string) {
-	if suiteName == "ControllerTestSuite" && testName == "TestCreateReconcile" {
+	if suiteName == "ControllerTestSuite" && (testName == "TestCreateReconcile" || testName == "TestFetchMissingIntermediateReleases") {
 		suite.compareGolden = true
 	}
 }
@@ -332,6 +332,102 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		assert.Contains(suite.T(), releasesStr, "testmodule-v0.3.0")
 		// Should NOT contain intermediate version
 		assert.NotContains(suite.T(), releasesStr, "testmodule-v0.5.0")
+	})
+
+	// A module that is still embedded but already published in an external source is
+	// pre-staged: a single source resolves automatically, so a ModuleRelease is created.
+	suite.Run("embedded module with a single source", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"ingressnginx"},
+			[]string{})
+		suite.setupTestController("embedded-module-single-source.yaml", withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+	})
+
+	// Several sources offer the embedded module and none is chosen via ModuleConfig:
+	// it is a conflict, so no ModuleRelease is created.
+	suite.Run("embedded module with several sources and no choice", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"ingressnginx"},
+			[]string{})
+		suite.setupTestController("embedded-module-several-sources-conflict.yaml", withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+	})
+
+	// The operator pinned a source via ModuleConfig that does not offer the module
+	// (a stale or mistyped .spec.source - e.g. the source stopped publishing the
+	// module after the config was admitted). It must be treated as a conflict, not
+	// silently skipped: no ModuleRelease is created and the conflict alert fires.
+	suite.Run("embedded module with a chosen source that is not available", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"ingressnginx"},
+			[]string{})
+		suite.setupTestController("embedded-module-stale-chosen-source.yaml", withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+	})
+
+	// Several sources, but the operator pinned the reconciled source via ModuleConfig:
+	// a ModuleRelease is created from the chosen source.
+	suite.Run("embedded module with several sources and a chosen source", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"ingressnginx"},
+			[]string{})
+		suite.setupTestController("embedded-module-chosen-source.yaml", withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+	})
+
+	// Several sources and ModuleConfig pins a different source than the reconciled one:
+	// the reconciled source must not pre-stage a release.
+	suite.Run("embedded module with several sources and a different chosen source", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"ingressnginx"},
+			[]string{})
+		suite.setupTestController("embedded-module-other-chosen-source.yaml", withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+	})
+
+	// "Embedded" is the sentinel for the built-in copy, not a real source, so a
+	// ModuleConfig with source: Embedded is treated as "no choice" - several sources
+	// remain a conflict and no ModuleRelease is created.
+	suite.Run("embedded module with several sources and Embedded chosen source", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"ingressnginx"},
+			[]string{})
+		suite.setupTestController("embedded-module-embedded-chosen-source.yaml", withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+	})
+}
+
+// TestFetchMissingIntermediateReleases reproduces the frozen-chain bug: the target
+// release already exists and its checksum matches the one recorded on the source (so
+// the plain checksum guard would skip the fetch), yet the step-by-step chain from the
+// deployed release up to the target has a gap because the intermediate versions were
+// mirrored into the registry only after the target release was first created. The
+// reconcile must re-derive the chain and create the missing intermediate releases.
+func (suite *ControllerTestSuite) TestFetchMissingIntermediateReleases() {
+	suite.Run("frozen chain with missing intermediates is re-derived", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.55.1",
+			[]string{"console"},
+			[]string{"v1.49.1", "v1.50.0", "v1.51.1", "v1.52.0", "v1.53.2", "v1.54.1", "v1.55.1"})
+		suite.setupTestController("frozen-chain-missing-intermediates.yaml", withDependencyContainer(dc))
+
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+		// the resulting ModuleReleases (including the newly created console-v1.53.2 and
+		// console-v1.54.1) are asserted against the golden snapshot in TearDownSubTest
 	})
 }
 
@@ -584,7 +680,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   annotations:
-    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
     modules.deckhouse.io/default-source: "true"
   name: test-source
 spec:
@@ -706,7 +802,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   annotations:
-    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
     modules.deckhouse.io/default-source: "true"
   name: test-source
 spec:

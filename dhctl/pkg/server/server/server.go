@@ -28,7 +28,6 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
@@ -47,7 +46,6 @@ func Serve(ctx context.Context, params settings.ServerParams) error {
 		return err
 	}
 
-	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{}, false)
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
 	log := logger.NewLogger(lvl).With(slog.String("component", "server"))
@@ -109,7 +107,7 @@ func Serve(ctx context.Context, params settings.ServerParams) error {
 	reflection.Register(s)
 
 	// init services
-	validationService := validation.New(config.NewSchemaStore(params.GlobalOptions))
+	validationService := validation.New(config.NewSchemaStore(params.GlobalOptions), params.GlobalOptions)
 	statusService := status.New(requestsCounter)
 
 	// register services

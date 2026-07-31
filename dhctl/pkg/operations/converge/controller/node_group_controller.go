@@ -16,22 +16,25 @@ package controller
 
 import (
 	"cmp"
+	gocontext "context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	gcmp "github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
@@ -72,7 +75,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
+	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs)
 	if err != nil {
 		return err
 	}
@@ -80,7 +83,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	c.cloudConfig = nodeCloudConfig
 
 	if c.desiredReplicas > len(c.state.State) {
-		err := log.Process("converge", fmt.Sprintf("Add Nodes to NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas), func() error {
+		err := dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), fmt.Sprintf("Add Nodes to NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas), func(gocontext.Context) error {
 			return c.nodeGroup.addNodes(ctx)
 		})
 		if err != nil {
@@ -88,12 +91,12 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		}
 	}
 
-	nodesToDeleteInfo, err := getNodesToDeleteInfo(c.desiredReplicas, c.state.State)
+	nodesToDeleteInfo, err := getNodesToDeleteInfo(ctx.Ctx(), c.desiredReplicas, c.state.State)
 	if err != nil {
 		return err
 	}
 
-	log.DebugF("Nodes to delete: %d. Starting to update nodes\n", len(nodesToDeleteInfo))
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Nodes to delete: %d. Starting to update nodes", len(nodesToDeleteInfo)))
 
 	if err := c.nodeGroup.beforeUpdateNodes(ctx); err != nil {
 		return err
@@ -104,7 +107,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("starting to delete nodes\n")
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "starting to delete nodes")
 
 	if err := c.switchClientBeforeDeleteNodesIfNeed(ctx, nodesToDeleteInfo); err != nil {
 		return err
@@ -120,7 +123,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("Starting to converge node template\n")
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Starting to converge node template")
 
 	if groupSpec != nil {
 		return c.tryUpdateNodeTemplate(ctx, groupSpec.NodeTemplate)
@@ -132,7 +135,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 func (c *NodeGroupController) switchClientBeforeDeleteNodesIfNeed(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	clientSwitcher := ctx.ClientSwitcher()
 	if govalue.IsNil(clientSwitcher) {
-		log.DebugF("Skipping switch of client before deleting nodes. Got empty switcher\n")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Skipping switch of client before deleting nodes. Got empty switcher")
 		return nil
 	}
 
@@ -150,12 +153,12 @@ func (c *NodeGroupController) switchClientBeforeDeleteNodesIfNeed(ctx *context.C
 
 func (c *NodeGroupController) tryDeleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	if len(nodesToDeleteInfo) == 0 {
-		log.DebugLn("No nodes to delete")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "No nodes to delete")
 		return nil
 	}
 
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		log.DebugLn("Skipping node deletion because destructive operations are disabled")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Skipping node deletion because destructive operations are disabled")
 		return nil
 	}
 
@@ -176,14 +179,14 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	if settings != nil {
 		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
 		if err != nil {
-			log.ErrorLn(err)
+			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprint(err))
 		} else {
 			mc, err := ctx.MetaConfig()
 			if err != nil {
 				return err
 			}
-			// we use dummy preparator because metaConfig was prepared early
-			cfg, err = mc.DeepCopy().Prepare(ctx.Ctx(), config.DummyPreparatorProvider())
+			// we use dummy validator because metaConfig was prepared early
+			cfg, err = mc.DeepCopy().Prepare(ctx.Ctx(), config.DummyValidatorProvider())
 			if err != nil {
 				return fmt.Errorf("unable to prepare copied config: %v", err)
 			}
@@ -191,21 +194,20 @@ func (c *NodeGroupController) deleteRedundantNodes(
 		}
 	}
 
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
-
+	// No kube client is resolved here on purpose: DestroyPipeline below removes a node, and for a
+	// master that switches the converge over to a surviving one and stops the client tunneled
+	// through the node being destroyed. The deletions after it take the provider and resolve the
+	// current client per attempt instead.
 	var allErrs *multierror.Error
 	for _, nodeToDeleteInfo := range nodesToDeleteInfo {
 		if _, ok := c.excludedNodes[nodeToDeleteInfo.name]; ok {
-			log.InfoF("Skipping deletion of excluded node %v\n", nodeToDeleteInfo.name)
+			dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprintf("Skipping deletion of excluded node %v", nodeToDeleteInfo.name))
 			continue
 		}
 
 		nodeIndex, err := config.GetIndexFromNodeName(nodeToDeleteInfo.name)
 		if err != nil {
-			log.ErrorF("can't extract index from infrastructure state secret (%v), skipping %s\n", err, nodeToDeleteInfo.name)
+			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeToDeleteInfo.name))
 			return nil
 		}
 
@@ -243,7 +245,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			return allErrs.ErrorOrNil()
 		}
 
-		if err := entity.DeleteNode(ctx.Ctx(), kubeClient, nodeToDeleteInfo.name); err != nil {
+		if err := entity.DeleteNode(ctx.Ctx(), ctx, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -253,7 +255,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			continue
 		}
 
-		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), kubeClient, fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
+		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), ctx, fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -262,11 +264,11 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	return allErrs.ErrorOrNil()
 }
 
-func getNodeTemplateDiff(fromNG, fromConfig map[string]any) string {
+func getNodeTemplateDiff(ctx gocontext.Context, fromNG, fromConfig map[string]any) string {
 	// prevent compare nil and empty map
 	// this case generates diff for gcmp.Diff
 	if len(fromNG) == 0 && len(fromConfig) == 0 {
-		log.DebugF("Node templates have no keys. Returning no diff\n")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Node templates have no keys. Returning no diff")
 		return ""
 	}
 
@@ -291,16 +293,16 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 			return err
 		}
 
-		diff := getNodeTemplateDiff(templateInCluster, nodeTemplate)
+		diff := getNodeTemplateDiff(ctx.Ctx(), templateInCluster, nodeTemplate)
 		if diff == "" {
-			log.DebugF("Node template of the %s NodeGroup has not changed", c.name)
+			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), strings.TrimRight(fmt.Sprintf("Node template of the %s NodeGroup has not changed", c.name), "\n"))
 			return nil
 		}
 
 		msg := fmt.Sprintf("Node template diff:\n\n%s\n", diff)
 
 		if !ctx.ChangesSettings().AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
-			log.InfoLn("Updating node group template was skipped")
+			dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Updating node group template was skipped")
 			return nil
 		}
 
@@ -316,7 +318,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 		}
 
 		if errors.Is(err, global.ErrNodeGroupChanged) {
-			log.WarnLn(err.Error())
+			dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(), fmt.Sprint(err.Error()))
 			continue
 		}
 
@@ -326,22 +328,17 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 
 func (c *NodeGroupController) tryDeleteNodeGroup(ctx *context.Context) error {
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		log.DebugF("Skipping deletion of %s node group because destructive operations are disabled\n", c.name)
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Skipping deletion of %s node group because destructive operations are disabled", c.name))
 		return nil
 	}
 
 	if c.name == global.MasterNodeGroupName {
-		log.DebugF("Skipping deletion of %s node group because it is master\n", c.name)
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Skipping deletion of %s node group because it is master", c.name))
 		return nil
 	}
 
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
-
-	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
-		return entity.DeleteNodeGroup(ctx.Ctx(), kubeClient, c.name)
+	return dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), fmt.Sprintf("Delete NodeGroup %s", c.name), func(gocontext.Context) error {
+		return entity.DeleteNodeGroup(ctx.Ctx(), ctx, c.name)
 	})
 }
 
@@ -352,8 +349,7 @@ func (c *NodeGroupController) getSpec(ctx *context.Context, name string) (*confi
 	}
 	for _, terranodeGroup := range metaConfig.GetTerraNodeGroups() {
 		if terranodeGroup.Name == name {
-			cc := terranodeGroup
-			return &cc, nil
+			return new(terranodeGroup), nil
 		}
 	}
 
@@ -373,17 +369,12 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 		return err
 	}
 
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
-
 	for _, nodeName := range nodeNames {
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
-		err := log.Process("converge", processTitle, func() error {
+		err := dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), processTitle, func(gocontext.Context) error {
 			if _, ok := c.excludedNodes[nodeName]; ok {
-				log.InfoF("Skipping update of excluded node %v\n", nodeName)
+				dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprintf("Skipping update of excluded node %v", nodeName))
 				return nil
 			}
 
@@ -392,8 +383,16 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 				return err
 			}
 
+			// Resolved after the update, not before the loop: updating a master node makes the
+			// pipeline hook switch the converge to another master and stop the client tunneled
+			// through this one.
+			kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+			if err != nil {
+				return fmt.Errorf("Could not get kube client: %w", err)
+			}
+
 			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
+			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs)
 			if err != nil {
 				return err
 			}
@@ -418,9 +417,9 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 	return allErrs.ErrorOrNil()
 }
 
-func getNodesToDeleteInfo(desiredReplicas int, state map[string][]byte) ([]nodeToDeleteInfo, error) {
+func getNodesToDeleteInfo(ctx gocontext.Context, desiredReplicas int, state map[string][]byte) ([]nodeToDeleteInfo, error) {
 	if desiredReplicas >= len(state) {
-		log.DebugF("desired replicas >= replicas in state. skipping nodes info\n")
+		dhlog.FromContext(ctx).DebugContext(ctx, "desired replicas >= replicas in state. skipping nodes info")
 		return nil, nil
 	}
 
@@ -442,7 +441,7 @@ func getNodesToDeleteInfo(desiredReplicas int, state map[string][]byte) ([]nodeT
 		count--
 
 		if count == desiredReplicas {
-			log.DebugF("stopping collection of nodes-to-delete info. count %v\n", count)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("stopping collection of nodes-to-delete info. count %v", count))
 			break
 		}
 	}

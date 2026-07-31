@@ -25,6 +25,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -32,6 +33,7 @@ import (
 
 type StaticSystemRequirementsCheck struct {
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	InstallConfig          *config.DeckhouseInstaller
 }
 
 const StaticSystemRequirementsCheckName preflight.CheckName = "static-system-requirements"
@@ -53,6 +55,7 @@ func (c StaticSystemRequirementsCheck) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	ramKb, err := extractRAMCapacityFromNode(ctx, nodeInterface)
 	if err != nil {
 		return err
@@ -63,19 +66,21 @@ func (c StaticSystemRequirementsCheck) Run(ctx context.Context) error {
 		return err
 	}
 
+	requirements := systemRequirementsForConfig(c.InstallConfig)
+
 	var failures []string
-	if coresCount < minimumRequiredCPUCores {
+	if coresCount < requirements.cpuCores {
 		failures = append(failures, fmt.Sprintf(
 			" - System requirements mandate at least %d CPU(s) on the node, but it has %d",
-			minimumRequiredCPUCores,
+			requirements.cpuCores,
 			coresCount,
 		))
 	}
 
-	if ramKb < minimumRequiredMemoryMB*1024 {
+	if ramKb < requirements.memoryMB*1024 {
 		failures = append(failures, fmt.Sprintf(
 			" - System requirements mandate at least %d MiB of RAM on the node, but it has %d MiB",
-			minimumRequiredMemoryMB,
+			requirements.memoryMB,
 			ramKb/1024,
 		))
 	}
@@ -140,8 +145,15 @@ func logicalCoresCountFromCPUInfo(cpuinfo []byte) (int, error) {
 	return len(processors), nil
 }
 
-func StaticSystemRequirements(sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
-	check := StaticSystemRequirementsCheck{SSHProviderInitializer: sshProviderInitializer}
+func StaticSystemRequirements(
+	sshProviderInitializer *providerinitializer.SSHProviderInitializer,
+	installConfig *config.DeckhouseInstaller,
+) preflight.Check {
+	check := StaticSystemRequirementsCheck{
+		SSHProviderInitializer: sshProviderInitializer,
+		InstallConfig:          installConfig,
+	}
+
 	return preflight.Check{
 		Name:        StaticSystemRequirementsCheckName,
 		Description: check.Description(),

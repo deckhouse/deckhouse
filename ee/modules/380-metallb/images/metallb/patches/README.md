@@ -19,3 +19,7 @@ Disabling the new annotation `metallb.io/ip-allocated-from-pool`, as well as war
 ## 004-fix-eps-for-identical-ip.patch
 
 Fix for the Virtualization module. During VM migration, EndpointSlices with duplicate IP addresses are created, which MetalLB handles incorrectly.
+
+## 005-add-deckhouse-pool-annotation.patch
+
+Add support for the `network.deckhouse.io/load-balancer-pool` annotation to assign an IP address from a specific pool.

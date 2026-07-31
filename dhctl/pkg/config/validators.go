@@ -46,8 +46,7 @@ func validateUserResources(_ context.Context, payload string, _ *SchemaStore, op
 	if err == nil {
 		return nil
 	}
-	var ve *ValidationError
-	if errors.As(err, &ve) {
+	if ve, ok := errors.AsType[*ValidationError](err); ok {
 		return ve
 	}
 	out := &ValidationError{}
@@ -65,9 +64,8 @@ func validateConfigSchema(ctx context.Context, payload string, _ *SchemaStore, o
 		return nil
 	}
 	opts = append(opts, ValidateOptionCollectAllErrors(true))
-	if _, err := ParseConfigFromData(ctx, payload, DummyPreparatorProvider(), nil, opts...); err != nil {
-		var ve *ValidationError
-		if errors.As(err, &ve) {
+	if _, err := ParseConfigFromData(ctx, payload, DummyValidatorProvider(), nil, opts...); err != nil {
+		if ve, ok := errors.AsType[*ValidationError](err); ok {
 			return ve
 		}
 		out := &ValidationError{}

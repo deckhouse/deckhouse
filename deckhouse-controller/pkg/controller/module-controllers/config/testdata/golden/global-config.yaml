@@ -9,6 +9,4 @@ spec:
     highAvailability: true
     modules:
       placement: {}
-status:
-  message: ""
-  version: ""
+status: {}

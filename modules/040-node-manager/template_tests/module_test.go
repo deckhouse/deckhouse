@@ -84,10 +84,6 @@ internal:
     ca: string
     key: string
     crt: string
-  allowedBundles:
-    - "ubuntu-lts"
-    - "centos"
-    - "debian"
 `
 
 const nodeManagerAWS = `
@@ -114,7 +110,6 @@ internal:
     - .*xxx-staging-spot-[0-9a-zA-Z]+$
     - .*xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
     - .*xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -173,7 +168,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -260,7 +254,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -305,64 +298,6 @@ internal:
   machineControllerManagerEnabled: true
 `
 
-const faultyNodeManagerOpenstack = `
-internal:
-  capiControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
-  capsControllerManagerWebhookCert:
-    ca: string
-    key: string
-    crt: string
-  nodeControllerWebhookCert:
-    ca: string
-    key: string
-    crt: string
-  machineDeployments: {}
-  instancePrefix: myprefix
-  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
-  kubernetesCA: myclusterca
-  cloudProvider:
-    type: openstack
-    machineClassKind: OpenStackMachineClass
-    openstack:
-      podNetworkMode: DirectRoutingWithPortSecurityEnabled
-      connection:
-        authURL: https://mycloud.qqq/3/
-        caCert: mycacert
-        domainName: Default
-        password: pPaAsS
-        region: myreg
-        tenantName: mytname
-        username: myuname
-      instances:
-        securityGroups: [groupa, groupb]
-        sshKeyPairName: mysshkey
-        mainNetwork: shared
-      internalSubnet: "10.0.0.1/24"
-      internalNetworkNames: [mynetwork, mynetwork2]
-      externalNetworkNames: [shared]
-  nodeGroups:
-  - name: worker
-    instanceClass:
-      flavorName: m1.large
-    nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
-    cloudInstances:
-      classReference:
-        kind: OpenStackInstanceClass
-        name: worker
-      maxPerZone: 5
-      minPerZone: 2
-      zones:
-      - zonea
-      - zoneb
-  machineControllerManagerEnabled: true
-`
-
 const nodeManagerOpenstack = `
 internal:
   capiControllerManagerWebhookCert:
@@ -377,7 +312,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -403,6 +337,7 @@ internal:
       internalSubnet: "10.0.0.1/24"
       internalNetworkNames: [mynetwork, mynetwork2]
       externalNetworkNames: [shared]
+      apiServerFloatingIP: true
       tags:
         yyy: zzz
         aaa: xxx
@@ -466,7 +401,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -556,7 +490,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -626,7 +559,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -655,7 +587,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -671,66 +602,6 @@ internal:
     kubernetesVersion: "1.23"
     cri:
       type: "Containerd"
-`
-	nodeManagerStaticInstancesStaticMachineTemplate = `
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-kind: StaticMachineTemplate
-metadata:
-  namespace: d8-cloud-instance-manager
-  name: worker
-  labels:
-    heritage: deckhouse
-    module: node-manager
-    node-group: worker
-spec:
-  template:
-    metadata:
-      labels:
-        heritage: deckhouse
-        module: node-manager
-        node-group: worker
-    spec:
-      labelSelector:
-        matchLabels:
-          node-group: worker
-`
-	nodeManagerStaticInstancesMachineDeployment = `
-apiVersion: cluster.x-k8s.io/v1beta1
-kind: MachineDeployment
-metadata:
-  namespace: d8-cloud-instance-manager
-  name: worker
-  labels:
-    app: caps-controller
-    heritage: deckhouse
-    module: node-manager
-    node-group: worker
-spec:
-  clusterName: static
-  replicas: 0
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-  template:
-    metadata:
-      labels:
-        cluster.x-k8s.io/cluster-name: static
-        cluster.x-k8s.io/deployment-name: worker
-    spec:
-      bootstrap:
-        dataSecretName: manual-bootstrap-for-worker
-      clusterName: static
-      infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-        kind: StaticMachineTemplate
-        namespace: d8-cloud-instance-manager
-        name: worker
-  selector:
-    matchLabels:
-      cluster.x-k8s.io/cluster-name: static
-      cluster.x-k8s.io/deployment-name: worker
 `
 )
 
@@ -821,6 +692,48 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 				})
 			})
+
+			Context("cluster auto-scaler split mode with MCM only", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscalerMCM", "true")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerMCMNodes", `["--nodes=0:2:d8-cloud-instance-manager.myprefix-worker-02320933"]`)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscaler", "false")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerNodes", `[]`)
+					setBashibleAPIServerTLSValues(f)
+					f.HelmRender()
+				})
+
+				It("renders MCM autoscaler target alerts against the MCM job", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					Expect(rule.Exists()).Should(BeTrue())
+					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{job=~"cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
+					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
+				})
+			})
+
+			Context("cluster auto-scaler split mode with MCM and CAPI", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscaler", "true")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerNodes", `["--nodes=0:2:d8-cloud-instance-manager.myprefix-worker-02320933"]`)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscalerMCM", "true")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerMCMNodes", `["--nodes=0:2:d8-cloud-instance-manager.myprefix-worker-6bdb5b0d"]`)
+					setBashibleAPIServerTLSValues(f)
+					f.HelmRender()
+				})
+
+				It("renders target alerts for both autoscaler jobs", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					Expect(rule.Exists()).Should(BeTrue())
+					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{job=~"cluster-autoscaler|cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
+					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 1) or absent(up{job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
+				})
+			})
 		})
 
 		Context("For machine controller manager", func() {
@@ -892,7 +805,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
 
-			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, "myprefix-worker-02320933", "myprefix-worker-6bdb5b0d")).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -925,13 +838,15 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			Expect(machineClassA.Exists()).To(BeTrue())
+			// MachineClass CR and MachineDeployment are rendered by node-controller
+			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			Expect(machineClassA.Exists()).To(BeFalse())
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
-			Expect(machineDeploymentA.Exists()).To(BeTrue())
+			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
-			Expect(machineClassB.Exists()).To(BeTrue())
+			Expect(machineClassB.Exists()).To(BeFalse())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
-			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
@@ -952,17 +867,17 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			f.HelmRender()
 		})
 
-		It("sets creation timeout for spot node groups", func() {
+		// The spot creationTimeout=5m is now set by node-controller
+		// (capi.buildMCMMachineDeployment); see the AWSSpot case in
+		// mcm_machinedeployment_test.go. Helm no longer renders the MachineDeployment.
+		It("does not render MachineDeployments in helm", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			machineDeploymentA := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
 
-			Expect(machineDeploymentA.Exists()).To(BeTrue())
-			Expect(machineDeploymentA.Field("spec.template.spec.creationTimeout").String()).To(Equal("5m"))
-
-			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			Expect(machineDeploymentB.Field("spec.template.spec.creationTimeout").String()).To(Equal("5m"))
+			Expect(machineDeploymentA.Exists()).To(BeFalse())
+			Expect(machineDeploymentB.Exists()).To(BeFalse())
 		})
 	})
 
@@ -1003,7 +918,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
 
-			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, "myprefix-worker-02320933", "myprefix-worker-6bdb5b0d")).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -1036,13 +951,15 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			Expect(machineClassA.Exists()).To(BeTrue())
+			// MachineClass CR and MachineDeployment are rendered by node-controller
+			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			Expect(machineClassA.Exists()).To(BeFalse())
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
-			Expect(machineDeploymentA.Exists()).To(BeTrue())
+			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
-			Expect(machineClassB.Exists()).To(BeTrue())
+			Expect(machineClassB.Exists()).To(BeFalse())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
-			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
@@ -1057,19 +974,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	})
 
 	Context("Openstack", func() {
-		Describe("Openstack faulty config", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+faultyNodeManagerOpenstack)
-				setBashibleAPIServerTLSValues(f)
-				f.HelmRender()
-			})
-
-			It("Test should fail", func() {
-				Expect(f.RenderError).Should(HaveOccurred())
-				Expect(f.RenderError.Error()).ShouldNot(BeEmpty())
-			})
-		})
-
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
 			setBashibleAPIServerTLSValues(f)
@@ -1109,7 +1013,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			simpleMachineClassSecretA := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "simple-02320933")
 			simpleMachineDeploymentA := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-simple-02320933")
 
-			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB, simpleMachineDeploymentA)).To(Succeed())
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, "myprefix-worker-02320933", "myprefix-worker-6bdb5b0d", "myprefix-simple-02320933")).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -1142,47 +1046,21 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			Expect(machineClassA.Exists()).To(BeTrue())
-			Expect(machineClassA.Field("spec.networks").String()).To(MatchYAML(`
-[{name: shared}, {name: mynetwork, podNetwork: true}, {name: mynetwork2, podNetwork: true}]
-`))
-			Expect(machineClassA.Field("spec.securityGroups").String()).To(MatchYAML(`
-[groupa, groupb]
-`))
-			Expect(machineClassA.Field("spec.tags").String()).To(MatchYAML(`
-kubernetes.io-cluster-deckhouse-f49dd1c3-a63a-4565-a06c-625e35587eab: "1"
-kubernetes.io-role-deckhouse-worker-zonea: "1"
-yyy: zzz
-aaa: xxx
-`))
-			Expect(machineClassA.Field("spec.flavorName").String()).To(MatchYAML(`m1.large`))
-			Expect(machineClassA.Field("spec.imageName").String()).To(MatchYAML(`ubuntu-18-04-cloud-amd64`))
-
+			// MachineClass CR and MachineDeployment are rendered by node-controller
+			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			// OpenstackMachineClass field content (networks/securityGroups/tags/flavorName/imageName)
+			// is covered by render_openstack_test.go.
+			Expect(machineClassA.Exists()).To(BeFalse())
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
-			Expect(machineDeploymentA.Exists()).To(BeTrue())
+			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
-			Expect(machineClassB.Exists()).To(BeTrue())
+			Expect(machineClassB.Exists()).To(BeFalse())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
-			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
-			Expect(simpleMachineClassA.Exists()).To(BeTrue())
-			Expect(simpleMachineClassA.Field("spec.networks").String()).To(MatchYAML(`
-[{name: shared}, {name: mynetwork, podNetwork: true}]
-`))
-			Expect(simpleMachineClassA.Field("spec.securityGroups").String()).To(MatchYAML(`
-[groupa, groupb, ic-groupa, ic-groupb]
-`))
-			Expect(simpleMachineClassA.Field("spec.tags").String()).To(MatchYAML(`
-kubernetes.io-cluster-deckhouse-f49dd1c3-a63a-4565-a06c-625e35587eab: "1"
-kubernetes.io-role-deckhouse-simple-zonea: "1"
-yyy: zzz
-aaa: bbb
-ccc: ddd
-`))
-			Expect(simpleMachineClassA.Field("spec.flavorName").String()).To(MatchYAML(`m1.xlarge`))
-			Expect(simpleMachineClassA.Field("spec.imageName").String()).To(MatchYAML(`centos`))
+			Expect(simpleMachineClassA.Exists()).To(BeFalse())
 			Expect(simpleMachineClassSecretA.Exists()).To(BeTrue())
-			Expect(simpleMachineDeploymentA.Exists()).To(BeTrue())
+			Expect(simpleMachineDeploymentA.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
@@ -1193,6 +1071,119 @@ ccc: ddd
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
 			assertBashibleAPIServerTLS(f)
+		})
+
+		Context("split mode with only CAPI autoscaler enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateKind", "OpenStackMachineTemplate")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.deployAutoscaler", true)
+				f.ValuesSet("global.discovery.podSubnet", "10.111.0.0/16")
+				f.ValuesSet("nodeManager.internal.autoscalerNodes", []string{
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-02320933",
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-6bdb5b0d",
+				})
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("must render only clusterapi autoscaler", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				clusterAutoscalerDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "cluster-autoscaler")
+				clusterAutoscalerMCMDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "cluster-autoscaler-mcm")
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+
+				Expect(clusterAutoscalerDeploy.Exists()).To(BeTrue())
+				Expect(clusterAutoscalerMCMDeploy.Exists()).To(BeFalse())
+				Expect(clusterAutoscalerDeploy.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--cloud-provider=clusterapi"))
+				Expect(machineDeployment.Exists()).To(BeFalse())
+			})
+
+			It("must not render the infrastructure MachineTemplate in helm (owned by node-controller)", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				// The OpenStackMachineTemplate is rendered by node-controller from the
+				// cloud-provider CAPI template secret, not by helm.
+				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", "worker-d03da7ca")
+				Expect(openStackTemplate.Exists()).To(BeFalse())
+			})
+
+			It("must keep API floating IP enabled for Standard-like layouts", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				openStackCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "openstack")
+				Expect(openStackCluster.Exists()).To(BeTrue())
+				Expect(openStackCluster.Field("spec.disableAPIServerFloatingIP").Exists()).To(BeFalse())
+				Expect(openStackCluster.Field("spec.controlPlaneEndpoint").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("split mode with only CAPI autoscaler enabled and VXLAN pod network", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateKind", "OpenStackMachineTemplate")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.openstack.podNetworkMode", "VXLAN")
+				f.ValuesSet("global.discovery.podSubnet", "10.111.0.0/16")
+				f.ValuesSet("nodeManager.internal.deployAutoscaler", true)
+				f.ValuesSet("nodeManager.internal.autoscalerNodes", []string{
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-02320933",
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-6bdb5b0d",
+				})
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("must not render allowed address pairs for VXLAN", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				// The OpenStackMachineTemplate is rendered by node-controller, not helm.
+				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", "worker-d03da7ca")
+				Expect(openStackTemplate.Exists()).To(BeFalse())
+			})
+		})
+
+		Context("split mode with OpenStack layout without API floating IP", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateKind", "OpenStackMachineTemplate")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.openstack.layout", "Standard")
+				f.ValuesSet("nodeManager.internal.cloudProvider.openstack.apiServerFloatingIP", false)
+				f.ValuesSet("nodeManager.internal.deployAutoscaler", true)
+				f.ValuesSet("nodeManager.internal.autoscalerNodes", []string{
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-02320933",
+				})
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("must use the existing control plane endpoint instead of API floating IP", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				openStackCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "openstack")
+				Expect(openStackCluster.Exists()).To(BeTrue())
+				Expect(openStackCluster.Field("spec.disableAPIServerFloatingIP").Bool()).To(BeTrue())
+				Expect(openStackCluster.Field("spec.controlPlaneEndpoint.host").String()).To(Equal("10.0.0.1"))
+				Expect(openStackCluster.Field("spec.controlPlaneEndpoint.port").Int()).To(Equal(int64(6443)))
+			})
 		})
 	})
 
@@ -1240,7 +1231,7 @@ ccc: ddd
 			machineClassSecretBWitoutNestedVirt := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-with-disabled-nested-virt-6bdb5b0d")
 			machineDeploymentBWitoutNestedVirt := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-with-disabled-nested-virt-6bdb5b0d")
 
-			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB, machineDeploymentAWitoutNestedVirt, machineDeploymentBWitoutNestedVirt)).To(Succeed())
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, "myprefix-worker-02320933", "myprefix-worker-6bdb5b0d", "myprefix-worker-with-disabled-nested-virt-02320933", "myprefix-worker-with-disabled-nested-virt-6bdb5b0d")).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -1273,29 +1264,25 @@ ccc: ddd
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			Expect(machineClassA.Exists()).To(BeTrue())
+			// MachineClass CR and MachineDeployment are rendered by node-controller
+			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			Expect(machineClassA.Exists()).To(BeFalse())
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
-			Expect(machineDeploymentA.Exists()).To(BeTrue())
+			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
-			Expect(machineClassB.Exists()).To(BeTrue())
+			Expect(machineClassB.Exists()).To(BeFalse())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
-			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
-			Expect(machineClassAWitoutNestedVirt.Exists()).To(BeTrue())
+			// VsphereMachineClass CR / MachineDeployment are controller-owned; the Secret stays in helm.
+			// spec.runtimeOptions.nestedHardwareVirtualization content is covered by render_vsphere_test.go.
+			Expect(machineClassAWitoutNestedVirt.Exists()).To(BeFalse())
 			Expect(machineClassSecretAWitoutNestedVirt.Exists()).To(BeTrue())
-			Expect(machineDeploymentAWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineDeploymentAWitoutNestedVirt.Exists()).To(BeFalse())
 
-			Expect(machineClassBWitoutNestedVirt.Exists()).To(BeTrue())
+			Expect(machineClassBWitoutNestedVirt.Exists()).To(BeFalse())
 			Expect(machineClassSecretBWitoutNestedVirt.Exists()).To(BeTrue())
-			Expect(machineDeploymentBWitoutNestedVirt.Exists()).To(BeTrue())
-
-			nestedVirtA := machineClassAWitoutNestedVirt.Field("spec.runtimeOptions.nestedHardwareVirtualization")
-			Expect(nestedVirtA.Exists()).To(BeTrue())
-			Expect(nestedVirtA.Bool()).To(BeFalse())
-
-			nestedVirtB := machineClassBWitoutNestedVirt.Field("spec.runtimeOptions.nestedHardwareVirtualization")
-			Expect(nestedVirtB.Exists()).To(BeTrue())
-			Expect(nestedVirtB.Bool()).To(BeFalse())
+			Expect(machineDeploymentBWitoutNestedVirt.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
@@ -1346,7 +1333,7 @@ ccc: ddd
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
 
-			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, "myprefix-worker-02320933", "myprefix-worker-6bdb5b0d")).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -1379,13 +1366,15 @@ ccc: ddd
 			Expect(clusterAutoscalerClusterRole.Exists()).To(BeTrue())
 			Expect(clusterAutoscalerClusterRoleBinding.Exists()).To(BeTrue())
 
-			Expect(machineClassA.Exists()).To(BeTrue())
+			// MachineClass CR and MachineDeployment are rendered by node-controller
+			// (capi.reconcileCloudMCMs), not helm; only the MachineClass Secret stays in helm.
+			Expect(machineClassA.Exists()).To(BeFalse())
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
-			Expect(machineDeploymentA.Exists()).To(BeTrue())
+			Expect(machineDeploymentA.Exists()).To(BeFalse())
 
-			Expect(machineClassB.Exists()).To(BeTrue())
+			Expect(machineClassB.Exists()).To(BeFalse())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
-			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 
@@ -1543,6 +1532,8 @@ ccc: ddd
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
+			// StaticMachineTemplate and MachineDeployment are created by node-controller
+			// (capi.reconcileStaticMDRendered), not helm.
 			staticMachineTemplate := f.KubernetesResource("StaticMachineTemplate", "d8-cloud-instance-manager", "worker")
 			staticMachineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "worker")
 
@@ -1584,206 +1575,20 @@ ccc: ddd
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
-			Expect(staticMachineTemplate.ToYaml()).To(MatchYAML(nodeManagerStaticInstancesStaticMachineTemplate))
-			Expect(staticMachineDeployment.ToYaml()).To(MatchYAML(nodeManagerStaticInstancesMachineDeployment))
+			Expect(staticMachineTemplate.Exists()).To(BeFalse())
+			Expect(staticMachineDeployment.Exists()).To(BeFalse())
 
 			assertBashibleAPIServerTLS(f)
 		})
 	})
 
-	Context("Setting tags/labels to MachineClass", func() {
-		providerValues := `{ "o":"provider", "z":"provider" }`
-		nodeGroupValues := `{ "a":"nodegroup", "o":"nodegroup" }`
-		// Basically asserting that provider entries are overwritten with nodegroup ones
-		assertValues := func(machineClass object_store.KubeObject, mapPath string) {
-			mapJSON := machineClass.Field(mapPath).String()
-			a := machineClass.Field(mapPath + ".a").String()
-			o := machineClass.Field(mapPath + ".o").String()
-			z := machineClass.Field(mapPath + ".z").String()
-			Expect(a).To(Equal("nodegroup"), `"a" must be "nodegroup" in `+mapPath+" "+mapJSON)
-			Expect(o).To(Equal("nodegroup"), `"o" must be "nodegroup" in `+mapPath+" "+mapJSON)
-			Expect(z).To(Equal("provider"), `"z" must be "provider" in `+mapPath+" "+mapJSON)
-		}
-
-		Context("AWS", func() {
-			f := SetupHelmConfig(``)
-
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
-				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.aws.tags", providerValues)
-				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
-				setBashibleAPIServerTLSValues(f)
-				f.HelmRender()
-			})
-
-			It("spec.tags must contain tags from cloud provider and nodegroup", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				mcls := f.KubernetesResource("AWSMachineClass", "d8-cloud-instance-manager", "worker-02320933")
-
-				Expect(mcls.Exists()).To(BeTrue())
-				assertValues(mcls, "spec.tags")
-			})
-
-			// Important! If checksum changes, the MachineDeployments will re-deploy!
-			// All nodes in MD will reboot! If you're not sure, don't change it.
-			It("preserves checksum", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
-				Expect(checksum).To(Equal("32ed026c31873a9b40c14182924c1d5d6766f025581f4562652f8ccb784898f2"))
-			})
-		})
-
-		Context("Openstack", func() {
-			f := SetupHelmConfig(``)
-
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
-				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.openstack.tags", providerValues)
-				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
-				setBashibleAPIServerTLSValues(f)
-				f.HelmRender()
-			})
-
-			It("spec.tags must contain tags from cloud provider and nodegroup", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				mcls := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "worker-02320933")
-
-				Expect(mcls.Exists()).To(BeTrue())
-				assertValues(mcls, "spec.tags")
-			})
-
-			// Important! If checksum changes, the MachineDeployments will re-deploy!
-			// All nodes in MD will reboot! If you're not sure, don't change it.
-			It("preserves checksum", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
-				Expect(checksum).To(Equal("453963d10ea1bfa125d4186fe8a3cf9ec01cc769c694b0c0a74ed781364cb71e"))
-			})
-		})
-
-		Context("Azure", func() {
-			f := SetupHelmConfig(``)
-
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAzure)
-				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.azure.additionalTags", providerValues)
-				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
-				setBashibleAPIServerTLSValues(f)
-				f.HelmRender()
-			})
-
-			It("spec.tags must contain tags from cloud provider and nodegroup", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				mcls := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "worker-02320933")
-
-				Expect(mcls.Exists()).To(BeTrue())
-				assertValues(mcls, "spec.tags")
-			})
-
-			It("spec.properties.networkProfile.acceleratedNetworking is not set (default true)", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "worker-02320933")
-				Expect(t.Exists()).To(BeTrue())
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
-			})
-
-			It("spec.properties.networkProfile.acceleratedNetworking is set to true", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "bbb-02320933")
-				Expect(t.Exists()).To(BeTrue())
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(true))
-			})
-
-			It("spec.properties.networkProfile.acceleratedNetworking is set to false", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				t := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "aaa-02320933")
-				Expect(t.Exists()).To(BeTrue())
-				Expect(t.Field("spec.properties.networkProfile.acceleratedNetworking").Bool()).To(Equal(false))
-			})
-
-			// Important! If checksum changes, the MachineDeployments will re-deploy!
-			// All nodes in MD will reboot! If you're not sure, don't change it.
-			It("preserves checksum", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
-				Expect(checksum).To(Equal("891a23e39148fe1457b88ad65898164c65df2e4cd34b013e4289127091089d95"))
-			})
-		})
-
-		Context("GCP", func() {
-			f := SetupHelmConfig(``)
-
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerGCP)
-				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.gcp.labels", providerValues)
-				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)
-				setBashibleAPIServerTLSValues(f)
-				f.HelmRender()
-			})
-
-			It("spec.labels must contain labels from cloud provider and nodegroup", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				mcls := f.KubernetesResource("GCPMachineClass", "d8-cloud-instance-manager", "worker-02320933")
-
-				Expect(mcls.Exists()).To(BeTrue())
-				assertValues(mcls, "spec.labels")
-			})
-
-			// Important! If checksum changes, the MachineDeployments will re-deploy!
-			// All nodes in MD will reboot! If you're not sure, don't change it.
-			It("preserves checksum", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
-				Expect(checksum).To(Equal("c87109f7fbd4b885f754a0f3d913bbc4340e5a585449ed29e36930b6b6503ac6"))
-			})
-		})
-
-		Context("Yandex", func() {
-			f := SetupHelmConfig(``)
-
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerYandex)
-				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.yandex.labels", providerValues)
-				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)
-				setBashibleAPIServerTLSValues(f)
-				f.HelmRender()
-			})
-
-			It("spec.labels must contain labels from cloud provider and nodegroup", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				mcls := f.KubernetesResource("YandexMachineClass", "d8-cloud-instance-manager", "worker-02320933")
-
-				Expect(mcls.Exists()).To(BeTrue())
-				assertValues(mcls, "spec.labels")
-			})
-
-			// Important! If checksum changes, the MachineDeployments will re-deploy!
-			// All nodes in MD will reboot! If you're not sure, don't change it.
-			It("preserves checksum", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
-				Expect(checksum).To(Equal("55b0c5ac9c7e72252f509bc825f5046e198eab25ebd80efa3258cfb38e881359"))
-			})
-		})
-	})
+	// The "Setting tags/labels to MachineClass" helm suite was removed: the
+	// MachineClass CR is now rendered by node-controller (capi.reconcileCloudMCMs),
+	// so provider+nodegroup tag/label merge, azure acceleratedNetworking, and the
+	// per-provider render output are covered by render_*_test.go. The MachineClass
+	// checksum (checksum/machine-class annotation — the only fleet-roll trigger) is
+	// covered byte-for-byte by TestRenderChecksum_MCMProviderParity in the
+	// node-controller machineclass package.
 
 	Context("CAPI", func() {
 		assertClusterResources := func(f *Config, clusterName string) {
@@ -1824,7 +1629,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -1956,35 +1760,16 @@ internal:
 			It("Everything must render properly", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				assertAutoscalingAnnotations := func(md object_store.KubeObject, labels, taints string) {
-					Expect(md.Exists()).To(BeTrue())
-
-					annotations := md.Field("metadata.annotations").Map()
-
-					if labels != "" {
-						Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/labels"].String()).To(Equal(labels))
-					} else {
-						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/labels"))
-					}
-
-					if taints != "" {
-						Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/taints"].String()).To(Equal(taints))
-					} else {
-						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/taints"))
-					}
+				// MachineDeployments are created by the capi-machine-deployment controller, not helm.
+				for _, name := range []string{
+					"myprefix-without-labels-and-taints-02320933",
+					"myprefix-with-labels-only-02320933",
+					"myprefix-with-taints-only-02320933",
+					"myprefix-with-labels-and-taints-02320933",
+				} {
+					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", name)
+					Expect(md.Exists()).To(BeFalse())
 				}
-
-				md1 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-without-labels-and-taints-02320933")
-				assertAutoscalingAnnotations(md1, "", "")
-
-				md2 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-labels-only-02320933")
-				assertAutoscalingAnnotations(md2, "app=warp-drive-ai,environment=production", "")
-
-				md3 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-taints-only-02320933")
-				assertAutoscalingAnnotations(md3, "", "b=v:NoExecute,a,d:NoExecute,c=v1:")
-
-				md4 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-labels-and-taints-02320933")
-				assertAutoscalingAnnotations(md4, "app=warp-drive-ai,environment=production", "b=v:NoExecute,a,d:NoExecute,c=v1:")
 			})
 		})
 
@@ -2006,7 +1791,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -2104,35 +1888,19 @@ internal:
 					templateName string
 				}
 
+				// The MachineDeployment and the infrastructure VCDMachineTemplate are created
+				// by node-controller (capi.reconcileCloudMDsRendered) from the cloud-provider
+				// CAPI template secret. Helm only renders the bootstrap Secret, still named
+				// after the instance-class checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
-					Expect(md.Exists()).To(BeTrue())
+					Expect(md.Exists()).To(BeFalse())
 
-					Expect(md.Field("spec.clusterName").String()).To(Equal("app"))
-					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("app"))
-					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
-					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
-
-					annotations := md.Field("metadata.annotations").Map()
-					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
-					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size"].String()).To(Equal("5"))
-					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"].String()).To(Equal("2"))
-					Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/memory"].String()).To(Equal("2Gi"))
-
-					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", strings.TrimPrefix(d.name, "myprefix-"))
 					Expect(secret.Exists()).To(BeTrue())
 
 					vcdTemplate := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", d.templateName)
-					Expect(vcdTemplate.Exists()).To(BeTrue())
-
-					Expect(vcdTemplate.Field("spec.template.spec.diskSize").String()).To(Equal("21474836480"))
-					Expect(vcdTemplate.Field("spec.template.spec.sizingPolicy").String()).To(Equal("s-c572-MSK1-S1-vDC1"))
-					Expect(vcdTemplate.Field("spec.template.spec.placementPolicy").String()).To(Equal("policy"))
-					Expect(vcdTemplate.Field("spec.template.spec.storageProfile").String()).To(Equal("vHDD"))
-					Expect(vcdTemplate.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
-
-					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
+					Expect(vcdTemplate.Exists()).To(BeFalse())
 				}
 				//
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2155,9 +1923,7 @@ internal:
 				})
 
 				vcdTemplateWithCatalog := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", "worker-big-c10b569f")
-				Expect(vcdTemplateWithCatalog.Exists()).To(BeTrue())
-				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
-				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.catalog").String()).To(Equal("catalog"))
+				Expect(vcdTemplateWithCatalog.Exists()).To(BeFalse())
 			})
 		})
 
@@ -2179,7 +1945,6 @@ internal:
     ca: string
     key: string
     crt: string
-  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -2244,37 +2009,19 @@ internal:
 					templateName string
 				}
 
+				// The MachineDeployment and the infrastructure DeckhouseMachineTemplate are
+				// created by node-controller (capi.reconcileCloudMDsRendered) from the
+				// cloud-provider CAPI template secret. Helm only renders the bootstrap Secret,
+				// still named after the instance-class checksum ({ng}-{sha(clusterUUID+zone+checksum)}).
 				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
-					Expect(md.Exists()).To(BeTrue())
+					Expect(md.Exists()).To(BeFalse())
 
-					Expect(md.Field("spec.clusterName").String()).To(Equal("dvp"))
-					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("dvp"))
-					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
-					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
-
-					annotations := md.Field("metadata.annotations").Map()
-					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
-					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size"].String()).To(Equal("5"))
-
-					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", strings.TrimPrefix(d.name, "myprefix-"))
 					Expect(secret.Exists()).To(BeTrue())
 
 					dvpTemplate := f.KubernetesResource("DeckhouseMachineTemplate", "d8-cloud-instance-manager", d.templateName)
-					Expect(dvpTemplate.Exists()).To(BeTrue())
-
-					Expect(dvpTemplate.Field("spec.template.spec.bootDiskImageRef.kind").String()).To(Equal("ClusterVirtualImage"))
-					Expect(dvpTemplate.Field("spec.template.spec.bootDiskImageRef.name").String()).To(Equal("ubuntu-2204"))
-					Expect(dvpTemplate.Field("spec.template.spec.bootloader").String()).To(Equal("EFI"))
-					Expect(dvpTemplate.Field("spec.template.spec.cpu.cores").String()).To(Equal("4"))
-					Expect(dvpTemplate.Field("spec.template.spec.cpu.cpuFraction").String()).To(Equal("100%"))
-					Expect(dvpTemplate.Field("spec.template.spec.memory").String()).To(Equal("8Gi"))
-					Expect(dvpTemplate.Field("spec.template.spec.rootDiskSize").String()).To(Equal("50Gi"))
-					Expect(dvpTemplate.Field("spec.template.spec.rootDiskStorageClass").String()).To(Equal("ceph-pool-r2-csi-rbd-immediate"))
-					Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
-
-					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
+					Expect(dvpTemplate.Exists()).To(BeFalse())
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2291,7 +2038,11 @@ internal:
 	})
 })
 
-func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, mds ...object_store.KubeObject) error {
+// verifyClusterAutoscalerDeploymentArgs checks the cluster-autoscaler --nodes args
+// against the expected MachineDeployment names. The MachineDeployments themselves are
+// rendered by node-controller (capi.reconcileCloudMCMs), not helm, so the expected
+// names are passed as literals rather than read from rendered MD objects.
+func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, mdNames ...string) error {
 	args := deployment.Field("spec.template.spec.containers.0.args").AsStringSlice()
 
 	nodesArgs := make([]string, 0)
@@ -2303,16 +2054,14 @@ func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, m
 		nodesArgs = append(nodesArgs, strings.Split(arg, ".")[1])
 	}
 
-	mdsNames := make([]string, 0, len(mds))
-	for _, md := range mds {
-		mdsNames = append(mdsNames, md.Field("metadata.name").String())
-	}
+	expected := make([]string, len(mdNames))
+	copy(expected, mdNames)
 
 	sort.Strings(nodesArgs)
-	sort.Strings(mdsNames)
-	equal := cmp.Equal(nodesArgs, mdsNames)
+	sort.Strings(expected)
+	equal := cmp.Equal(nodesArgs, expected)
 	if !equal {
-		return fmt.Errorf("cluster-autoscaler args %+v are not equal to a list of MachineDeployment names %+v", nodesArgs, mdsNames)
+		return fmt.Errorf("cluster-autoscaler args %+v are not equal to a list of MachineDeployment names %+v", nodesArgs, expected)
 	}
 
 	return nil

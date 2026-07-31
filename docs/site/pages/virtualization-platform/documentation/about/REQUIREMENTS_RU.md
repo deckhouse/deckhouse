@@ -106,20 +106,20 @@ lang: ru
 
 В таблице приведены основные компоненты control plane модуля `virtualization` и узлы, на которых они могут быть размещены. Компоненты распределяются по приоритету — если в кластере есть подходящий тип узлов, компонент будет размещён на нём.
 
-| Название компонента           | Группа узлов      | Комментарий                            |
-|-------------------------------|-------------------|----------------------------------------|
-| `cdi-operator-*`              | system/worker     |                                        |
-| `cdi-apiserver-*`             | master            |                                        |
-| `cdi-deployment-*`            | system/worker     |                                        |
-| `virt-api-*`                  | master            |                                        |
-| `virt-controller-*`           | system/worker     |                                        |
-| `virt-operator-*`             | system/worker     |                                        |
-| `virtualization-api-*`        | master            |                                        |
-| `virtualization-controller-*` | master            |                                        |
-| `virtualization-audit-*`      | system/worker     |                                        |
-| `dvcr-*`                      | system/worker     | На узле должно быть доступно хранилище |
-| `virt-handler-*`              | Все узлы кластера |                                        |
-| `vm-route-forge-*`            | Все узлы кластера |                                        |
+| Название компонента           | Группа узлов      | Комментарий                                                                                               |
+|-------------------------------|-------------------|-----------------------------------------------------------------------------------------------------------|
+| `cdi-operator-*`              | system/worker     |                                                                                                           |
+| `cdi-apiserver-*`             | master            |                                                                                                           |
+| `cdi-deployment-*`            | system/worker     |                                                                                                           |
+| `virt-api-*`                  | master            |                                                                                                           |
+| `virt-controller-*`           | system/worker     |                                                                                                           |
+| `virt-operator-*`             | system/worker     |                                                                                                           |
+| `virtualization-api-*`        | master            |                                                                                                           |
+| `virtualization-controller-*` | master            |                                                                                                           |
+| `virtualization-audit-*`      | system/worker     |                                                                                                           |
+| `dvcr-*`                      | system            | На узле должно быть доступно хранилище. При отсутствии system-узлов компонент размещается на worker-узле. |
+| `virt-handler-*`              | Все узлы кластера |                                                                                                           |
+| `vm-route-forge-*`            | Все узлы кластера |                                                                                                           |
 
 Компоненты для создания и загрузки (импорта) образов или дисков виртуальных машин (они запускаются только на время создания или загрузки):
 

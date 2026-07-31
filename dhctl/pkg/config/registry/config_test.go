@@ -340,29 +340,25 @@ func TestConfig_DeepCopy(t *testing.T) {
 			{
 				name: "Direct mode",
 				config: func() *Config {
-					c := ConfigBuilder(WithModeDirect())
-					return &c
+					return new(ConfigBuilder(WithModeDirect()))
 				}(),
 			},
 			{
 				name: "Proxy mode",
 				config: func() *Config {
-					c := ConfigBuilder(WithModeProxy())
-					return &c
+					return new(ConfigBuilder(WithModeProxy()))
 				}(),
 			},
 			{
 				name: "Unmanaged mode",
 				config: func() *Config {
-					c := ConfigBuilder(WithModeUnmanaged())
-					return &c
+					return new(ConfigBuilder(WithModeUnmanaged()))
 				}(),
 			},
 			{
 				name: "Local mode",
 				config: func() *Config {
-					c := ConfigBuilder(WithModeLocal())
-					return &c
+					return new(ConfigBuilder(WithModeLocal()))
 				}(),
 			},
 		}
@@ -419,14 +415,13 @@ func TestConfigProvider_IsLocal(t *testing.T) {
 		output output
 	}{
 		{
-			name: "both configs -> error",
+			name: "both configs -> MC precedence (Direct -> false)",
 			input: input{
 				initConfig:        &initCfg,
 				deckhouseSettings: &directSettings,
 			},
 			output: output{
-				err:    true,
-				errMsg: "duplicate registry configuration detected",
+				isLocal: false,
 			},
 		},
 		{
@@ -511,14 +506,13 @@ func TestConfigProvider_RemoteData(t *testing.T) {
 		output output
 	}{
 		{
-			name: "both configs -> error",
+			name: "both configs -> MC precedence",
 			input: input{
 				initConfig:        &initCfg,
 				deckhouseSettings: &directSettings,
 			},
 			output: output{
-				err:    true,
-				errMsg: "duplicate registry configuration detected",
+				imagesRepo: "registry.example.com",
 			},
 		},
 		{
@@ -609,7 +603,7 @@ func TestConfigProvider_Config(t *testing.T) {
 		output output
 	}{
 		{
-			name: "both configs -> error",
+			name: "both configs -> MC precedence (direct mode)",
 			input: input{
 				initConfig:        &initCfg,
 				deckhouseSettings: &directSettings,
@@ -617,8 +611,8 @@ func TestConfigProvider_Config(t *testing.T) {
 				isStatic:          true,
 			},
 			output: output{
-				err:    true,
-				errMsg: "duplicate registry configuration detected",
+				mode:       constant.ModeDirect,
+				legacyMode: false,
 			},
 		},
 		{

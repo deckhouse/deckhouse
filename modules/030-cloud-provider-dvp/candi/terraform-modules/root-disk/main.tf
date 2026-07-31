@@ -78,9 +78,9 @@ resource "kubernetes_resource_ready_v1" "root-disk" {
   # and we skip this case for simplify code and developer of new resource
   # believes this case is valid for re-testing readiness
   api_version = kubernetes_manifest.root-disk.object.apiVersion
-  kind = kubernetes_manifest.root-disk.object.kind
-  name = kubernetes_manifest.root-disk.object.metadata.name
-  namespace = kubernetes_manifest.root-disk.object.metadata.namespace
+  kind        = kubernetes_manifest.root-disk.object.kind
+  name        = kubernetes_manifest.root-disk.object.metadata.name
+  namespace   = kubernetes_manifest.root-disk.object.metadata.namespace
 
   # all next fields can be changed without recreate kubernetes_resource_ready_v1
   # in this case readiness check will not start
@@ -99,7 +99,7 @@ resource "kubernetes_resource_ready_v1" "root-disk" {
   }
 
   fail_condition {
-    type = "Ready"
+    type   = "Ready"
     status = "False"
     reason = format("^(%s)$", join("|", local.not_ready_fail_reasons))
   }

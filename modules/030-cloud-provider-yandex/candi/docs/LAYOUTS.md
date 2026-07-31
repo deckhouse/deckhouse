@@ -11,6 +11,11 @@ Three layouts are supported. Below is more information about each of them.
 In this placement strategy, nodes do not have public IP addresses allocated to them; they use NAT gateway service in Yandex Cloud to connect to the Internet. NAT Gateway uses random public IP addresses from [dedicated ranges](https://yandex.cloud/ru/docs/overview/concepts/public-ips#virtual-private-cloud). Because of this, it is impossible to whitelist the IP addresses of cloud resources located behind a specific NAT gateway on the side of other services.
 {% endalert %}
 
+{% alert level="warning" %}
+Because nodes are created without public IP addresses in this layout, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly over a private network or through a bastion host.
+If the master node is not directly accessible, run the installation with the `--ssh-bastion-host`, `--ssh-bastion-user`, and, if needed, `--ssh-bastion-port` parameters.
+{% endalert %}
+
 ![Yandex Cloud Standard Layout scheme](images/yandex-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10422&t=IvETjbByf1MSQzcm-0 --->
 
@@ -44,14 +49,15 @@ masterNodeGroup:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
-    externalIPAddresses:
-    - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
-    - "Auto"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
-    - <ZONE_D_SUBNET_ID>
+    # Optional: uncomment to assign public IP addresses to master nodes.
+    # externalIPAddresses:
+    # - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
+    # - "Auto"
+    # - "Auto"
+    # externalSubnetIDs:
+    # - <ZONE_A_SUBNET_ID>
+    # - <ZONE_B_SUBNET_ID>
+    # - <ZONE_D_SUBNET_ID>
     additionalLabels:
       takes: priority
 nodeGroups:
@@ -65,12 +71,13 @@ nodeGroups:
     memory: 8192
     imageID: <IMAGE_ID>
     coreFraction: 50
-    externalIPAddresses:
-    - "Auto"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
+    # Optional: uncomment to assign public IP addresses to worker nodes.
+    # externalIPAddresses:
+    # - "Auto"
+    # - "Auto"
+    # externalSubnetIDs:
+    # - <ZONE_A_SUBNET_ID>
+    # - <ZONE_B_SUBNET_ID>
     additionalLabels:
       role: example
 labels:
@@ -196,28 +203,22 @@ provider:
     }    
 masterNodeGroup:
   replicas: 1
+  zones:
+  - ru-central1-a
   instanceClass:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
-    externalIPAddresses:
-    - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
-    zones:
-    - ru-central1-a
 nodeGroups:
 - name: worker
   replicas: 1
+  zones:
+  - ru-central1-a
   instanceClass:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
     coreFraction: 50
-    externalIPAddresses:
-    - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
-    zones:
-    - ru-central1-a
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: <EXISTING_NETWORK_ID>
@@ -227,3 +228,13 @@ dhcpOptions:
   - <DNS_SERVER_1>
   - <DNS_SERVER_2>
 ```
+
+{% alert level="info" %}
+In this example, master and worker nodes are created without public IP addresses and without additional external network interfaces. Outbound traffic from the cluster subnets goes through the NAT instance.
+
+The NAT instance is not automatically used by the `dhctl` installer as a bastion host or jump host. To install the cluster, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly or through a bastion host.
+
+If the master node does not have a public IP address or is not directly accessible, run the installation with the `--ssh-bastion-host` and `--ssh-bastion-user` parameters.
+
+If you need to connect to the master node directly using a public IP address, specify the [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) and [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) parameters for it. Keep in mind that the interface from the network specified in `externalSubnetIDs` will be used as the node's default gateway.
+{% endalert %}

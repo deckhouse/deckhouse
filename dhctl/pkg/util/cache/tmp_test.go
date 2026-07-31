@@ -15,12 +15,14 @@
 package cache
 
 import (
+	"bytes"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -28,11 +30,29 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
+	dhlogger "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
-const loggerErrorPrefix = "Error while do cleanup"
+// captureSlog installs a buffer-backed slog logger as the process default so
+// that production code logging via dhlogger.FromContext(context.Background())
+// (which routes to slog.Default() in tests, since cmd/dhctl's slog.SetDefault
+// is never called here) is captured. The migrated cleanup code logs the
+// disable/skip and "multiple lock files" messages via slog rather than the
+// legacy in-memory logger, so these tests assert on the returned buffer.
+//
+// These tests do not call t.Parallel(), so mutating the global slog default is
+// safe; the previous default is restored on cleanup.
+func captureSlog(t *testing.T) *bytes.Buffer {
+	t.Helper()
+
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(dhlogger.NewBufferLogger(&buf))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	return &buf
+}
 
 func TestSortByDepthDescending(t *testing.T) {
 	emptySlice := make([]string, 0)
@@ -208,14 +228,16 @@ func TestClearAllInSubDirDisableCleanup(t *testing.T) {
 	const disableLogMsg = "Test disable cleanup"
 
 	f.cleaner.DisableCleanup(disableLogMsg)
+
+	// The migrated cleaner logs the skip reason via slog (DebugContext), not the
+	// legacy in-memory logger, so capture slog output to assert on the message.
+	buf := captureSlog(t)
 	f.cleaner.Cleanup()
 
 	assertKeep(t, f, testJoinFilesDirs(files, dirs), true)
 	assertKeepPath(t, f.tmpDir)
 
-	assertHasEntityInLogWithMatcher(t, f, &log.Match{
-		Suffix: []string{fmt.Sprintf("%s\n", disableLogMsg)},
-	}, 1)
+	require.Contains(t, buf.String(), disableLogMsg)
 }
 
 func TestClearAllInSubDirWithTombstone(t *testing.T) {
@@ -358,14 +380,13 @@ func TestMultipleLocksKeeptAll(t *testing.T) {
 		clearTmpCleanTest(t, f)
 	}()
 
+	// The migrated cleaner logs the multiple-lock warning via slog (WarnContext),
+	// not the legacy in-memory logger, so capture slog output to assert on it.
+	buf := captureSlog(t)
 	f.cleaner.Cleanup()
 
 	assertKeep(t, f, testJoinFilesDirs(files, dirs), false)
-	assertHasEntityInLogWithMatcher(t, f, &log.Match{
-		Regex: []*regexp.Regexp{
-			regexp.MustCompile(".+found multiple lock files.+"),
-		},
-	}, 1)
+	require.Contains(t, buf.String(), "found multiple lock files")
 	assertKeepPath(t, f.tmpDir)
 }
 
@@ -498,7 +519,7 @@ func TestGlobalCleanerProvider(t *testing.T) {
 	cleaner := GetGlobalTmpCleaner()
 	require.False(t, govalue.IsNil(cleaner))
 
-	dummyCleaner := NewDummyTmpCleaner(nil, "")
+	dummyCleaner := NewDummyTmpCleaner("")
 	SetGlobalTmpCleaner(dummyCleaner)
 
 	cleaner = GetGlobalTmpCleaner()
@@ -540,7 +561,7 @@ type makeDirsFiles struct {
 	makeFiles []fileDirToCreate
 }
 
-func (m *makeDirsFiles) makeAll(t *testing.T, root string, logger log.Logger, tmpDir string) {
+func (m *makeDirsFiles) makeAll(t *testing.T, root string, logger *slog.Logger, tmpDir string) {
 	fullPathToCreate := func(f fileDirToCreate) string {
 		fullPath := filepath.Join(tmpDir, f.path)
 		if f.outsideTmpRoot {
@@ -553,14 +574,14 @@ func (m *makeDirsFiles) makeAll(t *testing.T, root string, logger log.Logger, tm
 	makeDirs := sortFileDirToCreate(m.makeDirs)
 	for _, dir := range makeDirs {
 		fullPath := fullPathToCreate(dir)
-		logger.LogInfoF("Create dir %s\n", fullPath)
+		logger.Info(fmt.Sprintf("Create dir %s\n", fullPath))
 		testMkDir(t, fullPath)
 	}
 
 	makeFiles := sortFileDirToCreate(m.makeFiles)
 	for _, file := range makeFiles {
 		fullPath := fullPathToCreate(file)
-		logger.LogInfoF("Create file %s\n", fullPath)
+		logger.Info(fmt.Sprintf("Create file %s\n", fullPath))
 		testMkFile(t, fullPath)
 	}
 }
@@ -581,7 +602,8 @@ type testFunc struct {
 	tmpRoot     string
 	tmpDir      string
 	clearParams ClearTmpParams
-	logger      *log.InMemoryLogger
+	logger      *slog.Logger
+	logBuf      *bytes.Buffer
 	testName    string
 }
 
@@ -635,8 +657,9 @@ func getTestClearFunc(t *testing.T, params testClearFuncParams) testFunc {
 	testTmpDir := filepath.Join(os.TempDir(), "dhctl-clear-tmp-tests", first8Runes)
 	testMkDir(t, testTmpDir)
 
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger()).WithErrorPrefix(loggerErrorPrefix)
-	logger.Parent().LogInfoF("Tmp dir for test %s is %s\n", params.testName, testTmpDir)
+	var logBuf bytes.Buffer
+	logger := dhlogger.NewBufferLogger(&logBuf)
+	logger.Info(fmt.Sprintf("Tmp dir for test %s is %s\n", params.testName, testTmpDir))
 
 	tmpDir := testTmpDir
 	if params.tmpSubDir != "" {
@@ -644,7 +667,7 @@ func getTestClearFunc(t *testing.T, params testClearFuncParams) testFunc {
 		testMkDir(t, tmpDir)
 	}
 
-	params.makeAll(t, testTmpDir, logger.Parent(), tmpDir)
+	params.makeAll(t, testTmpDir, logger, tmpDir)
 
 	defaultTmpDir := testTmpDir
 	if params.defaultTmpDirAsSubdir {
@@ -656,7 +679,6 @@ func getTestClearFunc(t *testing.T, params testClearFuncParams) testFunc {
 		TmpDir:          tmpDir,
 		RemoveTombStone: params.removeTombstones,
 		DefaultTmpDir:   defaultTmpDir,
-		LoggerProvider:  log.SimpleLoggerProvider(logger),
 	}
 
 	if params.rewriteTmpDirTo != nil {
@@ -669,6 +691,7 @@ func getTestClearFunc(t *testing.T, params testClearFuncParams) testFunc {
 		tmpDir:      tmpDir,
 		clearParams: clearParams,
 		logger:      logger,
+		logBuf:      &logBuf,
 		testName:    params.testName,
 	}
 }
@@ -678,7 +701,7 @@ func clearTmpCleanTest(t *testing.T, params testFunc) {
 
 	require.False(t, govalue.IsNil(params.logger))
 
-	logger := params.logger.Parent()
+	logger := params.logger
 
 	require.False(t, govalue.IsNil(logger))
 
@@ -688,45 +711,30 @@ func clearTmpCleanTest(t *testing.T, params testFunc) {
 
 	err := os.RemoveAll(params.tmpRoot)
 	if err != nil {
-		logger.LogErrorF(
+		logger.Error(fmt.Sprintf(
 			"Couldn't remove tmp dir '%s' for test %s: %v",
 			params.tmpRoot,
 			params.testName,
 			err,
-		)
+		))
 		return
 	}
 
-	logger.LogInfoF(
+	logger.Info(fmt.Sprintf(
 		"Tmp dir %s for test %s was removed\n",
 		params.tmpRoot,
 		params.testName,
-	)
+	))
 }
 
 func assertNoErrorsInLog(t *testing.T, f testFunc) {
 	t.Helper()
 
 	require.False(t, govalue.IsNil(f.logger))
+	require.False(t, govalue.IsNil(f.logBuf))
 
-	matcher := &log.Match{
-		Prefix: []string{loggerErrorPrefix, cleanupErrorPrefix},
-	}
-
-	errorMsgs, err := f.logger.AllMatches(matcher)
-	require.NoError(t, err)
-	require.Empty(t, errorMsgs, fmt.Sprintf("Expected no errors in log: %v", errorMsgs))
-}
-
-func assertHasEntityInLogWithMatcher(t *testing.T, f testFunc, match *log.Match, countMatches int) {
-	t.Helper()
-
-	require.False(t, govalue.IsNil(f.logger))
-	require.NotNil(t, match)
-
-	errorMsgs, err := f.logger.AllMatches(match)
-	require.NoError(t, err)
-	require.Len(t, errorMsgs, countMatches)
+	require.NotContains(t, f.logBuf.String(), "level=ERROR",
+		fmt.Sprintf("Expected no errors in log: %s", f.logBuf.String()))
 }
 
 func assertIsRemovedError(t *testing.T, err error, fullPath string) {
@@ -806,4 +814,23 @@ func assertKeepAndRemoved(t *testing.T, removed []fileDirToCreate, f testFunc, k
 	assertKeep(t, f, keept, true)
 
 	assertNoErrorsInLog(t, f)
+}
+
+func TestKeepProviderBundleDirs(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	bundle := filepath.Join(tmpDir, "dvp@sha256:"+strings.Repeat("a", 64))
+	testMkDir(t, filepath.Join(bundle, "candi"))
+	require.NoError(t, os.WriteFile(filepath.Join(bundle, "validator"), []byte("bin"), 0o755))
+
+	junkDir := filepath.Join(tmpDir, "some-run-dir")
+	testMkDir(t, junkDir)
+	require.NoError(t, os.WriteFile(filepath.Join(junkDir, "f"), []byte("x"), 0o644))
+
+	NewTmpCleaner(ClearTmpParams{TmpDir: tmpDir, DefaultTmpDir: tmpDir}).Cleanup()
+
+	// Digest-pinned bundles are a content-addressed cache reused by the next
+	// run; everything else must still be cleaned.
+	require.FileExists(t, filepath.Join(bundle, "validator"))
+	require.NoDirExists(t, junkDir)
 }

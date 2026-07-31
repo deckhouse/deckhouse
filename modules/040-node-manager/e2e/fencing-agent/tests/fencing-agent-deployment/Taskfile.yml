@@ -8,13 +8,23 @@ tasks:
     desc: Run fencing-agent e2e test with JUNIT report
     cmds:
       - mkdir -p ./reports
-      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/
 
   run:verbose:
     desc: Run fencing-agent e2e test with verbose output
     cmds:
       - mkdir -p ./reports
-      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --verbose
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/ --verbose
+
+  lint:test:
+    desc: Validate test YAML against the chainsaw schema
+    cmds:
+      - chainsaw lint test -f chainsaw-test.yaml
+
+  lint:configuration:
+    desc: Validate configuration YAML against the chainsaw schema
+    cmds:
+      - chainsaw lint configuration -f {{.CONFIG}}
 
   dry-run:
     desc: Validate test YAML without a cluster
@@ -25,4 +35,4 @@ tasks:
     desc: Run test with pause on failure and fail-fast
     cmds:
       - mkdir -p ./reports
-      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --pause-on-failure --fail-fast
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/ --pause-on-failure --fail-fast

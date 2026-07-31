@@ -4,10 +4,6 @@ linters-settings:
       disable: true
   container:
     exclude-rules:
-      read-only-root-filesystem:
-        - kind: DaemonSet
-          name: snat
-          container: snat
       liveness-probe:
         - kind: DaemonSet
           name: snat

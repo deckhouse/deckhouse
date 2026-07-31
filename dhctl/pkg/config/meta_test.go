@@ -16,7 +16,6 @@ package config
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -29,9 +28,103 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
+
+func TestEffectiveClusterPrefix(t *testing.T) {
+	globalMC := func(prefix string) []*ModuleConfig {
+		settings := SettingsValues{}
+		if prefix != "" {
+			settings["prefix"] = prefix
+		}
+		mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
+		mc.SetName("global")
+		return []*ModuleConfig{mc}
+	}
+
+	tests := []struct {
+		name        string
+		moduleCfgs  []*ModuleConfig
+		cloudPrefix string
+		expected    string
+	}{
+		{name: "global MC prefix takes precedence", moduleCfgs: globalMC("mcprefix"), cloudPrefix: "cloudprefix", expected: "mcprefix"},
+		{name: "global MC prefix unset falls back to cloud.prefix", moduleCfgs: globalMC(""), cloudPrefix: "cloudprefix", expected: "cloudprefix"},
+		{name: "no global MC falls back to cloud.prefix", moduleCfgs: nil, cloudPrefix: "cloudprefix", expected: "cloudprefix"},
+		{name: "neither set", moduleCfgs: globalMC(""), cloudPrefix: "", expected: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MetaConfig{ModuleConfigs: tt.moduleCfgs}
+			require.Equal(t, tt.expected, m.effectiveClusterPrefix(tt.cloudPrefix))
+		})
+	}
+}
+
+func TestClusterConfigForInfrastructure(t *testing.T) {
+	cloudPrefixOf := func(cc map[string]json.RawMessage) (string, bool) {
+		raw, ok := cc["cloud"]
+		if !ok {
+			return "", false
+		}
+		var cloud map[string]any
+		if err := json.Unmarshal(raw, &cloud); err != nil {
+			return "", false
+		}
+		p, ok := cloud["prefix"].(string)
+		return p, ok
+	}
+
+	t.Run("injects prefix into tfvars but leaves the persisted ClusterConfig untouched", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   CloudClusterType,
+			ClusterPrefix: "lysov-test",
+			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"Yandex"}`)},
+		}
+
+		infra := m.clusterConfigForInfrastructure()
+
+		// tfvars copy has the prefix (and preserves other cloud fields)...
+		p, ok := cloudPrefixOf(infra)
+		require.True(t, ok)
+		require.Equal(t, "lysov-test", p)
+		var infraCloud map[string]any
+		require.NoError(t, json.Unmarshal(infra["cloud"], &infraCloud))
+		require.Equal(t, "Yandex", infraCloud["provider"])
+
+		// ...while the original (→ d8-cluster-configuration secret) has NO prefix.
+		_, ok = cloudPrefixOf(m.ClusterConfig)
+		require.False(t, ok, "m.ClusterConfig must not be mutated (secret stays clean)")
+	})
+
+	t.Run("global MC prefix overrides an existing cloud.prefix in tfvars only", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   CloudClusterType,
+			ClusterPrefix: "from-mc",
+			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"AWS","prefix":"old"}`)},
+		}
+		infra := m.clusterConfigForInfrastructure()
+		p, _ := cloudPrefixOf(infra)
+		require.Equal(t, "from-mc", p)
+		// original preserved verbatim
+		orig, _ := cloudPrefixOf(m.ClusterConfig)
+		require.Equal(t, "old", orig)
+	})
+
+	t.Run("static cluster returns config unchanged", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   StaticClusterType,
+			ClusterPrefix: "x",
+			ClusterConfig: map[string]json.RawMessage{},
+		}
+		infra := m.clusterConfigForInfrastructure()
+		_, ok := infra["cloud"]
+		require.False(t, ok)
+	})
+}
 
 func TestGetDNSAddress(t *testing.T) {
 	tests := []struct {
@@ -63,7 +156,7 @@ func TestGetDNSAddress(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(t, testCase.result, getDNSAddress(testCase.cidr))
+			require.Equal(t, testCase.result, getDNSAddress(t.Context(), testCase.cidr))
 		})
 	}
 }
@@ -163,7 +256,7 @@ provider:
 {{- end }}
 `
 
-func renderTestConfig(data map[string]interface{}, config string) string {
+func renderTestConfig(data map[string]any, config string) string {
 	t := template.New("testconfig_template").Funcs(sprig.TxtFuncMap())
 	t, err := t.Parse(config)
 	if err != nil {
@@ -190,9 +283,9 @@ func generateDockerCfg(host, username, password string) string {
 }
 
 func generateOldDockerCfg(host string, username, password *string) string {
-	res := map[string]interface{}{
-		"auths": map[string]interface{}{
-			host: make(map[string]interface{}),
+	res := map[string]any{
+		"auths": map[string]any{
+			host: make(map[string]any),
 		},
 	}
 
@@ -218,10 +311,10 @@ func generateOldDockerCfg(host string, username, password *string) string {
 	return string(auth)
 }
 
-func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
+func generateMetaConfig(t *testing.T, template string, data map[string]any, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
 
-	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), &options.New().Global)
+	cfg, err := ParseConfigFromData(t.Context(), configData, DummyValidatorProvider(), &options.New().Global)
 	f := require.NoError
 	if hasErr {
 		f = require.Error
@@ -232,7 +325,7 @@ func generateMetaConfig(t *testing.T, template string, data map[string]interface
 	return cfg
 }
 
-func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface{}) *MetaConfig {
+func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]any) *MetaConfig {
 	return generateMetaConfig(t, metaConfigTestsTemplate, data, false)
 }
 
@@ -301,19 +394,65 @@ spec:
 	})
 }
 
+func TestEffectiveDefaultCRI(t *testing.T) {
+	nodeManagerMC := func(cri string) []*ModuleConfig {
+		settings := SettingsValues{}
+		if cri != "" {
+			settings["defaultCRI"] = cri
+		}
+		mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
+		mc.SetName("node-manager")
+		return []*ModuleConfig{mc}
+	}
+	// presentCC returns a ClusterConfiguration map that always contains a
+	// ClusterConfiguration (marked by clusterType), with defaultCRI only when set.
+	presentCC := func(cri string) map[string]json.RawMessage {
+		cc := map[string]json.RawMessage{"clusterType": json.RawMessage(`"Cloud"`)}
+		if cri != "" {
+			cc["defaultCRI"] = json.RawMessage(`"` + cri + `"`)
+		}
+		return cc
+	}
+
+	tests := []struct {
+		name       string
+		clusterCfg map[string]json.RawMessage
+		moduleCRI  string
+		expected   string
+	}{
+		{name: "only ClusterConfiguration", clusterCfg: presentCC("ContainerdV2"), moduleCRI: "", expected: "ContainerdV2"},
+		{name: "only ModuleConfig", clusterCfg: presentCC(""), moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
+		{name: "ModuleConfig overrides ClusterConfiguration", clusterCfg: presentCC("Containerd"), moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
+		{name: "ModuleConfig at default falls back to ClusterConfiguration", clusterCfg: presentCC("ContainerdV2"), moduleCRI: "Containerd", expected: "ContainerdV2"},
+		{name: "ClusterConfiguration present, nothing set, built-in default", clusterCfg: presentCC(""), moduleCRI: "", expected: "Containerd"},
+		{name: "no ClusterConfiguration, empty", clusterCfg: nil, moduleCRI: "", expected: ""},
+		{name: "no ClusterConfiguration but ModuleConfig set", clusterCfg: nil, moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MetaConfig{
+				ClusterConfig: tt.clusterCfg,
+				ModuleConfigs: nodeManagerMC(tt.moduleCRI),
+			}
+			require.Equal(t, tt.expected, m.effectiveDefaultCRI())
+		})
+	}
+}
+
 func TestEnrichProxyData(t *testing.T) {
 	t.Run("proxy config is absent", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
 
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
 
-		require.Equal(t, p, map[string]interface{}(nil))
+		require.Equal(t, p, map[string]any(nil))
 	})
 
 	t.Run("proxy config is present, httpProxy is set", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"proxy": map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+			"proxy": map[string]any{
 				"httpProxy": "http://1.2.3.4",
 			},
 		})
@@ -321,15 +460,15 @@ func TestEnrichProxyData(t *testing.T) {
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
 
-		require.Equal(t, p, map[string]interface{}{
+		require.Equal(t, p, map[string]any{
 			"httpProxy": "http://1.2.3.4",
 			"noProxy":   []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
 	})
 
 	t.Run("proxy config is present, httpsProxy is set", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"proxy": map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+			"proxy": map[string]any{
 				"httpsProxy": "https://2.3.4.5",
 			},
 		})
@@ -337,15 +476,15 @@ func TestEnrichProxyData(t *testing.T) {
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
 
-		require.Equal(t, p, map[string]interface{}{
+		require.Equal(t, p, map[string]any{
 			"httpsProxy": "https://2.3.4.5",
 			"noProxy":    []string{"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
 		})
 	})
 
 	t.Run("proxy config is present, all options is set", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"proxy": map[string]interface{}{
+		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+			"proxy": map[string]any{
 				"httpProxy":  "http://1.2.3.4",
 				"httpsProxy": "https://2.3.4.5",
 				"noProxy":    []string{"example.com", ".example.com"},
@@ -355,7 +494,7 @@ func TestEnrichProxyData(t *testing.T) {
 		p, err := cfg.EnrichProxyData()
 		require.NoError(t, err)
 
-		require.Equal(t, p, map[string]interface{}{
+		require.Equal(t, p, map[string]any{
 			"httpProxy":  "http://1.2.3.4",
 			"httpsProxy": "https://2.3.4.5",
 			"noProxy":    []string{"example.com", ".example.com", "127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16"},
@@ -364,7 +503,7 @@ func TestEnrichProxyData(t *testing.T) {
 }
 
 func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
-	cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+	cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
@@ -377,13 +516,13 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 		},
 	}
 
-	data, err := cfg.ConfigForBashibleBundleTemplate("10.0.0.2")
+	data, err := cfg.ConfigForBashibleBundleTemplate(t.Context(), "10.0.0.2")
 	require.NoError(t, err)
 
-	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]interface{})
+	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]any)
 	require.True(t, ok)
 	require.Len(t, endpoints, 1)
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"address":                "127.0.0.1",
 		"kubeApiPort":            6443,
 		"rppServerPort":          5444,
@@ -395,19 +534,19 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 }
 
 func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing.T) {
-	cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{})
+	cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	expectedMingetBytes := []byte("test-minget")
 	require.NoError(t, os.WriteFile(mingetPath, expectedMingetBytes, 0o600))
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	data, err := cfg.ConfigForBashibleBundleTemplate("10.0.0.2")
+	data, err := cfg.ConfigForBashibleBundleTemplate(t.Context(), "10.0.0.2")
 	require.NoError(t, err)
 
-	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]interface{})
+	endpoints, ok := data["clusterMasterEndpoints"].([]map[string]any)
 	require.True(t, ok)
 	require.Len(t, endpoints, 1)
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"address":                "127.0.0.1",
 		"rppServerPort":          5444,
 		"rppBootstrapServerPort": defaultClusterMasterRPPBootstrapServerPort,
@@ -423,4 +562,71 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	mingetBytes, err := base64.StdEncoding.DecodeString(mingetB64)
 	require.NoError(t, err)
 	require.Equal(t, expectedMingetBytes, mingetBytes)
+}
+
+func TestMetaConfig_DeepCopy_PreservesValidateInputs(t *testing.T) {
+	src := &MetaConfig{
+		DownloadRootDir:  "/tmp/dl",
+		DownloadCacheDir: "/tmp/cache",
+		VersionFilePath:  "/tmp/v.yaml",
+		ResourcesYAML:    "kind: X\n",
+		ModuleConfigs:    []*ModuleConfig{{Spec: ModuleConfigSpec{Settings: SettingsValues{"k": "v"}}}},
+		Images:           imagesDigests{"a": map[string]interface{}{"b": "c"}},
+		VersionMap:       map[string]interface{}{"k": "v"},
+		InstallerVersion: "1.2.3",
+		ShowProgress:     true,
+	}
+	src.ModuleConfigs[0].SetName("x")
+
+	cp := src.DeepCopy()
+
+	require.Equal(t, src.DownloadRootDir, cp.DownloadRootDir)
+	require.Equal(t, src.DownloadCacheDir, cp.DownloadCacheDir)
+	require.Equal(t, src.VersionFilePath, cp.VersionFilePath)
+	require.Equal(t, src.ResourcesYAML, cp.ResourcesYAML)
+	require.Equal(t, src.InstallerVersion, cp.InstallerVersion)
+	require.True(t, cp.ShowProgress)
+	require.Len(t, cp.ModuleConfigs, 1)
+	require.Equal(t, "x", cp.ModuleConfigs[0].GetName())
+	require.Equal(t, "v", cp.VersionMap["k"])
+	require.Equal(t, "c", cp.Images["a"]["b"])
+}
+
+func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
+	src := &MetaConfig{
+		CloudProviderVars: &CloudProviderVars{
+			Settings:   map[string]interface{}{"k": "v"},
+			NodeGroups: map[string]map[string]interface{}{"ng": {"replicas": 1}},
+		},
+	}
+	cp := src.DeepCopy()
+
+	cp.CloudProviderVars.Settings["k"] = "mutated"
+	cp.CloudProviderVars.NodeGroups["ng"]["replicas"] = 99
+
+	require.Equal(t, "v", src.CloudProviderVars.Settings["k"])
+	require.Equal(t, 1, src.CloudProviderVars.NodeGroups["ng"]["replicas"])
+}
+
+func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {
+	settings := SettingsValues{"masterPool": map[string]interface{}{"replicas": 3}}
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Version: 2, Settings: settings}}
+	mc.SetName("cloud-provider-dvp")
+
+	m := &MetaConfig{
+		ProviderName:  "dvp",
+		ModuleConfigs: []*ModuleConfig{mc},
+	}
+
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	require.NotNil(t, m.CloudProviderVars)
+	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.True(t, ok, "expected spec object in CloudProviderVars.Settings")
+	require.Equal(t, float64(2), spec["version"])
+	specSettings, ok := spec["settings"].(map[string]interface{})
+	require.True(t, ok)
+	masterPool, ok := specSettings["masterPool"].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, float64(3), masterPool["replicas"])
 }

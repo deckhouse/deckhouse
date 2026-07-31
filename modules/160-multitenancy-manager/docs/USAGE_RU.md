@@ -131,9 +131,12 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 1. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
 
-   > Необходимо изменить не только шаблон, но и схему входных параметров под него.
-   >
-   > Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
+   {% alert level="info" %}
+   Необходимо изменить не только шаблон, но и схему входных параметров под него.
+
+   Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
+   {% endalert %}
+
 1. Измените имя шаблона в поле `.metadata.name`.
 1. Примените полученный шаблон командой:
 
@@ -338,7 +341,7 @@ metadata:
   name: storageclasses
 spec:
   grantedResource:
-    apiVersion: storage.k8s.io/v1
+    apiGroup: storage.k8s.io
     kind: StorageClass
   enforcement: Managed
   defaultAvailability: All

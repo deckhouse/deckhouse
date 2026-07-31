@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+#
+#Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -euo pipefail
+
+service_account_dir() {
+  local dir
+  for dir in \
+    "/var/run/secrets/kubernetes.io/serviceaccount" \
+    "/proc/1/root/var/run/secrets/kubernetes.io/serviceaccount"; do
+    if [[ -r "${dir}/token" && -r "${dir}/ca.crt" ]]; then
+      echo "${dir}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+kubeconfig_file() {
+  local file
+  for file in \
+    "/var/run/secrets/remote/config" \
+    "/proc/1/root/var/run/secrets/remote/config"; do
+    if [[ -r "${file}" ]]; then
+      echo "${file}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+normalize_version() {
+  case "${1:-}" in
+    1.21|1.21.*|v1.21|v1.21.*|v1x21*) echo "1.21" ;;
+    1.25|1.25.*|v1.25|v1.25.*|v1x25*) echo "1.25" ;;
+    1.27|1.27.*|v1.27|v1.27.*|v1x27*) echo "1.27" ;;
+    *) return 1 ;;
+  esac
+}
+
+configure_kubeconfig() {
+  if [[ -n "${KUBECONFIG:-}" && -r "${KUBECONFIG}" ]]; then
+    return 0
+  fi
+
+  local existing_kubeconfig
+  if existing_kubeconfig="$(kubeconfig_file)"; then
+    export KUBECONFIG="${existing_kubeconfig}"
+    return 0
+  fi
+
+  local sa_dir
+  if ! sa_dir="$(service_account_dir)"; then
+    return 0
+  fi
+
+  local api_host="${KUBERNETES_SERVICE_HOST:-kubernetes.default.svc}"
+  local api_port="${KUBERNETES_SERVICE_PORT_HTTPS:-${KUBERNETES_SERVICE_PORT:-443}}"
+  local namespace="default"
+  if [[ -r "${sa_dir}/namespace" ]]; then
+    namespace="$(< "${sa_dir}/namespace")"
+  fi
+
+  local kubeconfig="/tmp/istioctl-kubeconfig"
+  cat > "${kubeconfig}" <<EOF
+apiVersion: v1
+kind: Config
+clusters:
+- name: in-cluster
+  cluster:
+    certificate-authority: ${sa_dir}/ca.crt
+    server: https://${api_host}:${api_port}
+users:
+- name: service-account
+  user:
+    token: $(< "${sa_dir}/token")
+contexts:
+- name: in-cluster
+  context:
+    cluster: in-cluster
+    user: service-account
+    namespace: ${namespace}
+current-context: in-cluster
+EOF
+  chmod 0600 "${kubeconfig}"
+  export KUBECONFIG="${kubeconfig}"
+}
+
+if ! istioctl_minor="$(normalize_version "${ISTIOCTL_VERSION:-}")"; then
+  echo "Set ISTIOCTL_VERSION to one of: 1.21, 1.25, 1.27." >&2
+  echo "Alternatively, run a versioned binary directly: istioctl-1.21, istioctl-1.25, or istioctl-1.27." >&2
+  exit 1
+fi
+
+istioctl_binary="/usr/bin/istioctl-${istioctl_minor}"
+if [[ ! -x "${istioctl_binary}" ]]; then
+  echo "${istioctl_binary} is not available." >&2
+  exit 1
+fi
+
+configure_kubeconfig
+
+exec "${istioctl_binary}" "$@"

@@ -23,17 +23,17 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -298,6 +298,8 @@ func main() {
 	}
 
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
+	registerOnShutdown("Leave alternate screen if needed", logger.RestoreTerminal)
+	defer logger.RestoreTerminal()
 	registerOnShutdown("Stop kubernetes provider daemon", tofu.StopProviderDaemon)
 
 	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{
@@ -308,8 +310,16 @@ func main() {
 	kpApp.HelpFlag.Short('h')
 	app.GlobalFlags(kpApp, &opts.Global)
 
+	// Runs after flags are parsed, before any command action: mirror the
+	// in-cluster kube flag into GlobalOptions so config parsing can pick the
+	// reachable registry (in-cluster mirror vs upstream) accordingly.
+	kpApp.PreAction(func(_ *kingpin.ParseContext) error {
+		opts.Global.KubeInCluster = opts.Kube.InCluster
+		return nil
+	})
+
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
-		fmt.Printf("%s %s\n", app.AppName, opts.BuildInfo.AppVersion)
+		fmt.Printf("%s %s", app.AppName, opts.BuildInfo.AppVersion)
 		return nil
 	})
 
@@ -324,7 +334,15 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 	initer := newActionIniter(opts)
 
 	// inject context.Context to kingpin.ParseContext
-	kpApp.Action(kpcontext.SetContextToAction(ctx))
+	//
+	// Actions run once the flags are parsed, so opts.Kube is populated here: stamp the context
+	// with the auth mode those flags produce. Every retry loop under this command reads it to
+	// tell an apiserver that cannot answer yet from credentials that will never be allowed.
+	kpApp.Action(func(c *kingpin.ParseContext) error {
+		return kpcontext.SetContextToAction(
+			providerinitializer.WithKubeAuthMode(ctx, &opts.Kube),
+		)(c)
+	})
 
 	kpApp.Action(kptelemetry.StartCommand)
 
@@ -351,7 +369,8 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 		command, err := kpApp.Parse(os.Args[1:])
 		errorCode := 0
 		if err != nil {
-			log.DebugLn(command)
+			l := initer.Logger()
+			l.Debug(command)
 
 			msg := err.Error()
 
@@ -359,10 +378,7 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 				msg = fmt.Sprintf("%s\nDebug log file: %s", msg, logFile)
 			}
 
-			log.ErrorLn(msg)
-			if input.IsTerminal() && !opts.Global.ShowProgress {
-				progressbar.ErrorF("%s\n", msg)
-			}
+			l.Error(msg)
 			errorCode = 1
 		}
 		kptelemetry.EndCommand(err, errorCode)

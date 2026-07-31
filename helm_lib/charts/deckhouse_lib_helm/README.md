@@ -41,6 +41,8 @@
 | [helm_lib_cloud_data_discoverer_pod_monitor](#helm_lib_cloud_data_discoverer_pod_monitor) |
 | **Cloud Provider User Authz Roles** |
 | [helm_lib_cloud_provider_user_authz_cluster_roles](#helm_lib_cloud_provider_user_authz_cluster_roles) |
+| **Cluster Prefix** |
+| [helm_lib_cluster_prefix](#helm_lib_cluster_prefix) |
 | **Csi Controller** |
 | [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
 | **Dns Policy** |
@@ -71,6 +73,7 @@
 | [helm_lib_module_uri_scheme](#helm_lib_module_uri_scheme) |
 | [helm_lib_module_https_mode](#helm_lib_module_https_mode) |
 | [helm_lib_module_https_cert_manager_cluster_issuer_name](#helm_lib_module_https_cert_manager_cluster_issuer_name) |
+| [helm_lib_module_https_cert_manager_cluster_issuer_name_for_gateway_api](#helm_lib_module_https_cert_manager_cluster_issuer_name_for_gateway_api) |
 | [helm_lib_module_https_ingress_tls_enabled](#helm_lib_module_https_ingress_tls_enabled) |
 | [helm_lib_module_https_route_tls_enabled](#helm_lib_module_https_route_tls_enabled) |
 | [helm_lib_module_https_copy_custom_certificate](#helm_lib_module_https_copy_custom_certificate) |
@@ -652,6 +655,19 @@ list:
 `{{- include "helm_lib_cloud_provider_user_authz_cluster_roles" (list . $config) }} `
 
 
+## Cluster Prefix
+
+### helm_lib_cluster_prefix
+
+ returns the cluster object prefix: the global ModuleConfig value 
+ (global.prefix) when set, otherwise the deprecated 
+ ClusterConfiguration.cloud.prefix. Safe when the cloud section is absent. 
+
+#### Usage
+
+`{{ include "helm_lib_cluster_prefix" . }} `
+
+
 ## Csi Controller
 
 ### helm_lib_csi_image_with_common_fallback
@@ -893,6 +909,19 @@ list:
 #### Usage
 
 `{{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_https_cert_manager_cluster_issuer_name_for_gateway_api
+
+ returns cluster issuer name compatible with gateway api scheme 
+
+#### Usage
+
+`{{ include "helm_lib_module_https_cert_manager_cluster_issuer_name_for_gateway_api" . }} `
 
 #### Arguments
 

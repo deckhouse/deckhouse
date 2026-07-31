@@ -40,7 +40,6 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.72.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -202,6 +201,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -373,6 +374,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -523,6 +526,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -694,6 +699,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -844,6 +851,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -1015,6 +1024,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -1165,6 +1176,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -1336,6 +1349,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -1486,6 +1501,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -1657,6 +1674,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -1807,6 +1826,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -1978,6 +1999,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -2128,6 +2151,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -2299,6 +2324,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -2449,6 +2476,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -2620,6 +2649,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -2770,6 +2801,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -2941,6 +2974,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -3091,6 +3126,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -3262,6 +3299,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -3412,6 +3451,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -3583,6 +3624,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -3733,6 +3776,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -3904,6 +3949,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -4054,6 +4101,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -4225,6 +4274,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -4375,6 +4426,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -4546,6 +4599,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}

@@ -27,7 +27,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const HasChangesExitCode = 2
@@ -67,7 +67,7 @@ func (t *ringTail) String() string {
 	return b.String()
 }
 
-func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (int, error) {
+func Exec(ctx context.Context, cmd *exec.Cmd, isDebug bool) (int, error) {
 	// Start infrastructure utility as a leader of the new process group to prevent
 	// os.Interrupt (SIGINT) signal from the shell when Ctrl-C is pressed.
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -95,7 +95,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 		defer stderr.Close()
 	}
 
-	log.DebugLn(cmd.String())
+	dhlog.FromContext(ctx).DebugContext(ctx, cmd.String())
 	var (
 		wg        sync.WaitGroup
 		errBuf    bytes.Buffer
@@ -120,7 +120,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 		e.Buffer(make([]byte, 64*1024), 4*1024*1024)
 		for e.Scan() {
 			txt := e.Text()
-			log.DebugLn(txt)
+			dhlog.FromContext(ctx).DebugContext(ctx, txt)
 
 			stderrMu.Lock()
 			stderrAll.Add(txt)
@@ -144,7 +144,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 		s.Buffer(make([]byte, 64*1024), 4*1024*1024)
 		for s.Scan() {
 			line := s.Text()
-			logger.LogInfoLn(line)
+			dhlog.FromContext(ctx).InfoContext(ctx, line)
 			stdoutMu.Lock()
 			stdoutAll.Add(line)
 			stdoutMu.Unlock()
@@ -153,7 +153,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 
 	err = cmd.Start()
 	if err != nil {
-		log.ErrorF("Cannot start cmd: %v\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot start cmd: %v", err))
 		return cmd.ProcessState.ExitCode(), err
 	}
 
@@ -163,7 +163,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
 	if err != nil && exitCode != HasChangesExitCode {
-		logger.LogErrorF("Error while process exit code: %v\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Error while process exit code: %v", err))
 		if isDebug {
 			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search the output above for an error")
 		} else {

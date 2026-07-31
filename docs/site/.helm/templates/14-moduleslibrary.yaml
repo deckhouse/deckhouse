@@ -5,6 +5,7 @@ metadata:
   annotations:
     "werf.io/replicas-on-creation": "1"
     "pod-reloader.deckhouse.io/auto": "true"
+    "werf.io/no-activity-timeout": "10m"
   labels:
     service: moduleslibrary
     app.kubernetes.io/part-of: deckhouse-docs
@@ -69,7 +70,7 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
-            {{- include "readiness_probe" . | indent 12 }}
+            {{- include "readiness_probe_moduleslibrary" . | indent 12 }}
           volumeMounts:
             - mountPath: /app/en/modules
               name: modules-docs-en
@@ -95,6 +96,12 @@ spec:
           env:
             - name: HUGO_ENVIRONMENT
               value: production
+            - name: GOMEMLIMIT
+              value: {{ pluck .Values.web.env .Values.docsBuilder.goMemLimit | first | default .Values.docsBuilder.goMemLimit._default | quote }}
+            - name: HUGO_MEMORYLIMIT
+              value: {{ pluck .Values.web.env .Values.docsBuilder.hugoMemoryLimit | first | default .Values.docsBuilder.hugoMemoryLimit._default | quote }}
+            - name: HUGO_NUMWORKERMULTIPLIER
+              value: {{ pluck .Values.web.env .Values.docsBuilder.hugoNumWorkerMultiplier | first | default .Values.docsBuilder.hugoNumWorkerMultiplier._default | quote }}
             - name: POD_IP
               valueFrom:
                 fieldRef:
@@ -132,7 +139,7 @@ spec:
             httpGet:
               path: /readyz
               port: 8081
-            {{- include "readiness_probe" . | indent 12 }}
+            {{- include "readiness_probe_moduleslibrary" . | indent 12 }}
           volumeMounts:
             - mountPath: "/mount/public/en/modules"
               name: modules-docs-en

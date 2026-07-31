@@ -9,7 +9,6 @@ spec:
   version: v1.57.3
 status:
   approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---
@@ -28,7 +27,6 @@ spec:
   version: v1.58.1
 status:
   approved: false
-  message: ""
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -46,7 +44,6 @@ spec:
   version: v1.59.3
 status:
   approved: false
-  message: ""
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -64,5 +61,4 @@ spec:
   version: v1.60.2
 status:
   approved: false
-  message: ""
   transitionTime: null

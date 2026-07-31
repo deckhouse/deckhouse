@@ -15,7 +15,6 @@
 package checks
 
 import (
-	"context"
 	"errors"
 	"os/exec"
 	"testing"
@@ -72,7 +71,7 @@ func TestCheckAvailabilityPorts(t *testing.T) {
 			mockScript := &mocks.MockScript{}
 			tt.setupMock(mockNode, mockScript)
 
-			err := checkAvailabilityPorts(context.Background(), mockNode, nil)
+			err := checkAvailabilityPorts(t.Context(), mockNode, nil)
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

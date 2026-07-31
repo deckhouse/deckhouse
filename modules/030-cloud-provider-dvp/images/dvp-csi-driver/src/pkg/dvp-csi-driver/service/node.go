@@ -42,6 +42,7 @@ type NodeService struct {
 	csi.UnimplementedNodeServer
 	nodeName    string
 	dvpCloudAPI *dvpapi.DVPCloudAPI
+	volumeLocks *volumeLocks
 }
 
 var NodeCaps = []csi.NodeServiceCapability_RPC_Type{
@@ -57,6 +58,7 @@ func NewNode(
 	return &NodeService{
 		nodeName:    nodeName,
 		dvpCloudAPI: dvpCloudAPI,
+		volumeLocks: newVolumeLocks(),
 	}
 }
 
@@ -65,7 +67,7 @@ func (n *NodeService) NodeStageVolume(
 	req *csi.NodeStageVolumeRequest,
 ) (*csi.NodeStageVolumeResponse, error) {
 	if len(req.VolumeId) == 0 {
-		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
+		return nil, fmt.Errorf("error required request parameter VolumeId wasn't set")
 	}
 	diskName := req.VolumeId
 
@@ -114,9 +116,20 @@ func (n *NodeService) NodePublishVolume(
 	req *csi.NodePublishVolumeRequest,
 ) (*csi.NodePublishVolumeResponse, error) {
 	if len(req.VolumeId) == 0 {
-		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
+		return nil, fmt.Errorf("error required request parameter VolumeId wasn't set")
 	}
 	diskName := req.VolumeId
+
+	targetPath := req.GetTargetPath()
+	if targetPath == "" {
+		return nil, status.Error(codes.InvalidArgument, "target path not provided")
+	}
+
+	lockKey := volumeLockKey(diskName, targetPath)
+	if !n.volumeLocks.tryAcquire(lockKey) {
+		return nil, status.Errorf(codes.Aborted, "volume %q operation already in progress for %q", diskName, targetPath)
+	}
+	defer n.volumeLocks.release(lockKey)
 
 	device, err := n.getDevicePath(ctx, diskName)
 	if err != nil {
@@ -127,16 +140,31 @@ func (n *NodeService) NodePublishVolume(
 	if req.VolumeCapability.GetBlock() != nil {
 		return n.publishBlockVolume(req, device)
 	}
-	targetPath := req.GetTargetPath()
+
 	err = os.MkdirAll(targetPath, 0o644)
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}
 
 	fsType := req.VolumeCapability.GetMount().FsType
+
+	mounter := mount.New("")
+	notMnt, err := mount.IsNotMountPoint(mounter, targetPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to check mount point %s: %w", targetPath, err)
+		}
+
+		notMnt = true
+	}
+	if !notMnt {
+		klog.Infof("Filesystem target path %s is already mounted, skipping publish", targetPath)
+		return &csi.NodePublishVolumeResponse{}, nil
+	}
+
 	klog.Infof("Mounting devicePath %s, on targetPath: %s with FS type: %s",
 		device, targetPath, fsType)
-	mounter := mount.New("")
+
 	err = mounter.Mount(device, targetPath, fsType, []string{})
 	if err != nil {
 		klog.Errorf("Failed mounting %v", err)
@@ -181,21 +209,37 @@ func (n *NodeService) getDevicePath(ctx context.Context, diskName string) (strin
 }
 
 func (n *NodeService) publishBlockVolume(req *csi.NodePublishVolumeRequest, device string) (*csi.NodePublishVolumeResponse, error) {
-	klog.Infof("Publishing block volume, device: %s, req: %+v", device, req)
 	file, err := os.OpenFile(req.TargetPath, os.O_CREATE, os.FileMode(0o644))
-	defer func() {
-		err = file.Close()
-		if err != nil {
-			klog.Errorf("Failed to close file %s, err: %v", req.TargetPath, err)
-		}
-	}()
 	if err != nil {
 		if !os.IsExist(err) {
 			return nil, status.Errorf(codes.Internal, "Failed to create targetPath %s, err: %v", req.TargetPath, err)
 		}
 	}
+	defer func() {
+		if file == nil {
+			return
+		}
+		if closeErr := file.Close(); closeErr != nil {
+			klog.Errorf("Failed to close file %s, err: %v", req.TargetPath, closeErr)
+		}
+	}()
 
 	mounter := mount.New("")
+	notMnt, err := mount.IsNotMountPoint(mounter, req.TargetPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, status.Errorf(codes.Internal, "failed to check mount point %s: %v", req.TargetPath, err)
+		}
+
+		notMnt = true
+	}
+	if !notMnt {
+		klog.Infof("Block target path %s is already mounted, skipping publish", req.TargetPath)
+		return &csi.NodePublishVolumeResponse{}, nil
+	}
+
+	klog.Infof("Publishing block volume, device: %s, req: %+v", device, req)
+
 	err = mounter.Mount(device, req.TargetPath, "", []string{"bind"})
 	if err != nil {
 		if removeErr := os.Remove(req.TargetPath); removeErr != nil {
@@ -216,6 +260,12 @@ func (n *NodeService) NodeUnpublishVolume(
 	if target == "" {
 		return nil, status.Error(codes.InvalidArgument, "targetpath not provided")
 	}
+
+	lockKey := volumeLockKey(req.GetVolumeId(), target)
+	if !n.volumeLocks.tryAcquire(lockKey) {
+		return nil, status.Errorf(codes.Aborted, "volume %q operation already in progress for %q", req.GetVolumeId(), target)
+	}
+	defer n.volumeLocks.release(lockKey)
 
 	klog.Infof("NodeUnpublishVolume: unmounting %s", target)
 

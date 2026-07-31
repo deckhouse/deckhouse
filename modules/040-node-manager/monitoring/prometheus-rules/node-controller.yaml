@@ -1,0 +1,83 @@
+- name: d8.node-controller
+  rules:
+    - alert: D8NodeControllerWorkqueueDepthHigh
+      expr: |
+        max by (name) (
+          workqueue_depth{
+            namespace="d8-cloud-instance-manager",
+            job="node-controller"
+          }
+        ) > 50
+      for: 15m
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Node-controller workqueue {{ $labels.name }} has a high backlog.
+        description: |
+          The node-controller workqueue `{{ $labels.name }}` has more than 50 queued objects for more than 15 minutes.
+
+          This may indicate that the controller cannot process reconciliation events fast enough.
+
+          To inspect node-controller logs:
+
+          ```bash
+          kubectl -n d8-cloud-instance-manager logs deploy/node-controller --all-pods=true
+          ```
+
+    - alert: D8NodeControllerReconcileP99High
+      expr: |
+        histogram_quantile(
+          0.99,
+          sum by (controller, le) (
+            rate(controller_runtime_reconcile_time_seconds_bucket{
+              namespace="d8-cloud-instance-manager",
+              job="node-controller"
+            }[5m])
+          )
+        ) > 5
+      for: 10m
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Node-controller reconcile p99 is high for {{ $labels.controller }}.
+        description: |
+          The p99 reconcile duration for controller `{{ $labels.controller }}` has been above 5 seconds for more than 10 minutes.
+
+          This may indicate slow reconciliation, Kubernetes API latency, or degraded controller performance.
+
+          To inspect node-controller logs:
+
+          ```bash
+          kubectl -n d8-cloud-instance-manager logs deploy/node-controller --all-pods=true
+          ```
+
+    - alert: D8NodeControllerReconcileErrorsHigh
+      expr: |
+        sum by (controller) (
+          rate(controller_runtime_reconcile_errors_total{
+            namespace="d8-cloud-instance-manager",
+            job="node-controller"
+          }[5m])
+        ) > 0.1
+      for: 10m
+      labels:
+        tier: cluster
+        severity_level: "8"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Node-controller reconcile errors are high for {{ $labels.controller }}.
+        description: |
+          Controller `{{ $labels.controller }}` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
+
+          Check node-controller logs:
+
+          ```bash
+          kubectl -n d8-cloud-instance-manager logs deploy/node-controller --all-pods=true
+          ```

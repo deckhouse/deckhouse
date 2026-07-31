@@ -69,8 +69,6 @@ description: Подготовка к гибридной интеграции с 
    provider:
      server: <API_URL>
      apiToken: <API_TOKEN>
-     username: ""
-     password: ""
      insecure: false
    ```
 
@@ -172,7 +170,7 @@ description: Подготовка к гибридной интеграции с 
 - В дополнительных параметрах ВМ в VCD задано значение:
 
   ```text
-  disk.EnableUUID = 1
+  disk.EnableUUID = TRUE
   ```
 
 - Виртуальная машина подключена к сети VCD, используемой как основная сеть для облачных узлов кластера. Обычно это сеть, указанная в параметре [`mainNetwork`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-mainnetwork) конфигурации `cloud-provider-vcd` или в используемом VCDInstanceClass.

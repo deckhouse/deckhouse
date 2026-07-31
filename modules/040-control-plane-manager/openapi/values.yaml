@@ -60,6 +60,17 @@ properties:
         type: boolean
         default: false
         x-examples: [false]
+      etcdDefrag:
+        type: object
+        default: {}
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            x-examples: [true]
+          cronSchedule:
+            type: string
+            x-examples: ["*/3 * * * *"]
       kubeadmClusterAdminsTargetRoleName:
         type: string
         enum: ["cluster-admin", "user-authz:cluster-admin"]

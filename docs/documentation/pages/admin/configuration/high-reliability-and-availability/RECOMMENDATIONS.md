@@ -78,3 +78,61 @@ The component also provides the following metrics to Grafana:
 - `apiserver_flowcontrol_dispatched_requests_total`: Total number of processed requests.
 - `apiserver_flowcontrol_current_inqueue_requests`: Number of requests in queues.
 - `apiserver_flowcontrol_current_executing_requests`: Number of requests being executed.
+
+## Delaying node reboot or shutdown while critical pods are running
+
+{% alert level="info" %}
+Available in the **EE** edition.
+{% endalert %}
+
+DKP supports a mechanism for delaying the shutdown or reboot of a node if it is running stateful applications or virtual machines (VMs). This is implemented by the `d8-shutdown-inhibitor` service of the [`node-manager`](/modules/node-manager/) module.
+
+The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shutdown` are running on the node. DKP delays the shutdown or restart of the node so that the user can migrate critical pods or terminate them in a controlled manner. This is useful, for example, for stateful workloads and other cases where data loss must be avoided. For information about the mechanism's principles and features, refer to the [`node-manager` module documentation](/modules/node-manager/#delaying-node-reboot-or-shutdown-while-critical-pods-are-running).
+
+### Enabling a node shutdown delay
+
+{% alert level="warning" %}
+To decide whether to block a node shutdown, DKP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
+{% endalert %}
+
+To enable the mechanism that delays a node's restart or shutdown, add the label `pod.deckhouse.io/inhibit-node-shutdown` to the Pod (for a Deployment, specify the label in the pod template).
+
+Example of a Pod manifest with the `pod.deckhouse.io/inhibit-node-shutdown` label:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-stateful-app
+  labels:
+    app: my-stateful-app
+    pod.deckhouse.io/inhibit-node-shutdown: "true"
+spec:
+  containers:
+    - name: app
+      image: my-registry/my-app:1.0.0
+```
+
+{% alert level="warning" %}
+The block only applies to pods labeled with `pod.deckhouse.io/inhibit-node-shutdown` that are in the `Running` phase on the node. Kubelet shuts down the pods without this label according to the standard graceful shutdown process.
+{% endalert %}
+
+### Searching pods that prevent shutdown and performing the node troubleshooting
+
+To search the pods that are blocking a node shutdown, use the following command:
+
+```shell
+d8 k get po -A -l pod.deckhouse.io/inhibit-node-shutdown -o wide
+```
+
+To view the `GracefulShutdownPostpone` condition on a node, use the following command:
+
+```shell
+d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="GracefulShutdownPostpone")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
+```
+
+Possible values of the `reason` field:
+
+- `WaitingForShutdownSignal`: The shutdown blocking mechanism is running on the node, but the blocking has not yet begun.
+- `PodsWithLabelAreRunningOnNode`: The shutdown has been blocked because there are pods with the label `pod.deckhouse.io/inhibit-node-shutdown` still running on the node.
+- `NoRunningPodsWithLabel`: The blocking has been released and the shutdown can continue.

@@ -241,10 +241,13 @@ type Kubelet struct {
 	// How many rotated log files to store before deleting them.
 	// Default: '4'
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
+
+	// Use RuntimeDefault seccomp profile for workloads without explicitly defined seccompProfile.
+	SeccompDefault bool `json:"seccompDefault,omitempty"`
 }
 
 func (k Kubelet) IsEmpty() bool {
-	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0
+	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 && !k.SeccompDefault
 }
 
 type NodeGroupStatus struct {

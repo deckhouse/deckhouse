@@ -370,7 +370,14 @@ function main() {
     source "/var/lib/bashible/telemetry.env"
   fi
 
-  if [ -z "${is_local-}" ]; then
+  {{- /*
+    Only the child pass (BASHIBLE_SKIP_UPDATE=yes) runs the steps that need these
+    binaries. The self-update pass must not depend on them: the rpp-get digest is
+    baked into the bashible.sh already on disk, so it is the first thing to rot out
+    of the registry, and failing here pins the node to an outdated bashible.sh with
+    no way to ever fetch a newer one.
+  */}}
+  if [ -z "${is_local-}" ] && [ -n "${BASHIBLE_SKIP_UPDATE-}" ]; then
 {{- if ne .runType "Normal" }}
     bb-minget-install
 {{- end }}
@@ -429,6 +436,13 @@ function main() {
       bb-bashible-ready-error "Got empty bashible-new.sh"
       exit 1
     fi
+    printf '%s\n' "$bashible_bundle" | jq -r '.data."cleanup_static_node.sh"' > $BOOTSTRAP_DIR/cleanup_static_node.sh
+    if [ ! -s $BOOTSTRAP_DIR/cleanup_static_node.sh ]; then
+      >&2 echo "ERROR: cleanup_static_node.sh is empty"
+      bb-bashible-ready-error "Got empty cleanup_static_node.sh"
+      exit 1
+    fi
+    chmod 700 "$BOOTSTRAP_DIR/cleanup_static_node.sh"
     read -r first_line < $BOOTSTRAP_DIR/bashible-new.sh
     if [[ "$first_line" != '#!/usr/bin/env bash' ]] ; then
       >&2 echo "ERROR: bashible-new.sh is not a bash script (path: $BOOTSTRAP_DIR/bashible-new.sh)"
@@ -468,7 +482,7 @@ function main() {
     local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}"
     bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
     echo "Configuration is in sync, nothing to do."
-    
+
     exit 0
   fi
   rm -f "$CONFIGURATION_CHECKSUM_FILE"

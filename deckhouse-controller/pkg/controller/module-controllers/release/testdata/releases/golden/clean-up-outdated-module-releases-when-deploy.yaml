@@ -12,15 +12,10 @@ metadata:
   uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: ""
-  modules: null
-  modulesCount: 0
-  phase: ""
   syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -48,10 +43,8 @@ spec:
   weight: 910
 status:
   approved: false
-  message: ""
   phase: Superseded
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -79,10 +72,8 @@ spec:
   weight: 910
 status:
   approved: false
-  message: ""
   phase: Suspended
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -110,10 +101,8 @@ spec:
   weight: 910
 status:
   approved: false
-  message: ""
   phase: Superseded
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -146,10 +135,8 @@ spec:
   weight: 910
 status:
   approved: false
-  message: ""
   phase: Deployed
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1

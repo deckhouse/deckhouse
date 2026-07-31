@@ -19,14 +19,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"sigs.k8s.io/yaml"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -44,6 +47,23 @@ const (
 	cniBootstrapSourcePCC  = "providerClusterConfiguration"
 	cniBootstrapSupportedV = 1
 )
+
+// cniBootstrapPath prefers the bundled candi tree and falls back to the
+// unpacked provider bundle (external providers ship the file there).
+func cniBootstrapPath(m *MetaConfig, globalOptions *options.GlobalOptions) string {
+	path := filepath.Join(resolveCandiDir(globalOptions), "cloud-providers", m.ProviderName, cniBootstrapFileName)
+	if _, err := os.Stat(path); err == nil {
+		return path
+	}
+	downloadRoot := m.DownloadRootDir
+	if downloadRoot == "" && globalOptions != nil {
+		downloadRoot = globalOptions.DownloadDir
+	}
+	if downloadRoot == "" {
+		return path
+	}
+	return filepath.Join(providerdir.ProviderDir(downloadRoot, m.ProviderName), cniBootstrapFileName)
+}
 
 // sigs.k8s.io/yaml parses by converting YAML to JSON and unmarshalling with
 // encoding/json, so these structs use json tags, not yaml tags.
@@ -130,7 +150,7 @@ func analyzeCNIBootstrap(ctx context.Context, m *MetaConfig, globalOptions *opti
 		raw = []byte(contentOverride)
 		path = "<injected>"
 	} else {
-		path = filepath.Join(resolveCandiDir(globalOptions), "cloud-providers", m.ProviderName, cniBootstrapFileName)
+		path = cniBootstrapPath(m, globalOptions)
 		var err error
 		raw, err = os.ReadFile(path)
 		if err != nil {
@@ -195,12 +215,12 @@ func ApplyCNIBootstrap(ctx context.Context, m *MetaConfig, globalOptions *option
 
 	if user == nil {
 		m.ModuleConfigs = append(m.ModuleConfigs, recommended)
-		log.InfoF("cni-bootstrap: added recommended ModuleConfig %q\n", recommended.GetName())
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("cni-bootstrap: added recommended ModuleConfig %q", recommended.GetName()))
 		return nil
 	}
 
 	if analysis.Matches {
-		log.DebugF("cni-bootstrap: user ModuleConfig %q matches recommendation\n", user.GetName())
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("cni-bootstrap: user ModuleConfig %q matches recommendation", user.GetName()))
 		return nil
 	}
 
@@ -208,10 +228,10 @@ func ApplyCNIBootstrap(ctx context.Context, m *MetaConfig, globalOptions *option
 	msg := cniBootstrapConfirmMessage(analysis)
 	if input.NewConfirmation().WithMessage(msg).Ask() {
 		m.ModuleConfigs[userIdx] = recommended
-		log.InfoF("cni-bootstrap: replaced user ModuleConfig %q with %q\n", user.GetName(), recommended.GetName())
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("cni-bootstrap: replaced user ModuleConfig %q with %q", user.GetName(), recommended.GetName()))
 		return nil
 	}
-	log.InfoF("cni-bootstrap: keeping user ModuleConfig %q\n", user.GetName())
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("cni-bootstrap: keeping user ModuleConfig %q", user.GetName()))
 	return nil
 }
 
@@ -274,9 +294,7 @@ func cniBootstrapConfirmMessage(a *CNIBootstrapAnalysis) string {
 // key (overwrite, not deep merge).
 func resolveCNIBootstrapSettings(b cniBootstrap, providerCfg map[string]json.RawMessage) (map[string]any, error) {
 	settings := map[string]any{}
-	for k, v := range b.Config.Default {
-		settings[k] = v
-	}
+	maps.Copy(settings, b.Config.Default)
 
 	if len(b.Config.Rules) == 0 {
 		return settings, nil
@@ -289,7 +307,8 @@ func resolveCNIBootstrapSettings(b cniBootstrap, providerCfg map[string]json.Raw
 
 	for _, r := range b.Config.Rules {
 		if r.Source != cniBootstrapSourcePCC {
-			log.DebugF("cni-bootstrap: skipping rule with unsupported source %q\n", r.Source)
+			ctx := context.Background()
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("cni-bootstrap: skipping rule with unsupported source %q", r.Source))
 			continue
 		}
 		value, ok := cniBootstrapLookup(data, r.Match.JSONPath)
@@ -299,9 +318,7 @@ func resolveCNIBootstrapSettings(b cniBootstrap, providerCfg map[string]json.Raw
 		if !cniBootstrapMatches(value, r.Match.Values) {
 			continue
 		}
-		for k, v := range r.Settings {
-			settings[k] = v
-		}
+		maps.Copy(settings, r.Settings)
 	}
 
 	return settings, nil

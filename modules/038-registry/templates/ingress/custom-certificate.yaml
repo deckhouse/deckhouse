@@ -12,5 +12,11 @@
 
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-ingress-tls") -}}
 
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if $moduleGateway }}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-httproute-tls") -}}
+{{- end }}
+
 {{- end }}
 {{- end }}

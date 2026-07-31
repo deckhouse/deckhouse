@@ -20,17 +20,18 @@ import (
 	"fmt"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
-func setupController(mgr ctrl.Manager, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
+func setupController(mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
 	if maxConcurrentReconciles < 1 {
 		maxConcurrentReconciles = 1
 	}
 
 	if v, ok := r.(NeedsClient); ok {
-		v.InjectClient(mgr.GetClient())
+		v.InjectClient(c)
 	}
 	if v, ok := r.(NeedsRecorder); ok {
 		v.InjectRecorder(mgr.GetEventRecorderFor(name))
@@ -44,10 +45,14 @@ func setupController(mgr ctrl.Manager, name string, obj client.Object, r Reconci
 
 	b := ctrl.NewControllerManagedBy(mgr).
 		Named(name).
-		For(obj).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: maxConcurrentReconciles,
 		})
+	if v, ok := r.(NeedsForPredicates); ok {
+		b = b.For(obj, builder.WithPredicates(v.ForPredicates()...))
+	} else {
+		b = b.For(obj)
+	}
 
 	w := &builderWatcher{b: b}
 	r.SetupWatches(w)

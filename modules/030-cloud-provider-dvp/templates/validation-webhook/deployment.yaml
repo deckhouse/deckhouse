@@ -1,0 +1,130 @@
+{{- $bootstrapHostNetwork := not .Values.global.clusterIsBootstrapped }}
+
+{{- define "dvp_validation_webhook_pod_annotations" -}}
+checksum/tls: {{ include (print $.Template.BasePath "/validation-webhook/secret-tls.yaml") . | sha256sum }}
+{{- end -}}
+
+{{- define "dvp_validation_webhook_args" -}}
+- --webhook-port=4330
+- --webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs
+- --metrics-bind-address=0
+- --health-probe-bind-address=0.0.0.0:4332
+{{- end -}}
+
+{{- define "dvp_validation_webhook_resources" -}}
+cpu: 25m
+memory: 64Mi
+{{- end -}}
+
+{{- define "dvp_validation_webhook_max_allowed_resources" -}}
+cpu: 100m
+memory: 128Mi
+{{- end -}}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: validation-webhook
+  namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "validation-webhook")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: validation-webhook
+  updatePolicy:
+    updateMode: InPlaceOrRecreate
+  resourcePolicy:
+    containerPolicies:
+    - containerName: validation-webhook
+      minAllowed:
+        {{- include "dvp_validation_webhook_resources" . | nindent 8 }}
+      maxAllowed:
+        {{- include "dvp_validation_webhook_max_allowed_resources" . | nindent 8 }}
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: validation-webhook
+  namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "validation-webhook")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: validation-webhook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: validation-webhook
+  namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "validation-webhook")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: validation-webhook
+  template:
+    metadata:
+      labels:
+        app: validation-webhook
+        {{- if and (.Values.global.enabledModules | has "admission-policy-engine-crd") $bootstrapHostNetwork }}
+        security.deckhouse.io/security-policy-exception: validation-webhook
+        {{- end }}
+      annotations:
+        kubectl.kubernetes.io/default-exec-container: validation-webhook
+        kubectl.kubernetes.io/default-logs-container: validation-webhook
+        {{- include "dvp_validation_webhook_pod_annotations" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "validation-webhook")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+    {{- if $bootstrapHostNetwork }}
+      hostNetwork: true
+    {{- end }}
+      dnsPolicy: {{ include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet") }}
+      serviceAccountName: validation-webhook
+      containers:
+      - name: validation-webhook
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "validationWebhook") }}
+        imagePullPolicy: IfNotPresent
+        args:
+          {{- include "dvp_validation_webhook_args" . | nindent 10 }}
+        ports:
+          - name: webhook-server
+            containerPort: 4330
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 4332
+            scheme: HTTP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 4332
+            scheme: HTTP
+        volumeMounts:
+          - name: cert
+            mountPath: /tmp/k8s-webhook-server/serving-certs
+            readOnly: true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "dvp_validation_webhook_resources" . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: cert
+          secret:
+            secretName: validation-webhook-tls

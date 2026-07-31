@@ -33,6 +33,7 @@ const (
 	// ============================================================================
 	// Migration and experimental module tracking
 	MigratedModuleNotFoundMetricName        = "d8_migrated_module_not_found"
+	MigratedModuleNotDownloadedMetricName   = "d8_migrated_module_not_downloaded"
 	ExperimentalModulesAreAllowedMetricName = "is_experimental_modules_allowed"
 	ExperimentalModuleIsEnabled             = "is_experimental_module_enabled"
 	DeprecatedModuleIsEnabled               = "is_deprecated_module_enabled"
@@ -78,10 +79,11 @@ const (
 // Metric Groups
 // ============================================================================
 const (
-	MigratedModuleNotFoundGroup = "migrated_module_not_found"
-	D8Updating                  = "d8_updating"
-	D8ModuleUpdatingGroup       = "d8_module_updating_group"
-	ModuleReleaseGroup          = "module_release_group"
+	MigratedModuleNotFoundGroup      = "migrated_module_not_found"
+	MigratedModuleNotDownloadedGroup = "migrated_module_not_downloaded"
+	D8Updating                       = "d8_updating"
+	D8ModuleUpdatingGroup            = "d8_module_updating_group"
+	ModuleReleaseGroup               = "module_release_group"
 )
 
 // Group templates for dynamic metric names using fmt.Sprintf
@@ -172,6 +174,18 @@ func RegisterModuleManagerMetrics(metricStorage metricsstorage.Storage) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register %s: %w", MigratedModuleNotFoundMetricName, err)
+	}
+
+	// Register migrated module not-downloaded metric. Unlike the not-found metric,
+	// this tracks the transient case where the module is offered by a ModuleSource
+	// but has not been pre-staged on the filesystem yet.
+	_, err = metricStorage.RegisterGauge(
+		MigratedModuleNotDownloadedMetricName,
+		moduleLabels,
+		options.WithHelp("Gauge indicating migrated modules that are available in a ModuleSource but not downloaded yet (1.0 = not downloaded)"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", MigratedModuleNotDownloadedMetricName, err)
 	}
 
 	return nil

@@ -1,0 +1,57 @@
+candi:
+  fixes:
+    - summary: Fix containerd credential escaping by rendering username/password into auth string.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20921
+ci:
+  fixes:
+    - summary: remove CSE in deploy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20861
+cloud-provider-dvp:
+  fixes:
+    - summary: CVE fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20908
+control-plane-manager:
+  fixes:
+    - summary: fix Helm adoption of kubeadm:cluster-admins CRB on upgrade from pre-v1.76
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20904
+      impact: >-
+        After upgrading to v1.76.0, kubectl logs and exec fail cluster-wide for all users. Manual workaround
+        is available — see PR description.
+deckhouse:
+  features:
+    - summary: Ensure conversion hooks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20878
+  fixes:
+    - summary: Fix stale application conditions during update over a failed version
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20901
+deckhouse-controller:
+  fixes:
+    - summary: Add alias for legacy bash completion flag.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20890
+    - summary: add werf dependency to webhook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20970
+docs:
+  features:
+    - summary: Add auxiliary components (of virtualization module) architecture page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20846
+    - summary: Update csi-scsi-generic module architecture section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20912
+    - summary: Add deep-link anchors and auto-expand logic for collapsible sections.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20955
+    - summary: Add page about pod security settings
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20965
+  fixes:
+    - summary: Deleted the note about the beta version of the graphical installer on the DKP installation
+        page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20913
+    - summary: Update the wording in the FAQ section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20897
+ingress-nginx:
+  fixes:
+    - summary: Default ingress controller version is reverted to 1.10.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20934
+      impact: All ingress-nginx controller pods using default controller version will be restarted.
+user-authn:
+  fixes:
+    - summary: Fix blank dex error page caused by missing BuildIdentifier in the error template data struct.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20962

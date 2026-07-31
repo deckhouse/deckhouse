@@ -17,10 +17,11 @@ package runtime
 import (
 	"context"
 	"errors"
-	"fmt"
+	"path/filepath"
 
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
@@ -146,7 +147,7 @@ func (r *Runtime) renderManifests(ctx context.Context, name string) (string, err
 
 	if module := r.modules[name]; module != nil {
 		r.mu.Unlock()
-		return r.nelmService.Render(ctx, modulesNamespace, module)
+		return r.nelmService.Render(ctx, app.NamespaceDeckhouse, module)
 	}
 
 	r.mu.Unlock()
@@ -169,17 +170,20 @@ func (r *Runtime) collectQueues(name string) []string {
 	if app := r.apps[name]; app != nil {
 		queues = append(queues, app.GetName())
 		for _, q := range app.GetHooksQueues() {
-			queues = append(queues, fmt.Sprintf("%s/%s", name, q))
-			queues = append(queues, fmt.Sprintf("%s/%s/sync", name, q))
+			queues = append(queues, filepath.Join(name, q))
+			queues = append(queues, filepath.Join(name, q, "sync"))
 		}
 	}
 
 	if mod := r.modules[name]; mod != nil {
 		queues = append(queues, mod.GetName())
 		for _, q := range mod.GetHooksQueues() {
-			queues = append(queues, fmt.Sprintf("%s/%s", name, q))
-			queues = append(queues, fmt.Sprintf("%s/%s/sync", name, q))
+			queues = append(queues, filepath.Join(name, q))
+			queues = append(queues, filepath.Join(name, q, "sync"))
 		}
+		// The CRD subtask queue is spawned once per module by the global run task,
+		// as "<name>/crd" — it is not a per-hook-queue subqueue.
+		queues = append(queues, filepath.Join(name, "crd"))
 	}
 
 	return queues

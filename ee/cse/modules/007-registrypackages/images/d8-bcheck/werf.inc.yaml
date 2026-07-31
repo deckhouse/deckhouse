@@ -32,7 +32,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ index .Images "builder/golang-alpine" }}
+from: {{ index .Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -110,8 +110,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache build-base rsync
+  - pm install build-base rsync
   install:
   - |
     if [[ -d /libs ]]; then

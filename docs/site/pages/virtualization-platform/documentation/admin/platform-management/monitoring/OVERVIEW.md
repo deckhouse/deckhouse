@@ -55,7 +55,7 @@ Detailed description is in the [Ingress monitoring](../../../admin/network/alb-n
 
 ## Control plane monitoring
 
-Control plane monitoring is performed using the `monitoring-kubernetes-control-plane` module, which organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
+Control plane monitoring is a built-in capability of the `control-plane-manager` module. It organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
 - `kube-apiserver`: API server monitoring and health checks.
 - `kube-controller-manager`: Controller manager operation monitoring.
 - `kube-scheduler`: Scheduler performance and health monitoring.
@@ -75,7 +75,7 @@ DVP monitoring capabilities:
 - `CPU steal`: Monitoring cases of prolonged CPU steal exceeding.
 - `Conntrack table`: Monitoring Conntrack table state on nodes.
 - `Pod state`: Monitoring pods with incorrect state (as a possible consequence of kubelet issues).
-- `Control plane components`: Control plane component monitoring (implemented by the `monitoring-kubernetes-control-plane` module).
+- `Control plane components`: Control plane component monitoring (implemented by the `control-plane-manager` module).
 - `Secret monitoring`: Cluster Secret monitoring and TLS certificate expiration in them (implemented by the `extended-monitoring` module).
 - `Event collection`: Kubernetes cluster event collection as metrics (implemented by the `extended-monitoring` module).
 - `Image availability`: Container image availability monitoring in registry used by controllers (Deployments, StatefulSets, DaemonSets, CronJobs) (implemented by the `extended-monitoring` module).

@@ -23,12 +23,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 // NewClusterStateSaver returns StateSaver that saves intermediate infrastructure state to Secret.
@@ -69,7 +70,7 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 
 	task := actions.ManifestTask{
 		Name: `Secret "d8-cluster-terraform-state"`,
-		PatchData: func() interface{} {
+		PatchData: func() any {
 			return manifests.PatchWithInfrastructureState(outputs.InfrastructureState)
 		},
 		PatchFunc: func(ctx context.Context, patch []byte) error {
@@ -92,18 +93,25 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 		},
 	}
 
-	log.DebugF("Saving intermediate base infra in cluster...\n")
-	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 45, 1*time.Second).Run(
+	dhlog.FromContext(ctx).DebugContext(ctx, "Saving intermediate base infra in cluster...")
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Save Cluster intermediate infrastructure state"),
+		retry.WithAttempts(45),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	err := retry.NewSilentLoopWithParams(loopParams).Run(
 		func() error {
 			return task.Patch(ctx)
 		},
 	)
-	msg := "Intermediate base infra was saved in cluster\n"
+	msg := "Intermediate base infra was saved in cluster"
 	if err != nil {
-		msg = fmt.Sprintf("Intermediate base infra was not saved in cluster: %v\n", err)
+		msg = fmt.Sprintf("Intermediate base infra was not saved in cluster: %v", err)
 	}
 
-	log.DebugF(msg)
+	dhlog.FromContext(ctx).DebugContext(ctx, msg)
 	return err
 }
 
@@ -135,23 +143,23 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 		return nil
 	}
 
-	kubeClient, err := s.getter.KubeClientCtx(context.Background())
+	kubeClient, err := s.getter.KubeClientCtx(ctx)
 	if err != nil {
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, s.nodeName),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.SecretWithNodeInfrastructureState(s.nodeName, s.nodeGroup, outputs.InfrastructureState, s.nodeGroupSettings)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			_, err := kubeClient.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
-		PatchData: func() interface{} {
+		PatchData: func() any {
 			return manifests.PatchWithNodeInfrastructureState(outputs.InfrastructureState)
 		},
 		PatchFunc: func(ctx context.Context, patchData []byte) error {
@@ -167,17 +175,24 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 	}
 
 	taskName := fmt.Sprintf("Save intermediate infrastructure state for Node %q", s.nodeName)
-	log.DebugF("Saving intermediate state for node %s in cluster...\n", s.nodeName)
-	err = retry.NewSilentLoop(taskName, 45, 1*time.Second).Run(func() error {
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Saving intermediate state for node %s in cluster...", s.nodeName))
+
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("%s", taskName),
+		retry.WithAttempts(45),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	err = retry.NewSilentLoopWithParams(loopParams).Run(func() error {
 		return task.PatchOrCreate(ctx)
 	})
 
-	msg := fmt.Sprintf("Intermediate state for node %s was saved in cluster\n", s.nodeName)
+	msg := fmt.Sprintf("Intermediate state for node %s was saved in cluster", s.nodeName)
 	if err != nil {
-		msg = fmt.Sprintf("Intermediate state for node %s was not saved in cluster: %v\n", s.nodeName, err)
+		msg = fmt.Sprintf("Intermediate state for node %s was not saved in cluster: %v", s.nodeName, err)
 	}
 
-	log.DebugF(msg)
-
+	dhlog.FromContext(ctx).DebugContext(ctx, msg)
 	return err
 }

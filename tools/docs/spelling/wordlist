@@ -34,6 +34,7 @@ AllowedAddressPairs
 allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
+allowedUserGroups
 allowVolumeExpansion
 amd
 AMD
@@ -85,6 +86,7 @@ AuthorizationRule
 authURL
 Authy
 authz
+autocomplete
 autoConvergerPeriod
 autodiscovery
 autogenerate
@@ -99,6 +101,8 @@ autoscalers
 autoscaling
 autounattend
 autoverification
+AvailableClusterResource
+AVD
 Avi
 aws
 AWS
@@ -116,12 +120,14 @@ backet
 Backlink
 base64
 BaseDN
+basename
 bashbooster
 bashible
 Bashible
 BashibleTemplateData
 basicAuditPolicyEnabled
 BasicAuth
+BasicProjectDetails
 baz
 bcrypt
 BDU
@@ -140,6 +146,7 @@ blog
 bm
 bool
 boostrap
+bootable
 Bootable
 bootloader
 Bootloader
@@ -169,6 +176,7 @@ cdi
 cdi-uploadproxy
 ce
 CEF
+CEL
 centiseconds
 centos
 Centos
@@ -199,6 +207,7 @@ CI
 CIDR
 CIDRs
 CiliumClusterwideNetworkPolicies
+CiliumClusterwideNetworkPolicy
 CiliumEgressGatewayPolicy
 CIOps
 Cirros
@@ -249,6 +258,8 @@ ClusterLoggingConfig
 ClusterName
 ClusterObservabilityAlert
 ClusterPodLoggingConfig
+ClusterResourceGrant
+ClusterResourceGrantPolicy
 ClusterRole
 ClusterRoleBinding
 clusterType
@@ -267,8 +278,10 @@ codec
 CODEOWNERS
 Colocating
 Colour
+CommitDetail
 comparations
 compatibilityFlag
+complexityLevel
 conf
 config
 configMap
@@ -288,6 +301,8 @@ ContainerResourcePolicy
 contraire
 controlPlaneConfigurator
 controlPlaneManager
+ControlPlaneNode
+ControlPlaneOperation
 cooldown
 CoreDNS
 CPM
@@ -357,6 +372,7 @@ dashboard
 datacenter
 Datacenter
 DatacenterName
+datacenters
 datapath
 datasource
 dataSource
@@ -375,6 +391,7 @@ Datastreams
 DCGM
 DDTHH
 de
+debian
 Debian
 deckhouse
 Deckhouse
@@ -383,7 +400,12 @@ DeckhouseReleases
 defaultClusterStorageClass
 DefaultContainerResourcePolicy
 defaultCRI
+defragment
 Defragment
+defragmentation
+Defragmentation
+defragmenting
+Defragmenting
 descheduled
 descheduler
 Descheduler
@@ -438,6 +460,7 @@ dropdown
 DRS
 dryrun
 Dryrun
+ds
 DSA
 DSL
 DSR
@@ -474,8 +497,11 @@ ElasticIP
 elasticsearch
 Elasticsearch
 ELB
+emailAddress
 EmailConfig
 emptyDir
+enableBasicAuth
+enablement
 enableMultiTenancy
 endofftopic
 entrypoint
@@ -560,6 +586,7 @@ GCP
 GCPClusterConfiguration
 GCPInstanceClass
 GCPInstanceClasses
+gdm
 GeeseFS
 GELF
 Gemfile
@@ -595,11 +622,13 @@ GrafanaAlertsChannel
 GrafanaCloud
 GrafanaDashboardDefinition
 Grafanas
+GrantableClusterResourceDefinition
 GraphQL
 Graylog
 grep
 gRPC
 GRPC
+gz
 Habr
 hardcoded
 HardPodAntiAffinity
@@ -635,7 +664,9 @@ hsts
 HSTS
 html
 HTML
+htpasswd
 http
+httpd
 httpPort
 httpProxy
 https
@@ -652,6 +683,7 @@ hypervisor
 hypervisors
 Hypervisors
 IaC
+iam
 IAM
 ICMP
 idempotence
@@ -692,6 +724,7 @@ initContainer
 InitContainer
 initContainers
 InitContainers
+initiatorType
 Inline
 inode
 inodes
@@ -738,6 +771,8 @@ iSCSI
 isn
 ISP
 isSudoer
+IssueBasic
+issuerName
 istio
 istio-api-proxy
 istiod
@@ -764,10 +799,12 @@ KaaS
 Kanban
 Kaspersky
 kb
+KCV
 keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
+kerberos
 Kerberos
 KESL
 Keycloak
@@ -779,6 +816,7 @@ Kiali
 KiB
 KLLRCODA
 Klog
+krb
 kruise
 Kruise
 kube
@@ -819,6 +857,7 @@ LetsEncrypt
 LFS
 libc
 lifecycle
+lightdm
 linkTitle
 linstor
 Linstor
@@ -840,6 +879,7 @@ localpath
 LocalPathProvisioner
 localpref
 Lockbox
+lockDuration
 loghouse
 logLevel
 Logstash
@@ -880,6 +920,7 @@ masterNodeGroup
 matchExpressions
 matchLabels
 Mattermost
+maxAttempts
 maxConcurrent
 maxConcurrentDownloads
 maxPerZone
@@ -898,6 +939,7 @@ memberlist
 memcached
 menuTitle
 MergeRequestApprovals
+MergeRequestBasic
 metadata
 metallb
 MetalLB
@@ -907,12 +949,14 @@ MiB
 MicroK
 MicroK8s
 microservices
+microversion
 milli
 millicore
 minikube
 minimalNotificationTime
 MinIO
 MinIO’s
+minLength
 minPerZone
 minReplicas
 misconfigured
@@ -1033,6 +1077,7 @@ NTP
 NtpFwMark
 NUMA
 Nvidia
+NVMe
 oauth
 OAuth
 objectmeta
@@ -1061,6 +1106,7 @@ OpenID
 OpenKruise
 OpenLDAP
 openrc
+OpenSearch
 OpenShift
 openssh
 OpenSSL
@@ -1107,6 +1153,7 @@ paravirtualization
 passphrase
 Passthrough
 passwordHash
+passwordHistoryLimit
 passwordless
 pathPrefix
 PCI
@@ -1115,6 +1162,7 @@ PDB
 PDF
 PeerAuthentication
 PEM
+performant
 permalink
 PersistentVolume
 PersistentVolumeClaim
@@ -1144,6 +1192,7 @@ PodLogginConfig
 PodLoggingConfig
 PodMonitor
 PodMonitors
+PodNetwork
 podSubnetCIDR
 Poly
 portForwarding
@@ -1160,6 +1209,7 @@ preconfigurations
 preconfigured
 preemptible
 preffered
+preinstalled
 Preinstalled
 preload
 Prestable
@@ -1170,6 +1220,7 @@ prioritization
 PriorityClass
 priorityClassName
 PriorityLevelConfiguration
+programmatically
 ProjectTemplate
 ProjectType
 projectTypeName
@@ -1177,6 +1228,7 @@ prometheus
 PrometheusRemoteWrite
 PrometheusRule
 PrometheusRules
+promptType
 PromQL
 promtail
 Promtail
@@ -1202,6 +1254,7 @@ PVs
 PWD
 px
 qa
+qcow
 QCOW
 QEMU
 QoS
@@ -1231,6 +1284,7 @@ Redis
 Redoc
 redos
 RefreshToken
+refreshTokens
 regex
 Regex
 regexes
@@ -1242,6 +1296,7 @@ registryDockerCfg
 registryImagesRepo
 registrysecret
 Rego
+reindex
 releaseChannel
 RemoveDuplicates
 RemovePodsHavingTooManyRestarts
@@ -1249,6 +1304,7 @@ RemovePodsViolatingInterPodAntiAffinity
 RemovePodsViolatingNodeAffinity
 RemovePodsViolatingNodeTaints
 RemovePodsViolatingTopologySpreadConstraint
+repeatedChars
 ReplicaSet
 ReplicaSets
 ReplicatedStorageClass
@@ -1260,21 +1316,26 @@ reprovisioning
 repurposed
 RequestAuthentication
 RequirementCheck
+ResetPassword
 resizer
 resourceAttributes
 ResourceList
 ResourceName
 resourcePolicy
+ResourceQuota
 resourcesTemplate
 resourcе
 RESTful
 Restic
 RHEL
 RockSolid
+rolebinding
+RoleBinding
 roleRef
 RollingUpdate
 rollout
 rollouts
+rootCAData
 RootConf
 rootDir
 rootDiskSize
@@ -1306,6 +1367,8 @@ scrapeIntervals
 screenshot
 scriptable
 SCSITarget
+sddm
+SDN
 sds
 Searchable
 seccomp
@@ -1355,11 +1418,13 @@ smokeMini
 snaphost
 Snapshotter
 SNAT
+softdog
 SomeRegion
 SonarQube
 Sonatype
 sourceRanges
 SPE
+specialCharacters
 spellchecker
 Spellchecking
 SPIFFE
@@ -1414,6 +1479,7 @@ StorageClass
 StorageClasses
 StoragePolicy
 StorageProfile
+STOREDSIZE
 strategis
 Streebog
 Stribog
@@ -1501,9 +1567,11 @@ trdl
 trivy
 Trivy
 TrustDomain
+ttl
 tuf
 tunnelMode
 txt
+ubuntu
 Ubuntu
 UDP
 UEFI
@@ -1522,6 +1590,7 @@ unschedulable
 uploadproxy
 upmeter
 UpmeterHookProbe
+UpmeterHookProbes
 UpmeterRemoteWrite
 uptick
 UPTODATE
@@ -1529,10 +1598,12 @@ URIs
 urls
 URLs
 UsePAM
+UserBasic
 username
 UserOperation
 UTC
 UTF
+utils
 UUID
 UUIDs
 uwsgi
@@ -1551,6 +1622,7 @@ vCloud
 vCPU
 vCPUs
 VDC
+vdi
 VDI
 ve
 vectoradd
@@ -1559,12 +1631,14 @@ versioned
 versioning
 VersionItems
 VerticalPodAutoscaler
+VerticalPodAutoscalerCheckpoints
 vg
 vhost
 VictoriaMetrics
 VictorOps
 VictorOpsConfig
 virt
+virtio
 VirtIO
 VirtualDataCenter
 VirtualDisk
@@ -1575,6 +1649,7 @@ Virtualization
 VirtualMachine
 VirtualMachineClass
 VirtualMachineIPAddress
+VirtualMachineOperation
 VirtualMachines
 VirtualService
 Vitastor
@@ -1584,6 +1659,8 @@ VLAN
 vm
 VM
 vmagent
+vmdk
+VMDK
 VMs
 VMware
 VMX
@@ -1592,6 +1669,7 @@ VNet
 VNets
 VNIC
 VNicProfileId
+VolumeAttachment
 VolumeGroup
 volumeMounts
 VolumeSnapshot
@@ -1654,10 +1732,13 @@ WithoutNAT
 WORKDIR
 workflow
 workflows
+WorkItem
 worktree
 worseness
 WSL
 www
+Xorg
+xz
 Yadro
 YadroStorageClass
 YadroStorageConnection
@@ -1684,7 +1765,10 @@ zVirt
 Zvirt
 ZvirtClusterConfiguration
 ZvirtInstanceClass
+автодополнение
+автодополнения
 автомасштабирование
+автомасштабированием
 автомасштабировании
 автомасштабирования
 Автообновление
@@ -1693,6 +1777,8 @@ ZvirtInstanceClass
 автоподменой
 авторизовывать
 авторизовываться
+авторизующий
+авторизующим
 автоскейлерам
 автоскейлинг
 автосогласования
@@ -1701,8 +1787,10 @@ ZvirtInstanceClass
 агрегаторе
 агрегаторов
 агрегаторы
+агрегируются
 агрегирующей
 Агрегирующий
+агрегирующую
 админки
 ает
 Актуализируйте
@@ -1738,6 +1826,7 @@ ZvirtInstanceClass
 аутентификационные
 аутентифицировались
 аутентифицированному
+аутентифицированные
 аутентифицированных
 аутентифицировать
 аутентифицироваться
@@ -1752,12 +1841,14 @@ ZvirtInstanceClass
 бакету
 балансировщик
 балансировщика
+балансировщиками
 балансировщиках
 балансировщике
 балансировщики
 балансировщиков
 балансировщиком
 балансировщику
+бандами
 бандл
 бандла
 бандлами
@@ -1775,6 +1866,7 @@ ZvirtInstanceClass
 блокирующе
 блокчейном
 буквенно
+Булевый
 бутстрап
 бутстрапа
 бутстрапится
@@ -1841,10 +1933,12 @@ ZvirtInstanceClass
 высокодоступный
 высокодоступных
 высокоуровневой
+высокоуровневые
 высокоуровневыми
 высокоуровневых
 г
 гайде
+гайду
 Гб
 Гбит
 геораспределенном
@@ -1864,6 +1958,7 @@ ZvirtInstanceClass
 гуглить
 д
 дeплой
+датацентрах
 даунсемплинга
 дашборд
 дашборда
@@ -1897,6 +1992,7 @@ ZvirtInstanceClass
 деструктивна
 детализированно
 дефолтный
+дискозависимые
 донастройка
 доустановить
 дэшборд
@@ -1944,6 +2040,7 @@ ZvirtInstanceClass
 инстансам
 инстансами
 инстансах
+инстансе
 инстансов
 инстансом
 инстансу
@@ -2013,10 +2110,12 @@ ZvirtInstanceClass
 контеинеризации
 контеинеризация
 контейнер
+контейнера
 контейнеризации
 контейнеризация
 контейнеризированных
 контейнеризованного
+контексты
 контролллер
 контролллера
 конфиг
@@ -2054,6 +2153,9 @@ ZvirtInstanceClass
 логгеру
 логирование
 логирования
+логировать
+Логировать
+логируемого
 логируются
 ложноположительных
 м
@@ -2074,6 +2176,7 @@ ZvirtInstanceClass
 межкластерная
 межкластерного
 межкластерных
+межузлового
 межузловой
 мейнтейнер
 Меньшеe
@@ -2111,6 +2214,7 @@ ZvirtInstanceClass
 мультимастерной
 мультимастерном
 мультимастерный
+мультимастерными
 мультиплатформенной
 мультитенантности
 мультитенантность
@@ -2122,6 +2226,7 @@ ZvirtInstanceClass
 нативно
 неавторизованного
 неавторизованный
+неаутентифицированные
 невалидным
 недеструктивные
 недеструктивных
@@ -2151,10 +2256,11 @@ ZvirtInstanceClass
 неконфиденциальных
 ненагруженные
 ненагруженных
-️Необходимо
+необходимо
 неограничивающая
 неограничивающего
 неподдерживаемые
+неподдерживаемым
 неподдерживаемых
 неподнимающийся
 неподписанным
@@ -2180,12 +2286,15 @@ ZvirtInstanceClass
 оверпровижининг
 оверселлинг
 оверселлинга
+одномастерными
 одностраничных
 однострочник
 одноузлового
+одноузловом
 ООМ
 опциональные
 Опциональные
+опциональный
 Опциональный
 опциональных
 оркестратор
@@ -2199,6 +2308,7 @@ ZvirtInstanceClass
 отрисовки
 офлайн
 п
+пагинация
 Пайплайн
 пайплайна
 пайплайнами
@@ -2228,6 +2338,7 @@ ZvirtInstanceClass
 патчи
 патчится
 патчить
+переадресация
 Перебалансировке
 перебалансировки
 Перевыкат
@@ -2242,11 +2353,13 @@ ZvirtInstanceClass
 перегенерировать
 Перегенерируйте
 передеплоятся
+перезагрузится
 Перезаказ
 перезапускает
 перезапускается
 перезапускать
 перезапускаться
+перезапускающий
 перезапустились
 перезапустился
 перезапустится
@@ -2281,6 +2394,8 @@ ZvirtInstanceClass
 пересоздает
 пересоздаёт
 пересоздается
+пересоздаётся
+пересоздайте
 пересоздастся
 переупорядочивание
 перехешируются
@@ -2296,6 +2411,7 @@ ZvirtInstanceClass
 плейсхолдер
 плейсхолдеров
 побайтово
+подгрузкой
 поддомен
 поддоменам
 поддоменами
@@ -2313,6 +2429,7 @@ ZvirtInstanceClass
 Подсеть
 подсетью
 подсетям
+подсетями
 подсетях
 покоммитное
 помотрим
@@ -2337,6 +2454,7 @@ ZvirtInstanceClass
 примонтированных
 примонтируем
 приоритетность
+приоритизации
 приоритизация
 проброс
 проброса
@@ -2372,11 +2490,13 @@ ZvirtInstanceClass
 распарсил
 распарсить
 рассинхронизации
+рассинхронизироваться
 ребут
 реверт
 Ревью
 регистри
 редиректить
+резолверы
 резолвинга
 резолвится
 реквест
@@ -2422,6 +2542,7 @@ ZvirtInstanceClass
 рестартнуть
 рестартов
 ресурcы
+ресурсоёмкая
 ретраев
 ротирован
 ротировать
@@ -2462,6 +2583,7 @@ ZvirtInstanceClass
 сгенерированы
 сгенерировать
 сгенерируем
+сгенерирует
 сгенерируйте
 Сгенерируйте
 сегментировать
@@ -2510,6 +2632,8 @@ ZvirtInstanceClass
 сокеты
 соотвествущая
 соответствующий
+сопоставление
+сопоставления
 Сохраняеем
 спецзаголовки
 спринты
@@ -2532,6 +2656,7 @@ ZvirtInstanceClass
 таймаутом
 таймауту
 таймауты
+тайминги
 таргетов
 тегирование
 тегирования

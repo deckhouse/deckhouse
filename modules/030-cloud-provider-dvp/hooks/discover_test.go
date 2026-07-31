@@ -36,8 +36,28 @@ cloudProviderDvp:
   internal: {}
 `
 
+	const initValuesWithProvider = `
+cloudProviderDvp:
+  provider:
+    parameters:
+      namespace: test-ns
+  internal: {}
+`
+
 	const initValuesWithExclude = `
 cloudProviderDvp:
+  storageClass:
+    exclude:
+    - excluded-.*
+  internal:
+    defaultStorageClass: stale-default
+`
+
+	const initValuesWithExcludeAndProvider = `
+cloudProviderDvp:
+  provider:
+    parameters:
+      namespace: test-ns
   storageClass:
     exclude:
     - excluded-.*
@@ -173,7 +193,7 @@ volumeBindingMode: WaitForFirstConsumer
 	})
 
 	Context("When only managed StorageClass snapshots are present", func() {
-		f := HookExecutionConfigInit(initValues, `{}`)
+		f := HookExecutionConfigInit(initValuesWithProvider, `{}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext(), f.KubeStateSet(storageClassesOnly))
 			f.RunHook()
@@ -208,7 +228,7 @@ volumeBindingMode: WaitForFirstConsumer
 	})
 
 	Context("When discovery data and managed StorageClasses are present", func() {
-		f := HookExecutionConfigInit(initValuesWithExclude, `{}`)
+		f := HookExecutionConfigInit(initValuesWithExcludeAndProvider, `{}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.GenerateBeforeHelmContext(),
@@ -276,7 +296,7 @@ data:
   "discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(nonDefaultDiscoveryData)))
 
-		f := HookExecutionConfigInit(initValuesWithExclude, `{}`)
+		f := HookExecutionConfigInit(initValuesWithExcludeAndProvider, `{}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.GenerateBeforeHelmContext(),
@@ -302,7 +322,7 @@ data:
   "discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(`{"apiVersion":"deckhouse.io/v1","kind":"DVPCloudDiscoveryData","storageClasses":"broken"}`)))
 
-		f := HookExecutionConfigInit(initValues, `{}`)
+		f := HookExecutionConfigInit(initValuesWithProvider, `{}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.GenerateBeforeHelmContext(),

@@ -156,6 +156,9 @@ func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer
 
 	// Combine authorizers
 	if mtEngine != nil {
+		// Requests granted by CAR-independent RBAC (RoleBindings, non-CAR
+		// ClusterRoleBindings) must not be denied by multi-tenancy filters.
+		mtEngine.SetIndependentRBACChecker(rbacAuth)
 		return composite.NewCompositeAuthorizer(mtEngine, rbacAuth), mtEngine, nil
 	}
 	return rbacAuth, nil, nil

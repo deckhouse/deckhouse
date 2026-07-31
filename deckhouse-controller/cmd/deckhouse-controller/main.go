@@ -20,15 +20,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 
-	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
 	"github.com/flant/kube-client/klogtolog"
-	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"github.com/spf13/cobra"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/dhctlcli"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
@@ -51,10 +49,6 @@ var (
 	DefaultReleaseChannel = ""
 )
 
-const (
-	defaultReleaseChannel = "Stable"
-)
-
 func version() string {
 	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, nelm %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, NelmVersion, runtime.Version())
 }
@@ -62,14 +56,13 @@ func version() string {
 // main is almost a copy from addon-operator. We compile addon-operator to inline
 // Go hooks and set some defaults. Also, helper commands are defined for Shell hooks.
 
-const (
-	AppName        = "deckhouse"
-	AppDescription = "controller for Kubernetes platform from Flant"
-)
+// legacyBashCompletion is bound to the backward-compatibility flag
+// `--completion-script-bash` (see rootCmd setup in main).
+var legacyBashCompletion bool
 
 func main() {
-	sh_app.Version = ShellOperatorVersion
-	ad_app.Version = AddonOperatorVersion
+	app.SetShellOperatorVersion(ShellOperatorVersion)
+	app.SetAddonOperatorVersion(AddonOperatorVersion)
 
 	// deckhouse-controller is the single source of truth for environment-driven
 	// configuration of addon-operator (and the shell-operator globals
@@ -79,7 +72,7 @@ func main() {
 	// ParseEnv is intentionally not called: upstream renames (e.g. addon-operator
 	// v1.21 moved MODULES_DIR under ADDON_OPERATOR_MODULES_DIR) must not
 	// silently change the deckhouse env contract.
-	cfg := ad_app.NewConfig()
+	cfg := app.NewConfig()
 	if err := envconfig.Load(cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
 		os.Exit(1)
@@ -89,7 +82,7 @@ func main() {
 	// debug.DefaultSocketPath before registering debug sub-commands (queue,
 	// hook, global, module, raw).
 	//
-	// ad_app.ApplyConfig populates the addon-operator globals (ModulesDir,
+	// app.ApplyConfig populates the addon-operator globals (ModulesDir,
 	// Namespace, etc.) so that debug commands defined by addon-operator can
 	// locate config paths. The `start` command flow also performs this bridge
 	// inside NewAddonOperator, but for non-start invocations (e.g.
@@ -105,7 +98,7 @@ func main() {
 	// sh_debug.DefineDebugCommands(rootCmd) below. In the `start` path,
 	// NewAddonOperator also assigns sh_debug.DefaultSocketPath, so the two
 	// assignments are idempotent.
-	ad_app.ApplyConfig(cfg)
+	app.ApplyConfig(cfg)
 	sh_debug.DefaultSocketPath = cfg.Debug.UnixSocket
 
 	logger := log.NewLogger()
@@ -115,12 +108,39 @@ func main() {
 
 	rootCmd := &cobra.Command{
 		Use:   fileName,
-		Short: fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription),
-		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+		Short: fmt.Sprintf("%s %s: %s", app.AppName, DeckhouseVersion, app.AppDescription),
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			// Backward-compatibility alias for the legacy kingpin flag
+			// `--completion-script-bash`, which was replaced by the cobra
+			// `completion bash` subcommand after the migration to cobra.
+			// External callers (and our own image's /etc/bashrc) still invoke
+			// `deckhouse-controller --completion-script-bash`, so keep emitting
+			// the bash completion script and exit early when the flag is set.
+			// Use GenBashCompletionV2 (with descriptions) so the output is
+			// byte-for-byte identical to the `completion bash` subcommand.
+			if legacyBashCompletion {
+				if err := cmd.Root().GenBashCompletionV2(os.Stdout, true); err != nil {
+					return err
+				}
+
+				os.Exit(0)
+			}
+
 			klogtolog.InitAdapter(cfg.Debug.KubernetesAPI, logger.Named("klog"))
 			stdliblogtolog.InitAdapter(logger)
+
 			return nil
 		},
+	}
+
+	// Legacy kingpin completion flag alias. Hidden from help output: the
+	// canonical interface is the `completion` subcommand, this only preserves
+	// backward compatibility for `--completion-script-bash`.
+	rootCmd.PersistentFlags().BoolVar(&legacyBashCompletion, "completion-script-bash", false,
+		"Generate the bash autocompletion script (alias for `completion bash`).")
+	if err := rootCmd.PersistentFlags().MarkHidden("completion-script-bash"); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to hide completion-script-bash flag: %v\n", err)
+		os.Exit(1)
 	}
 
 	rootCmd.AddCommand(&cobra.Command{
@@ -136,12 +156,12 @@ func main() {
 		Short: "Start deckhouse.",
 		RunE:  start(logger, cfg),
 	}
-	ad_app.BindFlags(cfg, rootCmd, startCmd)
+	app.BindFlags(cfg, rootCmd, startCmd)
 	rootCmd.AddCommand(startCmd)
 
 	// Add debug commands from shell-operator and addon-operator.
 	sh_debug.DefineDebugCommands(rootCmd)
-	ad_app.DefineDebugCommands(rootCmd)
+	app.DefineDebugCommands(rootCmd)
 
 	// Add more commands to the "module" command registered by addon-operator above.
 	debug.DefineModuleConfigDebugCommands(rootCmd, logger)
@@ -171,10 +191,10 @@ func main() {
 	// remaining argv to a kingpin Application built on the fly.
 	{
 		dhctlOpts := options.New()
-		dhctlOpts.Global.LoggerType = envOr("DECKHOUSE_LOGGER_TYPE", "json")
-		dhctlOpts.Render.Editor = envOr("DECKHOUSE_EDITOR", "vim")
-		dhctlOpts.Kube.InCluster = envBoolOr("DECKHOUSE_KUBE_CONFIG_IN_CLUSTER", true)
-		dhctlOpts.Global.TmpDir = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
+		dhctlOpts.Global.LoggerType = app.EnvOr(app.EnvLoggerType, "json")
+		dhctlOpts.Render.Editor = app.EnvOr(app.EnvEditor, "vim")
+		dhctlOpts.Kube.InCluster = app.EnvBoolOr(app.EnvKubeConfigInCluster, true)
+		dhctlOpts.Global.TmpDir = app.EnvOr(app.EnvTmpDir, os.TempDir())
 
 		// Pin the dhctl content directories to the deckhouse image layout
 		// (/deckhouse/...). The legacy kingpin entrypoint relied on
@@ -193,7 +213,7 @@ func main() {
 		dhctlOpts.Global.GlobalHooksModule = options.DefaultGlobalHooksModule
 		dhctlOpts.Global.InfrastructureVersions = options.DefaultInfrastructureVersions
 		dhctlOpts.Global.VersionMap = options.DefaultVersionMap
-		dhctlOpts.Global.NeedDownload = false
+		dhctlOpts.Global.EnsureCandiAvailable = false
 
 		dhctlcli.RegisterCobraBridges(rootCmd, fileName, dhctlOpts)
 	}
@@ -204,26 +224,4 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
-}
-
-// envOr returns the env var name's value, or defaultValue when unset/empty.
-func envOr(name, defaultValue string) string {
-	if v, ok := os.LookupEnv(name); ok && v != "" {
-		return v
-	}
-	return defaultValue
-}
-
-// envBoolOr parses the env var as a bool (per strconv.ParseBool), or returns
-// defaultValue when unset, empty, or unparseable.
-func envBoolOr(name string, defaultValue bool) bool {
-	v, ok := os.LookupEnv(name)
-	if !ok || v == "" {
-		return defaultValue
-	}
-	parsed, err := strconv.ParseBool(v)
-	if err != nil {
-		return defaultValue
-	}
-	return parsed
 }

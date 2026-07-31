@@ -14,7 +14,7 @@ import (
 
 const (
 	AppLabelKey               = "app"
-	AppLabelValue             = "d8-waypoint"
+	AppLabelValue             = "waypoint"
 	WaypointInstanceLabelKey  = "istio.deckhouse.io/waypoint-instance"
 	WaypointComponentLabelKey = "istio.deckhouse.io/component"
 	HeritageLabelKey          = "heritage"

@@ -10,11 +10,9 @@ documentationEnabled: true
 deckhouseToolsEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
-ingressNginxEnabled: true
 kubeDnsEnabled: true
 kubeProxyEnabled: true
 localPathProvisionerEnabled: true
-logShipperEnabled: true
 monitoringCustomEnabled: true
 monitoringDeckhouseEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
@@ -29,7 +27,6 @@ prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
 terraformManagerEnabled: true
-upmeterEnabled: true
 userAuthnEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerEnabled: true

@@ -21,7 +21,6 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 
 Архитектура модуля [`cloud-provider-aws`](/modules/cloud-provider-aws/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля cloud-provider-aws](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-aws.ru.png)
 
 ## Компоненты модуля
@@ -51,22 +50,24 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-1. **CSI-драйвер (aws)** — реализация CSI-драйвера для AWS. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../infrastructure/csi-driver.html).
+1. **CSI-драйвер (aws)** — реализация CSI-драйвера для AWS. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html).
 
 1. **Node-termination-handler** — [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler), отвечает за обработку DKP событий от сервисов AWS о недоступности экземпляров EC2.
 
    Node-termination-handler обрабатывает следующие события AWS:
+
    * [EC2 maintenance events](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html);
    * [EC2 Spot interruptions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html);
    * [ASG Scale-In](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroupLifecycle.html#as-lifecycle-scale-in);
    * [ASG AZ Rebalance](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html);
    * [EC2 Instance Termination](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html).
 
-   При получении указанных событий node-termination-handler выполняет drain/cordon для соответствующего узла.
-
    Состоит из одного контейнера:
 
    * **node-termination-handler**.
+
+   При получении события, требующего вывода узла из эксплуатации (drain), например при плановом прерывании работы spot-инстанса, node-termination-handler устанавливает на соответствующий узел taint `aws-node-termination-handler/spot-itn`.
+   Модуль [`node-manager`](/modules/node-manager/) обнаруживает этот taint и с помощью [хуков модуля](../../module-development/structure/#hooks) выполняет drain, а затем удаляет узел.
 
 ## Взаимодействия модуля
 

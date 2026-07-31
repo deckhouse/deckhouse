@@ -114,20 +114,25 @@
   </div>
 
   <div class="form__row">
-    <label class="label" title="Права доступа к хранилищу образов контейнеров в Base64">
-      Права доступа к хранилищу образов контейнеров <strong>в Base64</strong>.
+    <label class="label" title="Имя пользователя для доступа к хранилищу образов контейнеров">
+      Имя пользователя для доступа к хранилищу образов контейнеров.
     </label>
     <input
       class="textfield"
-      type="text" id="registryDockerCfg"
-      name="registryDockerCfg" placeholder=""
+      type="text" id="privateRegistryUser"
+      name="privateRegistryUser" placeholder=""
       autocomplete="off" />
-    <span class="info">
-      Строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это <code>$HOME/.docker/config.json</code>), закодированная в Base64.<br />Подробнее про этот параметр читайте в <a href="/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg">документации ресурса InitConfiguration</a>.
-    </span>
-    <span class="info">
-      В случае использования анонимного доступа к хранилищу образов контейнеров не заполняйте это поле.
-    </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Пароль пользователя для доступа к хранилищу образов контейнеров">
+      Пароль пользователя для доступа к хранилищу образов контейнеров.
+    </label>
+    <input
+      class="textfield"
+      type="text" id="privateRegistryPassword"
+      name="privateRegistryPassword" placeholder=""
+      autocomplete="off" />
   </div>
 
   <div class="form__row">

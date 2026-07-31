@@ -18,10 +18,16 @@ package controlplaneoperation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki/signature"
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -37,8 +43,10 @@ var (
 	_ Step = (*renewKubeconfigsStep)(nil)
 	_ Step = (*syncManifestsStep)(nil)
 	_ Step = (*joinEtcdClusterStep)(nil)
+	_ Step = (*defragEtcdStep)(nil)
 	_ Step = (*waitPodReadyStep)(nil)
 	_ Step = (*certObserveStep)(nil)
+	_ Step = (*renewSignatureStep)(nil)
 )
 
 // StepOutcome is the terminal state when Step.Execute finishes.
@@ -49,6 +57,8 @@ const (
 	OutcomeCompleted StepOutcome = iota
 	// OutcomePending: the step is not finished; pipeline RequeueAfter and preserves the in-progress condition with the given Message.
 	OutcomePending
+	// OutcomeAbandoned: the step decided the operation can't continue; pipeline marks it terminal and stops.
+	OutcomeAbandoned
 )
 
 type StepResult struct {
@@ -72,8 +82,10 @@ func defaultSteps() map[controlplanev1alpha1.StepName]Step {
 		controlplanev1alpha1.StepRenewKubeconfigs: &renewKubeconfigsStep{},
 		controlplanev1alpha1.StepSyncManifests:    &syncManifestsStep{},
 		controlplanev1alpha1.StepJoinEtcdCluster:  &joinEtcdClusterStep{},
+		controlplanev1alpha1.StepDefragEtcd:       &defragEtcdStep{},
 		controlplanev1alpha1.StepWaitPodReady:     &waitPodReadyStep{},
 		controlplanev1alpha1.StepCertObserve:      &certObserveStep{},
+		controlplanev1alpha1.StepRenewSignature:   &renewSignatureStep{},
 	}
 }
 
@@ -158,7 +170,7 @@ type joinEtcdClusterStep struct{}
 func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	op := env.State.Raw()
 	if op.Spec.Component != controlplanev1alpha1.OperationComponentEtcd {
-		return StepResult{Outcome: OutcomeCompleted}, nil
+		return StepResult{Outcome: OutcomeCompleted, Message: "skipped: component is not etcd"}, nil
 	}
 
 	kubeconfigDir := env.Node.KubeconfigDir
@@ -169,12 +181,17 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 		return StepResult{}, fmt.Errorf("ensure admin kubeconfig: %w", err)
 	}
 
-	needsJoin, err := etcdNeedsJoin(env.Node, constants.KubernetesPkiPath, kubeconfigDir)
+	cls, err := classifyEtcdState(env.Node, constants.KubernetesPkiPath, kubeconfigDir)
 	if err != nil {
-		return StepResult{}, fmt.Errorf("check etcd join need: %w", err)
+		return StepResult{}, fmt.Errorf("classify etcd state: %w", err)
 	}
-	if !needsJoin {
-		logger.Info("etcd already in cluster, syncing manifest to desired state")
+
+	joinMessage := "etcd member joined"
+	switch cls.state {
+	case etcdJoined:
+		// Member registered and local etcd bootstrapped: etcd ignores --initial-cluster on restart, so the self-only manifest from syncFullManifest is safe.
+		// Promote our own member only if it is still a learner (a previous join added it but never promoted it).
+		logger.Info("etcd already in cluster, syncing manifest and ensuring promotion")
 		annotations := buildSyncManifestAnnotations(op)
 		results, err := syncFullManifest(op.Spec.Component, env.Secrets.CPMData, annotations, env.Node)
 		if err != nil {
@@ -185,13 +202,34 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 		if !hasChangedFiles(results) {
 			logger.Info("sync manifests no-op: desired content already on disk")
 		}
-		return StepResult{Outcome: OutcomeCompleted}, nil
+		if cls.isLearner {
+			if err := etcd.PromoteMember(env.Node.AdvertiseIP, etcd.WithCertificatesDir(constants.KubernetesPkiPath)); err != nil {
+				logger.Error("failed to promote own etcd member", log.Err(err))
+				return StepResult{}, fmt.Errorf("promote own etcd member: %w", err)
+			}
+			return StepResult{Outcome: OutcomeCompleted, Message: "etcd learner promoted; manifest synchronized"}, nil
+		}
+		return StepResult{Outcome: OutcomeCompleted, Message: "etcd member already joined; manifest synchronized"}, nil
+
+	case etcdOrphan:
+		// Orphan cleanup happens only here, for the explicitly classified state, so a concurrently starting etcd data dir is never deleted.
+		logger.Info("etcd orphan: cleaning stale data dir before rejoin")
+		if err := cleanupEtcdDataDir(); err != nil {
+			logger.Error("failed to cleanup etcd data dir", log.Err(err))
+			return StepResult{}, fmt.Errorf("cleanup etcd data dir: %w", err)
+		}
+		joinMessage = "stale etcd data directory removed; member rejoined"
+		fallthrough
+	case etcdNeedsJoin:
+		logger.Info("etcd needs join, executing idempotent join flow")
+		if err := reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, checksumAnnotationsFromSpec(op.Spec), logger); err != nil {
+			return StepResult{}, err
+		}
+		return StepResult{Outcome: OutcomeCompleted, Message: joinMessage}, nil
+
+	default:
+		return StepResult{}, fmt.Errorf("unknown etcd join state: %d", cls.state)
 	}
-	logger.Info("etcd needs join, executing join flow")
-	if err := reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, checksumAnnotationsFromSpec(op.Spec), logger); err != nil {
-		return StepResult{}, err
-	}
-	return StepResult{Outcome: OutcomeCompleted}, nil
 }
 
 // syncManifestsStep writes the static pod manifest (or patches annotations for PKI-only updates).
@@ -251,6 +289,16 @@ func syncAnnotationsOnly(component controlplanev1alpha1.OperationComponent, anno
 	return []fileWriteResult{manifestResult}, nil
 }
 
+// defragEtcdStep defragments the local etcd data store if fragmentation exceeds the threshold.
+// No-op for non-Etcd components. Requires the etcd pod to be Ready before running.
+type defragEtcdStep struct {
+	defragEtcd func(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error)
+}
+
+func (c *defragEtcdStep) Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
+	return c.defragEtcd(ctx, env.State, logger)
+}
+
 // waitPodReadyStep waits for the static pod to become ready with the expected checksum annotations.
 type waitPodReadyStep struct {
 	waitForPod func(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error)
@@ -283,10 +331,23 @@ type certObserveStep struct{}
 func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	kubeconfigDir := env.Node.KubeconfigDir
 	component := env.State.Raw().Spec.Component
+
 	observedState, ok, err := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
 	if !ok {
 		logger.Warn("CertObserve skipped: not a static pod component")
 		return StepResult{Outcome: OutcomeCompleted}, nil
+	}
+
+	if constants.SignatureEnabled() && component == controlplanev1alpha1.OperationComponentKubeAPIServer {
+		signatureExpiry, sigErr := observeSignatureExpiration(constants.KubernetesPkiPath)
+		if sigErr != nil {
+			err = errors.Join(err, fmt.Errorf("signature key: %w", sigErr))
+		} else {
+			if observedState.CertificatesExpirationTime == nil {
+				observedState.CertificatesExpirationTime = map[string]metav1.Time{}
+			}
+			observedState.CertificatesExpirationTime[constants.SignatureExpirationKey] = signatureExpiry
+		}
 	}
 
 	// Persist whatever was read successfully before surfacing the error
@@ -306,4 +367,39 @@ func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.L
 
 	logger.Info("observed certificate expiration", slog.Int("certificates", len(observedState.CertificatesExpirationTime)))
 	return StepResult{Outcome: OutcomeCompleted}, nil
+}
+
+type renewSignatureStep struct {
+	kubeClient kubernetes.Interface
+}
+
+func (c *renewSignatureStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
+	if !constants.SignatureEnabled() {
+		return StepResult{Outcome: OutcomeCompleted, Message: controlplanev1alpha1.CPOStepResultNotRenewed}, nil
+	}
+
+	if env.State.Raw().Spec.Component != controlplanev1alpha1.OperationComponentKubeAPIServer {
+		return StepResult{Outcome: OutcomeCompleted}, nil
+	}
+	if c.kubeClient == nil {
+		return StepResult{}, fmt.Errorf("renewSignatureStep: kubeClient not injected")
+	}
+
+	before, _ := signature.SignatureFilesChecksum(constants.KubernetesPkiPath)
+
+	if err := getEtcdKeySignatureRenewer().Renew(c.kubeClient); err != nil {
+		logger.Error("failed to renew signature keys", log.Err(err))
+		return StepResult{}, fmt.Errorf("renew signature keys: %w", err)
+	}
+
+	after, err := signature.SignatureFilesChecksum(constants.KubernetesPkiPath)
+	if err != nil {
+		logger.Error("failed to get signature files checksum", log.Err(err))
+		return StepResult{Outcome: OutcomeCompleted, Message: controlplanev1alpha1.CPOStepResultNotRenewed}, nil
+	}
+	if before != after {
+		logger.Info("signature keys rotated on disk")
+		return StepResult{Outcome: OutcomeCompleted, Message: controlplanev1alpha1.CPOStepResultRenewed}, nil
+	}
+	return StepResult{Outcome: OutcomeCompleted, Message: controlplanev1alpha1.CPOStepResultNotRenewed}, nil
 }

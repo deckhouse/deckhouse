@@ -283,7 +283,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 	isSequenceInCluster := true
 	for i := 1; i < len(releasesInCluster); i++ {
-		if !isUpdatingSequence(releasesInCluster[i-1].GetVersion(), releasesInCluster[i].GetVersion()) {
+		if !isSequentialReleasePair(releasesInCluster[i-1], releasesInCluster[i]) {
 			isSequenceInCluster = false
 			break
 		}

@@ -24,14 +24,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func NewErrClusterManagedByAnotherCommander(managedByCommanderUUID, requiredCommanderUUID uuid.UUID) error {
-	return fmt.Errorf("cluster is managed by another commander %s; unable to perform operations from your commander %s", managedByCommanderUUID.String(), requiredCommanderUUID.String())
+	return fmt.Errorf("%w: cluster is managed by another commander %s; unable to perform operations from your commander %s", actions.ErrManifestTaskPermanent, managedByCommanderUUID.String(), requiredCommanderUUID.String())
 }
 
 func doCheckShouldUpdateCommanderUUID(cm *v1.ConfigMap, requiredCommanderUUID uuid.UUID) (bool, error) {
@@ -69,17 +70,17 @@ func CheckShouldUpdateCommanderUUID(ctx context.Context, kubeCl *client.Kubernet
 func ConstructManagedByCommanderConfigMapTask(ctx context.Context, commanderUUID uuid.UUID, kubeCl *client.KubernetesClient) actions.ManifestTask {
 	return actions.ManifestTask{
 		Name: `ConfigMap "d8-commander-uuid"`,
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.CommanderUUIDConfigMap(commanderUUID.String())
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).
 				Create(ctx, manifest.(*v1.ConfigMap), metav1.CreateOptions{})
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			existingCm, err := kubeCl.
 				CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).
 				Get(ctx, manifests.CommanderUUIDCm, metav1.GetOptions{})

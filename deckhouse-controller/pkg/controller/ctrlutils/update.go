@@ -87,6 +87,10 @@ func UpdateWithRetry(ctx context.Context, c client.Client, obj client.Object, f 
 			if options.statusUpdate {
 				err := c.Status().Update(ctx, obj)
 				if err != nil {
+					if apierrors.IsNotFound(err) {
+						return nil
+					}
+
 					return fmt.Errorf("status update: %w", err)
 				}
 
@@ -95,6 +99,10 @@ func UpdateWithRetry(ctx context.Context, c client.Client, obj client.Object, f 
 
 			err := c.Update(ctx, obj)
 			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+
 				return fmt.Errorf("update: %w", err)
 			}
 

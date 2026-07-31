@@ -112,7 +112,7 @@ func handleChaosMonkey(ctx context.Context, input *go_hook.HookInput) error {
 
 		chaosPeriod, err := time.ParseDuration(ng.ChaosPeriod)
 		if err != nil {
-			input.Logger.Warn("chaos period for NodeGroup is invalid", slog.String("period", ng.ChaosPeriod), slog.String("NodeGroup name", ng.Name))
+			input.Logger.Warn("chaos period for NodeGroup is invalid", slog.String("period", ng.ChaosPeriod), slog.String("node_group_name", ng.Name))
 			continue
 		}
 

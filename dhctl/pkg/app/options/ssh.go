@@ -115,8 +115,8 @@ func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
 	}
 
 	for _, pathSet := range pathSets {
-		keys := strings.Split(pathSet, ",")
-		for _, k := range keys {
+		keys := strings.SplitSeq(pathSet, ",")
+		for k := range keys {
 			if strings.HasPrefix(k, "~") {
 				home := os.Getenv("HOME")
 				if home == "" {
