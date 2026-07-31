@@ -11,7 +11,6 @@
   variables:
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse
-    GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
     WERF_ENV: development
     WERF_LOG_VERBOSE: "on"

@@ -5,7 +5,6 @@
   stage: validate
   needs: []
   variables:
-    GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
 
 # --- go generate (Go + werf for generate-tools / werf config render) ---

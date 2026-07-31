@@ -5,7 +5,6 @@
   stage: validate
   needs: []
   variables:
-    GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
     DIFF_PATH: ./pr.diff
   image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
@@ -61,7 +60,6 @@ release_requirements_validation:
   tags:
     - vm-intteam-cloud-d8-ssdlc-runner
   variables:
-    GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
     DIFF_PATH: ./pr.diff
     VAULT_AUTH_PATH: fox

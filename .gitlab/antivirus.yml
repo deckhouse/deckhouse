@@ -124,7 +124,6 @@
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "deckhouse/deckhouse"
   variables:
-    GIT_STRATEGY: none
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse
   id_tokens:

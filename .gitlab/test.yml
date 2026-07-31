@@ -36,7 +36,6 @@
     name: ${DECKHOUSE_DEV_REGISTRY_HOST}/sys/deckhouse-oss/tests:${TESTS_IMAGE_TAG}
     pull_policy: always
   variables:
-    GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse
@@ -118,7 +117,6 @@ validators:
     - vm-intteam-cloud-d8-ssdlc-runner
   timeout: 2h
   variables:
-    GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse

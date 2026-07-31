@@ -7,7 +7,6 @@ gitleaks_scan:
   extends:
     - .rules:on_merge_request
   variables:
-    GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
     GITLEAKS_CONFIG_REF: "v15.0"
     GITLEAKS_CONFIG_PROJECT: "deckhouse%2F3p%2Fdeckhouse%2Fmodules-gitlab-ci"
@@ -19,7 +18,6 @@ gitleaks_scan:
         --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
         -o gitleaks.base.toml \
         "${CI_API_V4_URL}/projects/${GITLEAKS_CONFIG_PROJECT}/repository/files/${GITLEAKS_CONFIG_FILE}/raw?ref=${GITLEAKS_CONFIG_REF}"
-    - cat gitleaks.base.toml
     - |
       if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
         LOG_OPTS="${CI_MERGE_REQUEST_DIFF_BASE_SHA}..${CI_COMMIT_SHA}"

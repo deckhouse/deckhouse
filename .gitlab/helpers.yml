@@ -127,7 +127,6 @@
   variables:
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse
-    GIT_STRATEGY: fetch
     GIT_DEPTH: "0"
     REGISTRY_PATH: sys/deckhouse-oss
     WERF_FINAL_IMAGES_ONLY: "true"
