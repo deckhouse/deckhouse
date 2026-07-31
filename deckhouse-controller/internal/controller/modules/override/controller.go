@@ -267,20 +267,20 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{}, err
 	}
 
-	// Use mount point path: /modules/<module> (modules are mounted at /deckhouse/downloaded/modules/<module>)
-	// modulePath := fmt.Sprintf("/modules/%s", mpo.GetModuleName())
-	// ownerRef := metav1.OwnerReference{
-	// 	APIVersion: v1alpha2.ModulePullOverrideGVK.GroupVersion().String(),
-	// 	Kind:       v1alpha2.ModulePullOverrideGVK.Kind,
-	// 	Name:       mpo.GetName(),
-	// 	UID:        mpo.GetUID(),
-	// 	Controller: ptr.To(true),
-	// }
+	// Use mount point path: /modules/<module> (modules are mounted at /deckhouse/downloaded/modules/deployed/<module>)
+	modulePath := fmt.Sprintf("/modules/deployed/%s", mpo.GetModuleName())
+	ownerRef := metav1.OwnerReference{
+		APIVersion: v1alpha2.ModulePullOverrideGVK.GroupVersion().String(),
+		Kind:       v1alpha2.ModulePullOverrideGVK.Kind,
+		Name:       mpo.GetName(),
+		UID:        mpo.GetUID(),
+		Controller: new(true),
+	}
 
-	// if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, module.Properties.Source, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
-	// 	r.log.Error("failed to ensure module documentation for the module pull override", slog.String("name", mpo.Name), log.Err(err))
-	// 	return ctrl.Result{}, fmt.Errorf("ensure module documentation: %w", err)
-	// }
+	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, module.Properties.Source, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
+		r.logger.Error("failed to ensure module documentation for the module pull override", slog.String("name", mpo.Name), log.Err(err))
+		return ctrl.Result{}, fmt.Errorf("ensure module documentation: %w", err)
+	}
 
 	return ctrl.Result{RequeueAfter: scanInterval(mpo)}, nil
 }
