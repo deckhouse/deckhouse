@@ -2,6 +2,11 @@ cloud-provider-dvp:
   fixes:
     - summary: skip foreign nodes in cloud controller manager
       pull_request: https://github.com/deckhouse/deckhouse/pull/21779
+cni-cilium:
+  fixes:
+    - summary: Bump Go dependencies in the egress-gateway-agent image to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21608
+      impact: The egress-gateway-agent component will restart after the update.
 deckhouse:
   fixes:
     - summary: >-
