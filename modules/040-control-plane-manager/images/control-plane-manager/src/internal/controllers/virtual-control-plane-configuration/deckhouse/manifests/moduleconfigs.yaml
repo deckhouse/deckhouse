@@ -40,3 +40,39 @@ spec:
     # TODO: Add cert-manager, ingress/alb modules
     https:
       mode: Disabled
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-kubernetes
+  labels:
+    heritage: deckhouse
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-custom
+  labels:
+    heritage: deckhouse
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: extended-monitoring
+  labels:
+    heritage: deckhouse
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: monitoring-ping
+  labels:
+    heritage: deckhouse
+spec:
+  enabled: true
