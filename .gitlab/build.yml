@@ -444,42 +444,42 @@ build_cse:mr:
 # release-x.xx: FE + tests automatic; other editions manual
 # ---------------------------------------------------------------------------
 
-build_fe:release:
+build_fe:release-branch:
   extends:
     - .build_fe
     - .rules:on_release_branch
 
-build_tests:release:
+build_tests:release-branch:
   extends:
     - .build_tests
     - .rules:on_release_branch
 
-build_ce:release:
+build_ce:release-branch:
   extends:
     - .build_ce
     - .rules:on_release_branch
 
-build_ee:release:
+build_ee:release-branch:
   extends:
     - .build_ee
     - .rules:on_release_branch
 
-build_be:release:
+build_be:release-branch:
   extends:
     - .build_be
     - .rules:on_release_branch
 
-build_se:release:
+build_se:release-branch:
   extends:
     - .build_se
     - .rules:on_release_branch
 
-build_se_plus:release:
+build_se_plus:release-branch:
   extends:
     - .build_se_plus
     - .rules:on_release_branch
 
-build_cse:release:
+build_cse:release-branch:
   extends:
     - .build_cse
     - .rules:on_release_branch
