@@ -349,9 +349,9 @@ func (s *Storage) InjectRegistryValue(registry registry.Remote) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// inject spec to values schema
-	s.injectRegistrySpec(schema.TypeSettings)
-	// inject spec to helm schema
+	// not injected into the config schema: the registry comes from the module source,
+	// not from user settings
+	s.injectRegistrySpec(schema.TypeValues)
 	s.injectRegistrySpec(schema.TypeHelm)
 
 	if s.staticValues == nil {

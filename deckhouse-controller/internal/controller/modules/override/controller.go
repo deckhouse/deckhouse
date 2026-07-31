@@ -55,12 +55,10 @@ const (
 	// finalizerRequeueAfter is the short delay used to re-read the override right after
 	// its finalizer has been added.
 	finalizerRequeueAfter = 500 * time.Millisecond
-	// defaultScanInterval mirrors the CRD default for spec.scanInterval and backs
-	// overrides whose interval is unset or non-positive.
+	// defaultScanInterval mirrors the CRD default and backs a non-positive interval.
 	defaultScanInterval = 15 * time.Second
-	// digestTimeout bounds a single digest lookup. The controller runs one worker, so
-	// without it an unreachable registry blocks every other override's scan for as long
-	// as the registry client's own timeout allows.
+	// digestTimeout bounds a digest lookup so an unreachable registry cannot stall the
+	// controller's single worker.
 	digestTimeout = 30 * time.Second
 )
 

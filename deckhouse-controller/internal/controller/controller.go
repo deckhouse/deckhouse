@@ -44,7 +44,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
 const (
@@ -154,7 +153,7 @@ func buildControllerOpts(ctx context.Context, scheme *apiruntime.Scheme) ctrlrun
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
 		},
-		GracefulShutdownTimeout: ptr.To(gracefulShutdownTimeout),
+		GracefulShutdownTimeout: new(gracefulShutdownTimeout),
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				// for ModuleDocumentation controller
