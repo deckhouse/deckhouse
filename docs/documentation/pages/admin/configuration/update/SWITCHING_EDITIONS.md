@@ -574,77 +574,14 @@ There are two ways to work with the DKP container image registry:
 
   If your cluster uses this method for managing the DKP container image repository, refer to the section ["Switching without using the registry module"](#switching-without-the-registry-module) to switch versions.
 
-Before proceeding, complete the preparatory steps described in the [Pre-switch preparation](#pre-switch-preparation) section.
-
 ### Switching using the registry module
 
 {% alert level="warning" %}
-Not applicable for managed Kubernetes (EKS, AKS, GKE).
+- Before proceeding, complete the preparatory steps described in the [Pre-switch preparation](#pre-switch-preparation) section.
+- This switching method must be performed only in `Unmanaged` mode. Make sure that the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the previous DKP edition in `Unmanaged` mode. If this is not the case, perform the [migration to using the registry module](../registry/managing-interaction.html#migration-to-registry-management-format-using-the-registry-module) and switch the registry to `Unmanaged` mode.
+- This method is not applicable for managed Kubernetes (EKS, AKS, GKE) and for DKP CSE **below** 1.73.
+- Switching to CSE is only possible from the EE edition.
 {% endalert %}
-
-1. Make sure the cluster uses the `registry` module. ModuleConfig `deckhouse` must contain the registry parameters of the previous DKP edition in `Unmanaged` mode. If this is not the case, perform the [migration to using the registry module](../registry/managing-interaction.html#migration-to-registry-management-format-using-the-registry-module).
-
-   After completing the migration, ModuleConfig `deckhouse` must contain the registry parameters:
-
-   {% tabs switch-registry-edition-1 %}
-   {% tab "DKP CE" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
-         | regex_replace: "<CHECK_MODE>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
-         | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-
-   {% tab "DKP BE" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
-         | regex_replace: "<CHECK_MODE>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
-         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-
-   {% tab "DKP SE" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
-         | regex_replace: "<CHECK_MODE>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
-         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-
-   {% tab "DKP SE+" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
-         | regex_replace: "<CHECK_MODE>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
-         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-
-   {% tab "DKP EE" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<EDITION_CODE>", "<PREVIOUS_EDITION_CODE>"
-         | regex_replace: "<CHECK_MODE>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io"
-         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-   {% endtabs %}
-
-   The switch status must not contain errors:
-
-   {{ registry_status_cmd | regex_replace: "^", "   " }}
-
-   Example of a successful output:
-
-   {{ registry_status_example | regex_replace: "^", "   " }}
 
 1. In ModuleConfig [`deckhouse`](/modules/deckhouse/configuration.html#parameters-registry), set `imagesRepo` to the target edition and `checkMode: Relax`:
 
@@ -756,7 +693,9 @@ Not applicable for managed Kubernetes (EKS, AKS, GKE).
 ### Switching without the registry module
 
 {% alert level="warning" %}
-Before proceeding, make sure that the `registry` module is not used in the cluster. ModuleConfig `deckhouse` must not contain registry parameters. The `registry` module must be disabled. If this is not the case, perform the [migration to the deprecated registry management format (without the registry module)](../registry/managing-interaction.html#migration-to-the-deprecated-registry-management-format-without-the-registry-module).
+- Before proceeding, complete the preparatory steps described in the [Pre-switch preparation](#pre-switch-preparation) section.
+- Before applying, make sure that the `registry` module is not used in the cluster. ModuleConfig `deckhouse` must not contain registry parameters. The `registry` module must be disabled. If this is not the case, perform the [migration to the deprecated registry management format (without the registry module)](../registry/managing-interaction.html#migration-to-the-deprecated-registry-management-format-without-the-registry-module).
+- Switching to CSE is only possible from the EE edition.
 {% endalert %}
 
 Choose the target edition:

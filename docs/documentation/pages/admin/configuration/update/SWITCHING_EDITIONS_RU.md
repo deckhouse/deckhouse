@@ -705,103 +705,15 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
   Если в кластере используется этот способ работы с хранилищем образов контейнеров DKP, для переключения редакции воспользуйтесь разделом [«Переключение без использования модуля registry»](#переключение-без-использования-модуля-registry).
 
-Перед выполнением дальнейших шагов выполните подготовительные действия, описанные в разделе [«Подготовка к переключению»](#подготовка-к-переключению).
 
 ### Переключение с помощью модуля registry
 
 {% alert level="warning" %}
-Не подходит для managed Kubernetes (EKS, AKS, GKE) и для DKP CSE **ниже** 1.73.
+- Перед выполнением дальнейших шагов выполните подготовительные действия, описанные в разделе [«Подготовка к переключению»](#подготовка-к-переключению).
+- Данное переключение необходимо выполнять только в режиме `Unmanaged`. Убедитесь, что в кластере используется модуль registry. В moduleConfig `deckhouse` должны быть указаны параметры registry предыдущей редакции DKP в `Unmanaged` режиме работы. Если это не так, выполните [миграцию на использование модуля registry](../registry/managing-interaction.html#миграция-на-формат-управления-настройками-хранилища-образов-с-использованием-модуля-registry) и переключите режим работы registry в `Unmanaged`.
+- Данный способ не подходит для managed Kubernetes (EKS, AKS, GKE) и для DKP CSE **ниже** 1.73.
+- Переключние в CSE выполнятеся только из EE редакции.
 {% endalert %}
-
-1. Убедитесь, что в кластере используется модуль registry. В moduleConfig `deckhouse` должны быть указаны параметры registry предыдущей редакции DKP в `Unmanaged` режиме работы. Если это не так, выполните [миграцию на использование модуля registry](../registry/managing-interaction.html#миграция-на-формат-управления-настройками-хранилища-образов-с-использованием-модуля-registry).
-
-   После выполнения миграции, в moduleConfig `deckhouse` должны появиться параметры registry:
-
-   {% tabs switch-registry-edition-1 %}
-   {% tab "DKP CE" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
-         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
-         | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-
-   {% tab "DKP BE" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
-         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
-         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-
-   {% tab "DKP SE" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
-         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
-         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-
-   {% tab "DKP SE+" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
-         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
-         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-
-   {% tab "DKP EE" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
-         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
-         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-
-   {% tab "DKP CSE" %}
-      {{
-         change_registry_mc_deckhouse_unmanaged
-         | regex_replace: "<КОД_РЕДАКЦИИ>", "<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"
-         | regex_replace: "<РЕЖИМ_ПРОВЕРКИ>", "Default"
-         | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru"
-         | regex_replace: "<!/?REMOVE_FOR_CE>\n?", ""
-      }}
-   {% endtab %}
-   {% endtabs %}
-
-   В статусе переключения не должно быть ошибок:
-
-   {{ registry_status_cmd | regex_replace: "^", "   " }}
-
-   Пример успешного вывода:
-
-   {% tabs switch-registry-status-example-1 %}
-   {% tab "CE/BE/SE/SE+/EE" %}
-      {{
-         registry_status_example
-         | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru"
-         | regex_replace: "^", "   "
-      }}
-   {% endtab %}
-
-   {% tab "CSE" %}
-      {{
-         registry_status_example
-         | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru"
-         | regex_replace: "^", "   "
-      }}
-   {% endtab %}
-   {% endtabs %}
 
 1. **Только для DKP CSE** — удалите поле `releaseChannel` в moduleConfig `deckhouse`:
 
@@ -966,7 +878,9 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 ### Переключение без использования модуля registry
 
 {% alert level="warning" %}
-Перед применением, убедитесь, что модуль registry не используется в кластере. В moduleConfig `deckhouse` должны отсутствовать параметры registry. Модуль `registry` должен быть выключен. Если это не так, выполните [миграция на устаревший формат управления настройками registry](../registry/managing-interaction.html#миграция-на-устаревший-формат-управления-настройками-хранилища-образов-компонентов-dkp-без-модуля-registry).
+- Перед выполнением дальнейших шагов выполните подготовительные действия, описанные в разделе [«Подготовка к переключению»](#подготовка-к-переключению).
+- Перед применением, убедитесь, что модуль registry не используется в кластере. В moduleConfig `deckhouse` должны отсутствовать параметры registry. Модуль `registry` должен быть выключен. Если это не так, выполните [миграция на устаревший формат управления настройками registry](../registry/managing-interaction.html#миграция-на-устаревший-формат-управления-настройками-хранилища-образов-компонентов-dkp-без-модуля-registry).
+- Переключние в CSE выполнятеся только из EE редакции.
 {% endalert %}
 
 Выберите целевую редакцию:
