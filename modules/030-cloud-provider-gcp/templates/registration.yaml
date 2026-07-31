@@ -5,6 +5,11 @@
 type: {{ b64enc "gcp" | quote }}
 region: {{ $context.Values.cloudProviderGcp.internal.providerClusterConfiguration.provider.region | b64enc | quote }}
 zones: {{ $context.Values.cloudProviderGcp.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+# Storage version of the InstanceClass CRD. node-controller reads the InstanceClass through it, so the
+# read never goes through a conversion webhook. Must not be a non-storage version: its result also
+# depends on whether that webhook is wired yet, and the value feeds a checksum that names an
+# immutable MachineTemplate — changing it recreates every node in the NodeGroup.
+instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 instanceClassKind: {{ b64enc "GCPInstanceClass" | quote }}
 machineClassKind: {{ b64enc "GCPMachineClass" | quote }}
 # GCP

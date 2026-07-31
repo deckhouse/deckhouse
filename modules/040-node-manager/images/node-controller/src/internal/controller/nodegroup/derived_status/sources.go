@@ -20,12 +20,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +34,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/capacity"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -48,7 +50,10 @@ const (
 
 	instanceTypesCatalogName = "for-cluster-autoscaler"
 	instanceClassGroup       = "deckhouse.io"
-	instanceClassVersion     = "v1alpha1"
+
+	// InstanceTypesCatalog serves v1alpha1 only, so this one is safe to compile in. The
+	// InstanceClass version is not — see common.InstanceClassAPIVersion.
+	instanceTypesCatalogVersion = "v1alpha1"
 
 	apiserverPodNamespace  = "kube-system"
 	apiserverVersionAnnKey = "control-plane-manager.deckhouse.io/kubernetes-version"
@@ -214,24 +219,29 @@ func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string
 	return zones
 }
 
-// resolveInstanceClassVersion returns the served API version for a cloud InstanceClass
-// kind via the RESTMapper's preferred mapping. Providers publish different versions
-// (VCD/Dynamix/HuaweiCloud serve only deckhouse.io/v1), so the version must not be
-// hardcoded. Falls back to instanceClassVersion when the kind is unknown to the mapper.
-func resolveInstanceClassVersion(mapper meta.RESTMapper, kind string) string {
-	if mapper == nil {
-		return instanceClassVersion
+// ErrInstanceClassAPIVersionUnset is returned instead of a guess when the cloud provider has not
+// published the version yet. Callers that only describe a NodeGroup may carry on without the
+// instance class; callers that render from it must not, because a guessed version changes the
+// instance-class checksum and the checksum names an immutable MachineTemplate.
+var ErrInstanceClassAPIVersionUnset = errors.New("instanceClassAPIVersion is not published by the cloud provider")
+
+// instanceClassAPIVersion returns the version InstanceClass objects are read at, published by the
+// cloud provider module. See common.InstanceClassAPIVersion for why it is data and not something
+// node-controller may work out for itself.
+func (s *Service) instanceClassAPIVersion(ctx context.Context) (string, error) {
+	version, _ := s.readCloudProviderData(ctx)[nodecommon.InstanceClassAPIVersionKey].(string)
+	if version == "" {
+		return "", fmt.Errorf("%w (key %s of secret %s)", ErrInstanceClassAPIVersionUnset, nodecommon.InstanceClassAPIVersionKey, cloudProviderSecretName)
 	}
-	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: instanceClassGroup, Kind: kind})
-	if err != nil {
-		return instanceClassVersion
-	}
-	return mapping.GroupVersionKind.Version
+	return version, nil
 }
 
 func (s *Service) readInstanceClassSpec(ctx context.Context, kind, name string) (interface{}, error) {
+	version, err := s.instanceClassAPIVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
 	obj := &unstructured.Unstructured{}
-	version := resolveInstanceClassVersion(s.Client.RESTMapper(), kind)
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: version, Kind: kind})
 	if err := s.Client.Get(ctx, types.NamespacedName{Name: name}, obj); err != nil {
 		return nil, err
@@ -241,7 +251,7 @@ func (s *Service) readInstanceClassSpec(ctx context.Context, kind, name string) 
 
 func (s *Service) readInstanceTypesCatalog(ctx context.Context) *capacity.InstanceTypesCatalog {
 	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceClassVersion, Kind: "InstanceTypesCatalog"})
+	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceTypesCatalogVersion, Kind: "InstanceTypesCatalog"})
 	if err := s.Client.Get(ctx, types.NamespacedName{Name: instanceTypesCatalogName}, obj); err != nil {
 		return capacity.NewInstanceTypesCatalog(nil)
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package capi
 
 import (
+	"context"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -50,7 +51,7 @@ type BaseWithReader struct {
 func (b *BaseWithReader) Setup(mgr ctrl.Manager) error {
 	b.APIReader = mgr.GetAPIReader()
 
-	kinds, err := common.ServedInstanceClassKinds(mgr.GetConfig())
+	kinds, err := common.ServedInstanceClassKinds(context.Background(), mgr.GetAPIReader(), mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("discover InstanceClass kinds: %w", err)
 	}

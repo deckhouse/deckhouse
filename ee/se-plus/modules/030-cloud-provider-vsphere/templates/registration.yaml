@@ -7,6 +7,11 @@
 type: {{ b64enc "vsphere" | quote }}
 region: {{ $providerClusterConfiguration.region | b64enc | quote }}
 zones: {{ $providerClusterConfiguration.zones | toJson | b64enc | quote }}
+# Storage version of the InstanceClass CRD. node-controller reads the InstanceClass through it, so the
+# read never goes through a conversion webhook. Must not be a non-storage version: its result also
+# depends on whether that webhook is wired yet, and the value feeds a checksum that names an
+# immutable MachineTemplate — changing it recreates every node in the NodeGroup.
+instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 instanceClassKind: {{ b64enc "VsphereInstanceClass" | quote }}
 machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}
 {{- $vsphereValues := dict }}

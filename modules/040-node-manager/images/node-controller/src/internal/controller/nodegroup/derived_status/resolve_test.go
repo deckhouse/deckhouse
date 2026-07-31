@@ -23,15 +23,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -57,31 +56,51 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func TestResolveInstanceClassVersion(t *testing.T) {
-	t.Run("nil mapper falls back to default version", func(t *testing.T) {
-		assert.Equal(t, instanceClassVersion, resolveInstanceClassVersion(nil, "VCDInstanceClass"))
-	})
+func cloudProviderSecret(data map[string][]byte) *corev1.Secret {
+	return testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, data)
+}
 
-	t.Run("unknown kind falls back to default version", func(t *testing.T) {
-		mapper := meta.NewDefaultRESTMapper(nil)
-		assert.Equal(t, instanceClassVersion, resolveInstanceClassVersion(mapper, "UnknownInstanceClass"))
-	})
+func TestInstanceClassAPIVersion(t *testing.T) {
+	tests := []struct {
+		name       string
+		objs       []client.Object
+		expVersion string
+		expErr     string
+	}{
+		{
+			name:       "published version is used verbatim",
+			objs:       []client.Object{cloudProviderSecret(map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1")})},
+			expVersion: "v1",
+		},
+		{
+			name:       "a provider serving only v1alpha1 is honoured",
+			objs:       []client.Object{cloudProviderSecret(map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1alpha1")})},
+			expVersion: "v1alpha1",
+		},
+		{
+			// No guessing: a version picked here would feed the instance-class checksum, and a
+			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
+			name:   "provider registered without the key errors instead of guessing",
+			objs:   []client.Object{cloudProviderSecret(map[string][]byte{"instanceClassKind": []byte("YandexInstanceClass")})},
+			expErr: "instanceClassAPIVersion is not published",
+		},
+		{
+			name:   "no provider secret at all errors instead of guessing",
+			expErr: "instanceClassAPIVersion is not published",
+		},
+	}
 
-	t.Run("v1-only kind resolves to v1", func(t *testing.T) {
-		gv := schema.GroupVersion{Group: instanceClassGroup, Version: "v1"}
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{gv})
-		mapper.Add(gv.WithKind("VCDInstanceClass"), meta.RESTScopeRoot)
-		assert.Equal(t, "v1", resolveInstanceClassVersion(mapper, "VCDInstanceClass"))
-	})
-
-	t.Run("multi-version kind resolves to preferred v1", func(t *testing.T) {
-		v1gv := schema.GroupVersion{Group: instanceClassGroup, Version: "v1"}
-		alphaGV := schema.GroupVersion{Group: instanceClassGroup, Version: "v1alpha1"}
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{v1gv, alphaGV})
-		mapper.Add(v1gv.WithKind("YandexInstanceClass"), meta.RESTScopeRoot)
-		mapper.Add(alphaGV.WithKind("YandexInstanceClass"), meta.RESTScopeRoot)
-		assert.Equal(t, "v1", resolveInstanceClassVersion(mapper, "YandexInstanceClass"))
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := newTestService(t, tc.objs...).instanceClassAPIVersion(t.Context())
+			if tc.expErr != "" {
+				require.ErrorContains(t, err, tc.expErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.expVersion, got)
+		})
+	}
 }
 
 func TestReadStatic_ParsesInternalNetworkCIDRs(t *testing.T) {
@@ -140,7 +159,8 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
-		"instanceClassKind": []byte(`"YandexInstanceClass"`),
+		"instanceClassKind":       []byte(`"YandexInstanceClass"`),
+		"instanceClassAPIVersion": []byte("v1alpha1"),
 	}))
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},

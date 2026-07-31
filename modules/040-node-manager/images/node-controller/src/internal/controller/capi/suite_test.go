@@ -115,6 +115,7 @@ var _ = BeforeSuite(func() {
 	cloudProvider.Data = map[string][]byte{
 		"type":                          []byte(`"dvp"`),
 		"instanceClassKind":             []byte(`"DVPInstanceClass"`),
+		"instanceClassAPIVersion":       []byte("v1alpha1"),
 		"capiClusterKind":               []byte(`"DeckhouseCluster"`),
 		"capiClusterName":               []byte("dvp"),
 		"capiMachineTemplateKind":       []byte("DeckhouseMachineTemplate"),

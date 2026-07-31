@@ -19,4 +19,12 @@ package common
 const (
 	MachineNamespace                 = "d8-cloud-instance-manager"
 	ConfigurationChecksumsSecretName = "configuration-checksums"
+
+	CloudProviderSecretName      = "d8-node-manager-cloud-provider"
+	CloudProviderSecretNamespace = "kube-system"
+
+	// InstanceClassAPIVersionKey is published by the cloud provider module next to
+	// instanceClassKind. See InstanceClassAPIVersion for why the version is data and not
+	// something node-controller is allowed to work out for itself.
+	InstanceClassAPIVersionKey = "instanceClassAPIVersion"
 )

@@ -66,7 +66,7 @@ type Status struct {
 func (r *Status) Setup(mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
 
-	kinds, err := nodecommon.ServedInstanceClassKinds(mgr.GetConfig())
+	kinds, err := nodecommon.ServedInstanceClassKinds(context.Background(), mgr.GetAPIReader(), mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("discover InstanceClass kinds: %w", err)
 	}

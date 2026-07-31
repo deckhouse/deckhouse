@@ -119,7 +119,8 @@ func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
 			},
 		},
 		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
-			"instanceClassKind": []byte(`"YandexInstanceClass"`),
+			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
+			"instanceClassAPIVersion": []byte("v1alpha1"),
 		}),
 		secret(secretNamespace, secretName, map[string][]byte{
 			secretInputKey: priorInput,
@@ -147,7 +148,8 @@ func TestAssemble_OmitsFailingNodeGroupWithoutPrior(t *testing.T) {
 			},
 		},
 		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
-			"instanceClassKind": []byte(`"YandexInstanceClass"`),
+			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
+			"instanceClassAPIVersion": []byte("v1alpha1"),
 		}),
 	)
 

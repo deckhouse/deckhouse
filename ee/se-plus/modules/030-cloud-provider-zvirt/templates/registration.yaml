@@ -9,6 +9,11 @@ type: {{ b64enc "zvirt" | quote }}
 # oVirt/zVirt lacks regions and zones, so we mock a single region and zone
 region: {{ b64enc $region | quote }}
 zones: {{ $zones | toJson | b64enc | quote }}
+# Storage version of the InstanceClass CRD. node-controller reads the InstanceClass through it, so the
+# read never goes through a conversion webhook. Must not be a non-storage version: its result also
+# depends on whether that webhook is wired yet, and the value feeds a checksum that names an
+# immutable MachineTemplate — changing it recreates every node in the NodeGroup.
+instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 instanceClassKind: {{ b64enc "ZvirtInstanceClass" | quote }}
 machineClassKind: {{ b64enc "" | quote }}
 capiClusterKind: {{ b64enc "ZvirtCluster" | quote }}

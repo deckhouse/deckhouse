@@ -67,7 +67,7 @@ func (c *Controller) Setup(mgr ctrl.Manager) error {
 	}
 	c.clientset = cs
 
-	kinds, err := nodecommon.ServedInstanceClassKinds(mgr.GetConfig())
+	kinds, err := nodecommon.ServedInstanceClassKinds(context.Background(), mgr.GetAPIReader(), mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("discover InstanceClass kinds: %w", err)
 	}

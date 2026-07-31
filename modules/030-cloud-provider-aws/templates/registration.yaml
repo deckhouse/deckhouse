@@ -5,6 +5,11 @@
 type: {{ b64enc "aws" | quote }}
 region: {{ $context.Values.cloudProviderAws.internal.region | b64enc | quote }}
 zones: {{ $context.Values.cloudProviderAws.internal.zones | toJson | b64enc | quote }}
+# Storage version of the InstanceClass CRD. node-controller reads the InstanceClass through it, so the
+# read never goes through a conversion webhook. Must not be a non-storage version: its result also
+# depends on whether that webhook is wired yet, and the value feeds a checksum that names an
+# immutable MachineTemplate — changing it recreates every node in the NodeGroup.
+instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 instanceClassKind: {{ b64enc "AWSInstanceClass" | quote }}
 machineClassKind: {{ b64enc "AWSMachineClass" | quote }}
 # AWS

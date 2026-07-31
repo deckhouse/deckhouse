@@ -308,6 +308,15 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 	}
 	cloudType, _ := cloudProvider["type"].(string)
 
+	// Rendering reads the InstanceClass, and the version it is read through decides the
+	// instance-class checksum below, which in turn names an immutable MachineTemplate. Guessing a
+	// version here would rename that template and roll every machine in the NodeGroup, so wait for
+	// the provider to publish one instead. See common.InstanceClassAPIVersion.
+	if version, _ := cloudProvider[common.InstanceClassAPIVersionKey].(string); version == "" {
+		logger.V(1).Info("skipping CAPI: " + common.InstanceClassAPIVersionKey + " is not published yet")
+		return nil
+	}
+
 	ds := &derived_status.Service{Client: r.Client, Reader: r.APIReader}
 	resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, rawSpec)
 	if err != nil {

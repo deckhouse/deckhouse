@@ -18,6 +18,7 @@ apiserverProxyCerts:
 bootstrapTokens:
   cloud-worker: abcdef.0123456789abcdef
 cloudProvider:
+  instanceClassAPIVersion: v1alpha1
   instanceClassKind: D8TestInstanceClass
   machineClassKind: YandexMachineClass
   region: ru-central1

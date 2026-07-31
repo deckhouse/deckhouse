@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,6 +37,39 @@ import (
 
 const instanceClassKindSuffix = "InstanceClass"
 
+// InstanceClassAPIVersion returns the API version every InstanceClass read must use. The cloud
+// provider module publishes it in the registration Secret next to instanceClassKind, and it is
+// always the CRD's storage version, so a read never goes through a conversion webhook. An empty
+// result means the Secret is not published yet; callers must wait rather than pick a version of
+// their own.
+//
+// The version is deliberately not resolved from discovery. Two independent things make a
+// non-pinned read return different values for the same unchanged object:
+//
+//   - Which version a group resolves to depends on whichever version the RESTMapper happened to
+//     load first, and it is then cached for the whole process lifetime (controller-runtime
+//     pkg/client/apiutil/restmapper.go, "Prepend if preferred version, else append"). Two pods of
+//     the same build can disagree, permanently.
+//   - Reading a non-storage version also changes answer the moment the CRD's conversion webhook is
+//     wired. Deckhouse CRDs ship without spec.conversion and get it patched in at runtime, so
+//     early in a cluster's life the same read returns the raw stored value instead of the
+//     converted one.
+//
+// Either difference changes the instance-class checksum. That checksum names an immutable
+// infrastructure MachineTemplate, so a changed checksum renames the template, and the rename
+// recreates every node in the NodeGroup.
+func InstanceClassAPIVersion(ctx context.Context, r client.Reader) (string, error) {
+	secret := &corev1.Secret{}
+	key := types.NamespacedName{Namespace: CloudProviderSecretNamespace, Name: CloudProviderSecretName}
+	if err := r.Get(ctx, key, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("get %s secret: %w", CloudProviderSecretName, err)
+	}
+	return string(secret.Data[InstanceClassAPIVersionKey]), nil
+}
+
 // ServedInstanceClassKinds discovers the InstanceClass kinds the cluster actually serves, so the
 // controllers can watch them. The kind is provider-specific (AWSInstanceClass, DVPInstanceClass,
 // …) and therefore cannot be compiled in; discovery is done once at controller setup.
@@ -43,31 +78,43 @@ const instanceClassKindSuffix = "InstanceClass"
 // ten minutes during which the rendered MachineClass, the machine template and the bashible
 // context all describe the previous instance type. The helm implementation reacted immediately.
 //
-// Watching costs no extra informer: the derived-status service already reads these objects
-// through the cached unstructured client, so the informer exists either way.
-func ServedInstanceClassKinds(cfg *rest.Config) ([]schema.GroupVersionKind, error) {
+// Only the pinned version is enumerated, never the group's preferred one: the derived-status
+// service reads these objects at exactly that version, and a watch on any other version would both
+// miss the informer it is supposed to share and observe values a conversion webhook rewrote.
+func ServedInstanceClassKinds(ctx context.Context, r client.Reader, cfg *rest.Config) ([]schema.GroupVersionKind, error) {
+	version, err := InstanceClassAPIVersion(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	// The provider module has not registered yet. The resync still covers InstanceClass objects.
+	if version == "" {
+		return nil, nil
+	}
+
 	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("build discovery client: %w", err)
 	}
 
-	// Partial discovery is normal (an aggregated API can be momentarily unavailable) and must
-	// not cost us the watches for the groups that did answer.
-	lists, err := dc.ServerPreferredResources()
-	if err != nil && len(lists) == 0 {
-		return nil, fmt.Errorf("list served resources: %w", err)
+	gv := schema.GroupVersion{Group: v1.GroupVersion.Group, Version: version}
+	list, err := dc.ServerResourcesForGroupVersion(gv.String())
+	if err != nil {
+		// The provider's CRDs may not be applied yet; the resync still covers their objects.
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("list resources of %s: %w", gv.String(), err)
 	}
 
 	var gvks []schema.GroupVersionKind
-	for _, list := range lists {
-		gv, parseErr := schema.ParseGroupVersion(list.GroupVersion)
-		if parseErr != nil || gv.Group != v1.GroupVersion.Group {
+	for _, res := range list.APIResources {
+		// Subresources repeat the parent's Kind ("…instanceclasses/status") and would register
+		// the same watch twice.
+		if strings.Contains(res.Name, "/") {
 			continue
 		}
-		for _, res := range list.APIResources {
-			if strings.HasSuffix(res.Kind, instanceClassKindSuffix) && res.Kind != instanceClassKindSuffix {
-				gvks = append(gvks, gv.WithKind(res.Kind))
-			}
+		if strings.HasSuffix(res.Kind, instanceClassKindSuffix) && res.Kind != instanceClassKindSuffix {
+			gvks = append(gvks, gv.WithKind(res.Kind))
 		}
 	}
 	return gvks, nil

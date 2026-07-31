@@ -104,8 +104,11 @@ func (s *Service) capacityError(ctx context.Context, kind, name string) error {
 }
 
 func (s *Service) readInstanceClassNames(ctx context.Context, kind string) ([]string, error) {
+	version, err := s.instanceClassAPIVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
 	list := &unstructured.UnstructuredList{}
-	version := resolveInstanceClassVersion(s.Client.RESTMapper(), kind)
 	list.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: version, Kind: kind + "List"})
 	if err := s.Client.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list %s: %w", kind, err)
