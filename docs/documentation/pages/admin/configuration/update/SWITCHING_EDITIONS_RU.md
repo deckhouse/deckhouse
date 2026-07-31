@@ -158,10 +158,10 @@ Summary:
       Получить актуальные дайджесты cidecar образов
 
       ```bash
-      DKP_REPO=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F':' '{print $1}')
+      DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F':' '{print $1}')
       DKP_TAG=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F':' '{print $2}')
 
-      d8 k run dkp-image --image=$DKP_REPO/install:$DKP_TAG --command sleep -- infinity
+      d8 k run dkp-image --image=$DECKHOUSE_VERSION/install:$DKP_TAG --command sleep -- infinity
       d8 k wait --for=condition=ready pod/dkp-image --timeout=300s
 
       DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec dkp-image -- cat /deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
@@ -174,8 +174,8 @@ Summary:
 
       ```bash
       d8 k -n d8-system set image deployment/deckhouse \
-      kube-rbac-proxy=$DKP_REPO@$DECKHOUSE_KUBE_RBAC_PROXY \
-      init-downloaded-modules=$DKP_REPO@$DECKHOUSE_INIT
+      kube-rbac-proxy=$DECKHOUSE_VERSION@$DECKHOUSE_KUBE_RBAC_PROXY \
+      init-downloaded-modules=$DECKHOUSE_VERSION@$DECKHOUSE_INIT
       ```
 
    1. Убедитесь, в отсутствии ошибки скачивания образа:
