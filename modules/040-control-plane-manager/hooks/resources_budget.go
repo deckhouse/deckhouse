@@ -50,48 +50,6 @@ const (
 	kubeletResourceReservationCPUFloor    = 100               // 0.1 cpu
 )
 
-// Control-plane component keys used in internal values / ConfigMap / templates.
-// Container names match static-pod container names and PodMetric selectors.
-const (
-	componentKubeApiserver         = "kubeApiserver"
-	componentEtcd                  = "etcd"
-	componentKubeControllerManager = "kubeControllerManager"
-	componentKubeScheduler         = "kubeScheduler"
-
-	containerKubeApiserver         = "kube-apiserver"
-	containerEtcd                  = "etcd"
-	containerKubeControllerManager = "kube-controller-manager"
-	containerKubeScheduler         = "kube-scheduler"
-
-	resourceCPU    = "cpu"
-	resourceMemory = "memory"
-)
-
-// controlPlaneComponents lists components in a stable order.
-var controlPlaneComponents = []string{
-	componentKubeApiserver,
-	componentEtcd,
-	componentKubeControllerManager,
-	componentKubeScheduler,
-}
-
-// componentContainer maps internal component key → static-pod container name.
-var componentContainer = map[string]string{
-	componentKubeApiserver:         containerKubeApiserver,
-	componentEtcd:                  containerEtcd,
-	componentKubeControllerManager: containerKubeControllerManager,
-	componentKubeScheduler:         containerKubeScheduler,
-}
-
-// componentFallbackPercent is the fixed %-split used when per-component
-// autotune values are absent (bootstrap / manual override / cold start).
-var componentFallbackPercent = map[string]int64{
-	componentKubeApiserver:         33,
-	componentEtcd:                  35,
-	componentKubeControllerManager: 20,
-	componentKubeScheduler:         10,
-}
-
 type Node struct {
 	CapacityMilliCPU    int64
 	CapacityMemory      int64
@@ -165,10 +123,6 @@ func minMasterNodeBudget(nodes []Node) (int64, int64, bool) {
 	return discoveryMasterNodeMilliCPU - configEveryNodeMilliCPU,
 		discoveryMasterNodeMemory - configEveryNodeMemory,
 		true
-}
-
-func fallbackSplit(total, percent int64) int64 {
-	return total * percent / 100
 }
 
 // significantResourceChange reports whether rec differs from applied enough to

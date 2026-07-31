@@ -27,7 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-// masterNodeYAML / autotuneStateYAML are defined in autotune_resources_requests_test.go (same package).
+// Shared fixtures: masterNodeYAML / autotuneStateYAML live in resources_test_helpers_test.go.
 
 var _ = Describe("Module hooks :: control-plane-manager :: resources_repopulate_autotune", func() {
 	f := HookExecutionConfigInit(
@@ -41,7 +41,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_repopulate_
 		BeforeEach(func() {
 			called = false
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus","prometheus-metrics-adapter"]`))
-			fetchComponentUsage = func(_ context.Context, _ dependency.Container, _, _ string) (float64, bool, error) {
+			fetchComponentUsage = func(_ context.Context, _ dependency.Container, _ string, _ resourceKind) (float64, bool, error) {
 				called = true
 				return 0, false, nil
 			}

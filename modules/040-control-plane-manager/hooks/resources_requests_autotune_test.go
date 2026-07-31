@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -30,33 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-func autotuneStateYAML(state autotuneState) string {
-	raw, err := json.Marshal(state)
-	Expect(err).ToNot(HaveOccurred())
-	// Embed JSON as a single-line string value for the ConfigMap.
-	escaped, err := json.Marshal(string(raw))
-	Expect(err).ToNot(HaveOccurred())
-	return fmt.Sprintf(`
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: %s
-  namespace: kube-system
-data:
-  state: %s
-`, autotuneStateCMName, string(escaped))
-}
-
-func masterNodeYAML() string {
-	return generateMasterNodesConfig([]masterNode{{
-		cpu:    "8",
-		memory: "16Gi",
-		capCPU: "8",
-		capMem: "16Gi",
-	}})
-}
 
 var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune :: decide", func() {
 	now := time.Date(2026, 7, 23, 12, 0, 0, 0, time.UTC)
@@ -85,13 +57,13 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		`{}`,
 	)
 
-	var usage map[string]map[string]float64
+	var usage map[string]map[resourceKind]float64
 
 	BeforeEach(func() {
-		usage = map[string]map[string]float64{}
+		usage = map[string]map[resourceKind]float64{}
 		f.ValuesDelete("controlPlaneManager.resourcesRequests")
 		f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus","prometheus-metrics-adapter"]`))
-		fetchComponentUsage = func(_ context.Context, _ dependency.Container, component, resourceName string) (float64, bool, error) {
+		fetchComponentUsage = func(_ context.Context, _ dependency.Container, component string, resourceName resourceKind) (float64, bool, error) {
 			if byRes, ok := usage[component]; ok {
 				if v, ok := byRes[resourceName]; ok {
 					return v, true, nil
@@ -118,7 +90,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 					},
 				},
 			}
-			usage[componentKubeApiserver] = map[string]float64{resourceCPU: 0.25}
+			usage[componentKubeApiserver] = map[resourceKind]float64{resourceCPU: 0.25}
 			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 			f.RunHook()
@@ -147,7 +119,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 				},
 			}
 			for _, c := range controlPlaneComponents {
-				usage[c] = map[string]float64{resourceCPU: 0.5}
+				usage[c] = map[resourceKind]float64{resourceCPU: 0.5}
 			}
 			f.KubeStateSet(tiny + autotuneStateYAML(st))
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
@@ -249,24 +221,12 @@ etcd:
 
 	Context("Schedule: first memory commit", func() {
 		BeforeEach(func() {
-			// Complete cpu+memory set required for the initial snapshot gate.
+			setNearFallbackUsage(usage)
 			// Apiserver recommendations differ enough from %-split (660m / ~1.4Gi)
 			// to pass the deadband; others stay near fallback.
-			usage[componentKubeApiserver] = map[string]float64{
+			usage[componentKubeApiserver] = map[resourceKind]float64{
 				resourceCPU:    0.25,
 				resourceMemory: 256 * 1024 * 1024,
-			}
-			usage[componentEtcd] = map[string]float64{
-				resourceCPU:    0.70,
-				resourceMemory: 1503238553, // ~35% of 4Gi
-			}
-			usage[componentKubeControllerManager] = map[string]float64{
-				resourceCPU:    0.40,
-				resourceMemory: 858993459, // ~20% of 4Gi
-			}
-			usage[componentKubeScheduler] = map[string]float64{
-				resourceCPU:    0.20,
-				resourceMemory: 429496729, // ~10% of 4Gi
 			}
 			f.KubeStateSet(masterNodeYAML())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
@@ -285,7 +245,7 @@ etcd:
 
 	Context("Schedule: incomplete initial metrics wait without writing components", func() {
 		BeforeEach(func() {
-			usage[componentKubeApiserver] = map[string]float64{
+			usage[componentKubeApiserver] = map[resourceKind]float64{
 				resourceCPU:    0.25,
 				resourceMemory: 256 * 1024 * 1024,
 			}
@@ -303,21 +263,10 @@ etcd:
 	Context("Schedule: empty-string memory override does not skip memory autotune", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("controlPlaneManager.resourcesRequests", []byte("memory: \"\"\n"))
-			usage[componentKubeApiserver] = map[string]float64{
+			setNearFallbackUsage(usage)
+			usage[componentKubeApiserver] = map[resourceKind]float64{
 				resourceCPU:    0.25,
 				resourceMemory: 256 * 1024 * 1024,
-			}
-			usage[componentEtcd] = map[string]float64{
-				resourceCPU:    0.70,
-				resourceMemory: 1503238553,
-			}
-			usage[componentKubeControllerManager] = map[string]float64{
-				resourceCPU:    0.40,
-				resourceMemory: 858993459,
-			}
-			usage[componentKubeScheduler] = map[string]float64{
-				resourceCPU:    0.20,
-				resourceMemory: 429496729,
 			}
 			f.KubeStateSet(masterNodeYAML())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
