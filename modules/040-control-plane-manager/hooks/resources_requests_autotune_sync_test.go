@@ -27,9 +27,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-// Shared fixtures: masterNodeYAML / autotuneStateYAML live in resources_test_helpers_test.go.
-
-var _ = Describe("Module hooks :: control-plane-manager :: resources_repopulate_autotune", func() {
+var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune_sync", func() {
 	f := HookExecutionConfigInit(
 		`{"controlPlaneManager":{"internal":{"resourcesRequests":{"milliCpuControlPlane":2000,"memoryControlPlane":4294967296}}},"global":{"enabledModules":["prometheus","prometheus-metrics-adapter"]}}`,
 		`{}`,

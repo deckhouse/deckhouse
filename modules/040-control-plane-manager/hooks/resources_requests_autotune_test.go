@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -29,6 +30,51 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+func autotuneStateYAML(state autotuneState) string {
+	raw, err := json.Marshal(state)
+	Expect(err).ToNot(HaveOccurred())
+	escaped, err := json.Marshal(string(raw))
+	Expect(err).ToNot(HaveOccurred())
+	return fmt.Sprintf(`
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: %s
+  namespace: kube-system
+data:
+  state: %s
+`, autotuneStateCMName, string(escaped))
+}
+
+func masterNodeYAML() string {
+	return generateMasterNodesConfig([]masterNode{{
+		cpu:    "8",
+		memory: "16Gi",
+		capCPU: "8",
+		capMem: "16Gi",
+	}})
+}
+
+func setNearFallbackUsage(usage map[string]map[resourceKind]float64) {
+	usage[componentKubeApiserver] = map[resourceKind]float64{
+		resourceCPU:    0.66,
+		resourceMemory: 1417339207,
+	}
+	usage[componentEtcd] = map[resourceKind]float64{
+		resourceCPU:    0.70,
+		resourceMemory: 1503238553,
+	}
+	usage[componentKubeControllerManager] = map[resourceKind]float64{
+		resourceCPU:    0.40,
+		resourceMemory: 858993459,
+	}
+	usage[componentKubeScheduler] = map[resourceKind]float64{
+		resourceCPU:    0.20,
+		resourceMemory: 429496729,
+	}
+}
 
 var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune :: decide", func() {
 	now := time.Date(2026, 7, 23, 12, 0, 0, 0, time.UTC)
