@@ -269,6 +269,26 @@ conditions:
 
 {% endcapture %}
 
+{% capture registry_status_example_relax %}
+
+```yaml
+conditions:
+  - lastTransitionTime: "2026-05-05T13:53:23Z"
+    message: |-
+      Mode: Default
+      registry.deckhouse.io: all 1 items are checked
+    reason: Ready
+    status: "True"
+    type: RegistryContainsRequiredImages
+  - lastTransitionTime: "2026-05-05T13:54:49Z"
+    message: ""
+    reason: ""
+    status: "True"
+    type: Ready
+```
+
+{% endcapture %}
+
 {% capture alert_additional_registry %}
 {% alert level="info" %}
 If you need to add configuration for an additional registry in containerd, refer to the [How to add configuration for an additional registry in containerd](/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry-in-containerd) section.
@@ -321,10 +341,10 @@ spec:
   - '*'
   bundles:
   - '*'
-  weight: 40
+  weight: 1
   content: |
-    mkdir -p /etc/containerd/registry.d/registry.deckhouse.io
-    bb-sync-file "/etc/containerd/registry.d/registry.deckhouse.io/hosts.toml" - << "EOF"
+    mkdir -p /etc/containerd/registry.d/_default
+    bb-sync-file /etc/containerd/registry.d/_default/hosts.toml - << "EOF"
     [host]
 
       [host."https://registry.deckhouse.io"]
@@ -393,13 +413,30 @@ spec:
       rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
     fi
 EOF
-d8 k delete ngc del-temp-config.sh
+d8 k --as=system:sudouser delete ngc del-temp-config.sh
 ```
 
 For ContainerdV2
 
 ```shell
-d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
+d8 k --as=system:sudouser delete ngc containerdv2-$NEW_EDITION-config.sh
+d8 k --as=system:sudouser apply -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: del-temp-config.sh
+spec:
+  nodeGroups:
+  - '*'
+  bundles:
+  - '*'
+  weight: 1
+  content: |
+   if [ -d /etc/containerd/registry.d/_default ]; then
+      rm -rf /etc/containerd/registry.d/_default
+   fi
+EOF
+d8 k --as=system:sudouser delete ngc del-temp-config.sh
 ```
 
 {% endcapture %}
@@ -699,7 +736,7 @@ Not applicable for managed Kubernetes (EKS, AKS, GKE).
 
    Example of a successful output:
 
-   {{ registry_status_example | regex_replace: "^", "   " }}
+   {{ registry_status_example_relax | regex_replace: "^", "   " }}
 
 1. Set `checkMode` back to `Default`:
 
