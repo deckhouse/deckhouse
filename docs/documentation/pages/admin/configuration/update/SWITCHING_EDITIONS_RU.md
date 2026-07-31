@@ -359,7 +359,7 @@ registry.deckhouse.ru/deckhouse/$NEW_EDITION
 
 ```shell
 AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
-d8 k apply -f - <<EOF
+d8 k --as=system:sudouser apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
@@ -369,7 +369,7 @@ spec:
   - '*'
   bundles:
   - '*'
-  weight: 0
+  weight: 1
   content: |
     mkdir -p /etc/containerd/conf.d
     bb-sync-file /etc/containerd/conf.d/$NEW_EDITION-registry.toml - << "EOF"
@@ -388,7 +388,7 @@ EOF
 Для ContainerdV2:
 
 ```shell
-d8 k apply -f - <<EOF
+d8 k --as=system:sudouser apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
@@ -398,10 +398,10 @@ spec:
   - '*'
   bundles:
   - '*'
-  weight: 0
+  weight: 40
   content: |
     mkdir -p /etc/containerd/registry.d/registry.deckhouse.ru
-    bb-sync-file /etc/containerd/registry.d/registry.deckhouse.ru/hosts.toml - << "EOF"
+    bb-sync-file "/etc/containerd/registry.d/registry.deckhouse.ru/hosts.toml" - << "EOF"
     [host]
 
       [host."https://registry.deckhouse.ru"]
@@ -420,8 +420,8 @@ EOF
 Для ContainerdV1
 
 ```shell
-d8 k delete ngc containerdv1-$NEW_EDITION-config.sh
-d8 k apply -f - <<EOF
+d8 k --as=system:sudouser delete ngc containerdv1-$NEW_EDITION-config.sh
+d8 k --as=system:sudouser apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
@@ -431,7 +431,7 @@ spec:
   - '*'
   bundles:
   - '*'
-  weight: 0
+  weight: 1
   content: |
     if [ -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml ]; then
       rm -f /etc/containerd/conf.d/$NEW_EDITION-registry.toml
