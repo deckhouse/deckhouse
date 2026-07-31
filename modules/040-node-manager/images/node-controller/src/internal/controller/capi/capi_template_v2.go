@@ -125,6 +125,11 @@ func (r *MachineDeploymentReconciler) ensureMachineTemplateGeneration(ctx contex
 			// partial restore). Recreating it under a NEW name would switch the reference and roll
 			// every machine of the group; recreating it under the SAME name restores what the
 			// MachineSet expects and rolls nothing.
+			//
+			// The restored object is rendered from today's template text and provider config, so
+			// it can differ from the one that was deleted — the original content is not recoverable
+			// once the object is gone. That is the lesser evil: without the object the MachineSet
+			// cannot create replacement machines at all.
 			if err := r.createMachineTemplate(ctx, in, in.currentName); err != nil && !errors.IsAlreadyExists(err) {
 				return "", err
 			}
