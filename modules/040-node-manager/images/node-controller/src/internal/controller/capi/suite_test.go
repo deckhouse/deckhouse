@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -87,6 +88,8 @@ var _ = BeforeSuite(func() {
 
 	scheme = k8sruntime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
+	// The provider-contract specs install one CRD per provider kind at runtime.
+	Expect(apiextensionsv1.AddToScheme(scheme)).To(Succeed())
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
 	Expect(capiv1beta2.AddToScheme(scheme)).To(Succeed())
 	Expect(mcmv1alpha1.AddToScheme(scheme)).To(Succeed())

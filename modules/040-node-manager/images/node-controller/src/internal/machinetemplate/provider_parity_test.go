@@ -60,6 +60,11 @@ type providerFixture struct {
 	name string
 	// contractPath points at the file the provider module really ships today.
 	contractPath string
+	// crdPath points at the provider's InstanceClass CRD — the authority on which fields exist.
+	crdPath string
+	// registrationPath points at the helm template publishing the provider's registration secret,
+	// where the GVK of the machine template is declared a second time.
+	registrationPath string
 	// providerConfig is this provider's subtree of the d8-node-manager-cloud-provider secret.
 	providerConfig map[string]any
 	instanceClass  map[string]any
@@ -73,9 +78,12 @@ type providerFixture struct {
 func providerFixtures() []providerFixture {
 	return []providerFixture{
 		{
-			name:           "dvp",
-			contractPath:   "../../../../../../030-cloud-provider-dvp/capi/template.yaml",
-			providerConfig: map[string]any{},
+			name:    "dvp",
+			crdPath: "../../../../../../030-cloud-provider-dvp/crds/instance_class.yaml",
+
+			registrationPath: "../../../../../../030-cloud-provider-dvp/templates/registration.yaml",
+			contractPath:     "../../../../../../030-cloud-provider-dvp/capi/template.yaml",
+			providerConfig:   map[string]any{},
 			instanceClass: map[string]any{
 				"virtualMachine": map[string]any{
 					"virtualMachineClassName": "generic-vm-class",
@@ -96,8 +104,11 @@ func providerFixtures() []providerFixture {
 			manualRolloutIDIgnoredByV1: true,
 		},
 		{
-			name:         "yandex",
-			contractPath: "../../../../../../030-cloud-provider-yandex/capi/template.yaml",
+			name:    "yandex",
+			crdPath: "../../../../../../030-cloud-provider-yandex/candi/openapi/instance_class.yaml",
+
+			registrationPath: "../../../../../../030-cloud-provider-yandex/templates/registration.yaml",
+			contractPath:     "../../../../../../030-cloud-provider-yandex/capi/template.yaml",
 			providerConfig: map[string]any{
 				"instanceClassDefaults":       map[string]any{"imageID": "fd8default"},
 				"zoneToSubnetIdMap":           map[string]any{parityZone: "e9bsubnet"},
@@ -125,8 +136,11 @@ func providerFixtures() []providerFixture {
 			// expressed here — see TestYandexDefaultDiskSizeDivergence.
 		},
 		{
-			name:         "openstack",
-			contractPath: "../../../../../../../ee/modules/030-cloud-provider-openstack/capi/template.yaml",
+			name:    "openstack",
+			crdPath: "../../../../../../../ee/modules/030-cloud-provider-openstack/candi/openapi/instance_class.yaml",
+
+			registrationPath: "../../../../../../../ee/modules/030-cloud-provider-openstack/templates/registration.yaml",
+			contractPath:     "../../../../../../../ee/modules/030-cloud-provider-openstack/capi/template.yaml",
 			providerConfig: map[string]any{
 				"instances": map[string]any{
 					"imageName":          "ubuntu-24-04",
@@ -151,8 +165,11 @@ func providerFixtures() []providerFixture {
 			},
 		},
 		{
-			name:         "huaweicloud",
-			contractPath: "../../../../../../../ee/modules/030-cloud-provider-huaweicloud/capi/template.yaml",
+			name:    "huaweicloud",
+			crdPath: "../../../../../../../ee/modules/030-cloud-provider-huaweicloud/candi/openapi/instance_class.yaml",
+
+			registrationPath: "../../../../../../../ee/modules/030-cloud-provider-huaweicloud/templates/registration.yaml",
+			contractPath:     "../../../../../../../ee/modules/030-cloud-provider-huaweicloud/capi/template.yaml",
 			providerConfig: map[string]any{
 				"subnetId":        "subnet-default",
 				"securityGroupId": "sg-default",
@@ -172,9 +189,12 @@ func providerFixtures() []providerFixture {
 			manualRolloutIDIgnoredByV1: true,
 		},
 		{
-			name:           "dynamix",
-			contractPath:   "../../../../../../../ee/modules/030-cloud-provider-dynamix/capi/template.yaml",
-			providerConfig: map[string]any{},
+			name:    "dynamix",
+			crdPath: "../../../../../../../ee/modules/030-cloud-provider-dynamix/candi/openapi/instance_class.yaml",
+
+			registrationPath: "../../../../../../../ee/modules/030-cloud-provider-dynamix/templates/registration.yaml",
+			contractPath:     "../../../../../../../ee/modules/030-cloud-provider-dynamix/capi/template.yaml",
+			providerConfig:   map[string]any{},
 			instanceClass: map[string]any{
 				"imageName":       "ubuntu-24-04",
 				"numCPUs":         float64(4),
@@ -185,8 +205,11 @@ func providerFixtures() []providerFixture {
 			manualRolloutIDIgnoredByV1: true,
 		},
 		{
-			name:         "vcd",
-			contractPath: "../../../../../../../ee/modules/030-cloud-provider-vcd/capi/template.yaml",
+			name:    "vcd",
+			crdPath: "../../../../../../../ee/modules/030-cloud-provider-vcd/candi/openapi/instance_class.yaml",
+
+			registrationPath: "../../../../../../../ee/modules/030-cloud-provider-vcd/templates/registration.yaml",
+			contractPath:     "../../../../../../../ee/modules/030-cloud-provider-vcd/capi/template.yaml",
 			providerConfig: map[string]any{
 				"metadata": map[string]any{"owner": "platform"},
 			},
@@ -200,9 +223,12 @@ func providerFixtures() []providerFixture {
 			},
 		},
 		{
-			name:           "zvirt",
-			contractPath:   "../../../../../../../ee/se-plus/modules/030-cloud-provider-zvirt/capi/template.yaml",
-			providerConfig: map[string]any{},
+			name:    "zvirt",
+			crdPath: "../../../../../../../ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi/instance_class.yaml",
+
+			registrationPath: "../../../../../../../ee/se-plus/modules/030-cloud-provider-zvirt/templates/registration.yaml",
+			contractPath:     "../../../../../../../ee/se-plus/modules/030-cloud-provider-zvirt/capi/template.yaml",
+			providerConfig:   map[string]any{},
 			instanceClass: map[string]any{
 				"template":       "ubuntu-24-04",
 				"vnicProfileID":  "vnic-1",
@@ -352,11 +378,21 @@ func loadContract(t *testing.T, path string) *Contract {
 // node-controller stamps it.
 func renderLegacyTemplate(t *testing.T, fixture providerFixture) map[string]any {
 	t.Helper()
+	obj, err := renderLegacySpec(t, fixture, fixture.instanceClass)
+	require.NoError(t, err, "v1 template must still render (it is the reference)")
+	return obj
+}
+
+// renderLegacySpec renders the archived v1 template for an arbitrary InstanceClass spec, returning
+// the render error instead of failing: the edge-case specs below assert that both engines accept
+// or refuse the same input.
+func renderLegacySpec(t *testing.T, fixture providerFixture, instanceClass map[string]any) (map[string]any, error) {
+	t.Helper()
 
 	templateContent, err := os.ReadFile(fixture.legacyPath("machine-template.yaml"))
 	require.NoError(t, err)
 
-	nodeGroupValues := legacyNodeGroupValues(fixture.instanceClass, "")
+	nodeGroupValues := legacyNodeGroupValues(instanceClass, "")
 	renderCtx := map[string]any{
 		"Values": map[string]any{
 			"global": map[string]any{
@@ -378,12 +414,28 @@ func renderLegacyTemplate(t *testing.T, fixture providerFixture) map[string]any 
 	}
 
 	rendered, err := machineclass.RenderMachineClass(templateContent, renderCtx)
-	require.NoError(t, err, "v1 template must still render (it is the reference)")
+	if err != nil {
+		return nil, err
+	}
 
 	obj := map[string]any{}
-	require.NoError(t, sigsyaml.Unmarshal(rendered, &obj))
+	if err := sigsyaml.Unmarshal(rendered, &obj); err != nil {
+		return nil, err
+	}
 	delete(obj, "metadata")
-	return obj
+	return obj, nil
+}
+
+// renderV2Spec is the v2 side of the same comparison.
+func renderV2Spec(fixture providerFixture, contract *Contract, instanceClass map[string]any) (map[string]any, error) {
+	return Render(contract, RenderContext{
+		InstanceClass: instanceClass,
+		Provider:      fixture.providerConfig,
+		Zone:          parityZone,
+		NodeGroupName: parityNodeGroup,
+		ClusterUUID:   parityClusterUUID,
+		PodSubnet:     parityPodSubnet,
+	})
 }
 
 func renderLegacyChecksum(t *testing.T, fixture providerFixture, template []byte, instanceClass map[string]any, rolloutID string) string {
