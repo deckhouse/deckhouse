@@ -17,7 +17,6 @@ limitations under the License.
 package helm
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,52 +54,66 @@ func injectionTestClient(t *testing.T) *Client {
 	return &Client{templates: templates, logger: ctrl.Log.WithName("test")}
 }
 
-// stringParameterSchema declares one free-form string parameter, the shape a template author writes
-// when the value is just text.
-func stringParameterSchema(name string) map[string]any {
-	return map[string]any{
+// customTemplate is the shape a cluster administrator writes: one free-form string parameter and a
+// resourcesTemplate that puts it somewhere.
+func customTemplate(parameter, resources string) *v1alpha1.ProjectTemplate {
+	template := new(v1alpha1.ProjectTemplate)
+	template.Name = "custom"
+	template.Spec.ParametersSchema.OpenAPIV3Schema = map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			name: map[string]any{"type": "string"},
+			parameter: map[string]any{"type": "string"},
 		},
 	}
+	template.Spec.ResourcesTemplate = resources
+
+	return template
+}
+
+func shippedTemplate(t *testing.T, name string) *v1alpha1.ProjectTemplate {
+	t.Helper()
+
+	template, err := read[v1alpha1.ProjectTemplate]("../../templates/" + name + ".yaml")
+	require.NoError(t, err)
+
+	return template
 }
 
 // The built-in templates render natively now, but a resourcesTemplate written by a cluster
 // administrator still goes through the Helm engine, and its author is not obliged to know that an
 // unquoted substitution ends at the first line break. The check needs to know nothing about the
 // template: it compares what the parameters rendered into.
-func TestInjectedObjectIsRefusedForAnUnquotedTemplate(t *testing.T) {
-	client := injectionTestClient(t)
+func TestEnsureParametersStayValues(t *testing.T) {
+	t.Parallel()
 
-	template := new(v1alpha1.ProjectTemplate)
-	template.Name = "unquoted"
-	template.Spec.ParametersSchema.OpenAPIV3Schema = stringParameterSchema("owner")
-	template.Spec.ResourcesTemplate = `---
+	tests := []struct {
+		name        string
+		template    func(t *testing.T) *v1alpha1.ProjectTemplate
+		parameters  map[string]any
+		refused     bool
+		messagePart string
+	}{
+		{
+			name: "an injected object",
+			template: func(*testing.T) *v1alpha1.ProjectTemplate {
+				return customTemplate("owner", `---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: owner
 data:
   owner: {{ .parameters.owner }}
-`
-
-	project := new(v1alpha3.Project)
-	project.Name = "test"
-	project.Spec.Parameters = map[string]any{"owner": clusterAdminPayload}
-
-	require.ErrorIs(t, client.ensureParametersStayValues(project, template), ErrParameterInjection)
-}
-
-// The same check with the injection kept small enough that the manifests parse either way: here the
-// difference is not a parse error but an object that came out unlike the one the parameters describe.
-func TestInjectedListItemIsRefusedAndNamed(t *testing.T) {
-	client := injectionTestClient(t)
-
-	template := new(v1alpha1.ProjectTemplate)
-	template.Name = "unquoted-list"
-	template.Spec.ParametersSchema.OpenAPIV3Schema = stringParameterSchema("destination")
-	template.Spec.ResourcesTemplate = `---
+`)
+			},
+			parameters: map[string]any{"owner": clusterAdminPayload},
+			refused:    true,
+		},
+		{
+			// The injection kept small enough that the manifests parse either way: the difference is
+			// not a parse error but an object that came out unlike the one the parameters describe.
+			name: "an injected list item",
+			template: func(*testing.T) *v1alpha1.ProjectTemplate {
+				return customTemplate("destination", `---
 apiVersion: deckhouse.io/v1alpha1
 kind: PodLoggingConfig
 metadata:
@@ -108,26 +121,18 @@ metadata:
 spec:
   clusterDestinationRefs:
     - {{ .parameters.destination }}
-`
-
-	project := new(v1alpha3.Project)
-	project.Name = "test"
-	project.Spec.Parameters = map[string]any{"destination": "mine\n    - somebody-elses"}
-
-	err := client.ensureParametersStayValues(project, template)
-	require.ErrorIs(t, err, ErrParameterInjection)
-	assert.Contains(t, err.Error(), "PodLoggingConfig deckhouse.io/v1alpha1/logs")
-}
-
-// A line break that stays inside a value is not injection, and refusing it would make the check
-// unusable for templates that legitimately take a multi-line parameter.
-func TestMultilineValueInAQuotedFieldIsAllowed(t *testing.T) {
-	client := injectionTestClient(t)
-
-	template := new(v1alpha1.ProjectTemplate)
-	template.Name = "quoted"
-	template.Spec.ParametersSchema.OpenAPIV3Schema = stringParameterSchema("script")
-	template.Spec.ResourcesTemplate = `---
+`)
+			},
+			parameters:  map[string]any{"destination": "mine\n    - somebody-elses"},
+			refused:     true,
+			messagePart: "PodLoggingConfig deckhouse.io/v1alpha1/logs",
+		},
+		{
+			// Refusing this would make the check unusable for templates that legitimately take a
+			// multi-line parameter.
+			name: "a multi-line value in a quoted field",
+			template: func(*testing.T) *v1alpha1.ProjectTemplate {
+				return customTemplate("script", `---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -136,35 +141,79 @@ data:
   script: {{ .parameters.script | quote }}
   block: |
 {{ indent 4 .parameters.script }}
-`
+`)
+			},
+			parameters: map[string]any{"script": "first line\nsecond line\n"},
+		},
+		{
+			// The case that first tripped this check in a live cluster. Nothing about it is an
+			// injection: it is an annotation, and it stays one. The two renders differed by a single
+			// trailing space, because a block scalar comes back from YAML without its final line
+			// break while the same value with the break already replaced comes back with a space in
+			// its place.
+			name:     "a multi-line annotation through the shipped simple template",
+			template: func(t *testing.T) *v1alpha1.ProjectTemplate { return shippedTemplate(t, "simple") },
+			parameters: map[string]any{
+				"namespace": map[string]any{
+					"labels": map[string]any{"team": "platform"},
+					"annotations": map[string]any{
+						"owner-note": "first line\nsecond line: with a colon\n---\nand a separator that must stay text\n",
+					},
+				},
+			},
+		},
+		{
+			// toYaml writes whatever it is given as a value, key or not.
+			name:     "a payload used as an annotation key",
+			template: func(t *testing.T) *v1alpha1.ProjectTemplate { return shippedTemplate(t, "simple") },
+			parameters: map[string]any{
+				"namespace": map[string]any{
+					"annotations": map[string]any{clusterAdminPayload: "value"},
+				},
+			},
+		},
+	}
 
-	project := new(v1alpha3.Project)
-	project.Name = "test"
-	project.Spec.Parameters = map[string]any{"script": "first line\nsecond line\n"}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	require.NoError(t, client.ensureParametersStayValues(project, template))
+			project := new(v1alpha3.Project)
+			project.Name = "test"
+			project.Spec.Parameters = tt.parameters
+
+			err := injectionTestClient(t).ensureParametersStayValues(project, tt.template(t))
+
+			if !tt.refused {
+				require.NoError(t, err)
+
+				return
+			}
+
+			require.ErrorIs(t, err, ErrParameterInjection)
+			if tt.messagePart != "" {
+				assert.Contains(t, err.Error(), tt.messagePart)
+			}
+		})
+	}
 }
 
-// The shipped simple template passes namespace labels and annotations through toYaml, which writes
-// them as values whatever they contain. This is the assertion that keeps it that way.
-func TestSimpleTemplateKeepsNamespaceMetadataAsValues(t *testing.T) {
-	client := injectionTestClient(t)
+// The payload is present in the rendered manifests -- as the value it was put in, which is the
+// point. What matters is that it produced no object of its own.
+func TestPayloadRendersAsAValueAndNothingElse(t *testing.T) {
+	t.Parallel()
 
-	template, err := read[v1alpha1.ProjectTemplate]("../../templates/simple.yaml")
-	require.NoError(t, err)
+	client := injectionTestClient(t)
 
 	project := new(v1alpha3.Project)
 	project.Name = "test"
 	project.Spec.Parameters = map[string]any{
 		"namespace": map[string]any{
-			"labels":      map[string]any{"owner": clusterAdminPayload},
-			"annotations": map[string]any{clusterAdminPayload: "value"},
+			"labels": map[string]any{"owner": clusterAdminPayload},
 		},
 	}
 
-	require.NoError(t, client.ensureParametersStayValues(project, template))
-
-	manifests, err := client.renderTemplate(project, template)
+	manifests, err := client.renderTemplate(project, shippedTemplate(t, "simple"))
 	require.NoError(t, err)
 
 	objects, err := objectDigests(manifests)
@@ -177,29 +226,57 @@ func TestSimpleTemplateKeepsNamespaceMetadataAsValues(t *testing.T) {
 
 // Parameters without a line break cannot produce structure, so the second render is skipped and the
 // ordinary project pays nothing for the check.
-func TestOrdinaryProjectSkipsTheSecondRender(t *testing.T) {
-	assert.False(t, carriesLineBreak(map[string]any{"owner": "user@example.com"}))
-	assert.True(t, carriesLineBreak(map[string]any{"owner": clusterAdminPayload}))
+func TestCarriesLineBreak(t *testing.T) {
+	t.Parallel()
 
-	// A line break spelled the way YAML also accepts it counts the same.
-	assert.True(t, carriesLineBreak(map[string]any{"name": "evil\u2028---"}))
-	assert.True(t, carriesLineBreak([]any{map[string]any{"name": "evil\r"}}))
-}
-
-func TestReplaceLineBreaksKeepsEverythingElse(t *testing.T) {
-	value := map[string]any{
-		"name":    "first\nsecond",
-		"enabled": true,
-		"count":   int64(3),
-		"list":    []any{"a\rb"},
+	tests := []struct {
+		name     string
+		value    any
+		expected bool
+	}{
+		{name: "an ordinary name", value: map[string]any{"owner": "user@example.com"}, expected: false},
+		{name: "a payload", value: map[string]any{"owner": clusterAdminPayload}, expected: true},
+		{name: "a break in a nested list", value: []any{map[string]any{"name": "evil\r"}}, expected: true},
+		{name: "a break in a map key", value: map[string]any{"evil\nkey": "value"}, expected: true},
+		// YAML ends a scalar on these as well, so a check that only knew about \n would miss them.
+		{name: "a line separator", value: map[string]any{"name": "evil\u2028---"}, expected: true},
+		{name: "a next line character", value: map[string]any{"name": "evil\u0085---"}, expected: true},
+		{name: "a value that is not a string", value: map[string]any{"count": int64(3)}, expected: false},
 	}
 
-	stripped, ok := replaceLineBreaks(value).(map[string]any)
-	require.True(t, ok)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expected, carriesLineBreak(tt.value))
+		})
+	}
+}
+
+func TestReplaceLineBreaksIn(t *testing.T) {
+	t.Parallel()
+
+	stripped := replaceLineBreaksIn(map[string]any{
+		"name":     "first\nsecond",
+		"enabled":  true,
+		"count":    int64(3),
+		"list":     []any{"a\rb"},
+		"key\nbad": "value",
+	})
 
 	assert.Equal(t, "first second", stripped["name"])
 	assert.Equal(t, true, stripped["enabled"])
 	assert.Equal(t, int64(3), stripped["count"])
-	assert.Equal(t, []any{"a b"}, stripped["list"].([]any))
-	assert.False(t, strings.Contains(stripped["name"].(string), "\n"))
+	assert.Equal(t, []any{"a b"}, stripped["list"])
+	assert.Contains(t, stripped, "key bad", "a line break in a key is a break like any other")
+}
+
+func TestCollapseWhitespace(t *testing.T) {
+	t.Parallel()
+
+	// Only whitespace is touched: the round trip through YAML is what differs between the two
+	// renders, and everything else has to stay comparable.
+	assert.Equal(t, "a b c", collapseWhitespace("  a \n b\t\tc  "))
+	assert.Equal(t, map[string]any{"k": "a b"}, collapseWhitespace(map[string]any{"k": "a\nb"}))
+	assert.Equal(t, []any{"a b", int64(1)}, collapseWhitespace([]any{"a  b", int64(1)}))
 }
