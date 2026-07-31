@@ -5,9 +5,9 @@ search: upmeter, availability, component health
 description: Architecture of the upmeter module in Deckhouse Kubernetes Platform.
 ---
 
-The [`upmeter`](/modules/upmeter/) module continuously checks platform availability and cluster component health. Probe results are displayed on dashboards.
+The [`upmeter`](/modules/upmeter/) module continuously checks Deckhouse Kubernetes Platform (DKP) availability and cluster component health. Probe results are displayed on dashboards.
 
-To learn more about module settings and usage examples, see the [upmeter configuration page](/modules/upmeter/configuration.html).
+To learn more about module settings and usage examples, see the [`upmeter` configuration page](/modules/upmeter/configuration.html).
 
 ## Module architecture
 
@@ -19,14 +19,12 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica per Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`upmeter`](/modules/upmeter/) module and its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown below.
+The level-2 C4 architecture of the [`upmeter`](/modules/upmeter/) module and its interactions with other DKP components are shown below.
 
 ![Architecture of the upmeter module](../../images/architecture/observability/c4-l2-upmeter.svg)
 
-{% alert level="info" %}
-Numbers in the diagram show the user request flow to the `status` and `webui` components:
-- Steps 1, 2, and 3 handle requests through Ingress NGINX Controller with mandatory user authentication in the platform-wide auth system provided by the [`user-authn`](/modules/user-authn) module. For details, see the [user-authn architecture section](../iam/user-authn.html).
-{% endalert %}
+Numbers in the diagram show the user request flow to the status and webui components.
+Steps 1, 2, and 3 handle requests through Ingress NGINX Controller with mandatory user authentication in the platform-wide auth system provided by the [`user-authn`](/modules/user-authn) module. For details, see the [`user-authn` architecture section](../iam/user-authn.html).
 
 ## Module components
 
@@ -46,18 +44,19 @@ The module includes the following components:
    - **migrator**: Init container that applies SQL migrations to the component SQLite database.
    - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC for secure access to the upmeter API.
 
-1. **Upmeter-agent** (DaemonSet) runs on `master` nodes and regularly executes the following probe groups:
+1. **Upmeter-agent** (DaemonSet) runs on master nodes and regularly executes the following probe groups:
 
    - Control-plane: API server availability and controller health checks.
-   - Deckhouse: DKP cluster health and `deckhouse` module controller checks.
+   - Deckhouse: DKP cluster health and [`deckhouse`](/modules/deckhouse) module controller checks.
    - Extensions: Checks that every extension has at least one `Ready` Pod.
    - Load-balancing: Checks availability of network load balancing services.
    - Monitoring-and-autoscaling: Checks that the Observability subsystem is healthy and gathers metrics from system components.
-   - Nginx: Checks that every Ingress Controller has at least one `Ready` Pod.
+   - Nginx: Checks that every Ingress NGINX Controller has at least one `Ready` Pod.
    - Nodegroups: Checks the number of `desired` nodes in each NodeGroup.
    - Synthetic: Checks network connectivity between cluster nodes with HTTP requests to smoke-mini-[a-e].
 
    The control-plane group includes the following probes:
+
    - Apiserver: Upmeter-agent checks Kubernetes API availability.
    - Basic-functionality: Upmeter-agent checks basic Kubernetes API behavior through the ConfigMap lifecycle.
    - Namespace: Upmeter-agent creates the `upmeter-probe-namespace` namespace and removes it after validation.
@@ -66,13 +65,14 @@ The module includes the following components:
    - Cert-manager: Upmeter-agent creates a self-signed Certificate named `upmeter-probe-cert-manager`, verifies that cert-manager created the related Secret, and then removes the Certificate and Secret.
 
    The following flow is used to check the deckhouse controller:
-   - Upmeter-agent creates or updates the custom resource `UpmeterHookProbe`.
+
+   - Upmeter-agent creates or updates the custom resource UpmeterHookProbe.
    - The deckhouse controller watches this resource and runs a hook to update it.
-   - Upmeter-agent also watches `UpmeterHookProbe` and validates changes.
+   - Upmeter-agent also watches UpmeterHookProbe and validates changes.
 
-   You can disable probes or probe groups by using the [`.spec.settings.disabledProbes` parameter](/modules/upmeter/configuration.html#parameters-disabledprobes).
+   You can disable probes or probe groups by using the [`.spec.settings.disabledProbes`](/modules/upmeter/configuration.html#parameters-disabledprobes) parameter.
 
-   Upmeter-agent sends collected probe results to upmeter with an HTTP request: `POST /downtime`.
+   Upmeter-agent sends collected probe results to upmeter with an HTTP request `POST /downtime`.
 
    It includes the following containers:
 
@@ -94,8 +94,8 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-   - Manages custom resources `UpmeterRemoteWrite` and `UpmeterHookProbe`.
-   - Provides custom resources `Downtime`.
+   - Manages custom resources UpmeterRemoteWrite and UpmeterHookProbe.
+   - Processes the Downtime custom resources.
    - Authorizes requests to upmeter.
    - Creates, validates, and deletes standard resources: Pod, StatefulSet, Namespace, and Secret, and the custom resource Certificate.
 
