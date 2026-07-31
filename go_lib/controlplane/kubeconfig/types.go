@@ -25,4 +25,8 @@ const (
 	ControllerManager File = "controller-manager.conf"
 	Kubelet           File = "kubelet.conf"
 	BashibleApiserver File = "bashible-apiserver.conf"
+
+	CiliumOperator     File = "cilium-operator.conf"
+	KonnectivityServer File = "konnectivity-server.conf"
+	Deckhouse          File = "deckhouse.conf"
 )

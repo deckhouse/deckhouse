@@ -167,7 +167,7 @@ spec:
               mountPath: /deckhouse/downloaded
             - name: kubeconfig
               mountPath: /kubeconfig.yaml
-              subPath: super-admin.conf
+              subPath: deckhouse.conf
               readOnly: true
       volumes:
         - name: tmp
@@ -181,4 +181,4 @@ spec:
           emptyDir: {}
         - name: kubeconfig
           secret:
-            secretName: d8-admin-kubeconfig-virtual
+            secretName: d8-kubeconfig-virtual-clients

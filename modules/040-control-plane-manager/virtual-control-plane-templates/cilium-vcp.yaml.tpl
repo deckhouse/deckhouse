@@ -673,6 +673,10 @@ subjects:
 - kind: ServiceAccount
   name: "cilium-operator"
   namespace: kube-system
+# The operator runs in the parent cluster and authenticates with a client certificate.
+- kind: User
+  name: cilium-operator
+  apiGroup: rbac.authorization.k8s.io
 
 ---
 # Source: cilium/templates/cilium-agent/role.yaml
@@ -806,6 +810,9 @@ subjects:
 - kind: ServiceAccount
   name: "cilium-operator"
   namespace: kube-system
+- kind: User
+  name: cilium-operator
+  apiGroup: rbac.authorization.k8s.io
 ---
 # Source: cilium/templates/cilium-operator/rolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -823,6 +830,9 @@ subjects:
 - kind: ServiceAccount
   name: "cilium-operator"
   namespace: kube-system
+- kind: User
+  name: cilium-operator
+  apiGroup: rbac.authorization.k8s.io
 
 ---
 # Source: cilium/templates/cilium-agent/daemonset.yaml

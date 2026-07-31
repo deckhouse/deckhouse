@@ -75,8 +75,7 @@ func (r *reconciler) reconcileDeckhouse(
 		return reconcile.Result{}, fmt.Errorf("build tenant clients: %w", err)
 	}
 
-	// 1. Tenant: d8-system Namespace. No RBAC is needed: the pod authenticates
-	//    via super-admin.conf, and the module renders its own ServiceAccount.
+	// 1. Tenant: d8-system Namespace. The pod authenticates with its own client certificate bound in tenant-rbac.yaml.tpl, and the module renders its own ServiceAccount.
 	if err := reconcileTenantNamespace(ctx, tc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile tenant d8-system namespace: %w", err)
 	}
@@ -453,7 +452,7 @@ func buildTargetDeckhouseDeployment(
 	}
 
 	registrySecret := constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name)
-	adminKubeconfigSecret := constants.VirtualResourceName(constants.VirtualAdminKubeconfigSecretName, vcp.Name)
+	clientsKubeconfigSecret := constants.VirtualResourceName(constants.VirtualClientsKubeconfigSecretName, vcp.Name)
 
 	deployment.Name = constants.VirtualResourceName(deckhouseDeploymentName, vcp.Name)
 	if deployment.Labels == nil {
@@ -482,8 +481,8 @@ func buildTargetDeckhouseDeployment(
 
 	for i := range deployment.Spec.Template.Spec.Volumes {
 		vol := &deployment.Spec.Template.Spec.Volumes[i]
-		if vol.Secret != nil && vol.Secret.SecretName == constants.VirtualAdminKubeconfigSecretName {
-			vol.Secret.SecretName = adminKubeconfigSecret
+		if vol.Secret != nil && vol.Secret.SecretName == constants.VirtualClientsKubeconfigSecretName {
+			vol.Secret.SecretName = clientsKubeconfigSecret
 		}
 	}
 
