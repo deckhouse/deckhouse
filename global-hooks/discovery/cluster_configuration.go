@@ -184,6 +184,12 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		// Keep substituting Automatic → Default into global.clusterConfiguration for backward
 		// compatibility during the ClusterConfiguration.kubernetesVersion deprecation window.
 		// Declared target lives in global.discovery.targetKubernetesVersion instead.
+		//
+		// TODO(kubernetesVersion-deprecation): T+2 remove — this substitution goes with the field.
+		// Note it is not the same thing as clusterConfiguration.kubernetesVersion inside the
+		// control-plane templates: there the key is a render-context value that
+		// modules/040-control-plane-manager/templates/daemonset.yaml sets to the throttled
+		// effective version, and it stays.
 		if kubernetesVersionFromMetaConfig == automaticKubernetesVersion {
 			b, _ := json.Marshal(hooks.DefaultKubernetesVersion)
 			metaConfig.ClusterConfig["kubernetesVersion"] = b
@@ -255,6 +261,12 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 //
 // Only when ModuleConfig says nothing at all does the deprecated ClusterConfiguration field apply;
 // "Automatic" there is not a pin either and falls through to the Deckhouse default.
+// TODO(kubernetesVersion-deprecation): T+2 remove — when kubernetesVersion is removed from
+// ClusterConfiguration, drop the ccVersion parameter and the isPinnedKubernetesVersion branch —
+// the signature collapses to (mcVersion, defaultVersion) and an absent ModuleConfig setting simply
+// means the Deckhouse default. Removing that branch is what silently retargets a cluster that
+// never migrated, so the release doing it must also declare the kubernetesVersionMigrated
+// requirement (modules/040-control-plane-manager/requirements/check.go).
 func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string) (string, bool) {
 	switch {
 	case mcVersion == automaticKubernetesVersion:
@@ -268,6 +280,9 @@ func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string)
 	}
 }
 
+// TODO(kubernetesVersion-deprecation): T+2 remove — dies together with the ClusterConfiguration field. It is
+// only ever applied to the ClusterConfiguration value — for the ModuleConfig setting presence
+// decides, not pinning.
 func isPinnedKubernetesVersion(version string) bool {
 	return version != "" && version != automaticKubernetesVersion
 }

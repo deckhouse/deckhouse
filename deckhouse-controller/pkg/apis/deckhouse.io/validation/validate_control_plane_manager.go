@@ -67,6 +67,12 @@ type clusterKubernetesStatus struct {
 // applies when the previous value was "Automatic" too — under presence-wins resolution, dropping
 // the field does change which document owns the version.
 //
+// TODO(kubernetesVersion-deprecation): T+2 remove — that fallback branch: the `fromFallback`
+// flag, the two reject messages mentioning ClusterConfiguration, and
+// readRawClusterConfigurationVersion all go away with the field. Clearing the setting will then simply mean "use the Deckhouse default",
+// which needs no cross-document lookup. Keep the availableVersions and maxUsed checks: after the
+// removal this webhook is the only guard against a downgrade.
+//
 // Unchanged kubernetesVersion skips the check so edits to unrelated settings are not blocked by an
 // orphaned pin that fell outside availableVersions after the ConfigMap appeared or Supported shrank.
 //
@@ -216,6 +222,10 @@ func (v *moduleConfigValidator) rejectKubernetesVersionBelowMaxUsed(
 // explicit kubernetesVersion. Presence — not value — decides which document owns the version, so
 // an explicit "Automatic" counts too (see resolveTargetKubernetesVersion in
 // global-hooks/discovery/cluster_configuration.go).
+//
+// TODO(kubernetesVersion-deprecation): T+2 remove — only the ClusterConfiguration webhook calls this, to decide
+// whether it should stand down. Once ClusterConfiguration has no kubernetesVersion there is
+// nothing to stand down from, and this helper goes with it.
 //
 // Used by the ClusterConfiguration webhook to skip validating a field that no longer has any
 // effect. On a read error it reports false, i.e. keeps validating ClusterConfiguration — the

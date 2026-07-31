@@ -202,6 +202,13 @@ func readYAML(t *testing.T, relPath string, out interface{}) {
 // editions. Nothing tied those lists together, so a release adding a Kubernetes version could
 // update one and forget another; the new version would then be silently unavailable through the
 // recommended path, with no failure until a user tried it.
+//
+// TODO(kubernetesVersion-deprecation): T+2 rewrite — this test breaks the moment kubernetesVersion leaves the
+// ClusterConfiguration schema — it takes the ClusterConfiguration enum as the reference and the
+// require.NotEmpty below fails outright. Rework it in the same release, do not delete it: make the
+// ModuleConfig enum the reference and keep checking it against the edition version_map, which is
+// the half that actually prevents offering a version the release cannot build. Dropping the test
+// instead would silently give up that guarantee.
 func TestKubernetesVersionEnumConsistency(t *testing.T) {
 	for _, edition := range kubernetesVersionEditions {
 		t.Run(edition.name, func(t *testing.T) {

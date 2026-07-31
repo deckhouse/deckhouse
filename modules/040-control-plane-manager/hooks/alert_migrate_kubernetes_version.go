@@ -28,6 +28,16 @@ import (
 )
 
 /*
+TODO(kubernetesVersion-deprecation): T+2 remove — this entire file is temporary. It exists to nag about a
+migration, so it is deleted in the same release that removes kubernetesVersion from
+ClusterConfiguration, together with the D8ObsoleteKubernetesVersionInClusterConfiguration alert in
+monitoring/prometheus-rules/mc-migration.yaml and its entry in
+docs/documentation/_data/deckhouse-alerts.yml.
+
+Do not delete it earlier than that release: until the field is gone the alert is the only thing
+telling operators that their cluster still depends on it, and the value it publishes is what the
+release gate reads.
+
 Description:
 	Reminds the operator to move an explicit kubernetesVersion from the deprecated
 	ClusterConfiguration field to the control-plane-manager ModuleConfig setting.
@@ -38,6 +48,10 @@ Description:
 	which would make this alert fire on every cluster, including those with nothing to migrate.
 */
 
+// TODO(kubernetesVersion-deprecation): T+1 measure — this metric is the adoption counter for the
+// migration: it is set exactly on clusters that still depend on the deprecated field. Read it
+// across the fleet before arming the release gate, because that gate blocks upgrades for every
+// cluster still counted here.
 const (
 	obsoleteKubernetesVersionMetricGroup = "D8ObsoleteKubernetesVersionInClusterConfiguration"
 	obsoleteKubernetesVersionMetricName  = "d8_obsolete_kubernetes_version_in_cluster_configuration"

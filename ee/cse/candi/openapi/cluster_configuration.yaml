@@ -140,6 +140,15 @@ apiVersions:
         - "Containerd"
         - "ContainerdV2"
         - "NotManaged"
+      # TODO(kubernetesVersion-deprecation): T+2 remove — this field is being removed. Two things must happen in
+      # the same release, in this order:
+      #   1. a one-shot migration that strips kubernetesVersion from cluster-configuration.yaml in
+      #      the kube-system/d8-cluster-configuration Secret. The schema is additionalProperties:
+      #      false, so dropping the property here while the value is still stored makes every
+      #      existing document invalid: the ClusterConfiguration webhook starts rejecting any edit
+      #      and dhctl fails to parse it;
+      #   2. the release must declare the kubernetesVersionMigrated requirement, otherwise a
+      #      cluster that never migrated silently stops honouring its pinned version.
       kubernetesVersion:
         type: string
         x-doc-deprecated: true

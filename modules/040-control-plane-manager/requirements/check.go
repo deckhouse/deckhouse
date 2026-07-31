@@ -66,8 +66,23 @@ func init() {
 // checkKubernetesVersionMigrated blocks a DeckhouseRelease that requires the ClusterConfiguration
 // kubernetesVersion field to have been moved to ModuleConfig control-plane-manager.
 //
-// requirementValue comes from the release. Until T+2 no release declares this key, so the check
-// is inert.
+// requirementValue comes from the release. No release declares this key yet, so the check is inert.
+//
+// TODO(kubernetesVersion-deprecation): T+1 verify — this gate has never fired in anger: no
+// release declares the key yet. Exercise it on a stand (declare it in a test DeckhouseRelease,
+// check that an unmigrated cluster is refused with a readable message and a migrated one passes)
+// before the release below depends on it.
+//
+// TODO(kubernetesVersion-deprecation): T+2 declare — the release that removes the field from
+// ClusterConfiguration MUST declare `kubernetesVersionMigrated: "true"` in its requirements. That
+// is not a nice-to-have: removing the field also removes the fallback that reads it, so a cluster
+// which never migrated would silently stop honouring its pinned version and drift to the Deckhouse
+// default — an unrequested control-plane upgrade, with no alert.
+//
+// TODO(kubernetesVersion-deprecation): T+3 remove — do NOT delete this check in the T+2 release. The requirement is evaluated by the
+// *installed* Deckhouse against a candidate release, so this code must be present in the versions
+// users are upgrading *from*. It can only go once no supported upgrade path passes through the
+// release that declares it.
 func checkKubernetesVersionMigrated(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 	requirementValue = strings.TrimSpace(requirementValue)
 	if requirementValue == "" {

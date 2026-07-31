@@ -118,6 +118,13 @@ def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
     return None
 
 
+# TODO(kubernetesVersion-deprecation): T+2 remove — this helper and every branch that falls back to the
+# ClusterConfiguration value once kubernetesVersion is removed from that document. The ModuleConfig
+# setting then fully decides the target version.
+#
+# NOTE(kubernetesVersion-deprecation): keep — do NOT drop the d8-cluster-configuration Secret snapshot along with it. The same Secret
+# carries deckhouseDefaultKubernetesVersion, which get_deckhouse_default_version_from_secret above
+# still needs to resolve "Automatic". Only the secret-triggered validating rule becomes pointless.
 def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
     encoded_config = secret_data.get('cluster-configuration.yaml')
     if not encoded_config:

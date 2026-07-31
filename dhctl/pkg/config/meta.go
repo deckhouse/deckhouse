@@ -660,6 +660,15 @@ func isPinnedKubernetesVersion(version string) bool {
 // An install config that pins the version only in ModuleConfig must still set
 // ModuleConfig.spec.enabled and ModuleConfig.spec.version — dhctl rejects ModuleConfigs
 // without them (see load.go ModuleConfig validation).
+//
+// TODO(kubernetesVersion-deprecation): T+1 add — dhctl should warn when an
+// install config still sets ClusterConfiguration.kubernetesVersion. Today the only deprecation
+// signal is an alert in an already running cluster, so someone bootstrapping from an old install
+// config creates exactly the state that alert then complains about.
+//
+// TODO(kubernetesVersion-deprecation): T+2 remove — drop the ccVersion lookup and
+// the isPinnedKubernetesVersion branch below — bootstrap then reads the version from ModuleConfig
+// only, falling back to DefaultKubernetesVersion.
 func (m *MetaConfig) kubernetesVersionRaw() string {
 	mcVersion := ""
 	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {

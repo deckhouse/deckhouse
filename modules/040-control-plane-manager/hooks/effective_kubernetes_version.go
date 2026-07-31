@@ -283,6 +283,12 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 		data[key] = value
 	}
 
+	// NOTE(kubernetesVersion-deprecation): keep — these two keys are stored in the d8-cluster-configuration Secret but
+	// are not part of the ClusterConfiguration document — they sit next to it, as separate data
+	// keys. Deprecating and removing the kubernetesVersion *field* does not touch them, and the
+	// admission webhooks keep reading maxUsed from here as their downgrade baseline. Moving this
+	// bookkeeping to the d8-cluster-kubernetes ConfigMap is optional cleanup, not part of the
+	// deprecation.
 	if !effectiveKubernetesVersion.LessThan(maxUsedControlPlaneVersion) {
 		encoded := base64.StdEncoding.EncodeToString([]byte(resultStr))
 		addToPatch(maxUsedK8sVersionSecretKey, encoded)

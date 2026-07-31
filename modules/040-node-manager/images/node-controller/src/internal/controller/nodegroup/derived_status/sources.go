@@ -100,6 +100,14 @@ type clusterKubernetesSpec struct {
 
 // readClusterConfiguration returns the legacy CC target, defaultCRI and the Deckhouse default.
 // defaultCRI still belongs to ClusterConfiguration; only kubernetesVersion is being migrated.
+//
+// TODO(kubernetesVersion-deprecation): T+2 remove — drop the KubernetesVersion field of the
+// clusterConfiguration struct and the target it computes, plus the clusterConfigurationTarget
+// parameter of readTargetKubernetesVersion below.
+//
+// NOTE(kubernetesVersion-deprecation): keep — do NOT delete this function then. It also reads
+// defaultCRI, which is a separate migration with its own schedule, and deckhouseDefault, which
+// comes from a Secret key that outlives the ClusterConfiguration field.
 func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string, *semver.Version) {
 	// Served from the kube-system Secret informer (watch-fresh); a live GET here used to
 	// cost hundreds of ms on every derived-status pass during a NodeGroup burst.

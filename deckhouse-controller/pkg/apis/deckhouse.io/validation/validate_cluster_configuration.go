@@ -230,6 +230,17 @@ func parseVersion(version string) (*semver.Version, error) {
 	return semver.NewVersion(version)
 }
 
+// TODO(kubernetesVersion-deprecation): T+2 remove — validateKubernetesVersionDowngrade below, together with the
+// k8sVersionValidator/k8sDowngradeValidator wiring in clusterConfigurationHandler, guards a field
+// that is going away. When kubernetesVersion is removed from ClusterConfiguration the whole
+// downgrade path here disappears and the ModuleConfig webhook
+// (validate_control_plane_manager.go) becomes the only guard — make sure it still enforces both
+// the availableVersions membership and the maxUsed floor before deleting anything here.
+//
+// NOTE(kubernetesVersion-deprecation): keep — kubernetesVersionBaseline is not tied to the field. maxUsedControlPlaneKubernetesVersion
+// and deckhouseDefaultKubernetesVersion are separate keys of the d8-cluster-configuration Secret,
+// not entries inside cluster-configuration.yaml, so the Secret and those keys survive the removal.
+//
 // kubernetesVersionBaseline carries the cluster-level version facts the downgrade check resolves
 // "Automatic" against. Both values are Deckhouse's own bookkeeping (written by the
 // control-plane-manager effective_kubernetes_version.go hook), not ClusterConfiguration fields.

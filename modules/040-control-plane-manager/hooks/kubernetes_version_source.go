@@ -30,6 +30,16 @@ import (
 
 // clusterConfigurationSecretSnapshot is the binding name every hook in this package uses for the
 // kube-system/d8-cluster-configuration Secret when it needs the raw, unresolved kubernetesVersion.
+//
+// TODO(kubernetesVersion-deprecation): T+2 remove — this whole "raw ClusterConfiguration value" machinery:
+// this constant, sdkvFilterRawClusterConfigurationVersion, rawClusterConfigurationVersion,
+// rawClusterConfiguration, isPinnedKubernetesVersion and isKubernetesVersionMigrated below — exists
+// only while the deprecated field can still own the version. It goes away with the field, together
+// with alert_migrate_kubernetes_version.go and the Secret binding in helm.go.
+//
+// NOTE(kubernetesVersion-deprecation): keep — sdkvFilterModuleConfigKubernetesVersion and
+// controlPlaneManagerModuleConfigSnapshot/Name are NOT part of that cleanup: helm.go keeps using
+// them as a re-run trigger.
 const clusterConfigurationSecretSnapshot = "cluster_configuration_secret"
 
 // controlPlaneManagerModuleConfigSnapshot is the binding name for this module's own ModuleConfig,
@@ -44,6 +54,10 @@ const automaticKubernetesVersion = "Automatic"
 
 // KubernetesVersionMigratedRequirementKey is the requirements.SaveValue key that records whether
 // kubernetesVersion no longer depends on the deprecated ClusterConfiguration field.
+//
+// TODO(kubernetesVersion-deprecation): T+2 remove — but only from the
+// publishing side. The matching check in modules/040-control-plane-manager/requirements/check.go
+// must outlive it, see the note there.
 //
 // Published by the migration alert hook starting at T+0 so that a DeckhouseRelease at T+2 can
 // gate on RegisterCheck("kubernetesVersionMigrated") — the installed Deckhouse evaluates the

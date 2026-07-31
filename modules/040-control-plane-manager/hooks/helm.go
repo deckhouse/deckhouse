@@ -151,6 +151,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: sdkvFilterModuleConfigKubernetesVersion,
 		},
+		// TODO(kubernetesVersion-deprecation): T+2 remove — drop this binding together with the
+		// ClusterConfiguration field. Once the field is gone the Secret can no longer change the
+		// resolved version, so it is not a useful trigger any more. The ModuleConfig binding above
+		// stays.
 		{
 			Name:              clusterConfigurationSecretSnapshot,
 			ApiVersion:        "v1",

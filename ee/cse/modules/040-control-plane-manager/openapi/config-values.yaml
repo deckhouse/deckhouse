@@ -387,6 +387,19 @@ properties:
       - "ECDSA-P256"
     x-examples:
       - "ECDSA-P256"
+  # TODO(kubernetesVersion-deprecation): T+2 rewrite — two things to do here in the release that removes
+  # kubernetesVersion from ClusterConfiguration.
+  #
+  # 1. Rename the "Automatic" sentinel to "Default": a conversion v4 for this module plus the enum
+  #    here and in the other editions. Not before — while the field still exists in
+  #    ClusterConfiguration the two documents would carry different sentinels for the same meaning,
+  #    and all seven resolver implementations (5 Go, 2 Python) would have to tell them apart by
+  #    which document the value came from.
+  # 2. Rewrite the description below: it promises that an unset parameter falls back to
+  #    ClusterConfiguration.kubernetesVersion and that "Automatic" makes that field ignored. Both
+  #    sentences become wrong once the field is gone — an unset parameter will simply mean the
+  #    release default. The same text exists in the RU translation (doc-ru-config-values.yaml) and
+  #    in the other editions.
   kubernetesVersion:
     type: string
     description: |

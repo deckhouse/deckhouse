@@ -292,6 +292,14 @@ func (c *kubernetesVersionCheck) readUpdateModeFromConfigMap(ctx context.Context
 	return spec.UpdateMode, true
 }
 
+// TODO(kubernetesVersion-deprecation): T+2 remove — the ClusterConfiguration half of this fallback:
+// readClusterConfigurationKubernetesVersion, clusterConfKubernetesVersion,
+// isPinnedKubernetesVersion and the ccVersion branch below — goes away with the field.
+//
+// TODO(kubernetesVersion-deprecation): T+1 decide — whether the ModuleConfig half goes too: it depends on whether
+// d8-cluster-kubernetes spec is treated as an authoritative hand-off (then this fallback is a
+// bootstrap-only crutch and can be dropped) or as a cache that must always be re-verified (then it
+// stays). Decide that before writing the removal PR, not during it.
 func (c *kubernetesVersionCheck) isAutomaticFromModuleAndClusterConfig(ctx context.Context) (bool, error) {
 	mcVersion, err := c.readModuleConfigKubernetesVersion(ctx)
 	if err != nil {

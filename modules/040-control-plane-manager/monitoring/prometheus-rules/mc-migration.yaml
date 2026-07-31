@@ -188,6 +188,11 @@
              ```
 
              Delete the `encryptionAlgorithm` field and save.
+    # TODO(kubernetesVersion-deprecation): T+2 remove — delete this alert in the release that removes
+    # kubernetesVersion from ClusterConfiguration, together with the hook that feeds it
+    # (hooks/alert_migrate_kubernetes_version.go) and its entry in
+    # docs/documentation/_data/deckhouse-alerts.yml. Until then it is the only signal telling
+    # operators their cluster still depends on the deprecated field.
     - alert: D8ObsoleteKubernetesVersionInClusterConfiguration
       for: 5m
       expr: |
@@ -234,6 +239,14 @@
              ```
 
              Delete the `kubernetesVersion` field and save.
+    # NOTE(kubernetesVersion-deprecation): keep — this one is permanent — keep it when the migration alert above is
+    # deleted. It is about Automatic mode drifting from the running control plane, not about the
+    # deprecated ClusterConfiguration field.
+    #
+    # TODO(kubernetesVersion-deprecation): T+2 rewrite — its description does mention the field, though — the
+    # clause about the parameter being unset in ModuleConfig while ClusterConfiguration does not pin
+    # a version either. Reword it to "unset in ModuleConfig" alone when the field goes, here and in
+    # the copy under docs/documentation/_data/deckhouse-alerts.yml.
     - alert: D8ControlPlaneDefaultVersionDrift
       for: 5m
       expr: |
