@@ -17,26 +17,81 @@ limitations under the License.
 package constants
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
 
+type ControlPlaneType string
+
+const (
+	ControlPlaneTypeNormal  ControlPlaneType = "normal"
+	ControlPlaneTypeVirtual ControlPlaneType = "virtual"
+)
+
+// Normal control plane manager constants
+const (
+	ControlPlaneManagerName          = "control-plane-manager"
+	CpcControllerName                = "control-plane-configuration-controller"
+	CpnControllerName                = "control-plane-node-controller"
+	CpoControllerName                = "control-plane-operation-controller"
+	OperationsApproverControllerName = "operations_approver_controller"
+)
+
+// Virtual control plane manager constants
+const (
+	VirtualControlPlaneManagerName            = "virtual-control-plane-manager"
+	VirtualConfigurationController            = "virtual-control-plane-configuration-controller"
+	VirtualControlPlaneNodeController         = "virtual-control-plane-node-controller"
+	VirtualControlPlaneApproverControllerName = "virtual_control_plane_approver_controller"
+	VirtualControlPlaneConfigSecretName       = "d8-virtual-control-plane-config"
+	VirtualRenderedConfigSecretName           = "d8-vcp-config-virtual"
+	VirtualPKISecretName                      = "d8-pki-virtual"
+	VirtualKubeconfigSecretName               = "d8-kubeconfig-virtual"
+	VirtualAdminKubeconfigSecretName          = "d8-admin-kubeconfig-virtual"
+	VirtualClientsKubeconfigSecretName        = "d8-kubeconfig-virtual-clients"
+	VirtualAPIServerServiceName               = "kube-apiserver"
+	VirtualKonnectivityEgressConfigMapName    = "konnectivity-egress"
+	VirtualKonnectivityServerServiceName      = "konnectivity-server"
+	VirtualKonnectivityAgentCPSecretName      = "konnectivity-agent-cp"
+	VirtualDatastoreName                      = "d8-datastore-virtual"
+	VirtualDatastoreCredsSecretName           = "d8-datastore-creds-virtual"
+	VirtualControlPlaneNodeOrdinalLabelKey    = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
+	VirtualControlPlaneScopeLabelKey          = "control-plane.deckhouse.io/virtual-control-plane"
+	VirtualJoinScriptSecretName               = "d8-vcp-join-script"
+	VirtualBootstrapTokenGroup                = "system:bootstrappers:d8:vcp"
+	DefaultTenantClusterDomain                = "cluster.virtual"
+	DefaultTenantServiceSubnetCIDR            = "10.96.0.0/12"
+	// DefaultTenantPodSubnetCIDR must stay in sync with cluster-pool-ipv4-cidr in cilium-vcp.yaml.tpl.
+	DefaultTenantPodSubnetCIDR = "10.244.0.0/16"
+	// DefaultTenantClusterDNS is the 10th address of DefaultTenantServiceSubnetCIDR.
+	DefaultTenantClusterDNS   = "10.96.0.10"
+	VirtualExposeDomainSuffix = "vcp.local"
+
+	RegistryPackagesProxyPort          int32 = 4219
+	RegistryPackagesProxyBootstrapPort int32 = 4282
+)
+
+var (
+	VirtualBootstrapTokenTTL        = 24 * time.Hour
+	VirtualBootstrapTokenRegenBelow = 6 * time.Hour
+)
+
 const (
 	KubeSystemNamespace                 = "kube-system"
-	CpcControllerName                   = "control-plane-configuration-controller"
-	CpnControllerName                   = "control-plane-node-controller"
-	CpoControllerName                   = "control-plane-operation-controller"
 	ControlPlaneManagerConfigSecretName = "d8-control-plane-manager-config"
 	PkiSecretName                       = "d8-pki"
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
 	EtcdArbiterNodeLabelKey             = "node.deckhouse.io/etcd-arbiter"
 	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
+	ControlPlaneTypeLabelKey            = "control-plane.deckhouse.io/type"
 	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
 	HeritageLabelKey                    = "heritage"
 	HeritageLabelValue                  = "deckhouse"
 	MaintenanceModeLabelKey             = "control-plane-manager.deckhouse.io/maintenance"
 	ConfigChecksumAnnotationKey         = "control-plane-manager.deckhouse.io/config-checksum"
-	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum"
+	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum" // actually this is cert params checksum (certSANs, encryption-algorithm)
+	CertsChecksumAnnotationKey          = "control-plane-manager.deckhouse.io/certs-checksum"
 	CAChecksumAnnotationKey             = "control-plane-manager.deckhouse.io/ca-checksum"
 	OperationStartedAtAnnotationKey     = "control-plane-manager.deckhouse.io/operation-started-at"
 	NodeNameEnvVar                      = "NODE_NAME"
@@ -100,4 +155,13 @@ func SignatureEnabled() bool {
 // ToRelativePath returns path without leading slash for using in tmp directory sync
 func ToRelativePath(absolutePath string) string {
 	return strings.TrimPrefix(absolutePath, "/")
+}
+
+// VirtualResourceName returns a per-VCP unique object name so multiple VirtualControlPlanes
+// can coexist in one Namespace without colliding on hardcoded resource names.
+func VirtualResourceName(base, vcpName string) string {
+	if vcpName == "" {
+		return base
+	}
+	return fmt.Sprintf("%s-%s", base, vcpName)
 }

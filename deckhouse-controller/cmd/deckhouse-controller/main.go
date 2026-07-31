@@ -53,6 +53,53 @@ func version() string {
 	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, nelm %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, NelmVersion, runtime.Version())
 }
 
+// propagateKubeconfigEnv exports the kubeconfig path configured via
+// --kube-config/$KUBE_CONFIG into the standard $KUBECONFIG (and the context
+// into $HELM_KUBECONTEXT). The operator's main kube client, the object
+// patcher and the package-system clients receive the path through
+// cfg.Kube.Config directly, but several client paths resolve their config
+// through the default clientcmd loading rules or Helm env settings instead:
+// helm3lib action configs, the `registry` subcommand (ctrl.GetConfigOrDie),
+// the `module enable/disable` debug subcommands and the dependency-container
+// client used by Go hooks. Exporting the standard env vars points all of
+// them at the same apiserver instead of silently falling back to the
+// in-cluster config.
+func propagateKubeconfigEnv(cfg *app.Config) {
+	if cfg.Kube.Config != "" {
+		os.Setenv("KUBECONFIG", cfg.Kube.Config)
+		materializeDefaultKubeconfig(cfg.Kube.Config)
+	}
+	if cfg.Kube.Context != "" {
+		os.Setenv("HELM_KUBECONTEXT", cfg.Kube.Context)
+	}
+}
+
+// materializeDefaultKubeconfig symlinks $HOME/.kube/config to the configured
+// kubeconfig. The nelm action API (helm backend when USE_NELM=true) does not
+// read $KUBECONFIG: with no explicit paths it defaults to $HOME/.kube/config,
+// so without this link nelm falls back to localhost:8080 when running outside
+// the managed cluster. An already existing $HOME/.kube/config is left as is.
+func materializeDefaultKubeconfig(kubeconfigPath string) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cannot resolve home dir to link kubeconfig for nelm: %v\n", err)
+		return
+	}
+
+	target := filepath.Join(home, ".kube", "config")
+	if _, err := os.Lstat(target); err == nil {
+		return
+	}
+
+	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot create %s to link kubeconfig for nelm: %v\n", filepath.Dir(target), err)
+		return
+	}
+	if err := os.Symlink(kubeconfigPath, target); err != nil {
+		fmt.Fprintf(os.Stderr, "cannot link kubeconfig for nelm at %s: %v\n", target, err)
+	}
+}
+
 // main is almost a copy from addon-operator. We compile addon-operator to inline
 // Go hooks and set some defaults. Also, helper commands are defined for Shell hooks.
 
@@ -129,6 +176,8 @@ func main() {
 			klogtolog.InitAdapter(cfg.Debug.KubernetesAPI, logger.Named("klog"))
 			stdliblogtolog.InitAdapter(logger)
 
+			propagateKubeconfigEnv(cfg)
+
 			return nil
 		},
 	}
@@ -194,6 +243,14 @@ func main() {
 		dhctlOpts.Global.LoggerType = app.EnvOr(app.EnvLoggerType, "json")
 		dhctlOpts.Render.Editor = app.EnvOr(app.EnvEditor, "vim")
 		dhctlOpts.Kube.InCluster = app.EnvBoolOr(app.EnvKubeConfigInCluster, true)
+		// When a kubeconfig is configured for the operator ($KUBE_CONFIG),
+		// the embedded dhctl edit/config commands must talk to the same
+		// apiserver instead of the in-cluster one.
+		if cfg.Kube.Config != "" {
+			dhctlOpts.Kube.Config = cfg.Kube.Config
+			dhctlOpts.Kube.ConfigContext = cfg.Kube.Context
+			dhctlOpts.Kube.InCluster = false
+		}
 		dhctlOpts.Global.TmpDir = app.EnvOr(app.EnvTmpDir, os.TempDir())
 
 		// Pin the dhctl content directories to the deckhouse image layout

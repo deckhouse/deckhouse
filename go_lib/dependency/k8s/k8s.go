@@ -18,6 +18,7 @@ package k8s
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/flant/kube-client/fake"
 	"k8s.io/client-go/dynamic"
@@ -61,6 +62,10 @@ func NewClient(options ...Option) (Client, error) {
 		opt(opts)
 	}
 
+	if opts.kubeconfigPath == "" {
+		opts.kubeconfigPath = os.Getenv("KUBECONFIG")
+	}
+
 	var config *rest.Config
 	var err error
 	if opts.kubeconfigPath != "" {
@@ -69,7 +74,7 @@ func NewClient(options ...Option) (Client, error) {
 		config, err = rest.InClusterConfig()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("in cluster config: %w", err)
+		return nil, fmt.Errorf("kubernetes client config: %w", err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)

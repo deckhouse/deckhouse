@@ -1,0 +1,200 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package virtualcontrolplaneconfiguration
+
+import (
+	"fmt"
+	"sort"
+	"strings"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/yaml"
+)
+
+// imagesTable mirrors the "images" key of the global config Secret produced by the virtual-control-plane.yaml Helm template.
+type imagesTable struct {
+	Versioned        map[string]versionedImages `json:"versioned"`
+	Fixed            fixedImages                `json:"fixed"` // independent of the Kubernetes version
+	RegistryPackages registryPackagesTable      `json:"registrypackages"`
+}
+
+type versionedImages struct {
+	Apiserver         string `json:"apiserver"`
+	ControllerManager string `json:"controllerManager"`
+	Scheduler         string `json:"scheduler"`
+}
+
+type fixedImages struct {
+	Kine               string `json:"kine"`
+	KonnectivityServer string `json:"konnectivityServer"`
+	KonnectivityAgent  string `json:"konnectivityAgent"`
+	Cilium             string `json:"cilium"`
+	CiliumOperator     string `json:"ciliumOperator"`
+	BashibleApiserver  string `json:"bashibleApiserver"`
+}
+
+type registryPackagesTable struct {
+	Versioned map[string]registryPackagesVersioned `json:"versioned"`
+	Fixed     registryPackagesFixed                `json:"fixed"`
+}
+
+type registryPackagesVersioned struct {
+	Kubelet string `json:"kubelet"`
+	Crictl  string `json:"crictl"`
+}
+
+type registryPackagesFixed struct {
+	Containerd string `json:"containerd"`
+	TomlMerge  string `json:"tomlMerge"`
+	RppGet     string `json:"rppGet"`
+}
+
+func renderManifests(
+	globalData map[string][]byte,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiAdvertiseAddress string,
+	egressDestinations []string,
+) (map[string][]byte, error) {
+	table, err := parseImagesTable(globalData)
+	if err != nil {
+		return nil, err
+	}
+
+	versioned, ok := table.Versioned[vcp.Spec.KubernetesVersion]
+	if !ok {
+		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
+	}
+
+	replacer := buildManifestReplacer(
+		vcp,
+		versioned,
+		table.Fixed,
+		apiAdvertiseAddress,
+		string(globalData["cluster-uuid"]),
+		egressDestinations,
+	)
+
+	rendered := make(map[string][]byte)
+	for key, value := range globalData {
+		switch {
+		case strings.HasSuffix(key, ".yaml.tpl"), strings.HasSuffix(key, ".sh.tpl"):
+			rendered[key] = []byte(replacer.Replace(string(value)))
+		case key == "images", key == "cluster-uuid", key == "minget":
+			rendered[key] = value
+		}
+	}
+
+	return rendered, nil
+}
+
+func bashibleApiserverImageFromConfig(configSecret *corev1.Secret) (string, error) {
+	table, err := parseImagesTable(configSecret.Data)
+	if err != nil {
+		return "", err
+	}
+	if table.Fixed.BashibleApiserver == "" {
+		return "", fmt.Errorf("images.fixed.bashibleApiserver is empty")
+	}
+	return table.Fixed.BashibleApiserver, nil
+}
+
+func parseImagesTable(globalData map[string][]byte) (imagesTable, error) {
+	raw, ok := globalData["images"]
+	if !ok {
+		return imagesTable{}, fmt.Errorf("config Secret missing %q key", "images")
+	}
+
+	var table imagesTable
+	if err := yaml.Unmarshal(raw, &table); err != nil {
+		return imagesTable{}, fmt.Errorf("parse images table: %w", err)
+	}
+
+	return table, nil
+}
+
+func buildManifestReplacer(
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	versioned versionedImages,
+	fixed fixedImages,
+	apiAdvertiseAddress string,
+	clusterUUID string,
+	egressDestinations []string,
+) *strings.Replacer {
+	return strings.NewReplacer(
+		"${VCP_API_VIP}", apiAdvertiseAddress,
+		"${VCP_CLUSTER_UUID}", clusterUUID,
+		"${IMAGE_KUBE_APISERVER}", versioned.Apiserver,
+		"${IMAGE_KUBE_CONTROLLER_MANAGER}", versioned.ControllerManager,
+		"${IMAGE_KUBE_SCHEDULER}", versioned.Scheduler,
+		"${IMAGE_KINE}", fixed.Kine,
+		"${IMAGE_KONNECTIVITY_SERVER}", fixed.KonnectivityServer,
+		"${IMAGE_KONNECTIVITY_AGENT}", fixed.KonnectivityAgent,
+		"${IMAGE_CILIUM}", fixed.Cilium,
+		"${IMAGE_CILIUM_OPERATOR}", fixed.CiliumOperator,
+		"${VCP_NAME}", vcp.Name,
+		"${NAMESPACE}", vcp.Namespace,
+		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
+		"${CLUSTER_DOMAIN}", constants.DefaultTenantClusterDomain,
+		"${SERVICE_SUBNET_CIDR}", constants.DefaultTenantServiceSubnetCIDR,
+		"${POD_SUBNET_CIDR}", constants.DefaultTenantPodSubnetCIDR,
+		"${VCP_API_HOST}", apiExposeHost(vcp),
+		"${VCP_KONN_HOST}", konnExposeHost(vcp),
+		"${VCP_PKG_HOST}", packagesExposeHost(vcp),
+		"${PKI_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualPKISecretName, vcp.Name),
+		"${KUBE_APISERVER_SERVICE_NAME}", constants.VirtualResourceName(constants.VirtualAPIServerServiceName, vcp.Name),
+		"${KONNECTIVITY_EGRESS_CM_NAME}", constants.VirtualResourceName(constants.VirtualKonnectivityEgressConfigMapName, vcp.Name),
+		"${KONNECTIVITY_SERVER_SERVICE_NAME}", constants.VirtualResourceName(constants.VirtualKonnectivityServerServiceName, vcp.Name),
+		"${KONNECTIVITY_AGENT_CP_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualKonnectivityAgentCPSecretName, vcp.Name),
+		"${KONNECTIVITY_AGENT_CP_IDENTIFIERS}", konnectivityagentCPIdentifiers(egressDestinations),
+		"${KUBECONFIG_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualKubeconfigSecretName, vcp.Name),
+		"${CLIENTS_KUBECONFIG_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualClientsKubeconfigSecretName, vcp.Name),
+		"${DATASTORE_NAME}", constants.VirtualResourceName(constants.VirtualDatastoreName, vcp.Name),
+		"${DATASTORE_CREDS_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualDatastoreCredsSecretName, vcp.Name),
+		"${CILIUM_CONFIG_NAME}", constants.VirtualResourceName("cilium-config", vcp.Name),
+		"${CILIUM_OPERATOR_NAME}", constants.VirtualResourceName("cilium-operator", vcp.Name),
+	)
+}
+
+// konnectivityagentCPIdentifiers builds:
+//
+//	--agent-identifiers=ipv4=A&ipv4=B
+//
+// IPs are deduplicated and sorted for stable STS/Secret diffs.
+func konnectivityagentCPIdentifiers(dests []string) string {
+	seen := make(map[string]struct{}, len(dests))
+	ips := make([]string, 0, len(dests))
+	for _, d := range dests {
+		if d == "" {
+			continue
+		}
+		if _, ok := seen[d]; ok {
+			continue
+		}
+		seen[d] = struct{}{}
+		ips = append(ips, d)
+	}
+	sort.Strings(ips)
+
+	if len(ips) == 0 {
+		return "ipv4=0.0.0.0"
+	}
+
+	return "ipv4=" + strings.Join(ips, "&ipv4=")
+}

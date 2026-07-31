@@ -1,0 +1,248 @@
+{{- if .Values.controlPlaneManager.internal.hasVirtualControlPlane }}
+{{- $vm := .Files.Get "candi/version_map.yml" | fromYaml }}
+{{- $dig := .Values.global.modulesImages.digests.controlPlaneManager }}
+{{- $nmDig := .Values.global.modulesImages.digests.nodeManager }}
+{{- $reg := printf "%s%s" .Values.global.modulesImages.registry.address .Values.global.modulesImages.registry.path }}
+{{- $versioned := dict }}
+{{- range $ver, $_ := $vm.k8s }}
+  {{- $sfx := $ver | toString | replace "." "" }}
+  {{- $aKey := printf "kubeApiserver%s" $sfx }}
+  {{- if hasKey $dig $aKey }}
+    {{- $_ := set $versioned ($ver | toString) (dict
+        "apiserver"         (printf "%s@%s" $reg (get $dig $aKey))
+        "controllerManager" (printf "%s@%s" $reg (get $dig (printf "kubeControllerManager%s" $sfx)))
+        "scheduler"         (printf "%s@%s" $reg (get $dig (printf "kubeScheduler%s" $sfx)))) }}
+  {{- end }}
+{{- end }}
+{{- $rp := .Values.global.modulesImages.digests.registrypackages | default dict }}
+{{- $rpVersioned := dict }}
+{{- range $ver, $meta := $vm.k8s }}
+  {{- $sfx := $ver | toString | replace "." "" }}
+  {{- $kKey := printf "kubelet%s%v" $sfx ($meta.patch | toString) }}
+  {{- $cKey := printf "crictl%s" $sfx }}
+  {{- if hasKey $rp $kKey }}
+    {{- $_ := set $rpVersioned ($ver | toString) (dict
+        "kubelet" (get $rp $kKey)
+        "crictl"  (get $rp $cKey)) }}
+  {{- end }}
+{{- end }}
+{{- $rpFixed := dict
+    "containerd" (get $rp "containerd224")
+    "tomlMerge"  (get $rp "tomlMerge01")
+    "rppGet"     (get $rp "rppGet") }}
+{{- $fixed := dict 
+  "kine" (printf "%s@%s" $reg (get $dig "kine")) 
+  "konnectivityServer" (printf "%s@%s" $reg (get $dig "konnectivityServer"))
+  "konnectivityAgent" (printf "%s@%s" $reg (get $dig "konnectivityAgent"))
+  "cilium" "quay.io/cilium/cilium:v1.19.3"
+  "ciliumOperator" "quay.io/cilium/operator-generic:v1.19.3"
+  "bashibleApiserver" (printf "%s@%s" $reg (get $nmDig "bashibleApiserver"))
+}}
+{{- $imagesTable := dict
+  "versioned" $versioned
+  "fixed" $fixed
+  "registrypackages" (dict "versioned" $rpVersioned "fixed" $rpFixed)
+}}
+{{- $bctx := dict }}
+{{- $_ := set $bctx "Files" .Files }}
+{{- $_ := set $bctx "Template" .Template }}
+{{- $_ := set $bctx "runType" "VCPBootstrap" }}
+{{- $_ := set $bctx "nodeGroup" (dict "name" "worker" "nodeType" "Static") }}
+{{- $_ := set $bctx "mingetB64" (.Files.Get "candi/bashible/bootstrap/minget" | b64enc) }}
+{{- $_ := set $bctx "images" (dict "registrypackages" $rp) }}
+{{- $_ := set $bctx "clusterUUID" (.Values.global.discovery.clusterUUID | default "") }}
+{{- $_ := set $bctx "packagesProxy" (dict "direct" true "token" "${VCP_RPP_TOKEN}") }}
+{{- $_ := set $bctx "clusterMasterKubeAPIEndpoints" (list "${VCP_API_HOST}:6443") }}
+{{- $_ := set $bctx "clusterMasterRPPAddresses" (list "${VCP_PKG_HOST}:443") }}
+{{- /* minget (plaintext :80 bootstrap fetch of rpp-get) parses a numeric IP, not a hostname — give it the ALB VIP. The TLS :443 path below keeps the SNI hostname. */}}
+{{- $_ := set $bctx "clusterMasterRPPBootstrapAddresses" (list "${VCP_ALB_VIP}:80") }}
+{{- $lib := .Files.Get "candi/bashible/lib.sh.tpl" }}
+{{- $prereq := tpl (.Files.Get "candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl") $bctx | trimAll "\n" }}
+{{- $prereq = regexReplaceAll "^#!/bin/bash\nset -Eeo pipefail\n" $prereq "" }}
+{{- $getPhase2 := tpl (printf "%s\n{{ template \"get-phase2\" $ }}" $lib) $bctx }}
+{{- $glueHead := .Files.Get "virtual-control-plane-templates/_bootstrap.sh" }}
+{{- $bootstrapPhase1 := list $glueHead $prereq $getPhase2 "get_phase2 | bash" | join "\n" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-virtual-control-plane-config
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+type: Opaque
+stringData:
+  # Format marker for the global Virtual Control Plane config bundle.
+  # The first controller uses the whole Secret as checksum input.
+  config-format: control-plane.deckhouse.io/virtual-control-plane/v1alpha1
+  cluster-domain: {{ .Values.global.clusterConfiguration.clusterDomain | quote }}
+  service-subnet-cidr: {{ .Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
+  default-kubernetes-version: {{ .Values.controlPlaneManager.internal.effectiveKubernetesVersion | quote }}
+  cluster-uuid: {{ .Values.global.discovery.clusterUUID | default "" | quote }}
+  minget: {{ .Files.Get "candi/bashible/bootstrap/minget" | b64enc | quote }}
+  registry-address: {{ .Values.global.modulesImages.registry.address | quote }}
+  registry-path: {{ .Values.global.modulesImages.registry.path | quote }}
+  components: |
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+data:
+  {{- range $path, $_ := .Files.Glob "virtual-control-plane-templates/*.yaml.tpl" }}
+  {{ base $path }}: {{ $.Files.Get $path | b64enc }}
+  {{- end }}
+  {{- range $path, $_ := .Files.Glob "virtual-control-plane-templates/*.sh.tpl" }}
+  {{ base $path }}: {{ $.Files.Get $path | b64enc }}
+  {{- end }}
+  images: {{ $imagesTable | toYaml | b64enc }}
+  bootstrap.sh.tpl: {{ $bootstrapPhase1 | b64enc }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: d8-virtual-control-plane-manager
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:virtual-control-plane
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: ["apps"]
+  resources: ["statefulsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["virtualcontrolplanes"]
+  verbs: ["get", "list", "watch", "patch"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["virtualcontrolplanes/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["controlplanenodes"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["controlplanenodes/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["controlplaneoperations"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["controlplaneoperations/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: ["managed-services.deckhouse.io"]
+  resources: ["postgreses", "postgres"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["network.deckhouse.io"]
+  resources: ["albinstances"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["gateway.networking.k8s.io"]
+  resources: ["gateways", "listenersets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["gateway.networking.k8s.io"]
+  resources: ["tlsroutes", "tcproutes", "httproutes", "referencegrants"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:virtual-control-plane
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: d8-virtual-control-plane-manager
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: d8:virtual-control-plane
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: d8-virtual-control-plane-manager
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-virtual-control-plane-manager")) | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: d8-virtual-control-plane-manager
+  template:
+    metadata:
+      labels:
+        app: d8-virtual-control-plane-manager
+        component: virtual-control-plane
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: d8-virtual-control-plane-manager
+      automountServiceAccountToken: true
+      priorityClassName: system-cluster-critical
+      containers:
+      - name: virtual-control-plane
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "controlPlaneManager") }}
+        args:
+        - --mode=virtual
+        ports:
+        - containerPort: 4296
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8095
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8095
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          timeoutSeconds: 8
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+            {{- include "control_plane_manager_resources" . | nindent 12 }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 2Mi
+{{- end }}
