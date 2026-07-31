@@ -63,7 +63,7 @@ The module consists of the following components:
    * **check-wg-kernel-compat**: Init container checking the Linux kernel version for compliance with the minimum requirements for working with WireGuard used in CNI Cilium.
    * **check-linux-kernel**: Init container checking the Linux kernel version for compliance with the minimum requirements for working with CNI Cilium.
    * **clearing-unnecessary-iptables**: Init container running script for cleaning up unnecessary `iptables` rules.
-   * **handle-vxlan-offload**: Init container correcting UPD segmentation settings (if [tunnel mode](/modules/cni-cilium/configuration.html#parameters-tunnelmode) is set to `VXLAN`).
+   * **handle-vxlan-offload**: Init container correcting UDP segmentation settings (if [tunnel mode](/modules/cni-cilium/configuration.html#parameters-tunnelmode) is set to `VXLAN`).
    * **config**: Init container generating configuration file used to configure the agent.
    * **mount-cgroup**: Init container configuring Linux cgroups (control groups).
    * **apply-sysctl-overwrites**: Init container configuring the Linux kernel parameters.
