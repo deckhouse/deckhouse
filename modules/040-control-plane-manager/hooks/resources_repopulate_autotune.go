@@ -36,5 +36,5 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(autotuneResourcesRequestsRepopulate))
 
 func autotuneResourcesRequestsRepopulate(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	return runAutotune(ctx, input, dc, false)
+	return runAutotune(ctx, input, dc, runAutotuneOptions{Evaluate: false})
 }

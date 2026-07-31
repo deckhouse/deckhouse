@@ -296,20 +296,4 @@ var _ = Describe("Module hooks :: control-plane-manager :: calculate_resources_r
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(discoveryMem))
 		})
 	})
-
-	Context("absDiff", func() {
-		It("Correct calc", func() {
-			Expect(absDiff(2, 1)).To(Equal(int64(1)))
-			Expect(absDiff(1, 2)).To(Equal(int64(1)))
-			Expect(absDiff(1, 1)).To(Equal(int64(0)))
-		})
-	})
 })
-
-func absDiff(a, b int64) int64 {
-	d := a - b
-	if d > 0 {
-		return d
-	}
-	return b - a
-}
