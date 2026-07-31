@@ -6,11 +6,13 @@ search: operator-trivy,
 description: Архитектура модуля operator-trivy в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`operator-trivy`](/modules/operator-trivy/) обеспечивает сканирование пользовательских образов в рантайм на известные CVE (Common Vulnerabilities and Exposures), включая уязвимости РЕД ОС, ALT Linux и Astra Linux. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), обогащаемые базами Astra Linux, ALT Linux и РЕД ОС.
+Модуль [`operator-trivy`](/modules/operator-trivy/) обеспечивает сканирование пользовательских образов в рантайм на известные CVE (Common Vulnerabilities and Exposures), включая уязвимости Astra Linux, ALT Linux и РЕД ОС. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), обогащаемые базами Astra Linux, ALT Linux и РЕД ОС.
 
 Также модуль производит анализ соответствия кластера Kubernetes требованиям CIS (Center for Internet Security) Kubernetes Benchmark.
 
-Модуль `operator-trivy` работает со следующими кастомными ресурсами:
+Модуль `operator-trivy` работает с кастомными ресурсами API-групп `spdx.softwarecomposition.kubescape.io` и `trivy.deckhouse.io`.
+
+   В API-группу `trivy.deckhouse.io` входят следующие ресурсы:
 - [ClusterComplianceReport](/modules/operator-trivy/cr.html#clustercompliancereport) — хранит сводный отчёт о соответствии кластера требованиям безопасности (например, CIS Kubernetes Benchmark);
 - ClusterConfigAuditReport — хранит результаты аудита конфигурации Kubernetes-объектов на уровне кластера;
 - ClusterInfraAssessmentReport — хранит результаты проверок безопасности инфраструктуры Kubernetes на уровне кластера;
@@ -26,6 +28,24 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 - [RegistryScanTarget](/modules/operator-trivy/cr.html#registryscantarget) — задаёт целевой реестр, репозитории и параметры периодического сканирования;
 - [SbomReport](/modules/operator-trivy/cr.html#sbomreport) — хранит SBOM, то есть состав ПО и зависимостей в образе контейнера;
 - [VulnerabilityReport](/modules/operator-trivy/cr.html#vulnerabilityreport) — хранит результаты сканирования уязвимостей в образе контейнера.
+
+   В API-группу `spdx.softwarecomposition.kubescape.io` входят следующие ресурсы:
+- ApplicationProfiles — хранит профиль поведения приложения в рантайме (системные вызовы, запускаемые процессы, доступ к файлам, HTTP-эндпоинты);
+- CollapseConfigurations — задаёт кластерные пороги агрегации динамических путей, эндпоинтов и сетевых адресов при формировании профилей;
+- ConfigurationScanSummaries — хранит сводку результатов проверок конфигурации для группы рабочих нагрузок в заданной области (например, неймспейсе);
+- ContainerProfiles — хранит профиль отдельного контейнера, включая рантайм-поведение и сетевые взаимодействия;
+- GeneratedNetworkPolicies — хранит сгенерированные на основе наблюдаемого трафика объекты NetworkPolicy;
+- KnownServers — хранит справочник известных серверов и диапазонов IP-адресов для обогащения сгенерированных сетевых политик;
+- NetworkNeighborhoods — хранит наблюдаемую карту входящих и исходящих сетевых взаимодействий рабочих нагрузок;
+- OpenVulnerabilityExchangeContainers — хранит документы формата OpenVEX со статусами уязвимостей для компонентов;
+- SbomSyftFiltereds — хранит отфильтрованный Syft SBOM только с релевантными уязвимыми компонентами;
+- SbomSyfts — хранит SBOM в формате Syft;
+- SeccompProfiles — хранит seccomp-профили контейнеров (разрешённые системные вызовы и правила фильтрации);
+- VulnerabilityManifestSummaries — хранит сводку VulnerabilityManifest по уровням критичности с ссылками на связанные объекты;
+- VulnerabilityManifests — хранит подробный манифест найденных уязвимостей;
+- VulnerabilitySummaries — хранит агрегированную сводку уязвимостей для заданной области видимости;
+- WorkloadConfigurationScans — хранит детальные результаты сканирования конфигурации конкретного workload;
+- WorkloadConfigurationScanSummaries — хранит сводку результатов WorkloadConfigurationScan.
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/operator-trivy/).
 
@@ -79,46 +99,27 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
    - **server** — основной контейнер;
    - **trivy-db-info** — сайдкар-контейнер, который синхронизирует метаданные кеша Trivy с ресурсом ConfigMap `trivy-db-info` в неймспейсе `d8-operator-trivy`.
 
-1. **Trivy-provider** (StatefulSet) — компонент состоит из одного контейнера **trivy-provider** и обеспечивает интеграцию с Gatekeeper модуля [`admission-policy-engine`](/modules/admission-policy-engine/).
+1. **Trivy-provider** (StatefulSet) — компонент состоит из одного контейнера **trivy-provider** и предоставляет интерфейс для проверки образов компонентом Gatekeeper модуля [`admission-policy-engine`](/modules/admission-policy-engine/).
 
-   При установке модуля создаётся ресурс Provider, который регистрирует trivy-provider как провайдер в Gatekeeper.
+   При установке модуля создаётся ресурс Provider, который регистрирует trivy-provider как провайдер в Gatekeeper. Подробнее с описанием интеграции можно ознакомиться в [соответствующем разделе документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata/).
 
    Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.denyVulnerableImages.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-denyvulnerableimages-enabled) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`) и включен компонент Gatekeeper модуля [`admission-policy-engine`](/modules/admission-policy-engine/).
 
-1. **Report-updater** (Deployment) — опциональный контроллер, состоящий из одного контейнера **report-updater**, реализует MutatingWebhook и обеспечивает обогащение кастомного ресурса VulnerabilityReport идентификаторами BDU. Словарь BDU регулярно обновляется из OCI-образа.
+1. **Report-updater** (Deployment) — опциональный контроллер, состоящий из одного контейнера **report-updater**, реализует MutatingWebhook и обеспечивает обогащение кастомного ресурса VulnerabilityReport идентификаторами BDU. Словарь BDU регулярно (каждые 6 часов) обновляется из OCI-образа.
 
    Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.linkCVEtoBDU`](/modules/operator-trivy/stable/configuration.html#parameters-linkcvetobdu) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`).
 
-1. **Registry-scanner** (StatefulSet) — опциональный компонент, состоящий из одного контейнера **registry-scanner**, выполняет регулярное сканирование образов.
+1. **Registry-scanner** (StatefulSet) — опциональный компонент, состоящий из одного контейнера **registry-scanner**, выполняет регулярное сканирование образов, размещенных в произвольных реестрах контейнеров, указанных пользователем. Сканирование нагрузок в самом кластере выполняется компонентом operator.
 
    Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.registryScanning.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-registryscanning-enabled) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`).
 
    Registry-scanner читает кастомные ресурсы [RegistryScanTarget](/modules/operator-trivy/cr.html#registryscantarget), запускает сканирование образов через компонент trivy-server и сохраняет результаты обработки в кастомном ресурсе [RegistryImageVulnerabilityReport](/modules/operator-trivy/cr.html#registryimagevulnerabilityreport).
 
-1. **Security-storage** (Deployment) — контроллер, состоящий из одного контейнера **apiserver**, является расширением API Kubernetes и выполняет обработку CRUD-операций, watch-запросов и list-запросов к кастомным ресурсам API-группы `spdx.softwarecomposition.kubescape.io`:
-
-   - ApplicationProfiles;
-   - CollapseConfigurations;
-   - ConfigurationScanSummaries;
-   - ContainerProfiles;
-   - GeneratedNetworkPolicies;
-   - KnownServers;
-   - NetworkNeighborhoods;
-   - OpenVulnerabilityExchangeContainers;
-   - SbomSyftFiltereds;
-   - SbomSyfts;
-   - SeccompProfiles;
-   - VulnerabilityManifestSummaries;
-   - VulnerabilityManifests;
-   - VulnerabilitySummaries;
-   - WorkloadConfigurationScans;
-   - WorkloadConfigurationScanSummaries.
+1. **Security-storage** (Deployment) — контроллер, состоящий из одного контейнера **apiserver**, является расширением API Kubernetes и выполняет обработку CRUD-операций, watch-запросов и list-запросов к кастомным ресурсам API-групп `spdx.softwarecomposition.kubescape.io` и `trivy.deckhouse.io`.
 
    Также security-storage реализует бэкенд для хранения этих ресурсов:
    - метаданные сохраняются в SQLite базе данных;
    - тело объектов сохраняется в gob-формате в каталоге `/data`.
-
-   Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.nodeAgent.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-nodeagent-enabled) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`).
 
 1. **Node-agent** (DaemonSet) — опциональный компонент, состоящий из одного контейнера **node-agent**, запускается на всех узлах кластера в привилегированном режиме и через eBPF наблюдает за поведением контейнеров и формирует рантайм-профили.
 
@@ -155,8 +156,8 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
 1. **Kube-apiserver**:
 
-- обработка ресурсов Kubernetes, указанных в кастомных ресурсах из API-группы `spdx.softwarecomposition.kubescape.io/*`;
-- работа с кастомными ресурсами API-группы `aquasecurity.github.io/*`;
+- обработка ресурсов Kubernetes, указанных в кастомных ресурсах из API-групп `spdx.softwarecomposition.kubescape.io/*` и `trivy.deckhouse.io`;
+- работа с кастомными ресурсами API-группы `trivy.deckhouse.io/*`;
 - отслеживание ресурсов Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob и Job;
 - создание, обновление и удаление ресурсов Secret, Job.
 
