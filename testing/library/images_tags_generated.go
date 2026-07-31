@@ -326,6 +326,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"imageAvailabilityExporter":            "imageHash-extendedMonitoring-imageAvailabilityExporter",
 		"imageAvailabilityExporterVexArtifact": "imageHash-extendedMonitoring-imageAvailabilityExporterVexArtifact",
 		"x509CertificateExporter":              "imageHash-extendedMonitoring-x509CertificateExporter",
+		"x509CertificateExporterVexArtifact":   "imageHash-extendedMonitoring-x509CertificateExporterVexArtifact",
 	},
 	"ingressNginx": map[string]interface{}{
 		"controller110":                 "imageHash-ingressNginx-controller110",
@@ -425,8 +426,10 @@ var DefaultImagesDigests = map[string]interface{}{
 	"monitoringKubernetes": map[string]interface{}{
 		"ebpfExporter":                      "imageHash-monitoringKubernetes-ebpfExporter",
 		"kubeStateMetrics":                  "imageHash-monitoringKubernetes-kubeStateMetrics",
+		"kubeStateMetricsVexArtifact":       "imageHash-monitoringKubernetes-kubeStateMetricsVexArtifact",
 		"kubeletEvictionThresholdsExporter": "imageHash-monitoringKubernetes-kubeletEvictionThresholdsExporter",
 		"nodeExporter":                      "imageHash-monitoringKubernetes-nodeExporter",
+		"nodeExporterVexArtifact":           "imageHash-monitoringKubernetes-nodeExporterVexArtifact",
 	},
 	"monitoringPing": map[string]interface{}{
 		"monitoringPing": "imageHash-monitoringPing-monitoringPing",
@@ -503,6 +506,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"prometheus": map[string]interface{}{
 		"alertmanager":                           "imageHash-prometheus-alertmanager",
+		"alertmanagerVexArtifact":                "imageHash-prometheus-alertmanagerVexArtifact",
 		"alertsReceiver":                         "imageHash-prometheus-alertsReceiver",
 		"grafanaDashboardProvisioner":            "imageHash-prometheus-grafanaDashboardProvisioner",
 		"grafanaDashboardProvisionerVexArtifact": "imageHash-prometheus-grafanaDashboardProvisionerVexArtifact",
@@ -510,7 +514,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"grafanaV10VexArtifact":                  "imageHash-prometheus-grafanaV10VexArtifact",
 		"memcached":                              "imageHash-prometheus-memcached",
 		"memcachedExporter":                      "imageHash-prometheus-memcachedExporter",
+		"memcachedExporterVexArtifact":           "imageHash-prometheus-memcachedExporterVexArtifact",
 		"mimir":                                  "imageHash-prometheus-mimir",
+		"mimirVexArtifact":                       "imageHash-prometheus-mimirVexArtifact",
 		"prometheus":                             "imageHash-prometheus-prometheus",
 		"prometheusVexArtifact":                  "imageHash-prometheus-prometheusVexArtifact",
 		"promxy":                                 "imageHash-prometheus-promxy",
@@ -519,8 +525,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"tricksterVexArtifact":                   "imageHash-prometheus-tricksterVexArtifact",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{
-		"k8sPrometheusAdapter":   "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapter",
-		"prometheusReverseProxy": "imageHash-prometheusMetricsAdapter-prometheusReverseProxy",
+		"k8sPrometheusAdapter":            "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapter",
+		"k8sPrometheusAdapterVexArtifact": "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapterVexArtifact",
+		"prometheusReverseProxy":          "imageHash-prometheusMetricsAdapter-prometheusReverseProxy",
 	},
 	"prometheusPushgateway": map[string]interface{}{
 		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
