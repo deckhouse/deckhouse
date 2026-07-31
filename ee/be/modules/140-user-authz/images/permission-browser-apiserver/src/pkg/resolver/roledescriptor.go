@@ -222,18 +222,23 @@ func IsClusterAdminRole(roleName string) bool {
 	return ok
 }
 
-// bypassGroups are the administrator groups the system-resource webhook skips
-// before it looks at any role, so membership alone lifts the protection. Keep in
-// sync with the administrator half of BYPASS_GROUPS in
-// modules/140-user-authz/webhooks/validating/system_resources.py; the cluster
-// components in that set (system:nodes and the system service accounts) are
-// deliberately absent -- they are not subjects a report is ever built for, and
-// listing them would only invite treating a workload as an administrator.
+// bypassGroups are the groups the system-resource webhook skips before it looks
+// at any role, so membership alone lifts the protection. Keep in sync with
+// BYPASS_GROUPS in modules/140-user-authz/webhooks/validating/system_resources.py;
+// the contract test asserts the two sets are equal.
+//
+// The cluster components are here too, not only the administrator groups. A
+// report about a ServiceAccount of kube-system or d8-system is an ordinary thing
+// to ask for, and for one of those the webhook does step aside -- saying
+// otherwise would be the report claiming a restriction nobody applies.
 var bypassGroups = map[string]struct{}{
-	"system:masters":         {},
-	"kubeadm:cluster-admins": {},
-	"superadmins":            {},
-	"system:sudousers":       {},
+	"system:masters":                     {},
+	"kubeadm:cluster-admins":             {},
+	"superadmins":                        {},
+	"system:sudousers":                   {},
+	"system:nodes":                       {},
+	"system:serviceaccounts:kube-system": {},
+	"system:serviceaccounts:d8-system":   {},
 }
 
 // IsBypassGroup reports whether membership in this group alone bypasses the

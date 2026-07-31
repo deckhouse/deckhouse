@@ -167,13 +167,17 @@ func TestIsSuperadminRole(t *testing.T) {
 }
 
 func TestIsBypassGroup(t *testing.T) {
-	for _, group := range []string{"system:masters", "kubeadm:cluster-admins", "superadmins", "system:sudousers"} {
+	// Everything the webhook steps aside for, administrators and cluster components alike. A report
+	// about a ServiceAccount of kube-system is an ordinary thing to ask for, and for that subject the
+	// webhook really does step aside.
+	for _, group := range []string{
+		"system:masters", "kubeadm:cluster-admins", "superadmins", "system:sudousers",
+		"system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system",
+	} {
 		assert.True(t, IsBypassGroup(group), group)
 	}
 
-	// Cluster components bypass the webhook too, but a report is never built for them, and calling a
-	// workload an administrator would only misread the result.
-	for _, group := range []string{"system:nodes", "system:authenticated", "netops"} {
+	for _, group := range []string{"system:authenticated", "system:serviceaccounts:team-a", "netops"} {
 		assert.False(t, IsBypassGroup(group), group)
 	}
 }

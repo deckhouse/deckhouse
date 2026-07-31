@@ -30,30 +30,39 @@ const webhookSourcePath = "../../../../../../../../../modules/140-user-authz/web
 func TestSuperadminSetsMatchTheWebhook(t *testing.T) {
 	source := readWebhookSource(t)
 
-	assert.Equal(t, pythonSet(t, source, "SUPERADMIN_ROLES"), goSet(superadminRoles), "SUPERADMIN_ROLES")
-	assert.Equal(t, pythonSet(t, source, "CLUSTER_ADMIN_ROLES"), goSet(clusterAdminRoles), "CLUSTER_ADMIN_ROLES")
-
-	// BYPASS_GROUPS also lists cluster components (system:nodes, the system service accounts). They
-	// bypass the webhook as well, but a report is never built for them, so only the administrator
-	// groups are mirrored -- hence a subset check rather than equality.
-	webhookGroups := pythonSet(t, source, "BYPASS_GROUPS")
-	for group := range bypassGroups {
-		assert.Contains(t, webhookGroups, group, "group is not bypassed by the webhook")
-	}
+	assert.Equal(t, pythonSet(t, source, "SUPERADMIN_ROLES"), superadminRoles, "SUPERADMIN_ROLES")
+	assert.Equal(t, pythonSet(t, source, "CLUSTER_ADMIN_ROLES"), clusterAdminRoles, "CLUSTER_ADMIN_ROLES")
+	// Equality, in both directions. The subset check this replaces would have let a group added on
+	// the python side pass unnoticed, and the report would go on claiming a restriction the webhook
+	// had stopped applying.
+	assert.Equal(t, pythonSet(t, source, "BYPASS_GROUPS"), bypassGroups, "BYPASS_GROUPS")
 }
+
+// webhookTestPath is the test that ships beside the webhook. The two travel together, so their
+// absence tells the checkout apart from the drift.
+const webhookTestPath = "../../../../../../../../../modules/140-user-authz/webhooks/validating/system_resources_test.py"
 
 func readWebhookSource(t *testing.T) string {
 	t.Helper()
 
 	data, err := os.ReadFile(filepath.Clean(webhookSourcePath))
-	if err != nil {
-		// The webhook lives in another module of the same repository. When only this image is
-		// checked out there is nothing to compare against, and failing would report a packaging
-		// detail as a contract violation.
-		t.Skipf("webhook source is not available (%v)", err)
+	if err == nil {
+		return string(data)
 	}
 
-	return string(data)
+	// A missing file is the drift this test exists to catch -- renaming or deleting the webhook
+	// would otherwise turn the test green -- so it fails, unless the webhook is not part of this
+	// checkout at all. That case is real: the image is built from this subtree alone, and the two
+	// halves of the model live in different pull requests until they merge. It is told apart by the
+	// test that ships next to the webhook: gone together, the whole thing is absent; gone alone, the
+	// source moved and the contract can no longer be checked.
+	if _, sibling := os.Stat(filepath.Clean(webhookTestPath)); sibling != nil {
+		t.Skipf("the user-authz webhooks are not part of this checkout (%v)", err)
+	}
+
+	t.Fatalf("the webhook this package models is gone from %s: %v", webhookSourcePath, err)
+
+	return ""
 }
 
 var pythonStringRE = regexp.MustCompile(`"([^"]+)"`)
@@ -96,13 +105,4 @@ func stripComment(line string) string {
 	}
 
 	return line
-}
-
-func goSet(set map[string]struct{}) map[string]struct{} {
-	out := make(map[string]struct{}, len(set))
-	for key := range set {
-		out[key] = struct{}{}
-	}
-
-	return out
 }

@@ -388,6 +388,29 @@ func TestReport_UnknownResourceSurvivesAPartialSnapshot(t *testing.T) {
 	assert.Contains(t, status.Notes, "the discovery snapshot is incomplete: wildcard rules may have been expanded to fewer resources than they actually grant")
 }
 
+// A subresource is judged by its base resource. Discovery lists no subresources at all -- every name
+// with a slash is skipped -- so asking the snapshot about "nodes/proxy" answers "unknown" forever,
+// and the row would survive although it can no more be exercised in a namespace than "nodes" itself.
+func TestReport_SubresourceIsJudgedByItsBaseResource(t *testing.T) {
+	objs := []runtime.Object{
+		clusterRole("prober", nil,
+			rule([]string{""}, []string{"nodes/proxy"}, []string{"get"}),
+			rule([]string{""}, []string{"pods/log"}, []string{"get"}),
+			rule([]string{"flapping.example.com"}, []string{"widgets/status"}, []string{"get"})),
+		roleBinding("probe", "team-a", "ClusterRole", "prober", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}),
+	}
+
+	status, err := setupSubjectAccessResolver(t, objs, nil).Report(context.Background(), userRequest("alice"))
+	require.NoError(t, err)
+
+	scope := findScope(t, status, "team-a")
+	assert.False(t, hasResource(scope, "", "nodes/proxy"), "a subresource of a cluster-scoped resource is not exercisable in a namespace")
+	assert.True(t, hasResource(scope, "", "pods/log"), "a subresource of a namespaced resource was dropped")
+	// The base is unknown to the snapshot, so the row is kept -- an audit report over-reports rather
+	// than omits.
+	assert.True(t, hasResource(scope, "flapping.example.com", "widgets/status"), "a subresource of an unknown resource was dropped")
+}
+
 func hasResource(scope v1alpha1.AccessScope, group, resource string) bool {
 	for _, access := range scope.Resources {
 		if access.Group == group && access.Resource == resource {
