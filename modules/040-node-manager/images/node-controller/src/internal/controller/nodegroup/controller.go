@@ -113,11 +113,11 @@ func (r *Status) SetupWatches(w register.Watcher) {
 }
 
 func (r *Status) secretToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
-	return nodecommon.SecretToAllNodeGroups(ctx, r.Client)
+	return nodecommon.AllNodeGroups(ctx, r.Client)
 }
 
 func (r *Status) configMapToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {
-	return nodecommon.SecretToAllNodeGroups(ctx, r.Client)
+	return nodecommon.AllNodeGroups(ctx, r.Client)
 }
 
 func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

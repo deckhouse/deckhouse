@@ -67,10 +67,12 @@ func GetConfigurationChecksums(ctx context.Context, r client.Reader) (map[string
 	return checksums, nil
 }
 
-func SecretToAllNodeGroups(ctx context.Context, r client.Reader) []reconcile.Request {
+// AllNodeGroups returns a reconcile request for every NodeGroup. Used by watches
+// that must refresh all groups on a shared cluster-scoped object change (Secret, ConfigMap, …).
+func AllNodeGroups(ctx context.Context, r client.Reader) []reconcile.Request {
 	ngList := &v1.NodeGroupList{}
 	if err := r.List(ctx, ngList); err != nil {
-		log.FromContext(ctx).Error(err, "failed to list nodegroups for secret event")
+		log.FromContext(ctx).Error(err, "failed to list nodegroups")
 		return nil
 	}
 

@@ -157,7 +157,7 @@ func TestReconcile_LongErrorTruncatedAndEventEmitted(t *testing.T) {
 	}
 }
 
-func TestSecretToAllNodeGroups(t *testing.T) {
+func TestAllNodeGroups(t *testing.T) {
 	setEnv(t)
 	r, _ := newReconciler(t,
 		&v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "a"}},

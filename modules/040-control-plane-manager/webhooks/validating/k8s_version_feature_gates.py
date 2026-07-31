@@ -313,7 +313,10 @@ def validate_module_config_change(ctx: DotMap) -> Optional[str]:
 
 def validate(ctx: DotMap) -> Optional[str]:
     req = ctx.review.request
-    kind = req.kind.kind.lower()
+    # DotMap returns an empty DotMap for missing keys; calling .lower() on it raises
+    # AttributeError, which main() turns into deny — with failurePolicy:Fail that would
+    # lock ModuleConfig edits. Resolve kind defensively.
+    kind = str(req.get('kind', {}).get('kind', '') or '').lower()
 
     if kind == "secret":
         return validate_cluster_configuration_change(ctx)

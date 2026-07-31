@@ -22,6 +22,7 @@ import yaml
 import feature_gates_generated
 from k8s_version_feature_gates import (
     main,
+    validate,
     get_enabled_feature_gates,
     normalize_version,
     CLUSTER_CONFIG_SNAPSHOT_NAME,
@@ -256,6 +257,12 @@ class TestK8sVersionFeatureGatesValidationWebhook(unittest.TestCase):
             "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
         )
         tests.assert_validation_deny(self, out, error_msg)
+
+    def test_validate_missing_kind_should_allow_not_raise(self):
+        # DotMap returns an empty DotMap for missing keys; .kind.kind.lower() would
+        # AttributeError and lock ModuleConfig edits under failurePolicy:Fail.
+        ctx = DotMap({"review": {"request": {}}})
+        self.assertIsNone(validate(ctx))
 
 
 def _prepare_mc_validation_binding_context(

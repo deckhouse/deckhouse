@@ -156,6 +156,9 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		var extractErr error
 		oldSettings, extractErr = v.extractOldSettings(review.OldObjectRaw)
 		if extractErr != nil {
+			// Explicitly clear: CEL transition must not see partial/unconverted settings
+			// even if a future extractSettingsFromModuleConfig starts returning them with err.
+			oldSettings = nil
 			// Keep the kubernetesVersion clear-guard alive when conversion of the old object
 			// fails, but do not feed unconverted settings to CEL transition rules.
 			oldConfig := new(v1alpha1.ModuleConfig)
