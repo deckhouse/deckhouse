@@ -9,7 +9,9 @@ weight: 55
 ---
 
 Administrator documentation for advanced search in Deckhouse Code: operating indexing after OpenSearch is connected.
+<!-- Restore the links to /modules/code/stable/advanced-search.html once that page is published in the code module documentation.
 For connection and setup, see the [code module documentation](/modules/code/stable/advanced-search.html).
+-->
 For user instructions, see the [user guide](../../user/search.html).
 
 ## Operations
@@ -20,7 +22,7 @@ Manage indexing, monitoring, and troubleshooting.
 
 Go to **Admin** → **Settings** → **Search**.
 
-This section is available after [OpenSearch is connected](/modules/code/stable/advanced-search.html).
+This section is available after OpenSearch is connected.
 
 #### Pause indexing
 
@@ -64,32 +66,12 @@ The **Reindex all indices** operation automatically enqueues background reindexi
 
 ### Admin API
 
-#### Recreate indices
+The same operations are available through the administrative REST API:
 
-```shell
-curl --request POST \
-  --header "PRIVATE-TOKEN: <admin_token>" \
-  --data "schema_class=recreate_all" \
-  "https://code.example.com/api/v4/admin/opensearch/recreate_indices"
-```
+- `POST /api/v4/admin/opensearch/recreate_indices` — recreate indices;
+- `GET /api/v4/admin/opensearch/indexing_queue_stats` — indexing queue stats.
 
-The `schema_class` parameter:
-
-| Value | Description |
-|-------|-------------|
-| `Search::Opensearch::IndicesSchema::Code` | Code index |
-| `Search::Opensearch::IndicesSchema::Wiki` | Wiki index |
-| `Search::Opensearch::IndicesSchema::Note` | Comments index |
-| `recreate_all` | All indices |
-
-#### Indexing queue stats
-
-```shell
-curl --header "PRIVATE-TOKEN: <admin_token>" \
-  "https://code.example.com/api/v4/admin/opensearch/indexing_queue_stats"
-```
-
-The response contains the number of remaining jobs and the last update time.
+For permissions, allowed `schema_class` values, response codes, and request examples, see the ["OpenSearch API"](opensearch-api.html) reference.
 
 ### Monitoring
 
@@ -143,7 +125,7 @@ For repository indexing, use `search_repository_indexer_*`; for OpenSearch reque
 For user search, use `http_elasticsearch_*`.
 
 The indexing progress widget on **Admin** → **Settings** → **Search** shows the number of remaining full reindex jobs.
-The same data is available through the [Admin API](#indexing-queue-stats).
+The same data is available through the `indexing_queue_stats` endpoint of the [OpenSearch API](opensearch-api.html).
 
 #### Sidekiq queue
 
@@ -168,7 +150,7 @@ OpenSearch indexing jobs are written to Sidekiq logs. Filter by queue name `glob
 
 #### OpenSearch is unavailable
 
-- Check the connection settings — see the [code module documentation](/modules/code/stable/advanced-search.html).
+- Check the connection settings — see the code module documentation.
 - The **Admin** → **Settings** → **Search** page displays a connection failure message.
 - Search returns an error.
 
@@ -193,4 +175,6 @@ If new jobs are not enqueued to the `global-search-indexing` queue:
 ## Related topics
 
 - [Advanced search — user guide](../../user/search.html)
-- [Advanced search — code module documentation](/modules/code/stable/advanced-search.html)
+- [OpenSearch API](opensearch-api.html)
+- [Search API](../../user/search-api.html)
+<!-- - [Advanced search — code module documentation](/modules/code/stable/advanced-search.html) -->

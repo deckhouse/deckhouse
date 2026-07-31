@@ -21,7 +21,7 @@ Advanced search powered by OpenSearch allows you to:
 
 ## Use advanced search
 
-- An administrator must [connect advanced search (OpenSearch)](/modules/code/stable/advanced-search.html).
+- An administrator must [enable advanced search (OpenSearch)](../admin/configuration/advanced-search.html).
 
 To search:
 
@@ -73,6 +73,11 @@ When OpenSearch is enabled, the following scopes are available:
 When OpenSearch is enabled, search for code, commits, wiki, and comments runs through OpenSearch and respects the **access matrix**.
 Users see only objects they have permission to read.
 Search for issues, merge requests, and other entities runs through the database.
+
+{% alert level="info" %}
+The tables above describe search scopes in the web interface.
+The set of scopes available through the REST API differs — see the ["Search API"](search-api.html) reference.
+{% endalert %}
 
 ## Using search
 
@@ -202,4 +207,5 @@ Group wiki reindexing is available: index status and the **Reindex wiki** button
 
 ## Related topics
 
-- [Advanced search — code module documentation](/modules/code/stable/advanced-search.html)
+- [Advanced search (OpenSearch) — administrator guide](../admin/configuration/advanced-search.html)
+- [Search API](search-api.html)

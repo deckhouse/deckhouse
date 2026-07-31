@@ -9,7 +9,9 @@ weight: 55
 ---
 
 Документация для администратора по расширенному поиску в Deckhouse Code: эксплуатация индексации после подключения OpenSearch.
+<!-- Ссылки на страницу /modules/code/stable/advanced-search.html вернуть после её публикации в документации модуля code.
 Подключение и настройка — в [документации модуля code](/modules/code/stable/advanced-search.html).
+-->
 Инструкции для пользователей — в [руководстве пользователя](../../user/search.html).
 
 ## Эксплуатация
@@ -20,7 +22,7 @@ weight: 55
 
 Перейдите в «Admin» → «Настройки» → «Поиск».
 
-Раздел доступен после [подключения OpenSearch](/modules/code/stable/advanced-search.html).
+Раздел доступен после подключения OpenSearch.
 
 #### Приостановка индексации
 
@@ -64,32 +66,12 @@ weight: 55
 
 ### Admin API
 
-#### Переиндексация индексов
+Те же операции доступны через административный REST API:
 
-```shell
-curl --request POST \
-  --header "PRIVATE-TOKEN: <admin_token>" \
-  --data "schema_class=recreate_all" \
-  "https://code.example.com/api/v4/admin/opensearch/recreate_indices"
-```
+- `POST /api/v4/admin/opensearch/recreate_indices` — пересоздание индексов;
+- `GET /api/v4/admin/opensearch/indexing_queue_stats` — статистика очереди индексации.
 
-Параметр `schema_class`:
-
-| Значение | Описание |
-|----------|----------|
-| `Search::Opensearch::IndicesSchema::Code` | Индекс кода |
-| `Search::Opensearch::IndicesSchema::Wiki` | Индекс wiki |
-| `Search::Opensearch::IndicesSchema::Note` | Индекс комментариев |
-| `recreate_all` | Все индексы |
-
-#### Статистика очереди индексации
-
-```shell
-curl --header "PRIVATE-TOKEN: <admin_token>" \
-  "https://code.example.com/api/v4/admin/opensearch/indexing_queue_stats"
-```
-
-Ответ содержит количество оставшихся задач и время последнего обновления.
+Права доступа, допустимые значения `schema_class`, коды ответов и примеры запросов описаны в разделе [«API OpenSearch»](opensearch-api.html).
 
 ### Мониторинг
 
@@ -135,7 +117,7 @@ curl --header "PRIVATE-TOKEN: <admin_token>" \
 Рост `search_repository_indexer_lock_contention_total` — признак конкуренции за lock между заданиями одного проекта.
 Рост `search_repository_indexer_runs_total{outcome="error"}` — ошибки go-indexer или сервисов индексации; детали в логах Sidekiq.
 
-Метрики `*_failed_total` увеличиваются при ошибках подключения к opensearch или ошибках авторизации.
+Метрики `*_failed_total` увеличиваются при ошибках подключения к OpenSearch или ошибках авторизации.
 Рост `*_failed_total` указывает на недоступность OpenSearch или неверные credentials.
 Рост `*_duration_seconds` при стабильном `*_total` — на медленные ответы OpenSearch.
 
@@ -143,7 +125,7 @@ curl --header "PRIVATE-TOKEN: <admin_token>" \
 Для мониторинга пользовательского поиска — на `http_elasticsearch_*`.
 
 На странице «Admin» → «Настройки» → «Поиск» виджет прогресса индексации показывает число оставшихся задач переиндексации.
-Те же данные доступны через [Admin API](#статистика-очереди-индексации).
+Те же данные доступны через эндпоинт `indexing_queue_stats` [API OpenSearch](opensearch-api.html).
 
 #### Очередь Sidekiq
 
@@ -168,9 +150,9 @@ Cron-задачи не выполняют индексацию напрямую:
 
 #### OpenSearch недоступен
 
-- Проверьте настройки подключения — см. [документацию модуля code](/modules/code/stable/advanced-search.html).
+- Проверьте настройки подключения — см. документацию модуля code.
 - На странице «Admin» → «Настройки» → «Поиск» появится сообщение о невозможности подключения.
-- Поиск вернёт  ошибку.
+- Поиск вернёт ошибку.
 
 #### Неполные результаты поиска
 
@@ -193,4 +175,6 @@ Cron-задачи не выполняют индексацию напрямую:
 ## Связанные темы
 
 - [Расширенный поиск — руководство пользователя](../../user/search.html)
-- [Расширенный поиск — документация модуля code](/modules/code/stable/advanced-search.html)
+- [API OpenSearch](opensearch-api.html)
+- [API поиска](../../user/search-api.html)
+<!-- - [Расширенный поиск — документация модуля code](/modules/code/stable/advanced-search.html) -->
