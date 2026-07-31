@@ -370,16 +370,18 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
 	manifests, err := c.renderTemplate(project, template)
 	if err != nil {
-		return fmt.Errorf("render chart: %w", err)
+		return err
+	}
+
+	// Before post-rendering: injected manifests tend to fail there too, and "post render: yaml: line
+	// 6: ..." says nothing about the parameter that caused it.
+	if err = c.ensureParametersStayValues(project, template); err != nil {
+		return err
 	}
 
 	renderer := newPostRenderer(project, nil, c.logger, false)
 	if _, err = renderer.Run(bytes.NewBufferString(manifests)); err != nil {
 		return fmt.Errorf("post render: %w", err)
-	}
-
-	if err = c.ensureParametersStayValues(project, template); err != nil {
-		return err
 	}
 
 	return renderer.warning
@@ -399,7 +401,7 @@ func (c *Client) renderTemplate(project *v1alpha2.Project, template *v1alpha1.Pr
 
 	rendered, err := engine.Render(ch, values)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("render chart: %w", err)
 	}
 
 	buf := new(strings.Builder)
