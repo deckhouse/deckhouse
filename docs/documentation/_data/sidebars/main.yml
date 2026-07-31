@@ -906,8 +906,8 @@ entries:
                 ru: Назначение лейблов пространствам имён
               url: /admin/configuration/label-assignment.html
             - title:
-                en: Application delivery with Argo CD
-                ru: Доставка приложений с помощью Argo CD
+                en: Application delivery (Argo CD)
+                ru: Доставка приложений (Argo CD)
               folders:
                 - title:
                     en: Overview
@@ -1160,8 +1160,8 @@ entries:
                 ru: Настройка мониторинга приложений
               url: /user/monitoring/app.html
         - title:
-            en: Application delivery with Argo CD
-            ru: Доставка приложений с помощью Argo CD
+            en: Application delivery (Argo CD)
+            ru: Доставка приложений (Argo CD)
           url: /user/delivery/argocd/
         - title:
             en: Marketplace

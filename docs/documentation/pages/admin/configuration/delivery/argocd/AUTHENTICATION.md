@@ -55,7 +55,7 @@ spec:
 EOF
 ```
 
-After creating the user and applying the ArgoCD object manifest, additionally generate a password for web interface access if the user has been granted the corresponding rights.
+After creating the user and applying the ArgoCD object manifest, generate a password for web interface access if the user has been granted the corresponding rights.
 
 To set a password through a Secret, first calculate its bcrypt hash, then encode the result in Base64:
 
@@ -103,7 +103,7 @@ After disabling local authentication, review the access rules in the [Configurin
 
 ## SSO authentication
 
-Before configuring the ArgoCD object, create an OAuth2 client — a [DexClient](/modules/user-authn/cr.html#dexclient) object required for integration with Deckhouse Kubernetes Platform:
+Before configuring the ArgoCD object, create a [DexClient](/modules/user-authn/cr.html#dexclient) object. It is used as an OAuth2 client and is required for integration with Deckhouse Kubernetes Platform:
 
 ```bash
 d8 k create -f -<<EOF
@@ -252,6 +252,6 @@ argocd login <ARGOCD_DOMAIN>:443 --sso
 When this command runs on the administrator workstation, a web browser opens with the Deckhouse Kubernetes Platform authentication form.
 
 {% alert level="info" %}
-To configure a permanent token, create a local Argo CD user and set the `apiKey` attribute for them. In this case, the user has access rights only to the Argo CD API.
+To issue a permanent token, create a local Argo CD user and set the `apiKey` attribute for them. In this case, the user has access rights only to the Argo CD API.
 For details, see [Creating additional local users](#creating-additional-local-users).
 {% endalert %}

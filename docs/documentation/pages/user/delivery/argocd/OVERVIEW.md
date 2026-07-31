@@ -18,7 +18,7 @@ The user specifies the manifest source, target cluster, namespace, and synchroni
 after which Argo CD deploys the application and keeps it in the target state.
 
 In DKP, Argo CD instances are deployed with the [operator-argo](/modules/operator-argo/) module.
-Typical user work with Argo CD includes:
+Typical work with Argo CD includes:
 
 - creating or using an existing [AppProject](/modules/operator-argo/cr.html#appproject) object;
 - preparing the target namespace for the application;

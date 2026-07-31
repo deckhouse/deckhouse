@@ -35,7 +35,6 @@ Detailed information about module settings is available in the [`operator-argo` 
 After you enable the `operator-argo` module, Argo CD custom resources become available in the DKP cluster.
 
 To run an Argo CD instance, create an [ArgoCD](/modules/operator-argo/cr.html#argocd) object.
-Deploying [one](#deploying-an-argo-cd-instance) or [multiple](#deploying-multiple-argo-cd-instances) Argo CD instances is described below.
 Working with custom resources that belong to an Argo CD instance is described in the [Usage](/products/kubernetes-platform/documentation/v1/user/delivery/argocd/) section.
 
 {% offtopic title="List of Argo CD custom resources created by the <code>operator-argo</code> module..." %}
@@ -98,7 +97,7 @@ spec:
 The [`spec.server.insecure: true`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-insecure) parameter in the example above disables internal TLS on the Argo CD API server. This helps avoid redirect loops when publishing through Ingress.
 {% endalert %}
 
-After you create the ArgoCD object from the example above, Argo CD components are started in the `argocd` namespace:
+After you create the ArgoCD object, Argo CD components are started in the `argocd` namespace:
 
 ```console
 d8 k -n argocd get pods
