@@ -341,6 +341,11 @@ func normalizePath(path string) string {
 
 // download fetches a package image into a versioned directory via an atomic temporary directory rename.
 // A cached version directory is reused unless force is set, in which case it is replaced by a fresh download.
+//
+// force is set for modules only, and is transitional. It is unsafe for packages that
+// share a version directory: several deployed names can point at one
+// <repo>/<packageName>/<version> (application instances built from the same definition),
+// and replacing it would pull the directory out from under the other names' symlinks.
 func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDir, name, version string, force bool) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "download")
 	defer span.End()

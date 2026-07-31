@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -54,6 +55,13 @@ const (
 	// finalizerRequeueAfter is the short delay used to re-read the override right after
 	// its finalizer has been added.
 	finalizerRequeueAfter = 500 * time.Millisecond
+	// defaultScanInterval mirrors the CRD default for spec.scanInterval and backs
+	// overrides whose interval is unset or non-positive.
+	defaultScanInterval = 15 * time.Second
+	// digestTimeout bounds a single digest lookup. The controller runs one worker, so
+	// without it an unreachable registry blocks every other override's scan for as long
+	// as the registry client's own timeout allows.
+	digestTimeout = 30 * time.Second
 )
 
 // RegisterController registers the ModulePullOverride controller with the manager.
@@ -178,8 +186,17 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	// set condition overridden for the module
+	//
+	// Skipped when the condition already holds: SetConditionTrue restamps LastProbeTime
+	// on every call, so an unconditional update would write the module status on every
+	// scan and wake every Module watcher with it.
 	err := utils.UpdateStatus(ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
+			return false
+		}
+
 		module.SetConditionTrue(v1alpha1.ModuleConditionIsOverridden)
+
 		return true
 	})
 	if err != nil {
@@ -212,16 +229,18 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	digest, err := r.manager.GetModuleDigest(ctx, registry.BuildRemote(source), mpo.Name, mpo.Spec.ImageTag)
+	digestCtx, cancel := context.WithTimeout(ctx, digestTimeout)
+	digest, err := r.manager.GetModuleDigest(digestCtx, registry.BuildRemote(source), mpo.Name, mpo.Spec.ImageTag)
+	cancel()
+
 	if err != nil {
-		mpo.Status.Message = fmt.Sprintf("Download error: %v", err)
-		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
+		if uerr := r.setStatusMessage(ctx, mpo, fmt.Sprintf("Download error: %v", err)); uerr != nil {
 			r.logger.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
 
 		r.logger.Error("failed to download dev image tag for the module pull override", slog.String("name", mpo.Name), log.Err(err))
-		return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
+		return ctrl.Result{RequeueAfter: scanInterval(mpo)}, nil
 	}
 
 	// check if module is up-to-date
@@ -232,7 +251,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 			return ctrl.Result{}, uerr
 		}
 
-		return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
+		return ctrl.Result{RequeueAfter: scanInterval(mpo)}, nil
 	}
 
 	if err = r.deployPackage(ctx, source, mpo); err != nil {
@@ -263,19 +282,33 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 	// 	return ctrl.Result{}, fmt.Errorf("ensure module documentation: %w", err)
 	// }
 
-	return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
+	return ctrl.Result{RequeueAfter: scanInterval(mpo)}, nil
+}
+
+// scanInterval returns the delay before the next digest check. A non-positive interval
+// reads as "do not requeue" to controller-runtime, which would silently stop scanning
+// the override, so it falls back to the CRD default.
+func scanInterval(mpo *v1alpha2.ModulePullOverride) time.Duration {
+	if mpo.Spec.ScanInterval.Duration <= 0 {
+		return defaultScanInterval
+	}
+
+	return mpo.Spec.ScanInterval.Duration
 }
 
 // deployPackage registers the overridden module in the package runtime, carrying over
-// the settings from its module config.
+// the settings from its module config. A module config is optional: without one the
+// module deploys with empty settings, and the config controller pushes them later if
+// one appears.
 //
 // The update is forced: an override pins a mutable tag, so the runtime sees an
 // unchanged version and would reuse the copy it already deployed. Only the digest
 // comparison in handleCreateOrUpdate, which gates this call, can tell that the image
 // behind that tag is new.
 func (r *reconciler) deployPackage(ctx context.Context, source *v1alpha1.ModuleSource, mpo *v1alpha2.ModulePullOverride) error {
+	// A not-found config stays zero-valued, and Settings.GetMap handles a nil receiver.
 	config := new(v1alpha1.ModuleConfig)
-	if err := r.client.Get(ctx, client.ObjectKeyFromObject(mpo), config); err != nil {
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(mpo), config); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("get module config: %w", err)
 	}
 

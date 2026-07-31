@@ -100,6 +100,9 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 // found it changed: a module tag is not necessarily immutable — a dev tag pinned by
 // a ModulePullOverride can be re-pushed with different content under an unchanged
 // version, which the runtime cannot detect on its own.
+//
+// It is a transitional flag: once module tags are immutable, a version change is the
+// only thing that can invalidate a deployed module and force goes away.
 func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -222,14 +225,21 @@ func (r *Runtime) RemoveModule(name string) {
 	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
 }
 
-// GetModuleDigest returns the digest of the module image.
+// GetModuleDigest returns the digest the module tag currently resolves to. Callers use
+// it to tell a re-pushed mutable tag from an unchanged one and pass the answer back as
+// UpdateModule's force flag.
 func (r *Runtime) GetModuleDigest(ctx context.Context, remote registry.Remote, name, tag string) (string, error) {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "GetModuleDigest")
 	defer span.End()
 
+	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("tag", tag))
+	span.SetAttributes(attribute.String("repository", remote.Name))
+
 	digest, err := r.registry.GetImageDigest(ctx, remote, name, tag)
 	if err != nil {
-		return "", fmt.Errorf("failed to get %s module digest: %w", name, err)
+		span.SetStatus(codes.Error, err.Error())
+		return "", fmt.Errorf("get %s module digest: %w", name, err)
 	}
 
 	return digest, nil
