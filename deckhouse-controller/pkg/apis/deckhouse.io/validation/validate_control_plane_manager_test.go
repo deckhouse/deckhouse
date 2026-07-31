@@ -17,6 +17,7 @@ limitations under the License.
 package validation
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -25,7 +26,9 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -63,6 +66,14 @@ func newClusterConfigurationSecret(kubernetesVersion string) *corev1.Secret {
 			"cluster-configuration.yaml": []byte(raw),
 		},
 	}
+}
+
+// newClusterConfigurationSecretWithMaxUsed also carries the version bookkeeping
+// control-plane-manager keeps alongside the ClusterConfiguration document.
+func newClusterConfigurationSecretWithMaxUsed(kubernetesVersion, maxUsed string) *corev1.Secret {
+	secret := newClusterConfigurationSecret(kubernetesVersion)
+	secret.Data["maxUsedControlPlaneKubernetesVersion"] = []byte(maxUsed)
+	return secret
 }
 
 func newClusterKubernetesConfigMap(available []string) *corev1.ConfigMap {
@@ -360,7 +371,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.32")
 	})
 
-	t.Run("fail-open: no ConfigMap — allowed", func(t *testing.T) {
+	t.Run("fail-open: no ConfigMap and no maxUsed baseline — allowed", func(t *testing.T) {
 		handler := withObjs(t)
 
 		newCfg := newControlPlaneManagerConfig("1.32")
@@ -369,6 +380,76 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 
 		resp := callHandler(t, handler, review)
 		assert.True(t, resp.Allowed)
+	})
+
+	// Before update-observer publishes status.availableVersions — a fresh cluster, a recreated
+	// ConfigMap, an empty status — the membership check has nothing to work with. The Secret
+	// bookkeeping control-plane-manager has always maintained takes over there, so a deep
+	// downgrade cannot slip through that window.
+	t.Run("no ConfigMap: pin more than one minor below maxUsed is rejected", func(t *testing.T) {
+		handler := withObjs(t, newClusterConfigurationSecretWithMaxUsed("1.35", "1.35"))
+
+		newCfg := newControlPlaneManagerConfig("1.32")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "more than one minor below")
+		assert.Contains(t, resp.Result.Message, "1.35")
+	})
+
+	t.Run("no ConfigMap: pin exactly at maxUsed-1 is allowed", func(t *testing.T) {
+		handler := withObjs(t, newClusterConfigurationSecretWithMaxUsed("1.35", "1.35"))
+
+		newCfg := newControlPlaneManagerConfig("1.34")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
+	})
+
+	t.Run("no ConfigMap: upgrade above maxUsed is allowed", func(t *testing.T) {
+		handler := withObjs(t, newClusterConfigurationSecretWithMaxUsed("1.34", "1.34"))
+
+		newCfg := newControlPlaneManagerConfig("1.36")
+		oldCfg := newControlPlaneManagerConfig("1.34")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
+	})
+
+	t.Run("no ConfigMap: clearing the override onto a stale CC pin is rejected via maxUsed", func(t *testing.T) {
+		handler := withObjs(t, newClusterConfigurationSecretWithMaxUsed("1.32", "1.35"))
+
+		newCfg := newControlPlaneManagerConfig("")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "ClusterConfiguration.kubernetesVersion")
+		assert.Contains(t, resp.Result.Message, "more than one minor below")
+	})
+
+	t.Run("empty availableVersions falls through to the maxUsed guard", func(t *testing.T) {
+		handler := withObjs(t,
+			newClusterKubernetesConfigMap(nil),
+			newClusterConfigurationSecretWithMaxUsed("1.35", "1.35"),
+		)
+
+		newCfg := newControlPlaneManagerConfig("1.32")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "more than one minor below")
 	})
 
 	t.Run("fail-open: empty availableVersions — allowed", func(t *testing.T) {
@@ -391,5 +472,46 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 
 		resp := callHandler(t, handler, review)
 		assert.True(t, resp.Allowed)
+	})
+}
+
+// TestModuleConfigOwnsKubernetesVersion covers the predicate that lets the ClusterConfiguration
+// webhook stand down. Presence of the setting — not its value — decides which document owns the
+// version, so an explicit "Automatic" counts as ownership just like a pin does.
+//
+// Getting this wrong is not cosmetic: while the ModuleConfig owns the version, the leftover
+// ClusterConfiguration field describes nothing the cluster will actually run, and validating it
+// blocks edits (including the field's own removal, the last step of the documented migration).
+func TestModuleConfigOwnsKubernetesVersion(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, v1alpha1.AddToScheme(scheme))
+
+	newClient := func(objs ...client.Object) client.Client {
+		return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+	}
+
+	t.Run("no ModuleConfig — ClusterConfiguration still owns the version", func(t *testing.T) {
+		assert.False(t, moduleConfigOwnsKubernetesVersion(context.Background(), newClient()))
+	})
+
+	t.Run("ModuleConfig without settings does not claim ownership", func(t *testing.T) {
+		cfg := newControlPlaneManagerConfig("")
+		assert.False(t, moduleConfigOwnsKubernetesVersion(context.Background(), newClient(cfg)))
+	})
+
+	t.Run("pinned ModuleConfig owns the version", func(t *testing.T) {
+		cfg := newControlPlaneManagerConfig("1.35")
+		assert.True(t, moduleConfigOwnsKubernetesVersion(context.Background(), newClient(cfg)))
+	})
+
+	t.Run("explicit Automatic owns the version too", func(t *testing.T) {
+		cfg := newControlPlaneManagerConfig("Automatic")
+		assert.True(t, moduleConfigOwnsKubernetesVersion(context.Background(), newClient(cfg)))
+	})
+
+	t.Run("a different module's ModuleConfig is irrelevant", func(t *testing.T) {
+		cfg := newControlPlaneManagerConfig("1.35")
+		cfg.SetName("node-manager")
+		assert.False(t, moduleConfigOwnsKubernetesVersion(context.Background(), newClient(cfg)))
 	})
 }

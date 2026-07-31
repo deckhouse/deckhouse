@@ -19,6 +19,7 @@ package validation
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -120,7 +121,12 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 
 	available, ok := v.readAvailableKubernetesVersions(ctx)
 	if !ok || len(available) == 0 {
-		return nil, nil
+		// availableVersions is the richer signal, but it only exists once update-observer has
+		// published status — not on a fresh cluster, not after the ConfigMap was recreated, and
+		// not while status is empty or corrupt. Those are exactly the moments a pin far below the
+		// running version would slip through, so fall back to the Secret bookkeeping, which
+		// control-plane-manager has been maintaining since long before this ConfigMap existed.
+		return v.rejectKubernetesVersionBelowMaxUsed(ctx, effective, fromFallback)
 	}
 
 	if !slices.Contains(available, effective) {
@@ -139,6 +145,79 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		))
 	}
 	return nil, nil
+}
+
+// rejectKubernetesVersionBelowMaxUsed is the availableVersions guard's stand-in for the window
+// before update-observer publishes status. It enforces only the one rule that matters there —
+// never land more than one minor below the highest version the cluster has ever run — using
+// maxUsedControlPlaneKubernetesVersion from the d8-cluster-configuration Secret.
+//
+// Deliberately not validateKubernetesVersionDowngrade: that one resolves "Automatic" on both
+// sides and forbids handing control back to Deckhouse, which is a contract this webhook
+// explicitly allows. Here effective is always an already-resolved explicit version, so a plain
+// floor check is both correct and easier to reason about.
+//
+// Fail-open on a missing/unreadable/unparsable baseline, matching every other guard in this file.
+func (v *moduleConfigValidator) rejectKubernetesVersionBelowMaxUsed(
+	ctx context.Context, effective string, fromFallback bool,
+) (*kwhvalidating.ValidatorResult, error) {
+	baseline, ok := v.readKubernetesVersionBaseline(ctx)
+	if !ok || !baseline.MaxUsedSet || baseline.MaxUsed == "" {
+		return nil, nil
+	}
+
+	maxUsed, err := parseVersion(baseline.MaxUsed)
+	if err != nil {
+		log.Warn("skipping the kubernetesVersion maxUsed guard: cannot parse maxUsedControlPlaneKubernetesVersion",
+			slog.String("value", baseline.MaxUsed), log.Err(err))
+		return nil, nil
+	}
+	target, err := parseVersion(effective)
+	if err != nil {
+		return nil, nil
+	}
+
+	// Allowed floor is maxUsed minus one minor. Written as an addition on the target so the
+	// uint64 minor never underflows on a 1.0-style version.
+	switch {
+	case target.Major() > maxUsed.Major():
+		return nil, nil
+	case target.Major() == maxUsed.Major() && target.Minor()+1 >= maxUsed.Minor():
+		return nil, nil
+	}
+
+	if fromFallback {
+		return rejectResult(fmt.Sprintf(
+			"clearing or deleting the ModuleConfig kubernetesVersion override would fall back to "+
+				"ClusterConfiguration.kubernetesVersion %q, which is more than one minor below %q, "+
+				"the highest version the cluster has ever run; such a downgrade is forbidden",
+			effective, maxUsed.Original(),
+		))
+	}
+	return rejectResult(fmt.Sprintf(
+		"kubernetesVersion %q is more than one minor below %q, the highest version the cluster "+
+			"has ever run; such a downgrade is forbidden",
+		effective, maxUsed.Original(),
+	))
+}
+
+// moduleConfigOwnsKubernetesVersion reports whether ModuleConfig control-plane-manager carries an
+// explicit kubernetesVersion. Presence — not value — decides which document owns the version, so
+// an explicit "Automatic" counts too (see resolveTargetKubernetesVersion in
+// global-hooks/discovery/cluster_configuration.go).
+//
+// Used by the ClusterConfiguration webhook to skip validating a field that no longer has any
+// effect. On a read error it reports false, i.e. keeps validating ClusterConfiguration — the
+// pre-migration behaviour, which is the safe direction for a guard.
+func moduleConfigOwnsKubernetesVersion(ctx context.Context, cli client.Client) bool {
+	cfg := new(v1alpha1.ModuleConfig)
+	if err := cli.Get(ctx, client.ObjectKey{Name: controlPlaneManagerModuleName}, cfg); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Warn("cannot read the control-plane-manager ModuleConfig, validating ClusterConfiguration.kubernetesVersion anyway", log.Err(err))
+		}
+		return false
+	}
+	return settingsKubernetesVersion(rawModuleConfigSettings(cfg)) != ""
 }
 
 func settingsKubernetesVersion(settings map[string]interface{}) string {
@@ -200,10 +279,17 @@ func (v *moduleConfigValidator) readAvailableKubernetesVersions(ctx context.Cont
 	return status.AvailableVersions, true
 }
 
-// readRawClusterConfigurationVersion returns the literal kubernetesVersion from the
-// d8-cluster-configuration Secret. Used only when resolving fallback after clearing an MC pin.
-// ok=false means fail-open.
-func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.Context) (version string, ok bool) {
+// readKubernetesVersionBaseline returns the version bookkeeping control-plane-manager keeps in the
+// d8-cluster-configuration Secret. ok=false means fail-open (missing/unreadable).
+func (v *moduleConfigValidator) readKubernetesVersionBaseline(ctx context.Context) (kubernetesVersionBaseline, bool) {
+	secret, ok := v.readClusterConfigurationSecret(ctx)
+	if !ok {
+		return kubernetesVersionBaseline{}, false
+	}
+	return kubernetesVersionBaselineFromSecret(secret), true
+}
+
+func (v *moduleConfigValidator) readClusterConfigurationSecret(ctx context.Context) (*v1.Secret, bool) {
 	secret := &v1.Secret{}
 	if err := v.client.Get(ctx, client.ObjectKey{
 		Name:      clusterConfigurationSecretName,
@@ -212,6 +298,17 @@ func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.C
 		if !apierrors.IsNotFound(err) {
 			log.Warn("skipping the kubernetesVersion fallback guard: cannot read the d8-cluster-configuration secret", log.Err(err))
 		}
+		return nil, false
+	}
+	return secret, true
+}
+
+// readRawClusterConfigurationVersion returns the literal kubernetesVersion from the
+// d8-cluster-configuration Secret. Used only when resolving fallback after clearing an MC pin.
+// ok=false means fail-open.
+func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.Context) (version string, ok bool) {
+	secret, ok := v.readClusterConfigurationSecret(ctx)
+	if !ok {
 		return "", false
 	}
 

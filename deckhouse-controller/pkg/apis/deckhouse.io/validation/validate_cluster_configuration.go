@@ -289,6 +289,19 @@ func kubernetesVersionBaselineFromSecret(secret *v1.Secret) kubernetesVersionBas
 func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline kubernetesVersionBaseline) (*kwhvalidating.ValidatorResult, error) {
 	// oldVersion can be either "Automatic" or semver (e.g., "1.23.4")
 	// newVersion can be either "Automatic" or semver (e.g., "1.23.5")
+	//
+	// kubernetesVersion is optional in ClusterConfiguration since it moved to the
+	// control-plane-manager ModuleConfig, so either side can now be absent. An absent field means
+	// exactly what "Automatic" means — Deckhouse picks the version — so normalize instead of
+	// handing "" to the semver parser, which used to turn "remove the deprecated field" (the last
+	// step of the documented migration) into a rejected write.
+	if oldVersion == "" {
+		oldVersion = automaticKubernetesVersion
+	}
+	if newVersion == "" {
+		newVersion = automaticKubernetesVersion
+	}
+
 	if oldVersion == newVersion {
 		return allowResult(nil)
 	}
@@ -507,8 +520,17 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 			return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
 		}
 
-		k8sVersionValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-			if clusterConf.KubernetesVersion == "Automatic" {
+		k8sVersionValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+			// Not a pin: "Automatic" hands the choice to Deckhouse, and an absent field means the
+			// same after kubernetesVersion became optional here. Neither names a version to check,
+			// and feeding "" to validateKubernetesVersion rejects the write outright — which used
+			// to make a fully migrated ClusterConfiguration uneditable.
+			if !isPinnedKubernetesVersion(clusterConf.KubernetesVersion) {
+				return allowResult(nil)
+			}
+			// The ModuleConfig setting supersedes this field entirely, so a leftover pin here does
+			// not describe what the cluster will run and must not gate the write.
+			if moduleConfigOwnsKubernetesVersion(ctx, cli) {
 				return allowResult(nil)
 			}
 			return validateKubernetesVersion(clusterConf.KubernetesVersion, mm)
@@ -537,7 +559,13 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 							return validateUnsafeConfigChanges(oldClusterConf, clusterConf, unsafeMode)
 						})
 
-						k8sDowngradeValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+						k8sDowngradeValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+							// See k8sVersionValidator: when ModuleConfig owns the version this
+							// field is inert, so changing (or removing) it cannot downgrade
+							// anything and must not be blocked.
+							if moduleConfigOwnsKubernetesVersion(ctx, cli) {
+								return allowResult(nil)
+							}
 							return validateKubernetesVersionDowngrade(oldClusterConf.KubernetesVersion, clusterConf.KubernetesVersion, kubernetesVersionBaselineFromSecret(secret))
 						})
 

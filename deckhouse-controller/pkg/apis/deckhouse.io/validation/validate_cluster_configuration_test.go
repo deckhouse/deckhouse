@@ -342,6 +342,59 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 			expectValid: false, // Automatic below current version is still rejected
 			expectError: false,
 		},
+		// kubernetesVersion is optional in ClusterConfiguration since it moved to the
+		// control-plane-manager ModuleConfig. An absent field means the same as "Automatic";
+		// feeding "" to the semver parser used to fail the request outright, which made the last
+		// step of the documented migration ("remove the deprecated field") impossible to perform.
+		{
+			name:       "field removed, Deckhouse default is higher — allowed",
+			oldVersion: "1.33.0",
+			newVersion: "",
+			secretData: map[string][]byte{
+				"deckhouseDefaultKubernetesVersion":    []byte("1.34.0"),
+				"maxUsedControlPlaneKubernetesVersion": []byte("1.33.0"),
+			},
+			expectValid: true,
+			expectError: false,
+		},
+		{
+			name:       "field removed, Deckhouse default equals current — allowed",
+			oldVersion: "1.34.0",
+			newVersion: "",
+			secretData: map[string][]byte{
+				"deckhouseDefaultKubernetesVersion":    []byte("1.34.0"),
+				"maxUsedControlPlaneKubernetesVersion": []byte("1.34.0"),
+			},
+			expectValid: true,
+			expectError: false,
+		},
+		{
+			name:       "field removed, Deckhouse default is lower — still a real downgrade",
+			oldVersion: "1.34.0",
+			newVersion: "",
+			secretData: map[string][]byte{
+				"deckhouseDefaultKubernetesVersion":    []byte("1.32.0"),
+				"maxUsedControlPlaneKubernetesVersion": []byte("1.34.0"),
+			},
+			expectValid: false,
+			expectError: false,
+		},
+		{
+			name:        "field absent on both sides — no-op",
+			oldVersion:  "",
+			newVersion:  "",
+			secretData:  map[string][]byte{},
+			expectValid: true,
+			expectError: false,
+		},
+		{
+			name:        "field added where there was none — upgrade path, allowed",
+			oldVersion:  "",
+			newVersion:  "1.34.0",
+			secretData:  map[string][]byte{},
+			expectValid: true,
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
