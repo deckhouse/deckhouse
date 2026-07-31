@@ -54,6 +54,64 @@ DKP поддерживает три режима обновления, кото�
   после появления новой версии на канале обновлений.
 - **Ручной режим** — для применения обновления его необходимо подтвердить вручную.
 
+[Окна обновлений](#окна-обновлений) — разрешённые обновления применяются с учётом [`update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows), если окна заданы. Если окна не заданы, обновление выполняется сразу после появления версии на канале.
+
+Для автоматического режима доступны два [варианта настройки](/modules/deckhouse/configuration.html#parameters-update-mode):
+
+- `AutoPatch` (значение по умолчанию) — автоматически устанавливаются только патч-версии в рамках текущей минорной версии.
+  Переход на новую минорную версию требует [ручного подтверждения](#ручное-подтверждение-обновлений).
+- `Auto` — автоматически устанавливаются и патч-версии, и минорные версии.
+
+В ручном режиме (`Manual`) — и патч-версии, и минорные версии применяются только после ручного подтверждения.
+
+{% alert level="info" %}
+Настройки [`update`](/modules/deckhouse/configuration.html#parameters-update) модуля `deckhouse` (режим и окна) по умолчанию применяются и к встроенным, и к внешним модулям.
+
+Если у модуля нет собственной политики обновления ([ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy)) и в его ModuleConfig не указан параметр `updatePolicy`, модуль наследует [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) и [`update`](/modules/deckhouse/configuration.html#parameters-update) из ModuleConfig `deckhouse`.
+{% endalert %}
+
+### Только патч-версии в рамках текущей минорной (`AutoPatch`)
+
+Чтобы DKP обновлялся только в пределах текущей минорной версии (устанавливались только патч-версии), используйте режим `AutoPatch`.
+
+Например, при установленной версии `v1.70.1` DKP сможет автоматически обновиться до `v1.70.2`,
+но не перейдёт на `v1.71.*` без [ручного подтверждения](#ручное-подтверждение-обновлений).
+
+Это значение задано по умолчанию. Чтобы явно установить режим `AutoPatch`, выполните:
+
+```shell
+d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
+```
+
+Чтобы подтвердить обновление минорной версии, выполните следующую команду,
+указав необходимую версию DKP вместо `<DECKHOUSE-VERSION>`:
+
+```shell
+d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
+```
+
+### Автоматическое обновление всех версий (`Auto`)
+
+В режиме `Auto` DKP автоматически применяет и патч-версии, и минорные версии
+с учётом [окон обновлений](#окна-обновлений), если они заданы.
+
+Чтобы включить режим `Auto`, выполните:
+
+```shell
+d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Auto"}}}}'
+```
+
+### Ручной режим (`Manual`)
+
+В режиме `Manual` DKP получает информацию о новых версиях в кластер,
+но применение и патч-версий, и минорных версий требует [ручного подтверждения](#ручное-подтверждение-обновлений).
+
+Чтобы включить режим `Manual`, выполните:
+
+```shell
+d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
+```
+
 ### Проверка текущего режима обновления
 
 Чтобы узнать, какой режим обновления используется в кластере,
@@ -70,6 +128,7 @@ spec:
   settings:
     releaseChannel: Stable
     update:
+      mode: AutoPatch
       windows:
       - days:
         - Mon
@@ -77,7 +136,7 @@ spec:
         to: "20:00"
 ```
 
-### Автоматическое обновление
+### Как применяется автоматическое обновление
 
 Автоматический режим активируется при указании параметра [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) в конфигурации модуля `deckhouse`.
 При выполнении этого условия:
@@ -150,18 +209,20 @@ d8 k get deckhousereleases
 - Установить тег необходимой версии DKP для Deployment `deckhouse`
   и удалить [параметр `releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
-  В этом случае DKP останется на указанной версии
-  и никакая информация о новых доступных версиях (объекты DeckhouseRelease) в кластере появляться не будет.
-  
-  > **Важно**. Этот режим заблокирует установку патч-релизов,
-  > которые могут содержать исправления критических уязвимостей и ошибок.
+В этом случае DKP останется на указанной версии
+и никакая информация о новых доступных версиях (объекты DeckhouseRelease) в кластере появляться не будет.
 
-  Пример установки версии `v1.66.3` для DKP EE и удаления параметра `releaseChannel` из конфигурации модуля `deckhouse`:
+> **Важно**. Этот режим заблокирует установку патч-релизов,
+> которые могут содержать исправления критических уязвимостей и ошибок.
+> Если нужно получать патчи в рамках текущей минорной версии, используйте режим [`AutoPatch`](#только-патч-версии-в-рамках-текущей-минорной-autopatch)
+> вместо жёсткого закрепления.
 
-  ```shell
-  d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
-  d8 k patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
-  ```
+Пример установки версии `v1.66.3` для DKP EE и удаления параметра `releaseChannel` из конфигурации модуля `deckhouse`:
+
+```shell
+d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
+d8 k patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
+```
 
 ### Ручное подтверждение обновлений
 
