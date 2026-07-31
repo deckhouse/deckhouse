@@ -468,7 +468,7 @@ spec:
    d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
    ```
 
-   Если значение пустое, используйте устаревший способ:
+   Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса ClusterConfiguration (префикс перенесён в ModuleConfig `global`):
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \

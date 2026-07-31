@@ -89,7 +89,7 @@ To add a pre-created VM as a node to a cluster, follow these steps:
      d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
      ```
 
-     If the value is empty, use the deprecated command:
+     If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of ClusterConfiguration (the prefix has moved to the ModuleConfig `global`):
 
      ```shell
      d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \

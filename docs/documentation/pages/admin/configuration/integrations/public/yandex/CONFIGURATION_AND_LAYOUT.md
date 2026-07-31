@@ -507,7 +507,7 @@ Read through the [security group specifics in Yandex Cloud](https://yandex.cloud
    d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
    ```
 
-   If the value is empty, use the deprecated command:
+   If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of ClusterConfiguration (the prefix has moved to the ModuleConfig `global`):
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
