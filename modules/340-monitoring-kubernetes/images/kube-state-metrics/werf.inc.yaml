@@ -52,3 +52,5 @@ shell:
   - make build-local
   - chown 64535:64535 /src/kube-state-metrics
   - chmod 0700 /src/kube-state-metrics
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

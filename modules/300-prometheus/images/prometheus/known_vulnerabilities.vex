@@ -3,7 +3,7 @@
   "@id": "merged-vex-ffc0ec4119e1fc154ff048bb42d1d9e67ef4a4f3608ce32d9eb2fd513668b779",
   "author": "Deckhouse <contact@deckhouse.io>",
   "timestamp": "2026-06-02T15:00:00.000000+03:00",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -74,6 +74,20 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-41568 представляет собой состояние гонки (race condition) при создании точки монтирования во время операции 'docker cp' демона Docker, позволяющее вредоносному контейнеру через подмену символьной ссылки создавать пустые файлы или каталоги по произвольным путям на файловой системе хоста с правами root (отказ в обслуживании). Prometheus использует исключительно клиентский SDK Docker (github.com/docker/docker/client) для обнаружения сервисов (service discovery) Docker и Docker Swarm контейнеров и никогда не выполняет операции 'docker cp' / 'PUT /containers/{id}/archive'. Уязвимый код находится в функции createIfNotExists Docker-демона, который не компилируется и не вызывается в составе Prometheus. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Prometheus."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932: пакет golang.org/x/crypto/openpgp не сопровождается и небезопасен по дизайну. В бинарях bin/prometheus и bin/promtool он не импортируется — компоненты не выполняют операций OpenPGP, поэтому уязвимость неэксплуатируема.",
+      "timestamp": "2026-07-31T12:00:00Z"
     }
   ]
 }

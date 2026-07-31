@@ -3,7 +3,7 @@
   "@id": "merged-vex-operator-prometheus-prometheus-operator",
   "author": "Deckhouse <contact@deckhouse.io>",
   "timestamp": "2026-05-21T15:00:00.000000+03:00",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -60,6 +60,20 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-44903 (GHSA-fw8g-cg8f-9j28, CWE-79) — Stored XSS в legacy веб-интерфейсе Prometheus при отображении heatmap (histogram bucket label values), активируемый флагом --enable-feature=old-ui. Согласно официальному advisory, уязвимость затрагивает Prometheus < 3.5.3 и < 3.11.3 (фикс в 3.5.3/3.11.3, upstream v0.311.3). Образ prometheus-operator v0.68.0 в Deckhouse использует библиотеку github.com/prometheus/prometheus v0.47.0 (Prometheus 2.47.x) только как набор Go-типов для shared конфигурационных структур, CRD-валидации и client-go-обёрток. Бинарь /bin/operator является Kubernetes-оператором: он не запускает Prometheus-сервер, не открывает legacy web UI Prometheus и не имеет флага --enable-feature=old-ui. Код пакета github.com/prometheus/prometheus/web/ui в /bin/operator не импортируется и не компилируется в исполняемый путь. Эксплуатация в рамках данного образа недоступна."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932: пакет golang.org/x/crypto/openpgp не сопровождается и небезопасен по дизайну. В бинарях /bin/operator и /bin/prometheus-config-reloader он не импортируется — компоненты не выполняют операций OpenPGP, поэтому уязвимость неэксплуатируема.",
+      "timestamp": "2026-07-31T12:00:00Z"
     }
   ]
 }
