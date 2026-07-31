@@ -494,7 +494,7 @@ CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/image
 CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
 <!/REMOVE_FOR_CSE_1_58>
 
-d8 k delete cse-image
+d8 k delete pod cse-image
 ```
 
 {% endcapture %}
