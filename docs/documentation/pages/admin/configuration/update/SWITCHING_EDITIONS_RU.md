@@ -450,7 +450,7 @@ d8 system module enable chrony
 
 {% capture enable_release_channel_cse %}
 
-```shell
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -467,7 +467,7 @@ spec:
 
 {% capture disable_release_channel_cse %}
 
-```shell
+```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -1112,12 +1112,22 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
          | regex_replace: "\$NEW_EDITION", "be"
          | regex_replace: "^", "   "
       }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
    {% endtab %}
 
    {% tab "DKP SE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
          | regex_replace: "^", "   "
       }}
    {% endtab %}
@@ -1128,12 +1138,22 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
          | regex_replace: "\$NEW_EDITION", "se-plus"
          | regex_replace: "^", "   "
       }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
    {% endtab %}
 
    {% tab "DKP EE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
          | regex_replace: "^", "   "
       }}
    {% endtab %}
@@ -1208,6 +1228,11 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       ngc_cleanup_registry
       | regex_replace: "\$NEW_EDITION", "cse"
       | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru"
+      | regex_replace: "^", "   "
+   }}
+
+   {{
+      bashible_sync_wait
       | regex_replace: "^", "   "
    }}
 
@@ -1400,6 +1425,11 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    EOF
    d8 k delete ngc del-temp-config.sh
    ```
+
+   {{
+      bashible_sync_wait
+      | regex_replace: "^", "   "
+   }}
 
 {% endtab %}
 {% endtabs %}

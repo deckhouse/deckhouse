@@ -902,12 +902,22 @@ Choose the target edition:
          | regex_replace: "\$NEW_EDITION", "be"
          | regex_replace: "^", "   "
       }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
    {% endtab %}
 
    {% tab "DKP SE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "se"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
          | regex_replace: "^", "   "
       }}
    {% endtab %}
@@ -918,12 +928,22 @@ Choose the target edition:
          | regex_replace: "\$NEW_EDITION", "se-plus"
          | regex_replace: "^", "   "
       }}
+
+      {{
+         bashible_sync_wait
+         | regex_replace: "^", "   "
+      }}
    {% endtab %}
 
    {% tab "DKP EE" %}
       {{
          ngc_cleanup_registry
          | regex_replace: "\$NEW_EDITION", "ee"
+         | regex_replace: "^", "   "
+      }}
+
+      {{
+         bashible_sync_wait
          | regex_replace: "^", "   "
       }}
    {% endtab %}
