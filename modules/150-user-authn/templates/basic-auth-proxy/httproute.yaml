@@ -9,7 +9,7 @@ metadata:
   name: basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
   annotations:
-    alb.network.deckhouse.io/buffer-max-request-bytes: "10485760"
+    alb.network.deckhouse.io/request-body-buffer-limit: "10485760"
   {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
     alb.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
   {{- end }}
