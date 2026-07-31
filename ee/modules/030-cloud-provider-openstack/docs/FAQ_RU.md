@@ -14,9 +14,19 @@ title: "Cloud provider — OpenStack: FAQ"
 
 С помощью `loadbalancer.openstack.org/node-selector` рекомендуется выбирать только те узлы, которые должны использоваться в качестве таргетов данного LoadBalancer.
 
-Чтобы использовать для LoadBalancer Ingress-контроллера заранее выделенный floating IP, добавьте `loadbalancer.openstack.deckhouse.io/load-balancer-address` в аннотации секции inlet ресурса `IngressNginxController`. Deckhouse передает эти аннотации в сгенерированный `Service` типа `LoadBalancer`. Floating IP должен быть заранее создан, не должен быть привязан к порту и должен находиться в floating-сети, настроенной для OpenStack CCM. Если указанный floating IP недоступен, CCM не назначит внешний адрес сервису. Если нужно переиспользовать существующий Octavia-балансировщик целиком, а не только выбрать его floating IP, используйте `loadbalancer.openstack.org/load-balancer-id` с UUID балансировщика.
+Чтобы назначить LoadBalancer Ingress-контроллера заранее созданный floating IP, укажите аннотацию `loadbalancer.openstack.deckhouse.io/load-balancer-address` в поле `annotations` соответствующей конфигурации inlet ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller). DKP добавит эту аннотацию в сгенерированный объект Service типа LoadBalancer.
 
-Не добавляйте эти OpenStack-аннотации на прикладные ресурсы `Ingress`: их обрабатывает `openstack-cloud-controller-manager` на объекте `Service`.
+Floating IP должен соответствовать следующим требованиям:
+
+- быть создан заранее;
+- не быть привязанным к порту;
+- находиться в floating-сети, настроенной для OpenStack CCM.
+
+Если указанный floating IP недоступен, OpenStack CCM не сможет назначить внешний IP-адрес объекту Service.
+
+Аннотация `loadbalancer.openstack.deckhouse.io/load-balancer-address` позволяет использовать только заранее выделенный floating IP. Чтобы переиспользовать существующий балансировщик Octavia целиком, укажите его UUID в аннотации `loadbalancer.openstack.org/load-balancer-id`.
+
+Не добавляйте эти аннотации к прикладным ресурсам Ingress. Их обрабатывает `openstack-cloud-controller-manager` в аннотациях объекта Service.
 
 ### Пример IngressNginxController
 

@@ -14,9 +14,19 @@ Without a `node-selector` restriction, cloud-controller-manager may use all suit
 
 It is recommended to use `loadbalancer.openstack.org/node-selector` to select only the nodes that should be used as targets for the corresponding LoadBalancer.
 
-To use a preallocated floating IP for the Ingress controller LoadBalancer, add `loadbalancer.openstack.deckhouse.io/load-balancer-address` to the annotations of the `IngressNginxController` inlet section. Deckhouse passes these annotations to the generated `Service` of type `LoadBalancer`. The floating IP must already exist, must not be attached to a port, and must belong to the floating network configured for OpenStack CCM. If the specified floating IP is unavailable, CCM will not assign an external address to the Service. To reuse an existing Octavia load balancer instead of selecting only its floating IP, use `loadbalancer.openstack.org/load-balancer-id` with the load balancer UUID.
+To assign a pre-created floating IP to the Ingress controller's LoadBalancer, specify the `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotation in the `annotations` field of the corresponding inlet configuration in the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource. DKP adds this annotation to the generated Service of the LoadBalancer type.
 
-Do not put these OpenStack load balancer annotations on application `Ingress` resources: they are processed by `openstack-cloud-controller-manager` on the `Service` object.
+The floating IP must meet the following requirements:
+
+- It must be created in advance.
+- It must not be associated with a port.
+- It must belong to the floating network configured for OpenStack CCM.
+
+If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the `Service`.
+
+The `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotation allows you to use a pre-allocated floating IP. To reuse an existing Octavia load balancer as a whole, specify its UUID in the `loadbalancer.openstack.org/load-balancer-id` annotation.
+
+Do not add these annotations to application Ingress resources. They are processed by `openstack-cloud-controller-manager` on the Service object.
 
 ### IngressNginxController example
 
