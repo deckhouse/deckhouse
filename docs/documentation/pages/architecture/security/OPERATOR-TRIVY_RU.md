@@ -156,7 +156,6 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
 1. **Kube-apiserver**:
 
-- обработка ресурсов Kubernetes, указанных в кастомных ресурсах из API-групп `spdx.softwarecomposition.kubescape.io/*` и `trivy.deckhouse.io`;
 - работа с кастомными ресурсами API-группы `trivy.deckhouse.io/*`;
 - отслеживание ресурсов Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob и Job;
 - создание, обновление и удаление ресурсов Secret, Job.
@@ -165,6 +164,9 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver** — мутация кастомных ресурсов VulnerabilityReport.
+1. **Kube-apiserver**:
+
+- обработка ресурсов Kubernetes, указанных в кастомных ресурсах из API-групп `spdx.softwarecomposition.kubescape.io/*` и `trivy.deckhouse.io`;
+— мутация кастомных ресурсов VulnerabilityReport.
 
 1. **Prometheus-main** — сбор метрик модуля.
