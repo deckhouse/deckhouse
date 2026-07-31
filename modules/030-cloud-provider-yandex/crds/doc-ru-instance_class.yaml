@@ -71,6 +71,11 @@ spec:
 
                   Подробнее о возможных типах дисков можно узнать в [документации провайдера](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
                 type: string
+              etcdDiskSizeGB:
+                description: |
+                  Размер диска для etcd, устанавливается только для InstanceClass, предназначенных для группы мастер-узлов. Значение указывается в `ГиБ`.
+                nullable: true
+                type: integer
               gpus:
                 description: |
                   Количество графических адаптеров у создаваемых виртуальных машин.

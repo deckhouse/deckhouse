@@ -19,6 +19,17 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+const (
+	YandexInstanceClassGroupName = "deckhouse.io"
+	YandexInstanceClassVersion   = "v1alpha1"
+	YandexInstanceClassKind      = "YandexInstanceClass"
+)
+
+var (
+	SchemeGroupVersion = schema.GroupVersion{Group: YandexInstanceClassGroupName, Version: YandexInstanceClassVersion}
 )
 
 // +kubebuilder:object:root=true

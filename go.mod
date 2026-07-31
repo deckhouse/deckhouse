@@ -53,6 +53,7 @@ require (
 require (
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0
@@ -396,6 +397,8 @@ replace github.com/docker/docker => github.com/docker/docker v28.3.3+incompatibl
 replace github.com/docker/cli => github.com/docker/cli v28.3.3+incompatible
 
 replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlplane
+
+replace github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg => ./modules/030-cloud-provider-yandex/pkg
 
 // Image sources under this tree are built inside third-party source trees
 // (see werf.inc.yaml) and are hidden from build/lint by build tags. go mod

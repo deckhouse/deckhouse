@@ -49,7 +49,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: InstanceClassSpec defines the desired state of the YandexInstanceClass.
+            description: YandexInstanceClassSpec defines the desired state of the
+              YandexInstanceClass.
             properties:
               additionalLabels:
                 additionalProperties:
@@ -120,6 +121,13 @@ spec:
                 x-doc-default: '"network-hdd"'
                 x-doc-examples:
                 - network-hdd
+              etcdDiskSizeGB:
+                description: Disk size for etcd is set only for InstanceClass intended
+                  for master NodeGroup. The value is specified in `GiB`.
+                nullable: true
+                type: integer
+                x-doc-examples:
+                - "20"
               gpus:
                 default: 0
                 description: Number of GPUs on a Yandex Compute Instance.

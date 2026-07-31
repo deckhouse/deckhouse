@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package settings contains the ModuleConfig root type for the cloud-provider-yandex module.
-package settings
+package v2
 
 // Describes the configuration of the cloud-provider-yandex module.
 //

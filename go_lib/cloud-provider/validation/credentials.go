@@ -26,13 +26,6 @@ import (
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 )
 
-// Credential secret data keys.
-const (
-	CredentialSecretAuthSchemeKey = "authScheme"
-	CredentialSecretIdentityKey   = "identity"
-	CredentialSecretSecretKey     = "secret"
-)
-
 // Validation violation codes for credential Secrets.
 const (
 	CodeCredentialSecretRequired       = "credential_secret_required"
@@ -100,14 +93,14 @@ type AccessKeyPairValidator struct {
 func (v *AccessKeyPairValidator) Validate(path string, data map[string]string) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
-	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[CredentialSecretAuthSchemeKey]))
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
 
 	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeAccessKeyPair, &result); !ok {
 		return result
 	}
 
-	_ = validateRequiredCredentialKey(path, data, CredentialSecretIdentityKey, authScheme, &result)
-	_ = validateRequiredCredentialKey(path, data, CredentialSecretSecretKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
 
 	return result
 }
@@ -120,14 +113,14 @@ type APITokenValidator struct {
 func (v *APITokenValidator) Validate(path string, data map[string]string) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
-	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[CredentialSecretAuthSchemeKey]))
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
 
 	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeAPIToken, &result); !ok {
 		return result
 	}
 
-	_ = validateUnsupportedCredentialKey(path, data, CredentialSecretIdentityKey, authScheme, &result)
-	_ = validateRequiredCredentialKey(path, data, CredentialSecretSecretKey, authScheme, &result)
+	_ = validateUnsupportedCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
 
 	return result
 }
@@ -140,14 +133,14 @@ type AppSecretValidator struct {
 func (v *AppSecretValidator) Validate(path string, data map[string]string) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
-	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[CredentialSecretAuthSchemeKey]))
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
 
 	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeAppSecret, &result); !ok {
 		return result
 	}
 
-	_ = validateUnsupportedCredentialKey(path, data, CredentialSecretIdentityKey, authScheme, &result)
-	_ = validateRequiredCredentialKey(path, data, CredentialSecretSecretKey, authScheme, &result)
+	_ = validateUnsupportedCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
 
 	return result
 }
@@ -160,14 +153,14 @@ type ClientSecretValidator struct {
 func (v *ClientSecretValidator) Validate(path string, data map[string]string) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
-	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[CredentialSecretAuthSchemeKey]))
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
 
 	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeClientSecret, &result); !ok {
 		return result
 	}
 
-	_ = validateRequiredCredentialKey(path, data, CredentialSecretIdentityKey, authScheme, &result)
-	_ = validateRequiredCredentialKey(path, data, CredentialSecretSecretKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
 
 	return result
 }
@@ -179,15 +172,15 @@ type KubeconfigValidator struct{}
 func (v *KubeconfigValidator) Validate(path string, data map[string]string) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
-	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[CredentialSecretAuthSchemeKey]))
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
 
 	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeKubeconfig, &result); !ok {
 		return result
 	}
 
-	_ = validateUnsupportedCredentialKey(path, data, CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateUnsupportedCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
 
-	if ok := validateRequiredCredentialKey(path, data, CredentialSecretSecretKey, authScheme, &result); !ok {
+	if ok := validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result); !ok {
 		return result
 	}
 
@@ -253,15 +246,15 @@ type ServiceAccountValidator struct {
 func (v *ServiceAccountValidator) Validate(path string, data map[string]string) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
-	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[CredentialSecretAuthSchemeKey]))
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
 
 	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeServiceAccount, &result); !ok {
 		return result
 	}
 
-	_ = validateUnsupportedCredentialKey(path, data, CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateUnsupportedCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
 
-	if ok := validateRequiredCredentialKey(path, data, CredentialSecretSecretKey, authScheme, &result); !ok {
+	if ok := validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result); !ok {
 		return result
 	}
 
@@ -290,14 +283,14 @@ type UserPasswordValidator struct {
 func (v *UserPasswordValidator) Validate(path string, data map[string]string) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
-	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[CredentialSecretAuthSchemeKey]))
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
 
 	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeUserPassword, &result); !ok {
 		return result
 	}
 
-	_ = validateRequiredCredentialKey(path, data, CredentialSecretIdentityKey, authScheme, &result)
-	_ = validateRequiredCredentialKey(path, data, CredentialSecretSecretKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
 
 	return result
 }
@@ -311,7 +304,7 @@ type CombinedCredentialValidator struct {
 func (v *CombinedCredentialValidator) Validate(path string, data map[string]string) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
-	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[CredentialSecretAuthSchemeKey]))
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
 
 	validator, ok := v.ValidatorMap[authScheme]
 	if !ok {
@@ -356,10 +349,10 @@ func validateRequiredCredentialKey(path string, data map[string]string, key stri
 
 	var code, message string
 	switch key {
-	case CredentialSecretIdentityKey:
+	case cpapi.CredentialSecretIdentityKey:
 		code = CodeCredentialIdentityRequired
 		message = fmt.Sprintf("identity is required for authScheme %q", authScheme)
-	case CredentialSecretSecretKey:
+	case cpapi.CredentialSecretSecretKey:
 		code = CodeCredentialSecretKeyRequired
 		message = fmt.Sprintf("secret is required for authScheme %q", authScheme)
 	default:
@@ -378,10 +371,10 @@ func validateUnsupportedCredentialKey(path string, data map[string]string, key s
 
 	var code, message string
 	switch key {
-	case CredentialSecretIdentityKey:
+	case cpapi.CredentialSecretIdentityKey:
 		code = CodeCredentialIdentityUnsupported
 		message = fmt.Sprintf("identity is unsupported for authScheme %q", authScheme)
-	case CredentialSecretSecretKey:
+	case cpapi.CredentialSecretSecretKey:
 		code = CodeCredentialSecretKeyUnsupported
 		message = fmt.Sprintf("secret is unsupported for authScheme %q", authScheme)
 	default:

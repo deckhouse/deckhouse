@@ -14,15 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package internal
 
-import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/cloud_provider_migration_pending_metric"
-)
-
-var _ = cloud_provider_migration_pending_metric.RegisterHook(
-	dvpMigrationConfigMapName,
-	dvpNamespace,
-	"d8_cloud_provider_dvp_migration_pending",
-	"D8CloudProviderDVPMigration",
+const (
+	PCCSecretName                    = "d8-provider-cluster-configuration"
+	PCCDiscoveryDataFilename         = "cloud-provider-discovery-data.json"
+	PCCClusterConfigFilename         = "cloud-provider-cluster-configuration.yaml"
+	CandiDiscoverySecretName         = "d8-candi-cloud-provider-discovery-data"
+	YandexMigrationResourcesName     = "d8-migration-resources"
+	YandexMigrationResourcesFilename = "resources.yaml"
+	YandexMigrationConfigMapName     = "d8-module-is-migrating"
 )
