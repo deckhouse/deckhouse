@@ -73,7 +73,7 @@ type packageRuntime interface {
 	UpdateApp(repo registry.Remote, inst packageruntime.App)
 	RemoveApp(namespace, name string)
 	GetStatus(name string) packagestatus.Status
-	GetStatusQueue() workqueue.TypedRateLimitingInterface[string]
+	GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string]
 	Cleanup(ctx context.Context, preserve []packageruntime.PreservePackage)
 }
 
@@ -101,7 +101,7 @@ func RegisterController(
 	}
 
 	r.status = status.NewService(r.client, packageRuntime.GetStatus, r.logger)
-	r.status.Start(context.Background(), packageRuntime.GetStatusQueue())
+	r.status.Start(context.Background(), packageRuntime.GetAppStatusQueue())
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).

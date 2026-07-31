@@ -22,7 +22,6 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	"github.com/flant/addon-operator/pkg/utils"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -257,7 +256,7 @@ func (m *mockModuleManager) GetModuleEventsChannel() chan events.ModuleEvent {
 
 func newMockHandler() *confighandler.Handler {
 	// minimal handler for tests with dummy channels
-	deckhouseConfigCh := make(chan utils.Values, 10)
+	deckhouseConfigCh := make(chan addonutils.Values, 10)
 	configEventCh := make(chan config.Event, 10)
 
 	handler := confighandler.New(nil, conversionsStore, deckhouseConfigCh)

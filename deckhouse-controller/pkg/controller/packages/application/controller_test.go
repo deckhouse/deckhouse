@@ -270,8 +270,8 @@ func (o *operatorStub) GetStatus(name string) packagestatus.Status {
 	return packagestatus.NewService().GetStatus(name)
 }
 
-func (o *operatorStub) GetStatusQueue() workqueue.TypedRateLimitingInterface[string] {
-	return packagestatus.NewService().Queue()
+func (o *operatorStub) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return packagestatus.NewService().AppQueue()
 }
 
 func (o *operatorStub) Cleanup(_ context.Context, _ []packageoperator.PreservePackage) {}

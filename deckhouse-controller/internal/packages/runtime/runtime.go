@@ -844,9 +844,14 @@ func (r *Runtime) GetStatus(name string) status.Status {
 	return r.status.GetStatus(name)
 }
 
-// GetStatusQueue returns the status queue for external access
-func (r *Runtime) GetStatusQueue() workqueue.TypedRateLimitingInterface[string] {
-	return r.status.Queue()
+// GetAppStatusQueue returns the application status queue for external access
+func (r *Runtime) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.AppQueue()
+}
+
+// GetModuleStatusQueue returns the module status queue for external access
+func (r *Runtime) GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.ModuleQueue()
 }
 
 // PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.
