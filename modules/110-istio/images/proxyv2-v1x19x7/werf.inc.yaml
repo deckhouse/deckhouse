@@ -8,6 +8,7 @@
 #      and https://github.com/istio/istio/blob/1.19.7/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
+fromCacheVersion: "2026-07-31 23:21"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
   add: /src/istio/out/pilot-agent
@@ -119,7 +120,6 @@ shell:
   install:
   - mkdir -p /relocate/sbin
   - |
-    # Force nft for plain iptables* (RO rootfs: skip iptables-wrapper symlink rewrite). 2026-07-31 22:05
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
       ln -sf /sbin/xtables-nft-multi "/relocate/sbin/${cmd}"
     done
