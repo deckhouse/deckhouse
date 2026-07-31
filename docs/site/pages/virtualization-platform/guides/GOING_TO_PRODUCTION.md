@@ -36,17 +36,17 @@ The [update windows](/modules/deckhouse/configuration.html#parameters-update-win
 ## Kubernetes version
 
 {% alert level="info" %}
-Use the automatic [Kubernetes version selection](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) or set the version explicitly.
+Use the automatic [Kubernetes version selection](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) or set the version explicitly.
 {% endalert %}
 
 In most cases, we recommend opting for the automatic selection of the Kubernetes version.
-In the platform, this behavior is set by default, but it can be changed with the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter.
+In the platform, this behavior is set by default, but it can be changed with the [kubernetesVersion](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` ModuleConfig.
 Upgrading the Kubernetes version in the cluster has no effect on applications and is done [consistently and securely](/modules/control-plane-manager/#version-control).
 
 If automatic Kubernetes version selection is enabled, the platform can upgrade the Kubernetes version in the cluster when updating the platform release (when upgrading a minor version).
 
 {% alert level="warning" %}
-If the Kubernetes version is explicitly specified in the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter, the platform update may fail if the Kubernetes version used in the cluster is no longer supported.
+If the Kubernetes version is explicitly specified in the [kubernetesVersion](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) parameter, the platform update may fail if the Kubernetes version used in the cluster is no longer supported.
 {% endalert %}
 
 If your application uses outdated resource versions or depends on a particular version of Kubernetes for some other reason,

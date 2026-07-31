@@ -5,7 +5,9 @@ apiVersions:
     description: |
       Общие параметры кластера.
 
-      Определяют, например, сетевые параметры, параметры CRI, версию control plane и т. д. Некоторые параметры можно изменять после развертывания кластера, во время его работы.
+      Определяют, например, сетевые параметры, параметры CRI и т. д. Некоторые параметры можно изменять после развертывания кластера, во время его работы.
+
+      Версия control plane Kubernetes управляется настройкой [`kubernetesVersion`](https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`, а не этим ресурсом.
 
       Чтобы изменить содержимое ресурса `ClusterConfiguration` в работающем кластере, выполните следующую команду:
 
@@ -87,15 +89,13 @@ apiVersions:
           - поддержка модуля ядра `erofs`.
       kubernetesVersion:
         description: |
-          **Устарело.** Используйте `kubernetesVersion` в ModuleConfig `control-plane-manager`.
+          **Устарело.** Используйте [`kubernetesVersion`](https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) в ModuleConfig `control-plane-manager` (`d8 k edit mc control-plane-manager`).
 
           Если поле задано в ModuleConfig, оно имеет приоритет над этим полем.
-          Поле необязательно: если его нет в ClusterConfiguration, задайте `kubernetesVersion`
-          в ModuleConfig `control-plane-manager` (у ModuleConfig должны быть `spec.enabled` и `spec.version`).
+          Поле необязательно: если его нет здесь и оно не задано в ModuleConfig, Deckhouse использует версию по умолчанию текущего релиза.
+          Явный пин только в ClusterConfiguration (без переноса в ModuleConfig) приводит к алерту `D8ObsoleteKubernetesVersionInClusterConfiguration`.
 
-          Версия Kubernetes (компонентов control plane кластера).
-
-          Изменение параметра в работающем кластере приведет к [автоматическому обновлению](https://deckhouse.ru/modules/control-plane-manager/#управление-версиями) версии control plane кластера.
+          Не изменяйте это поле в работающем кластере для обновления или отката Kubernetes — меняйте ModuleConfig.
 
           Если указано `Automatic`, то используется версия control plane, которая считается стабильной на данный момент. Если стабильная версия control plane меньше максимальной, которая когда либо была установлена в кластере, больше чем на 1 минорную версию - тогда версия кластера не изменится.
           Изменение этой версии может произойти при смене минорной версии релиза Deckhouse (см. список изменений к релизу).

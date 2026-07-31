@@ -29,12 +29,12 @@ layout: sidebar-guides
 ## Версия Kubernetes
 
 {% alert %}
-Используйте автоматический [выбор версии Kubernetes](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) либо установите версию явно.
+Используйте автоматический [выбор версии Kubernetes](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) либо установите версию явно.
 {% endalert %}
 
-В большинстве случаев предпочтительно использовать автоматический выбор версии Kubernetes. В Deckhouse такое поведение установлено по умолчанию, но его можно изменить с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion). Обновление версии Kubernetes в кластере не оказывает влияния на приложения и проходит [последовательно и безопасно](/modules/control-plane-manager/#управление-версиями).
+В большинстве случаев предпочтительно использовать автоматический выбор версии Kubernetes. В Deckhouse такое поведение установлено по умолчанию, но его можно изменить с помощью параметра [kubernetesVersion](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`. Обновление версии Kubernetes в кластере не оказывает влияния на приложения и проходит [последовательно и безопасно](/modules/control-plane-manager/#управление-версиями).
 
-Если указан автоматический выбор версии Kubernetes, Deckhouse может обновить версию Kubernetes в кластере при обновлении релиза Deckhouse (при обновлении минорной версии). Когда версия Kubernetes явно прописана в параметре [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), очередное обновление Deckhouse может завершиться неудачей, если окажется, что используемая в кластере версия Kubernetes более не поддерживается.
+Если указан автоматический выбор версии Kubernetes, Deckhouse может обновить версию Kubernetes в кластере при обновлении релиза Deckhouse (при обновлении минорной версии). Когда версия Kubernetes явно прописана в параметре [kubernetesVersion](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion), очередное обновление Deckhouse может завершиться неудачей, если окажется, что используемая в кластере версия Kubernetes более не поддерживается.
 
 Если приложение использует устаревшие версии ресурсов или требует конкретной версии Kubernetes по какой-либо другой причине, проверьте, что эта версия [поддерживается](/products/kubernetes-platform/documentation/v1/supported_versions.html), и [установите ее](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html).
 

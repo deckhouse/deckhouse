@@ -28,12 +28,12 @@ The [update windows](/modules/deckhouse/configuration.html#parameters-update-win
 ## Kubernetes version
 
 {% alert %}
-Use the automatic [Kubernetes version selection](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) or set the version explicitly.
+Use the automatic [Kubernetes version selection](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) or set the version explicitly.
 {% endalert %}
 
-In most cases, we recommend opting for the automatic selection of the Kubernetes version. In Deckhouse, this behavior is set by default, but it can be changed with the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](/modules/control-plane-manager/#version-control).
+In most cases, we recommend opting for the automatic selection of the Kubernetes version. In Deckhouse, this behavior is set by default, but it can be changed with the [kubernetesVersion](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` ModuleConfig. Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](/modules/control-plane-manager/#version-control).
 
-If the automatic Kubernetes version selection is enabled, Deckhouse can upgrade the Kubernetes version in the cluster together with the Deckhouse update (when upgrading a minor version). If the Kubernetes version in the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter is set explicitly, Deckhouse may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
+If the automatic Kubernetes version selection is enabled, Deckhouse can upgrade the Kubernetes version in the cluster together with the Deckhouse update (when upgrading a minor version). If the Kubernetes version in the [kubernetesVersion](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) parameter is set explicitly, Deckhouse may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
 
 You must decide for yourself whether to use automatic version selection or set a specific version and update it manually every now and then.
 

@@ -367,6 +367,12 @@ properties:
     description: |
       Desired Kubernetes version of the control plane components.
 
+      This is the preferred place to manage the cluster Kubernetes version. Edit with:
+
+      ```shell
+      d8 k edit mc control-plane-manager
+      ```
+
       If `Automatic` is specified, Deckhouse selects the version considered stable for the current release, and the deprecated `ClusterConfiguration.kubernetesVersion` is ignored. If the stable version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
 
       If the parameter is not set at all, the value from `ClusterConfiguration.kubernetesVersion` is used (deprecated); if that is not set either, the current Deckhouse release's default version is used.
@@ -381,6 +387,7 @@ properties:
       - "Automatic"
     x-examples:
       - "1.35"
+      - "Automatic"
   rootKubeconfigSymlink:
     type: boolean
     default: true

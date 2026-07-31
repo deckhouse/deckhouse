@@ -133,7 +133,6 @@ cloud:
   prefix: cloud-demo
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
 clusterDomain: cluster.local
 ---
 apiVersion: deckhouse.io/v1
@@ -154,6 +153,16 @@ provider:
   clientSecret: <CLIENT_SECRET>
   tenantId: <TENANT_ID>
   location: westeurope
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Automatic"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -287,7 +296,6 @@ cloud:
   prefix: cloud-demo
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
 clusterDomain: cluster.local
 ---
 apiVersion: deckhouse.io/v1
@@ -295,6 +303,16 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ee
   registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2zzzmRlY2tob3Vxxcxxxc5ydSI6IsssfX0K
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "Automatic"
 ---
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
@@ -1138,7 +1156,6 @@ cloud:
   prefix: main
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "Automatic"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 proxy:

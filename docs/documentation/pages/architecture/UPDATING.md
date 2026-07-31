@@ -79,20 +79,20 @@ The process is fully automated by the platform.
 ### Automatic minor version updates
 
 To automatically update the control plane to a new minor version (for example, from `1.28.*` to `1.30.*`),
-specify [`kubernetesVersion: Automatic`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) in the ClusterConfiguration resource.
+set [`kubernetesVersion: Automatic`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) in the `control-plane-manager` ModuleConfig.
 DKP will select the default Kubernetes version at the time of the update.
 
 ### Manual minor version updates
 
 To manually update the control plane to a new minor version (for example, from `1.28.*` to `1.30.*`),
-specify the target version in the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter of the ClusterConfiguration resource.
-For example, `kubernetesVersion: 1.30`.
+specify the target version in the [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` ModuleConfig.
+For example, `kubernetesVersion: "1.30"`.
 
 ```shell
-d8 system edit cluster-configuration
+d8 k edit mc control-plane-manager
 ```
 
-This command initiates an upgrade to the default minor Kubernetes version used by DKP at the time.
+This command opens the ModuleConfig editor. After you save the change, Deckhouse starts upgrading toward the selected minor version.
 To track the upgrade progress, check the Kubernetes version in the output of the node description command:
 
 ```shell

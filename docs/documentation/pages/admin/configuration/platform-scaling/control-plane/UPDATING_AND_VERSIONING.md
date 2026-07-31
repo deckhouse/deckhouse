@@ -10,36 +10,41 @@ The control plane update process in DKP is fully automated.
 - DKP supports the latest five Kubernetes versions.
 - You can roll back the control plane one minor version and upgrade forward several minor versions — one at a time.
 - Patch versions (e.g., `1.27.3` → `1.27.5`) are updated automatically with Deckhouse and cannot be managed manually.
-- Minor versions are set manually using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter in the ClusterConfiguration resource.
+- Minor versions are set using the [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) parameter of the [`control-plane-manager`](/modules/control-plane-manager/) ModuleConfig.
 
 ### Changing the Kubernetes version
 
 You can downgrade only one minor version from the highest version ever used in the cluster. Upgrades proceed one minor version at a time.
 
-1. Open the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) editor:
+1. Edit the ModuleConfig of the `control-plane-manager` module:
 
    ```shell
-   d8 system edit cluster-configuration
+   d8 k edit mc control-plane-manager
    ```
 
-1. Set the target Kubernetes version using the `kubernetesVersion` field:
+1. Set the target Kubernetes version in `spec.settings.kubernetesVersion`:
 
    ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: ClusterConfiguration
-   cloud:
-     prefix: demo-stand
-     provider: Yandex
-   clusterDomain: cloud.education
-   clusterType: Cloud
-   kubernetesVersion: "1.30"
-   podSubnetCIDR: 10.111.0.0/16
-   podSubnetNodeCIDRPrefix: "24"
-   serviceSubnetCIDR: 10.222.0.0/16
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 3
+     enabled: true
+     settings:
+       kubernetesVersion: "1.30"
    ```
+
+   Use `kubernetesVersion: "Automatic"` to track the Kubernetes version considered stable for the current Deckhouse release. If the parameter is omitted, Deckhouse falls back to the deprecated `ClusterConfiguration.kubernetesVersion` field (if present), otherwise to the release default.
 
 1. Save the changes.
 1. Wait for the update to complete. You can track the update progress with the `d8 k get no` command. The update can be considered complete when the updated version appears in the `VERSION` column of each cluster node in the command output.
+
+{% alert level="warning" %}
+Do not set `kubernetesVersion` in [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — the field is deprecated. Keeping an explicit pin there without migrating it to ModuleConfig `control-plane-manager` triggers the [D8ObsoleteKubernetesVersionInClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8obsoletekubernetesversioninclusterconfiguration) alert.
+{% endalert %}
+
 
 ## Monitoring Kubernetes update progress
 
@@ -47,10 +52,10 @@ The [`control-plane-manager`](/modules/control-plane-manager/) module includes t
 
 `update-observer` component:
 
-- reads cluster configuration from the `d8-cluster-configuration` Secret
+- reads the desired Kubernetes version from the `spec` block of the `d8-cluster-kubernetes` ConfigMap (written by the `control-plane-manager` module from ModuleConfig settings)
 - tracks kubelet versions on all nodes via `nodeInfo.kubeletVersion`
 - collects versions from all control plane instances via the `control-plane-manager.deckhouse.io/kubernetes-version` annotation
-- creates and maintains the **`d8-cluster-kubernetes`** ConfigMap in the `kube-system` namespace with detailed update status.
+- maintains the **`d8-cluster-kubernetes`** ConfigMap in the `kube-system` namespace with detailed update status.
 
 The `d8-cluster-kubernetes` ConfigMap displays:
 
@@ -65,7 +70,7 @@ The `d8-cluster-kubernetes` ConfigMap displays:
 
 During `ControlPlaneUpdating`, `status.progress` reflects overall upgrade progress across intermediate minor versions. For a multi-hop upgrade (for example, 1.33 → 1.35), the percentage increases as each hop completes, not only when every control plane component reaches the final target.
 
-Minor versions in the ConfigMap (`spec`, `status`, and metadata labels such as `k8s-version` and `max-k8s-version`) use the same string format as in ClusterConfiguration, meaning without a `v` prefix (for example, `"1.33"`).
+Minor versions in the ConfigMap (`spec`, `status`, and metadata labels such as `k8s-version` and `max-k8s-version`) use the same string format as in ModuleConfig `kubernetesVersion`, meaning without a `v` prefix (for example, `"1.33"`).
 
 You can see in real time which components are being updated, at what stage the process is, and whether the update has "stuck" on any node or component.
 

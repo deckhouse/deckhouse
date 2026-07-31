@@ -29,15 +29,15 @@ lang: ru
 ## Версия Kubernetes
 
 {% alert level="info" %}
-Используйте автоматический [выбор версии Kubernetes](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) либо установите версию явно.
+Используйте автоматический [выбор версии Kubernetes](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) либо установите версию явно.
 {% endalert %}
 
-В большинстве случаев предпочтительно использовать автоматический выбор версии Kubernetes. В платформе такое поведение установлено по умолчанию, но его можно изменить с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion). Обновление версии Kubernetes в кластере не оказывает влияния на приложения и проходит [последовательно и безопасно](/modules/control-plane-manager/#управление-версиями).
+В большинстве случаев предпочтительно использовать автоматический выбор версии Kubernetes. В платформе такое поведение установлено по умолчанию, но его можно изменить с помощью параметра [kubernetesVersion](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`. Обновление версии Kubernetes в кластере не оказывает влияния на приложения и проходит [последовательно и безопасно](/modules/control-plane-manager/#управление-версиями).
 
 Если включён автоматический выбор версии Kubernetes, платформа может обновить версию Kubernetes в кластере при обновлении релиза платформы (при обновлении минорной версии).
 
 {% alert level="warning" %}
-Если версия Kubernetes явно указана в параметре [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), обновление платформы может завершиться неудачей, если используемая в кластере версия Kubernetes более не поддерживается.
+Если версия Kubernetes явно указана в параметре [kubernetesVersion](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion), обновление платформы может завершиться неудачей, если используемая в кластере версия Kubernetes более не поддерживается.
 {% endalert %}
 
 Если приложение использует устаревшие версии ресурсов или требует конкретной версии Kubernetes по какой-либо другой причине, проверьте, что эта версия [поддерживается](/products/virtualization-platform/documentation/about/requirements.html), и [установите ее явно](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html).
