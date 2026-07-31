@@ -18,12 +18,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -115,6 +117,11 @@ type Executor struct {
 	pipesMutex     sync.Mutex
 	stdoutPipeFile *os.File
 	stderrPipeFile *os.File
+	// Read ends of pipes - need to be closed to unblock goroutines stuck in Read()
+	stdoutReadPipe        *os.File
+	stderrReadPipe        *os.File
+	stdoutHandlerReadPipe *os.File
+	stderrHandlerReadPipe *os.File
 
 	StderrBuffer   *bytes.Buffer
 	StderrSplitter bufio.SplitFunc
@@ -122,10 +129,12 @@ type Executor struct {
 
 	WaitHandler func(err error)
 
-	started bool
-	stop    bool
-	waitCh  chan struct{}
-	stopCh  chan struct{}
+	started  atomic.Bool
+	stop     atomic.Bool
+	waitCh   chan struct{}
+	stopCh   chan struct{}
+	doneCh   chan struct{}
+	stopOnce sync.Once
 
 	lockWaitError sync.RWMutex
 	waitError     error
@@ -134,6 +143,8 @@ type Executor struct {
 
 	timeout time.Duration
 }
+
+var RegisterStoppables = true
 
 func NewDefaultExecutor(cmd *exec.Cmd) *Executor {
 	return NewExecutor(DefaultSession, cmd)
@@ -255,6 +266,7 @@ func (e *Executor) SetupStreamHandlers() error {
 
 		e.pipesMutex.Lock()
 		e.stdoutPipeFile = stdoutWritePipe
+		e.stdoutReadPipe = stdoutReadPipe
 		e.pipesMutex.Unlock()
 
 		// create pipe for StdoutHandler
@@ -263,6 +275,9 @@ func (e *Executor) SetupStreamHandlers() error {
 			if err != nil {
 				return fmt.Errorf("unable to create os pipe for stdoutHandler: %s", err)
 			}
+			e.pipesMutex.Lock()
+			e.stdoutHandlerReadPipe = stdoutHandlerReadPipe
+			e.pipesMutex.Unlock()
 		}
 	}
 
@@ -280,6 +295,7 @@ func (e *Executor) SetupStreamHandlers() error {
 
 		e.pipesMutex.Lock()
 		e.stderrPipeFile = stderrWritePipe
+		e.stderrReadPipe = stderrReadPipe
 		e.pipesMutex.Unlock()
 
 		// create pipe for StderrHandler
@@ -288,6 +304,9 @@ func (e *Executor) SetupStreamHandlers() error {
 			if err != nil {
 				return fmt.Errorf("unable to create os pipe for stderrHandler: %s", err)
 			}
+			e.pipesMutex.Lock()
+			e.stderrHandlerReadPipe = stderrHandlerReadPipe
+			e.pipesMutex.Unlock()
 		}
 	}
 
@@ -304,6 +323,12 @@ func (e *Executor) SetupStreamHandlers() error {
 	// - Copy to buffer if capture is enabled
 	// - Copy to pipe if StdoutHandler is set
 	go func() {
+		defer func() {
+			if stdoutHandlerWritePipe != nil {
+				_ = stdoutHandlerWritePipe.Close()
+			}
+			e.closeStdoutReadPipe()
+		}()
 		e.readFromStreams(stdoutReadPipe, stdoutHandlerWritePipe)
 	}()
 
@@ -311,6 +336,7 @@ func (e *Executor) SetupStreamHandlers() error {
 		if e.StdoutHandler == nil {
 			return
 		}
+		defer e.closeStdoutHandlerReadPipe()
 		e.ConsumeLines(stdoutHandlerReadPipe, e.StdoutHandler)
 		log.DebugF("stop line consumer for '%s'\n", e.cmd.Args[0])
 	}()
@@ -326,6 +352,12 @@ func (e *Executor) SetupStreamHandlers() error {
 
 		log.DebugLn("Start reading from stderr pipe")
 		defer log.DebugLn("Stop reading from stderr pipe")
+		defer func() {
+			if stderrHandlerWritePipe != nil {
+				_ = stderrHandlerWritePipe.Close()
+			}
+			e.closeStderrReadPipe()
+		}()
 
 		buf := make([]byte, 16)
 		for {
@@ -342,7 +374,11 @@ func (e *Executor) SetupStreamHandlers() error {
 				_, _ = stderrHandlerWritePipe.Write(buf[:n])
 			}
 
-			if err == io.EOF {
+			if err != nil {
+				if errors.Is(err, io.EOF) || errors.Is(err, os.ErrClosed) {
+					break
+				}
+				log.DebugF("Error reading from stderr: %s\n", err)
 				break
 			}
 		}
@@ -352,6 +388,7 @@ func (e *Executor) SetupStreamHandlers() error {
 		if e.StderrHandler == nil {
 			return
 		}
+		defer e.closeStderrHandlerReadPipe()
 		e.ConsumeLines(stderrHandlerReadPipe, e.StderrHandler)
 		log.DebugF("stop sdterr line consumer for '%s'\n", e.cmd.Args[0])
 	}()
@@ -377,14 +414,6 @@ func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWriteP
 	errorsCount := 0
 	for {
 		n, err := stdoutReadPipe.Read(buf)
-		if err != nil && err != io.EOF {
-			log.DebugF("Error reading from stdout: %s\n", err)
-			errorsCount++
-			if errorsCount > 1000 {
-				panic(fmt.Errorf("readFromStreams: too many errors, last error %v", err))
-			}
-			continue
-		}
 
 		m := 0
 		if !matchersDone {
@@ -426,9 +455,17 @@ func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWriteP
 			_, _ = stdoutHandlerWritePipe.Write(buf[m:n])
 		}
 
-		if err == io.EOF {
-			log.DebugLn("readFromStreams: EOF")
-			break
+		if err != nil {
+			if errors.Is(err, io.EOF) || errors.Is(err, os.ErrClosed) {
+				break
+			}
+
+			log.DebugF("Error reading from stdout: %s\n", err)
+			errorsCount++
+			if errorsCount > 1000 {
+				panic(fmt.Errorf("readFromStreams: too many errors, last error %v", err))
+			}
+			continue
 		}
 	}
 }
@@ -461,14 +498,17 @@ func (e *Executor) Start() error {
 
 	err = e.cmd.Start()
 	if err != nil {
+		e.forceClosePipes()
 		return err
 	}
-	e.started = true
 
 	e.ProcessWait()
+	e.started.Store(true)
 
-	log.DebugF("Register stoppable: '%s'\n", e.cmd.String())
-	e.Session.RegisterStoppable(e)
+	if RegisterStoppables {
+		log.DebugF("Register stoppable: '%s'\n", e.cmd.String())
+		e.Session.RegisterStoppable(e)
+	}
 
 	return nil
 }
@@ -477,24 +517,20 @@ func (e *Executor) ProcessWait() {
 	waitErrCh := make(chan error, 1)
 	e.waitCh = make(chan struct{}, 1)
 	e.stopCh = make(chan struct{}, 1)
+	e.doneCh = make(chan struct{})
 
 	// wait for process in go routine
 	go func() {
 		waitErrCh <- e.cmd.Wait()
 	}()
 
-	go func() {
-		if e.timeout > 0 {
-			time.Sleep(e.timeout)
-			if e.stopCh != nil {
-				e.stopCh <- struct{}{}
-			}
-		}
-	}()
+	go e.waitForTimeout()
 
 	// watch for wait or stop
 	go func() {
 		defer func() {
+			e.closeWritePipes()
+			close(e.doneCh)
 			close(e.waitCh)
 			close(waitErrCh)
 		}()
@@ -502,9 +538,10 @@ func (e *Executor) ProcessWait() {
 		for {
 			select {
 			case err := <-waitErrCh:
-				if e.stop {
+				if e.stop.Load() {
 					// Ignore error if Stop() was called.
 					// close(e.waitCh)
+					e.killProcessGroup()
 					return
 				}
 				e.setWaitError(err)
@@ -514,28 +551,48 @@ func (e *Executor) ProcessWait() {
 				// close(e.waitCh)
 				return
 			case <-e.stopCh:
-				e.stop = true
-				// Prevent next readings from the closed channel.
-				e.stopCh = nil
+				e.stop.Store(true)
 				// The usual e.cmd.Process.Kill() is not working for the process
 				// started with the new process group (Setpgid: true).
 				// Negative pid number is used to send a signal to all processes in the group.
-				err := syscall.Kill(-e.cmd.Process.Pid, syscall.SIGKILL)
-				if err != nil {
-					e.killError = err
-				}
+				e.killProcessGroup()
+				e.forceClosePipes()
 			}
 		}
 	}()
 }
 
-func (e *Executor) closePipes() {
-	log.DebugLn("Starting close piped")
-	defer log.DebugLn("Stop close piped")
+func (e *Executor) waitForTimeout() {
+	if e.timeout <= 0 {
+		return
+	}
+
+	timer := time.NewTimer(e.timeout)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		e.signalStop()
+	case <-e.doneCh:
+		return
+	}
+}
+
+func (e *Executor) killProcessGroup() {
+	err := syscall.Kill(-e.cmd.Process.Pid, syscall.SIGKILL)
+	if err != nil {
+		e.killError = err
+	}
+}
+
+func (e *Executor) closeWritePipes() {
+	log.DebugLn("Starting close write pipes")
+	defer log.DebugLn("Stop close write pipes")
 
 	e.pipesMutex.Lock()
 	defer e.pipesMutex.Unlock()
 
+	// Close write ends first
 	if e.stdoutPipeFile != nil {
 		err := e.stdoutPipeFile.Close()
 		if err != nil {
@@ -553,28 +610,78 @@ func (e *Executor) closePipes() {
 	}
 }
 
+func (e *Executor) forceClosePipes() {
+	e.closeWritePipes()
+
+	log.DebugLn("Starting force close pipes")
+	defer log.DebugLn("Stop force close pipes")
+
+	e.closeStdoutReadPipe()
+	e.closeStderrReadPipe()
+	e.closeStdoutHandlerReadPipe()
+	e.closeStderrHandlerReadPipe()
+}
+
+func (e *Executor) closeStdoutReadPipe() {
+	e.closePipeFile(&e.stdoutReadPipe, "stdout read pipe")
+}
+
+func (e *Executor) closeStderrReadPipe() {
+	e.closePipeFile(&e.stderrReadPipe, "stderr read pipe")
+}
+
+func (e *Executor) closeStdoutHandlerReadPipe() {
+	e.closePipeFile(&e.stdoutHandlerReadPipe, "stdout handler read pipe")
+}
+
+func (e *Executor) closeStderrHandlerReadPipe() {
+	e.closePipeFile(&e.stderrHandlerReadPipe, "stderr handler read pipe")
+}
+
+func (e *Executor) closePipeFile(pipe **os.File, name string) {
+	e.pipesMutex.Lock()
+	defer e.pipesMutex.Unlock()
+
+	if *pipe != nil {
+		err := (*pipe).Close()
+		if err != nil {
+			log.DebugF("Cannot close %s: %v\n", name, err)
+		}
+		*pipe = nil
+	}
+}
+
 func (e *Executor) Stop() {
-	if e.stop {
-		log.DebugF("Stop '%s': already stopped\n", e.cmd.String())
-		return
-	}
-	if !e.started {
-		log.DebugF("Stop '%s': not started yet\n", e.cmd.String())
-		return
-	}
 	if e.cmd == nil {
 		log.DebugF("Possible BUG: Call Executor.Stop with Cmd==nil\n")
 		return
 	}
-
-	e.stop = true
-	log.DebugF("Stop '%s'\n", e.cmd.String())
-	if e.stopCh != nil {
-		close(e.stopCh)
+	if !e.started.Load() {
+		log.DebugF("Stop '%s': not started yet\n", e.cmd.String())
+		return
 	}
+
+	if e.stop.CompareAndSwap(false, true) {
+		log.DebugF("Stop '%s'\n", e.cmd.String())
+		e.signalStop()
+	} else {
+		log.DebugF("Stop '%s': already stopping\n", e.cmd.String())
+	}
+
+	// Close pipes immediately to unblock goroutines stuck in Read()
+	// This must happen before waiting for waitCh
+	e.forceClosePipes()
 	<-e.waitCh
 	log.DebugF("Stopped '%s': %d\n", e.cmd.String(), e.cmd.ProcessState.ExitCode())
-	e.closePipes()
+}
+
+func (e *Executor) signalStop() {
+	e.stopOnce.Do(func() {
+		select {
+		case e.stopCh <- struct{}{}:
+		default:
+		}
+	})
 }
 
 // Run executes a command and blocks until it is finished or stopped.
@@ -588,7 +695,7 @@ func (e *Executor) Run(_ context.Context) error {
 
 	<-e.waitCh
 
-	e.closePipes()
+	e.closeWritePipes()
 
 	return e.WaitError()
 }

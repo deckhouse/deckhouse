@@ -36,20 +36,29 @@ import (
 )
 
 type SSHFile struct {
-	sshClient *ssh.Client
+	client *Client
 }
 
-func NewSSHFile(client *ssh.Client) *SSHFile {
-	return &SSHFile{sshClient: client}
+func NewSSHFile(client *Client) *SSHFile {
+	return &SSHFile{client: client}
 }
 
 func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error {
+	sshClient, err := f.client.snapshotSSHClient()
+	if err != nil {
+		return err
+	}
+
+	return f.upload(ctx, sshClient, srcPath, remotePath)
+}
+
+func (f *SSHFile) upload(ctx context.Context, sshClient *ssh.Client, srcPath, remotePath string) error {
 	fType, err := CheckLocalPath(srcPath)
 	if err != nil {
 		return fmt.Errorf("failed to open local file: %w", err)
 	}
 
-	session, err := f.sshClient.NewSession()
+	session, err := sshClient.NewSession()
 	if err != nil {
 		return err
 	}
@@ -62,7 +71,7 @@ func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error 
 		}
 		defer localFile.Close()
 
-		rType, err := getRemoteFileStat(f.sshClient, remotePath)
+		rType, err := getRemoteFileStat(sshClient, remotePath)
 		if err != nil {
 			if !strings.ContainsAny(err.Error(), "No such file or directory") {
 				return err
@@ -86,7 +95,7 @@ func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error 
 			return fmt.Errorf("could not read directory: %w", err)
 		}
 		for _, file := range files {
-			err = f.Upload(ctx, srcPath+"/"+file.Name(), remotePath+"/"+file.Name())
+			err = f.upload(ctx, sshClient, srcPath+"/"+file.Name(), remotePath+"/"+file.Name())
 			if err != nil {
 				return err
 			}
@@ -119,7 +128,16 @@ func (f *SSHFile) UploadBytes(ctx context.Context, data []byte, remotePath strin
 }
 
 func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) error {
-	fType, err := getRemoteFileStat(f.sshClient, remotePath)
+	sshClient, err := f.client.snapshotSSHClient()
+	if err != nil {
+		return err
+	}
+
+	return f.download(ctx, sshClient, remotePath, dstPath)
+}
+
+func (f *SSHFile) download(ctx context.Context, sshClient *ssh.Client, remotePath, dstPath string) error {
+	fType, err := getRemoteFileStat(sshClient, remotePath)
 	if err != nil {
 		return err
 	}
@@ -140,12 +158,12 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 			return fmt.Errorf("failed to open local file: %w", err)
 		}
 		defer localFile.Close()
-		if err := CopyFromRemote(ctx, localFile, remotePath, f.sshClient); err != nil {
+		if err := CopyFromRemote(ctx, localFile, remotePath, sshClient); err != nil {
 			return fmt.Errorf("failed to copy file from remote host: %w", err)
 		}
 	} else {
 		// recursive copy logic
-		filesString, err := getRemoteFilesList(f.sshClient, remotePath)
+		filesString, err := getRemoteFilesList(sshClient, remotePath)
 		if err != nil {
 			return err
 		}
@@ -162,7 +180,7 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 		re := regexp.MustCompile(`\s+`)
 		files := re.Split(filesString, -1)
 		for _, file := range files {
-			err = f.Download(ctx, filepath.Join(remotePath, file), filepath.Join(dstPath, file))
+			err = f.download(ctx, sshClient, filepath.Join(remotePath, file), filepath.Join(dstPath, file))
 			if err != nil {
 				return err
 			}

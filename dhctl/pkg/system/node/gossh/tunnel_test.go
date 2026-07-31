@@ -16,6 +16,7 @@ package gossh
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os"
 	"testing"
@@ -26,6 +27,32 @@ import (
 	ssh_testing "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh/testing"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
+
+func TestTunnelAcceptTunnelConnectionStopsSilentlyAfterListenerClose(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	tun := NewTunnel(nil, "")
+	done := make(chan struct{})
+	go func() {
+		tun.acceptTunnelConnection(1, "127.0.0.1:1", listener)
+		close(done)
+	}()
+
+	require.NoError(t, listener.Close())
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		require.FailNow(t, "acceptTunnelConnection must stop after listener close")
+	}
+
+	select {
+	case err = <-tun.errorCh:
+		require.FailNow(t, "listener close must not be reported as tunnel error", "got %v", err)
+	default:
+	}
+}
 
 func TestTunnel(t *testing.T) {
 	testName := "TestTunnel"
