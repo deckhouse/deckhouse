@@ -41,11 +41,20 @@ const (
 	// immutableAPIPort is where the node's own kube-apiserver listens.
 	immutableAPIPort = 6443
 
-	// immutableWaitAttempts and immutableWaitInterval bound every wait on the
-	// node bringing its control plane up: pulling the control-plane images,
-	// starting the static pods and registering the Node take a few minutes on a
-	// cold registry.
-	immutableWaitAttempts = 250
+	// immutableAPIWaitAttempts and immutableAPIWaitInterval bound the wait for
+	// the very first answer from the node's own apiserver — 30 minutes. Nothing
+	// has happened on the VM yet when this wait starts: it still has to install
+	// the OS onto its disk, reboot into it, pull three system extensions, start
+	// containerd and kubelet, pull four control-plane images and only then serve.
+	// The classic path spends its budget on "sshd answers", which is a fraction
+	// of that.
+	immutableAPIWaitAttempts = 60
+	immutableAPIWaitInterval = 30 * time.Second
+
+	// immutableWaitAttempts and immutableWaitInterval bound everything that
+	// happens after the apiserver answers. Registering the Node is the node's
+	// next step, so a couple of minutes is generous.
+	immutableWaitAttempts = 120
 	immutableWaitInterval = time.Second
 )
 
@@ -265,16 +274,26 @@ func newKubeconfigKubeProvider(ctx context.Context, b *ClusterBootstrapper, kube
 		return nil, fmt.Errorf("build the Kubernetes runner interface: %w", err)
 	}
 
-	waitParams := libretry.NewEmptyParams(
+	// InitClient only builds the client out of the kubeconfig, which either
+	// works at once or is broken; WaitingReady is the loop that polls
+	// /version until the node's apiserver answers, and that is the one the
+	// whole "the node installs itself and brings a control plane up" wait
+	// hides behind.
+	initParams := libretry.NewEmptyParams(
 		libretry.WithWait(immutableWaitInterval),
 		libretry.WithAttempts(immutableWaitAttempts),
+		libretry.WithLogger(dhlog.FromContext(ctx)),
+	)
+	readyParams := libretry.NewEmptyParams(
+		libretry.WithWait(immutableAPIWaitInterval),
+		libretry.WithAttempts(immutableAPIWaitAttempts),
 		libretry.WithLogger(dhlog.FromContext(ctx)),
 	)
 
 	return provider.NewDefaultKubeProvider(b.SSHProviderInitializer.GetSettings(), kubeConfig, runner).
 		WithLoopsParams(provider.KubeProviderLoopsParams{
-			InitClient:   waitParams,
-			WaitingReady: waitParams,
+			InitClient:   initParams,
+			WaitingReady: readyParams,
 		}), nil
 }
 
