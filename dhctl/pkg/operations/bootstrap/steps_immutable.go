@@ -212,12 +212,49 @@ func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *
 		return nil, nil, fmt.Errorf("forward %d to %s:%d through the bastion %s: %w", localPort, masterIP, immutableAPIPort, sshConfig.BastionHost, err)
 	}
 
+	stopDrain := drainTunnelErrors(ctx, tunnel)
+
 	stop := func() {
+		// Stop() first: it releases HealthMonitor, which is what the drain
+		// reads from.
 		tunnel.Stop()
+		stopDrain()
 		_ = sshProvider.Cleanup(ctx)
 	}
 
 	return tunnel, stop, nil
+}
+
+// drainTunnelErrors keeps the tunnel accepting connections and returns the
+// function that stops the drain again.
+//
+// Every proxied connection posts the error it ends with — usually "use of
+// closed network connection" from whichever direction lost the race to close —
+// into a channel buffered for ten, and only HealthMonitor takes them out.
+// Without it the eleventh connection blocks the accept loop and the API channel
+// dies in the middle of installing Deckhouse. The errors themselves are of no
+// interest: a request that hit one fails on its own and the client retries.
+func drainTunnelErrors(ctx context.Context, tunnel libcon.Tunnel) func() {
+	logger := dhlog.FromContext(ctx)
+
+	// Buffered, so HealthMonitor is never left blocked on a hand-over after
+	// the drain has stopped.
+	errorCh := make(chan error, 16)
+	go tunnel.HealthMonitor(errorCh)
+
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case err := <-errorCh:
+				logger.DebugContext(ctx, fmt.Sprintf("API server tunnel: %v", err))
+			case <-done:
+				return
+			}
+		}
+	}()
+
+	return func() { close(done) }
 }
 
 // writeImmutableKubeconfig mints installer credentials from the CA the node was
