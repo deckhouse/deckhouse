@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -34,6 +35,7 @@ import (
 	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -373,26 +375,26 @@ func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, dir 
 	return path, nil
 }
 
-// saveAdminKubeconfig writes the admin kubeconfig where --kubeconfig-out asks
-// for it, and says so loudly when nothing asked for it.
+// saveAdminKubeconfig hands the admin kubeconfig to the operator, at the path
+// --kubeconfig-out names or next to the run's log and trace files.
 //
-// A cluster whose first master runs an immutable OS has no second way in: the
-// node runs no SSH server, so the kubeconfig the classic bootstrap leaves in
-// /root/.kube/config on the master cannot be fetched from it, and the handoff
-// endpoint this one came through serves once and is already closed. Without
-// this file the bootstrap ends with a cluster nobody can reach.
+// It is written by default rather than on request because a cluster whose first
+// master runs an immutable OS has no second way in: the node runs no SSH server,
+// so the kubeconfig the classic bootstrap leaves in /root/.kube/config on the
+// master cannot be fetched from it, and the handoff endpoint this one came
+// through serves once and is already closed. Defaulting to "do not keep it"
+// would mean defaulting to a cluster nobody can reach.
 func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content []byte) error {
 	path := b.Options.Bootstrap.KubeconfigOut
 	if path == "" {
-		dhlog.FromContext(ctx).WarnContext(ctx, "The cluster is reachable only through the credentials dhctl holds for this run: "+
-			"the first master runs an immutable OS and has no SSH server. Pass --kubeconfig-out=<path> to keep them.")
-		return nil
+		path = filepath.Join(b.TmpDir, cache.AdminKubeconfigName)
 	}
 
 	if err := os.WriteFile(path, content, 0o600); err != nil {
 		return fmt.Errorf("write the admin kubeconfig to %s: %w", path, err)
 	}
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Admin kubeconfig written to %s — it holds cluster-admin credentials.", path))
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Admin kubeconfig written to %s — it holds cluster-admin credentials, "+
+		"and on a cluster of immutable nodes it is the only way in.", path))
 	return nil
 }
 

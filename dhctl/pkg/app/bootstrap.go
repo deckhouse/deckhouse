@@ -35,6 +35,7 @@ func DefineBashibleBundleFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptio
 // DefineKubeconfigOutFlags registers --kubeconfig-out.
 func DefineKubeconfigOutFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 	cmd.Flag("kubeconfig-out", `Path to write the admin kubeconfig of the bootstrapped cluster to (mode 0600).
+Defaults to admin.kubeconfig in the dhctl temporary directory, beside the run's log and trace.
 Only a cluster whose first master runs an immutable OS produces one: such a node runs no SSH server, so the kubeconfig
 the classic bootstrap leaves on the master cannot be fetched from it afterwards. The file holds cluster-admin credentials.`).
 		Envar(configEnvName("KUBECONFIG_OUT")).
