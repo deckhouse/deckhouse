@@ -124,7 +124,12 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		return err
 	}
 
-	kubeconfigPath, err := b.writeImmutableKubeconfig(ctx, b.TmpDir, kubeconfig, server)
+	content, err := immutable.RetargetKubeconfig(kubeconfig, server)
+	if err != nil {
+		return err
+	}
+
+	kubeconfigPath, err := b.writeImmutableKubeconfig(ctx, b.TmpDir, content)
 	if err != nil {
 		return err
 	}
@@ -138,6 +143,12 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	kubeCl, err := b.KubeProvider.Client(ctx)
 	if err != nil {
 		return fmt.Errorf("connect to the API server of the immutable master at %s: %w", server, err)
+	}
+
+	// Handed over only after the client above proved the credentials work, so
+	// what the operator gets is never a kubeconfig that cannot connect.
+	if err := b.saveAdminKubeconfig(ctx, content); err != nil {
+		return err
 	}
 
 	// The file holds admin credentials and is read exactly once, here: the
@@ -339,12 +350,7 @@ func drainTunnelErrors(ctx context.Context, tunnel libcon.Tunnel) func() {
 // writeImmutableKubeconfig stores the collected admin kubeconfig in a file the
 // Kubernetes client can be built from, with its server URL pointed at the
 // address dhctl reaches the API on.
-func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, dir string, kubeconfig []byte, server string) (string, error) {
-	content, err := immutable.RetargetKubeconfig(kubeconfig, server)
-	if err != nil {
-		return "", err
-	}
-
+func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, dir string, content []byte) (string, error) {
 	// os.CreateTemp opens the file with mode 0600; it holds admin credentials,
 	// so it is removed again once dhctl exits.
 	file, err := os.CreateTemp(dir, "dhctl-immutable-kubeconfig-*.yaml")
@@ -365,6 +371,29 @@ func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, dir 
 	})
 
 	return path, nil
+}
+
+// saveAdminKubeconfig writes the admin kubeconfig where --kubeconfig-out asks
+// for it, and says so loudly when nothing asked for it.
+//
+// A cluster whose first master runs an immutable OS has no second way in: the
+// node runs no SSH server, so the kubeconfig the classic bootstrap leaves in
+// /root/.kube/config on the master cannot be fetched from it, and the handoff
+// endpoint this one came through serves once and is already closed. Without
+// this file the bootstrap ends with a cluster nobody can reach.
+func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content []byte) error {
+	path := b.Options.Bootstrap.KubeconfigOut
+	if path == "" {
+		dhlog.FromContext(ctx).WarnContext(ctx, "The cluster is reachable only through the credentials dhctl holds for this run: "+
+			"the first master runs an immutable OS and has no SSH server. Pass --kubeconfig-out=<path> to keep them.")
+		return nil
+	}
+
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		return fmt.Errorf("write the admin kubeconfig to %s: %w", path, err)
+	}
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Admin kubeconfig written to %s — it holds cluster-admin credentials.", path))
+	return nil
 }
 
 // removeImmutableKubeconfig deletes the temporary kubeconfig, tolerating a
