@@ -379,7 +379,14 @@ func sandboxImage(metaConfig *config.MetaConfig, images map[string]any) (string,
 		return "", fmt.Errorf("registry imagesRepo is empty")
 	}
 
-	return fmt.Sprintf("%s/%s@%s", imagesRepo, commonDigestsKey, digest), nil
+	// Every Deckhouse image lives in ONE repository and is addressed by digest
+	// alone — the group a digest is filed under ("common", "controlPlaneManager")
+	// is a key in the digest map, not a path segment. Appending it yields a
+	// repository that does not exist and the pull fails with 404, which surfaces
+	// far away from here: as a pod sandbox that cannot be created. The control
+	// plane templates build their references the same way (address + path +
+	// "@" + digest, see candi/control-plane/kube-apiserver.yaml.tpl:222).
+	return fmt.Sprintf("%s@%s", imagesRepo, digest), nil
 }
 
 // nodeRegistry gives the node direct registry access: it pulls the
