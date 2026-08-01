@@ -24,6 +24,7 @@ import (
 type ImmutableDeps struct {
 	MetaConfig    *config.MetaConfig
 	BootstrapOpts *options.BootstrapOptions
+	GlobalOpts    *options.GlobalOptions
 }
 
 // NewImmutableSuite gathers the checks that only apply when the master
@@ -35,6 +36,7 @@ func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 		checks.ImmutableRegistryMode(deps.MetaConfig),
 		checks.ImmutableMasterDisks(deps.MetaConfig),
 		checks.ImmutableMasterReplicas(deps.MetaConfig),
+		checks.ImmutableSignatureMode(deps.MetaConfig, deps.GlobalOpts),
 		checks.ImmutablePostBootstrapScript(deps.BootstrapOpts),
 	)
 }

@@ -18,11 +18,14 @@ import (
 	"context"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
@@ -35,6 +38,7 @@ const (
 	ImmutableMasterDisksCheckName       preflight.CheckName = "immutable-master-disks"
 	ImmutableMasterReplicasCheckName    preflight.CheckName = "immutable-master-replicas"
 	ImmutablePostBootstrapHookCheckName preflight.CheckName = "immutable-post-bootstrap-script"
+	ImmutableSignatureModeCheckName     preflight.CheckName = "immutable-signature-mode"
 )
 
 func noRetry() preflight.RetryPolicy {
@@ -121,6 +125,47 @@ func ImmutableMasterReplicas(metaConfig *config.MetaConfig) preflight.Check {
 				return fmt.Errorf("masterNodeGroup.replicas is %d: an immutable master group supports a single replica for now", replicas)
 			}
 			return nil
+		},
+	}
+}
+
+// ImmutableSignatureMode rejects a cluster that asks kube-apiserver to verify
+// object signatures. That mode makes the apiserver manifest reference
+// extra-files/secret-encryption-config.yaml, and the key pair plus the config
+// behind it are generated and uploaded over SSH by the control-plane-manager
+// bootstrap preparator, which the immutable path never runs. The apiserver
+// would come up in a crash loop over a missing file.
+func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.GlobalOptions) preflight.Check {
+	return preflight.Check{
+		Name:        ImmutableSignatureModeCheckName,
+		Description: "control-plane signature mode is off",
+		Phase:       preflight.PhasePreInfra,
+		Retry:       noRetry(),
+		Run: func(ctx context.Context) error {
+			if metaConfig == nil {
+				return fmt.Errorf("meta config is nil")
+			}
+
+			extractor := controlplane.NewSettingsExtractor(
+				metaConfig,
+				config.NewSchemaStore(globalOpts),
+				config.GetEdition(),
+				dhlog.FromContext(ctx),
+			)
+
+			mode, err := extractor.SignatureMode()
+			if err != nil {
+				return err
+			}
+			if mode == controlplane.NoSignatureMode {
+				return nil
+			}
+
+			return fmt.Errorf(
+				"control-plane-manager runs with apiserver.signature %q, which an immutable master does not support yet: "+
+					"the signing keys and the encryption provider config are uploaded to the node over SSH, and an immutable node runs no sshd",
+				mode,
+			)
 		},
 	}
 }

@@ -214,4 +214,8 @@ type ControlPlaneParams struct {
 	// EncryptionAlgorithm is empty when the cluster does not pin one; the node
 	// then falls back to the PKI library default.
 	EncryptionAlgorithm string `json:"encryptionAlgorithm"`
+	// CertSANs are the extra names and addresses the apiserver certificate has
+	// to cover, the same list control-plane-manager keeps under the "cert-sans"
+	// key of its config secret.
+	CertSANs []string `json:"certSANs,omitempty"`
 }

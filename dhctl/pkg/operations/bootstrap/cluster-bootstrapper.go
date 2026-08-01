@@ -524,6 +524,7 @@ func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflig
 	runner.AddSuite(suites.NewImmutableSuite(suites.ImmutableDeps{
 		MetaConfig:    bctx.metaConfig,
 		BootstrapOpts: &b.Options.Bootstrap,
+		GlobalOpts:    &b.Options.Global,
 	}))
 
 	// The cloud API check tunnels through the master host; there is no sshd
