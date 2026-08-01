@@ -17,6 +17,7 @@ package bootstrap
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -42,12 +43,12 @@ const (
 	immutableAPIPort = 6443
 
 	// immutableAPIWaitAttempts and immutableAPIWaitInterval bound the wait for
-	// the very first answer from the node's own apiserver — 30 minutes. Nothing
-	// has happened on the VM yet when this wait starts: it still has to install
-	// the OS onto its disk, reboot into it, pull three system extensions, start
-	// containerd and kubelet, pull four control-plane images and only then serve.
-	// The classic path spends its budget on "sshd answers", which is a fraction
-	// of that.
+	// the very first answer from the node — 30 minutes. Nothing has happened on
+	// the VM yet when this wait starts: it still has to install the OS onto its
+	// disk, reboot into it, pull three system extensions, start containerd and
+	// kubelet, generate the cluster PKI, pull four control-plane images and only
+	// then serve. The classic path spends its budget on "sshd answers", which is
+	// a fraction of that.
 	immutableAPIWaitAttempts = 60
 	immutableAPIWaitInterval = 30 * time.Second
 
@@ -83,7 +84,6 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 		controlPlaneConfig, err := immutable.BuildControlPlaneConfig(ctx, immutable.ControlPlaneInput{
 			NodeName:   nodeName,
 			MetaConfig: bctx.metaConfig,
-			GlobalOpts: &b.Options.Global,
 			StateCache: bctx.stateCache,
 		})
 		if err != nil {
@@ -103,15 +103,20 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 	return cloudConfig, err
 }
 
-// connectToImmutableMaster waits for the node to finish bringing its own
-// control plane up and hands the rest of the bootstrap a Kubernetes client.
+// connectToImmutableMaster collects the cluster credentials from the node and
+// hands the rest of the bootstrap a Kubernetes client.
 //
-// There is no bashible pipeline here: the node issues its own certificates and
-// kubeconfigs, lays the manifests down, waits for its apiserver and creates the
-// first cluster objects itself. dhctl only needs a way in.
+// There is no bashible pipeline here: the node generates the cluster PKI, lays
+// the manifests down, waits for its apiserver and creates the first cluster
+// objects itself. dhctl never sees a cluster key until the node gives it one.
 func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
 	if bctx.masterIP == "" {
 		return fmt.Errorf("the first master address is unknown: rerun the bootstrap so the BaseInfra phase reports it")
+	}
+
+	kubeconfig, err := b.collectImmutableKubeconfig(ctx, bctx)
+	if err != nil {
+		return err
 	}
 
 	server, err := b.openImmutableAPIChannel(ctx, bctx)
@@ -119,7 +124,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		return err
 	}
 
-	kubeconfigPath, err := b.writeImmutableKubeconfig(ctx, bctx, server)
+	kubeconfigPath, err := b.writeImmutableKubeconfig(ctx, b.TmpDir, kubeconfig, server)
 	if err != nil {
 		return err
 	}
@@ -130,15 +135,12 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	}
 	b.KubeProvider = kubeProvider
 
-	// Client() retries the connection and then polls the API until it answers,
-	// which is exactly the "wait for the node to bring its control plane up"
-	// step this phase replaces the bashible pipeline with.
 	kubeCl, err := b.KubeProvider.Client(ctx)
 	if err != nil {
 		return fmt.Errorf("connect to the API server of the immutable master at %s: %w", server, err)
 	}
 
-	// The file holds a system:masters key and is read exactly once, here: the
+	// The file holds admin credentials and is read exactly once, here: the
 	// runner behind this provider is the local one, which never reports a
 	// switched connection, so no later Client() call rebuilds the client from
 	// it. In dhctl-server the process outlives the bootstrap, so waiting for
@@ -148,39 +150,109 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	return waitForImmutableMasterNode(ctx, kubeCl, bctx.masterNodeName)
 }
 
+// collectImmutableKubeconfig waits for the node's one-shot handoff endpoint and
+// reads the admin kubeconfig out of it.
+//
+// This is the whole "wait for the node to install itself and bring a control
+// plane up" step: the endpoint does not answer before that is done. The channel
+// to it is closed again as soon as the credentials are in hand — it serves
+// once, so there is nothing left to reach.
+func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bctx *bootstrapContext) ([]byte, error) {
+	material, err := immutable.LoadHandoffMaterial(ctx, bctx.stateCache)
+	if err != nil {
+		return nil, err
+	}
+	if material == nil {
+		return nil, fmt.Errorf("the bootstrap handoff credentials are missing from the state cache: rerun the bootstrap so the BaseInfra phase regenerates the master payload")
+	}
+
+	address, stop, err := b.openImmutableChannel(ctx, bctx, immutable.HandoffPort, "credentials handoff")
+	if err != nil {
+		return nil, err
+	}
+	if stop != nil {
+		defer stop()
+	}
+
+	input := immutable.FetchKubeconfigInput{
+		Address: address,
+		// The endpoint's certificate is issued for the node's name, not for the
+		// address dhctl dialled: that address did not exist when the payload
+		// was built.
+		ServerName: bctx.masterNodeName,
+		Material:   material,
+	}
+
+	var kubeconfig []byte
+	err = retry.NewLoop("Waiting for the first master to hand over the cluster credentials", immutableAPIWaitAttempts, immutableAPIWaitInterval).
+		BreakIf(func(err error) bool {
+			return errors.Is(err, immutable.ErrHandoffUnauthorized) || errors.Is(err, immutable.ErrHandoffAlreadyServed)
+		}).
+		RunContext(ctx, func() error {
+			collected, err := immutable.FetchKubeconfig(ctx, input)
+			if err != nil {
+				return err
+			}
+			kubeconfig = collected
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return kubeconfig, nil
+}
+
 // openImmutableAPIChannel returns the URL dhctl talks to the master's apiserver
-// on. Without a bastion that is the master itself; with one it is the local end
-// of a forward through the bastion — the bastion opens a direct-tcpip channel
-// to an arbitrary address, so no sshd on the master is involved.
+// on and keeps the tunnel behind it open for the rest of the bootstrap.
 func (b *ClusterBootstrapper) openImmutableAPIChannel(ctx context.Context, bctx *bootstrapContext) (string, error) {
+	address, stop, err := b.openImmutableChannel(ctx, bctx, immutableAPIPort, "API server")
+	if err != nil {
+		return "", err
+	}
+	if stop != nil {
+		bctx.immutableTunnelStop = stop
+	}
+
+	return "https://" + address, nil
+}
+
+// openImmutableChannel returns the host:port dhctl reaches the given port of
+// the master on, and the function that closes the tunnel behind it — nil when
+// there is no tunnel.
+//
+// Without a bastion that is the master itself; with one it is the local end of
+// a forward through the bastion, which opens a direct-tcpip channel to an
+// arbitrary address, so no sshd on the master is involved.
+func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bootstrapContext, remotePort int, purpose string) (string, func(), error) {
 	connectionConfig := b.SSHProviderInitializer.GetConfig()
 	if connectionConfig == nil || connectionConfig.Config == nil || connectionConfig.Config.BastionHost == "" {
-		return "https://" + net.JoinHostPort(bctx.masterIP, strconv.Itoa(immutableAPIPort)), nil
+		return net.JoinHostPort(bctx.masterIP, strconv.Itoa(remotePort)), nil, nil
 	}
 
 	localPort, err := freeLocalPort()
 	if err != nil {
-		return "", fmt.Errorf("reserve a local port for the API tunnel: %w", err)
+		return "", nil, fmt.Errorf("reserve a local port for the %s tunnel: %w", purpose, err)
 	}
 
-	tunnel, stop, err := b.openBastionTunnel(ctx, connectionConfig.Config, bctx.masterIP, localPort)
+	tunnel, stop, err := b.openBastionTunnel(ctx, connectionConfig.Config, bctx.masterIP, remotePort, localPort)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	bctx.immutableTunnelStop = stop
 
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
-		"API server tunnel through the bastion is up: %s", tunnel.String(),
+		"%s tunnel through the bastion is up: %s", purpose, tunnel.String(),
 	))
 
-	// 127.0.0.1 is always in the SAN list of a kube-apiserver certificate, so
-	// TLS verifies against the cluster CA without any extra name.
-	return fmt.Sprintf("https://127.0.0.1:%d", localPort), nil
+	// 127.0.0.1 is always in the SAN list of a kube-apiserver certificate, and
+	// the handoff endpoint is verified by name rather than by address, so
+	// neither channel needs the local end to be nameable.
+	return net.JoinHostPort("127.0.0.1", strconv.Itoa(localPort)), stop, nil
 }
 
-// openBastionTunnel forwards a local port to the master's API port through the
-// bastion.
-func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *sshconfig.Config, masterIP string, localPort int) (libcon.Tunnel, func(), error) {
+// openBastionTunnel forwards a local port to the given port of the master
+// through the bastion.
+func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *sshconfig.Config, masterIP string, remotePort, localPort int) (libcon.Tunnel, func(), error) {
 	// The SSH session is retargeted at the bastion itself instead of using it
 	// as a jump host: the forward has to originate on the bastion, because the
 	// master runs no sshd to originate it on.
@@ -213,10 +285,10 @@ func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *
 		return nil, nil, fmt.Errorf("connect to the bastion host %s: %w", sshConfig.BastionHost, err)
 	}
 
-	tunnel := sshClient.Tunnel(fmt.Sprintf("%s:%d:127.0.0.1:%d", masterIP, immutableAPIPort, localPort))
+	tunnel := sshClient.Tunnel(fmt.Sprintf("%s:%d:127.0.0.1:%d", masterIP, remotePort, localPort))
 	if err := tunnel.Up(ctx); err != nil {
 		_ = sshProvider.Cleanup(ctx)
-		return nil, nil, fmt.Errorf("forward %d to %s:%d through the bastion %s: %w", localPort, masterIP, immutableAPIPort, sshConfig.BastionHost, err)
+		return nil, nil, fmt.Errorf("forward %d to %s:%d through the bastion %s: %w", localPort, masterIP, remotePort, sshConfig.BastionHost, err)
 	}
 
 	stopDrain := drainTunnelErrors(ctx, tunnel)
@@ -264,30 +336,18 @@ func drainTunnelErrors(ctx context.Context, tunnel libcon.Tunnel) func() {
 	return func() { close(done) }
 }
 
-// writeImmutableKubeconfig mints installer credentials from the CA the node was
-// given and stores them in a kubeconfig file. There is no sshd to copy
-// admin.conf off the node with, so dhctl issues its own client certificate.
-func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, bctx *bootstrapContext, server string) (string, error) {
-	ca, err := immutable.LoadCABundle(ctx, bctx.stateCache)
-	if err != nil {
-		return "", err
-	}
-	if len(ca) == 0 {
-		return "", fmt.Errorf("the control-plane CA bundle is missing from the state cache: rerun the bootstrap so the BaseInfra phase regenerates the master payload")
-	}
-
-	content, err := immutable.BuildAdminKubeconfig(ctx, immutable.AdminKubeconfigInput{
-		CACertPEM: ca["ca.crt"],
-		CAKeyPEM:  ca["ca.key"],
-		Server:    server,
-	})
+// writeImmutableKubeconfig stores the collected admin kubeconfig in a file the
+// Kubernetes client can be built from, with its server URL pointed at the
+// address dhctl reaches the API on.
+func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, dir string, kubeconfig []byte, server string) (string, error) {
+	content, err := immutable.RetargetKubeconfig(kubeconfig, server)
 	if err != nil {
 		return "", err
 	}
 
-	// os.CreateTemp opens the file with mode 0600; it holds a system:masters
-	// key, so it is removed again once dhctl exits.
-	file, err := os.CreateTemp(b.TmpDir, "dhctl-immutable-kubeconfig-*.yaml")
+	// os.CreateTemp opens the file with mode 0600; it holds admin credentials,
+	// so it is removed again once dhctl exits.
+	file, err := os.CreateTemp(dir, "dhctl-immutable-kubeconfig-*.yaml")
 	if err != nil {
 		return "", fmt.Errorf("create a temporary kubeconfig: %w", err)
 	}

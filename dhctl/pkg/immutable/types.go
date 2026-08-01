@@ -17,10 +17,15 @@
 //
 // Such a node runs no sshd, no bash and no bashible: the on-node agent
 // (nodelet) reads its desired state from /config/nodeconfig.yaml and
-// /config/controlplane.yaml, issues its own leaf certificates on top of the CA
-// dhctl generates, lays the control-plane manifests down and waits for its own
-// apiserver. dhctl only hands over the payload and then talks to the finished
-// API server.
+// /config/controlplane.yaml, generates the whole cluster PKI itself — the CA
+// included — renders the control-plane manifests, brings its own apiserver up
+// and creates the first cluster objects.
+//
+// The payload therefore carries inputs, never artifacts: nothing secret about
+// the cluster travels through cloud-init, which would otherwise leave the
+// cluster CA keys in a Secret, in the infrastructure state and in the
+// installer's cache. dhctl collects the admin kubeconfig afterwards from the
+// one-shot handoff endpoint the node opens for it — see handoff.go.
 package immutable
 
 // PayloadAPIVersion and the kinds below are the contract with the on-node
@@ -176,9 +181,8 @@ type UpdateWindow struct {
 }
 
 // ControlPlaneConfig is the document written to /config/controlplane.yaml. The
-// node issues every leaf certificate and kubeconfig itself on top of the CA
-// bundle carried here, then lays the manifests down and waits for its own
-// apiserver.
+// node generates the cluster PKI, renders the manifests and brings its own
+// apiserver up from the inputs carried here.
 type ControlPlaneConfig struct {
 	APIVersion string           `json:"apiVersion"`
 	Kind       string           `json:"kind"`
@@ -195,22 +199,33 @@ type ControlPlaneSpec struct {
 	// (/var/lib/etcd and /etc/kubernetes). It belongs here rather than in
 	// NodeConfig because it only means anything on a control-plane node.
 	Disk Disk `json:"disk,omitempty"`
-	// CA maps a path relative to /etc/kubernetes/pki to its PEM contents.
-	CA     map[string]string  `json:"ca"`
-	Params ControlPlaneParams `json:"params"`
-	// ExtraFiles maps a path relative to
-	// /etc/kubernetes/deckhouse/extra-files to its contents.
-	ExtraFiles map[string]string `json:"extraFiles,omitempty"`
-	// Manifests maps a path relative to /etc/kubernetes/manifests to the
-	// rendered static-pod manifest.
-	Manifests map[string]string `json:"manifests"`
+	// Cluster are the cluster-wide inputs behind the certificate SANs and the
+	// command line of every control-plane component.
+	Cluster ClusterParams `json:"cluster"`
+	// Images are the digests of the four static-pod images. They come from the
+	// digest map of the release the installer was built from, which the node
+	// cannot reach.
+	Images ControlPlaneImages `json:"images"`
+	// Handoff is the one-shot channel dhctl collects the admin kubeconfig
+	// through once the node has a control plane.
+	Handoff Handoff `json:"handoff"`
 }
 
-// ControlPlaneParams are the cluster-wide settings the node needs to issue its
-// own certificates and kubeconfigs.
-type ControlPlaneParams struct {
+// ClusterParams are the cluster-wide settings the node needs to issue its own
+// certificates and render the control-plane manifests.
+type ClusterParams struct {
 	ClusterDomain     string `json:"clusterDomain"`
 	ServiceSubnetCIDR string `json:"serviceSubnetCIDR"`
+	PodSubnetCIDR     string `json:"podSubnetCIDR"`
+	// PodSubnetNodeCIDRPrefix is the per-node prefix length, e.g. "24".
+	PodSubnetNodeCIDRPrefix string `json:"podSubnetNodeCIDRPrefix"`
+	// KubernetesVersion is the minor version, e.g. "1.34". "Automatic" is
+	// resolved before it gets here: the node has no default to fall back on.
+	KubernetesVersion string `json:"kubernetesVersion"`
+	// ClusterType is Cloud or Static. Without Cloud the controller manager
+	// never gets --cloud-provider=external and never hands node lifecycle to
+	// the cloud-controller-manager.
+	ClusterType string `json:"clusterType"`
 	// EncryptionAlgorithm is empty when the cluster does not pin one; the node
 	// then falls back to the PKI library default.
 	EncryptionAlgorithm string `json:"encryptionAlgorithm"`
@@ -218,4 +233,26 @@ type ControlPlaneParams struct {
 	// to cover, the same list control-plane-manager keeps under the "cert-sans"
 	// key of its config secret.
 	CertSANs []string `json:"certSANs,omitempty"`
+}
+
+// ControlPlaneImages are the digests of the four static-pod images. The node
+// prepends the registry address and path from NodeConfig.spec.registry to build
+// the reference, which is why only the digest travels here.
+type ControlPlaneImages struct {
+	Etcd                  string `json:"etcd"`
+	KubeAPIServer         string `json:"kubeApiserver"`
+	KubeControllerManager string `json:"kubeControllerManager"`
+	KubeScheduler         string `json:"kubeScheduler"`
+}
+
+// Handoff is the TLS material and the bearer token of the one-shot endpoint the
+// node serves the admin kubeconfig on.
+//
+// The key here belongs to that endpoint alone and is worth nothing once the
+// bootstrap is over: it protects one read of one file, and the endpoint closes
+// after it. No cluster key ever travels in this document.
+type Handoff struct {
+	Token      string `json:"token"`
+	ServerCert string `json:"serverCert"`
+	ServerKey  string `json:"serverKey"`
 }

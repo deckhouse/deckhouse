@@ -33,12 +33,13 @@ import (
 // systemType: Immutable. Each of them guards an assumption the immutable
 // bootstrap path makes that the classic bashible path does not.
 const (
-	ImmutableSysextDigestsCheckName     preflight.CheckName = "immutable-sysext-digests"
-	ImmutableRegistryModeCheckName      preflight.CheckName = "immutable-registry-mode"
-	ImmutableMasterDisksCheckName       preflight.CheckName = "immutable-master-disks"
-	ImmutableMasterReplicasCheckName    preflight.CheckName = "immutable-master-replicas"
-	ImmutablePostBootstrapHookCheckName preflight.CheckName = "immutable-post-bootstrap-script"
-	ImmutableSignatureModeCheckName     preflight.CheckName = "immutable-signature-mode"
+	ImmutableSysextDigestsCheckName      preflight.CheckName = "immutable-sysext-digests"
+	ImmutableControlPlaneImagesCheckName preflight.CheckName = "immutable-control-plane-images"
+	ImmutableRegistryModeCheckName       preflight.CheckName = "immutable-registry-mode"
+	ImmutableMasterDisksCheckName        preflight.CheckName = "immutable-master-disks"
+	ImmutableMasterReplicasCheckName     preflight.CheckName = "immutable-master-replicas"
+	ImmutablePostBootstrapHookCheckName  preflight.CheckName = "immutable-post-bootstrap-script"
+	ImmutableSignatureModeCheckName      preflight.CheckName = "immutable-signature-mode"
 )
 
 func noRetry() preflight.RetryPolicy {
@@ -59,6 +60,26 @@ func ImmutableSysextDigests(metaConfig *config.MetaConfig) preflight.Check {
 				return fmt.Errorf("meta config is nil")
 			}
 			_, err := immutable.SysextDigests(metaConfig)
+			return err
+		},
+	}
+}
+
+// ImmutableControlPlaneImages fails early when the installer image does not
+// carry a control plane for the cluster's Kubernetes version. The node has no
+// digest map of its own, so an unresolved image reaches it as an empty string
+// and the static pod never starts, with nothing on the node to say why.
+func ImmutableControlPlaneImages(metaConfig *config.MetaConfig) preflight.Check {
+	return preflight.Check{
+		Name:        ImmutableControlPlaneImagesCheckName,
+		Description: "installer image carries the control plane of the requested Kubernetes version",
+		Phase:       preflight.PhasePreInfra,
+		Retry:       noRetry(),
+		Run: func(_ context.Context) error {
+			if metaConfig == nil {
+				return fmt.Errorf("meta config is nil")
+			}
+			_, err := immutable.ResolveControlPlaneImages(metaConfig)
 			return err
 		},
 	}

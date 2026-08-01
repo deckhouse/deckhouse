@@ -70,39 +70,24 @@ write_files:
       name: zykov-master-0
     spec:
       bootstrap: true
-      ca:
-        ca.crt: <ca.crt>
-        ca.key: <ca.key>
-        etcd/ca.crt: <etcd/ca.crt>
-        etcd/ca.key: <etcd/ca.key>
-        front-proxy-ca.crt: <front-proxy-ca.crt>
-        front-proxy-ca.key: <front-proxy-ca.key>
-        sa.key: <sa.key>
-        sa.pub: <sa.pub>
+      cluster:
+        clusterDomain: cluster.local
+        clusterType: Cloud
+        encryptionAlgorithm: ""
+        kubernetesVersion: "1.34"
+        podSubnetCIDR: 10.222.0.0/16
+        podSubnetNodeCIDRPrefix: "24"
+        serviceSubnetCIDR: 10.223.0.0/16
       disk:
         diskSelector:
           size: <=30Gi
-      extraFiles:
-        authentication-config.yaml: |
-          apiVersion: apiserver.config.k8s.io/v1beta1
-          kind: AuthenticationConfiguration
-          anonymous:
-            enabled: true
-            conditions:
-            - path: /livez
-            - path: /readyz
-            - path: /healthz
-      manifests:
-        etcd.yaml: |
-          <etcd.yaml>
-        kube-apiserver.yaml: |
-          <kube-apiserver.yaml>
-        kube-controller-manager.yaml: |
-          <kube-controller-manager.yaml>
-        kube-scheduler.yaml: |
-          <kube-scheduler.yaml>
-      params:
-        clusterDomain: cluster.local
-        encryptionAlgorithm: ""
-        serviceSubnetCIDR: 10.223.0.0/16
+      handoff:
+        serverCert: <handoff server certificate>
+        serverKey: <handoff server key>
+        token: <handoff token>
+      images:
+        etcd: sha256:5555555555555555555555555555555555555555555555555555555555555555
+        kubeApiserver: sha256:6666666666666666666666666666666666666666666666666666666666666666
+        kubeControllerManager: sha256:7777777777777777777777777777777777777777777777777777777777777777
+        kubeScheduler: sha256:8888888888888888888888888888888888888888888888888888888888888888
   path: /config/controlplane.yaml

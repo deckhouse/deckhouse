@@ -32,6 +32,11 @@ const (
 	testCNIDigest        = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	testKubeletDigest    = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
 	testPauseDigest      = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+
+	testEtcdDigest              = "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+	testAPIServerDigest         = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+	testControllerManagerDigest = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+	testSchedulerDigest         = "sha256:8888888888888888888888888888888888888888888888888888888888888888"
 )
 
 func testMetaConfig(t *testing.T, rootDiskSize, etcdDiskSize string) *config.MetaConfig {
@@ -51,9 +56,11 @@ func testMetaConfig(t *testing.T, rootDiskSize, etcdDiskSize string) *config.Met
 		ClusterDomain:     "cluster.local",
 		ClusterDNSAddress: "10.223.0.10",
 		ClusterConfig: map[string]json.RawMessage{
-			"kubernetesVersion": json.RawMessage(`"1.34"`),
-			"serviceSubnetCIDR": json.RawMessage(`"10.223.0.0/16"`),
-			"clusterDomain":     json.RawMessage(`"cluster.local"`),
+			"kubernetesVersion":       json.RawMessage(`"1.34"`),
+			"serviceSubnetCIDR":       json.RawMessage(`"10.223.0.0/16"`),
+			"podSubnetCIDR":           json.RawMessage(`"10.222.0.0/16"`),
+			"podSubnetNodeCIDRPrefix": json.RawMessage(`"24"`),
+			"clusterDomain":           json.RawMessage(`"cluster.local"`),
 		},
 		ProviderClusterConfig: map[string]json.RawMessage{
 			"masterNodeGroup": json.RawMessage(masterNodeGroup),
@@ -67,6 +74,12 @@ func testMetaConfig(t *testing.T, rootDiskSize, etcdDiskSize string) *config.Met
 			},
 			"common": {
 				"pause": testPauseDigest,
+			},
+			"controlPlaneManager": {
+				"etcd":                     testEtcdDigest,
+				"kubeApiserver134":         testAPIServerDigest,
+				"kubeControllerManager134": testControllerManagerDigest,
+				"kubeScheduler134":         testSchedulerDigest,
 			},
 		},
 	}
