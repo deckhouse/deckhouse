@@ -138,6 +138,13 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		return fmt.Errorf("connect to the API server of the immutable master at %s: %w", server, err)
 	}
 
+	// The file holds a system:masters key and is read exactly once, here: the
+	// runner behind this provider is the local one, which never reports a
+	// switched connection, so no later Client() call rebuilds the client from
+	// it. In dhctl-server the process outlives the bootstrap, so waiting for
+	// the shutdown hook to remove it means leaving it on disk for hours.
+	removeImmutableKubeconfig(ctx, kubeconfigPath)
+
 	return waitForImmutableMasterNode(ctx, kubeCl, bctx.masterNodeName)
 }
 
@@ -290,14 +297,22 @@ func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, bctx
 		return "", fmt.Errorf("write the temporary kubeconfig %s: %w", file.Name(), err)
 	}
 
+	// The happy path removes the file as soon as the client is built; this
+	// covers the runs that never get that far.
 	path := file.Name()
 	tomb.RegisterOnShutdown("Delete the temporary installer kubeconfig", func() {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to remove %s: %v", path, err))
-		}
+		removeImmutableKubeconfig(ctx, path)
 	})
 
 	return path, nil
+}
+
+// removeImmutableKubeconfig deletes the temporary kubeconfig, tolerating a
+// second call.
+func removeImmutableKubeconfig(ctx context.Context, path string) {
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to remove %s: %v", path, err))
+	}
 }
 
 // newKubeconfigKubeProvider builds a Kubernetes provider that talks to the API
