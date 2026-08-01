@@ -50,6 +50,24 @@ const (
 	registryPackagesProxyTokenSecret = "registry-packages-proxy-token"
 	registryPackagesProxyTokenKey    = "token"
 
+	// deckhouseRegistrySecret describes the registry the cluster was installed
+	// from: where its images live and how to authenticate. It is the same secret
+	// every Deckhouse pod carries as an imagePullSecret.
+	d8SystemNS              = "d8-system"
+	deckhouseRegistrySecret = "deckhouse-registry"
+	registryAddressKey      = "address"
+	registryPathKey         = "path"
+	registrySchemeKey       = "scheme"
+	registryCAKey           = "ca"
+	registryImagesKey       = "imagesRegistry"
+	registryDockerConfigKey = ".dockerconfigjson"
+
+	// pauseDigestGroup and pauseDigestName locate the pause image in the digest
+	// map. The group is a key in that map, not a path segment: every Deckhouse
+	// image lives in one repository and is addressed by digest alone.
+	pauseDigestGroup = "common"
+	pauseDigestName  = "pause"
+
 	// clusterConfigSecretName holds the cluster domain and pod subnet layout.
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
@@ -78,6 +96,11 @@ const (
 	// phaseReady is what the node reports once it has reconciled the spec it
 	// was given.
 	phaseReady = "Ready"
+
+	// controlPlaneRoleLabel marks a node that runs the control plane. Such a
+	// node was provisioned from an installer payload rather than from a
+	// rendered NodeConfig, and parts of that payload cannot be reproduced here.
+	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
 
 	// operationNodeLabel names the node an operation was created for; shared with
 	// the reconciler (nodeoperation) so the lookup contract cannot drift.

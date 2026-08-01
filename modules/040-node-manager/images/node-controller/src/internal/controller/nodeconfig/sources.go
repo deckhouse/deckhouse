@@ -34,6 +34,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
 // clusterInputs is everything outside the NodeGroup that a rendered NodeConfig
@@ -54,6 +55,17 @@ type clusterInputs struct {
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
 	RegistryPackagesProxyToken string
+	// SandboxImage is the pause image containerd starts every pod sandbox from,
+	// resolved against the cluster's own registry. It cannot be a constant: a
+	// cluster installed from a private registry — the normal case in a closed
+	// network — has no route to the upstream one, and a node that cannot pull
+	// the pause image runs no pods at all.
+	SandboxImage string
+	// Registry is how a node reaches the cluster's registry on its own. Only
+	// control-plane nodes are given it, because only they run pods nobody
+	// attaches an imagePullSecret to: the control-plane static pods. Everything
+	// else pulls with the secret its pod carries, or through the packages proxy.
+	Registry *internalv1alpha1.Registry
 	// NodeExtensionRequests are the operator's requests to merge extra system
 	// extensions onto the nodes they select.
 	NodeExtensionRequests []deckhousev1alpha1.NodeExtensionRequest
@@ -104,6 +116,18 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	}
 	in.RegistryPackagesProxyToken = token
 
+	registry, imagesRepo, err := s.readRegistry(ctx)
+	if err != nil {
+		return in, err
+	}
+	in.Registry = registry
+
+	sandbox, err := s.readSandboxImage(ctx, imagesRepo)
+	if err != nil {
+		return in, err
+	}
+	in.SandboxImage = sandbox
+
 	ners, err := s.readNodeExtensionRequests(ctx)
 	if err != nil {
 		return in, err
@@ -111,6 +135,65 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	in.NodeExtensionRequests = ners
 
 	return in, nil
+}
+
+// readRegistry describes the cluster's registry: the spec a node needs to reach
+// it, and the repository every image of the release lives in.
+func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Registry, string, error) {
+	secret := &corev1.Secret{}
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: d8SystemNS, Name: deckhouseRegistrySecret}, secret); err != nil {
+		return nil, "", fmt.Errorf("read the registry configuration from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
+	}
+
+	address := string(secret.Data[registryAddressKey])
+	if address == "" {
+		return nil, "", fmt.Errorf("secret %s/%s carries no %q", d8SystemNS, deckhouseRegistrySecret, registryAddressKey)
+	}
+
+	registry := &internalv1alpha1.Registry{
+		Address: address,
+		Path:    string(secret.Data[registryPathKey]),
+		Scheme:  strings.ToUpper(string(secret.Data[registrySchemeKey])),
+		CA:      string(secret.Data[registryCAKey]),
+		Auth:    registryAuth(secret.Data[registryDockerConfigKey], address),
+	}
+
+	imagesRepo := string(secret.Data[registryImagesKey])
+	if imagesRepo == "" {
+		imagesRepo = address + registry.Path
+	}
+	return registry, imagesRepo, nil
+}
+
+// registryAuth pulls the credentials for one registry out of a docker config.
+// An anonymous registry has none, and that is not an error: the field is
+// optional and a node without it pulls anonymously, exactly as the secret says.
+func registryAuth(dockerConfig []byte, address string) string {
+	if len(dockerConfig) == 0 {
+		return ""
+	}
+	var config struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
+	}
+	if err := json.Unmarshal(dockerConfig, &config); err != nil {
+		return ""
+	}
+	return config.Auths[address].Auth
+}
+
+// readSandboxImage resolves the pause image against the cluster's own registry.
+func (s *sourceReader) readSandboxImage(ctx context.Context, imagesRepo string) (string, error) {
+	all, err := s.readImagesDigests(ctx)
+	if err != nil {
+		return "", err
+	}
+	digest := all[pauseDigestGroup][pauseDigestName]
+	if digest == "" {
+		return "", fmt.Errorf("no %s/%s digest in %s", pauseDigestGroup, pauseDigestName, imagesDigestsKey)
+	}
+	return imagesRepo + "@" + digest, nil
 }
 
 // readNodeExtensionRequests lists the extension requests. They are additive, so
@@ -236,10 +319,10 @@ func (s *sourceReader) readDNS(ctx context.Context) (string, string) {
 	return domain, dns
 }
 
-// readSysextDigests picks the system extension digests for this release: one
-// containerd, one CNI, and the kubelet matching the group's Kubernetes version.
-// The digests live in the same ConfigMap bashible-apiserver reads.
-func (s *sourceReader) readSysextDigests(ctx context.Context, kubernetesVersion string) (map[string]string, error) {
+// readImagesDigests returns the digest of every image the release ships, keyed
+// by group and then by image name. The group is a key in this map, not a path
+// segment: every Deckhouse image lives in one repository, addressed by digest.
+func (s *sourceReader) readImagesDigests(ctx context.Context) (map[string]map[string]string, error) {
 	cm := &corev1.ConfigMap{}
 	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: imagesDigestsConfigMapName}, cm); err != nil {
 		return nil, fmt.Errorf("read image digests: %w", err)
@@ -253,6 +336,17 @@ func (s *sourceReader) readSysextDigests(ctx context.Context, kubernetesVersion 
 	var all map[string]map[string]string
 	if err := json.Unmarshal([]byte(raw), &all); err != nil {
 		return nil, fmt.Errorf("parse image digests: %w", err)
+	}
+	return all, nil
+}
+
+// readSysextDigests picks the system extension digests for this release: one
+// containerd, one CNI, and the kubelet matching the group's Kubernetes version.
+// The digests live in the same ConfigMap bashible-apiserver reads.
+func (s *sourceReader) readSysextDigests(ctx context.Context, kubernetesVersion string) (map[string]string, error) {
+	all, err := s.readImagesDigests(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	packages := all[registryPackagesDigestsKey]

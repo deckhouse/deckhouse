@@ -45,11 +45,26 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		Kernel:                              kernel,
 		Network:                             renderNetwork(node),
 		Kubelet:                             renderKubelet(ng, node, in),
-		ContainerRuntime:                    renderContainerRuntime(ng),
+		ContainerRuntime:                    renderContainerRuntime(ng, in),
+		Registry:                            renderRegistry(node, in),
 		UpdatePolicy:                        renderUpdatePolicy(ng),
 		RegistryPackagesProxyAccessTokenB64: in.RegistryPackagesProxyToken,
 	}
 	return spec
+}
+
+// renderRegistry gives control-plane nodes their own way to the registry.
+//
+// They are the only nodes that need one: the control-plane static pods carry no
+// imagePullSecret, so nothing but the node's own containerd configuration can
+// authenticate their image pulls. Every other node pulls with the secret its
+// pod carries, or through the registry packages proxy, and handing it registry
+// credentials it never uses would only widen what a compromised node holds.
+func renderRegistry(node *corev1.Node, in clusterInputs) *internalv1alpha1.Registry {
+	if _, isControlPlane := node.Labels[controlPlaneRoleLabel]; !isControlPlane {
+		return nil
+	}
+	return in.Registry
 }
 
 // renderStorage repeats the disk selection the node was bootstrapped with. The
@@ -59,10 +74,60 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 // coming back.
 //
 // An empty selector means "the first whole disk that is not the cloud-init
-// CDROM", which is what the bootstrap userdata asks for: the platform decides
-// the order the guest sees its disks in, so no fixed path can be rendered here.
+// CDROM", which is what the bootstrap userdata asks for on an ordinary node:
+// the platform decides the order the guest sees its disks in, so no fixed path
+// can be rendered here. A node the installer gave a narrower selector — the
+// first master, which has a second disk for the control-plane state and picks
+// its system disk by size — keeps the one it booted with, see
+// keepBootstrapOnlyFields.
 func renderStorage() internalv1alpha1.Storage {
-	return internalv1alpha1.Storage{DiskSelector: &internalv1alpha1.DiskSelector{}}
+	return internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{}}}
+}
+
+// keepBootstrapOnlyFields carries over the parts of the spec that are decided
+// once, by whoever provisioned the node, and that this controller has no input
+// for: it renders a NodeGroup, and none of these has a NodeGroup field behind
+// it. Overwriting them with the rendered zero value is what a wholesale spec
+// patch would otherwise do.
+//
+// It matters on the first master, which is the only node provisioned from a
+// dhctl payload rather than from a rendered NodeConfig, and where each of them
+// carries a decision the cluster cannot reproduce:
+//
+//   - registry: the direct registry access it pulls the control-plane images
+//     with. There is no registry-packages-proxy while it is bringing the cluster
+//     up, and no proxy afterwards either for the static pods, which have no
+//     imagePullSecrets.
+//   - kubelet.serverTLSBootstrap: turned off, because nothing approved serving
+//     CSRs before Deckhouse was installed. Turning it back on leaves kubelet
+//     waiting for a certificate and the node never Ready.
+//   - kubelet.nodeIP, kubelet.resourceReservation: set by the payload, not
+//     derived from anything in the cluster.
+//   - storage: the master picks its system disk by size, because it has two
+//     disks and "the first non-CDROM one" is not the answer there.
+//
+// It is applied to every node rather than only to control-plane ones: on a node
+// the controller itself provisioned these are empty on both sides, so the rule
+// is the same one either way and needs no test for which kind of node this is.
+func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec) {
+	desired.Kubelet.NodeIP = existing.Kubelet.NodeIP
+	desired.Kubelet.ResourceReservation = existing.Kubelet.ResourceReservation
+
+	// An empty rendered selector claims nothing; anything the node already
+	// carries is more specific and was chosen with the disk layout in view.
+	if !storageIsExplicit(&existing.Storage) {
+		return
+	}
+	desired.Storage = existing.Storage
+}
+
+// storageIsExplicit reports whether a storage section names a disk rather than
+// standing for "whatever the first usable one is".
+func storageIsExplicit(storage *internalv1alpha1.Storage) bool {
+	if storage.Device != "" {
+		return true
+	}
+	return storage.DiskSelector != nil && *storage.DiskSelector != internalv1alpha1.DiskSelector{}
 }
 
 // renderKernel repeats the sysctl settings the node was bootstrapped with. This
@@ -190,6 +255,14 @@ func renderTaints(ng *v1.NodeGroup) []internalv1alpha1.Taint {
 	return taints
 }
 
+// isControlPlaneNode reports whether the node runs the control plane. The label
+// is set by the node itself as it brings its apiserver up, and later by the
+// node-template controller.
+func isControlPlaneNode(node *corev1.Node) bool {
+	_, ok := node.Labels[controlPlaneRoleLabel]
+	return ok
+}
+
 // isCloudNodeType reports whether a node type is CAPI-backed (has a Machine) and
 // so needs the external cloud provider to be assigned its providerID.
 func isCloudNodeType(t v1.NodeType) bool {
@@ -201,9 +274,9 @@ func isCloudNodeType(t v1.NodeType) bool {
 // defaults mirror the NodeConfig CRD defaults so the bootstrap path (which
 // marshals the spec to a file rather than creating it through the API server,
 // where CRD defaulting runs) produces the same values as a day-2 object.
-func renderContainerRuntime(ng *v1.NodeGroup) internalv1alpha1.ContainerRuntime {
+func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1.ContainerRuntime {
 	runtime := internalv1alpha1.ContainerRuntime{
-		SandboxImage:           defaultSandboxImage,
+		SandboxImage:           in.SandboxImage,
 		MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
 	}
 	if ng.Spec.CRI == nil {

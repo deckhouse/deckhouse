@@ -1,0 +1,93 @@
+#cloud-config
+write_files:
+- content: |
+    apiVersion: internal.deckhouse.io/v1alpha1
+    kind: NodeConfig
+    metadata:
+      labels:
+        node.deckhouse.io/group: master
+      name: zykov-master-0
+    spec:
+      apiServerEndpoints:
+      - https://$MY_IP:6443
+      containerRuntime:
+        maxConcurrentDownloads: 3
+        sandboxImage: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:4444444444444444444444444444444444444444444444444444444444444444
+      extensions:
+      - digest: sha256:1111111111111111111111111111111111111111111111111111111111111111
+        name: containerd
+        requestedBy: dhctl
+      - digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+        name: kubelet
+        requestedBy: dhctl
+      - digest: sha256:2222222222222222222222222222222222222222222222222222222222222222
+        name: kubernetes-cni
+        requestedBy: dhctl
+      kernel:
+        sysctl:
+          kernel.panic: "10"
+          kernel.panic_on_oops: "1"
+          net.ipv4.ip_forward: "1"
+          vm.max_map_count: "262144"
+      kubelet:
+        clusterDNS:
+        - 10.223.0.10
+        clusterDomain: cluster.local
+        containerLogMaxFiles: 4
+        containerLogMaxSize: 50Mi
+        externalCloudProvider: true
+        maxPods: 110
+        nodeLabels:
+          node.deckhouse.io/cgroup: cgroup2fs
+          node.deckhouse.io/group: master
+          node.deckhouse.io/type: CloudPermanent
+        resourceReservation:
+          mode: Auto
+        serverTLSBootstrap: false
+      network:
+        hostname: zykov-master-0
+        interfaces:
+        - dhcp: true
+          name: eth0
+      nodeName: zykov-master-0
+      osImage: registry.deckhouse.io/deckhouse/olcedar:v0.1
+      registry:
+        address: dev-registry.deckhouse.io
+        auth: dXNlcjpwYXNzd29yZA==
+        path: /sys/deckhouse-oss
+        scheme: HTTPS
+      storage:
+        diskSelector:
+          size: '>=30Gi'
+      updatePolicy:
+        mode: Automatic
+        window: {}
+  path: /config/nodeconfig.yaml
+- content: |
+    apiVersion: internal.deckhouse.io/v1alpha1
+    kind: ControlPlaneConfig
+    metadata:
+      name: zykov-master-0
+    spec:
+      bootstrap: true
+      cluster:
+        clusterDomain: cluster.local
+        clusterType: Cloud
+        encryptionAlgorithm: ""
+        kubernetesVersion: "1.34"
+        podSubnetCIDR: 10.222.0.0/16
+        podSubnetNodeCIDRPrefix: "24"
+        serviceSubnetCIDR: 10.223.0.0/16
+      disk:
+        diskSelector:
+          size: <=30Gi
+      handoff:
+        serverCert: <handoff server certificate>
+        serverKey: <handoff server key>
+        token: <handoff token>
+      images:
+        etcd: sha256:5555555555555555555555555555555555555555555555555555555555555555
+        kubeApiserver: sha256:6666666666666666666666666666666666666666666666666666666666666666
+        kubeControllerManager: sha256:7777777777777777777777777777777777777777777777777777777777777777
+        kubeScheduler: sha256:8888888888888888888888888888888888888888888888888888888888888888
+  path: /config/controlplane.yaml

@@ -50,6 +50,10 @@ var apiServerEndpoints []string
 const (
 	testKubernetesVersion = "1.35"
 	testContainerdDigest  = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+	testPauseDigest       = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+	testRegistryAddress   = "registry.example.com"
+	testRegistryPath      = "/deckhouse/ce"
+	testRegistryAuth      = "dXNlcjpwYXNzd29yZA=="
 	testCNIDigest         = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	testKubeletDigest     = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
 	testClusterCA         = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
@@ -628,6 +632,87 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(err).To(HaveOccurred())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
+
+	// User story: As a cluster operator, I want the first master to keep working
+	// after Deckhouse is installed, so that installing the very thing that
+	// manages the cluster does not take its control plane down.
+	It("keeps what the installer gave the first master", func(ctx context.Context) {
+		ngName := testenv.UniqueName("master-imm")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("master")
+
+		// The control-plane label is set by the node itself as it brings its
+		// apiserver up, which is before it ever reports Ready — so it is there
+		// from the first moment the controller can see the node.
+		node := &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nodeName,
+				Labels: map[string]string{
+					nodecommon.NodeGroupLabel: ngName,
+					controlPlaneRoleLabel:     "",
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, node)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, node) })
+
+		// The master publishes the payload it was booted with itself; the
+		// controller must not race it with an object of its own, which would
+		// carry none of these fields and win over the file.
+		By("waiting for the node to publish the config it booted with")
+		Consistently(func(g Gomega) {
+			nc := &internalv1alpha1.NodeConfig{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, nc)).NotTo(Succeed())
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		bootstrapped := &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+			Spec: internalv1alpha1.NodeSpec{
+				NodeName: nodeName,
+				Registry: &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
+				Storage: internalv1alpha1.Storage{
+					Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=30Gi"}},
+				},
+				Kubelet: internalv1alpha1.Kubelet{
+					ServerTLSBootstrap:  ptr.To(false),
+					ResourceReservation: &internalv1alpha1.ResourceReservation{Mode: "Auto"},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, bootstrapped)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, bootstrapped) })
+
+		By("letting the controller render over it")
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+
+			// The render did happen: the cluster-wide inputs are in.
+			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
+			g.Expect(nc.Spec.Extensions).To(HaveLen(3))
+
+			// What only the installer knew was not dropped.
+			g.Expect(nc.Spec.Kubelet.ResourceReservation).NotTo(BeNil())
+			g.Expect(nc.Spec.Storage.DiskSelector).NotTo(BeNil())
+			g.Expect(nc.Spec.Storage.DiskSelector.Size).To(Equal(">=30Gi"))
+
+			// Registry access, on the other hand, is the cluster's answer now,
+			// not the payload's: this node is a control-plane one, so it gets
+			// the cluster registry with the credentials from its secret.
+			g.Expect(nc.Spec.Registry).NotTo(BeNil())
+			g.Expect(nc.Spec.Registry.Address).To(Equal(testRegistryAddress))
+			g.Expect(nc.Spec.Registry.Auth).To(Equal(testRegistryAuth))
+
+			// And serverTLSBootstrap is left to the cluster, which turns it on.
+			// Keeping the payload's "false" forever left the master with a
+			// self-signed kubelet certificate carrying no IP, so the API server
+			// could not reach kubelet at all: no exec, no logs, no metrics.
+			g.Expect(nc.Spec.Kubelet.ServerTLSBootstrap).To(BeNil())
+
+			// The pause image comes from the cluster's own registry; the
+			// upstream one is unreachable in a closed network.
+			g.Expect(nc.Spec.ContainerRuntime.SandboxImage).To(Equal(testRegistryAddress + testRegistryPath + "@" + testPauseDigest))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
 })
 
 // reportHeld is what the agent publishes while it holds a config it may not
@@ -869,8 +954,8 @@ func ensureClusterInputs(ctx context.Context) {
 	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: "kube-dns"}, fresh)).To(Succeed())
 	clusterDNSAddress = fresh.Spec.ClusterIP
 
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest)
+	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testPauseDigest)
 	ensureObject(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: imagesDigestsConfigMapName},
 		Data:       map[string]string{imagesDigestsKey: digests},
@@ -879,6 +964,21 @@ func ensureClusterInputs(ctx context.Context) {
 	ensureObject(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: registryPackagesProxyTokenSecret},
 		Data:       map[string][]byte{registryPackagesProxyTokenKey: []byte("proxy-token")},
+	})
+
+	// The registry the cluster was installed from. Rendering refuses to proceed
+	// without it: a node whose config names the upstream pause image runs no
+	// pods at all in a closed network.
+	ensureObject(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: d8SystemNS}})
+	ensureObject(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: d8SystemNS, Name: deckhouseRegistrySecret},
+		Data: map[string][]byte{
+			registryAddressKey:      []byte(testRegistryAddress),
+			registryPathKey:         []byte(testRegistryPath),
+			registrySchemeKey:       []byte("https"),
+			registryImagesKey:       []byte(testRegistryAddress + testRegistryPath),
+			registryDockerConfigKey: []byte(fmt.Sprintf(`{"auths":{%q:{"auth":%q}}}`, testRegistryAddress, testRegistryAuth)),
+		},
 	})
 
 	// In a real cluster kube-controller-manager publishes this ConfigMap into
