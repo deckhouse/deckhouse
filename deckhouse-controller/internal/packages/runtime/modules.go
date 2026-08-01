@@ -111,8 +111,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 	name := module.Name
 	version := module.Definition.Version
 
-	// a forced update skips change detection it would fail anyway
-	// Modules do not support maintenance mode, so it is always empty here.
+	// A forced update skips change detection it would fail anyway.
 	if !force && !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
 		return
 	}
