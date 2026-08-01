@@ -976,6 +976,14 @@ func (b *ClusterBootstrapper) bootstrapFinalize(ctx context.Context, bctx *boots
 		return err
 	}
 
+	// The immutable master's CA bundle holds the private keys of every cluster
+	// CA, and the whole state cache is handed back to commander on each phase
+	// boundary. It is kept only so that a retried bootstrap gives the node the
+	// same CA it was already given — once the cluster is up there is nothing
+	// left to retry, so it goes regardless of DisableBootstrapClearCache, which
+	// commander sets and which would otherwise keep the keys forever.
+	bctx.stateCache.Delete(ctx, immutable.CACacheKey)
+
 	if !b.DisableBootstrapClearCache {
 		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Clear cache", func(ctx context.Context) error {
 			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.ClearCache")
