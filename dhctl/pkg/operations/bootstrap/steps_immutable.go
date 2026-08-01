@@ -36,7 +36,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -197,7 +196,7 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 	}
 
 	var kubeconfig []byte
-	err = retry.NewLoop("Waiting for the first master to hand over the cluster credentials", immutableAPIWaitAttempts, immutableAPIWaitInterval).
+	err = libretry.NewLoop("Waiting for the first master to hand over the cluster credentials", immutableAPIWaitAttempts, immutableAPIWaitInterval).
 		BreakIf(func(err error) bool {
 			return errors.Is(err, immutable.ErrHandoffUnauthorized) || errors.Is(err, immutable.ErrHandoffAlreadyServed)
 		}).
@@ -444,7 +443,7 @@ func newKubeconfigKubeProvider(ctx context.Context, b *ClusterBootstrapper, kube
 // node also creates the bootstrap RBAC, the control-plane label and taint and
 // the d8-pki Secret on its own; dhctl creates none of them.
 func waitForImmutableMasterNode(ctx context.Context, kubeCl libcon.KubeClient, nodeName string) error {
-	return retry.NewLoop("Waiting for the first master node to register", immutableWaitAttempts, immutableWaitInterval).
+	return libretry.NewLoop("Waiting for the first master node to register", immutableWaitAttempts, immutableWaitInterval).
 		RunContext(ctx, func() error {
 			_, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 			if err != nil {
