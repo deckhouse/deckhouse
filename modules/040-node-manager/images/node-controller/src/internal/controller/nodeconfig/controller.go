@@ -173,7 +173,7 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 	}
 
 	desired := newNodeConfig(ng, node, inputs)
-	if err := r.apply(ctx, ng, desired, logger); err != nil {
+	if err := r.apply(ctx, ng, node, desired, logger); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -195,10 +195,19 @@ func (r *Reconciler) kubernetesVersion(ctx context.Context, ng *v1.NodeGroup) st
 
 // apply creates the object or patches it when the rendered spec drifted. The
 // status belongs to the node-local agent and is never touched here.
-func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, desired *internalv1alpha1.NodeConfig, logger logr.Logger) error {
+func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, desired *internalv1alpha1.NodeConfig, logger logr.Logger) error {
 	existing := &internalv1alpha1.NodeConfig{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, existing)
 	if apierrors.IsNotFound(err) {
+		// A control-plane node was provisioned from an installer payload, not
+		// from a rendered NodeConfig, and it publishes that payload itself. The
+		// object created here would carry none of the bootstrap-only fields
+		// (see keepBootstrapOnlyFields) and would win over the file the node
+		// holds them in, so it waits for the node to register instead.
+		if isControlPlaneNode(node) {
+			logger.V(1).Info("waiting for the control-plane node to publish its own NodeConfig", "node", desired.Name)
+			return nil
+		}
 		if err := r.Client.Create(ctx, desired); err != nil {
 			if apierrors.IsAlreadyExists(err) {
 				return nil
@@ -211,6 +220,8 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, desired *inter
 	if err != nil {
 		return fmt.Errorf("get NodeConfig %s: %w", desired.Name, err)
 	}
+
+	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec)
 
 	if apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec) &&
 		apiequality.Semantic.DeepEqual(existing.Labels, desired.Labels) {
