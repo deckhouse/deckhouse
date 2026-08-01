@@ -79,6 +79,11 @@ const (
 	// was given.
 	phaseReady = "Ready"
 
+	// controlPlaneRoleLabel marks a node that runs the control plane. Such a
+	// node was provisioned from an installer payload rather than from a
+	// rendered NodeConfig, and parts of that payload cannot be reproduced here.
+	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
+
 	// operationNodeLabel names the node an operation was created for; shared with
 	// the reconciler (nodeoperation) so the lookup contract cannot drift.
 	operationNodeLabel = v1alpha1.NodeOperationNodeLabel
