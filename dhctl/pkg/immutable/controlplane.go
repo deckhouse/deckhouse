@@ -20,7 +20,9 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
@@ -63,6 +65,10 @@ anonymous:
 `
 
 const authenticationConfigFile = "authentication-config.yaml"
+
+// extraFilesDir is where the control-plane manifests expect the contents of
+// ControlPlaneSpec.ExtraFiles to be on the node.
+const extraFilesDir = "/etc/kubernetes/deckhouse/extra-files"
 
 // ControlPlaneInput is everything BuildControlPlaneConfig needs.
 type ControlPlaneInput struct {
@@ -131,6 +137,12 @@ func BuildControlPlaneConfig(ctx context.Context, in ControlPlaneInput) (*Contro
 		return nil, err
 	}
 
+	extraFiles := map[string]string{authenticationConfigFile: authenticationConfig}
+
+	if err := checkExtraFiles(manifests, extraFiles); err != nil {
+		return nil, err
+	}
+
 	return &ControlPlaneConfig{
 		APIVersion: PayloadAPIVersion,
 		Kind:       ControlPlaneConfigKind,
@@ -143,11 +155,94 @@ func BuildControlPlaneConfig(ctx context.Context, in ControlPlaneInput) (*Contro
 				ClusterDomain:       clusterDomain,
 				ServiceSubnetCIDR:   serviceSubnetCIDR,
 				EncryptionAlgorithm: encryptionAlgorithm,
+				CertSANs:            certSANs(in.MetaConfig),
 			},
-			ExtraFiles: map[string]string{authenticationConfigFile: authenticationConfig},
+			ExtraFiles: extraFiles,
 			Manifests:  manifests,
 		},
 	}, nil
+}
+
+// extraFileRef finds every /etc/kubernetes/deckhouse/extra-files/<name> the
+// rendered manifests point a flag at.
+var extraFileRef = regexp.MustCompile(regexp.QuoteMeta(extraFilesDir) + `/([A-Za-z0-9._-]+)`)
+
+// checkExtraFiles refuses a payload whose manifests start a component with a
+// file nobody puts on the node.
+//
+// On the classic path those files are written by the module preparators
+// bashible runs before the manifests appear; none of them runs here, so
+// anything beyond the hardcoded set above is a component that crash-loops on a
+// missing file with no way to tell why from the outside. Whichever cluster
+// setting turned the flag on has to grow support here first.
+func checkExtraFiles(manifests, extraFiles map[string]string) error {
+	missing := make(map[string][]string)
+
+	names := make([]string, 0, len(manifests))
+	for name := range manifests {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, manifest := range names {
+		for _, match := range extraFileRef.FindAllStringSubmatch(manifests[manifest], -1) {
+			file := match[1]
+			if _, ok := extraFiles[file]; ok {
+				continue
+			}
+			missing[file] = append(missing[file], manifest)
+		}
+	}
+
+	if len(missing) == 0 {
+		return nil
+	}
+
+	files := make([]string, 0, len(missing))
+	for file, manifests := range missing {
+		files = append(files, fmt.Sprintf("%s (referenced by %s)", file, strings.Join(manifests, ", ")))
+	}
+	sort.Strings(files)
+
+	return fmt.Errorf(
+		"the rendered control-plane manifests need extra files the immutable bootstrap does not produce: %s; "+
+			"the cluster configuration enables a control-plane feature that is not supported on an immutable master yet",
+		strings.Join(files, "; "),
+	)
+}
+
+// certSANs are the extra names the apiserver certificate must cover. The node
+// issues that certificate itself, so it needs the same list
+// control-plane-manager later publishes under the "cert-sans" key of its config
+// secret — without them anything reaching the cluster through a load balancer
+// or a floating IP fails the hostname check until control-plane-manager
+// reissues the certificate.
+func certSANs(metaConfig *config.MetaConfig) []string {
+	mc := metaConfig.FindModuleConfig("control-plane-manager")
+	if mc == nil {
+		return nil
+	}
+
+	apiserver, ok := mc.Spec.Settings["apiserver"].(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	raw, ok := apiserver["certSANs"].([]any)
+	if !ok {
+		return nil
+	}
+
+	sans := make([]string, 0, len(raw))
+	for _, value := range raw {
+		if san, ok := value.(string); ok && san != "" {
+			sans = append(sans, san)
+		}
+	}
+	if len(sans) == 0 {
+		return nil
+	}
+	return sans
 }
 
 // LoadCABundle returns the CA bundle a previous BuildControlPlaneConfig stored,
