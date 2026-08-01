@@ -837,15 +837,12 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 	return nil
 }
 
+// bootstrapAdditionalNodes creates every node beyond the first master.
+//
+// A multi-replica immutable master group is refused by the immutable-master-
+// replicas preflight, before any infrastructure exists; repeating the check
+// here would only fail after Deckhouse is already installed.
 func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx *bootstrapContext) error {
-	// Additional masters are ordered with the cloud config node-manager
-	// publishes for the master group, which is a bashible bundle an immutable
-	// node cannot run. Failing here beats handing the extra masters a payload
-	// that leaves them stuck halfway.
-	if bctx.immutableMaster && bctx.metaConfig.MasterNodeGroupSpec.Replicas > 1 {
-		return fmt.Errorf("masterNodeGroup.replicas is %d: an immutable master group supports a single replica for now", bctx.metaConfig.MasterNodeGroupSpec.Replicas)
-	}
-
 	if bctx.metaConfig.ClusterType == config.CloudClusterType {
 		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallAdditionalMastersAndStaticNodes, true, bctx.stateCache, nil); err != nil {
 			return err
