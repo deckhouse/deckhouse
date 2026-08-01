@@ -26,12 +26,16 @@ import (
 )
 
 // TestKeepBootstrapOnlyFields covers what happens to the first master on its
-// first day-2 render. Its spec came from a dhctl payload, and the fields below
-// have no NodeGroup behind them, so a rendered spec carries none of them: the
-// wholesale patch would turn serverTLSBootstrap back on (kubelet then waits for
-// a serving certificate nobody signs), drop the direct registry access the
-// control-plane static pods pull with, and replace the by-size disk selector
-// that tells the master's two disks apart.
+// first day-2 render. Its spec came from a dhctl payload, and only the fields
+// below have no answer anywhere in the cluster, so only they survive the
+// wholesale patch.
+//
+// Registry and serverTLSBootstrap deliberately do NOT: both are rendered from
+// the cluster now. Carrying them over made the master keep whatever the
+// bootstrap chose forever — a self-signed kubelet serving certificate with no
+// IP in it (so `kubectl exec` and `kubectl logs` failed against every pod on the
+// master), and, on the create path where there is no existing object to carry
+// anything from, no registry at all.
 func TestKeepBootstrapOnlyFields(t *testing.T) {
 	bootstrapped := internalv1alpha1.NodeSpec{
 		Registry: &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
@@ -46,20 +50,16 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		existing    internalv1alpha1.NodeSpec
-		expStorage  internalv1alpha1.Storage
-		expRegistry *internalv1alpha1.Registry
-		expTLS      *bool
-		expNodeIP   string
+		name       string
+		existing   internalv1alpha1.NodeSpec
+		expStorage internalv1alpha1.Storage
+		expNodeIP  string
 	}{
 		{
-			name:        "bootstrapped master keeps every field the render has no answer for",
-			existing:    bootstrapped,
-			expStorage:  bootstrapped.Storage,
-			expRegistry: bootstrapped.Registry,
-			expTLS:      ptr.To(false),
-			expNodeIP:   "10.0.0.10",
+			name:       "bootstrapped master keeps only what the cluster cannot render",
+			existing:   bootstrapped,
+			expStorage: bootstrapped.Storage,
+			expNodeIP:  "10.0.0.10",
 		},
 		{
 			name:       "worker with nothing to keep is left as rendered",
@@ -77,8 +77,10 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			rendered := &internalv1alpha1.Registry{Address: "rendered.example.com"}
 			desired := internalv1alpha1.NodeSpec{
 				NodeName: "master-0",
+				Registry: rendered,
 				Storage:  renderStorage(),
 				Kubelet:  internalv1alpha1.Kubelet{MaxPods: defaultMaxPods},
 			}
@@ -86,10 +88,13 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 			keepBootstrapOnlyFields(&desired, &tc.existing)
 
 			require.Equal(t, tc.expStorage, desired.Storage)
-			require.Equal(t, tc.expRegistry, desired.Registry)
-			require.Equal(t, tc.expTLS, desired.Kubelet.ServerTLSBootstrap)
 			require.Equal(t, tc.expNodeIP, desired.Kubelet.NodeIP)
 			require.Equal(t, tc.existing.Kubelet.ResourceReservation, desired.Kubelet.ResourceReservation)
+
+			// The cluster owns these two, so the render wins even when the node
+			// was bootstrapped with something else.
+			require.Equal(t, rendered, desired.Registry)
+			require.Nil(t, desired.Kubelet.ServerTLSBootstrap)
 
 			// Everything else still comes from the render.
 			require.Equal(t, "master-0", desired.NodeName)

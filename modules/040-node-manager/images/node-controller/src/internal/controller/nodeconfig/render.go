@@ -45,11 +45,26 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		Kernel:                              kernel,
 		Network:                             renderNetwork(node),
 		Kubelet:                             renderKubelet(ng, node, in),
-		ContainerRuntime:                    renderContainerRuntime(ng),
+		ContainerRuntime:                    renderContainerRuntime(ng, in),
+		Registry:                            renderRegistry(node, in),
 		UpdatePolicy:                        renderUpdatePolicy(ng),
 		RegistryPackagesProxyAccessTokenB64: in.RegistryPackagesProxyToken,
 	}
 	return spec
+}
+
+// renderRegistry gives control-plane nodes their own way to the registry.
+//
+// They are the only nodes that need one: the control-plane static pods carry no
+// imagePullSecret, so nothing but the node's own containerd configuration can
+// authenticate their image pulls. Every other node pulls with the secret its
+// pod carries, or through the registry packages proxy, and handing it registry
+// credentials it never uses would only widen what a compromised node holds.
+func renderRegistry(node *corev1.Node, in clusterInputs) *internalv1alpha1.Registry {
+	if _, isControlPlane := node.Labels[controlPlaneRoleLabel]; !isControlPlane {
+		return nil
+	}
+	return in.Registry
 }
 
 // renderStorage repeats the disk selection the node was bootstrapped with. The
@@ -95,8 +110,6 @@ func renderStorage() internalv1alpha1.Storage {
 // the controller itself provisioned these are empty on both sides, so the rule
 // is the same one either way and needs no test for which kind of node this is.
 func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec) {
-	desired.Registry = existing.Registry
-	desired.Kubelet.ServerTLSBootstrap = existing.Kubelet.ServerTLSBootstrap
 	desired.Kubelet.NodeIP = existing.Kubelet.NodeIP
 	desired.Kubelet.ResourceReservation = existing.Kubelet.ResourceReservation
 
@@ -261,9 +274,9 @@ func isCloudNodeType(t v1.NodeType) bool {
 // defaults mirror the NodeConfig CRD defaults so the bootstrap path (which
 // marshals the spec to a file rather than creating it through the API server,
 // where CRD defaulting runs) produces the same values as a day-2 object.
-func renderContainerRuntime(ng *v1.NodeGroup) internalv1alpha1.ContainerRuntime {
+func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1.ContainerRuntime {
 	runtime := internalv1alpha1.ContainerRuntime{
-		SandboxImage:           defaultSandboxImage,
+		SandboxImage:           in.SandboxImage,
 		MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
 	}
 	if ng.Spec.CRI == nil {

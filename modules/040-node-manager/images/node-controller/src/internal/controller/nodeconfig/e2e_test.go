@@ -50,6 +50,10 @@ var apiServerEndpoints []string
 const (
 	testKubernetesVersion = "1.35"
 	testContainerdDigest  = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+	testPauseDigest       = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+	testRegistryAddress   = "registry.example.com"
+	testRegistryPath      = "/deckhouse/ce"
+	testRegistryAuth      = "dXNlcjpwYXNzd29yZA=="
 	testCNIDigest         = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	testKubeletDigest     = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
 	testClusterCA         = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
@@ -686,13 +690,27 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
 			g.Expect(nc.Spec.Extensions).To(HaveLen(3))
 
-			// And none of what only the installer knew was dropped.
-			g.Expect(nc.Spec.Registry).NotTo(BeNil())
-			g.Expect(nc.Spec.Registry.Address).To(Equal("registry.example.com"))
-			g.Expect(nc.Spec.Kubelet.ServerTLSBootstrap).To(Equal(ptr.To(false)))
+			// What only the installer knew was not dropped.
 			g.Expect(nc.Spec.Kubelet.ResourceReservation).NotTo(BeNil())
 			g.Expect(nc.Spec.Storage.DiskSelector).NotTo(BeNil())
 			g.Expect(nc.Spec.Storage.DiskSelector.Size).To(Equal(">=30Gi"))
+
+			// Registry access, on the other hand, is the cluster's answer now,
+			// not the payload's: this node is a control-plane one, so it gets
+			// the cluster registry with the credentials from its secret.
+			g.Expect(nc.Spec.Registry).NotTo(BeNil())
+			g.Expect(nc.Spec.Registry.Address).To(Equal(testRegistryAddress))
+			g.Expect(nc.Spec.Registry.Auth).To(Equal(testRegistryAuth))
+
+			// And serverTLSBootstrap is left to the cluster, which turns it on.
+			// Keeping the payload's "false" forever left the master with a
+			// self-signed kubelet certificate carrying no IP, so the API server
+			// could not reach kubelet at all: no exec, no logs, no metrics.
+			g.Expect(nc.Spec.Kubelet.ServerTLSBootstrap).To(BeNil())
+
+			// The pause image comes from the cluster's own registry; the
+			// upstream one is unreachable in a closed network.
+			g.Expect(nc.Spec.ContainerRuntime.SandboxImage).To(Equal(testRegistryAddress + testRegistryPath + "@" + testPauseDigest))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })
@@ -936,8 +954,8 @@ func ensureClusterInputs(ctx context.Context) {
 	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: "kube-dns"}, fresh)).To(Succeed())
 	clusterDNSAddress = fresh.Spec.ClusterIP
 
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest)
+	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testPauseDigest)
 	ensureObject(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: imagesDigestsConfigMapName},
 		Data:       map[string]string{imagesDigestsKey: digests},
@@ -946,6 +964,21 @@ func ensureClusterInputs(ctx context.Context) {
 	ensureObject(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: registryPackagesProxyTokenSecret},
 		Data:       map[string][]byte{registryPackagesProxyTokenKey: []byte("proxy-token")},
+	})
+
+	// The registry the cluster was installed from. Rendering refuses to proceed
+	// without it: a node whose config names the upstream pause image runs no
+	// pods at all in a closed network.
+	ensureObject(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: d8SystemNS}})
+	ensureObject(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: d8SystemNS, Name: deckhouseRegistrySecret},
+		Data: map[string][]byte{
+			registryAddressKey:      []byte(testRegistryAddress),
+			registryPathKey:         []byte(testRegistryPath),
+			registrySchemeKey:       []byte("https"),
+			registryImagesKey:       []byte(testRegistryAddress + testRegistryPath),
+			registryDockerConfigKey: []byte(fmt.Sprintf(`{"auths":{%q:{"auth":%q}}}`, testRegistryAddress, testRegistryAuth)),
+		},
 	})
 
 	// In a real cluster kube-controller-manager publishes this ConfigMap into

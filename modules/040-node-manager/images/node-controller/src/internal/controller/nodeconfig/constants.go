@@ -50,6 +50,24 @@ const (
 	registryPackagesProxyTokenSecret = "registry-packages-proxy-token"
 	registryPackagesProxyTokenKey    = "token"
 
+	// deckhouseRegistrySecret describes the registry the cluster was installed
+	// from: where its images live and how to authenticate. It is the same secret
+	// every Deckhouse pod carries as an imagePullSecret.
+	d8SystemNS              = "d8-system"
+	deckhouseRegistrySecret = "deckhouse-registry"
+	registryAddressKey      = "address"
+	registryPathKey         = "path"
+	registrySchemeKey       = "scheme"
+	registryCAKey           = "ca"
+	registryImagesKey       = "imagesRegistry"
+	registryDockerConfigKey = ".dockerconfigjson"
+
+	// pauseDigestGroup and pauseDigestName locate the pause image in the digest
+	// map. The group is a key in that map, not a path segment: every Deckhouse
+	// image lives in one repository and is addressed by digest alone.
+	pauseDigestGroup = "common"
+	pauseDigestName  = "pause"
+
 	// clusterConfigSecretName holds the cluster domain and pod subnet layout.
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
