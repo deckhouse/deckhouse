@@ -4,5 +4,8 @@ path = "gitleaks.base.toml"
 
 [allowlist]
 regexes = [
-  'kubernetesCni162'
+  'kubernetesCni162',
+  # base64 of "user:password": the placeholder registry credential the
+  # node-controller tests and the dhctl cloud-init golden are built from.
+  'dXNlcjpwYXNzd29yZA=='
 ]
