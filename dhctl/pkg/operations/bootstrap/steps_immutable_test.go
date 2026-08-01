@@ -17,7 +17,6 @@ package bootstrap
 import (
 	"encoding/base64"
 	"encoding/json"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -73,29 +72,22 @@ func TestBuildImmutableMasterPayloadIsBase64CloudConfig(t *testing.T) {
 }
 
 // immutableTestBootstrapper builds the smallest bootstrapper that can render
-// the master payload: the control-plane manifests come from the repository's
-// own candi directory, so the test covers the templates that actually ship.
+// the master payload.
 func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapContext) {
 	t.Helper()
-
-	candiDir, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "candi"))
-	require.NoError(t, err)
 
 	stateCache, err := cache.NewStateCache(t.TempDir())
 	require.NoError(t, err)
 
-	opts := options.New()
-	opts.Global.CandiDir = candiDir
-
-	b := &ClusterBootstrapper{Params: &Params{Options: opts}}
+	b := &ClusterBootstrapper{Params: &Params{Options: options.New()}}
 
 	return b, &bootstrapContext{
-		metaConfig: immutableTestMetaConfig(t, candiDir),
+		metaConfig: immutableTestMetaConfig(t),
 		stateCache: stateCache,
 	}
 }
 
-func immutableTestMetaConfig(t *testing.T, candiDir string) *config.MetaConfig {
+func immutableTestMetaConfig(t *testing.T) *config.MetaConfig {
 	t.Helper()
 
 	const digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
@@ -106,10 +98,11 @@ func immutableTestMetaConfig(t *testing.T, candiDir string) *config.MetaConfig {
 		ClusterDomain:     "cluster.local",
 		ClusterDNSAddress: "10.223.0.10",
 		ClusterConfig: map[string]json.RawMessage{
-			"kubernetesVersion": json.RawMessage(`"1.34"`),
-			"serviceSubnetCIDR": json.RawMessage(`"10.223.0.0/16"`),
-			"podSubnetCIDR":     json.RawMessage(`"10.222.0.0/16"`),
-			"clusterDomain":     json.RawMessage(`"cluster.local"`),
+			"kubernetesVersion":       json.RawMessage(`"1.34"`),
+			"serviceSubnetCIDR":       json.RawMessage(`"10.223.0.0/16"`),
+			"podSubnetCIDR":           json.RawMessage(`"10.222.0.0/16"`),
+			"podSubnetNodeCIDRPrefix": json.RawMessage(`"24"`),
+			"clusterDomain":           json.RawMessage(`"cluster.local"`),
 		},
 		ProviderClusterConfig: map[string]json.RawMessage{
 			"masterNodeGroup": json.RawMessage(`{
@@ -145,8 +138,6 @@ func immutableTestMetaConfig(t *testing.T, candiDir string) *config.MetaConfig {
 			Password:   "password",
 		},
 	}
-
-	require.NoError(t, metaConfig.LoadVersionMap(filepath.Join(candiDir, "version_map.yml")))
 
 	return metaConfig
 }

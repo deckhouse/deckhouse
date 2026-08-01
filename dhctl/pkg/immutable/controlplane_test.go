@@ -15,6 +15,7 @@
 package immutable
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,51 +24,72 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-// TestCheckExtraFiles covers the case that put kube-apiserver in a crash loop:
-// a cluster setting adds a flag pointing at an extra file, and on the immutable
-// path nothing creates it — the module preparators that write those files on
-// the classic path run over SSH and never run here.
-func TestCheckExtraFiles(t *testing.T) {
-	tests := []struct {
-		name             string
-		manifests        map[string]string
-		extraFiles       map[string]string
-		wantErrSubstring string
-	}{
-		{
-			name:       "every referenced file is carried",
-			manifests:  map[string]string{"kube-apiserver.yaml": "    - --authentication-config=" + extraFilesDir + "/authentication-config.yaml\n"},
-			extraFiles: map[string]string{authenticationConfigFile: authenticationConfig},
-		},
-		{
-			name: "the CSE encryption provider config nobody writes",
-			manifests: map[string]string{
-				"kube-apiserver.yaml": "    - --authentication-config=" + extraFilesDir + "/authentication-config.yaml\n" +
-					"    - --encryption-provider-config=" + extraFilesDir + "/secret-encryption-config.yaml\n",
-			},
-			extraFiles:       map[string]string{authenticationConfigFile: authenticationConfig},
-			wantErrSubstring: "secret-encryption-config.yaml (referenced by kube-apiserver.yaml)",
-		},
-		{
-			name: "a file missed by two manifests names both",
-			manifests: map[string]string{
-				"kube-scheduler.yaml":          "    - --config=" + extraFilesDir + "/scheduler-config.yaml\n",
-				"kube-controller-manager.yaml": "    - --config=" + extraFilesDir + "/scheduler-config.yaml\n",
-			},
-			wantErrSubstring: "scheduler-config.yaml (referenced by kube-controller-manager.yaml, kube-scheduler.yaml)",
-		},
-	}
+// TestClusterParamsResolvesAutomaticKubernetesVersion covers the one cluster
+// setting the node cannot interpret: "Automatic" is an installer default, and
+// the node would render it straight into the feature gates of every component.
+func TestClusterParamsResolvesAutomaticKubernetesVersion(t *testing.T) {
+	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig.ClusterConfig["kubernetesVersion"] = json.RawMessage(`"Automatic"`)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := checkExtraFiles(tt.manifests, tt.extraFiles)
-			if tt.wantErrSubstring == "" {
-				require.NoError(t, err)
-				return
-			}
-			require.ErrorContains(t, err, tt.wantErrSubstring)
+	params, err := clusterParams(metaConfig)
+	require.NoError(t, err)
+	require.Equal(t, config.DefaultKubernetesVersion, params.KubernetesVersion)
+}
+
+// TestClusterParams pins the inputs behind the component flags. Every one of
+// them renders as an empty flag when it is missing, and the component then dies
+// on its own command line with nothing pointing back at the configuration.
+func TestClusterParams(t *testing.T) {
+	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+
+	params, err := clusterParams(metaConfig)
+	require.NoError(t, err)
+	require.Equal(t, ClusterParams{
+		ClusterDomain:           "cluster.local",
+		ServiceSubnetCIDR:       "10.223.0.0/16",
+		PodSubnetCIDR:           "10.222.0.0/16",
+		PodSubnetNodeCIDRPrefix: "24",
+		KubernetesVersion:       "1.34",
+		ClusterType:             config.CloudClusterType,
+	}, params)
+
+	for _, key := range []string{"clusterDomain", "serviceSubnetCIDR", "podSubnetCIDR", "podSubnetNodeCIDRPrefix"} {
+		t.Run("missing "+key, func(t *testing.T) {
+			metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+			delete(metaConfig.ClusterConfig, key)
+
+			_, err := clusterParams(metaConfig)
+			require.ErrorContains(t, err, key+" is empty in the cluster configuration")
 		})
 	}
+}
+
+// TestResolveControlPlaneImages pins what travels to the node: bare digests.
+// The node prepends the registry address and path itself, from the registry it
+// was given in NodeConfig.
+func TestResolveControlPlaneImages(t *testing.T) {
+	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+
+	images, err := ResolveControlPlaneImages(metaConfig)
+	require.NoError(t, err)
+	require.Equal(t, ControlPlaneImages{
+		Etcd:                  testEtcdDigest,
+		KubeAPIServer:         testAPIServerDigest,
+		KubeControllerManager: testControllerManagerDigest,
+		KubeScheduler:         testSchedulerDigest,
+	}, images)
+}
+
+// TestResolveControlPlaneImagesMissingVersion is what the preflight check
+// guards: an installer that does not ship a control plane for the requested
+// minor hands the node an empty image and the static pod never starts.
+func TestResolveControlPlaneImagesMissingVersion(t *testing.T) {
+	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig.ClusterConfig["kubernetesVersion"] = json.RawMessage(`"1.30"`)
+
+	_, err := ResolveControlPlaneImages(metaConfig)
+	require.ErrorContains(t, err, `no "controlPlaneManager"."kubeApiserver130" image digest`)
+	require.ErrorContains(t, err, "Kubernetes 1.30")
 }
 
 // TestCertSANs reads the same list control-plane-manager publishes under the

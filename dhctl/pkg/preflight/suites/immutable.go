@@ -33,6 +33,7 @@ type ImmutableDeps struct {
 func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 	return preflight.NewSuite(
 		checks.ImmutableSysextDigests(deps.MetaConfig),
+		checks.ImmutableControlPlaneImages(deps.MetaConfig),
 		checks.ImmutableRegistryMode(deps.MetaConfig),
 		checks.ImmutableMasterDisks(deps.MetaConfig),
 		checks.ImmutableMasterReplicas(deps.MetaConfig),

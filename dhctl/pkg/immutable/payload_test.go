@@ -19,10 +19,13 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 var updateGolden = flag.Bool("update-golden", false, "rewrite the golden payload files")
@@ -31,10 +34,11 @@ var updateGolden = flag.Bool("update-golden", false, "rewrite the golden payload
 // on-node agent parses both documents strictly, so a silent rename of any field
 // here is a node that refuses to bootstrap.
 //
-// The control-plane document is assembled by hand rather than through
-// BuildControlPlaneConfig: the real one embeds freshly generated CA material and
-// the rendered candi manifests, neither of which is byte-stable. The manifest
-// rendering itself is covered by pkg/template/controlplane_manifests_test.go.
+// Both documents are built the way the bootstrap builds them; only the three
+// handoff strings are replaced with placeholders afterwards, because they are
+// freshly minted on every run. Everything else in the golden file is what
+// actually boots the node — which is what makes the absence of any cluster key
+// and of any rendered manifest visible here.
 func TestBuildCloudConfigGolden(t *testing.T) {
 	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
 
@@ -44,38 +48,17 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, controlPlaneDisk, err := MasterDisks(metaConfig)
+	controlPlaneConfig, err := BuildControlPlaneConfig(context.Background(), ControlPlaneInput{
+		NodeName:   "zykov-master-0",
+		MetaConfig: metaConfig,
+		StateCache: cache.NewTestCache(),
+	})
 	require.NoError(t, err)
 
-	controlPlaneConfig := &ControlPlaneConfig{
-		APIVersion: PayloadAPIVersion,
-		Kind:       ControlPlaneConfigKind,
-		Metadata:   ObjectMeta{Name: "zykov-master-0"},
-		Spec: ControlPlaneSpec{
-			Bootstrap: true,
-			Disk:      controlPlaneDisk,
-			CA: map[string]string{
-				"ca.crt":             "<ca.crt>",
-				"ca.key":             "<ca.key>",
-				"front-proxy-ca.crt": "<front-proxy-ca.crt>",
-				"front-proxy-ca.key": "<front-proxy-ca.key>",
-				"etcd/ca.crt":        "<etcd/ca.crt>",
-				"etcd/ca.key":        "<etcd/ca.key>",
-				"sa.key":             "<sa.key>",
-				"sa.pub":             "<sa.pub>",
-			},
-			Params: ControlPlaneParams{
-				ClusterDomain:     "cluster.local",
-				ServiceSubnetCIDR: "10.223.0.0/16",
-			},
-			ExtraFiles: map[string]string{authenticationConfigFile: authenticationConfig},
-			Manifests: map[string]string{
-				"etcd.yaml":                    "<etcd.yaml>\n",
-				"kube-apiserver.yaml":          "<kube-apiserver.yaml>\n",
-				"kube-controller-manager.yaml": "<kube-controller-manager.yaml>\n",
-				"kube-scheduler.yaml":          "<kube-scheduler.yaml>\n",
-			},
-		},
+	controlPlaneConfig.Spec.Handoff = Handoff{
+		Token:      "<handoff token>",
+		ServerCert: "<handoff server certificate>",
+		ServerKey:  "<handoff server key>",
 	}
 
 	cloudConfig, err := BuildCloudConfig(nodeConfig, controlPlaneConfig)
@@ -90,6 +73,39 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 	golden, err := os.ReadFile(goldenPath)
 	require.NoError(t, err)
 	require.Equal(t, string(golden), cloudConfig)
+
+	// The invariant the whole payload is shaped around. cloud-init ends up in a
+	// Secret of somebody else's namespace, in the infrastructure state and in
+	// the installer's cache, so no key of this cluster may ever travel in it:
+	// the node generates its own PKI and never receives one. The only key that
+	// legitimately appears in the real payload is the handoff serving key
+	// redacted above, and it protects one read of one file.
+	require.NotContains(t, cloudConfig, "PRIVATE KEY",
+		"the master payload must carry no private key of the cluster")
+}
+
+// TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey checks the same invariant
+// on the unredacted payload: the handoff serving key is the one key in it, and
+// it is in the handoff section.
+func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
+	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+
+	controlPlaneConfig, err := BuildControlPlaneConfig(context.Background(), ControlPlaneInput{
+		NodeName:   "zykov-master-0",
+		MetaConfig: metaConfig,
+		StateCache: cache.NewTestCache(),
+	})
+	require.NoError(t, err)
+
+	document, err := yaml.Marshal(controlPlaneConfig)
+	require.NoError(t, err)
+
+	require.Contains(t, controlPlaneConfig.Spec.Handoff.ServerKey, "PRIVATE KEY")
+	require.Equal(t,
+		strings.Count(controlPlaneConfig.Spec.Handoff.ServerKey, "PRIVATE KEY"),
+		strings.Count(string(document), "PRIVATE KEY"),
+		"the only private key in the control-plane payload must be the handoff serving key",
+	)
 }
 
 // TestBuildCloudConfigHasNoConflictingKeys guards the one cloud-init rule the
