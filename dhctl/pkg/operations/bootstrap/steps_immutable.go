@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -51,6 +52,13 @@ const (
 // buildImmutableMasterPayload renders the cloud-init the first master boots
 // with. The node has no sshd and no bashible, so everything dhctl would
 // otherwise upload afterwards has to be in here.
+//
+// The result is base64-encoded because that is what the "cloudConfig" tfvar
+// carries: every provider's terraform base64decodes it before writing the
+// cloud-init secret, and the only other producer of that variable (the cloud
+// config secret read in kubernetes/actions/entity) encodes it too. The encoding
+// happens here rather than inside BuildCloudConfig so the document itself stays
+// readable — it is pinned by a golden file.
 func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, bctx *bootstrapContext, nodeName string) (string, error) {
 	var cloudConfig string
 
@@ -73,10 +81,12 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 			return fmt.Errorf("build control-plane config: %w", err)
 		}
 
-		cloudConfig, err = immutable.BuildCloudConfig(nodeConfig, controlPlaneConfig)
+		document, err := immutable.BuildCloudConfig(nodeConfig, controlPlaneConfig)
 		if err != nil {
 			return fmt.Errorf("build cloud config: %w", err)
 		}
+
+		cloudConfig = base64.StdEncoding.EncodeToString([]byte(document))
 
 		return nil
 	})
