@@ -70,12 +70,16 @@
   {{- $versionSchema := $stablestVersion.schema.openAPIV3Schema }}
   {{- $langVersionData := dict }}
 
-  {{- if $langData.spec.versions }}
-    {{- $langVersionData = index (where $langData.spec.versions "name" "eq" $versionName) 0 }}
+  {{- /* Language schema may be missing entirely (no doc-<lang>-<crd> key) — guard every dereference against nil */}}
+  {{- if and (reflect.IsMap $langData) $langData.spec $langData.spec.versions }}
+    {{- $matchedLangVersions := where $langData.spec.versions "name" "eq" $versionName }}
+    {{- if gt (len $matchedLangVersions) 0 }}
+      {{- $langVersionData = index $matchedLangVersions 0 }}
+    {{- end }}
   {{- end }}
 
   {{- $description := $versionSchema.description }}
-  {{- if $langVersionData.schema.openAPIV3Schema.description }}
+  {{- if and (reflect.IsMap $langVersionData) $langVersionData.schema $langVersionData.schema.openAPIV3Schema $langVersionData.schema.openAPIV3Schema.description }}
     {{- $description = $langVersionData.schema.openAPIV3Schema.description }}
   {{- end }}
 
@@ -94,7 +98,11 @@
 
   {{- /* Extract properties from the CRD schema using recursive partial */}}
   {{- if $versionSchema.properties }}
-    {{- $crdProperties := partial "openapi/extract-crd-properties-recursive" (dict "data" $versionSchema "langData" $langVersionData.schema.openAPIV3Schema "moduleName" $moduleName "moduleChannel" $moduleChannel "ancestors" slice "kind" $kind "versionName" $versionName) }}
+    {{- $langSchema := "" }}
+    {{- if and (reflect.IsMap $langVersionData) $langVersionData.schema $langVersionData.schema.openAPIV3Schema }}
+      {{- $langSchema = $langVersionData.schema.openAPIV3Schema }}
+    {{- end }}
+    {{- $crdProperties := partial "openapi/extract-crd-properties-recursive" (dict "data" $versionSchema "langData" $langSchema "moduleName" $moduleName "moduleChannel" $moduleChannel "ancestors" slice "kind" $kind "versionName" $versionName) }}
     {{- $searchParams = $searchParams | append $crdProperties }}
   {{- end }}
 {{- end }}

@@ -7,7 +7,7 @@
 {{- $linkAnchor := .linkAnchor }}
 
 {{- $description :=  "" }}
-{{- if $langData.description }}
+{{- if and (reflect.IsMap $langData) $langData.description }}
   {{- $description = $langData.description }}
 {{- else }}
   {{- $description =  $attributes.description }}
