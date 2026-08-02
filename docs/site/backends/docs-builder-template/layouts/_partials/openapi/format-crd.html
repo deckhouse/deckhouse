@@ -44,9 +44,12 @@
 
     {{- $description :=  $versionSchema.description }}
     {{- $langVersionData := dict }}
-    {{- if $langData.spec.versions }}
-      {{- $langVersionData =  index (where $langData.spec.versions "name" "eq" $versionName) 0 }}
-      {{- if $langVersionData.schema.openAPIV3Schema.description }}{{ $description = $langVersionData.schema.openAPIV3Schema.description }}{{ end }}
+    {{- if and (reflect.IsMap $langData) $langData.spec $langData.spec.versions }}
+      {{- $matchedLangVersions := where $langData.spec.versions "name" "eq" $versionName }}
+      {{- if gt (len $matchedLangVersions) 0 }}
+        {{- $langVersionData = index $matchedLangVersions 0 }}
+      {{- end }}
+      {{- if and (reflect.IsMap $langVersionData) $langVersionData.schema $langVersionData.schema.openAPIV3Schema $langVersionData.schema.openAPIV3Schema.description }}{{ $description = $langVersionData.schema.openAPIV3Schema.description }}{{ end }}
     {{- end }}
 
     <div class="resources__prop_description">{{ partial "openapi/format-description" $description }}</div>
@@ -72,7 +75,10 @@
           {{- end }}
         {{- end }}
         
-        {{- $propertyLangData := index $langVersionData.schema.openAPIV3Schema.properties $property }}
+        {{- $propertyLangData := "" }}
+        {{- if and (reflect.IsMap $langVersionData) $langVersionData.schema $langVersionData.schema.openAPIV3Schema $langVersionData.schema.openAPIV3Schema.properties }}
+          {{- $propertyLangData = index $langVersionData.schema.openAPIV3Schema.properties $property }}
+        {{- end }}
 
         {{- $liClass := "" }}
         {{- if eq $property "spec" }}

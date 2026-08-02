@@ -107,7 +107,10 @@
   {{- $requiredParameters := $data.required }}
   <ul>
   {{- range $subParameterName, $subParameterAttributes := $data.properties }}
-    {{- $subParameterLangData := index $langData.properties $subParameterName }}
+    {{- $subParameterLangData := "" }}
+    {{- if and (reflect.IsMap $langData) $langData.properties }}
+      {{- $subParameterLangData = index $langData.properties $subParameterName }}
+    {{- end }}
 
     {{/* Checking for x-doc-skip into child properties */}}
     {{- if reflect.IsMap $subParameterAttributes }}
@@ -126,7 +129,10 @@
     {{/* Array of objects */}}
     <ul>
     {{- range $subParameterName, $subParameterAttributes := $data.items.properties }}
-      {{- $subParameterLangData := index $langData.items.properties $subParameterName }}
+      {{- $subParameterLangData := "" }}
+      {{- if and (reflect.IsMap $langData) (reflect.IsMap $langData.items) $langData.items.properties }}
+        {{- $subParameterLangData = index $langData.items.properties $subParameterName }}
+      {{- end }}
 
       {{/* Checking for x-doc-skip for array items */}}
       {{- if reflect.IsMap $subParameterAttributes }}
@@ -148,8 +154,12 @@
     {{- range $key, $val := $data.items }}{{ if in $keysToShow $key }}{{ $keysToShowIsExist = true }}{{ end }}{{ end }}
 
     {{- if $keysToShowIsExist }}
+      {{- $itemsLangData := "" }}
+      {{- if reflect.IsMap $langData }}
+        {{- $itemsLangData = $langData.items }}
+      {{- end }}
       <ul>
-      {{- partial "openapi/format-schema" ( dict "name" "" "data" $data.items "langData" $langData.items "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
+      {{- partial "openapi/format-schema" ( dict "name" "" "data" $data.items "langData" $itemsLangData "parent" $data "ancestors" $fullPath "apiVersion"  $apiVersion "resourceName" $resourceName "type" $type) }}
       </ul>
     {{- end }}
 
@@ -161,7 +171,10 @@
 
     {{- if and (reflect.IsMap $data.additionalProperties) (not $data.properties) ($data.additionalProperties.properties) (or (not $data.additionalProperties.type) (eq $data.additionalProperties.type "object")) }} {{/* Render if additionalProperties is a schema object with properties (not primitive type) AND parent has no properties */}}
       {{- $additionalPropsData := $data.additionalProperties }}
-      {{- $additionalPropsLangData := index $langData "additionalProperties" }}
+      {{- $additionalPropsLangData := "" }}
+      {{- if reflect.IsMap $langData }}
+        {{- $additionalPropsLangData = index $langData "additionalProperties" }}
+      {{- end }}
       {{- $additionalPropsRequired := $additionalPropsData.required }}
 
       {{/* Checking for x-doc-skip for additionalProperties */}}
@@ -191,7 +204,7 @@
 
           {{- /* Get existing description if any */}}
           {{- $existingDescription := "" }}
-          {{- if $additionalPropsLangData.description }}
+          {{- if and (reflect.IsMap $additionalPropsLangData) $additionalPropsLangData.description }}
             {{- $existingDescription = $additionalPropsLangData.description }}
           {{- else if $additionalPropsData.description }}
             {{- $existingDescription = $additionalPropsData.description }}
@@ -219,7 +232,10 @@
       {{- end }}
     {{- else if and (reflect.IsMap $data.additionalProperties) ($data.additionalProperties.properties) }} {{/* Only render if additionalProperties is a schema object AND has properties (normal case when parent has properties) */}}
       {{- $additionalPropsData := $data.additionalProperties }}
-      {{- $additionalPropsLangData := index $langData "additionalProperties" }}
+      {{- $additionalPropsLangData := "" }}
+      {{- if reflect.IsMap $langData }}
+        {{- $additionalPropsLangData = index $langData "additionalProperties" }}
+      {{- end }}
       {{- $additionalPropsRequired := $additionalPropsData.required }}
 
       {{/* Checking for x-doc-skip for additionalProperties */}}
