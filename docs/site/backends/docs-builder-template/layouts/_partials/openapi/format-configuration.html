@@ -118,7 +118,7 @@ Context:
       {{- end }}
 
       {{- $propertyLangData := "" }}
-      {{- if and (reflect.IsMap $langData) $langData.properties }}
+      {{- if and (reflect.IsMap $langData) (reflect.IsMap $langData.properties) }}
         {{- $propertyLangData = index $langData.properties $property }}
       {{- end }}
       {{- partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "resourceName" "parameters" "type" "module_configuration") }}

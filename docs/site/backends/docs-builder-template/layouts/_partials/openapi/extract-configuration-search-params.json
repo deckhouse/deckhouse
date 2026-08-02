@@ -14,7 +14,7 @@
     {{- range $paramName, $paramData := $data.properties }}
       {{- if reflect.IsMap $paramData }}
         {{- $paramLangData := "" }}
-        {{- if and (reflect.IsMap $langData) $langData.properties }}
+        {{- if and (reflect.IsMap $langData) (reflect.IsMap $langData.properties) }}
           {{- $paramLangData = index $langData.properties $paramName }}
         {{- end }}
         {{- $currentAncestors := $ancestors | append $paramName }}

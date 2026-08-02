@@ -108,7 +108,7 @@
   <ul>
   {{- range $subParameterName, $subParameterAttributes := $data.properties }}
     {{- $subParameterLangData := "" }}
-    {{- if and (reflect.IsMap $langData) $langData.properties }}
+    {{- if and (reflect.IsMap $langData) (reflect.IsMap $langData.properties) }}
       {{- $subParameterLangData = index $langData.properties $subParameterName }}
     {{- end }}
 
@@ -130,7 +130,7 @@
     <ul>
     {{- range $subParameterName, $subParameterAttributes := $data.items.properties }}
       {{- $subParameterLangData := "" }}
-      {{- if and (reflect.IsMap $langData) (reflect.IsMap $langData.items) $langData.items.properties }}
+      {{- if and (reflect.IsMap $langData) (reflect.IsMap $langData.items) (reflect.IsMap $langData.items.properties) }}
         {{- $subParameterLangData = index $langData.items.properties $subParameterName }}
       {{- end }}
 
@@ -173,7 +173,10 @@
       {{- $additionalPropsData := $data.additionalProperties }}
       {{- $additionalPropsLangData := "" }}
       {{- if reflect.IsMap $langData }}
-        {{- $additionalPropsLangData = index $langData "additionalProperties" }}
+        {{- $indexedAdditionalPropsLangData := index $langData "additionalProperties" }}
+        {{- if reflect.IsMap $indexedAdditionalPropsLangData }}
+          {{- $additionalPropsLangData = $indexedAdditionalPropsLangData }}
+        {{- end }}
       {{- end }}
       {{- $additionalPropsRequired := $additionalPropsData.required }}
 
@@ -258,7 +261,7 @@
   {{- range $pattern, $patternSchema := $data.patternProperties }}
     {{- if reflect.IsMap $patternSchema }}
       {{- $patternLangData := dict }}
-      {{- if and (reflect.IsMap $langData) $langData.patternProperties }}
+      {{- if and (reflect.IsMap $langData) (reflect.IsMap $langData.patternProperties) }}
         {{- $indexedLangData := index $langData.patternProperties $pattern }}
         {{- if reflect.IsMap $indexedLangData }}
           {{- $patternLangData = $indexedLangData }}
