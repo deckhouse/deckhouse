@@ -1,3 +1,17 @@
+@use "components/common/_variables.scss";
+@use "components/common/_mixins";
+@use 'components/common/_breakpoints.scss';
+
+.gs-installer__image {
+  width: 70%;
+  margin: 16px auto;
+
+  @include breakpoints.max-w(l) {
+    width: 100%;
+    margin: 0;
+  }
+}
+
 .download-btn {
   display: inline-block;
   align-items: center;

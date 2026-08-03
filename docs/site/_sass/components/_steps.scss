@@ -12,7 +12,7 @@
         overflow-x: auto;
         box-sizing: border-box;
         padding: 8px 50px 90px;
-        margin-bottom: 45px;
+        margin-bottom: 40px;
     }
 
     @include breakpoints.max-w(m) {
@@ -37,7 +37,7 @@
             min-width: 500px;
         }
 
-        @include breakpoints.max-w(xs) {
+        @include breakpoints.max-w(xxs) {
             min-width: 360px;
         }
     }
