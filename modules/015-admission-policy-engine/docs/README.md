@@ -60,6 +60,16 @@ Users creating label-based policies should be aware that:
 
 For controller kinds, SecurityPolicyException (SPE) labels and annotations are taken from the **pod template's metadata** (`spec.template.metadata`), not from the controller's top-level metadata. This ensures SPEs apply to the pods the controller creates, not to the controller object itself.
 
+### Disabling controller-level validation
+
+Controller-level validation can be disabled using the [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) parameter in the module settings.
+
+When `controllerValidation: false`, constraints are applied only to Pods. In this case:
+
+- controllers (Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicationController) are not checked on creation or update;
+- SecurityPolicyException labels on `spec.template.metadata.labels` of controllers are not resolved, since constraints are not applied to controllers;
+- Pods are still validated at launch time, as they are when `true` is set.
+
 ## Pod validation when policies are modified or new ones are added
 
 For all three policy categories (Pod Security Standards, operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.

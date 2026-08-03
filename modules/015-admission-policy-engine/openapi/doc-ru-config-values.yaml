@@ -27,6 +27,14 @@ properties:
             properties:
               knownRanges:
                 description: "Список диапазонов портов, которые будут разрешены в привязке hostPort."
+      controllerValidation:
+        description: |
+          Управляет тем, применяются ли ограничения политик безопасности к контроллерам
+          (Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicationController)
+          в дополнение к подам.
+
+          - `true` (по умолчанию) — ограничения проверяют как поды, так и контроллеры;
+          - `false` — ограничения проверяют только поды, контроллеры не проверяются.
   denyVulnerableImages:
     description: |
       Настройки Trivy-провайдера.
