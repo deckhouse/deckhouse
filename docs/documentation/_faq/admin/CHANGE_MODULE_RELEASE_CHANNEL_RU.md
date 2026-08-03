@@ -26,11 +26,11 @@ lang: ru
      name: my-module-policy
    spec:
      releaseChannel: Alpha
-     # При необходимости, укажите режим обновления и окна обновления.
-     # update:
-     #   mode: AutoPatch
-     #   windows: []
+     update:
+       mode: Auto
    ```
+   
+   При необходимости измените [режим обновления](./reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-update-mode) и настройте [окна обновлений](./reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-update-windows).
 
    Убедитесь, что политика создана:
 
