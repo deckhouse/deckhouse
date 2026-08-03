@@ -457,36 +457,64 @@ spec:
 
 С помощью `loadbalancer.openstack.org/node-selector` рекомендуется выбирать только те узлы, которые должны использоваться в качестве таргетов данного LoadBalancer.
 
-Если необходимо использовать заранее созданный Octavia-балансировщик для Ingress-контроллера, укажите аннотацию `loadbalancer.openstack.deckhouse.io/load-balancer-id` в поле `annotations` соответствующей конфигурации инлет ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
+В поле `annotations` соответствующей конфигурации инлета ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) можно указать следующие аннотации:
 
-DKP автоматически добавит эту аннотацию в сгенерированный объект Service типа LoadBalancer.
+* `loadbalancer.openstack.org/node-selector` - выбирает узлы, которые будут использоваться как таргеты LoadBalancer.
+* `loadbalancer.openstack.deckhouse.io/load-balancer-id` - заставляет OpenStack CCM использовать заранее созданный Octavia-балансировщик.
+* `loadbalancer.openstack.deckhouse.io/load-balancer-address` - заставляет OpenStack CCM привязать заранее выделенный floating IP к балансировщику, который он создает и которым владеет.
 
-Балансировщик должен соответствовать следующим требованиям:
+DKP автоматически добавит эти аннотации в сгенерированный объект Service типа LoadBalancer.
+
+Если используется `loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
 
 * находиться в подсети кластера;
 * иметь состояние `ACTIVE`.
 
-Если необходимо использовать заранее созданный floating IP, укажите аннотацию `loadbalancer.openstack.deckhouse.io/load-balancer-address` в том же поле `annotations`.
+Если используется заранее созданный балансировщик с произвольным именем, привяжите floating IP к его VIP-порту до создания кластера и не указывайте `loadbalancer.openstack.deckhouse.io/load-balancer-address`.
 
-Floating IP должен соответствовать следующим требованиям:
+Если используется только `loadbalancer.openstack.deckhouse.io/load-balancer-address`, floating IP должен соответствовать следующим требованиям:
 
 * не быть привязанным к порту;
 * находиться в floating-сети, настроенной для OpenStack CCM.
 
 Если указанный floating IP недоступен, OpenStack CCM не сможет назначить внешний IP-адрес объекту Service.
 
-Если используется заранее созданный балансировщик с произвольным именем, привяжите floating IP к его VIP-порту до создания кластера.
-
 Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DKP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
 
-#### Пример IngressNginxController
+#### IngressNginxController с заранее созданным балансировщиком
 
 В примере ниже:
 
 * поды Ingress-контроллера размещаются на frontend-узлах;
 * `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами;
-* `loadbalancer.openstack.deckhouse.io/load-balancer-id` указывает заранее созданный Octavia-балансировщик;
-* `loadbalancer.openstack.deckhouse.io/load-balancer-address` указывает заранее выделенный floating IP.
+* `loadbalancer.openstack.deckhouse.io/load-balancer-id` указывает заранее созданный Octavia-балансировщик, к VIP-порту которого уже привязан floating IP.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancerWithProxyProtocol
+  loadBalancerWithProxyProtocol:
+    annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-id: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b"
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
+      loadbalancer.openstack.org/proxy-protocol: "true"
+      loadbalancer.openstack.org/timeout-member-connect: "2000"
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    operator: Equal
+    value: frontend
+```
+
+#### IngressNginxController с заранее выделенным floating IP
+
+В этом примере OpenStack CCM создает балансировщик и привязывает к нему указанный свободный floating IP:
 
 ```yaml
 apiVersion: deckhouse.io/v1
