@@ -51,32 +51,32 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: controller
 
 		Context(tc.name, func() {
 			f := SetupHelmConfig(`
-	admissionPolicyEngine:
-			internal:
-			  ratify:
-			    webhook:
-			      ca: test-ca-placeholder
-			      crt: test-crt-placeholder
-			      key: test-key-placeholder
-			  podSecurityStandards:
-			    enforcementActions:
-			      - deny
-			  bootstrapped: true
-			  webhook:
-			    ca: test-ca-placeholder
-			    crt: test-crt-placeholder
-			    key: test-key-placeholder
-			  trackedConstraintResources: []
-			  trackedMutateResources: []
-			podSecurityStandards:
-			  defaultPolicy: Baseline
-			  enforcementAction: Deny
-			  policies:
-			    hostPorts:
-			      knownRanges:
-			        - max: 35000
-			          min: 30000
-	`)
+admissionPolicyEngine:
+  internal:
+    ratify:
+      webhook:
+        ca: test-ca-placeholder
+        crt: test-crt-placeholder
+        key: test-key-placeholder
+    podSecurityStandards:
+      enforcementActions:
+        - deny
+    bootstrapped: true
+    webhook:
+      ca: test-ca-placeholder
+      crt: test-crt-placeholder
+      key: test-key-placeholder
+    trackedConstraintResources: []
+    trackedMutateResources: []
+  podSecurityStandards:
+    defaultPolicy: Baseline
+    enforcementAction: Deny
+    policies:
+      hostPorts:
+        knownRanges:
+          - max: 35000
+            min: 30000
+`)
 
 			BeforeEach(func() {
 				if tc.controllerValidation != nil {
@@ -175,4 +175,3 @@ func validateKinds(kinds []interface{}, expectControllers bool, constraintName s
 		Expect(hasJob).To(BeFalse(), "%s should NOT match Job when controllerValidation is disabled", constraintName)
 	}
 }
-
