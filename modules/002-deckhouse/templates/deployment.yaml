@@ -187,6 +187,10 @@ spec:
               value: "false"
             - name: USE_NELM
               value: "true"
+            # Adopt fields owned by the legacy "deckhouse-controller" field manager
+            # (pre-nelm Helm 3 engine), so stale fields get removed on upgrade.
+            - name: NELM_FEAT_ADOPT_DECKHOUSE_CONTROLLER_FIELDS
+              value: "true"
             - name: LOG_TYPE
               value: "json"
             - name: DECKHOUSE_HA
