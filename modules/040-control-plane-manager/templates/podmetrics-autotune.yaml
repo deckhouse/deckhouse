@@ -36,9 +36,12 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 spec:
   query: |
-    sum(
-      avg_over_time(
-        container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7m:1m]
-      )
-    ) by (<<.GroupBy>>)
+    round(
+      sum(
+        avg_over_time(
+          container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7m:1m]
+        )
+      ) by (<<.GroupBy>>)
+      / 1024 / 1024
+    )
 {{- end }}

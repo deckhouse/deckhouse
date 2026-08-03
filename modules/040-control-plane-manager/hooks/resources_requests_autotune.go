@@ -481,7 +481,8 @@ func clampRecommendation(raw float64, resourceName resourceKind, nodeBudget int6
 			v = autotuneMinMilliCPU
 		}
 	case resourceMemory:
-		v = int64(math.Ceil(raw))
+		// PodMetric returns MiB (rounded in PromQL); convert to bytes.
+		v = int64(math.Round(raw)) * 1024 * 1024
 		if v < autotuneMinMemory {
 			v = autotuneMinMemory
 		}
@@ -611,7 +612,7 @@ func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric stri
 	}
 
 	// custom.metrics encodes samples as milli-quantities; AsApproximateFloat64
-	// yields the natural unit (cores for cpu, bytes for memory).
+	// yields the natural unit (cores for cpu, MiB for memory — see PodMetric PromQL).
 	v := list.Items[0].Value.AsApproximateFloat64()
 	if math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 {
 		return 0, false, fmt.Errorf("GET %s: non-positive metric value %q", path, list.Items[0].Value.String())

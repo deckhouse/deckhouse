@@ -58,21 +58,22 @@ func masterNodeYAML() string {
 }
 
 func setNearFallbackUsage(usage map[string]map[resourceKind]float64) {
+	// Memory stubs are MiB (PodMetric unit); clampRecommendation converts to bytes.
 	usage[componentKubeApiserver] = map[resourceKind]float64{
 		resourceCPU:    0.66,
-		resourceMemory: 1417339207,
+		resourceMemory: 1351.67,
 	}
 	usage[componentEtcd] = map[resourceKind]float64{
 		resourceCPU:    0.70,
-		resourceMemory: 1503238553,
+		resourceMemory: 1433.59,
 	}
 	usage[componentKubeControllerManager] = map[resourceKind]float64{
 		resourceCPU:    0.40,
-		resourceMemory: 858993459,
+		resourceMemory: 819.2,
 	}
 	usage[componentKubeScheduler] = map[resourceKind]float64{
 		resourceCPU:    0.20,
-		resourceMemory: 429496729,
+		resourceMemory: 409.6,
 	}
 }
 
@@ -308,7 +309,7 @@ etcd:
 			// to pass the deadband; others stay near fallback.
 			usage[componentKubeApiserver] = map[resourceKind]float64{
 				resourceCPU:    0.25,
-				resourceMemory: 256 * 1024 * 1024,
+				resourceMemory: 256,
 			}
 			f.KubeStateSet(masterNodeYAML())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
@@ -329,7 +330,7 @@ etcd:
 		BeforeEach(func() {
 			usage[componentKubeApiserver] = map[resourceKind]float64{
 				resourceCPU:    0.25,
-				resourceMemory: 256 * 1024 * 1024,
+				resourceMemory: 256,
 			}
 			f.KubeStateSet(masterNodeYAML())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
@@ -348,7 +349,7 @@ etcd:
 			setNearFallbackUsage(usage)
 			usage[componentKubeApiserver] = map[resourceKind]float64{
 				resourceCPU:    0.25,
-				resourceMemory: 256 * 1024 * 1024,
+				resourceMemory: 256,
 			}
 			f.KubeStateSet(masterNodeYAML())
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
