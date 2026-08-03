@@ -763,6 +763,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/fencing-controller/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/kubernetes-api-proxy/src"
   labels:
   - "type/dependencies"

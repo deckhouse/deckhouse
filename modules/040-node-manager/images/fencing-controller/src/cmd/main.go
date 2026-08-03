@@ -44,16 +44,16 @@ func main() {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	defer stop()
-
-	if err := run(ctx, logger, healthBindAddress, leaderElect); err != nil {
+	if err := run(logger, healthBindAddress, leaderElect); err != nil {
 		logger.Error("fencing-controller failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, logger *slog.Logger, healthBindAddress string, leaderElect bool) error {
+func run(logger *slog.Logger, healthBindAddress string, leaderElect bool) error {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
+
 	logger.Info("starting fencing-controller 2.0", "leader_elect", leaderElect, "health_probe_bind_address", healthBindAddress)
 
 	mux := http.NewServeMux()
