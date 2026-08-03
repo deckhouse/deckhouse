@@ -29,11 +29,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
 // clusterInputs is everything outside the NodeGroup that a rendered NodeConfig
@@ -42,6 +44,11 @@ import (
 type clusterInputs struct {
 	// APIServerEndpoints are the addresses the node-local proxy balances over.
 	APIServerEndpoints []string
+	// KubernetesVersion is the cluster's minor version, e.g. "1.34". kubelet's
+	// feature gates depend on it: bashible turns the DRA gates on by version, and
+	// a node that is not told the version cannot follow — DRA would then work on
+	// every node in the cluster except the immutable ones.
+	KubernetesVersion string
 	// ClusterDomain and ClusterDNS configure kubelet's DNS.
 	ClusterDomain string
 	ClusterDNS    string
@@ -54,6 +61,17 @@ type clusterInputs struct {
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
 	RegistryPackagesProxyToken string
+	// SandboxImage is the pause image containerd starts every pod sandbox from,
+	// resolved against the cluster's own registry. It cannot be a constant: a
+	// cluster installed from a private registry — the normal case in a closed
+	// network — has no route to the upstream one, and a node that cannot pull
+	// the pause image runs no pods at all.
+	SandboxImage string
+	// Registry is how a node reaches the cluster's registry on its own. Every
+	// node gets it, not only the control-plane ones: containerd pulls the pause
+	// image before any pod exists and with no imagePullSecret to use, so a worker
+	// without credentials fails every sandbox it tries to create.
+	Registry *internalv1alpha1.Registry
 	// NodeExtensionRequests are the operator's requests to merge extra system
 	// extensions onto the nodes they select.
 	NodeExtensionRequests []deckhousev1alpha1.NodeExtensionRequest
@@ -77,7 +95,7 @@ func (s *sourceReader) reader() client.Reader {
 // pieces are reported: rendering a config with, say, no API server endpoints
 // would strand the node.
 func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion string) (clusterInputs, error) {
-	in := clusterInputs{}
+	in := clusterInputs{KubernetesVersion: kubernetesVersion}
 
 	in.APIServerEndpoints = s.readAPIServerEndpoints(ctx)
 	if len(in.APIServerEndpoints) == 0 {
@@ -104,6 +122,18 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	}
 	in.RegistryPackagesProxyToken = token
 
+	registry, imagesRepo, err := s.readRegistry(ctx)
+	if err != nil {
+		return in, err
+	}
+	in.Registry = registry
+
+	sandbox, err := s.readSandboxImage(ctx, imagesRepo)
+	if err != nil {
+		return in, err
+	}
+	in.SandboxImage = sandbox
+
 	ners, err := s.readNodeExtensionRequests(ctx)
 	if err != nil {
 		return in, err
@@ -113,13 +143,76 @@ func (s *sourceReader) readClusterInputs(ctx context.Context, kubernetesVersion 
 	return in, nil
 }
 
+// readRegistry describes the cluster's registry: the spec a node needs to reach
+// it, and the repository every image of the release lives in.
+func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Registry, string, error) {
+	secret := &corev1.Secret{}
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: d8SystemNS, Name: deckhouseRegistrySecret}, secret); err != nil {
+		return nil, "", fmt.Errorf("read the registry configuration from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
+	}
+
+	address := string(secret.Data[registryAddressKey])
+	if address == "" {
+		return nil, "", fmt.Errorf("secret %s/%s carries no %q", d8SystemNS, deckhouseRegistrySecret, registryAddressKey)
+	}
+
+	registry := &internalv1alpha1.Registry{
+		Address: address,
+		Path:    string(secret.Data[registryPathKey]),
+		Scheme:  strings.ToUpper(string(secret.Data[registrySchemeKey])),
+		CA:      string(secret.Data[registryCAKey]),
+		Auth:    registryAuth(secret.Data[registryDockerConfigKey], address),
+	}
+
+	imagesRepo := string(secret.Data[registryImagesKey])
+	if imagesRepo == "" {
+		imagesRepo = address + registry.Path
+	}
+	return registry, imagesRepo, nil
+}
+
+// registryAuth pulls the credentials for one registry out of a docker config.
+// An anonymous registry has none, and that is not an error: the field is
+// optional and a node without it pulls anonymously, exactly as the secret says.
+func registryAuth(dockerConfig []byte, address string) string {
+	if len(dockerConfig) == 0 {
+		return ""
+	}
+	var config struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
+	}
+	if err := json.Unmarshal(dockerConfig, &config); err != nil {
+		return ""
+	}
+	return config.Auths[address].Auth
+}
+
+// readSandboxImage resolves the pause image against the cluster's own registry.
+func (s *sourceReader) readSandboxImage(ctx context.Context, imagesRepo string) (string, error) {
+	all, err := s.readImagesDigests(ctx)
+	if err != nil {
+		return "", err
+	}
+	digest := all[pauseDigestGroup][pauseDigestName]
+	if digest == "" {
+		return "", fmt.Errorf("no %s/%s digest in %s", pauseDigestGroup, pauseDigestName, imagesDigestsKey)
+	}
+	return imagesRepo + "@" + digest, nil
+}
+
 // readNodeExtensionRequests lists the extension requests. They are additive, so
 // an absent CRD or an empty list is tolerated: the node simply gets the base
 // system extensions.
 func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhousev1alpha1.NodeExtensionRequest, error) {
 	list := &deckhousev1alpha1.NodeExtensionRequestList{}
 	if err := s.reader().List(ctx, list); err != nil {
-		if apierrors.IsNotFound(err) {
+		// A cluster without the CRD answers NoKindMatch rather than NotFound —
+		// the typed client cannot even map the kind. Both mean the same thing
+		// here: nobody has asked for an extra extension, so the node gets the
+		// base set.
+		if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("list node extension requests: %w", err)
@@ -236,10 +329,10 @@ func (s *sourceReader) readDNS(ctx context.Context) (string, string) {
 	return domain, dns
 }
 
-// readSysextDigests picks the system extension digests for this release: one
-// containerd, one CNI, and the kubelet matching the group's Kubernetes version.
-// The digests live in the same ConfigMap bashible-apiserver reads.
-func (s *sourceReader) readSysextDigests(ctx context.Context, kubernetesVersion string) (map[string]string, error) {
+// readImagesDigests returns the digest of every image the release ships, keyed
+// by group and then by image name. The group is a key in this map, not a path
+// segment: every Deckhouse image lives in one repository, addressed by digest.
+func (s *sourceReader) readImagesDigests(ctx context.Context) (map[string]map[string]string, error) {
 	cm := &corev1.ConfigMap{}
 	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: imagesDigestsConfigMapName}, cm); err != nil {
 		return nil, fmt.Errorf("read image digests: %w", err)
@@ -253,6 +346,17 @@ func (s *sourceReader) readSysextDigests(ctx context.Context, kubernetesVersion 
 	var all map[string]map[string]string
 	if err := json.Unmarshal([]byte(raw), &all); err != nil {
 		return nil, fmt.Errorf("parse image digests: %w", err)
+	}
+	return all, nil
+}
+
+// readSysextDigests picks the system extension digests for this release: one
+// containerd, one CNI, and the kubelet matching the group's Kubernetes version.
+// The digests live in the same ConfigMap bashible-apiserver reads.
+func (s *sourceReader) readSysextDigests(ctx context.Context, kubernetesVersion string) (map[string]string, error) {
+	all, err := s.readImagesDigests(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	packages := all[registryPackagesDigestsKey]
