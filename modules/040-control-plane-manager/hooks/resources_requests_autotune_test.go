@@ -58,22 +58,22 @@ func masterNodeYAML() string {
 }
 
 func setNearFallbackUsage(usage map[string]map[resourceKind]float64) {
-	// Memory stubs are MiB (PodMetric unit); clampRecommendation converts to bytes.
+	// Memory stubs are MB (PodMetric unit); clampRecommendation converts to bytes.
 	usage[componentKubeApiserver] = map[resourceKind]float64{
 		resourceCPU:    0.66,
-		resourceMemory: 1351.67,
+		resourceMemory: 1417.34,
 	}
 	usage[componentEtcd] = map[resourceKind]float64{
 		resourceCPU:    0.70,
-		resourceMemory: 1433.59,
+		resourceMemory: 1503.24,
 	}
 	usage[componentKubeControllerManager] = map[resourceKind]float64{
 		resourceCPU:    0.40,
-		resourceMemory: 819.2,
+		resourceMemory: 858.99,
 	}
 	usage[componentKubeScheduler] = map[resourceKind]float64{
 		resourceCPU:    0.20,
-		resourceMemory: 409.6,
+		resourceMemory: 429.50,
 	}
 }
 
@@ -319,7 +319,7 @@ etcd:
 		It("commits milliCPU and memoryBytes together", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256 * 1024 * 1024)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256 * 1000 * 1000)))
 			// Full initial snapshot materializes every component in one values write.
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.milliCPU").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.memoryBytes").Exists()).To(BeTrue())
@@ -359,7 +359,7 @@ etcd:
 		It("commits memoryBytes despite empty memory key", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256 * 1024 * 1024)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256 * 1000 * 1000)))
 		})
 	})
 
