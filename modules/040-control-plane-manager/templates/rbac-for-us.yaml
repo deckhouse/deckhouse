@@ -103,19 +103,21 @@ roleRef:
   name: d8:control-plane-manager
   apiGroup: rbac.authorization.k8s.io
 {{- /*
-  Single source of truth for the kubeadm:cluster-admins binding lives in the Go hook
-  modules/040-control-plane-manager/hooks/reconcile_kubeadm_cluster_admins_binding.go. The hook
-  evaluates three gates (user-authz enabled, cluster bootstrapped, ClusterRole user-authz:cluster-admin
-  observed in the API) and publishes already-made decisions into Helm values:
+  The main kubeadm:cluster-admins binding is owned entirely by the Go hook
+  modules/040-control-plane-manager/hooks/reconcile_kubeadm_cluster_admins_binding.go and is NOT
+  rendered here: it left this template in v1.77. On that converge Helm orphaned the live object via
+  the helm.sh/resource-policy: keep annotation stamped in v1.76 (both by the old template block and
+  by the hook), so the binding was never pruned and admin.conf never lost root. The hook remains the
+  single source of truth for it.
 
-    .Values.controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName  string
+  This template only renders the additive supplement, gated by the hook's decision published into:
+
     .Values.controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled bool
 
-  We read those values verbatim and do NOT re-evaluate the gates here, so hook and template
-  stay aligned by construction. Read via `dig` to keep the early-render path safe (hook runs
-  on OnBeforeHelm before each helm reconcile, but the schema defaults must work too).
+  We read that value verbatim and do NOT re-evaluate the gates here. Read via `dig` to keep the
+  early-render path safe (hook runs on OnBeforeHelm before each helm reconcile, but the schema
+  defaults must work too).
 */}}
-{{- $targetRole := dig "internal" "kubeadmClusterAdminsTargetRoleName" "cluster-admin" .Values.controlPlaneManager }}
 {{- $supplementEnabled := dig "internal" "kubeadmClusterAdminsSupplementEnabled" false .Values.controlPlaneManager }}
 {{- if $supplementEnabled }}
 ---
@@ -290,31 +292,6 @@ subjects:
 - kind: Group
   name: kubeadm:cluster-admins
 {{- end }}
-{{- /*
-  Main kubeadm:cluster-admins binding: target ClusterRole comes from the hook (see top of file).
-  Helm SSA cannot mutate roleRef (immutable), so the actual Delete+Create on role flip is done
-  by reconcile_kubeadm_cluster_admins_binding hook before Helm runs; Helm here only adopts.
-
-  helm.sh/resource-policy: keep guarantees Helm never prunes this binding. It guards the future
-  migration to hook-only ownership: once this block is dropped from the template, Helm leaves the
-  live object in place (instead of deleting it), so there is no window where kubeadm:cluster-admins
-  has no binding and admin.conf loses root access. The hook remains the single source of truth.
-*/}}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kubeadm:cluster-admins
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-  annotations:
-    helm.sh/resource-policy: keep
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: {{ $targetRole }}
-subjects:
-- kind: Group
-  name: kubeadm:cluster-admins
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
