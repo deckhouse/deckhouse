@@ -123,7 +123,7 @@
   tags:
     - vm-intteam-cloud-d8-ssdlc-runner
   needs: []
-  timeout: 24h
+  timeout: 4h
   variables:
     VAULT_AUTH_PATH: fox
     VAULT_AUTH_ROLE: deckhouse
