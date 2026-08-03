@@ -12,6 +12,7 @@ description: Архитектура компонента Virtualization API мо
 
    - [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) — ресурс, описывающий конфигурацию и статус виртуальной машины (ВМ);
    - [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) — ресурс, описывающий набор параметров для ресурсов [VirtualMachine](/modules/virtualization/cr.html#virtualmachine), таких, как спецификации CPU и RAM, `NodeSelector` и `Tolerations`;
+   - [VirtualMachinePool](/modules/virtualization/early-access/cr.html#virtualmachinepool) — ресурс, декларативно управляющий группой одинаковых ВМ;
    - [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) — ресурс, описывающий желаемую конфигурацию диска ВМ;
    - [VirtualImage](/modules/virtualization/cr.html#virtualimage) — ресурс, описывающий:
      - образ диска ВМ, который может использоваться в качестве источника данных для новых ресурсов [VirtualDisk](/modules/virtualization/cr.html#virtualdisk);

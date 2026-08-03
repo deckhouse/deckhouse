@@ -11,6 +11,7 @@ The Virtualization API component of the [`virtualization`](/modules/virtualizati
 
    - [VirtualMachine](/modules/virtualization/cr.html#virtualmachine): A resource that describes the virtual machine (VM) configuration and status.
    - [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass): A resource that describes a set of parameters for [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resources, such as CPU and RAM specification, `NodeSelector`, and `Tolerations`.
+   - [VirtualMachinePool](/modules/virtualization/early-access/cr.html#virtualmachinepool): A resource that declaratively manages a group of identical VMs.
    - [VirtualDisk](/modules/virtualization/cr.html#virtualdisk): A resource that describes desired VM disk configuration.
    - [VirtualImage](/modules/virtualization/cr.html#virtualimage): A resource that describes:
      - a VM disk image that can be used as a data source for new [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resources.
