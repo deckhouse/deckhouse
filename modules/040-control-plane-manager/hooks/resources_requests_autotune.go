@@ -69,6 +69,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		autotuneNodesBinding(false),
 		autotuneStateBinding(false),
+		autotunePodsBinding(),
 	},
 }, dependency.WithExternalDependencies(autotuneResourcesRequests))
 
@@ -117,10 +118,13 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		stateDirty = true
 	}
 
-	budgetCPU, budgetMemBytes, _ := minMasterNodeBudget(nodes)
+	otherPods, err := sdkobjectpatch.UnmarshalToStruct[nodeOtherRequests](input.Snapshots, "AutotunePodRequests")
+	if err != nil {
+		return fmt.Errorf("unmarshal AutotunePodRequests snapshots: %w", err)
+	}
+	fitCPU, fitMemMB, _ := minMasterFitBudget(nodes, aggregateOtherRequestsByNode(otherPods))
 	combinedCPU := input.Values.Get(pathMilliCPUControlPlane).Int()
 	combinedMemMB := bytesToMB(input.Values.Get(pathMemoryControlPlane).Int())
-	budgetMemMB := bytesToMB(budgetMemBytes)
 
 	fetch := opts.Fetch
 	if fetch == nil {
@@ -133,10 +137,10 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	if opts.Evaluate {
 		now := dc.GetClock().Now().UTC()
 
-		recsCPU, cpuUsageOK := fetchRecs(ctx, dc, fetch, resourceCPU, cpuOverridden, budgetCPU, func(comp string, ferr error) {
+		recsCPU, cpuUsageOK := fetchRecs(ctx, dc, fetch, resourceCPU, cpuOverridden, fitCPU, func(comp string, ferr error) {
 			input.Logger.Warn("autotune: metrics API cpu fetch failed", "component", comp, "error", ferr)
 		})
-		recsMem, memUsageOK := fetchRecs(ctx, dc, fetch, resourceMemory, memoryOverridden, budgetMemMB, func(comp string, ferr error) {
+		recsMem, memUsageOK := fetchRecs(ctx, dc, fetch, resourceMemory, memoryOverridden, fitMemMB, func(comp string, ferr error) {
 			input.Logger.Warn("autotune: metrics API memory fetch failed", "component", comp, "error", ferr)
 		})
 		usageOK := cpuUsageOK && memUsageOK
@@ -164,7 +168,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 				if len(recsCPU) == 0 {
 					input.Logger.Warn("autotune: no cpu usage datapoints from metrics API, leaving cpu state unchanged")
 				}
-				if evaluateMeasurement(input, state, resourceCPU, recsCPU, budgetCPU, combinedCPU, now) {
+				if evaluateMeasurement(input, state, resourceCPU, recsCPU, fitCPU, combinedCPU, now) {
 					stateDirty = true
 				}
 				if plan.InitialCPU {
@@ -177,7 +181,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 				if len(recsMem) == 0 {
 					input.Logger.Warn("autotune: no memory usage datapoints from metrics API, leaving memory state unchanged")
 				}
-				if evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMemMB, combinedMemMB, now) {
+				if evaluateMeasurement(input, state, resourceMemory, recsMem, fitMemMB, combinedMemMB, now) {
 					stateDirty = true
 				}
 				if plan.InitialMem {
@@ -346,6 +350,18 @@ func autotuneStateBinding(onSync bool) go_hook.KubernetesConfig {
 		FilterFunc:                   applyAutotuneStateFilter,
 		ExecuteHookOnEvents:          ptr.To(false),
 		ExecuteHookOnSynchronization: ptr.To(onSync),
+	}
+}
+
+// autotunePodsBinding feeds non-control-plane pod requests into the fit-capacity gate.
+func autotunePodsBinding() go_hook.KubernetesConfig {
+	return go_hook.KubernetesConfig{
+		Name:                         "AutotunePodRequests",
+		ApiVersion:                   "v1",
+		Kind:                         "Pod",
+		FilterFunc:                   applyAutotunePodRequestsFilter,
+		ExecuteHookOnEvents:          ptr.To(false),
+		ExecuteHookOnSynchronization: ptr.To(false),
 	}
 }
 
