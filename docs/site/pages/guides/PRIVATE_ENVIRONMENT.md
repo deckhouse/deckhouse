@@ -966,14 +966,14 @@ To connect via SSH to a server without external access, you can use the Bastion 
 
 There are two ways to connect:
 
-1. *Connect via a jump host.* Run the command:
+1. _Connect via a jump host._ Run the command:
 
    ```bash
    ssh -J ubuntu@<BASTION_IP> ubuntu@<NODE_IP>
    ```
 
    In this mode, you first connect to the Bastion host, and then connect through it to the target server using the same SSH key.
-1. *Connect with agent forwarding.* Connect to the Bastion host using:
+1. _Connect with agent forwarding._ Connect to the Bastion host using:
 
    ```bash
    ssh -A ubuntu@<BASTION_IP>
