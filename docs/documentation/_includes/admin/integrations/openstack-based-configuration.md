@@ -475,7 +475,6 @@ DKP automatically adds this annotation to the generated LoadBalancer Service obj
 
 The load balancer must meet the following requirements:
 
-- be created in advance
 - reside in the cluster subnet
 - be in the `ACTIVE` state
 
@@ -483,7 +482,6 @@ If you want to use a pre-created floating IP, specify the `loadbalancer.openstac
 
 The floating IP must meet the following requirements:
 
-- be created in advance
 - not be associated with any port
 - belong to the floating network configured for OpenStack CCM
 
