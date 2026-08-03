@@ -109,6 +109,18 @@ type vsphereInstanceClass struct {
 	Memory int `json:"memory"`
 }
 
+type metal3InstanceClass struct {
+	Capacity *Capacity `json:"capacity,omitempty"`
+}
+
+func (ic *metal3InstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
+	if ic.Capacity == nil || ic.Capacity.CPU.IsZero() || ic.Capacity.Memory.IsZero() {
+		return nil, ErrInvalidSpec
+	}
+
+	return ic.Capacity.ToInstanceType(), nil
+}
+
 func (vic vsphereInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
 	cpuStr := strconv.FormatInt(int64(vic.CPU), 10)
 	memStr := strconv.FormatInt(int64(vic.Memory), 10)
@@ -410,6 +422,10 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 
 	case "DVPInstanceClass":
 		var spec dvpInstanceClass
+		extractor = &spec
+
+	case "Metal3InstanceClass":
+		var spec metal3InstanceClass
 		extractor = &spec
 
 	case "D8TestInstanceClass":

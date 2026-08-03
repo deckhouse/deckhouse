@@ -1,0 +1,29 @@
+{{- $clusterName := .clusterName | required "clusterName is required" }}
+{{- $controlPlaneEndpoint := dict }}
+{{- $clusterMasterEndpoints := .Values.nodeManager.internal.clusterMasterEndpoints | default (list) }}
+{{- if gt (len $clusterMasterEndpoints) 0 }}
+  {{- $firstEndpoint := first $clusterMasterEndpoints }}
+  {{- $_ := set $controlPlaneEndpoint "host" (index $firstEndpoint "address") }}
+  {{- $_ := set $controlPlaneEndpoint "port" (index $firstEndpoint "kubeApiPort") }}
+{{- end }}
+{{- $clusterMasterAddresses := .Values.nodeManager.internal.clusterMasterAddresses | default (list) }}
+{{- if and (eq (len $controlPlaneEndpoint) 0) (gt (len $clusterMasterAddresses) 0) }}
+  {{- $hostPort := splitList ":" (first $clusterMasterAddresses) }}
+  {{- if gt (len $hostPort) 1 }}
+    {{- $_ := set $controlPlaneEndpoint "host" (first $hostPort) }}
+    {{- $_ := set $controlPlaneEndpoint "port" (atoi (last $hostPort)) }}
+  {{- end }}
+{{- end }}
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: Metal3Cluster
+metadata:
+  name: {{ $clusterName | quote }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capm3-controller-manager")) | nindent 2 }}
+spec:
+  noCloudProvider: true
+{{- if and (hasKey $controlPlaneEndpoint "host") (hasKey $controlPlaneEndpoint "port") }}
+  controlPlaneEndpoint:
+    host: {{ $controlPlaneEndpoint.host | quote }}
+    port: {{ $controlPlaneEndpoint.port }}
+{{- end }}

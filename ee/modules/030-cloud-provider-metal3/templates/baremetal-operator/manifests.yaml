@@ -1,0 +1,420 @@
+{{- $ironic := .Values.cloudProviderMetal3.ironic | default dict -}}
+{{- if $ironic.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: baremetal-operator-controller-manager
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: baremetal-operator-leader-election-role
+  namespace: d8-cloud-provider-metal3
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ''
+  resources:
+  - configmaps/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - ''
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: baremetal-operator-manager-role
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
+  - ''
+  resources:
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - ironic.metal3.io
+  resources:
+  - ironics
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts
+  - bmceventsubscriptions
+  - dataimages
+  - firmwareschemas
+  - hardwaredata
+  - hostclaims
+  - hostfirmwarecomponents
+  - hostfirmwaresettings
+  - preprovisioningimages
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts/finalizers
+  - dataimages/finalizers
+  - hardware/finalizers
+  - hostclaims/finalizers
+  - hostfirmwarecomponents/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts/status
+  - bmceventsubscriptions/status
+  - dataimages/status
+  - firmwareschemas/status
+  - hostclaims/status
+  - hostfirmwarecomponents/status
+  - hostfirmwaresettings/status
+  - preprovisioningimages/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - metal3.io
+  resources:
+  - hostdeploypolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - metal3.io
+  resources:
+  - hostupdatepolicies
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: baremetal-operator-metrics-auth-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: baremetal-operator-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: baremetal-operator-leader-election-rolebinding
+  namespace: d8-cloud-provider-metal3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: baremetal-operator-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: baremetal-operator-controller-manager
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: baremetal-operator-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: baremetal-operator-manager-role
+subjects:
+- kind: ServiceAccount
+  name: baremetal-operator-controller-manager
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: baremetal-operator-metrics-auth-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: baremetal-operator-metrics-auth-role
+subjects:
+- kind: ServiceAccount
+  name: baremetal-operator-controller-manager
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: v1
+data:
+  IRONIC_NAME: ironic
+kind: ConfigMap
+metadata:
+  name: ironic
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: baremetal-operator-controller-manager-metrics-service
+  namespace: d8-cloud-provider-metal3
+spec:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: baremetal-operator-webhook-service
+  namespace: d8-cloud-provider-metal3
+spec:
+  ports:
+  - port: 443
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager
+    webhook: metal3-io-v1alpha1-baremetalhost
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: controller-manager
+    webhook: metal3-io-v1alpha1-baremetalhost
+  name: baremetal-operator-controller-manager
+  namespace: d8-cloud-provider-metal3
+spec:
+  minReadySeconds: 10
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+        webhook: metal3-io-v1alpha1-baremetalhost
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      containers:
+      - args:
+        - --enable-leader-election
+        command:
+        - /baremetal-operator
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        envFrom:
+        - configMapRef:
+            name: ironic
+        image: {{ include "helm_lib_module_image" (list . "baremetalOperator") }}
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /healthz
+            port: 9440
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 2
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /readyz
+            port: 9440
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 2
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsUser: 65532
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: baremetal-operator-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: bmo-webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: baremetal-operator-serving-cert
+  namespace: d8-cloud-provider-metal3
+spec:
+  dnsNames:
+  - baremetal-operator-webhook-service.d8-cloud-provider-metal3.svc
+  - baremetal-operator-webhook-service.d8-cloud-provider-metal3.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: baremetal-operator-selfsigned-issuer
+  secretName: bmo-webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: baremetal-operator-selfsigned-issuer
+  namespace: d8-cloud-provider-metal3
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: d8-cloud-provider-metal3/baremetal-operator-serving-cert
+  name: baremetal-operator-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta
+  clientConfig:
+    service:
+      name: baremetal-operator-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-metal3-io-v1alpha1-baremetalhost
+  failurePolicy: Fail
+  name: baremetalhost.metal3.io
+  rules:
+  - apiGroups:
+    - metal3.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - baremetalhosts
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta
+  clientConfig:
+    service:
+      name: baremetal-operator-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-metal3-io-v1alpha1-bmceventsubscription
+  failurePolicy: Fail
+  name: bmceventsubscription.metal3.io
+  rules:
+  - apiGroups:
+    - metal3.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - bmceventsubscriptions
+  sideEffects: None
+{{- end }}

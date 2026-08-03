@@ -1,0 +1,212 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: d8-cloud-provider-metal3/capm3-serving-cert
+    controller-gen.kubebuilder.io/version: v0.16.5
+  labels:
+    cluster.x-k8s.io/v1beta1: v1beta1
+  name: metal3clusters.infrastructure.cluster.x-k8s.io
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: capm3-webhook-service
+          namespace: d8-cloud-provider-metal3
+          path: /convert
+      conversionReviewVersions:
+      - v1
+      - v1beta1
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: Metal3Cluster
+    listKind: Metal3ClusterList
+    plural: metal3clusters
+    shortNames:
+    - m3c
+    - m3cluster
+    - m3clusters
+    - metal3c
+    - metal3cluster
+    singular: metal3cluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Time duration since creation of Metal3Cluster
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - description: metal3Cluster is Ready
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: Most recent error
+      jsonPath: .status.failureReason
+      name: Error
+      type: string
+    - description: Cluster to which this BMCluster belongs
+      jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
+      name: Cluster
+      type: string
+    - description: Control plane endpoint
+      jsonPath: .spec.controlPlaneEndpoint
+      name: Endpoint
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: Metal3Cluster is the Schema for the metal3clusters API.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object.
+
+              Servers should convert recognized schemas to the latest internal value,
+              and
+
+              may reject unrecognized values.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents.
+
+              Servers may infer this from the endpoint the client submits requests
+              to.
+
+              Cannot be updated.
+
+              In CamelCase.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Metal3ClusterSpec defines the desired state of Metal3Cluster.
+            properties:
+              controlPlaneEndpoint:
+                description: ControlPlaneEndpoint represents the endpoint used to
+                  communicate with the control plane.
+                properties:
+                  host:
+                    description: Host is the hostname on which the API server is serving.
+                    type: string
+                  port:
+                    description: Port is the port on which the API server is serving.
+                    type: integer
+                required:
+                - host
+                - port
+                type: object
+              noCloudProvider:
+                description: 'Determines if the cluster is not to be deployed with
+                  an external cloud provider.
+
+                  If set to true, CAPM3 will use node labels to set providerID on
+                  the kubernetes nodes.
+
+                  If set to false, providerID is set on nodes by other entities and
+                  CAPM3 uses the value of the providerID on the m3m resource.'
+                type: boolean
+            type: object
+          status:
+            description: Metal3ClusterStatus defines the observed state of Metal3Cluster.
+            properties:
+              conditions:
+                description: Conditions defines current service state of the Metal3Cluster.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: 'Last time the condition transitioned from one
+                        status to another.
+
+                        This should be when the underlying condition changed. If that
+                        is not known, then using the time when
+
+                        the API field changed is acceptable.'
+                      format: date-time
+                      type: string
+                    message:
+                      description: 'A human readable message indicating details about
+                        the transition.
+
+                        This field may be empty.'
+                      type: string
+                    reason:
+                      description: 'The reason for the condition''s last transition
+                        in CamelCase.
+
+                        The specific API may choose whether or not this field is considered
+                        a guaranteed API.
+
+                        This field may be empty.'
+                      type: string
+                    severity:
+                      description: 'severity provides an explicit classification of
+                        Reason code, so the users or machines can immediately
+
+                        understand the current situation and act accordingly.
+
+                        The Severity field MUST be set only when Status=False.'
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: 'type of condition in CamelCase or in foo.example.com/CamelCase.
+
+                        Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions
+
+                        can be useful (see .node.status.conditions), the ability to
+                        deconflict is important.'
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: 'FailureMessage indicates that there is a fatal problem
+                  reconciling the
+
+                  state, and will be set to a descriptive error message.'
+                type: string
+              failureReason:
+                description: 'FailureReason indicates that there is a fatal problem
+                  reconciling the
+
+                  state, and will be set to a token value suitable for
+
+                  programmatic interpretation.'
+                type: string
+              lastUpdated:
+                description: LastUpdated identifies when this status was last observed.
+                format: date-time
+                type: string
+              ready:
+                description: 'Ready denotes that the Metal3 cluster (infrastructure)
+                  is ready. In
+
+                  Baremetal case, it does not mean anything for now as no infrastructure
+
+                  steps need to be performed. Required by Cluster API. Set to True
+                  by the
+
+                  metal3Cluster controller after creation.'
+                type: boolean
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

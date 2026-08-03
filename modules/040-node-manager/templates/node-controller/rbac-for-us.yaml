@@ -173,6 +173,7 @@ rules:
   - deckhousemachinetemplates
   - dynamixmachinetemplates
   - huaweicloudmachinetemplates
+  - metal3machinetemplates
   - openstackmachinetemplates
   - staticmachinetemplates
   - vcdmachinetemplates
@@ -271,6 +272,7 @@ rules:
   - yandexinstanceclasses
   - dynamixinstanceclasses
   - huaweicloudinstanceclasses
+  - metal3instanceclasses
   - openstackinstanceclasses
   - vcdinstanceclasses
   - vsphereinstanceclasses

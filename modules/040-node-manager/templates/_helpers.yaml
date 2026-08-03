@@ -36,7 +36,7 @@
 
 {{- define "legacy_cluster_autoscaler_uses_capi" }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
-    {{- if or (hasKey $.Values.nodeManager.internal.cloudProvider "vcd") (hasKey $.Values.nodeManager.internal.cloudProvider "zvirt") (hasKey $.Values.nodeManager.internal.cloudProvider "dynamix") (hasKey $.Values.nodeManager.internal.cloudProvider "huaweicloud") (hasKey $.Values.nodeManager.internal.cloudProvider "dvp") }}
+    {{- if or (hasKey $.Values.nodeManager.internal.cloudProvider "vcd") (hasKey $.Values.nodeManager.internal.cloudProvider "zvirt") (hasKey $.Values.nodeManager.internal.cloudProvider "dynamix") (hasKey $.Values.nodeManager.internal.cloudProvider "huaweicloud") (hasKey $.Values.nodeManager.internal.cloudProvider "dvp") (hasKey $.Values.nodeManager.internal.cloudProvider "metal3") }}
       not empty string
     {{- end }}
   {{- end }}

@@ -1,0 +1,136 @@
+ARG SOURCE_IMAGE
+ARG BASE_IMAGE=quay.io/centos/centos:stream9-minimal
+ARG IPXE_BINARIES_IMAGE=quay.io/metal3-io/ipxe-binaries@sha256:155a410dbafc9537fe75c42f55c93843dfc6bba9e4f0676ac05f872f8a9e674d
+
+ARG PIP_VERSION=24.1
+ARG SETUPTOOLS_VERSION=80.10.2
+
+FROM ${SOURCE_IMAGE} AS source
+
+FROM ${BASE_IMAGE} AS ironic-builder
+
+WORKDIR /tmp
+
+COPY --from=source /src/prepare-efi.sh /bin/
+
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked <<EORUN
+set -euxo pipefail
+microdnf install -y dnf
+printf "[main]\ngpgcheck=1\ninstall_weak_deps=0\ntsflags=nodocs\nkeepcache=1\n" > /etc/dnf/dnf.conf
+prepare-efi.sh centos
+EORUN
+
+FROM ${IPXE_BINARIES_IMAGE} AS ipxe-binaries
+
+FROM ${BASE_IMAGE} AS python-build-base
+
+RUN --mount=type=cache,sharing=locked,target=/var/cache/dnf <<EORUN
+set -euxo pipefail
+rm -f /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-SIG-Extras /etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial-PQC
+KEYS=$(find /etc/pki/rpm-gpg/ -name "RPM-GPG-KEY-cento*")
+if [ -z "$KEYS" ]; then echo "ERROR: No CentOS GPG keys found in /etc/pki/rpm-gpg/"; exit 1; fi
+echo "$KEYS" | xargs rpm --import
+printf "[main]\ngpgcheck=1\ninstall_weak_deps=0\ntsflags=nodocs\nkeepcache=1\n" > /etc/dnf/dnf.conf
+microdnf install -y \
+    gcc \
+    python3.12-devel \
+    python3.12-pip \
+    python3.12-setuptools
+EORUN
+
+FROM python-build-base AS deps-wheel-builder
+
+ARG UPPER_CONSTRAINTS_FILE=upper-constraints.txt
+ARG PIP_VERSION
+ARG SETUPTOOLS_VERSION
+
+ENV UPPER_CONSTRAINTS_FILE=${UPPER_CONSTRAINTS_FILE} \
+    PIP_VERSION=${PIP_VERSION} \
+    SETUPTOOLS_VERSION=${SETUPTOOLS_VERSION}
+
+COPY --from=source /src/${UPPER_CONSTRAINTS_FILE} /src/ironic-deps-list /tmp/
+COPY --from=source /src/build-wheels.sh /bin/
+
+RUN IRONIC_PKG_LIST=/tmp/ironic-deps-list /bin/build-wheels.sh
+
+FROM python-build-base AS ironic-wheel-builder
+
+ARG UPPER_CONSTRAINTS_FILE=upper-constraints.txt
+ARG IRONIC_SOURCE=79669b5de7396d105e17cbb5e0941facf6f9fcf7
+ARG SUSHY_SOURCE
+ARG PIP_VERSION
+ARG SETUPTOOLS_VERSION
+
+ENV IRONIC_SOURCE=${IRONIC_SOURCE} \
+    SUSHY_SOURCE=${SUSHY_SOURCE} \
+    UPPER_CONSTRAINTS_FILE=${UPPER_CONSTRAINTS_FILE} \
+    PIP_VERSION=${PIP_VERSION} \
+    SETUPTOOLS_VERSION=${SETUPTOOLS_VERSION}
+
+RUN --mount=type=cache,sharing=locked,target=/var/cache/dnf \
+    microdnf install -y git-core
+
+COPY --from=source /src/sources /sources/
+COPY --from=source /src/${UPPER_CONSTRAINTS_FILE} /src/ironic-packages-list /tmp/
+COPY --from=source /src/build-wheels.sh /bin/
+
+RUN /bin/build-wheels.sh
+
+FROM ${BASE_IMAGE}
+
+ARG PIP_VERSION
+ARG SETUPTOOLS_VERSION
+ENV PIP_VERSION=${PIP_VERSION} \
+    SETUPTOOLS_VERSION=${SETUPTOOLS_VERSION}
+
+LABEL org.opencontainers.image.authors="metal3-dev@googlegroups.com"
+LABEL org.opencontainers.image.description="Container image to run OpenStack Ironic as part of Metal3"
+LABEL org.opencontainers.image.documentation="https://book.metal3.io/ironic/introduction"
+LABEL org.opencontainers.image.licenses="Apache License 2.0"
+LABEL org.opencontainers.image.title="Metal3 Ironic Container"
+LABEL org.opencontainers.image.url="https://github.com/metal3-io/ironic-image"
+LABEL org.opencontainers.image.vendor="Metal3-io"
+
+ARG TARGETARCH
+
+ARG PKGS_LIST=main-packages-list.txt
+ARG ARCH_PKGS_LIST=main-packages-list-${TARGETARCH}.txt
+ARG EXTRA_PKGS_LIST
+ARG PATCH_LIST
+ARG DNSMASQ_DATA_DIR=/data/dnsmasq
+
+COPY --from=source /src/${PKGS_LIST} /src/${ARCH_PKGS_LIST} /src/${EXTRA_PKGS_LIST:-$PKGS_LIST} /src/${PATCH_LIST:-$PKGS_LIST} /tmp/
+COPY --from=source /src/ironic-config/ /tmp/ironic-config/
+COPY --from=source /src/prepare-image.sh /src/patch-image.sh /src/configure-nonroot.sh /src/scripts/ /bin/
+
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=from=deps-wheel-builder,source=/wheels,target=/deps-wheels \
+    --mount=from=ironic-wheel-builder,source=/wheels,target=/ironic-wheels \
+    prepare-image.sh && \
+    rm -f /bin/prepare-image.sh
+
+COPY --from=ipxe-binaries /ipxe/undionly.kpxe /ipxe/snponly-x86_64.efi /ipxe/snponly-arm64.efi /tftpboot/
+COPY --from=ironic-builder /tmp/uefi_esp*.img /templates/
+
+RUN <<EORUN
+set -euxo pipefail
+cp /tmp/ironic-config/inspector.ipxe.j2 /tmp/ironic-config/httpd-ironic-api.conf.j2 \
+   /tmp/ironic-config/ipxe_config.template /tmp/ironic-config/dnsmasq.conf.j2 \
+   /templates/
+mkdir -p /etc/ironic
+cp /tmp/ironic-config/ironic.conf.j2 /etc/ironic/
+cp /tmp/ironic-config/httpd.conf.j2 /etc/httpd/conf/
+cp /tmp/ironic-config/httpd-modules.conf /etc/httpd/conf.modules.d/
+cp /tmp/ironic-config/apache2-vmedia.conf.j2 /templates/httpd-vmedia.conf.j2
+cp /tmp/ironic-config/apache2-ipxe.conf.j2 /templates/httpd-ipxe.conf.j2
+rm -rf /tmp/ironic-config
+mkdir -p /var/lib/ironic
+sqlite3 /var/lib/ironic/ironic.sqlite "pragma journal_mode=wal"
+microdnf remove -y sqlite
+microdnf clean all
+rm -rf /var/cache/{yum,dnf}/*
+configure-nonroot.sh
+rm -f /bin/configure-nonroot.sh
+EORUN
+
+USER ironic
