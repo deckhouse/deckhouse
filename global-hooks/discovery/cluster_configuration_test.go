@@ -302,4 +302,168 @@ spec:
 			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
 		})
 	})
+
+	Context("ConfigMap d8-cluster-kubernetes data.spec writer", func() {
+		It("creates CM with Manual mode for a pinned target", func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("1.35"), 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.35"`))
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring("updateMode: Manual"))
+			Expect(cm.Field("data.status").Exists()).To(BeFalse())
+		})
+
+		It("creates CM with Automatic mode when tracking Default", func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring(fmt.Sprintf("desiredVersion: %q", hooks.DefaultKubernetesVersion)))
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring("updateMode: Automatic"))
+		})
+
+		It("updates only data.spec, leaving status and labels untouched", func() {
+			existing := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    k8s-version: "1.34"
+    max-k8s-version: "1.34"
+data:
+  spec: |
+    desiredVersion: "1.34"
+    updateMode: Manual
+  status: |
+    currentVersion: "1.34"
+    phase: UpToDate
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("1.35")+existing, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.35"`))
+			Expect(cm.Field("data.status").String()).To(ContainSubstring(`currentVersion: "1.34"`))
+			Expect(cm.Field("metadata.labels.k8s-version").String()).To(Equal("1.34"))
+			Expect(cm.Field("metadata.labels.max-k8s-version").String()).To(Equal("1.34"))
+		})
+	})
+
+	Context("Automatic soft-guard freeze", func() {
+		findDriftMetric := func() (float64, bool) {
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == "d8_control_plane_default_version_drift" {
+					return *m.Value, true
+				}
+			}
+			return 0, false
+		}
+
+		It("freezes desired digit when Default is below maxUsed window", func() {
+			// Default is 1.36 in this suite; maxUsed 1.38 means Default is two minors below → freeze.
+			existing := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    k8s-version: "1.38"
+    max-k8s-version: "1.38"
+data:
+  spec: |
+    desiredVersion: "1.38"
+    updateMode: Automatic
+  status: |
+    currentVersion: "1.38"
+    phase: UpToDate
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Automatic")+existing, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+
+			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.38"`))
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring("updateMode: Automatic"))
+
+			value, found := findDriftMetric()
+			Expect(found).To(BeTrue())
+			Expect(value).To(Equal(1.0))
+		})
+
+		It("publishes Default when it is within the maxUsed window", func() {
+			existing := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    max-k8s-version: "1.36"
+data:
+  status: |
+    currentVersion: "1.36"
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Automatic")+existing, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			_, found := findDriftMetric()
+			Expect(found).To(BeFalse())
+		})
+
+		It("fail-opens when Automatic has no maxUsed baseline", func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Automatic"), 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			_, found := findDriftMetric()
+			Expect(found).To(BeFalse())
+		})
+
+		It("does not freeze an explicit Manual pin", func() {
+			existing := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    max-k8s-version: "1.36"
+data:
+  status: |
+    currentVersion: "1.36"
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("1.33")+existing, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
+			_, found := findDriftMetric()
+			Expect(found).To(BeFalse())
+		})
+	})
 })
