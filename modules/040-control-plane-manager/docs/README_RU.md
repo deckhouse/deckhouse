@@ -108,11 +108,25 @@ spec:
 
 Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии DKP. Управлять обновлением patch-версий нельзя.
 
-Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`, в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+
+Пример закрепления версии Kubernetes:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "1.33"
+```
 
 Обновление control plane выполняется безопасно и для single-master-, и для multi-master-кластеров. Во время обновления может быть кратковременная недоступность API-сервера. На работу приложений в кластере обновление не влияет и может выполняться без выделения окна для регламентных работ.
 
-Если указанная для обновления версия (с параметром [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не соответствует текущей версии control plane в кластере, запускается умная стратегия изменения версий компонентов:
+Если указанная для обновления версия (с параметром [kubernetesVersion](configuration.html#parameters-kubernetesversion)) не соответствует текущей версии control plane в кластере, запускается умная стратегия изменения версий компонентов:
 
 - Общие замечания:
   - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NogeGroup узлы обновляются последовательно, по одному.
@@ -202,7 +216,7 @@ spec:
 Если feature gate не поддерживается или имеет статус `deprecated`, в системе мониторинга будет сгенерирован алерт [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse), информирующий о том, что feature gate не будет применен.
 
 {% alert level="warning" %}
-Обновление версии Kubernetes (управляется параметром [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не произойдёт, если в списке включенных feature gates, заданных для новой версии Kubernetes, есть feature gates в статусе `deprecated`.
+Обновление версии Kubernetes (управляется параметром [kubernetesVersion](configuration.html#parameters-kubernetesversion)) не произойдёт, если в списке включенных feature gates, заданных для новой версии Kubernetes, есть feature gates в статусе `deprecated`.
 {% endalert %}
 
 Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
