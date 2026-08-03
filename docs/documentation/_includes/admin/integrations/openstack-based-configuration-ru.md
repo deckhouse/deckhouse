@@ -457,7 +457,17 @@ spec:
 
 С помощью `loadbalancer.openstack.org/node-selector` рекомендуется выбирать только те узлы, которые должны использоваться в качестве таргетов данного LoadBalancer.
 
-Чтобы назначить LoadBalancer Ingress-контроллера заранее созданный floating IP, укажите аннотацию `loadbalancer.openstack.deckhouse.io/load-balancer-address` в поле `annotations` соответствующей конфигурации inlet ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller). DKP добавит эту аннотацию в сгенерированный объект Service типа LoadBalancer.
+Если необходимо использовать заранее созданный Octavia-балансировщик для Ingress-контроллера, укажите аннотацию `loadbalancer.openstack.deckhouse.io/load-balancer-id` в поле `annotations` соответствующей конфигурации инлет ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
+
+DKP автоматически добавит эту аннотацию в сгенерированный объект Service типа LoadBalancer.
+
+Балансировщик должен соответствовать следующим требованиям:
+
+* быть создан заранее;
+* находиться в подсети кластера;
+* иметь состояние `ACTIVE`.
+
+Если необходимо использовать заранее созданный floating IP, укажите аннотацию `loadbalancer.openstack.deckhouse.io/load-balancer-address` в том же поле `annotations`.
 
 Floating IP должен соответствовать следующим требованиям:
 
@@ -467,13 +477,18 @@ Floating IP должен соответствовать следующим тр�
 
 Если указанный floating IP недоступен, OpenStack CCM не сможет назначить внешний IP-адрес объекту Service.
 
-Аннотация `loadbalancer.openstack.deckhouse.io/load-balancer-address` позволяет использовать только заранее выделенный floating IP. Чтобы переиспользовать существующий балансировщик Octavia целиком, укажите его UUID в аннотации `loadbalancer.openstack.org/load-balancer-id`.
+Если используется заранее созданный балансировщик с произвольным именем, привяжите floating IP к его VIP-порту до создания кластера.
 
-Не добавляйте эти аннотации к прикладным ресурсам Ingress. Их обрабатывает `openstack-cloud-controller-manager` в аннотациях объекта Service.
+Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DKP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
 
 #### Пример IngressNginxController
 
-В примере поды Ingress-контроллера размещаются на frontend-узлах, аннотация `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами, а `loadbalancer.openstack.deckhouse.io/load-balancer-address` подключает к LoadBalancer заранее выделенный floating IP:
+В примере ниже:
+
+* поды Ingress-контроллера размещаются на frontend-узлах;
+* `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами;
+* `loadbalancer.openstack.deckhouse.io/load-balancer-id` указывает заранее созданный Octavia-балансировщик;
+* `loadbalancer.openstack.deckhouse.io/load-balancer-address` указывает заранее выделенный floating IP.
 
 ```yaml
 apiVersion: deckhouse.io/v1
