@@ -1,29 +1,30 @@
 ---
 title: "CAPI machine-template contract v2"
-description: How a cloud-provider module describes the CAPI machine template node-manager renders for ephemeral nodes.
+description: How a cloud-provider module describes the CAPI machine template that node-manager renders for ephemeral nodes.
 ---
 
-This is the single source of truth for the file a cloud-provider module ships as
-`capi/template.yaml`. **If something is not in this document, it is not in the contract**:
-node-controller gives a template nothing beyond what is described here, and widening the contract
-requires bumping `version`.
+This is the single source of truth for `capi/template.yaml`, the file a cloud-provider module
+ships. **If something is not in this document, it is not in the contract**: node-controller gives
+a template nothing beyond what is described here, and widening the contract requires bumping
+`version`.
 
 ## What node-manager does with your file
 
-For every NodeGroup zone, node-controller decides whether the machines need to be recreated, and
-only when they do, it renders your template into a new infrastructure MachineTemplate object and
-points the MachineDeployment at it. CAPI recreates machines because the *name* of the referenced
-template changed — that is the CAPI contract, and it is why the objects are immutable.
+For every zone of a NodeGroup, node-controller first decides whether the machines must be
+recreated. Only then does it render your template into a new infrastructure MachineTemplate and
+point the MachineDeployment at it. CAPI recreates machines because the *name* of the referenced
+template changed — that is the CAPI contract, and the reason the objects are immutable.
 
-Consequences you must design for:
+Design for three consequences:
 
-- **Your template is rendered once per generation.** The rendered object is frozen for the life of
-  that generation; node-controller never re-renders or patches it.
-- **A new template text, or a new provider config, does not reach existing machines by itself.**
-  It is picked up by the next generation — either when a user changes a rolloutField, or when an
-  operator forces a rollout with the `manual-rollout-id` annotation on the NodeGroup.
-- **The render must be a pure function of the context.** Anything else (clock, randomness, network,
-  environment) is unavailable, and would make "did anything change?" unanswerable.
+- **Your template is rendered once per generation.** The rendered object is frozen for that
+  generation's lifetime; node-controller never re-renders or patches it.
+- **New template text or a new provider config does not reach existing machines by itself.**
+  The next generation picks it up. Three things create one: a user changes a rolloutField, an
+  operator sets the `manual-rollout-id` annotation on the NodeGroup, or a provider release adds
+  to `rolloutFields` a field the user had already edited (see below).
+- **The render must be a pure function of the context.** Everything else — clock, randomness,
+  network, environment — is unavailable; with it, "did anything change?" would have no answer.
 
 ## File shape
 
@@ -54,14 +55,21 @@ template: |
         flavor: {{ .instanceClass.flavorName | quote }}
 ```
 
-The file is delivered in the provider's CAPI secret, exactly as before: for in-tree modules
-`d8-cloud-provider-<type>-capi` in `kube-system`, for external modules any secret labelled
-`cloud-provider.deckhouse.io/ephemeral-nodes-templates: capi` (see the ADR *External cloud provider
-module*). Put the file in your module's `capi/` directory; the helm template that builds the secret
-picks it up by basename.
+Parsing is strict: an unknown key, an empty template, a missing `rolloutFields`, a malformed
+field path or an unparsable template invalidates the whole contract, and the reconcile fails
+loudly.
 
-Parsing is strict: an unknown key, an empty template, a missing `rolloutFields`, a malformed field
-path or an unparsable template makes the whole contract invalid and the reconcile fails loudly.
+## Delivery
+
+The file travels in the provider's CAPI secret, the same channel as before:
+
+- in-tree modules: `d8-cloud-provider-<type>-capi` in `kube-system`;
+- external modules: any secret labelled
+  `cloud-provider.deckhouse.io/ephemeral-nodes-templates: capi` (see the ADR *External cloud
+  provider module*).
+
+Put the file in your module's `capi/` directory; the helm template that builds the secret picks
+it up by basename.
 
 ## Render context — five roots, nothing else
 
@@ -73,23 +81,24 @@ path or an unparsable template makes the whole contract invalid and the reconcil
 | `.nodeGroup.name` | string | NodeGroup name — for tags and labels inside `spec`. |
 | `.cluster` | map | `{uuid, podSubnet}`. |
 
-There is no `.Values`, no `.Chart`, no `.Files`, no `.Release`: node-manager is not helm, and the
-v1 engine only emulated a values tree so that migrating templates would not have to be rewritten.
+There is no `.Values`, no `.Chart`, no `.Files`, no `.Release`. node-manager is not helm; the v1
+engine emulated a values tree only so that migrated templates would not need rewriting.
 
 ## Rules
 
-1. **Render `apiVersion`, `kind` and `spec` only.** `metadata` is rejected: node-controller owns the
-   name (it encodes the generation), the labels (`heritage`, `module`, `node-group` — every prune
-   and cleanup selects on them) and the annotations (they hold the rollout snapshot).
+1. **Render `apiVersion`, `kind` and `spec` — nothing else.** `metadata` is rejected:
+   node-controller owns the name (it encodes the generation), the labels (`heritage`, `module`,
+   `node-group` — every prune and cleanup selects on them) and the annotations (they hold the
+   rollout snapshot).
 2. **The rendered `apiVersion`/`kind` must match `capiMachineTemplateAPIVersion`/
    `capiMachineTemplateKind` from your registration secret**, otherwise the reconcile fails.
-3. **Optional fields must be read with `get` or guarded with `hasKey`.** The sandbox runs with
-   `missingkey=error`, so `.instanceClass.maybeAbsent` is a render error, not an empty string. This
-   is deliberate: under v1 a typo rendered `<no value>` straight into the cloud.
-4. **Be deterministic.** Rendering twice with the same context must produce the same object.
-5. **Fail loudly when input is missing** — `fail "…"` or `required "…" value`. Do not paper over it
-   with a default that silently creates the wrong machine. node-controller adds the NodeGroup, the
-   InstanceClass and the zone to the message; do not repeat them.
+3. **Read optional fields with `get`, or guard them with `hasKey`.** The sandbox runs with
+   `missingkey=error`, so `.instanceClass.maybeAbsent` is a render error, not an empty string.
+   This is deliberate: under v1 a typo rendered `<no value>` straight into the cloud.
+4. **Be deterministic.** Rendering the same context twice must produce the same object.
+5. **Fail loudly on missing input** — `fail "…"` or `required "…" value`. Do not paper over it
+   with a default that silently creates the wrong machine. node-controller adds the NodeGroup,
+   the InstanceClass and the zone to the message; do not repeat them.
 
 ## Functions
 
@@ -104,57 +113,58 @@ The sandbox is [sprig](https://masterminds.github.io/sprig/) plus helm's `toYaml
 | host environment | `env`, `expandenv`, `getHostByName` |
 | helm-only | `include`, `tpl`, `lookup` |
 
-Using one is a parse error, so it can never reach a cluster. The exact function set is pinned by a
-golden test (`internal/machinetemplate/testdata/sandbox_functions.txt`), so a sprig upgrade that
-adds a function is reviewed rather than silently accepted.
+Using one is a parse error, so it can never reach a cluster. The exact function set is pinned by
+a golden test (`internal/machinetemplate/testdata/sandbox_functions.txt`), so a sprig upgrade
+that adds a function is reviewed rather than silently accepted.
 
 Traps worth knowing:
 
-- `default` fires on **any** falsy value: `0`, `false` and `""` all take the default. That is the
-  helm behaviour your v1 template already had; keep it in mind when a `0` is meaningful.
+- `default` fires on **any** falsy value: `0`, `false` and `""` all take the default. That is
+  the helm behaviour your v1 template already had; keep it in mind when a `0` is meaningful.
 - `get dict "key"` returns an empty value for an absent key — that is what makes
   `get .instanceClass "diskType" | default "network-hdd"` work under `missingkey=error`.
 - Ranging over a possibly-absent list: `{{- range (get .instanceClass "subnets" | default list) }}`.
 
 ## rolloutFields — what recreates machines
 
-`rolloutFields` is your answer to one question: *which InstanceClass fields cannot be changed on a
-live VM?* Only your team knows. Fields not in the list are still rendered into the object; they
-simply do not, on their own, cause a new generation — the change reaches machines with the next
-rollout.
+`rolloutFields` is your answer to one question: *which InstanceClass fields cannot be changed on
+a live VM?* Only your team knows. Fields not in the list are still rendered into the object;
+they simply do not, on their own, cause a new generation — the change reaches machines with the
+next rollout.
 
-How node-controller uses it:
+How node-controller uses the list:
 
-- The **whole** InstanceClass spec is stored on the generation object
+- The **whole** InstanceClass spec is snapshotted on the generation object
   (`node.deckhouse.io/applied-instance-class`, next to `applied-rollout-id` and
-  `applied-generation`), and `rolloutFields` is applied only when comparing.
-  So **removing** a field from the list never rolls machines. **Adding** one is free only while
-  that field has not changed since the current generation was created: the snapshot holds the value
-  from back then, and the widened criterion now compares against it. Add a field a user edited in
-  the meantime and the next reconcile rolls that NodeGroup — check before widening the list, or
-  pair it with a release note.
-- Comparison is **by value** after both sides are normalized: `50` is `50` no matter which Go type
-  or serialization it arrived in. There are no byte-level goldens to be afraid of any more.
+  `applied-generation`); `rolloutFields` filters the comparison, not the snapshot.
+- **Removing** a field from the list therefore never rolls machines.
+- **Adding** a field is free only while it has not changed since the current generation was
+  created: the snapshot holds the value from back then, and the widened criterion compares
+  against it. If a user edited the field in the meantime, the next reconcile rolls that
+  NodeGroup — check before widening the list, or pair the change with a release note.
+- Comparison is **by value** after both sides are normalized: `50` is `50` no matter which Go
+  type or serialization it arrived in. There are no byte-level goldens to be afraid of any more.
 - An absent field and an explicit `null` compare equal.
-- `manual-rollout-id` on the NodeGroup is handled by node-controller for every provider; it is not
-  part of your file.
+- `manual-rollout-id` on the NodeGroup is handled by node-controller for every provider; it is
+  not part of your file.
 
 Choosing the list:
 
-- Include everything the cloud cannot change in place: flavor/CPU/memory, image, disks, networks,
-  security groups, tags baked at creation.
-- Exclude fields that describe something other than the VM. Real examples from the migration:
-  openstack's `capacity` (a scale-from-zero hint for the autoscaler) and DVP's `etcdDisk` (a master
-  parameter) are not listed — listing them would roll a whole fleet on an unrelated edit.
+- Include everything the cloud cannot change in place: flavor/CPU/memory, image, disks,
+  networks, security groups, tags baked in at creation.
+- Exclude fields that describe something other than the VM. Two real examples from the
+  migration: openstack's `capacity` (a scale-from-zero hint for the autoscaler) and DVP's
+  `etcdDisk` (a master parameter) are not listed — an unrelated edit would otherwise roll a
+  whole fleet.
 - When a cloud gains a live-change capability (hotplug memory, mutable tags), dropping the field
-  from the list is a one-line release, and it will not roll anybody.
+  from the list is a one-line release that rolls nobody.
 
 ## machineDeployment.additionalFields
 
-The MachineDeployment is built by node-controller, not by your template. If you need extra fields
-in it, declare them here: the key is a dot-path inside `spec.template.spec`, the value is a
-go-template rendered in the same sandbox, with the same five context roots, as the machine
-template. Today one provider uses one entry:
+node-controller builds the MachineDeployment; your template does not. To add fields to it,
+declare them here: the key is a dot-path inside `spec.template.spec`, the value is a go-template
+rendered in the same sandbox with the same five context roots as the machine template. Today one
+provider uses one entry:
 
 ```yaml
 machineDeployment:
@@ -186,8 +196,8 @@ the snapshot into its annotations and adopts it as the current generation. Gener
 
 ## Checking your template
 
-Every `capi/template.yaml` in the repository is parsed by a test that globs for it, so a new
-provider gets contract validation the moment it ships the file. Beyond that, the parity harness in
+Every `capi/template.yaml` in the repository is picked up by a globbing test, so a new provider
+gets contract validation the moment the file ships. Beyond that, the parity harness in
 `modules/040-node-manager/images/node-controller/src/internal/machinetemplate/provider_parity_test.go`
 takes one fixture per provider and requires:
 
@@ -202,6 +212,6 @@ Add your provider there before merging a migration. Self-check list:
 - [ ] `apiVersion`/`kind` match the registration secret.
 - [ ] Every optional field read through `get`/`hasKey`.
 - [ ] No clock/random/env/crypto function (it would not parse anyway).
-- [ ] `rolloutFields` covers everything the cloud cannot change on a live VM, and nothing that is
-      not a property of the VM.
+- [ ] `rolloutFields` covers everything the cloud cannot change on a live VM, and nothing that
+      is not a property of the VM.
 - [ ] Parity fixture added, both parity tests green.
