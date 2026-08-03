@@ -126,13 +126,12 @@ Summary:
          [[ -z "$modules" ]] && return 0
          local registry_modules=$(d8-crane ls "$repo" 2>/dev/null)
 
-         echo "Модуль | Наличие модуля | Наличие версии"
-         echo "-------|----------------|---------------"
+         echo "Модуль | Наличие модуля"
+         echo "-------|---------------"
 
          echo "$modules" | while read module version; do
             grep -qx "$module" <<< "$registry_modules" && list="✅" || list="❌"
-            d8-crane manifest "$repo/${module}/release:v${version}" &>/dev/null && release="✅" || release="❌"
-            echo "$module ($version) | $list | $release"
+            echo "$module | $list"
          done
       }
 
