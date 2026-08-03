@@ -49,6 +49,13 @@ spec:
           NET_ADMIN/NET_RAW are required for iptables/ipset and routing;
           SYS_PTRACE/SYS_ADMIN are required to inspect and enter pod network namespaces;
           DAC_OVERRIDE is required to write hostPath mounts owned by non-root.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Ambient mode requires hostNetwork so install-cni can coordinate with ztunnel
+          and manage pod network namespaces on the node.
   volumes:
     types:
       allowedValues:
@@ -75,5 +82,13 @@ spec:
           readOnly: false
           metadata:
             description: Host network namespaces used by CNI repair to enter pod netns.
+        - path: /proc
+          readOnly: true
+          metadata:
+            description: Host procfs used in ambient mode to inspect and enter pod network namespaces.
+        - path: /var/run/ztunnel
+          readOnly: false
+          metadata:
+            description: Host directory shared with ztunnel for the ambient dataplane UDS socket.
 {{- end }}
 {{- end }}
