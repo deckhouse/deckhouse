@@ -199,7 +199,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 				},
 				Memory: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
-						componentKubeApiserver: {AppliedBytes: ptr.To(int64(512 * 1024 * 1024)), LastChange: "2026-07-01T00:00:00Z"},
+						componentKubeApiserver: {AppliedMB: ptr.To(int64(512)), LastChange: "2026-07-01T00:00:00Z"},
 					},
 				},
 			}
@@ -212,7 +212,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Exists()).To(BeFalse())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.milliCPU").Exists()).To(BeFalse())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryMB").Int()).To(Equal(int64(512)))
 
 			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
 			Expect(ops.Exists()).To(BeTrue())
@@ -235,7 +235,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 				},
 				Memory: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
-						componentKubeApiserver: {AppliedBytes: ptr.To(int64(512 * 1024 * 1024)), LastChange: "2026-07-01T00:00:00Z"},
+						componentKubeApiserver: {AppliedMB: ptr.To(int64(512)), LastChange: "2026-07-01T00:00:00Z"},
 					},
 				},
 			}
@@ -248,7 +248,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Exists()).To(BeFalse())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.milliCPU").Exists()).To(BeFalse())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(512 * 1024 * 1024)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryMB").Int()).To(Equal(int64(512)))
 
 			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
 			Expect(ops.Exists()).To(BeTrue())
@@ -266,7 +266,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			f.ValuesSetFromYaml("controlPlaneManager.internal.resourcesRequests.components", []byte(`
 kubeApiserver:
   milliCPU: 700
-  memoryBytes: 536870912
+  memoryMB: 536
 etcd:
   milliCPU: 800
 `))
@@ -280,7 +280,7 @@ etcd:
 				},
 				Memory: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
-						componentKubeApiserver: {AppliedBytes: ptr.To(int64(512 * 1024 * 1024)), LastChange: "2026-07-01T00:00:00Z"},
+						componentKubeApiserver: {AppliedMB: ptr.To(int64(512)), LastChange: "2026-07-01T00:00:00Z"},
 					},
 				},
 			}
@@ -316,13 +316,13 @@ etcd:
 			f.RunHook()
 		})
 
-		It("commits milliCPU and memoryBytes together", func() {
+		It("commits milliCPU and memoryMB together", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256 * 1000 * 1000)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryMB").Int()).To(Equal(int64(256)))
 			// Full initial snapshot materializes every component in one values write.
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.milliCPU").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.memoryBytes").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.memoryMB").Exists()).To(BeTrue())
 		})
 	})
 
@@ -356,10 +356,10 @@ etcd:
 			f.RunHook()
 		})
 
-		It("commits memoryBytes despite empty memory key", func() {
+		It("commits memoryMB despite empty memory key", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256 * 1000 * 1000)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryMB").Int()).To(Equal(int64(256)))
 		})
 	})
 

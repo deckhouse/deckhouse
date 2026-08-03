@@ -55,7 +55,7 @@ properties:
                     type: integer
                     format: int64
                     minimum: 0
-                  memoryBytes:
+                  memoryMB:
                     type: integer
                     format: int64
                     minimum: 0
@@ -67,7 +67,7 @@ properties:
                     type: integer
                     format: int64
                     minimum: 0
-                  memoryBytes:
+                  memoryMB:
                     type: integer
                     format: int64
                     minimum: 0
@@ -79,7 +79,7 @@ properties:
                     type: integer
                     format: int64
                     minimum: 0
-                  memoryBytes:
+                  memoryMB:
                     type: integer
                     format: int64
                     minimum: 0
@@ -91,7 +91,7 @@ properties:
                     type: integer
                     format: int64
                     minimum: 0
-                  memoryBytes:
+                  memoryMB:
                     type: integer
                     format: int64
                     minimum: 0

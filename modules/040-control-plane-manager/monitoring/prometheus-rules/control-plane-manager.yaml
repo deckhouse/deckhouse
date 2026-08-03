@@ -122,7 +122,7 @@
         weakest master node does not have enough allocatable budget.
 
         {{- if eq $labels.resource "memory" }}
-        Missing capacity: `{{ $value | humanize1024 }}B`.
+        Missing capacity: `{{ $value }}M`.
         {{- else }}
         Missing capacity: `{{ $value }}m` CPU.
         {{- end }}
