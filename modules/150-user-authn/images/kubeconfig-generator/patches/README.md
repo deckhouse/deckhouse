@@ -10,4 +10,9 @@ patch
 
 ### 003-fix-cves.patch
 
-Fixes CVE-2025-22868 CVE-2024-28180
+#### Fix CVEs
+
+- CVE-2024-28180
+- CVE-2025-22868
+- CVE-2026-39824
+- CVE-2026-56852

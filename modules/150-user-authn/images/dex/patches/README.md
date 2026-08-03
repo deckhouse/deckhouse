@@ -90,16 +90,30 @@ Added cache get parameter to main CSS file URL that gets opaque dex build identi
 
 ### 014-fix-cve.patch
 
-This patch fixes:
+#### Fix CVEs
 
 - CVE-2025-47914
 - CVE-2025-58181
+- CVE-2026-25680
+- CVE-2026-25681
 - CVE-2026-26958
-- CVE-2026-32952
-- CVE-2026-33487 
-- CVE-2026-34986
-- CVE-2026-33186
+- CVE-2026-27136
 - CVE-2026-29181
+- CVE-2026-32952
+- CVE-2026-33186
+- CVE-2026-33487
+- CVE-2026-33814
+- CVE-2026-34986
+- CVE-2026-39821
+- CVE-2026-39824
+- CVE-2026-42502
+- CVE-2026-42506
+- CVE-2026-46600
+- CVE-2026-56852
+
+#### GHSA
+
+- GHSA-hrxh-6v49-42gf
 
 ### 015-ratelimit-lock-unlock-users.patch
 
