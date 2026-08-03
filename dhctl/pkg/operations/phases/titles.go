@@ -70,13 +70,11 @@ func LoadTitles() (*Titles, error) {
 }
 
 // Phase returns the English title of a phase by its code.
-// If the phase is not found, returns the code itself.
 func (t *Titles) Phase(phase OperationPhase) string {
 	return t.phase[ENLanguage][phase]
 }
 
 // SubPhase returns the English title of a subphase by its code.
-// If the subphase is not found, returns the code itself.
 func (t *Titles) SubPhase(subPhase OperationSubPhase) string {
 	return t.subPhase[ENLanguage][subPhase]
 }
