@@ -15,6 +15,8 @@ lang: ru
 
 ### Изменение версии Kubernetes
 
+Понижение версии возможно только на одну минорную назад от максимальной версии, когда-либо использовавшейся в кластере. Обновление вперёд — по одной минорной версии за раз.
+
 1. Откройте редактирование [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration):
 
    ```shell

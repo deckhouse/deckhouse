@@ -39,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -125,7 +126,7 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 
 		nodeStateSecrets, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).List(timeoutCtx, listOpts)
 		if err != nil {
-			if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+			if kubeerrors.IsPermanentAuthError(ctx, err) {
 				// A permission failure will not resolve by retrying.
 				return err
 			}
@@ -556,9 +557,17 @@ func ensureNamespace(ctx context.Context, kubeCl *client.KubernetesClient, name 
 		})
 }
 
-func DeleteInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, secretName string) error {
+// DeleteInfrastructureState removes the state secret of a destroyed node. Like entity.DeleteNode
+// it resolves the client per attempt, because destroying a master node switches the converge to
+// another one and stops the client this loop would otherwise keep using.
+func DeleteInfrastructureState(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, secretName string) error {
 	return retry.NewLoop(fmt.Sprintf("Delete infrastructure state %s", secretName), 450, 1*time.Second).
 		RunContext(ctx, func() error {
+			kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+			if err != nil {
+				return err
+			}
+
 			return kubeCl.CoreV1().Secrets("d8-system").Delete(ctx, secretName, metav1.DeleteOptions{})
 		})
 }

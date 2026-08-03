@@ -82,11 +82,12 @@ rules:
 - apiGroups: ["deckhouse.io"]
   resources: ["nodegroups"]
   verbs: ["get", "list", "watch"]
-# In-cluster dhctl parses the provider ModuleConfig (mc-flow, get-by-name)
-# and lists provider InstanceClasses for CloudProviderVars.
+# In-cluster dhctl parses the provider ModuleConfig (mc-flow, get-by-name),
+# lists provider InstanceClasses for CloudProviderVars, and reads the global
+# ModuleConfig for the cluster prefix (migrated from ClusterConfiguration.cloud.prefix).
 - apiGroups: ["deckhouse.io"]
   resources: ["moduleconfigs"]
-  resourceNames: ["cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}"]
+  resourceNames: ["cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}", "global"]
   verbs: ["get"]
 - apiGroups: ["deckhouse.io"]
   resources: ["{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"]

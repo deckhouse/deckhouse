@@ -1,4 +1,4 @@
-2791
+2793
 1GB
 2GB
 5XX
@@ -1671,6 +1671,7 @@ VNet
 VNets
 VNIC
 VNicProfileId
+VolumeAttachment
 VolumeGroup
 volumeMounts
 VolumeSnapshot
@@ -1779,6 +1780,7 @@ ZvirtInstanceClass
 авторизовывать
 авторизовываться
 авторизующий
+авторизующим
 автоскейлерам
 автоскейлинг
 автосогласования
@@ -1841,6 +1843,7 @@ ZvirtInstanceClass
 бакету
 балансировщик
 балансировщика
+балансировщиками
 балансировщиках
 балансировщике
 балансировщики

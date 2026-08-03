@@ -42,6 +42,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
@@ -69,7 +70,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -140,9 +140,9 @@ type moduleManagerI interface {
 	IsModuleEnabled(name string) bool
 }
 
-// New creates and initializes a Runtime with all subsystems wired together.
+// Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -844,9 +844,14 @@ func (r *Runtime) GetStatus(name string) status.Status {
 	return r.status.GetStatus(name)
 }
 
-// GetStatusQueue returns the status queue for external access
-func (r *Runtime) GetStatusQueue() workqueue.TypedRateLimitingInterface[string] {
-	return r.status.Queue()
+// GetAppStatusQueue returns the application status queue for external access
+func (r *Runtime) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.AppQueue()
+}
+
+// GetModuleStatusQueue returns the module status queue for external access
+func (r *Runtime) GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.ModuleQueue()
 }
 
 // PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.

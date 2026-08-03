@@ -274,7 +274,13 @@ spec:
 
 К виртуальным машинам, которые вы хотите добавить к кластеру в качестве узлов, добавьте `Network Tag`, аналогичный префиксу кластера.
 
-Префикс кластера можно узнать, воспользовавшись следующей командой:
+Префикс кластера можно узнать с помощью команды:
+
+```shell
+d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+```
+
+Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса ClusterConfiguration (префикс перенесён в ModuleConfig `global`):
 
 ```shell
 d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
