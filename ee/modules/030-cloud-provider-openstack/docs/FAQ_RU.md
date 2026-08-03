@@ -20,7 +20,7 @@ title: "Cloud provider — OpenStack: FAQ"
 
 DKP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
 
-Если используется аннтоация `loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
+Если используется аннотация`loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
 
 * находиться в подсети кластера;
 * иметь состояние `ACTIVE`.
