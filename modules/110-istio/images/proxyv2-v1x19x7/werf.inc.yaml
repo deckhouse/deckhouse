@@ -8,6 +8,7 @@
 #      and https://github.com/istio/istio/blob/1.19.7/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
+fromCacheVersion: "2026-08-03 14:37"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
   add: /src/istio/out/pilot-agent
@@ -114,6 +115,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
+fromCacheVersion: "2026-08-03 14:37"
 final: false
 shell:
   install:
