@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"encoding/base64"
+	"fmt"
 
 	_ "github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
@@ -99,10 +100,28 @@ data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration))
 	)
 
-	// Set default value for test purposes. Normally this var set to specific kubernetes version on the build stage.
+	moduleConfigYAML := func(version string) string {
+		settings := ""
+		if version != "" {
+			settings = fmt.Sprintf("\n  settings:\n    kubernetesVersion: %q", version)
+		}
+		return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  enabled: true
+  version: 1%s
+`, settings)
+	}
+
+	// Set default value for test purposes. Normally this var set to specific kube version on the build stage.
 	hooks.DefaultKubernetesVersion = "1.36"
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Cluster has a d8-cluster-configuration Secret", func() {
 		BeforeEach(func() {
@@ -123,11 +142,18 @@ data:
 			Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal("10.111.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.222.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
 
-			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			value := metrics[0].Value
-			Expect(*value).To(Equal(float64(256)))
+			var maxNodes *float64
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
+					maxNodes = m.Value
+					break
+				}
+			}
+			Expect(maxNodes).NotTo(BeNil())
+			Expect(*maxNodes).To(Equal(float64(256)))
 		})
 
 		Context("d8-cluster-configuration Secret has changed", func() {
@@ -149,11 +175,18 @@ data:
 				Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal("10.122.0.0/16"))
 				Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 				Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
+				Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
+				Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
 
-				metrics := f.MetricsCollector.CollectedMetrics()
-				Expect(metrics).To(HaveLen(1))
-				value := metrics[0].Value
-				Expect(*value).To(Equal(float64(1024)))
+				var maxNodes *float64
+				for _, m := range f.MetricsCollector.CollectedMetrics() {
+					if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
+						maxNodes = m.Value
+						break
+					}
+				}
+				Expect(maxNodes).NotTo(BeNil())
+				Expect(*maxNodes).To(Equal(float64(1024)))
 			})
 		})
 
@@ -167,12 +200,15 @@ data:
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(f.ValuesGet("global.clusterConfiguration").Exists()).To(Not(BeTrue()))
+				Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+				Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
 			})
 		})
 	})
 
 	Context("Cluster doesn't have a d8-cluster-configuration Secret", func() {
 		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 0))
@@ -183,6 +219,8 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(f.ValuesGet("global.clusterConfiguration").Exists()).To(Not(BeTrue()))
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
 		})
 	})
 
@@ -206,11 +244,62 @@ data:
 			Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal("10.122.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
 
-			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(1))
-			value := metrics[0].Value
-			Expect(*value).To(Equal(float64(1024)))
+			var maxNodes *float64
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == "d8_max_nodes_amount_by_pod_cidr" {
+					maxNodes = m.Value
+					break
+				}
+			}
+			Expect(maxNodes).NotTo(BeNil())
+			Expect(*maxNodes).To(Equal(float64(1024)))
+		})
+	})
+
+	Context("targetKubernetesVersion priority MC / CC / Default", func() {
+		It("pinned ModuleConfig wins over pinned ClusterConfiguration", func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("1.35"), 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.35"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
+			// Backward-compat: global.clusterConfiguration still reflects the Secret (CC pin).
+			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.33"))
+		})
+
+		It("ModuleConfig Automatic overrides a pinned ClusterConfiguration", func() {
+			// Presence of the ModuleConfig setting decides which document owns the version, so an
+			// explicit Automatic means "track the Deckhouse default" and the CC pin is ignored.
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("Automatic"), 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			// Backward-compat: global.clusterConfiguration still reflects the Secret (CC pin).
+			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.33"))
+		})
+
+		It("unset ModuleConfig defers to a pinned ClusterConfiguration", func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML(""), 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
+		})
+
+		It("unset ModuleConfig and Automatic ClusterConfiguration resolve to Default", func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
 		})
 	})
 })
