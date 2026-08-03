@@ -354,25 +354,14 @@ function ipv4InCidr(ip, cidr) {
   return n >= c.start && n <= c.end;
 }
 
-// #gs-next-step blocked until form valid.
+// Toggle blocked state of #gs-next-step.
 function toggleNextStepEnabled(valid) {
   const $next = $('#gs-next-step');
   if (!$next.length) return;
   if (valid) {
     $next.removeClass('gs-next-step--blocked');
     $next.attr('aria-disabled', 'false');
-    const saved = $next.attr('data-href');
-    if (saved) {
-      $next.attr('href', saved);
-    }
-    $next.css('pointer-events', '');
   } else {
-    const href = $next.attr('href');
-    if (href && href !== '#') {
-      $next.attr('data-href', href);
-    }
-    $next.attr('href', '#');
-    $next.css('pointer-events', 'none');
     $next.addClass('gs-next-step--blocked');
     $next.attr('aria-disabled', 'true');
   }
@@ -382,9 +371,7 @@ function toggleNextStepEnabled(valid) {
 function bindNextStepGuard() {
   $(document).on('click', '#gs-next-step.gs-next-step--blocked', function (e) {
     e.preventDefault();
-    if (typeof validateClusterForm === 'function') {
-      validateClusterForm({ strictCidr: true, showAllErrors: true });
-    }
+    validateClusterForm({ strictCidr: true, showAllErrors: true });
     return false;
   });
 }

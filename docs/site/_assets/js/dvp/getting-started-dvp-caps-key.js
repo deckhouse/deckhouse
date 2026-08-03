@@ -96,8 +96,12 @@ function dvpFormatEd25519PublicKey(publicKey, comment) {
   return 'ssh-ed25519 ' + dvpBytesToBase64(blob) + ' ' + (comment || 'dvp-caps');
 }
 
-function dvpAsciiToBase64(str) {
-  return btoa(str);
+// Reveal the pre-rendered CAPS_KEY_WARNING.liquid alert.
+function dvpShowCapsKeyWarning() {
+  var banner = document.getElementById('dvp-caps-key-warning');
+  if (banner) {
+    banner.classList.remove('hide');
+  }
 }
 
 // Generate Ed25519 CAPS key pair once per GS session (sessionStorage).
@@ -115,6 +119,7 @@ function generate_caps_ssh_key(force) {
     !globalThis.crypto.subtle ||
     typeof globalThis.crypto.subtle.generateKey !== 'function'
   ) {
+    dvpShowCapsKeyWarning();
     return Promise.reject(new Error('Web Crypto API is not available in this browser'));
   }
 
@@ -134,7 +139,11 @@ function generate_caps_ssh_key(force) {
       var pem = dvpEncodeOpenSSHEd25519PrivateKey(seed, publicKeyRaw, 'dvp-caps');
       var publicKeyLine = dvpFormatEd25519PublicKey(publicKeyRaw, 'dvp-caps');
 
-      sessionStorage.setItem(STORAGE_KEYS.capsPrivateKeyB64, dvpAsciiToBase64(pem));
+      sessionStorage.setItem(STORAGE_KEYS.capsPrivateKeyB64, btoa(pem));
       sessionStorage.setItem(STORAGE_KEYS.capsPublicKey, publicKeyLine);
+    })
+    .catch(function (err) {
+      dvpShowCapsKeyWarning();
+      throw err;
     });
 }

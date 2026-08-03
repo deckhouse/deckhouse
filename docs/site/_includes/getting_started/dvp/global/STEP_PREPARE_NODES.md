@@ -1,5 +1,7 @@
 {%- include getting_started/dvp/global/partials/gs_scripts.liquid step='prepare' -%}
 
+{% include getting_started/dvp/global/partials/CAPS_KEY_WARNING.liquid %}
+
 Prepare cluster nodes: configure the NFS server and worker node before platform installation.
 
 ## Configure the NFS server
@@ -80,7 +82,7 @@ Private key:
 {% endalert %}
 
 {% alert level="warning" %}
-If you deploy the lab on virtual machines, enable nested virtualization on the hypervisor for the **worker node**. See [installation requirements](/products/virtualization-platform/gs/bm/step1.html#hardware-and-software-requirements).
+If you deploy the lab on virtual machines, enable nested virtualization on the hypervisor for the **worker node**. See [installation requirements](./#hardware-and-software-requirements).
 {% endalert %}
 
 To continue setup, create the `caps` user by running the following commands on the **worker node**:

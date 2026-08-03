@@ -138,77 +138,68 @@ function dvpPlaceholderRules(values, scope) {
   var v = values || dvpSessionValues();
   var rules = [];
 
-  function add(rule) {
-    rules.push(rule);
-  }
-
   if (scope === 'config') {
     // Longest token names first so substring replacement stays safe.
-    add({
+    rules.push({
       token: '<GENERATED_PASSWORD_HASH>',
       getValue: function () { return v.hash; },
-      keepTokenIfEmpty: true,
       omitWhenFalsy: true,
     });
-    add({
+    rules.push({
       token: '<CAPS_SSH_PRIVATE_KEY_BASE64>',
       getValue: function () { return v.capsPrivateKeyB64; },
-      keepTokenIfEmpty: true,
       omitWhenFalsy: true,
     });
-    add({
+    rules.push({
       token: '<YOUR_ACCESS_STRING_IS_HERE>',
       getValue: function () { return v.licenseCfg; },
-      keepTokenIfEmpty: true,
       omitWhenFalsy: true,
     });
-    add({
+    rules.push({
       token: '<GENERATED_PASSWORD>',
       getValue: function () { return v.password; },
-      keepTokenIfEmpty: true,
       omitWhenFalsy: true,
     });
-    add({
+    rules.push({
       token: '<WORKER_NODE_IP>',
       getValue: function () { return v.workerIp; },
-      keepTokenIfEmpty: true,
       omitWhenFalsy: true,
     });
   }
 
   if (scope === 'command') {
-    add({
+    rules.push({
       token: '<CAPS_SSH_PRIVATE_KEY>',
       getValue: dvpCapsPrivateKeyPem,
       keepTokenIfEmpty: true,
     });
-    add({
+    rules.push({
       token: '<MASTER_IP>',
       getValue: function () { return v.master; },
       keepTokenIfEmpty: true,
     });
-    add({
+    rules.push({
       token: '<GENERATED_PASSWORD>',
       getValue: function () { return v.password; },
       keepTokenIfEmpty: true,
     });
   }
 
-  add({ token: '<NFS_SHARE>', getValue: function () { return v.nfsS; }, keepTokenIfEmpty: scope === 'command' });
-  add({ token: '<NFS_HOST>', getValue: function () { return v.nfsH; }, keepTokenIfEmpty: true });
-  add({ token: '<INTERNAL_NETWORK_CIDRS>', getValue: function () { return v.internal; }, keepTokenIfEmpty: true });
-  add({ token: '<POD_SUBNET_CIDR>', getValue: function () { return v.pod; } });
-  add({ token: '<SERVICE_SUBNET_CIDR>', getValue: function () { return v.svc; } });
-  add({ token: '<VIRTUAL_MACHINE_CIDRS>', getValue: function () { return v.vm; } });
-  add({ token: '<PUBLIC_DOMAIN_TEMPLATE>', getValue: function () { return v.pubDomain; } });
-  add({
+  rules.push({ token: '<NFS_SHARE>', getValue: function () { return v.nfsS; }, keepTokenIfEmpty: scope === 'command' });
+  rules.push({ token: '<NFS_HOST>', getValue: function () { return v.nfsH; }, keepTokenIfEmpty: true });
+  rules.push({ token: '<INTERNAL_NETWORK_CIDRS>', getValue: function () { return v.internal; }, keepTokenIfEmpty: true });
+  rules.push({ token: '<POD_SUBNET_CIDR>', getValue: function () { return v.pod; } });
+  rules.push({ token: '<SERVICE_SUBNET_CIDR>', getValue: function () { return v.svc; } });
+  rules.push({ token: '<VIRTUAL_MACHINE_CIDRS>', getValue: function () { return v.vm; } });
+  rules.push({ token: '<PUBLIC_DOMAIN_TEMPLATE>', getValue: function () { return v.pubDomain; } });
+  rules.push({
     token: '<CAPS_SSH_PUBLIC_KEY>',
     getValue: function () { return v.capsPublicKey; },
     keepTokenIfEmpty: true,
   });
 
   if (scope === 'command') {
-    add({
+    rules.push({
       token: '<WORKER_NODE_IP>',
       getValue: function () { return v.workerIp; },
       keepTokenIfEmpty: true,

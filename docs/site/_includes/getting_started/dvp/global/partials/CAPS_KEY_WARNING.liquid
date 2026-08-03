@@ -1,0 +1,9 @@
+{%- if page.lang == 'ru' -%}
+{% alert level="warning" active="false" id="dvp-caps-key-warning" %}
+Ваш браузер не поддерживает генерацию Ed25519-ключей (Web Crypto API). Обновите браузер или сгенерируйте пару ключей вручную командой `ssh-keygen -t ed25519` и подставьте её вместо `<CAPS_SSH_PUBLIC_KEY>` и `<CAPS_SSH_PRIVATE_KEY>`.
+{% endalert %}
+{%- else -%}
+{% alert level="warning" active="false" id="dvp-caps-key-warning" %}
+Your browser cannot generate Ed25519 keys (Web Crypto API). Update your browser or generate a key pair manually with `ssh-keygen -t ed25519` and substitute it for `<CAPS_SSH_PUBLIC_KEY>` and `<CAPS_SSH_PRIVATE_KEY>`.
+{% endalert %}
+{%- endif -%}

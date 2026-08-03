@@ -16,6 +16,7 @@ var STORAGE_KEYS = {
   capsPublicKey: 'dhctl-caps-public-key',
 };
 
+// Keep in sync with placeholders in step_cluster_setup_fields.liquid.
 var DEFAULTS = {
   pod: '10.115.0.0/16',
   service: '10.225.0.0/16',

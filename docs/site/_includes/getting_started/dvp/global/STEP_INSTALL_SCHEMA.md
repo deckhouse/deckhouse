@@ -60,8 +60,8 @@ Installing Deckhouse Virtualization Platform requires the following components t
   - **BIOS/UEFI**:
     - Hardware virtualization enabled in firmware settings.
   - **Resources** for a one-master, one-worker cluster:
-    - at least 6 vCPU;
-    - at least 8 GB RAM;
+    - at least 6 vCPU (_8 vCPU recommended_);
+    - at least 8 GB RAM (_16 GB of RAM recommended_);
     - at least 60 GB fast disk space with 400+ IOPS.
   - **Operating system**:
     - a [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html);

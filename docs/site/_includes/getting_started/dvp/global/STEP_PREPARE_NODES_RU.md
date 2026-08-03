@@ -1,5 +1,7 @@
 {%- include getting_started/dvp/global/partials/gs_scripts.liquid step='prepare' -%}
 
+{% include getting_started/dvp/global/partials/CAPS_KEY_WARNING.liquid %}
+
 Подготовьте узлы кластера: настройте NFS-сервер и worker-узел до установки платформы.
 
 ## Настройка NFS-сервера
@@ -80,7 +82,7 @@
 {% endalert %}
 
 {% alert level="warning" %}
-При развёртывании тестового окружения на виртуальных машинах (ВМ) включите nested virtualization на гипервизоре для **worker-узла**. См. [требования к установке](/products/virtualization-platform/gs/bm/step1.html#hardware-and-software-requirements).
+При развёртывании тестового окружения на виртуальных машинах (ВМ) включите nested virtualization на гипервизоре для **worker-узла**. См. [требования к установке](./#требования-к-аппаратному-и-программному-обеспечению).
 {% endalert %}
 
 Для дальнейшей настройки создайте пользователя `caps`, выполнив следующие команды на **worker-узле** :
