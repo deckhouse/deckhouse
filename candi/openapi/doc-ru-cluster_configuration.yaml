@@ -1,3 +1,8 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /candi/openapi/doc-ru-cluster_configuration.yaml
+# /ee/cse/candi/openapi/doc-ru-cluster_configuration.yaml
+
 kind: ClusterConfiguration
 apiVersions:
 - apiVersion: deckhouse.io/v1
@@ -138,4 +143,3 @@ apiVersions:
               Для настройки wildcard-доменов используйте написание вида ".example.com".
 
               > **Внимание.** Если в кластере предполагается взаимодействие подов с сервисами, размещенными в сети узлов кластера, то укажите список подсетей, которые используются на узлах.
-
