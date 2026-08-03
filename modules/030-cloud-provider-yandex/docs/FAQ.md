@@ -45,16 +45,15 @@ If the dhcpOptions parameter is set, all DNS are routed to the DNS servers speci
 
 **Do not use** this option if the recursive DNSs specified cannot resolve the same list of zones that the recursive DNSs in the Yandex Cloud subnet can resolve.
 
-## Changing networkType does not recreate CloudEphemeral nodes
+## Changing `networkType` does not recreate CloudEphemeral nodes
 
-In clusters that use Machine Controller Manager (MCM), changing the [`networkType`](cr.html#yandexinstanceclass-v1-spec-networktype) parameter in YandexInstanceClass does not trigger automatic recreation of existing CloudEphemeral nodes. The MachineClass is updated, but virtual machines in Yandex Cloud keep the previous network acceleration type.
+In clusters that use Machine Controller Manager (MCM), changing the [`networkType`](cr.html#yandexinstanceclass-v1-spec-networktype) parameter in a YandexInstanceClass resource does not trigger automatic recreation of existing CloudEphemeral nodes. Although the MachineClass is updated, the network acceleration type of existing virtual machines in Yandex Cloud remains unchanged.
 
-Deckhouse does not include `networkType` in the MCM checksum: adding it would recreate CloudEphemeral nodes in all clusters where the parameter is already set, even if it was not changed. In Cluster API, `networkType` is already included in the checksum, and migration to CAPI implies recreating ephemeral nodes.
+DKP intentionally does not take the `networkType` parameter into account when determining whether CloudEphemeral nodes should be recreated in MCM. If it did, updating DKP would recreate CloudEphemeral nodes in all clusters where `networkType` is specified, even if its value had not changed.
 
-To apply a new `networkType` value:
+In Cluster API, the `networkType` parameter is taken into account when determining whether nodes should be recreated, so changing it automatically triggers node recreation. New CloudEphemeral NodeGroups in Yandex Cloud use Cluster API by default.
 
-1. Recreate the CloudEphemeral nodes manually. Follow the [node-manager instructions](/modules/node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
-1. Or migrate to Cluster API, where changing `networkType` triggers node recreation.
+To apply a new `networkType` value, recreate the CloudEphemeral nodes manually by following the [documentation](/modules/node-manager/faq.html#how-to-recreate-ephemeral-cloud-machines-with-a-new-configuration).
 
 ## Setting a custom StorageClass as default
 

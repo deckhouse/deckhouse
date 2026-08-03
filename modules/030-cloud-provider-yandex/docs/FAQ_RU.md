@@ -45,16 +45,15 @@ reserved: true
 
 **Не используйте** эту опцию, если указанные рекурсивные DNS-серверы не могут разрешать тот же список зон, что сможет разрешать рекурсивный DNS-сервер в подсети Yandex Cloud.
 
-## Изменение networkType не пересоздаёт CloudEphemeral-узлы
+## Изменение `networkType` не пересоздаёт CloudEphemeral-узлы
 
-В кластерах, использующих Machine Controller Manager (MCM), изменение параметра [`networkType`](cr.html#yandexinstanceclass-v1-spec-networktype) в YandexInstanceClass не приводит к автоматическому пересозданию существующих CloudEphemeral-узлов. MachineClass обновляется, но виртуальные машины в Yandex Cloud сохраняют прежний тип сетевого ускорения.
+В кластерах, использующих Machine Controller Manager (MCM), изменение параметра [`networkType`](cr.html#yandexinstanceclass-v1-spec-networktype) в ресурсе YandexInstanceClass не приводит к автоматическому пересозданию существующих CloudEphemeral-узлов. Хотя MachineClass обновляется, тип сетевого ускорения у уже созданных виртуальных машин в Yandex Cloud не изменяется.
 
-Deckhouse не включает `networkType` в checksum MCM: добавление поля привело бы к пересозданию CloudEphemeral-узлов во всех кластерах, где параметр уже задан, даже без его изменения. В Cluster API параметр `networkType` уже учитывается в checksum, а миграция на CAPI подразумевает пересоздание эфемерных узлов.
+DKP намеренно не учитывает параметр `networkType` при определении необходимости пересоздания CloudEphemeral-узлов в MCM. Если бы он учитывался, обновление DKP привело бы к пересозданию CloudEphemeral-узлов во всех кластерах, где `networkType` уже указан, даже если его значение не изменялось.
 
-Чтобы применить новое значение `networkType`:
+В Cluster API параметр `networkType` учитывается при определении необходимости пересоздания узлов, поэтому его изменение запускает их обновление автоматически. Новые CloudEphemeral NodeGroup в Yandex по умолчанию используют CAPI.
 
-1. Пересоздайте CloudEphemeral-узлы вручную. Следуйте [инструкции модуля node-manager](/modules/node-manager/faq.html#как-пересоздать-эфемерные-машины-в-облаке-с-новой-конфигурацией).
-1. Или выполните миграцию на Cluster API, где изменение `networkType` запускает пересоздание узлов.
+Чтобы применить новое значение `networkType` пересоздайте CloudEphemeral-узлы вручную — следуйте [инструкции в документации](/modules/node-manager/faq.html#как-пересоздать-эфемерные-машины-в-облаке-с-новой-конфигурацией).
 
 ## Назначение произвольного StorageClass используемого по умолчанию
 
