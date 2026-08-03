@@ -97,7 +97,10 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {
-			progressCh, finishProgress := phases.InitProgress(ctx, logger.FromContext(ctx), "Destroy cluster")
+			progressCh, finishProgress, err := phases.InitProgress(ctx, logger.FromContext(ctx), "Destroy cluster")
+			if err != nil {
+				return err
+			}
 			defer finishProgress()
 
 			onUpdateFunc := func(progress phases.Progress) error {

@@ -289,7 +289,10 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	printBanner(ctx)
 
 	if interactive {
-		progressCh, finishProgress := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
+		progressCh, finishProgress, err := phases.InitProgress(ctx, dhlog.FromContext(ctx), "Bootstrap cluster")
+		if err != nil {
+			return err
+		}
 		bctx.finishProgress = finishProgress
 
 		onUpdateFunc := func(progress phases.Progress) error {

@@ -262,16 +262,19 @@ type phasesOpts struct {
 	clusterConfig ClusterConfig
 }
 
-func operationPhases(operation Operation, opts phasesOpts) []PhaseWithSubPhases {
-	p := map[Operation][]PhaseWithSubPhases{
+func allOperationPhases() map[Operation][]PhaseWithSubPhases {
+	return map[Operation][]PhaseWithSubPhases{
 		OperationBootstrap:       BootstrapPhases(),
 		OperationConverge:        ConvergePhases(),
 		OperationCheck:           CheckPhases(),
 		OperationDestroy:         DestroyPhases(),
 		OperationCommanderAttach: CommanderAttachPhases(),
 		OperationCommanderDetach: CommanderDetachPhases(),
-	}[operation]
+	}
+}
 
+func operationPhases(operation Operation, opts phasesOpts) []PhaseWithSubPhases {
+	p := allOperationPhases()[operation]
 	phases := make([]PhaseWithSubPhases, 0, len(p))
 	for _, phase := range p {
 		if phase.includeIf == nil || phase.includeIf(opts) {

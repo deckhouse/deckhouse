@@ -132,6 +132,11 @@ var commandList = []Command{
 		DefineFunc: commands.DefineDestroyCommand,
 	},
 	{
+		Name:       "phase-catalog",
+		Help:       "Print the phase and subphase title catalog as JSON.",
+		DefineFunc: commands.DefinePhaseCatalogCommand,
+	},
+	{
 		Name:       "session",
 		Help:       "SSH tunnel proxy to Kubernetes cluster and save local kubeconfig for kubectl.",
 		DefineFunc: commands.DefineSessionCommand,
