@@ -122,7 +122,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	secret := cloudSecrets[0]
 
-	discoveryDataJSON := secret.Data["discovery-data.json"]
+	discoveryDataJSON := migrateLegacyIsDefaultField(secret.Data["discovery-data.json"])
 
 	if err := validation.ValidateData([]string{"/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi", "/deckhouse/candi/cloud-providers/zvirt/openapi"}, &discoveryDataJSON); err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
@@ -141,6 +141,47 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 	}
 
 	return nil
+}
+
+// migrateLegacyIsDefaultField renames the legacy "IsDefault" storage domain property to "isDefault".
+// Discovery data persisted by deckhouse-controller versions prior to the fix in
+// https://github.com/deckhouse/deckhouse/pull/13386 used the wrong JSON key, and strict schema
+// validation permanently rejects such secrets with "storageDomains.IsDefault is a forbidden property"
+// unless the legacy key is normalized first.
+func migrateLegacyIsDefaultField(raw []byte) []byte {
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return raw
+	}
+
+	domains, ok := data["storageDomains"].([]any)
+	if !ok {
+		return raw
+	}
+
+	changed := false
+	for _, item := range domains {
+		domain, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		if v, exists := domain["IsDefault"]; exists {
+			domain["isDefault"] = v
+			delete(domain, "IsDefault")
+			changed = true
+		}
+	}
+
+	if !changed {
+		return raw
+	}
+
+	migrated, err := json.Marshal(data)
+	if err != nil {
+		return raw
+	}
+
+	return migrated
 }
 
 func handleDiscoveryDataVolumeTypes(
