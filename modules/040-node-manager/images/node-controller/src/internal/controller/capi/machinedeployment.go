@@ -260,6 +260,8 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		infraAPIGroup = infraAPIGroup[:idx]
 	}
 
+	capacityCPU, capacityMemory := r.readNodeCapacity(ctx, ng.Name)
+
 	for _, zone := range zones {
 		mdHash := sha256Hash(clusterUUID + zone)
 		mdSuffix := fmt.Sprintf("%s-%s", ng.Name, mdHash)
@@ -285,6 +287,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		if serializedTaints != "" {
 			annotations["capacity.cluster-autoscaler.kubernetes.io/taints"] = serializedTaints
 		}
+		setScaleFromZeroCapacityAnnotations(annotations, capacityCPU, capacityMemory)
 
 		commonLabels := map[string]interface{}{
 			"heritage":   "deckhouse",
@@ -609,6 +612,41 @@ func applyMachineDeploymentSpecPatch(spec map[string]interface{}, rawPatch strin
 
 	deepMergeMaps(spec, patch)
 	return nil
+}
+
+type nodeCapacityValues struct {
+	CPU    string `json:"cpu" yaml:"cpu"`
+	Memory string `json:"memory" yaml:"memory"`
+}
+
+// readNodeCapacity loads CPU/memory previously calculated by get_crds and published
+// via the d8-node-manager-capi-node-capacity ConfigMap for scale-from-zero.
+func (r *MachineDeploymentReconciler) readNodeCapacity(ctx context.Context, ngName string) (cpu, memory string) {
+	cm := &corev1.ConfigMap{}
+	if err := r.APIReader.Get(ctx, types.NamespacedName{
+		Name: nodeCapacityConfigMapName, Namespace: common.MachineNamespace,
+	}, cm); err != nil {
+		return "", ""
+	}
+	raw, ok := cm.Data[ngName]
+	if !ok || strings.TrimSpace(raw) == "" {
+		return "", ""
+	}
+	var capacity nodeCapacityValues
+	if err := sigsyaml.Unmarshal([]byte(raw), &capacity); err != nil {
+		log.FromContext(ctx).Error(err, "failed to unmarshal node capacity", "nodeGroup", ngName)
+		return "", ""
+	}
+	return capacity.CPU, capacity.Memory
+}
+
+func setScaleFromZeroCapacityAnnotations(annotations map[string]interface{}, cpu, memory string) {
+	if cpu != "" {
+		annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = cpu
+	}
+	if memory != "" {
+		annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = memory
+	}
 }
 
 func substitutePatchVariables(raw string, vars map[string]string) string {

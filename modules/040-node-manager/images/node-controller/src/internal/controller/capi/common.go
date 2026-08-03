@@ -33,6 +33,9 @@ const (
 	clusterConfigSecretNamespace = "kube-system"
 	clusterUUIDConfigMapName     = "d8-cluster-uuid"
 	clusterUUIDConfigMapNS       = "kube-system"
+	// nodeCapacityConfigMapName is rendered by helm from get_crds nodeCapacity values
+	// so CAPI MachineDeployments can advertise CPU/memory for scale-from-zero.
+	nodeCapacityConfigMapName = "d8-node-manager-capi-node-capacity"
 )
 
 type BaseWithReader struct {
