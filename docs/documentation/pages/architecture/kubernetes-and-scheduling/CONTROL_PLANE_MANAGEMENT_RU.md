@@ -129,11 +129,11 @@ description: Архитектура и функции модуля control-plane
 
 ## Мониторинг control plane кластера
 
-Модуль обеспечивает безопасный сбор метрик и предоставляет базовый набор правил мониторинга всех компонентов control plane кластера:
+Модуль [`control-plane-manager`](/modules/control-plane-manager/) обеспечивает безопасный сбор метрик и предоставляет базовый набор правил мониторинга всех компонентов control plane кластера:
 
 * **kube-apiserver**;
 * **kube-controller-manager**;
 * **kube-scheduler**;
 * **etcd**.
 
-Метрики **kube-apiserver** собираются **prometheus-main** напрямую. Метрики остальных компонентов control-plane собираются **prometheus-main** с авторизацией в kube-apiserver через компонент control-plane-proxy. Модуль `control-plane-manager` добавляет правила сбора метрик компонентов control-plane в конфигурацию **prometheus-main**.
+Метрики **kube-apiserver** собираются **prometheus-main** напрямую. Метрики остальных компонентов control-plane собираются **prometheus-main** с авторизацией в kube-apiserver через компонент control-plane-proxy. Модуль [`control-plane-manager`](/modules/control-plane-manager/) добавляет правила сбора метрик компонентов control-plane в конфигурацию **prometheus-main**.

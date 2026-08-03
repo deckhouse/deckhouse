@@ -49,7 +49,7 @@ The Level 2 C4 architecture of the [`control-plane-manager`](/modules/control-pl
 
 ![control-plane-manager module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.png)
 
-## Module components
+### Module components
 
 The module consists of the following components:
 
@@ -94,7 +94,7 @@ The module consists of the following components:
 
    * **kube-rbac-proxy***: Container with an authorization proxy based on Kubernetes RBAC, providing secure access for metrics of the components of the cluster control plane. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
 
-1. **control-plane-proxy-etcd-arbiter** (DaemonSet): Optional component that is installed in the cluster when the [`prometheus`] module(/modules/prometheus/) is enabled, if the cluster operates [in HA mode with two master nodes and an arbiter node](../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). In this case, Control-plane-proxy-etcd-arbiter runs on the arbiter node and forwards authorized requests for metrics to the etcd instance running on it.
+1. **control-plane-proxy-etcd-arbiter** (DaemonSet): Optional component that is installed in the cluster when the [`prometheus`](/modules/prometheus/) module is enabled, if the cluster operates [in HA mode with two master nodes and an arbiter node](../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). In this case, Control-plane-proxy-etcd-arbiter runs on the arbiter node and forwards authorized requests for metrics to the etcd instance running on it.
 
    It consists of a single container:
 
@@ -128,11 +128,11 @@ The following external components interact with the module:
 
 ## Cluster control plane monitoring
 
-The module provides control plane monitoring, ensuring secure metrics collection and providing a basic set of monitoring rules for the following cluster components:
+The [`control-plane-manager`](/modules/control-plane-manager/) module provides control plane monitoring, ensuring secure metrics collection and providing a basic set of monitoring rules for the following cluster components:
 
 * **kube-apiserver**
 * **kube-controller-manager**
 * **kube-scheduler**
 * **etcd**
 
-Metrics from **kube-apiserver** are collected directly by **prometheus-main**. Metrics of the other control-plane components are collected by **prometheus-main** with authorization in kube-apiserver via the control-plane-proxy component. The `control-plane-manager` module adds the corresponding metric collection rules to the **prometheus-main** configuration.
+Metrics from **kube-apiserver** are collected directly by **prometheus-main**. Metrics of the other control-plane components are collected by **prometheus-main** with authorization in kube-apiserver via the control-plane-proxy component. The [`control-plane-manager`](/modules/control-plane-manager/) module adds the corresponding metric collection rules to the **prometheus-main** configuration.
