@@ -40,6 +40,14 @@ memory: 10Mi
 {{- $_ := set $tpl_context "images" (dict "controlPlaneManager" $images) }}
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
+{{- /*
+  NOTE(kubernetesVersion-deprecation): keep — this line is why candi/control-plane/*.tpl and the
+  _authorization_config / _authentication_configuration templates may keep reading
+  .clusterConfiguration.kubernetesVersion after the field is removed from ClusterConfiguration — there it is a render-context key holding
+  the throttled effective version, not the deprecated document field. Do not "clean up" those
+  templates along with the deprecation, and do not let a ModuleConfig pin reach them directly:
+  that would bypass the one-minor-at-a-time throttling, including image tag selection.
+*/ -}}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "controlPlaneTemplatesDir" "control-plane-templates" -}}
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
@@ -336,8 +344,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: KUBERNETES_VERSION
-          value: {{ $.Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
         - name: AUTOMATIC_KUBERNETES_VERSION
