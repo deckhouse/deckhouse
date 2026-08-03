@@ -461,7 +461,7 @@ func discardAutotuneForLegacy(input *go_hook.HookInput) error {
 
 const (
 	autotuneMinMilliCPU = int64(10)
-	autotuneMinMemory   = int64(15 * 1024 * 1024) // 15 MiB
+	autotuneMinMemory   = int64(15 * 1000 * 1000) // 15 MB
 )
 
 // componentUsageFunc reads lookback-average usage for a control-plane component.
@@ -481,8 +481,8 @@ func clampRecommendation(raw float64, resourceName resourceKind, nodeBudget int6
 			v = autotuneMinMilliCPU
 		}
 	case resourceMemory:
-		// PodMetric returns MiB (rounded in PromQL); convert to bytes.
-		v = int64(math.Round(raw)) * 1024 * 1024
+		// PodMetric returns MB (rounded in PromQL); convert to bytes.
+		v = int64(math.Round(raw)) * 1000 * 1000
 		if v < autotuneMinMemory {
 			v = autotuneMinMemory
 		}
@@ -612,7 +612,7 @@ func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric stri
 	}
 
 	// custom.metrics encodes samples as milli-quantities; AsApproximateFloat64
-	// yields the natural unit (cores for cpu, MiB for memory — see PodMetric PromQL).
+	// yields the natural unit (cores for cpu, MB for memory — see PodMetric PromQL).
 	v := list.Items[0].Value.AsApproximateFloat64()
 	if math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 {
 		return 0, false, fmt.Errorf("GET %s: non-positive metric value %q", path, list.Items[0].Value.String())

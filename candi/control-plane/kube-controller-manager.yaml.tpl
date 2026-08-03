@@ -110,7 +110,7 @@ spec:
       requests:
         {{- $c := (($resourcesRequests.components | default dict).kubeControllerManager) | default dict }}
         cpu: "{{ $c.milliCPU | default (div (mul $millicpu 20) 100) }}m"
-        memory: "{{ $c.memoryBytes | default (div (mul $memory 20) 100) }}"
+        memory: "{{ div ($c.memoryBytes | default (div (mul $memory 20) 100)) 1000000 }}M"
     securityContext:
       capabilities:
         drop:
