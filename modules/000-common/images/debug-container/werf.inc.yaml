@@ -66,6 +66,10 @@ import:
   add: /src/istio/out/istioctl
   to: /usr/bin/istioctl-1.27
   before: install
+- image: istio/istioctl-v1x29x6-build-artifact
+  add: /src/istio/out/istioctl
+  to: /usr/bin/istioctl-1.29
+  before: install
 {{- end }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/bin

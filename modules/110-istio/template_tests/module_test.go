@@ -1790,6 +1790,35 @@ MY_VAR: "myvalue"
 			Expect(cniConfig.Field("data.AMBIENT_ENABLEMENT_SELECTOR").String()).To(ContainSubstring("istio.io/dataplane-mode: ambient"))
 			Expect(cniConfig.Field("data.ISTIO_OWNED_CNI_CONFIG").String()).To(Equal("false"))
 			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
+			Expect(cniConfig.Field("data.ENABLE_AMBIENT_DETECTION_RETRY").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("custom control plane for operator-free version 1.29", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.29":
+  revision: "v1x29"
+  fullVersion: "1.29.6"
+  imageSuffix: "V1x29x6"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.29"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
+			f.HelmRender()
+		})
+
+		It("renders CNI upstream defaults not implemented for 1.29", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cniConfig := f.KubernetesResource("ConfigMap", "d8-istio", "cni-config")
+			Expect(cniConfig.Field("data.ISTIO_OWNED_CNI_CONFIG").String()).To(Equal("false"))
+			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
+			Expect(cniConfig.Field("data.ENABLE_AMBIENT_DETECTION_RETRY").String()).To(Equal("false"))
 		})
 	})
 
