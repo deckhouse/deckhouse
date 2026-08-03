@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -44,7 +44,7 @@ var (
 	src              string
 	dst              string
 	metricsAddress   string
-	pprofEnabled     bool
+	pprofEnabled     string
 	pprofAddress     string
 	highAvailability bool
 )
@@ -56,7 +56,7 @@ func init() {
 	flag.StringVar(&metricsAddress, "metrics-address", ":9090", "Address to listen on metrics")
 	flag.StringVar(&pprofAddress, "pprof-address", ":6060", "Address to listen on pprof")
 	flag.BoolVar(&highAvailability, "highAvailability", false, "high availability mod")
-	pprofEnabled, _ = strconv.ParseBool(os.Getenv("PPROF_ENABLED"))
+	pprofEnabled = os.Getenv("PPROF_ENABLED")
 }
 
 func main() {
@@ -94,7 +94,7 @@ func main() {
 	}
 
 	var pprofSrv *http.Server
-	if pprofEnabled {
+	if strings.ToLower(pprofEnabled) == "true" {
 		logger.Warn("pprof enabled", slog.String("address", pprofAddress))
 		pprofSrv = pprof.NewServer(pprofAddress)
 	}

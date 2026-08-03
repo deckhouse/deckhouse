@@ -21,10 +21,7 @@ import (
 	httppprof "net/http/pprof"
 )
 
-// NewServer returns an HTTP server exposing the pprof handlers, or nil when
-// pprof is disabled. pprof is opt-in because it exposes runtime internals: it
-// is only enabled when PPROF_ENABLED is set to a truthy value (e.g. for
-// debugging memory usage).
+// NewServer returns an HTTP server exposing the pprof handlers.
 func NewServer(addr string) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/debug/pprof/", httppprof.Index)

@@ -12,10 +12,6 @@ spec:
     port: 443
     targetPort: https
     protocol: TCP
-  - name: pprof
-    port: 6060
-    targetPort: pprof
-    protocol: TCP
   selector:
     app: documentation
 {{- end }}
