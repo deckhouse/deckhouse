@@ -277,9 +277,12 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	// but keep isAutomatic=true / updateMode=Automatic and raise the drift metric.
 	publishedTarget := target
 	if isAutomatic {
-		maxUsed := cmSnap.MaxUsed
+		// Secret maxUsedControlPlaneKubernetesVersion is the canonical baseline (same source
+		// admission uses). ConfigMap label max-k8s-version is a fallback when the Secret key
+		// is still absent.
+		maxUsed := secretMaxUsed
 		if maxUsed == "" {
-			maxUsed = secretMaxUsed
+			maxUsed = cmSnap.MaxUsed
 		}
 		if maxUsed != "" {
 			inWindow, err := kubernetesVersionInMaxUsedWindow(target, maxUsed)

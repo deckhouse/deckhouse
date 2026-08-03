@@ -442,6 +442,48 @@ data:
 			Expect(found).To(BeFalse())
 		})
 
+		It("prefers Secret maxUsed over ConfigMap label when both disagree", func() {
+			// Label alone (1.36) would keep Default in-window; Secret (1.38) forces freeze.
+			// Secret must win so soft-guard matches admission's baseline.
+			secretWithMaxUsed := `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration)) + `
+  "maxUsedControlPlaneKubernetesVersion": ` + base64.StdEncoding.EncodeToString([]byte("1.38"))
+			existing := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    k8s-version: "1.38"
+    max-k8s-version: "1.36"
+data:
+  spec: |
+    desiredVersion: "1.38"
+    updateMode: Automatic
+  status: |
+    currentVersion: "1.38"
+    phase: UpToDate
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Automatic")+existing, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			value, found := findDriftMetric()
+			Expect(found).To(BeTrue())
+			Expect(value).To(Equal(1.0))
+		})
+
 		It("does not freeze an explicit Manual pin", func() {
 			existing := `
 ---
