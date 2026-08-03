@@ -27,7 +27,7 @@ If you need a different configuration, please refer to the documentation on [ins
    Requirements:
 
    - at least 4 CPU cores (_8 CPU cores recommended_)
-   - at least 8 GB of RAM (_16 GB of RAM is recommended_)
+   - at least 8 GB of RAM (_16 GB of RAM recommended_)
    - at least 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
    - [supported OS](/products/virtualization-platform/documentation/about/requirements.html#supported-os-for-platform-nodes)
    - Linux kernel version >= `5.8`

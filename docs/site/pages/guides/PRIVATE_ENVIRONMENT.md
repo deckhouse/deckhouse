@@ -58,7 +58,7 @@ Server requirements:
 
 * **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. That much disk space is needed because the bastion host temporarily holds all DKP images used for installation. Images are downloaded from the public DKP registry to the bastion host before being pushed to the private container registry and packed into archives; these steps require substantial free space.
 * **VM for the private registry**: at least 4 CPU cores, 8 GB RAM, and at least 150 GB on fast storage for DKP images. Plan disk capacity with a margin, using the bundle size after `d8 mirror push` as a guide.
-* **Cluster nodes**: choose [resources for future cluster nodes](./hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores (_8 CPU cores recommended_), 8 GB RAM (_16 GB of RAM is recommended_), and 60 GB on fast storage (400+ IOPS) per node.
+* **Cluster nodes**: choose [resources for future cluster nodes](./hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores (_8 CPU cores recommended_), 8 GB RAM (_16 GB RAM recommended_), and 60 GB on fast storage (400+ IOPS) per node.
 
 ## Preparing a private container registry
 
