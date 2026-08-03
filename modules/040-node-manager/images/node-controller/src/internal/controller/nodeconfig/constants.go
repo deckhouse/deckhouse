@@ -50,6 +50,24 @@ const (
 	registryPackagesProxyTokenSecret = "registry-packages-proxy-token"
 	registryPackagesProxyTokenKey    = "token"
 
+	// deckhouseRegistrySecret describes the registry the cluster was installed
+	// from: where its images live and how to authenticate. It is the same secret
+	// every Deckhouse pod carries as an imagePullSecret.
+	d8SystemNS              = "d8-system"
+	deckhouseRegistrySecret = "deckhouse-registry"
+	registryAddressKey      = "address"
+	registryPathKey         = "path"
+	registrySchemeKey       = "scheme"
+	registryCAKey           = "ca"
+	registryImagesKey       = "imagesRegistry"
+	registryDockerConfigKey = ".dockerconfigjson"
+
+	// pauseDigestGroup and pauseDigestName locate the pause image in the digest
+	// map. The group is a key in that map, not a path segment: every Deckhouse
+	// image lives in one repository and is addressed by digest alone.
+	pauseDigestGroup = "common"
+	pauseDigestName  = "pause"
+
 	// clusterConfigSecretName holds the cluster domain and pod subnet layout.
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
@@ -79,6 +97,21 @@ const (
 	// was given.
 	phaseReady = "Ready"
 
+	// kubernetesLabelNamespace and k8sLabelNamespace are the label namespaces a
+	// node may not put itself into, beyond kubeletAllowedLabels below.
+	kubernetesLabelNamespace = "kubernetes.io"
+	k8sLabelNamespace        = "k8s.io"
+
+	// kubeletLabelNamespace and nodeLabelNamespace are the two prefixes inside
+	// them that kubelet does accept from a node.
+	kubeletLabelNamespace = "kubelet.kubernetes.io"
+	nodeLabelNamespace    = "node.kubernetes.io"
+
+	// controlPlaneRoleLabel marks a node that runs the control plane. Such a
+	// node was provisioned from an installer payload rather than from a
+	// rendered NodeConfig, and parts of that payload cannot be reproduced here.
+	controlPlaneRoleLabel = "node-role.kubernetes.io/control-plane"
+
 	// operationNodeLabel names the node an operation was created for; shared with
 	// the reconciler (nodeoperation) so the lookup contract cannot drift.
 	operationNodeLabel = v1alpha1.NodeOperationNodeLabel
@@ -104,9 +137,30 @@ const defaultOSImage = "registry.deckhouse.io/deckhouse/olcedar:v0.1"
 // creating it through the API server, where CRD defaulting runs — produces the
 // same values as a day-2 object.
 const (
-	defaultMaxPods                = 110
+	// Matches bashible (064_configure_kubelet.sh.tpl:359) and the NodeConfig CRD
+	// default. The number decides how much capacity the cluster believes a node
+	// has, so a node that disagrees with the fleet skews the scheduler for all.
+	defaultMaxPods = 120
+	// maxPodsCeiling is what the agent's schema accepts (Maximum=500).
+	maxPodsCeiling                = 500
 	defaultContainerLogMaxSize    = "50Mi"
 	defaultContainerLogMaxFiles   = 4
 	defaultSandboxImage           = "registry.k8s.io/pause:3.10"
 	defaultMaxConcurrentDownloads = 3
 )
+
+// kubeletAllowedLabels is the set kubelet accepts on --node-labels despite
+// living in a reserved namespace (kubernetes/pkg/kubelet/apis/well_known_labels.go).
+var kubeletAllowedLabels = map[string]struct{}{
+	"beta.kubernetes.io/arch":                  {},
+	"beta.kubernetes.io/instance-type":         {},
+	"beta.kubernetes.io/os":                    {},
+	"failure-domain.beta.kubernetes.io/region": {},
+	"failure-domain.beta.kubernetes.io/zone":   {},
+	"kubernetes.io/arch":                       {},
+	"kubernetes.io/hostname":                   {},
+	"kubernetes.io/os":                         {},
+	"node.kubernetes.io/instance-type":         {},
+	"topology.kubernetes.io/region":            {},
+	"topology.kubernetes.io/zone":              {},
+}
