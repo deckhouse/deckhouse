@@ -251,7 +251,7 @@ spec:
                   description: |
                     Network type: `Standard` or [`SoftwareAccelerated`](https://cloud.yandex.com/en/docs/vpc/concepts/software-accelerated-network).
 
-                    > In clusters that use Machine Controller Manager (MCM), changing the `networkType` parameter does not trigger automatic recreation of existing CloudEphemeral nodes. Details and workarounds are available in the [FAQ](faq.html#changing-networktype-does-not-recreate-cloudephemeral-nodes).
+                    > In clusters that use Machine Controller Manager (MCM), changing the `networkType` parameter does not trigger automatic recreation of existing CloudEphemeral nodes. Details are available in the [FAQ](faq.html#changing-networktype-does-not-recreate-cloudephemeral-nodes).
             status:
               type: object
               properties:

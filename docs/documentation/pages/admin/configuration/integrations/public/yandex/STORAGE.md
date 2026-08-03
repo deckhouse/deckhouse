@@ -366,6 +366,16 @@ dhctl converge
 
 This command reconciles the cluster state with the configuration defined in the resources.
 
+## Changing `networkType` does not recreate CloudEphemeral nodes
+
+In clusters that use Machine Controller Manager (MCM), changing the [`networkType`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-networktype) parameter in a YandexInstanceClass resource does not trigger automatic recreation of existing CloudEphemeral nodes. Although the MachineClass is updated, the network acceleration type of existing virtual machines in Yandex Cloud remains unchanged.
+
+DKP intentionally does not take the `networkType` parameter into account when determining whether CloudEphemeral nodes should be recreated in MCM. If it did, updating DKP would recreate CloudEphemeral nodes in all clusters where `networkType` is specified, even if its value had not changed.
+
+In Cluster API, the `networkType` parameter is taken into account when determining whether nodes should be recreated, so changing it automatically triggers node recreation. New CloudEphemeral NodeGroups in Yandex Cloud use Cluster API by default.
+
+To apply a new `networkType` value, recreate the CloudEphemeral nodes manually by following the [documentation](/modules/node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
+
 ## Integrating manually created VMs
 
 DKP allows you to connect existing VMs in Yandex Cloud to the Kubernetes cluster as nodes.
