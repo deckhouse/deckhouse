@@ -1,0 +1,434 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: hostclaims.metal3.io
+spec:
+  group: metal3.io
+  names:
+    kind: HostClaim
+    listKind: HostClaimList
+    plural: hostclaims
+    singular: hostclaim
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: HostClaim is the Schema for the hostclaims API.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object.
+
+              Servers should convert recognized schemas to the latest internal value,
+              and
+
+              may reject unrecognized values.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents.
+
+              Servers may infer this from the endpoint the client submits requests
+              to.
+
+              Cannot be updated.
+
+              In CamelCase.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: HostClaimSpec defines the desired state of HostClaim.
+            properties:
+              consumerRef:
+                description: 'ConsumerRef can be used to store information about something
+
+                  that is using a host. When it is not empty, the host is
+
+                  considered "in use". The common use case is a link to a Machine
+
+                  resource when the host is used by Cluster API.'
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: 'If referring to a piece of an object instead of
+                      an entire object, this string
+
+                      should contain a valid JSON/Go field access statement, such
+                      as desiredState.manifest.containers[2].
+
+                      For example, if the object reference is to a container within
+                      a pod, this would take on a value like:
+
+                      "spec.containers{name}" (where "name" refers to the name of
+                      the container that triggered
+
+                      the event) or if no container name is specified "spec.containers[2]"
+                      (container with
+
+                      index 2 in this pod). This syntax is chosen only to have some
+                      well-defined way of
+
+                      referencing a part of an object.'
+                    type: string
+                  kind:
+                    description: 'Kind of the referent.
+
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent.
+
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent.
+
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
+                  resourceVersion:
+                    description: 'Specific resourceVersion to which this reference
+                      is made, if any.
+
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    type: string
+                  uid:
+                    description: 'UID of the referent.
+
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              customDeploy:
+                description: 'A custom deploy procedure. This is an advanced feature
+                  that allows
+
+                  using a custom deploy step provided by a site-specific deployment
+
+                  ramdisk. Most users will want to use "image" instead. Setting this
+
+                  field triggers provisioning.'
+                properties:
+                  method:
+                    description: 'Custom deploy method name.
+
+                      This name is specific to the deploy ramdisk used. If you don''t
+                      have
+
+                      a custom deploy ramdisk, you shouldn''t use CustomDeploy.'
+                    type: string
+                required:
+                - method
+                type: object
+              failureDomain:
+                description: 'FailureDomain is the failure domain unique identifier
+                  this HostClaim
+
+                  should be attached to, as defined in Cluster API. It is implemented
+
+                  when set as a preference for binding BareMetalHost having the label
+
+                  infrastructure.cluster.x-k8s.io/failure-domain set to the value
+                  of
+
+                  the field.'
+                type: string
+              hostSelector:
+                description: 'HostSelector specifies matching criteria for labels
+                  on BareMetalHosts.
+
+                  This is used to limit the set of BareMetalHost objects considered
+                  for
+
+                  claiming for a HostClaim.'
+                properties:
+                  inNamespace:
+                    description: 'InNamespace specifies a single namespace where the
+                      BareMetalHost should
+
+                      reside. If not specified, the selection will be done over all
+                      available
+
+                      namespaces with a compliant policy.'
+                    type: string
+                  matchExpressions:
+                    description: Label match expressions that must be true on a chosen
+                      BareMetalHost
+                    items:
+                      properties:
+                        key:
+                          type: string
+                        operator:
+                          description: 'Operator represents a key/field''s relationship
+                            to value(s).
+
+                            See labels.Requirement and fields.Requirement for more
+                            details.'
+                          type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      - values
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: Key/value pairs of labels that must exist on a chosen
+                      BareMetalHost
+                    type: object
+                type: object
+              image:
+                description: 'Image holds the details of the image to be provisioned.
+                  Populating
+
+                  the image will cause the target host to start provisioning.'
+                properties:
+                  checksum:
+                    description: 'Checksum is the checksum for the image. Required
+                      for all formats
+
+                      except for "live-iso" and OCI images (oci://).'
+                    type: string
+                  checksumType:
+                    description: 'ChecksumType is the checksum algorithm for the image,
+                      e.g md5, sha256 or sha512.
+
+                      The special value "auto" can be used to detect the algorithm
+                      from the checksum.
+
+                      If missing, MD5 is used. If in doubt, use "auto".'
+                    enum:
+                    - md5
+                    - sha256
+                    - sha512
+                    - auto
+                    type: string
+                  format:
+                    description: 'Format contains the format of the image (raw, qcow2,
+                      ...).
+
+                      When set to "live-iso", an ISO 9660 image referenced by the
+                      url will
+
+                      be live-booted and not deployed to disk.'
+                    enum:
+                    - raw
+                    - qcow2
+                    - vdi
+                    - vmdk
+                    - live-iso
+                    type: string
+                  ociAuthSecretName:
+                    description: 'OCIAuthSecretName optionally names a Docker-config
+                      secret containing
+
+                      registry credentials for oci:// images. Must be in the same
+                      namespace
+
+                      as the BareMetalHost. Allowed types: kubernetes.io/dockerconfigjson|dockercfg.
+
+                      Only used when Image.URL has the oci:// scheme.'
+                    type: string
+                  url:
+                    description: URL is a location of an image to deploy.
+                    type: string
+                required:
+                - url
+                type: object
+              metaData:
+                description: 'MetaData holds the reference to the Secret containing
+                  host metadata
+
+                  (e.g. meta_data.json) which is passed to the Config Drive.'
+                properties:
+                  name:
+                    description: name is unique within a namespace to reference a
+                      secret resource.
+                    type: string
+                  namespace:
+                    description: namespace defines the space within which the secret
+                      name must be unique.
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              networkData:
+                description: 'NetworkData holds the reference to the Secret containing
+                  network
+
+                  configuration which is passed to the Config Drive and interpreted
+
+                  by the first boot software such as cloud-init.'
+                properties:
+                  name:
+                    description: name is unique within a namespace to reference a
+                      secret resource.
+                    type: string
+                  namespace:
+                    description: namespace defines the space within which the secret
+                      name must be unique.
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              poweredOn:
+                description: 'Should the compute resource be powered on? Changing
+                  this value will trigger
+
+                  a change in power state of the targeted host.'
+                type: boolean
+              userData:
+                description: 'UserData holds the reference to the Secret containing
+                  the user data
+
+                  which is passed to the Config Drive and interpreted by the
+
+                  first-boot software such as cloud-init. The format of user data
+                  is
+
+                  specific to the first-boot software.'
+                properties:
+                  name:
+                    description: name is unique within a namespace to reference a
+                      secret resource.
+                    type: string
+                  namespace:
+                    description: namespace defines the space within which the secret
+                      name must be unique.
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+            required:
+            - poweredOn
+            type: object
+          status:
+            description: HostClaimStatus defines the observed state of HostClaim.
+            properties:
+              bareMetalHost:
+                description: BareMetalHost is a pointer to the name of the bound BareMetalHost
+                properties:
+                  name:
+                    description: '`name` is the name of the object bound'
+                    type: string
+                  namespace:
+                    description: '`namespace` is the namespace of the object bound'
+                    type: string
+                required:
+                - name
+                - namespace
+                type: object
+              conditions:
+                description: Conditions defines current service state of the HostClaim.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: 'lastTransitionTime is the last time the condition
+                        transitioned from one status to another.
+
+                        This should be when the underlying condition changed.  If
+                        that is not known, then using the time when the API field
+                        changed is acceptable.'
+                      format: date-time
+                      type: string
+                    message:
+                      description: 'message is a human readable message indicating
+                        details about the transition.
+
+                        This may be an empty string.'
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: 'observedGeneration represents the .metadata.generation
+                        that the condition was set based upon.
+
+                        For instance, if .metadata.generation is currently 12, but
+                        the .status.conditions[x].observedGeneration is 9, the condition
+                        is out of date
+
+                        with respect to the current state of the instance.'
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: 'reason contains a programmatic identifier indicating
+                        the reason for the condition''s last transition.
+
+                        Producers of specific condition types may define expected
+                        values and meanings for this field,
+
+                        and whether the values are considered a guaranteed API.
+
+                        The value should be a CamelCase string.
+
+                        This field may not be empty.'
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - 'True'
+                      - 'False'
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              hardwareData:
+                description: 'HardwareData is a pointer to the name of the bound HardwareData
+
+                  structure.'
+                properties:
+                  name:
+                    description: '`name` is the name of the object bound'
+                    type: string
+                  namespace:
+                    description: '`namespace` is the namespace of the object bound'
+                    type: string
+                required:
+                - name
+                - namespace
+                type: object
+              lastUpdated:
+                description: LastUpdated identifies when this status was last observed.
+                format: date-time
+                type: string
+              poweredOn:
+                description: 'The currently detected power state of the host. This
+                  field may get
+
+                  briefly out of sync with the actual state of the hardware while
+
+                  provisioning processes are running.'
+                type: boolean
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

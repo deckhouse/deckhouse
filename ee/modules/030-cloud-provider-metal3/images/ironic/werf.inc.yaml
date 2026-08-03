@@ -1,0 +1,22 @@
+{{- $version := include "get_oss_version_by_id" (list "ironic-image-metal3" $) }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+context: ee/modules/030-cloud-provider-metal3/images/ironic
+dockerfile: Dockerfile.ironic
+dependencies:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  imports:
+  - type: ImageName
+    targetBuildArg: SOURCE_IMAGE
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/metal3-io/ironic-image.git /src
+  - cd /src
+  - rm -rf .git
