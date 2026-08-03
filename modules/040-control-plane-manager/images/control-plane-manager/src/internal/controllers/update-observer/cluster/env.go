@@ -59,6 +59,14 @@ func LoadVersionSettingsFromEnv() (VersionSettings, error) {
 	}, nil
 }
 
+// Available returns the versions the cluster is allowed to move to, published as
+// status.availableVersions in the d8-cluster-kubernetes ConfigMap.
+//
+// The result is not only informational: the ModuleConfig admission webhook in deckhouse-controller
+// rejects a kubernetesVersion that is not a member of this list
+// (deckhouse-controller/pkg/apis/deckhouse.io/validation/validate_control_plane_manager.go).
+// Changing the formula therefore changes what users are allowed to set — keep that webhook in mind,
+// and note that it also enforces a maxUsed floor of its own, so the two must not contradict.
 func (s VersionSettings) Available(maxUsedVersion string) []string {
 	for i, v := range s.Supported {
 		if v == maxUsedVersion {
@@ -67,6 +75,14 @@ func (s VersionSettings) Available(maxUsedVersion string) []string {
 		}
 	}
 
-	// maxVersion not found in supported list (shouldn't happen)
+	// maxUsedVersion is not in the supported list. Normally that means it is older than everything
+	// this release ships (the cluster started long ago and the version was dropped since), and the
+	// whole list is an upgrade relative to it, so returning it unfiltered is safe.
+	//
+	// It can also mean the opposite — maxUsed is *newer* than anything supported, e.g. after a
+	// Deckhouse downgrade or an edition switch. Then this list no longer encodes "no more than one
+	// minor below maxUsed", and membership alone would permit a deep downgrade. That case is caught
+	// by the maxUsed floor check in the admission webhook referenced above, which runs in addition
+	// to membership rather than instead of it.
 	return s.Supported
 }

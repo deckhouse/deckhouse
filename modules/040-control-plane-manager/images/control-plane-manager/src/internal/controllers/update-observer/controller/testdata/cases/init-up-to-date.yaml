@@ -1,13 +1,15 @@
 ---
 apiVersion: v1
-kind: Secret
+kind: ConfigMap
 metadata:
-  name: d8-cluster-configuration
+  labels:
+    heritage: deckhouse
+  name: d8-cluster-kubernetes
   namespace: kube-system
 data:
-  cluster-configuration.yaml: |
-    YXBpVmVyc2lvbjogZGVja2hvdXNlLmlvL3YxCmtpbmQ6IENsdXN0ZXJDb25maWd1cmF0aW9uCmt1YmVybmV0ZXNWZXJzaW9uOiBBdXRvbWF0aWM=
-  deckhouseDefaultKubernetesVersion: djEuMzU=
+  spec: |
+    desiredVersion: "1.35"
+    updateMode: Automatic
 ---
 apiVersion: v1
 kind: Node

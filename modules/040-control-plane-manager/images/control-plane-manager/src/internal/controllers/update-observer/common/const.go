@@ -19,7 +19,6 @@ package common
 const (
 	ControllerName         = "update-observer"
 	ConfigMapName          = "d8-cluster-kubernetes"
-	SecretName             = "d8-cluster-configuration"
 	KubeSystemNamespace    = "kube-system"
 	HeritageLabelKey       = "heritage"
 	DeckhouseLabel         = "deckhouse"

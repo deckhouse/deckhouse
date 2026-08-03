@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"go.yaml.in/yaml/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +29,7 @@ import (
 	"control-plane-manager/internal/controllers/update-observer/cluster"
 	"control-plane-manager/internal/controllers/update-observer/common"
 	podstatus "control-plane-manager/internal/controllers/update-observer/pkg/pod-status"
+	"control-plane-manager/internal/controllers/update-observer/pkg/version"
 )
 
 func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, configmapLabels map[string]string, downgradeInProgress bool) (*cluster.State, error) {
@@ -52,17 +54,34 @@ func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configura
 	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, maxUsedVersion, sourceVersion, downgradeInProgress), nil
 }
 
-func (r *reconciler) getClusterConfiguration(ctx context.Context) (*cluster.Configuration, error) {
-	secret := &corev1.Secret{}
-	err := r.client.Get(ctx, client.ObjectKey{
-		Name:      common.SecretName,
-		Namespace: common.KubeSystemNamespace,
-	}, secret)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get secret: %w", err)
+// getDesiredConfiguration reads the operator-declared desired Kubernetes version straight from
+// the already-fetched ConfigMap's own data["spec"] block. That block is external input, written
+// by the global discovery hook — this controller never computes it itself, only reconciles
+// data["status"] against it.
+func getDesiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuration, error) {
+	rawSpec, ok := configMap.Data["spec"]
+	if !ok {
+		return nil, fmt.Errorf("configMap %s/%s has no 'spec' data key yet", configMap.Namespace, configMap.Name)
 	}
 
-	return cluster.GetConfiguration(secret)
+	var spec Spec
+	if err := yaml.Unmarshal([]byte(rawSpec), &spec); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal 'spec': %w", err)
+	}
+
+	if spec.DesiredVersion == "" {
+		return nil, fmt.Errorf("configMap %s/%s 'spec.desiredVersion' is empty", configMap.Namespace, configMap.Name)
+	}
+
+	desiredVersion, err := version.Normalize(spec.DesiredVersion)
+	if err != nil {
+		return nil, fmt.Errorf("invalid configMap %s/%s 'spec.desiredVersion': %w", configMap.Namespace, configMap.Name, err)
+	}
+
+	return &cluster.Configuration{
+		DesiredVersion: desiredVersion,
+		UpdateMode:     cluster.UpdateMode(spec.UpdateMode),
+	}, nil
 }
 
 func (r *reconciler) getNodesState(ctx context.Context, desiredVersion, sourceVersion string) (*cluster.NodesState, error) {
