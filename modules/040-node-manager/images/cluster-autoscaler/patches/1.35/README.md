@@ -6,30 +6,29 @@ Bumps Go module dependencies to remediate CVEs reported by Trivy for the
 cluster-autoscaler binary. The vulnerabilities live in indirect/build
 dependencies that are linked into the binary (x/crypto/ssh, x/net, k8s
 staging modules), not in cluster-autoscaler logic, so the fix is a pure
-`go.mod`/`go.sum` bump. The gardener tag stays `v1.34.1`.
+`go.mod`/`go.sum` bump. The gardener tag stays `v1.35.1`.
+
+This patch also covers the k8s 1.36 image: `werf.inc.yaml` clamps
+`$maxVersion = "1.35"`, so that image is built from gardener `v1.35.1`
+with `patches/1.35/`.
 
 Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
 
-- `go` directive: `1.24.0` -> `1.25.0`
-- `golang.org/x/net`: `v0.38.0` -> `v0.55.0` (HTML parser / HTTP2 / idna CVEs)
-- `golang.org/x/sys`: `v0.31.0` -> `v0.45.0`
-- `golang.org/x/crypto`: `v0.36.0` -> `v0.51.0` (x/crypto/ssh CVEs)
-- `k8s.io/kubernetes`: `v1.34.1` -> `v1.34.2`, and all `k8s.io/*` staging
-  modules (require + replace) synced to `v0.34.2` (kube-controller-manager
-  SSRF, CVE-2025-13281)
+- `golang.org/x/net`: `v0.48.0` -> `v0.57.0` (HTML parser / HTTP2 / idna / dns CVEs)
+- `golang.org/x/sys`: `v0.39.0` -> `v0.47.0`
+- `golang.org/x/crypto`: `v0.46.0` -> `v0.54.0` (x/crypto/ssh CVEs)
+- `golang.org/x/text`: `v0.32.0` -> `v0.40.0` (unicode normalization DoS)
 
 To recreate this patch, check out the clean tag and re-apply the bumps:
 
 ```shell
 git clone <SOURCE_REPO>/gardener/autoscaler.git
-cd autoscaler && git checkout v1.34.1
+cd autoscaler && git checkout v1.35.1
 cd cluster-autoscaler
-go get golang.org/x/crypto@v0.51.0
-go get golang.org/x/net@v0.55.0
-go get golang.org/x/sys@v0.45.0
-go get k8s.io/kubernetes@v1.34.2
-# sync every k8s.io/* require and replace directive to v0.34.2
-cd apis && go get golang.org/x/net@v0.55.0 && cd ..
+go get golang.org/x/crypto@v0.54.0
+go get golang.org/x/net@v0.57.0
+go get golang.org/x/sys@v0.47.0
+cd apis && go get golang.org/x/net@v0.57.0 && go get golang.org/x/sys@v0.47.0 && cd ..
 go mod tidy && (cd apis && go mod tidy)
 cd ..
 git diff -- cluster-autoscaler/go.mod cluster-autoscaler/go.sum \
@@ -59,7 +58,7 @@ drizzling replicas count in machine deployment.
 
 Report all machine creation errors to Cluster Autoscaler, not only ResourceExhausted
 
-Previously, generateInstanceStatus only reported ErrorInfo to the Cluster Autoscaler when a Machine failed with ResourceExhausted error code (quota/stockout). 
+Previously, generateInstanceStatus only reported ErrorInfo to the Cluster Autoscaler when a Machine failed with ResourceExhausted error code (quota/stockout).
 All other creation failures (invalid image, wrong credentials, network errors, etc.) returned InstanceStatus without ErrorInfo, making them invisible to CA's error handling.
 
 ### 006-fix-upcoming-nodes-deadlock-for-failed-node-groups.patch
