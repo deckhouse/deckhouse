@@ -23,8 +23,9 @@ Design for three consequences:
   The next generation picks it up. Three things create one: a user changes a rolloutField, an
   operator sets the `manual-rollout-id` annotation on the NodeGroup, or a provider release adds
   to `rolloutFields` a field the user had already edited (see below).
-- **The render must be a pure function of the context.** Everything else — clock, randomness,
-  network, environment — is unavailable; with it, "did anything change?" would have no answer.
+- **The rendered object must depend on nothing but the context.** The template cannot reach the
+  clock, random numbers, the network or the environment. If it could, "did anything change?"
+  would have no answer — every render would produce something new.
 
 ## File shape
 
@@ -95,10 +96,11 @@ engine emulated a values tree only so that migrated templates would not need rew
 3. **Read optional fields with `get`, or guard them with `hasKey`.** The sandbox runs with
    `missingkey=error`, so `.instanceClass.maybeAbsent` is a render error, not an empty string.
    This is deliberate: under v1 a typo rendered `<no value>` straight into the cloud.
-4. **Be deterministic.** Rendering the same context twice must produce the same object.
-5. **Fail loudly on missing input** — `fail "…"` or `required "…" value`. Do not paper over it
-   with a default that silently creates the wrong machine. node-controller adds the NodeGroup,
-   the InstanceClass and the zone to the message; do not repeat them.
+4. **Keep the template predictable.** Rendering the same context twice must give the same
+   object.
+5. **Say so when input is missing** — `fail "…"` or `required "…" value`. Do not substitute a
+   default: that quietly builds the wrong machine. node-controller adds the NodeGroup, the
+   InstanceClass and the zone to the message, so do not repeat them.
 
 ## Functions
 
