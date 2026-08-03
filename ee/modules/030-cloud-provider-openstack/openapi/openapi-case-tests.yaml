@@ -1,6 +1,22 @@
 positive:
   configValues:
     - {}
+    - connection:
+        authURL: http://my.cloud.lalla/4/
+        token: mytoken
+        region: myreg
+    - connection:
+        authURL: http://my.cloud.lalla/5/
+        applicationCredentialId: appcredid
+        applicationCredentialSecret: appcredsecret
+        region: myreg
+    - connection:
+        authURL: http://my.cloud.lalla/6/
+        username: myuser
+        domainName: mydomain
+        applicationCredentialName: appcredname
+        applicationCredentialSecret: appcredsecret
+        region: myreg
   values:
     - internal:
         connection:
@@ -71,6 +87,34 @@ positive:
           mainNetwork: "aaa"
           imageName: "bbb"
         zones: [ "zonea" ]
+    - internal:
+        connection:
+          authURL: http://my.cloud.lalla/4/
+          token: mytoken
+          region: myreg
+        internalNetworkNames:
+          - myintnetname
+        podNetworkMode: VXLAN
+    - internal:
+        connection:
+          authURL: http://my.cloud.lalla/5/
+          applicationCredentialId: appcredid
+          applicationCredentialSecret: appcredsecret
+          region: myreg
+        internalNetworkNames:
+          - myintnetname
+        podNetworkMode: VXLAN
+    - internal:
+        connection:
+          authURL: http://my.cloud.lalla/6/
+          username: myuser
+          domainName: mydomain
+          applicationCredentialName: appcredname
+          applicationCredentialSecret: appcredsecret
+          region: myreg
+        internalNetworkNames:
+          - myintnetname
+        podNetworkMode: VXLAN
 negative:
   configValues:
     - { somethingInConfig: yes }
