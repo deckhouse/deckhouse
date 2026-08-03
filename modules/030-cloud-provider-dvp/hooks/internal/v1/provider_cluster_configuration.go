@@ -24,6 +24,8 @@ type DvpProviderClusterConfiguration struct {
 	MasterNodeGroup any          `json:"masterNodeGroup,omitempty" yaml:"masterNodeGroup,omitempty"`
 	NodeGroups      []any        `json:"nodeGroups,omitempty" yaml:"nodeGroups,omitempty"`
 	SSHPublicKey    *string      `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
+	SSHCAKeys       *[]string    `json:"sshCAKeys,omitempty" yaml:"sshCAKeys,omitempty"`
+	AdditionalUsers *[]string    `json:"additionalUsers,omitempty" yaml:"additionalUsers,omitempty"`
 	Region          *string      `json:"region,omitempty" yaml:"region,omitempty"`
 	Zones           *[]string    `json:"zones,omitempty" yaml:"zones,omitempty"`
 }
@@ -60,11 +62,13 @@ type DvpNodesV2 struct {
 }
 
 type DvpNodesParameters struct {
-	Layout       *string             `json:"layout,omitempty" yaml:"layout,omitempty"`
-	SSHPublicKey *string             `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
-	Region       *string             `json:"region,omitempty" yaml:"region,omitempty"`
-	Zones        *[]string           `json:"zones,omitempty" yaml:"zones,omitempty"`
-	IPAddresses  map[string][]string `json:"ipAddresses,omitempty"`
+	Layout          *string             `json:"layout,omitempty" yaml:"layout,omitempty"`
+	SSHPublicKey    *string             `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
+	SSHCAKeys       *[]string           `json:"sshCAKeys,omitempty" yaml:"sshCAKeys,omitempty"`
+	AdditionalUsers *[]string           `json:"additionalUsers,omitempty" yaml:"additionalUsers,omitempty"`
+	Region          *string             `json:"region,omitempty" yaml:"region,omitempty"`
+	Zones           *[]string           `json:"zones,omitempty" yaml:"zones,omitempty"`
+	IPAddresses     map[string][]string `json:"ipAddresses,omitempty"`
 }
 
 // DvpStorageV2 represents the v2 schema storage section (from ModuleConfig).

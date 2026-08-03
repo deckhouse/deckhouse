@@ -12,18 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+module "cloudinit" {
+  source = "../cloudinit-merge"
+
+  hostname         = var.hostname
+  ssh_public_key   = var.ssh_public_key
+  user_data        = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
+  ssh_ca_keys      = var.ssh_ca_keys
+  additional_users = var.additional_users
+}
+
 resource "kubernetes_secret" "cloudinit-secret" {
   metadata {
     name      = local.cloudinit_secret_name
     namespace = var.namespace
-    labels = local.cloudinit_secret_labels
+    labels    = local.cloudinit_secret_labels
   }
   data = {
-    userData = templatefile("${path.module}/templates/cloudinit.tftpl", {
-      host_name      = var.hostname
-      ssh_public_key = var.ssh_public_key
-      user_data      = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
-    })
+    userData = module.cloudinit.user_data
   }
   type      = "provisioning.virtualization.deckhouse.io/cloud-init"
   immutable = true
