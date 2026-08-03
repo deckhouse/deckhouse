@@ -324,31 +324,37 @@ build_fe:tag:
   extends:
     - .build_fe
     - .rules:on_tag
+    - .needs_tag_prechecks
 
 build_ce:tag:
   extends:
     - .build_ce
     - .rules:on_tag
+    - .needs_tag_prechecks
 
 build_ee:tag:
   extends:
     - .build_ee
     - .rules:on_tag
+    - .needs_tag_prechecks
 
 build_be:tag:
   extends:
     - .build_be
     - .rules:on_tag
+    - .needs_tag_prechecks
 
 build_se:tag:
   extends:
     - .build_se
     - .rules:on_tag
+    - .needs_tag_prechecks
 
 build_se_plus:tag:
   extends:
     - .build_se_plus
     - .rules:on_tag
+    - .needs_tag_prechecks
 
 # CSE is not built on tags in GitHub release workflow.
 
