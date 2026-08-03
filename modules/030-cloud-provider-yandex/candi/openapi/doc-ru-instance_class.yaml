@@ -125,3 +125,5 @@ spec:
                   description: |
                     Тип сети: обычная или [программно-ускоренная](https://cloud.yandex.ru/docs/vpc/concepts/software-accelerated-network).
 
+                    > В кластерах, использующих Machine Controller Manager (MCM), изменение параметра `networkType` не приводит к автоматическому пересозданию существующих CloudEphemeral-узлов. Подробности и способы решения — в [FAQ](faq.html#изменение-networktype-не-пересоздаёт-cloudephemeral-узлы).
+
