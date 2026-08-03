@@ -6,6 +6,265 @@ properties:
     type: object
     default: {}
     properties:
+      # Internal values of the controller-based implementation.
+      #
+      # Deliberately a separate branch alongside `orchestrator`, with no shared
+      # keys: the two implementations must never be able to read each other's
+      # state. The old implementation stays in the tree as inert ballast rather
+      # than a translator, and this separation is what keeps it inert.
+      #
+      # Removed together with `orchestrator` when the legacy implementation is
+      # dropped.
+      v2:
+        type: object
+        default: {}
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            description: |
+              Whether the current implementation is active.
+
+              Not a setting: there is no choice of implementation. True unless the
+              previous implementation is still managing the cluster, which it does
+              until it has been brought to its `Unmanaged` state.
+
+              Every template of the current implementation is rendered under this
+              value, and the templates of the previous one under its negation, so
+              both owning the pull path at once is impossible by construction
+              rather than by care. See `templates/_ownership.tpl`.
+          switchBlockedReason:
+            type: string
+            description: |
+              Why the cluster is still on the previous implementation, when it is.
+              Raised as an alert, since a module cannot write its own ModuleConfig
+              status.
+
+              Empty once the handover has happened.
+          registryConfig:
+            type: object
+            default: {}
+            description: |
+              The resolved primary configuration helm renders RegistryConfig from.
+
+              Built by a hook out of ModuleConfig, with `auth.license` already
+              resolved into a username/password pair, so the template stays free
+              of resolution logic.
+            properties:
+              mode:
+                type: string
+                enum: [Managed, Unmanaged]
+              primary:
+                type: object
+                properties:
+                  upstream:
+                    type: object
+                    properties:
+                      scheme:
+                        type: string
+                        enum: [HTTP, HTTPS]
+                      host:
+                        type: string
+                      path:
+                        type: string
+                      ca:
+                        type: string
+                      auth: &v2Auth
+                        type: object
+                        properties:
+                          username:
+                            type: string
+                          password:
+                            type: string
+                          auth:
+                            type: string
+                      mirrors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            scheme:
+                              type: string
+                              enum: [HTTP, HTTPS]
+                            host:
+                              type: string
+                            path:
+                              type: string
+                            ca:
+                              type: string
+                            auth:
+                              <<: *v2Auth
+              storage:
+                type: object
+                properties:
+                  cache:
+                    type: boolean
+                  size:
+                    type: string
+                  source:
+                    type: object
+                    properties:
+                      bundleRef:
+                        type: string
+                      expectedDigests:
+                        type: integer
+                        format: int32
+                  garbageCollection:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      schedule:
+                        type: string
+          storageAddresses:
+            type: array
+            items:
+              type: string
+            description: |
+              The addresses the storage replicas are reachable at.
+
+              Node addresses, not the Service name. Everything that talks to the
+              storage does so from a node — the agent pulling, a replica
+              replicating — in the host network, where a cluster DNS name does not
+              exist. `registry.d8-system.svc:5001` is what image references are
+              built from and what a request is matched against, but nothing dials
+              it.
+
+              The same set the serving certificate is issued for, which is why the
+              two are produced together.
+          bashibleConfig:
+            type: object
+            description: |
+              What nodes are told, rendered into the `registry-bashible-config`
+              secret that the bashible apiserver reads.
+
+              The field that matters most in it is `agent`: its presence is what
+              silences the bashible step that writes per-registry drop-in
+              directories, handing `/etc/containerd/registry.d` to the node agent.
+
+              Absent in two cases, and in both the bashible apiserver falls back
+              to the `deckhouse-registry` secret and points the container runtime
+              straight at the registry the cluster was installed with: while the
+              previous implementation is still managing the cluster, and while the
+              mode is `Unmanaged`.
+            x-required-for-helm:
+              - agent
+            properties:
+              agent:
+                type: object
+                properties:
+                  endpoint:
+                    type: string
+                    description: |
+                      Where the agent serves the container runtime, as `host:port`.
+                  dropInFile:
+                    type: string
+                    description: |
+                      The file the agent writes for the container runtime.
+
+                      Carried to the node so that a step which has to wait for the
+                      agent waits on the path the agent actually writes.
+                  layout:
+                    type: string
+                    description: |
+                      A marshalled RegistryNodeSpec: the routing the agent uses
+                      until the API server answers for the first time.
+
+                      Needed because a node joining a cluster has to pull the
+                      control plane before there is a control plane to ask how.
+                      Holds registry credentials.
+              mode:
+                type: string
+              version:
+                type: string
+              imagesBase:
+                type: string
+              proxyEndpoints:
+                type: array
+                items:
+                  type: string
+              hosts:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    mirrors:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          host:
+                            type: string
+                          scheme:
+                            type: string
+                          ca:
+                            type: string
+                          auth:
+                            type: object
+                            properties:
+                              username:
+                                type: string
+                              password:
+                                type: string
+                              auth:
+                                type: string
+                          rewrites:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                from:
+                                  type: string
+                                to:
+                                  type: string
+          pki:
+            type: object
+            description: |
+              Certificates and credentials of the in-cluster storage, generated and
+              persisted by the module hook.
+
+              Separate from the agent PKI, which is generated on the node at
+              bootstrap and never leaves it: the agent's only relying party is the
+              containerd on the same node, so there is nothing to agree with the
+              cluster, and neither half has to wait for the other.
+
+              Read credentials are used by the node agents and by replication
+              between replicas; write credentials guard the publication endpoint
+              used by `d8 mirror push` and are deliberately different, since that
+              endpoint is reachable from outside the cluster.
+            properties:
+              ca: &v2CertKey
+                type: object
+                properties:
+                  cert:
+                    type: string
+                  key:
+                    type: string
+              distribution:
+                <<: *v2CertKey
+              auth:
+                <<: *v2CertKey
+              token:
+                <<: *v2CertKey
+              ingressClient:
+                <<: *v2CertKey
+              httpSecret:
+                type: string
+                description: |
+                  Signs the state carried in upload URLs. Identical across replicas,
+                  otherwise an upload started against one replica cannot be finished
+                  against another — which is what happens behind an ingress.
+              ro: &v2User
+                type: object
+                properties:
+                  name:
+                    type: string
+                  password:
+                    type: string
+                  passwordHash:
+                    type: string
+              rw:
+                <<: *v2User
       customCertificateData:
         type: object
         properties:

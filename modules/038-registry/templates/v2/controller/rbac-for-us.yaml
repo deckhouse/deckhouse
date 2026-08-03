@@ -1,0 +1,253 @@
+{{- /*
+RBAC of the controller-based implementation.
+
+Rendered only under the implementation discriminator, so that on a cluster still
+running the legacy implementation none of these objects exist at all. Keeping the
+two implementations from owning the pull path at once is a property of what gets
+rendered, not of operator care.
+*/ -}}
+{{- if ((.Values.registry.internal).v2).enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Chart.Name }}-controller
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-controller" .Chart.Name))) | nindent 2 }}
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-controller" .Chart.Name))) | nindent 2 }}
+rules:
+  # The controller owns RegistryStorage and RegistryNode outright, and writes the
+  # status of RegistryConfig and RegistryUpstream, whose specs belong to other
+  # writers: the module (or an administrator during an incident) for
+  # RegistryConfig, and any module, administrator or user for RegistryUpstream.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registryconfigs", "registryupstreams"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registryconfigs/status", "registryupstreams/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registrystorages", "registrynodes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registrystorages/status", "registrynodes/status"]
+    verbs: ["get", "update", "patch"]
+  # The maintenance windows of the master node group, which is where the garbage collection
+  # goes unless an operator said otherwise: those are hours they have already declared safe for
+  # disruption. Read-only, and best-effort — without this the collection falls back to a night
+  # hour rather than not happening.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["nodegroups"]
+    verbs: ["get", "list", "watch"]
+  # Nodes drive the per-node layout: one RegistryNode per Node, owned by it.
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-controller" .Chart.Name))) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Chart.Name }}-controller
+    namespace: d8-system
+roleRef:
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:controller
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Chart.Name }}:controller
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-controller" .Chart.Name))) | nindent 2 }}
+rules:
+  # Leader election among the controller replicas.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Chart.Name }}:controller
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-controller" .Chart.Name))) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Chart.Name }}-controller
+    namespace: d8-system
+roleRef:
+  kind: Role
+  name: {{ .Chart.Name }}:controller
+  apiGroup: rbac.authorization.k8s.io
+
+---
+{{- /*
+The storage replicas. Each syncer writes exactly one entry in
+RegistryStorage.status.replicas — its own — and competes for the lease that decides
+which replica is filled from the upstream. It never writes any spec: what the
+storage should do is the controller's decision.
+*/ -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Chart.Name }}-storage
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-storage" .Chart.Name))) | nindent 2 }}
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:storage
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-storage" .Chart.Name))) | nindent 2 }}
+rules:
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registrystorages"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registrystorages/status"]
+    verbs: ["get", "update", "patch"]
+  # What the cluster is running, which is what decides whether an image in the store belongs
+  # to a release the cluster has moved past. Read-only: this is the one input that justifies a
+  # deletion, and nothing here has any business changing it.
+  - apiGroups: ["deckhouse.io"]
+    resources: ["deckhousereleases"]
+    verbs: ["get", "list", "watch"]
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Chart.Name }}:storage
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-storage" .Chart.Name))) | nindent 2 }}
+rules:
+  # Two leases, and they are deliberately two. One decides which replica fills the cache from
+  # the upstream; the other decides whose turn it is to go read-only and reclaim its disk. The
+  # replica doing the filling is the last one that should stop accepting writes, so those two
+  # answers must be free to be different replicas.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Chart.Name }}:storage
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-storage" .Chart.Name))) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Chart.Name }}-storage
+    namespace: d8-system
+roleRef:
+  kind: Role
+  name: {{ .Chart.Name }}:storage
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:storage
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-storage" .Chart.Name))) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Chart.Name }}-storage
+    namespace: d8-system
+roleRef:
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:storage
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Chart.Name }}:storage
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-storage" .Chart.Name))) | nindent 2 }}
+rules:
+  # The lease that elects the replica filled from the upstream, so that several
+  # replicas do not spend the same upstream credentials at once.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Chart.Name }}:storage
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-storage" .Chart.Name))) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Chart.Name }}-storage
+    namespace: d8-system
+roleRef:
+  kind: Role
+  name: {{ .Chart.Name }}:storage
+  apiGroup: rbac.authorization.k8s.io
+
+---
+{{- /*
+The node agent reads its own RegistryNode with the kubelet's kubeconfig, so the
+permission is granted to the `system:nodes` group. bashible already grants this
+group its own resources the same way.
+
+This is safe only because RegistryNode carries no per-node secrets: every object
+holds the same global configuration, so a node reading another node's object
+learns nothing it does not already have. Status patches cannot be narrowed —
+RBAC has no way to scope list/watch by field selector — which is why nothing in
+RegistryNode.status is load-bearing for the pull path.
+*/ -}}
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:agent
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-agent" .Chart.Name))) | nindent 2 }}
+rules:
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registrynodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["registrynodes/status"]
+    verbs: ["get", "update", "patch"]
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:agent
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-agent" .Chart.Name))) | nindent 2 }}
+subjects:
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
+  # New nodes read their layout before the kubelet has a node identity.
+  - kind: Group
+    name: system:bootstrappers:d8-node-manager
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:agent
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

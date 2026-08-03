@@ -1,0 +1,110 @@
+{{- /*
+  What Prometheus scrapes.
+
+  Two monitors because the two workloads answer different questions and their series need
+  different labels: the controller describes the cluster, and a storage replica describes a
+  node.
+
+  Nothing here scrapes the node agent, and it cannot. The agent is a static pod that has to
+  keep working when the API server does not — that is the whole reason it exists as one —
+  so it can carry no kube-rbac-proxy, since that sidecar authenticates against the very API
+  server the agent is designed to outlive. What the agent knows is written into its
+  RegistryNode status and exported from the controller instead.
+*/ -}}
+{{- if and (((.Values.registry.internal).v2).enabled) (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: registry-controller
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "registry-controller")) | nindent 2 }}
+spec:
+  jobLabel: app
+  selector:
+    matchLabels:
+      app: registry-controller
+  namespaceSelector:
+    matchNames:
+    - d8-system
+  podMetricsEndpoints:
+  - port: https-metrics
+    path: /metrics
+    scheme: https
+    honorLabels: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
+    # Only ready pods. A replica still starting has empty gauges, and an alert cannot
+    # tell those from a cluster whose cache is genuinely empty.
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: registry-storage
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "registry-storage")) | nindent 2 }}
+spec:
+  jobLabel: app
+  selector:
+    matchLabels:
+      app: registry-storage
+  namespaceSelector:
+    matchNames:
+    - d8-system
+  podMetricsEndpoints:
+  # The syncer: what this replica did, which only this process knows.
+  - port: https-metrics
+    path: /metrics
+    scheme: https
+    honorLabels: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+  # The registry itself, behind the same proxy under a second path. Its metrics are the
+  # ones that say whether pulls are actually being served, which no amount of our own
+  # accounting can substitute for.
+  - port: https-metrics
+    path: /registry/metrics
+    scheme: https
+    honorLabels: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+{{- end }}

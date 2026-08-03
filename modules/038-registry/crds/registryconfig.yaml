@@ -1,0 +1,409 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: registryconfigs.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: registry
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: registryconfigs
+    singular: registryconfig
+    kind: RegistryConfig
+    shortNames:
+      - rcfg
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Mode
+          type: string
+          description: "Whether the module manages the image pull path."
+          jsonPath: .spec.mode
+        - name: Cache
+          type: boolean
+          description: "Whether pulls go through the in-cluster cache."
+          jsonPath: .spec.storage.cache
+        - name: Upstream
+          type: string
+          description: "Primary upstream host. Empty means air-gap."
+          jsonPath: .spec.primary.upstream.host
+        - name: UpstreamValid
+          type: string
+          description: "Result of the preflight probe of the primary upstream."
+          jsonPath: .status.conditions[?(@.type=="UpstreamValid")].status
+        - name: Age
+          type: date
+          description: "Time since creation."
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the resolved registry configuration of the cluster.
+
+            In normal operation the object is rendered by the module from [ModuleConfig/registry](configuration.html). It is a contract rather than Deckhouse property: an administrator may edit it directly when the Deckhouse operator is unavailable, and the change is applied on the fly by the registry controller and the storage syncer without a helm re-render.
+
+            Only one object named `registry` is used.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              x-kubernetes-validations:
+                # A Managed registry must have a source of images. The two axes give
+                # three valid combinations; the fourth (no upstream, no cache) leaves
+                # the nodes with nothing to pull from.
+                - rule: 'has(self.mode) && self.mode == ''Unmanaged'' || (has(self.primary) && has(self.primary.upstream)) || (has(self.storage) && has(self.storage.cache) && self.storage.cache)'
+                  message: "A Managed registry needs a source of images: set primary.upstream, or enable storage.cache for an air-gapped cluster."
+                # In air-gap there is no upstream to fall back on, so cache completeness
+                # must be decidable before it is safe to drop the upstream.
+                - rule: 'has(self.mode) && self.mode == ''Unmanaged'' || (has(self.primary) && has(self.primary.upstream)) || (has(self.storage) && has(self.storage.source))'
+                  message: "storage.source is required when primary.upstream is not set: in air-gap there is no upstream to fall back on, so cache completeness must be decidable."
+              properties:
+                mode:
+                  type: string
+                  enum:
+                    - Managed
+                    - Unmanaged
+                  default: Managed
+                  description: |
+                    Whether the module manages the image pull path.
+
+                    - `Managed` — the module owns the pull path and creates its components.
+                    - `Unmanaged` — the module owns nothing; no components are created.
+                primary:
+                  type: object
+                  description: |
+                    The single authoritative source of Deckhouse component images.
+
+                    Additional registries are declared as separate [RegistryUpstream](cr.html#registryupstream) objects. More than one primary source is not supported: it would make both "is the cache complete" and "what fills the cache in an air-gapped cluster" ambiguous.
+                  properties:
+                    upstream:
+                      type: object
+                      description: |
+                        The registry to pull Deckhouse component images from.
+
+                        If omitted, the cluster is air-gapped: the in-cluster cache becomes authoritative and is populated out of band with `d8 mirror push`. Omitting it requires `storage.cache: true`.
+                      required:
+                        - host
+                      properties:
+                        scheme:
+                          type: string
+                          enum:
+                            - HTTP
+                            - HTTPS
+                          default: HTTPS
+                          description: |
+                            The protocol used to reach the registry.
+
+                            Use `HTTP` only for insecure, trusted registries.
+                        host:
+                          type: string
+                          minLength: 1
+                          description: |
+                            The registry host, optionally with a port.
+                          x-doc-example: 'registry.deckhouse.io'
+                        path:
+                          type: string
+                          description: |
+                            The repository prefix inside the registry.
+                          x-doc-example: '/deckhouse/ee'
+                        ca:
+                          type: string
+                          description: |
+                            A PEM-encoded certificate authority bundle used to verify the registry when `scheme` is `HTTPS`.
+
+                            If omitted, the system trust store is used.
+                        auth:
+                          type: object
+                          description: |
+                            Credentials for the registry.
+
+                            **Sensitive.** Credentials are stored inline in the object rather than referenced from a Secret, so that the node agent stays self-sufficient while the API server is unreachable. Restrict access to registry resources accordingly.
+                          properties:
+                            username:
+                              type: string
+                              description: |
+                                The username for basic authentication.
+                            password:
+                              type: string
+                              description: |
+                                The password for basic authentication.
+                            auth:
+                              type: string
+                              description: |
+                                Pre-encoded `base64("username:password")`.
+
+                                Takes precedence over `username` and `password` when set.
+                        mirrors:
+                          type: array
+                          description: |
+                            Additional addresses serving **the same** content as the primary registry, used for failover and load balancing.
+
+                            Mirrors are not separate sources. The storage caches one de-duplicated set regardless of which mirror the images were pulled from.
+                          items:
+                            type: object
+                            required:
+                              - host
+                            properties:
+                              scheme:
+                                type: string
+                                enum:
+                                  - HTTP
+                                  - HTTPS
+                                default: HTTPS
+                                description: |
+                                  The protocol used to reach the mirror.
+                              host:
+                                type: string
+                                minLength: 1
+                                description: |
+                                  The mirror host, optionally with a port.
+                                x-doc-example: 'registry-mirror.example.com'
+                              path:
+                                type: string
+                                description: |
+                                  The repository prefix inside the mirror.
+                              ca:
+                                type: string
+                                description: |
+                                  A PEM-encoded certificate authority bundle used to verify the mirror.
+                              auth:
+                                type: object
+                                description: |
+                                  Credentials for the mirror.
+
+                                  **Sensitive.** See `primary.upstream.auth`.
+                                properties:
+                                  username:
+                                    type: string
+                                    description: |
+                                      The username for basic authentication.
+                                  password:
+                                    type: string
+                                    description: |
+                                      The password for basic authentication.
+                                  auth:
+                                    type: string
+                                    description: |
+                                      Pre-encoded `base64("username:password")`.
+                storage:
+                  type: object
+                  description: |
+                    Configures the in-cluster registry cache.
+                  properties:
+                    cache:
+                      type: boolean
+                      default: false
+                      description: |
+                        Whether pulls go through the in-cluster cache on the master nodes.
+
+                        This is the first of the two configuration axes. The second is whether `primary.upstream` is set. Together they replace the former mode state machine:
+
+                        - `cache: false` with an upstream — the agent forwards pulls straight to the upstream and no storage is needed.
+                        - `cache: true` with an upstream — a pass-through cache, filled from the upstream.
+                        - `cache: true` without an upstream — air-gap: the cache is authoritative and is filled with `d8 mirror push`.
+                    garbageCollection:
+                      type: object
+                      description: |
+                        When the cache reclaims the disk taken by releases the cluster has moved past.
+
+                        Nothing else ever removes anything: every release adds a slice of the repository, so a cluster that lives for years fills its store and then stops being able to pull.
+
+                        A collection puts one replica read-only for as long as it takes. That replica keeps serving every image it holds; what it cannot do is store the result of a cache miss, or accept a `d8 mirror push`. Only one replica collects at a time.
+                      properties:
+                        enabled:
+                          type: boolean
+                          description: |
+                            Whether the cache reclaims its disk at all.
+                        schedule:
+                          type: string
+                          description: |
+                            A five-field cron expression, in the replicas' own time zone.
+
+                            Defaults to a night hour, or to the start of the `master` node group's maintenance window when one is set.
+                    size:
+                      type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      description: |
+                        The size of the persistent volume backing the cache.
+                      x-doc-example: '50Gi'
+                    source:
+                      type: object
+                      description: |
+                        The image set the cache is expected to hold.
+
+                        Required in an air-gapped cluster: with no upstream to fall back on, completeness must be decidable before it is safe to serve from the cache alone.
+                      properties:
+                        bundleRef:
+                          type: string
+                          description: |
+                            The name of the image set, for example the bundle pushed with `d8 mirror push`.
+                          x-doc-example: 'd8-mirror-bundle'
+                        expectedDigests:
+                          type: integer
+                          format: int32
+                          minimum: 0
+                          description: |
+                            The number of distinct digests the set contains.
+                          x-doc-example: 459
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: |
+                    The `spec` generation the controller last acted on.
+                effectiveUpstream:
+                  type: object
+                  description: |
+                    The upstream actually in effect, which is not necessarily the configured one.
+
+                    This is the controller's own record of the last upstream that passed its preflight probe, and it is what makes a bad change survivable: entering credentials that do not work, or switching to a license without access, leaves this field — and the cluster — on the previous working upstream, while the `UpstreamValid` condition reports why.
+
+                    It also holds the upstream through the air-gap transition, where the configuration already says "none" but the cache is not complete yet.
+
+                    Empty means no upstream is in effect: either the cluster is air-gapped, or nothing has been configured yet.
+                  properties:
+                    scheme:
+                      type: string
+                      enum:
+                        - HTTP
+                        - HTTPS
+                      description: |
+                        The protocol used to reach the registry.
+                    host:
+                      type: string
+                      description: |
+                        The registry host, optionally with a port.
+                    path:
+                      type: string
+                      description: |
+                        The repository prefix inside the registry.
+                    ca:
+                      type: string
+                      description: |
+                        A PEM-encoded certificate authority bundle used to verify the registry.
+                    auth:
+                      type: object
+                      description: |
+                        Credentials for the registry.
+
+                        **Sensitive.**
+                      properties:
+                        username:
+                          type: string
+                          description: |
+                            The username for basic authentication.
+                        password:
+                          type: string
+                          description: |
+                            The password for basic authentication.
+                        auth:
+                          type: string
+                          description: |
+                            Pre-encoded `base64("username:password")`.
+                    mirrors:
+                      type: array
+                      description: |
+                        Additional addresses serving the same content.
+                      items:
+                        type: object
+                        required:
+                          - host
+                        properties:
+                          scheme:
+                            type: string
+                            enum:
+                              - HTTP
+                              - HTTPS
+                            description: |
+                              The protocol used to reach the mirror.
+                          host:
+                            type: string
+                            description: |
+                              The mirror host, optionally with a port.
+                          path:
+                            type: string
+                            description: |
+                              The repository prefix inside the mirror.
+                          ca:
+                            type: string
+                            description: |
+                              A PEM-encoded certificate authority bundle used to verify the mirror.
+                          auth:
+                            type: object
+                            description: |
+                              Credentials for the mirror.
+
+                              **Sensitive.**
+                            properties:
+                              username:
+                                type: string
+                                description: |
+                                  The username for basic authentication.
+                              password:
+                                type: string
+                                description: |
+                                  The password for basic authentication.
+                              auth:
+                                type: string
+                                description: |
+                                  Pre-encoded `base64("username:password")`.
+                conditions:
+                  type: array
+                  description: |
+                    The health summary written by the registry controller.
+
+                    - `Valid` — the resolved configuration is coherent.
+                    - `UpstreamValid` — the result of the preflight probe of the primary upstream: reachable, credentials accepted, sentinel content in place. `False` means the controller is holding the last known good upstream and has **not** switched over, so a broken license or a wrong address cannot take the cluster down.
+                    - `StorageConverged` — the storage has reached the state the configuration asks for.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          The condition type.
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        description: |
+                          The condition status.
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        description: |
+                          The `spec` generation the condition was set for.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: |
+                          When the condition last changed.
+                      reason:
+                        type: string
+                        description: |
+                          A machine-readable reason for the condition.
+                      message:
+                        type: string
+                        description: |
+                          A human-readable explanation.

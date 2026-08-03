@@ -27,12 +27,40 @@ const (
 	Path       = "/system/deckhouse"
 	PathRegexp = "^system/deckhouse"
 	Scheme     = "https"
+
+	// DropInRoot is the directory the container runtime is pointed at through its
+	// `config_path`, and which the node agent owns.
+	DropInRoot = "/etc/containerd/registry.d"
+
+	// DropInDefaultHost is containerd's fallback directory: consulted for any registry
+	// that has no directory of its own, which is how one drop-in covers every registry
+	// and makes the node configuration static.
+	DropInDefaultHost = "_default"
+
+	// DropInHostsFile is the file name containerd reads inside a host directory.
+	DropInHostsFile = "hosts.toml"
+
+	// StorePath is where the registry keeps its blobs on a node.
+	//
+	// A module constant rather than a user setting: the path is part of the
+	// contract with the data already on disk. The legacy implementation writes
+	// under StorePath/local_data, which matters when adopting an existing store
+	// instead of refilling it.
+	StorePath = "/opt/deckhouse/registry"
 )
 
 var (
 	Host         = fmt.Sprintf("registry.d8-system.svc:%d", Port)
 	ProxyHost    = fmt.Sprintf("127.0.0.1:%d", Port)
 	HostWithPath = fmt.Sprintf("%s/%s", Host, strings.TrimLeft(Path, "/"))
+
+	// AgentDropInFile is the one file the node agent writes for the container runtime.
+	//
+	// A shared constant rather than a path spelled out on each side, because it is a
+	// contract between three of them: the agent writes it, a bashible step waits for it
+	// as the sign that pulls can succeed, and containerd reads it. Spelled out
+	// separately, a change to any one of those would be silent in the other two.
+	AgentDropInFile = fmt.Sprintf("%s/%s/%s", DropInRoot, DropInDefaultHost, DropInHostsFile)
 
 	SupportedCRI         = []CRIType{CRIContainerdV1, CRIContainerdV2}
 	ModesRequiringModule = []ModeType{ModeDirect, ModeLocal, ModeProxy}

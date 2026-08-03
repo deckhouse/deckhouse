@@ -1,0 +1,75 @@
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    excludePaths:
+      - '**/*.md'
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+        - '**/*.go'
+  # The API types are shared with the storage syncer and with the agent, whose
+  # node-delivery package lives in modules/007-registrypackages. They sit in
+  # go_lib so that all three link the same package instead of keeping three
+  # copies in step.
+  - add: /{{ $.ModulePath }}go_lib/registry
+    to: /go_lib/registry
+    includePaths:
+      - '**/*.go'
+      - '**/*.mod'
+      - '**/*.sum'
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - go.mod
+        - go.sum
+shell:
+  install:
+    - set -e
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+from: {{ index $.Images "builder/golang" }}
+final: false
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src
+    to: /src
+    before: install
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /go_lib/registry
+    to: /go_lib/registry
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: "{{ $.GOPROXY }}"
+shell:
+  install:
+    - cd /src
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    # No `go test` here. Building an image and checking it are separate phases: the tests of
+    # this module's source run in the testing phase (`make test-all` iterates every go.mod,
+    # including this one), where they get a real environment and where a failure reads as a
+    # failed test rather than a failed build.
+    #
+    # They used to run here, which is how a test that needs something a build container does
+    # not have — a listener, a writable path — turned into an unbuildable image.
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /registry-controller ./cmd
+    - chown 64535:64535 /registry-controller
+    - chmod 0755 /registry-controller
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+fromImage: common/distroless
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /registry-controller
+    to: /registry-controller
+    before: setup
+imageSpec:
+  config:
+    entrypoint: ["/registry-controller"]
