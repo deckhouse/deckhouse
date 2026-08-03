@@ -56,6 +56,15 @@ spec:
         description: |
           Ambient mode requires hostNetwork so install-cni can coordinate with ztunnel
           and manage pod network namespaces on the node.
+    hostPorts:
+      - port: 15014
+        protocol: TCP
+        metadata:
+          description: Istio CNI metrics endpoint; with hostNetwork it is exposed as a host port.
+      - port: 4286
+        protocol: TCP
+        metadata:
+          description: HTTPS metrics endpoint exposed through kube-rbac-proxy in ambient mode.
   volumes:
     types:
       allowedValues:
