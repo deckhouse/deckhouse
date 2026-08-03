@@ -8,6 +8,7 @@
 #      and https://github.com/istio/istio/blob/1.19.7/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
+fromCacheVersion: "2026-08-03 14:37"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
   add: /src/istio/out/pilot-agent
@@ -114,13 +115,14 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
+fromCacheVersion: "2026-08-03 14:37"
 final: false
 shell:
   install:
   - mkdir -p /relocate/sbin
   - |
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+      ln -sf /sbin/xtables-nft-multi "/relocate/sbin/${cmd}"
     done
     # broken symlinks are not imported from the artifact
     touch /sbin/iptables-wrapper
