@@ -27,18 +27,48 @@ function __main__() {
   #    and the module must not be enabled.
   #    This check is consistent with the validation performed by the control-plane-manager on startup.
 
-  # 2. global.clusterConfiguration.defaultCRI is set and is in the allowed list
-  #    of container runtimes the module supports.
+  # 2. The effective default CRI is one the module supports.
+  #
+  #    Resolved the same way dhctl resolves it, and for the same reason: this setting
+  #    moved to the node-manager ModuleConfig, and the deprecated
+  #    ClusterConfiguration.defaultCRI lost its schema default along with the move. Read
+  #    only from ClusterConfiguration, this condition would silently stop matching on
+  #    every cluster that follows the new guidance, and a module that manages how the
+  #    whole cluster pulls images would quietly not be there.
+  #
+  #    A value of Containerd in the ModuleConfig cannot be told apart from an unset one,
+  #    because that is the ModuleConfig's own schema default. So it does not override the
+  #    deprecated field — otherwise a cluster carrying ContainerdV2 there and nothing in
+  #    the ModuleConfig would resolve to Containerd.
 
-  if values::has global.clusterConfiguration && values::has global.clusterConfiguration.defaultCRI; then
-    containerd_mode=$(values::get global.clusterConfiguration.defaultCRI)
-
-    case "$containerd_mode" in
-      "Containerd" | "ContainerdV2")
-        echo "true" >"$MODULE_ENABLED_RESULT"
-        ;;
-    esac
+  if ! values::has global.clusterConfiguration; then
+    return 0
   fi
+
+  containerd_mode=""
+
+  if values::has nodeManager.defaultCRI; then
+    from_module_config=$(values::get nodeManager.defaultCRI)
+    if [[ -n "$from_module_config" && "$from_module_config" != "Containerd" ]]; then
+      containerd_mode=$from_module_config
+    fi
+  fi
+
+  if [[ -z "$containerd_mode" ]] && values::has global.clusterConfiguration.defaultCRI; then
+    containerd_mode=$(values::get global.clusterConfiguration.defaultCRI)
+  fi
+
+  # Neither source says anything, which is the ordinary case now: the effective value is
+  # the default both schemas agree on.
+  if [[ -z "$containerd_mode" ]]; then
+    containerd_mode="Containerd"
+  fi
+
+  case "$containerd_mode" in
+    "Containerd" | "ContainerdV2")
+      echo "true" >"$MODULE_ENABLED_RESULT"
+      ;;
+  esac
 }
 
 enabled::run "$@"
