@@ -195,6 +195,7 @@ github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
 github.com/deckhouse/lib-dhctl v0.21.0 h1:6pO9qOj3mdQpX+zD07ZRlorKCtjvn5VEyigmT4k5SBw=
 github.com/deckhouse/lib-dhctl v0.21.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
+github.com/deckhouse/lib-dhctl v0.22.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
 github.com/deckhouse/module-sdk v0.12.1 h1:kcfvgIKwXUtcDXdK5e7D69lvdyaHctp8ectYKi+BYKw=
 github.com/deckhouse/module-sdk v0.12.1/go.mod h1:v3pnOUIY8hCv7qQ5YaffiAYKj5oH8WBonG614KvRPXw=
 github.com/denis-tingajkin/go-header v0.4.2 h1:jEeSF4sdv8/3cT/WY8AgDHUoItNSoEZ7qg9dX7pc218=

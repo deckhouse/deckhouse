@@ -17,7 +17,6 @@ package controlplane
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -26,9 +25,6 @@ import (
 type SSHChecker struct {
 	sshProvider      libcon.SSHProvider
 	nodesExternalIPs map[string]string
-
-	mu      sync.Mutex
-	clients map[string]libcon.SSHClient
 }
 
 func NewSSHChecker(
@@ -38,7 +34,6 @@ func NewSSHChecker(
 	return &SSHChecker{
 		sshProvider:      sshProvider,
 		nodesExternalIPs: nodesExternalIPs,
-		clients:          make(map[string]libcon.SSHClient),
 	}
 }
 
@@ -82,17 +77,6 @@ func (c *SSHChecker) clientForNode(
 	nodeName string,
 	address string,
 ) (libcon.SSHClient, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if client := c.clients[nodeName]; client != nil {
-		if !client.IsStopped() {
-			return client, nil
-		}
-
-		delete(c.clients, nodeName)
-	}
-
 	sourceClient, err := c.sshProvider.Client(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get source SSH client: %w", err)
@@ -114,21 +98,30 @@ func (c *SSHChecker) clientForNode(
 		},
 	})
 
-	client, err := c.sshProvider.NewStandaloneClient(
+	standaloneProvider, ok := c.sshProvider.(libcon.StandaloneClientProvider)
+	if !ok {
+		return nil, fmt.Errorf(
+			"SSH provider does not support keyed standalone clients",
+		)
+	}
+
+	client, err := standaloneProvider.StandaloneClientFor(
 		ctx,
+		SSHCheckerClientKey(nodeName),
 		checkSession,
 		sourceClient.PrivateKeys(),
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf(
-			"create standalone client for node %s: %w",
+			"get standalone client for node %s: %w",
 			nodeName,
 			err,
 		)
 	}
 
-	c.clients[nodeName] = client
-
 	return client, nil
+}
+
+func SSHCheckerClientKey(nodeName string) string {
+	return "controlplane-readiness/" + nodeName
 }

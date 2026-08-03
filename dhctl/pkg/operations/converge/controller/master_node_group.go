@@ -21,6 +21,7 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
@@ -540,9 +541,30 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 			return err
 		}
 
-		err = c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
-			return controlplane.NewHookForDestroyPipeline(ctx, sshProvider, nodeName, ctx.CommanderMode())
-		})
+		err = c.deleteRedundantNodes(
+			ctx,
+			c.state.Settings,
+			nodesToDeleteInfo,
+			func(nodeName string) infrastructure.InfraActionHook {
+				return controlplane.NewHookForDestroyPipeline(
+					ctx,
+					sshProvider,
+					nodeName,
+					ctx.CommanderMode(),
+				)
+			},
+			func(nodeName string) {
+				standaloneProvider, ok := sshProvider.(libcon.StandaloneClientProvider)
+				if !ok {
+					return
+				}
+
+				standaloneProvider.StopStandaloneClientFor(
+					ctx.Ctx(),
+					controlplane.SSHCheckerClientKey(nodeName),
+				)
+			},
+		)
 
 		// If deletion was successful, update master hosts cache
 		if err == nil && len(nodesToDelete) > 0 {
