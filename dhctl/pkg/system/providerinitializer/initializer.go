@@ -135,6 +135,8 @@ func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) libcon.Kub
 		return nil
 	}
 
+	// An empty kube.Config names no credentials, so this provider connects the default way:
+	// an SSH tunnel to the impersonating kubectl proxy on a master.
 	cfg := &kube.Config{}
 	runnerInterface, err := provider.GetRunnerInterface(ctx, cfg, i.baseProviderSettings, i)
 	if err != nil {

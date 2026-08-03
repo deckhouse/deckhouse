@@ -23,17 +23,15 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/deckhouse/go_lib/project"
 )
 
 func List() ([]apiextensionsv1.CustomResourceDefinition, error) {
-	projectDir, err := project.Dir()
+	crdsPath, err := crdsDir()
 	if err != nil {
-		return nil, fmt.Errorf("get project directory: %w", err)
+		return nil, fmt.Errorf("get crds directory: %w", err)
 	}
 
-	fsys := os.DirFS(filepath.Join(projectDir, "deckhouse-controller", "crds"))
+	fsys := os.DirFS(crdsPath)
 	var result []apiextensionsv1.CustomResourceDefinition
 	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -73,4 +71,29 @@ func List() ([]apiextensionsv1.CustomResourceDefinition, error) {
 		return nil, fmt.Errorf("walk dir: %w", err)
 	}
 	return result, nil
+}
+
+// crdsDir walks up from the process working directory (for a test binary it is
+// the directory of the package under test) until it finds this very directory.
+// Detecting the repository root by its contents and not by the name of the
+// checkout directory is what keeps this working in CI, where the checkout is
+// named after the CI project and a parent directory may be named deckhouse.
+func crdsDir() (string, error) {
+	pwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get process working directory: %w", err)
+	}
+
+	for {
+		candidate := filepath.Join(pwd, "deckhouse-controller", "crds")
+		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
+			return candidate, nil
+		}
+
+		parent := filepath.Dir(pwd)
+		if parent == pwd {
+			return "", fmt.Errorf("deckhouse-controller/crds not found above %s", pwd)
+		}
+		pwd = parent
+	}
 }

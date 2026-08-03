@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 )
 
 func removeResourceVersion(mc *unstructured.Unstructured) {
@@ -129,8 +130,8 @@ func prepareModuleConfig(ctx context.Context, mc *config.ModuleConfig, res *Mani
 // the ModuleConfig's CRD is still being installed, a resource-version conflict, or an
 // admission-webhook rejection that depends on another just-created resource, e.g. a
 // ModuleSource, being reconciled) which should keep retrying.
-func moduleConfigErrIsPermanent(err error) bool {
-	return apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err)
+func moduleConfigErrIsPermanent(ctx context.Context, err error) bool {
+	return kubeerrors.IsPermanentAuthError(ctx, err)
 }
 
 func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, mcName string, value any, field []string) error {
@@ -138,7 +139,7 @@ func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClie
 
 	cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(ctx, mcName, metav1.GetOptions{})
 	if err != nil {
-		if moduleConfigErrIsPermanent(err) {
+		if moduleConfigErrIsPermanent(ctx, err) {
 			return err
 		}
 		return fmt.Errorf("%w: get module config %s: %w", actions.ErrManifestTaskTransient, mcName, err)
@@ -153,7 +154,7 @@ func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClie
 
 	_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Update(ctx, cm, metav1.UpdateOptions{})
 	if err != nil {
-		if moduleConfigErrIsPermanent(err) {
+		if moduleConfigErrIsPermanent(ctx, err) {
 			return err
 		}
 		return fmt.Errorf("%w: update module config %s: %w", actions.ErrManifestTaskTransient, mcName, err)

@@ -8,6 +8,12 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "kube-router")) | nindent 2 }}
 spec:
   securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          kube-router must run privileged to enforce NetworkPolicy firewall rules
+          via iptables on the host network namespace.
     runAsNonRoot:
       allowedValue: false
       metadata:
@@ -29,8 +35,8 @@ spec:
           - ALL
       metadata:
         description: |
-          NET_ADMIN/NET_RAW are required to program iptables firewall rules for
-          NetworkPolicies and to set up the iptables-wrapper.
+          NET_ADMIN/NET_RAW are required by iptables-wrapper-init to set up
+          the iptables binaries used by kube-router.
   network:
     hostNetwork:
       allowedValue: true

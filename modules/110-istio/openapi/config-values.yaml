@@ -1102,6 +1102,22 @@ properties:
                         - type: number
                         description: |
                           Configuring memory limits.
+  configAnalysis:
+    type: object
+    description: |
+      Periodic Istio configuration analysis (`istioctl analyze`) that exports findings as Prometheus metrics and alerts.
+    x-doc-d8Editions:
+    - ee
+    default: {"enabled": true}
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        description: |
+          Enable the Istio configuration analyzer Deployment for each installed control-plane revision.
+
+          Set to `false` to disable analysis and remove related workloads.
+        x-examples: [false]
   ambient:
     type: object
     description: |
