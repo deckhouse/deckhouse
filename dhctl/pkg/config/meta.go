@@ -457,10 +457,11 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
-	// Default CRI. The node-manager ModuleConfig setting takes precedence over the
-	// deprecated ClusterConfiguration.defaultCRI field (see effectiveDefaultCRI).
-	if cri := m.effectiveDefaultCRI(); cri != "" {
-		defaultCRI = registry_const.CRIType(cri)
+	// Default CRI
+	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
+		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
+			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
+		}
 	}
 
 	registry, err := registry.NewConfigProvider(
@@ -706,10 +707,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 		configForBashibleBundleTemplate["provider"] = m.ProviderName
 	}
 
-	// The node-manager ModuleConfig setting takes precedence over the deprecated
-	// ClusterConfiguration.defaultCRI field, with a built-in fallback when neither
-	// is set (see effectiveDefaultCRI).
-	configForBashibleBundleTemplate["cri"] = m.effectiveDefaultCRI()
+	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
 	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup
 	configForBashibleBundleTemplate["clusterBootstrap"] = clusterBootstrap
@@ -1012,8 +1010,6 @@ func (m *MetaConfig) LoadImagesDigests() error {
 	return nil
 }
 
-// FindModuleConfig
-// if not found returns nil
 // effectiveClusterPrefix resolves the cluster prefix used to name cloud
 // infrastructure. The global ModuleConfig setting (spec.settings.prefix) is the
 // new home for this value and takes precedence over the deprecated
@@ -1078,41 +1074,8 @@ func (m *MetaConfig) clusterConfigForInfrastructure() map[string]json.RawMessage
 	return out
 }
 
-// effectiveDefaultCRI resolves the container runtime that should be used for the
-// bootstrapped node. The node-manager ModuleConfig setting (spec.settings.defaultCRI)
-// is the new home for this option and takes precedence over the deprecated
-// ClusterConfiguration.defaultCRI field when it is set to a non-default value.
-//
-// When neither source specifies a value it falls back to the built-in default
-// (Containerd), but only if a ClusterConfiguration is present. This mirrors the
-// former ClusterConfiguration schema default, which applied only within a
-// ClusterConfiguration document: with no ClusterConfiguration there is no cluster
-// to bootstrap, and the registry config relies on an empty CRI to stay disabled.
-func (m *MetaConfig) effectiveDefaultCRI() string {
-	if mc := m.FindModuleConfig("node-manager"); mc != nil {
-		if raw, ok := mc.Spec.Settings["defaultCRI"]; ok {
-			if cri, ok := raw.(string); ok && cri != "" && cri != string(registry_const.CRIContainerdV1) {
-				return cri
-			}
-		}
-	}
-
-	if raw, ok := m.ClusterConfig["defaultCRI"]; ok {
-		var cri string
-		if err := json.Unmarshal(raw, &cri); err == nil && cri != "" {
-			return cri
-		}
-	}
-
-	if len(m.ClusterConfig) > 0 {
-		return string(registry_const.CRIContainerdV1)
-	}
-
-	return ""
-}
-
-// FindModuleConfig returns the ModuleConfig with the given name, or nil if not found.
-
+// FindModuleConfig
+// if not found returns nil
 func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
 	if len(m.ModuleConfigs) == 0 {
 		return nil
