@@ -56,11 +56,13 @@ type runAutotuneOptions struct {
 	Fetch componentUsageFunc
 }
 
-// Schedule entrypoint: metrics → decide → commit. Kubernetes snapshots are
-// watched for state only (no ExecuteHookOnSynchronization — that is the sync
-// hook in resources_requests_autotune_sync.go).
+// Schedule + OnBeforeHelm entrypoint: metrics → decide → commit.
+// Nodes/state snapshots are passive (no sync — that is resources_requests_autotune_sync.go).
+// OnBeforeHelm re-runs when controlPlaneManager values change (e.g. manual
+// resourcesRequests), so overrides do not wait for the daily cron.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: autotuneQueue,
+	Queue:        autotuneQueue,
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: autotuneScheduleName, Crontab: "*/5 * * * *"}, // DEBUG: prod "0 3 * * *"
 	},

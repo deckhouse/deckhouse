@@ -222,6 +222,42 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		})
 	})
 
+	Context("OnBeforeHelm: manual CPU override clears cpu without waiting for cron", func() {
+		BeforeEach(func() {
+			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
+			st := autotuneState{
+				CPU: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
+						componentEtcd:          {AppliedMilliCPU: ptr.To(int64(800)), LastChange: "2026-07-01T00:00:00Z"},
+					},
+				},
+				Memory: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver: {AppliedBytes: ptr.To(int64(512 * 1024 * 1024)), LastChange: "2026-07-01T00:00:00Z"},
+					},
+				},
+			}
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("clears cpu components from values but keeps memory", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.milliCPU").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(512 * 1024 * 1024)))
+
+			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
+			Expect(ops.Exists()).To(BeTrue())
+			var st autotuneState
+			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+			Expect(st.CPU).To(BeNil())
+			Expect(st.Memory).ToNot(BeNil())
+		})
+	})
+
 	Context("Schedule: both measurements overridden clears components without merge error", func() {
 		BeforeEach(func() {
 			// Pre-seed components so Remove is exercised (the previous double-Remove
