@@ -97,30 +97,6 @@ spec:
               name: https
         path: /modules
         pathType: Prefix
-  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
-  tls:
-    - hosts:
-        - {{ include "helm_lib_module_public_domain" (list . "documentation") }}
-      secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
-  {{- end }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: documentation-pprof
-  namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
-  annotations:
-    nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: documentation-basic-auth
-    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
-    nginx.ingress.kubernetes.io/backend-protocol: HTTP
-spec:
-  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
-  rules:
-  - host: {{ include "helm_lib_module_public_domain" (list . "documentation") }}
-    http:
-      paths:
       - backend:
           service:
             name: documentation
@@ -134,7 +110,6 @@ spec:
         - {{ include "helm_lib_module_public_domain" (list . "documentation") }}
       secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
-{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

@@ -19,9 +19,9 @@ import (
 	"errors"
 	"flag"
 	"net/http"
-	"net/http/pprof"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -33,6 +33,7 @@ import (
 	"github.com/flant/docs-builder/internal/docs"
 	v1 "github.com/flant/docs-builder/internal/http/v1"
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/pprof"
 	"github.com/flant/docs-builder/pkg/k8s"
 )
 
@@ -42,6 +43,7 @@ var (
 	src              string
 	dst              string
 	metricsAddress   string
+	pprofEnabled     bool
 	pprofAddress     string
 	highAvailability bool
 )
@@ -53,6 +55,7 @@ func init() {
 	flag.StringVar(&metricsAddress, "metrics-address", ":9090", "Address to listen on metrics")
 	flag.StringVar(&pprofAddress, "pprof-address", ":6060", "Address to listen on pprof")
 	flag.BoolVar(&highAvailability, "highAvailability", false, "high availability mod")
+	pprofEnabled, _ = strconv.ParseBool(os.Getenv("PPROF_ENABLED"))
 }
 
 func main() {
@@ -89,16 +92,9 @@ func main() {
 		Handler: mStorage.Handler(),
 	}
 
-	pprofMux := http.NewServeMux()
-	pprofMux.HandleFunc("/debug/pprof/", pprof.Index)
-	pprofMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	pprofMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	pprofMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	pprofMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
-	pprofSrv := &http.Server{
-		Addr:    pprofAddress,
-		Handler: pprofMux,
+	var pprofSrv *http.Server
+	if pprofEnabled {
+		pprofSrv = pprof.NewServer(pprofAddress)
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -107,7 +103,9 @@ func main() {
 
 	eg.Go(srv.ListenAndServe)
 	eg.Go(metricsSrv.ListenAndServe)
-	eg.Go(pprofSrv.ListenAndServe)
+	if pprofSrv != nil {
+		eg.Go(pprofSrv.ListenAndServe)
+	}
 	eg.Go(lManager.Run(ctx))
 
 	logger.Info("application started")
@@ -134,9 +132,11 @@ func main() {
 	shutdownEg.Go(func() error {
 		return metricsSrv.Shutdown(shutdownCtx)
 	})
-	shutdownEg.Go(func() error {
-		return pprofSrv.Shutdown(shutdownCtx)
-	})
+	if pprofSrv != nil {
+		shutdownEg.Go(func() error {
+			return pprofSrv.Shutdown(shutdownCtx)
+		})
+	}
 
 	waitErr := shutdownEg.Wait()
 	if waitErr != nil && !errors.Is(waitErr, context.Canceled) {
