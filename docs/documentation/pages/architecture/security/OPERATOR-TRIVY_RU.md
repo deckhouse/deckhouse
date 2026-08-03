@@ -2,7 +2,7 @@
 title: Модуль operator-trivy
 permalink: ru/architecture/security/operator-trivy.html
 lang: ru
-search: operator-trivy,
+search: operator-trivy, сканирование образов, сканирование на уязвимости
 description: Архитектура модуля operator-trivy в Deckhouse Kubernetes Platform.
 ---
 
@@ -88,7 +88,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
    Состоит из следующих контейнеров:
 
    - **operator** — основной контейнер;
-   - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
+   - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищённого доступа к метрикам контроллера.
 
 1. **Trivy-server** (StatefulSet) — компонент реализует сервис сканирования безопасности, базируется на основе Open Source-проекта [Trivy](https://github.com/aquasecurity/trivy).
 
@@ -105,13 +105,13 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
    При установке модуля создаётся ресурс Provider, который регистрирует trivy-provider как провайдер в Gatekeeper. Подробнее с описанием интеграции можно ознакомиться в [соответствующем разделе документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata/).
 
-   Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.denyVulnerableImages.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-denyvulnerableimages-enabled) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`) и включен компонент Gatekeeper модуля [`admission-policy-engine`](/modules/admission-policy-engine/).
+   Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.denyVulnerableImages.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-denyvulnerableimages-enabled) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`) и включён компонент Gatekeeper модуля [`admission-policy-engine`](/modules/admission-policy-engine/).
 
 1. **Report-updater** (Deployment) — опциональный контроллер, состоящий из одного контейнера **report-updater**, реализует MutatingWebhook и обеспечивает обогащение кастомного ресурса VulnerabilityReport идентификаторами БДУ. Словарь БДУ регулярно (каждые 6 часов) обновляется из OCI-образа.
 
    Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.linkCVEtoBDU`](/modules/operator-trivy/stable/configuration.html#parameters-linkcvetobdu) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`).
 
-1. **Registry-scanner** (StatefulSet) — опциональный компонент, состоящий из одного контейнера **registry-scanner**, выполняет регулярное сканирование образов, размещенных в произвольных реестрах контейнеров, указанных пользователем. Сканирование нагрузок в самом кластере выполняется компонентом operator.
+1. **Registry-scanner** (StatefulSet) — опциональный компонент, состоящий из одного контейнера **registry-scanner**, выполняет регулярное сканирование образов, размещённых в произвольных реестрах контейнеров, указанных пользователем. Сканирование нагрузок в самом кластере выполняется компонентом operator.
 
    Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.registryScanning.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-registryscanning-enabled) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`).
 
@@ -135,7 +135,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
    - SYSLOG
    - SYS_RESOURCE
    - IPC_LOCK
-   - NET_RAW.
+   - NET_RAW
    Это необходимо для наблюдения за поведением контейнеров через eBPF.
 
    Node-agent работает в профилирующем режиме, не выполняет активное обнаружение атак по правилам.
