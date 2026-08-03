@@ -14,6 +14,7 @@
 #      and https://github.com/istio/istio/blob/1.25.2/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
+fromCacheVersion: "2026-08-03 13:29"
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -147,6 +148,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
+fromCacheVersion: "2026-08-03 13:29"
 final: false
 shell:
   beforeInstall:
