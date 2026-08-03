@@ -27,18 +27,21 @@ import (
 )
 
 /*
-TODO(kubernetesVersion-deprecation): T+1 remove — delete this hook together with the
-D8UnsetKubernetesVersionInModuleConfig alert in monitoring/prometheus-rules/mc-migration.yaml
-and its entry in docs/documentation/_data/deckhouse-alerts.yml once ModuleConfig is the only
-source and the fleet has set the setting (T+1 migrate may clear the alert by writing Automatic).
+TODO(kubernetesVersion-deprecation): T+1 remove — delete this hook with the
+D8UnsetKubernetesVersionInModuleConfig alert (mc-migration.yaml + deckhouse-alerts.yml)
+after ASAP migrate has filled ModuleConfig across the fleet.
+
+TODO(kubernetesVersion-deprecation): T+1 add — ASAP migrate hook: empty MC → copy CC or
+Automatic; create-or-patch MC; scrub kubernetesVersion from ClusterConfiguration Secret.
+Do not declare kubernetesVersionMigrated in that same release.
 
 Description:
 	Alerts when ModuleConfig control-plane-manager has no kubernetesVersion setting.
 	Also publishes requirements.SaveValue for the kubernetesVersionMigrated release gate.
 */
 
-// TODO(kubernetesVersion-deprecation): T+1 measure — adoption counter: set exactly on clusters
-// with unset ModuleConfig kubernetesVersion. Read across the fleet before arming the release gate.
+// TODO(kubernetesVersion-deprecation): T+1 measure — adoption counter on unset ModuleConfig
+// kubernetesVersion; read fleet-wide before arming the release gate.
 const (
 	unsetKubernetesVersionMetricGroup = "D8UnsetKubernetesVersionInModuleConfig"
 	unsetKubernetesVersionMetricName  = "d8_unset_kubernetes_version_in_module_config"
@@ -47,7 +50,7 @@ const (
 // KubernetesVersionMigratedRequirementKey is the requirements.SaveValue key that records whether
 // ModuleConfig control-plane-manager has kubernetesVersion set (any value, including Automatic).
 //
-// TODO(kubernetesVersion-deprecation): T+1 remove — publishing side only; the RegisterCheck in
+// TODO(kubernetesVersion-deprecation): T+1 remove — publishing side only; RegisterCheck in
 // requirements/check.go must outlive it (see T+1 declare / verify markers there).
 const KubernetesVersionMigratedRequirementKey = "controlPlaneManager:kubernetesVersionMigrated"
 

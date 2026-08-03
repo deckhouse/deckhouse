@@ -68,11 +68,11 @@ func init() {
 //
 // requirementValue comes from the release. No release declares this key yet, so the check is inert.
 //
-// TODO(kubernetesVersion-deprecation): T+1 verify — exercise on a stand (declare in a test
-// DeckhouseRelease; unset MC refused with a readable message, set MC passes) before the release below depends on it.
+// TODO(kubernetesVersion-deprecation): T+1 verify — stand-check with a test DeckhouseRelease
+// before arming the real gate.
 //
-// TODO(kubernetesVersion-deprecation): T+1 declare — the release that removes ClusterConfiguration
-// kubernetesVersion MUST declare `kubernetesVersionMigrated: "true"` in its requirements.
+// TODO(kubernetesVersion-deprecation): T+1 declare — add kubernetesVersionMigrated: "true" to
+// DeckhouseRelease requirements in the release AFTER ASAP migrate + CC strip; never co-ship with ASAP.
 func checkKubernetesVersionMigrated(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 	requirementValue = strings.TrimSpace(requirementValue)
 	if requirementValue == "" {

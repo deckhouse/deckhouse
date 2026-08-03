@@ -237,7 +237,8 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			// compatibility during the ClusterConfiguration.kubernetesVersion deprecation window.
 			// Declared target lives in global.discovery.targetKubernetesVersion instead.
 			//
-			// TODO(kubernetesVersion-deprecation): T+1 remove — this substitution goes with the CC field.
+			// TODO(kubernetesVersion-deprecation): T+1 remove — drop Automatic→Default substitution into
+			// global.clusterConfiguration.kubernetesVersion with the CC field; keep discovery.target*.
 			if kubernetesVersionFromMetaConfig == automaticKubernetesVersion {
 				b, _ := json.Marshal(hooks.DefaultKubernetesVersion)
 				metaConfig.ClusterConfig["kubernetesVersion"] = b
