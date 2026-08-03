@@ -1,4 +1,4 @@
-2797
+2806
 1GB
 2GB
 5XX
@@ -1129,6 +1129,7 @@ datastreams
 de
 debian
 deckhouse
+deeplink
 defaultCRI
 defaultClusterStorageClass
 defragment
@@ -1472,6 +1473,7 @@ nowrap
 npm
 oauth
 objectmeta
+occurrences
 offline
 offtopic
 ok
@@ -1623,6 +1625,7 @@ shapshot
 shouldn
 smokeMini
 snaphost
+snippet
 softdog
 sourceRanges
 specialCharacters
@@ -2234,6 +2237,7 @@ zoneTagCategory
 межузловой
 мейнтейнер
 мейнтейнерам
+мейнтейнеры
 менятьcя
 меняться
 мержит
@@ -2275,6 +2279,7 @@ zoneTagCategory
 наблюдаемости
 наблюдаемость
 нативно
+находок
 неавторизованного
 неавторизованный
 неаутентифицированные
@@ -2359,6 +2364,7 @@ zoneTagCategory
 пайплайн
 пайплайна
 пайплайнами
+пайплайнах
 пайплайне
 пайплайнов
 пайплайну
@@ -2439,6 +2445,7 @@ zoneTagCategory
 пересоздастся
 пересоздаёт
 пересоздаётся
+перетащите
 переупорядочивание
 перехешируются
 пецификация
@@ -2620,6 +2627,8 @@ zoneTagCategory
 сервисах
 сервисов
 сервисы
+серьёзности
+серьёзность
 синтаксисы
 скачался
 скачаться
@@ -2796,9 +2805,3 @@ zoneTagCategory
 юзера
 юнит
 юнита
-мейнтейнеры
-находок
-серьёзность
-серьёзности
-пайплайну
-перетащите
