@@ -99,6 +99,8 @@ Summary:
    1. Получите список внешних модулей запущенных из `moduleSource/deckhouse` с результатом проверки их наличия в DKP новой редакции:
 
       ```shell
+      (set -e
+      trap 'echo "Ошибка выполнения"' ERR
       d8-crane() {
          if command -v d8 &>/dev/null && d8 cr &>/dev/null 2>&1; then
             d8 cr "$@"
@@ -134,11 +136,12 @@ Summary:
          done
       }
 
-      d8-crane --help > /dev/null 2>&1 && echo "OK" || echo "FAIL"
+      d8-crane --help > /dev/null 2>&1 || { echo "ERROR: crane not found"; exit 1; }
       <!REMOVE_FOR_CE>
       d8-crane-login "registry.deckhouse.ru" "$LICENSE_TOKEN"
       <!/REMOVE_FOR_CE>
       check_external_modules "registry.deckhouse.ru/deckhouse/$NEW_EDITION/modules"
+      )
       ```
 
    1. Отключите модули которые не были найден в новой редакции, если это допустимо. Иначе, **прервите процесс переключения.**

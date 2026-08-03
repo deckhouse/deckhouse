@@ -98,6 +98,8 @@ Summary:
    1. Get the list of external modules launched via `moduleSource/deckhouse` with the result of checking their availability in DKP new edition:
 
       ```shell
+      (set -e
+      trap 'echo "Execution error"' ERR
       d8-crane() {
          if command -v d8 &>/dev/null && d8 cr &>/dev/null 2>&1; then
             d8 cr "$@"
@@ -133,11 +135,12 @@ Summary:
          done
       }
 
-      d8-crane --help > /dev/null 2>&1 && echo "OK" || echo "FAIL"
+      d8-crane --help > /dev/null 2>&1 || { echo "ERROR: crane not found"; exit 1; }
       <!REMOVE_FOR_CE>
       d8-crane-login "registry.deckhouse.io" "$LICENSE_TOKEN"
       <!/REMOVE_FOR_CE>
       check_external_modules "registry.deckhouse.io/deckhouse/$NEW_EDITION/modules"
+      )
       ```
 
    1. Disable the modules that were not found in the new edition if acceptable. Otherwise, **abort the switching process.**
