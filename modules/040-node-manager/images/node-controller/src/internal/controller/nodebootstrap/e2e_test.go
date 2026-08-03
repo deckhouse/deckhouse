@@ -41,6 +41,9 @@ const (
 	cloudInstanceManagerNS = "d8-cloud-instance-manager"
 	testKubernetesVersion  = "1.35"
 	testContainerdDigest   = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+	testPauseDigest        = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+	testRegistryAddress    = "registry.example.com"
+	testRegistryPath       = "/deckhouse/ce"
 	testCNIDigest          = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	testKubeletDigest      = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
 	testClusterCA          = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
@@ -345,8 +348,8 @@ func ensureClusterInputs(ctx context.Context) {
 	ensureNamespace(ctx, kubeSystemNS)
 	ensureNamespace(ctx, cloudInstanceManagerNS)
 
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest)
+	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testPauseDigest)
 	ensureObject(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: "bashible-apiserver-files"},
 		Data:       map[string]string{"images_digests.json": digests},
@@ -355,6 +358,20 @@ func ensureClusterInputs(ctx context.Context) {
 	ensureObject(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: cloudInstanceManagerNS, Name: "registry-packages-proxy-token"},
 		Data:       map[string][]byte{"token": []byte("proxy-token")},
+	})
+
+	// The registry the cluster was installed from: the userdata names the pause
+	// image against it, so rendering cannot proceed without it.
+	ensureNamespace(ctx, "d8-system")
+	ensureObject(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "deckhouse-registry"},
+		Data: map[string][]byte{
+			"address":           []byte(testRegistryAddress),
+			"path":              []byte(testRegistryPath),
+			"scheme":            []byte("https"),
+			"imagesRegistry":    []byte(testRegistryAddress + testRegistryPath),
+			".dockerconfigjson": []byte(fmt.Sprintf(`{"auths":{%q:{"auth":"dXNlcjpwYXNzd29yZA=="}}}`, testRegistryAddress)),
+		},
 	})
 
 	ensureObject(ctx, &corev1.ConfigMap{

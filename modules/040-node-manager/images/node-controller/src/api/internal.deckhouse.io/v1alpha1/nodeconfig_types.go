@@ -25,10 +25,18 @@ import (
 // cannot be backed by the finite user-namespace ID ranges on the host.
 const MaxKubeletPods = 500
 
+// MaxContainerLogFiles is a sanity limit for spec.kubelet.containerLogMaxFiles.
+// The value is rendered into an int32 KubeletConfiguration field, so an
+// unbounded one wraps negative rather than being refused.
+const MaxContainerLogFiles = 1000
+
 // NodeConfig is the top-level object stored at /config/nodeconfig.yaml and, in
 // the cluster, a CRD (internal.deckhouse.io/v1alpha1). It describes the desired
-// state of a Deckhouse olcedar node. The on-node loader parses the same type
-// from the config file; the CRD is generated from it (see `task gen`).
+// state of a Deckhouse olcedar node. The on-node loader (nodelet) parses the
+// same type from the config file, so this file and the agent's own
+// internal/config/types.go are one contract and must stay identical. The CRD in
+// modules/040-node-manager/crds/nodeconfig.yaml is generated from it — see the
+// "Generate" section of this module's Makefile.
 //
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=nc
@@ -54,9 +62,10 @@ type NodeConfigStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// AppliedGeneration is the spec generation the node is actually running. It
-	// lags ObservedGeneration while a disruptive config is held. The rollout's
-	// "this node has converged" test is AppliedGeneration == metadata.generation,
-	// not ObservedGeneration.
+	// lags ObservedGeneration while a disruptive config is held: the node keeps
+	// running the previous generation until the interruption the new one needs
+	// is approved. The cluster's "this node has converged" test is
+	// AppliedGeneration == metadata.generation, not ObservedGeneration.
 	// +optional
 	AppliedGeneration int64 `json:"appliedGeneration,omitempty"`
 	// Phase summarises the node. Ready: running the published config, healthy.
@@ -76,29 +85,47 @@ type NodeConfigStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// Extensions is the outcome of each configured system extension, one entry
 	// per extension, so a reader sees which one failed rather than a single
-	// aggregate ExtensionsReady.
+	// aggregate ExtensionsReady. It is republished on every pass, empty when the
+	// pass checked nothing — an empty list means exactly that, and never "the
+	// previous outcome still holds".
 	// +optional
 	// +listType=map
 	// +listMapKey=name
-	Extensions []ExtensionStatus `json:"extensions,omitempty"`
+	Extensions []ExtensionStatus `json:"extensions"`
 	// Units is the outcome of each managed systemd unit (containerd, kubelet and
-	// every unit an extension ships), one entry per unit.
+	// every unit an extension ships), one entry per unit. Republished on every
+	// pass like Extensions, and empty when the pass checked nothing.
 	// +optional
 	// +listType=map
 	// +listMapKey=name
-	Units []UnitStatus `json:"units,omitempty"`
+	Units []UnitStatus `json:"units"`
+	// LastReconcileTime is when the node last finished a reconcile pass. Nothing
+	// else in the status ages: conditions carry a lastTransitionTime that moves
+	// only on a transition, so an agent that died at 02:00 goes on publishing the
+	// last status it wrote, and a reader — or the cluster's rollout gate, which
+	// frees a slot for a node it believes converged — cannot tell it from a
+	// healthy one.
+	//
+	// It is republished at most once every few minutes, not on every pass: a
+	// write per node per minute buys nothing a coarser heartbeat does not. So
+	// judge staleness in tens of minutes, not seconds.
+	// +optional
+	LastReconcileTime metav1.Time `json:"lastReconcileTime,omitempty"`
 	// MaintenanceToken authenticates a push to the node's maintenance endpoint.
-	// The on-node agent generates it at startup and republishes it here; an
-	// operator reads it from the last status the node published while the API was
-	// reachable and presents it when pushing a config to the node's :50000
-	// endpoint after the node has lost the API.
+	// nodelet generates it once at startup and republishes it here on every pass
+	// while the API is reachable. When the node later loses the API and opens its
+	// :50000 config-push port, an operator reads this token from the last status
+	// the node published and presents it as `Authorization: Bearer <token>` to
+	// push a config — the endpoint rejects a push without it.
 	//
 	// The token is a credential for a root-equivalent config push, so it is
-	// marked sensitive: the API strips it from get/list/watch responses for any
-	// caller without the nodeconfigs/sensitive subresource, which nodes are
-	// deliberately not granted (see the d8:node-manager:node-agent ClusterRole).
-	// controller-gen cannot emit the marker, so it is maintained by hand in
-	// crds/nodeconfig.yaml — keep it there when regenerating.
+	// marked sensitive: the API strips it from get/list/watch responses for
+	// any caller without the nodeconfigs/sensitive subresource. Nodes read
+	// NodeConfigs cluster-wide and are deliberately NOT granted it, so one
+	// node cannot read another's token (see the d8:node-manager:node-agent
+	// ClusterRole). The marker itself lives in the CRD — controller-gen cannot
+	// emit it, so it is stamped back in after generating; keep it there when
+	// regenerating crds/nodeconfig.yaml.
 	// +optional
 	MaintenanceToken string `json:"maintenanceToken,omitempty"`
 }
@@ -149,9 +176,14 @@ type NodeSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	NodeName string `json:"nodeName"`
-	// OSImage is the system image the node boots (resolved from the release
-	// channel).
-	OSImage string `json:"osImage"`
+	// OSImage is the OS image reference the cluster believes this node should
+	// run. Nothing acts on it: the node boots whatever the DVPInstanceClass
+	// points its root disk at, and nodelet only logs this. Optional, so the same
+	// document is accepted both as /config/nodeconfig.yaml and by the API —
+	// required here while the file loader did not require it meant one YAML
+	// passed on the node and was refused by the API server.
+	// +optional
+	OSImage string `json:"osImage,omitempty"`
 	// Storage selects the target disk for the OS install. The partition layout
 	// is fixed (boot/config/data), so only the whole-disk device is needed.
 	// +optional
@@ -176,7 +208,7 @@ type NodeSpec struct {
 	// APIServerEndpoints is the list of API server URLs the node connects to
 	// (via the node-local API proxy).
 	// +optional
-	// +kubebuilder:validation:items:Pattern=`^(https?://)?(\\[[0-9A-Fa-f:]+\\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$`
+	// +kubebuilder:validation:items:Pattern=`^(https?://)?(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$`
 	APIServerEndpoints []string `json:"apiServerEndpoints,omitempty"`
 	// UpdatePolicy controls how and when the node is updated.
 	// +optional
@@ -184,9 +216,56 @@ type NodeSpec struct {
 
 	// RegistryPackagesProxyAccessTokenB64 is a base64-encoded token used to
 	// authenticate against the registry packages proxy.
+	//
+	// It is a credential, but deliberately NOT marked x-kubernetes-sensitive-data
+	// the way status.maintenanceToken is. The nodeconfigs/sensitive subresource
+	// is granted per resource, not per field, so a node cannot be allowed to read
+	// this one without also being allowed to read every other node's maintenance
+	// token — and nodelet must read this one: the extensions controller decodes
+	// it to fetch every sysext. Nothing is lost by leaving it visible: the proxy
+	// token is one cluster-wide secret (registry-packages-proxy-token) published
+	// identically to every node, so reading a neighbour's copy hands an attacker
+	// what it already holds.
 	// +optional
 	// +kubebuilder:validation:Pattern=`^(([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)?$`
 	RegistryPackagesProxyAccessTokenB64 string `json:"registryPackagesProxyAccessTokenB64,omitempty"`
+
+	// Registry is the container registry the node talks to directly, without the
+	// cluster's registry-packages-proxy. A node bootstrapping a control-plane has
+	// no proxy to ask — it is the one bringing the cluster up — yet it still has
+	// to pull the control-plane images and its own system extensions, so it needs
+	// the address and the credentials itself. Worker nodes leave this empty and
+	// keep going through the proxy.
+	// +optional
+	Registry *Registry `json:"registry,omitempty"`
+}
+
+// Registry describes direct access to a container registry: where it is, how to
+// reach it and how to authenticate. It feeds both the extension downloader and
+// the containerd hosts.toml, so a control-plane static pod (which has no
+// imagePullSecrets — nothing has created them yet) can pull its image.
+type Registry struct {
+	// Address is the registry host, optionally with a port, e.g.
+	// "registry.deckhouse.io" or "registry.example.com:5000".
+	// +kubebuilder:validation:MinLength=1
+	Address string `json:"address"`
+	// Path is the repository path within the registry, e.g. "/deckhouse/ce".
+	// +optional
+	Path string `json:"path,omitempty"`
+	// Scheme is HTTPS (default) or HTTP.
+	// +optional
+	// +kubebuilder:validation:Enum=HTTPS;HTTP
+	// +kubebuilder:default=HTTPS
+	Scheme string `json:"scheme,omitempty"`
+	// CA is a PEM certificate bundle to verify the registry with, for registries
+	// signed by a private CA. The image carries the Mozilla bundle and nothing
+	// else, so without this a self-signed registry is unreachable.
+	// +optional
+	CA string `json:"ca,omitempty"`
+	// Auth is the base64-encoded "user:password" pair, as it appears in the
+	// "auth" field of a docker config.
+	// +optional
+	Auth string `json:"auth,omitempty"`
 }
 
 // Storage selects the target disk for the OS install. The partition layout is
@@ -194,6 +273,12 @@ type NodeSpec struct {
 // no per-partition configuration. Consumed by the initramfs disk provisioner at
 // install time (see the initramfs repo docs/disk-provisioning-plan.md).
 type Storage struct {
+	Disk `json:",inline"`
+}
+
+// Disk names one whole-disk block device, by path or by attributes, and says
+// whether it may be reformatted.
+type Disk struct {
 	// Device is the whole-disk block device to install onto, e.g. "/dev/sda",
 	// "/dev/nvme0n1", or a stable "/dev/disk/by-id/..." path. Ignored when
 	// diskSelector is set.
@@ -383,8 +468,16 @@ type Kubelet struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=500
-	// +kubebuilder:default=110
+	// +kubebuilder:default=120
 	MaxPods int `json:"maxPods,omitempty"`
+	// KubernetesVersion is the cluster's minor version, e.g. "1.34". It decides
+	// which feature gates kubelet is started with — bashible turns the DRA gates
+	// on by version, and a node not told the version cannot follow. Without it a
+	// DRA workload runs everywhere in the cluster except on immutable nodes.
+	// +optional
+	// +kubebuilder:validation:MaxLength=16
+	// +kubebuilder:validation:Pattern=`^[0-9]+\.[0-9]+$`
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
 	// ContainerLogMaxSize is the maximum log file size before rotation
 	// (e.g. "50Mi").
 	// +optional
@@ -394,6 +487,9 @@ type Kubelet struct {
 	// ContainerLogMaxFiles is the number of rotated log files to retain.
 	// +optional
 	// +kubebuilder:validation:Minimum=1
+	// Keep the maximum in sync with MaxContainerLogFiles: a marker cannot read
+	// the constant, and the file loader enforces the same bound.
+	// +kubebuilder:validation:Maximum=1000
 	// +kubebuilder:default=4
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
 	// CACert is the base64-encoded cluster CA certificate used in the
@@ -418,6 +514,31 @@ type Kubelet struct {
 	// +kubebuilder:validation:XValidation:rule="self.all(key, size(key) <= 317 && size(self[key]) <= 63)",message="nodeLabels keys and values are too long"
 	// +kubebuilder:validation:XValidation:rule="self.all(key, !format.qualifiedName().validate(key).hasValue())",message="nodeLabels keys must be qualified names"
 	NodeLabels map[string]NodeLabelValue `json:"nodeLabels,omitempty"`
+	// ServerTLSBootstrap makes kubelet request a serving certificate from the
+	// cluster instead of signing its own. Default true. The zero master sets it
+	// to false: nothing approves serving CSRs until Deckhouse is installed, and
+	// a kubelet waiting for that certificate never reports the node Ready.
+	// +optional
+	ServerTLSBootstrap *bool `json:"serverTLSBootstrap,omitempty"`
+	// NodeIP is the address kubelet registers the node with (--node-ip). Left
+	// empty kubelet picks an address itself, which on a multi-homed node is not
+	// always the one the cluster routes to.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == '' || isIP(self)",message="nodeIP must be a valid IP address"
+	NodeIP string `json:"nodeIP,omitempty"`
+	// ResourceReservation controls how much CPU, memory and disk are held back
+	// from pods for the system itself (kubeReserved).
+	// +optional
+	ResourceReservation *ResourceReservation `json:"resourceReservation,omitempty"`
+}
+
+// ResourceReservation is the kubeReserved policy for the node.
+type ResourceReservation struct {
+	// Mode is Auto to compute the reservation from the node's capacity, or Off
+	// to reserve nothing.
+	// +kubebuilder:validation:Enum=Auto;Off
+	// +kubebuilder:default=Auto
+	Mode string `json:"mode,omitempty"`
 }
 
 // Taint represents a Kubernetes taint applied to a node during registration.

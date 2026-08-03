@@ -27,8 +27,11 @@ spec:
         description: |-
           NodeConfig is the top-level object stored at /config/nodeconfig.yaml and, in
           the cluster, a CRD (internal.deckhouse.io/v1alpha1). It describes the desired
-          state of a Deckhouse olcedar node. The on-node loader parses the same type
-          from the config file; the CRD is generated from it (see `task gen`).
+          state of a Deckhouse olcedar node. The on-node loader (nodelet) parses the
+          same type from the config file, so this file and the agent's own
+          internal/config/types.go are one contract and must stay identical. The CRD in
+          modules/040-node-manager/crds/nodeconfig.yaml is generated from it — see the
+          "Generate" section of this module's Makefile.
         properties:
           apiVersion:
             description: |-
@@ -219,12 +222,30 @@ spec:
                       ExternalCloudProvider enables --cloud-provider=external so the
                       cloud-controller-manager manages the node (zone, region, providerID).
                     type: boolean
+                  kubernetesVersion:
+                    description: |-
+                      KubernetesVersion is the cluster's minor version, e.g. "1.34". It decides
+                      which feature gates kubelet is started with — bashible turns the DRA gates
+                      on by version, and a node not told the version cannot follow. Without it a
+                      DRA workload runs everywhere in the cluster except on immutable nodes.
+                    maxLength: 16
+                    pattern: ^[0-9]+\.[0-9]+$
+                    type: string
                   maxPods:
-                    default: 110
+                    default: 120
                     description: MaxPods is the maximum number of pods per node.
                     maximum: 500
                     minimum: 1
                     type: integer
+                  nodeIP:
+                    description: |-
+                      NodeIP is the address kubelet registers the node with (--node-ip). Left
+                      empty kubelet picks an address itself, which on a multi-homed node is not
+                      always the one the cluster routes to.
+                    type: string
+                    x-kubernetes-validations:
+                    - message: nodeIP must be a valid IP address
+                      rule: self == '' || isIP(self)
                   nodeLabels:
                     additionalProperties:
                       description: NodeLabelValue mirrors Kubernetes label-value validation
@@ -269,6 +290,28 @@ spec:
                       - key
                       type: object
                     type: array
+                  resourceReservation:
+                    description: |-
+                      ResourceReservation controls how much CPU, memory and disk are held back
+                      from pods for the system itself (kubeReserved).
+                    properties:
+                      mode:
+                        default: Auto
+                        description: |-
+                          Mode is Auto to compute the reservation from the node's capacity, or Off
+                          to reserve nothing.
+                        enum:
+                        - Auto
+                        - "Off"
+                        type: string
+                    type: object
+                  serverTLSBootstrap:
+                    description: |-
+                      ServerTLSBootstrap makes kubelet request a serving certificate from the
+                      cluster instead of signing its own. Default true. The zero master sets it
+                      to false: nothing approves serving CSRs until Deckhouse is installed, and
+                      a kubelet waiting for that certificate never reports the node Ready.
+                    type: boolean
                 type: object
               network:
                 description: Network holds hostname, DNS, NTP, interfaces and routes.
@@ -341,9 +384,54 @@ spec:
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
               osImage:
-                description: OSImage is the OS image reference (resolved from the
-                  release channel).
+                description: |-
+                  OSImage is the OS image reference the cluster believes this node should
+                  run. Nothing acts on it: the node boots whatever the DVPInstanceClass
+                  points its root disk at, and nodelet only logs this. Optional, so the same
+                  document is accepted both as /config/nodeconfig.yaml and by the API —
+                  required here while the file loader did not require it meant one YAML
+                  passed on the node and was refused by the API server.
                 type: string
+              registry:
+                description: |-
+                  Registry is the container registry the node talks to directly, without the
+                  cluster's registry-packages-proxy. A node bootstrapping a control-plane has
+                  no proxy to ask — it is the one bringing the cluster up — yet it still has
+                  to pull the control-plane images and its own system extensions, so it needs
+                  the address and the credentials itself. Worker nodes leave this empty and
+                  keep going through the proxy.
+                properties:
+                  address:
+                    description: |-
+                      Address is the registry host, optionally with a port, e.g.
+                      "registry.deckhouse.io" or "registry.example.com:5000".
+                    minLength: 1
+                    type: string
+                  auth:
+                    description: |-
+                      Auth is the base64-encoded "user:password" pair, as it appears in the
+                      "auth" field of a docker config.
+                    type: string
+                  ca:
+                    description: |-
+                      CA is a PEM certificate bundle to verify the registry with, for registries
+                      signed by a private CA. The image carries the Mozilla bundle and nothing
+                      else, so without this a self-signed registry is unreachable.
+                    type: string
+                  path:
+                    description: Path is the repository path within the registry,
+                      e.g. "/deckhouse/ce".
+                    type: string
+                  scheme:
+                    default: HTTPS
+                    description: Scheme is HTTPS (default) or HTTP.
+                    enum:
+                    - HTTPS
+                    - HTTP
+                    type: string
+                required:
+                - address
+                type: object
               registryPackagesProxyAccessTokenB64:
                 description: |-
                   RegistryPackagesProxyAccessTokenB64 is a base64-encoded token used to
@@ -457,7 +545,6 @@ spec:
                 type: object
             required:
             - nodeName
-            - osImage
             type: object
           status:
             description: Status is reported by the on-node agent after each reconcile
@@ -602,9 +689,10 @@ spec:
                   marked sensitive: the API strips it from get/list/watch responses for
                   any caller without the nodeconfigs/sensitive subresource. Nodes read
                   NodeConfigs cluster-wide and are deliberately NOT granted it, so one
-                  node cannot read another's token (see deploy/rbac.yaml). The marker
-                  itself lives in the CRD — controller-gen cannot emit it, so `task gen`
-                  stamps it back after generating.
+                  node cannot read another's token (see the d8:node-manager:node-agent
+                  ClusterRole). The marker itself lives in the CRD — controller-gen cannot
+                  emit it, so it is stamped back in after generating; keep it there when
+                  regenerating crds/nodeconfig.yaml.
                 type: string
                 x-kubernetes-sensitive-data: true
               observedGeneration:
