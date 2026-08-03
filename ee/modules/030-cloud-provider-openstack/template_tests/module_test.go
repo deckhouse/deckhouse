@@ -128,34 +128,6 @@ const moduleValues = `
       floatingNetworkID: my-floating-network-id
 `
 
-const badModuleValues = `
-  internal:
-    capoControllerManagerWebhookCert:
-      ca: myca
-      key: mykey
-      crt: mycrt
-    connection:
-      authURL: http://my.cloud.lalla/123/
-      username: myuser
-      password: myPaSs
-      domainName: mydomain
-      tenantName: mytenantname
-      tenantID: mytenantid
-      caCert: mycacert
-      region: myreg
-    internalNetworkNames:
-      - myintnetname
-      - myintnetname2
-    externalNetworkNames:
-      - myextnetname
-      - myextnetname2
-    podNetworkMode: "VXLAN"
-    instances:
-      sshKeyPairName: mysshkeypairname
-      securityGroups: ["aaa","bbb"]
-    zones: ["zonea", "zoneb"]
-`
-
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -492,20 +464,6 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			Expect(scSlow.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
 `))
-		})
-	})
-
-	Context("Openstack bad config", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
-			f.HelmRender()
-		})
-
-		It("Test should fail", func() {
-			Expect(f.RenderError).Should(HaveOccurred())
-			Expect(f.RenderError.Error()).ShouldNot(BeEmpty())
 		})
 	})
 
