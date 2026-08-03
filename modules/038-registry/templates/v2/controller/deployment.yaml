@@ -8,7 +8,7 @@ cpu: 10m
 memory: 50Mi
 {{- end }}
 
-{{- if ((.Values.registry.internal).v2).enabled }}
+{{- if eq (include "registry_v2_manages" .) "true" }}
 
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---

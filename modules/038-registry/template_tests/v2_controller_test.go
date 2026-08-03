@@ -237,6 +237,104 @@ internal:
         passwordHash: RW-HASH
 `
 
+// The module at its default. `enabled` is the switch discriminator — this implementation
+// owns the cluster rather than the previous one — and it says nothing about the module
+// having been asked to manage anything. The hook still generates the PKI and publishes a
+// resolved config, so these values are what a brand-new cluster actually has.
+const v2EnabledUnmanaged = `
+internal:
+  orchestrator: {}
+  v2:
+    enabled: true
+    registryConfig:
+      mode: Unmanaged
+    pki:
+      ca:
+        cert: CA-CERT
+        key: CA-KEY
+      distribution:
+        cert: DISTRIBUTION-CERT
+        key: DISTRIBUTION-KEY
+      auth:
+        cert: AUTH-CERT
+        key: AUTH-KEY
+      token:
+        cert: TOKEN-CERT
+        key: TOKEN-KEY
+      ingressClient:
+        cert: INGRESS-CLIENT-CERT
+        key: INGRESS-CLIENT-KEY
+      httpSecret: HTTP-SECRET
+      ro:
+        name: registry-ro
+        password: RO-PASSWORD
+        passwordHash: RO-HASH
+      rw:
+        name: registry-rw
+        password: RW-PASSWORD
+        passwordHash: RW-HASH
+`
+
+// Managed with the cache turned off: the node agent owns the pull path, and nothing is
+// cached. The storage must not appear anywhere.
+const v2ManagedNoCache = `
+internal:
+  orchestrator: {}
+  v2:
+    enabled: true
+    registryConfig:
+      mode: Managed
+      primary:
+        upstream:
+          scheme: HTTPS
+          host: registry.deckhouse.io
+          path: /deckhouse/ee
+      storage:
+        cache: false
+    pki:
+      ca:
+        cert: CA-CERT
+        key: CA-KEY
+      distribution:
+        cert: DISTRIBUTION-CERT
+        key: DISTRIBUTION-KEY
+      auth:
+        cert: AUTH-CERT
+        key: AUTH-KEY
+      token:
+        cert: TOKEN-CERT
+        key: TOKEN-KEY
+      ingressClient:
+        cert: INGRESS-CLIENT-CERT
+        key: INGRESS-CLIENT-KEY
+      httpSecret: HTTP-SECRET
+      ro:
+        name: registry-ro
+        password: RO-PASSWORD
+        passwordHash: RO-HASH
+      rw:
+        name: registry-rw
+        password: RW-PASSWORD
+        passwordHash: RW-HASH
+`
+
+// A cluster on its first converge: this module has weight 38 and cert-manager 101, so
+// cert-manager is not enabled yet and the https mode is the default CertManager. The
+// ingress helpers refuse that combination, and they refuse it by failing the render.
+const globalValuesBeforeCertManager = `
+clusterIsBootstrapped: false
+enabledModules: ["vertical-pod-autoscaler", "registry"]
+modules:
+  https:
+    mode: CertManager
+  publicDomainTemplate: "%s.example.com"
+  placement: {}
+discovery:
+  d8SpecificNodeCountByRole:
+    system: 1
+    master: 1
+`
+
 var _ = Describe("Module :: registry :: helm template :: v2 controller", func() {
 	f := SetupHelmConfig(``)
 
@@ -780,5 +878,74 @@ var _ = Describe("Module :: registry :: helm template :: v2 garbage collection",
 		Expect(cluster.Field("rules").String()).To(ContainSubstring("deckhousereleases"))
 		// Read-only: this is the one input that justifies a deletion.
 		Expect(cluster.Field("rules").String()).ToNot(ContainSubstring("deckhousereleases/status"))
+	})
+})
+
+// What the module deploys is decided by three separate questions, and conflating them is
+// what once made a default installation fail: everything rendered at `Unmanaged`, and the
+// publication endpoint — whose own condition is "no upstream", which `Unmanaged` satisfies
+// vacuously — could not render for want of cert-manager and took the module down with it.
+var _ = Describe("Module :: registry :: helm template :: v2 what gets deployed", func() {
+	f := SetupHelmConfig(``)
+
+	renderWith := func(global, registryValues string) {
+		f.ValuesSetFromYaml("global", global)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("registry", registryValues)
+		f.HelmRender()
+	}
+
+	Context("the module manages nothing", func() {
+		BeforeEach(func() { renderWith(globalValues, v2EnabledUnmanaged) })
+
+		It("renders without error", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		})
+
+		It("deploys no components at all", func() {
+			Expect(f.KubernetesResource("Deployment", "d8-system", "registry-controller").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("StatefulSet", "d8-system", "registry-storage").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Service", "d8-system", "registry").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Service", "d8-system", "registry-push").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Ingress", "d8-system", "registry-push").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-storage-pki").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("RegistryConfig", "registry").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "registry-controller").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "registry-storage").Exists()).To(BeFalse())
+		})
+
+		It("still records that the switch happened", func() {
+			// Not conditional on the mode: the record answers whether the previous
+			// implementation has handed over, and going Unmanaged does not hand it back.
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-v2-switch").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("managed with the cache turned off", func() {
+		BeforeEach(func() { renderWith(globalValues, v2ManagedNoCache) })
+
+		It("deploys the controller but no storage", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Deployment", "d8-system", "registry-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("RegistryConfig", "registry").Exists()).To(BeTrue())
+
+			Expect(f.KubernetesResource("StatefulSet", "d8-system", "registry-storage").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Service", "d8-system", "registry").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "d8-system", "registry-storage-pki").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "registry-storage").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("air-gapped, on the converge before cert-manager exists", func() {
+		BeforeEach(func() { renderWith(globalValuesBeforeCertManager, v2AirGap) })
+
+		It("renders the cache without the publication endpoint, rather than failing", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("StatefulSet", "d8-system", "registry-storage").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Ingress", "d8-system", "registry-push").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Service", "d8-system", "registry-push").Exists()).To(BeFalse())
+		})
 	})
 })

@@ -6,7 +6,7 @@ running the legacy implementation none of these objects exist at all. Keeping th
 two implementations from owning the pull path at once is a property of what gets
 rendered, not of operator care.
 */ -}}
-{{- if ((.Values.registry.internal).v2).enabled }}
+{{- if eq (include "registry_v2_manages" .) "true" }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:

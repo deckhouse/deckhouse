@@ -12,7 +12,7 @@
   in the status, not here.
 */}}
 {{- with ((.Values.registry.internal).v2) }}
-{{- if .enabled }}
+{{- if eq (include "registry_v2_manages" $) "true" }}
 {{- with .registryConfig }}
 ---
 apiVersion: deckhouse.io/v1alpha1

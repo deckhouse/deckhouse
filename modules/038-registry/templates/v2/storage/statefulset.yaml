@@ -30,7 +30,7 @@ syncer brings it back by signalling it, which needs a shared process namespace. 
 pod object is never touched in the process, which is exactly what keeps such a
 change working while the Deckhouse operator is down.
 */ -}}
-{{- if ((.Values.registry.internal).v2).enabled }}
+{{- if eq (include "registry_v2_caches" .) "true" }}
 {{- $storePath := ((.Values.registry.internal.v2).registryConfig).storage | default dict }}
 ---
 apiVersion: v1

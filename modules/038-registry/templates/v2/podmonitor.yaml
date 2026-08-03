@@ -11,7 +11,7 @@
   server the agent is designed to outlive. What the agent knows is written into its
   RegistryNode status and exported from the controller instead.
 */ -}}
-{{- if and (((.Values.registry.internal).v2).enabled) (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+{{- if and (eq (include "registry_v2_manages" .) "true") (.Values.global.enabledModules | has "operator-prometheus-crd") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -49,6 +49,7 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
+{{- if eq (include "registry_v2_caches" .) "true" }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -107,4 +108,5 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
+{{- end }}
 {{- end }}
