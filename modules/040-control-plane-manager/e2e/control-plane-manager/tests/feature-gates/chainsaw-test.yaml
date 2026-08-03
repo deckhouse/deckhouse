@@ -1,0 +1,192 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: feature-gates
+spec:
+  description: |
+    Verifies that enabling all supported feature gates for the cluster Kubernetes
+    version triggers completed ControlPlaneOperations for kube-apiserver,
+    kube-controller-manager, and kube-scheduler, and applies the gates to manifests.
+    Restores the original ModuleConfig on completion.
+  concurrent: false
+  namespace: default
+  steps:
+    - name: backup-and-prepare
+      try:
+        - description: Backup ModuleConfig, snapshot CPOs, build feature-gates ModuleConfig
+          script:
+            timeout: 2m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              . ./scripts/feature-gates.sh
+              backup_moduleconfig_spec "$CPM_E2E_BACKUP_FILE"
+              snapshot_control_plane_cpos "$CPM_E2E_FG_STATE_DIR"
+              prepare_feature_gates_test "$CPM_E2E_FG_STATE_DIR"
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Always restore original control-plane-manager ModuleConfig
+          script:
+            timeout: 5m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              restore_moduleconfig "$CPM_E2E_BACKUP_FILE"
+            check:
+              ($error == null): true
+
+    - name: apply-moduleconfig
+      try:
+        - description: Apply ModuleConfig with dynamically built enabledFeatureGates
+          script:
+            timeout: 5m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              . ./scripts/feature-gates.sh
+              apply_or_patch_moduleconfig "$CPM_E2E_FG_STATE_DIR/moduleconfig-target.yaml"
+            check:
+              ($error == null): true
+
+    - name: wait-for-operations
+      try:
+        - description: Wait for new ControlPlaneOperations on all control plane components
+          script:
+            timeout: 15m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              . ./scripts/feature-gates.sh
+              wait_for_new_control_plane_cpos "$CPM_E2E_FG_STATE_DIR" 300
+            check:
+              ($error == null): true
+      catch:
+        - description: Collect ControlPlaneOperations on failure
+          script:
+            content: |
+              . ./scripts/functions.sh
+              kubectl_run get controlplaneoperations -n kube-system -o wide || true
+            check:
+              ($error == null): true
+        - description: Collect control-plane-manager ModuleConfig on failure
+          script:
+            content: |
+              . ./scripts/functions.sh
+              kubectl_run get moduleconfig control-plane-manager -o yaml || true
+            check:
+              ($error == null): true
+        - description: Collect control-plane-manager pod logs on failure
+          podLogs:
+            namespace: kube-system
+            selector: app=d8-control-plane-manager
+            tail: 200
+
+    - name: assert-operations-complete
+      try:
+        - description: Load new kube-apiserver ControlPlaneOperation name
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              . ./scripts/feature-gates.sh
+              cat "$CPM_E2E_FG_STATE_DIR/new-cpo-kube-apiserver.txt"
+            outputs:
+              - name: newApiCPO
+                value: ($stdout)
+            check:
+              ($error == null): true
+        - description: Assert kube-apiserver operation has expected steps and completed successfully
+          assert:
+            timeout: 10m
+            resource:
+              apiVersion: control-plane.deckhouse.io/v1alpha1
+              kind: ControlPlaneOperation
+              metadata:
+                name: ($newApiCPO)
+                namespace: kube-system
+              spec:
+                component: KubeAPIServer
+                steps:
+                  - Backup
+                  - SyncManifests
+                  - WaitPodReady
+                  - CertObserve
+              status:
+                (conditions[?type == 'Completed' && status == 'True' && reason == 'OperationCompleted'] | length(@) > `0`): true
+        - description: Load new kube-controller-manager ControlPlaneOperation name
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              . ./scripts/feature-gates.sh
+              cat "$CPM_E2E_FG_STATE_DIR/new-cpo-kube-controller-manager.txt"
+            outputs:
+              - name: newKcmCPO
+                value: ($stdout)
+            check:
+              ($error == null): true
+        - description: Assert kube-controller-manager operation has expected steps and completed successfully
+          assert:
+            timeout: 10m
+            resource:
+              apiVersion: control-plane.deckhouse.io/v1alpha1
+              kind: ControlPlaneOperation
+              metadata:
+                name: ($newKcmCPO)
+                namespace: kube-system
+              spec:
+                component: KubeControllerManager
+                steps:
+                  - Backup
+                  - SyncManifests
+                  - WaitPodReady
+                  - CertObserve
+              status:
+                (conditions[?type == 'Completed' && status == 'True' && reason == 'OperationCompleted'] | length(@) > `0`): true
+        - description: Load new kube-scheduler ControlPlaneOperation name
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              . ./scripts/feature-gates.sh
+              cat "$CPM_E2E_FG_STATE_DIR/new-cpo-kube-scheduler.txt"
+            outputs:
+              - name: newSchedulerCPO
+                value: ($stdout)
+            check:
+              ($error == null): true
+        - description: Assert kube-scheduler operation has expected steps and completed successfully
+          assert:
+            timeout: 10m
+            resource:
+              apiVersion: control-plane.deckhouse.io/v1alpha1
+              kind: ControlPlaneOperation
+              metadata:
+                name: ($newSchedulerCPO)
+                namespace: kube-system
+              spec:
+                component: KubeScheduler
+                steps:
+                  - Backup
+                  - SyncManifests
+                  - WaitPodReady
+                  - CertObserve
+              status:
+                (conditions[?type == 'Completed' && status == 'True' && reason == 'OperationCompleted'] | length(@) > `0`): true
+
+    - name: assert-feature-gates
+      try:
+        - description: Assert feature gates are present in each component pod manifest
+          script:
+            timeout: 5m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              . ./scripts/feature-gates.sh
+              assert_control_plane_feature_gates "$CPM_E2E_FG_STATE_DIR"
+            check:
+              ($error == null): true

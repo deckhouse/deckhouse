@@ -1,0 +1,32 @@
+version: "3"
+
+includes:
+  basic-audit-policy:
+    taskfile: ./tests/basic-audit-policy/Taskfile.yml
+    dir: ./tests/basic-audit-policy
+  basic-audit-policy-maintenance:
+    taskfile: ./tests/basic-audit-policy-maintenance/Taskfile.yml
+    dir: ./tests/basic-audit-policy-maintenance
+  feature-gates:
+    taskfile: ./tests/feature-gates/Taskfile.yml
+    dir: ./tests/feature-gates
+  basic-audit-policy-simple:
+    taskfile: ./tests/basic-audit-policy-simple/Taskfile.yml
+    dir: ./tests/basic-audit-policy-simple
+
+tasks:
+  run:
+    desc: Run all control-plane-manager e2e tests
+    cmds:
+      - task: basic-audit-policy:run
+      - task: basic-audit-policy-maintenance:run
+      - task: feature-gates:run
+      - task: basic-audit-policy-simple:run
+
+  dry-run:
+    desc: Dry-Run all control-plane-manager e2e tests
+    cmds:
+      - task: basic-audit-policy:dry-run
+      - task: basic-audit-policy-maintenance:dry-run
+      - task: basic-audit-policy-simple:dry-run
+      - task: feature-gates:dry-run
