@@ -467,37 +467,37 @@ It is recommended to limit the list of nodes added to the load balancer pool usi
 
 Without a `node-selector` restriction, cloud-controller-manager may use all suitable cluster nodes as load balancer targets. As a result, adding or removing nodes that are not related to the workload served by the load balancer may trigger an update of the load balancer pool membership. In large or frequently changing clusters, such updates may occur regularly and, in some configurations, may cause brief disruptions to existing connections.
 
-The following annotations can be specified in the `annotations` field of the corresponding inlet configuration of the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource:
+The `annotations` field of the corresponding inlet configuration in the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource supports the following annotations:
 
-- `loadbalancer.openstack.org/node-selector` - selects the nodes that should be used as targets for the LoadBalancer.
-- `loadbalancer.openstack.deckhouse.io/load-balancer-id` - makes OpenStack CCM reuse a pre-created Octavia load balancer.
-- `loadbalancer.openstack.deckhouse.io/load-balancer-address` - makes OpenStack CCM attach a pre-allocated floating IP to a load balancer it creates and owns.
+- `loadbalancer.openstack.org/node-selector`: Selects the nodes that will be used as LoadBalancer targets.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-id`: Instructs OpenStack CCM to use a pre-created Octavia load balancer.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-address`: Instructs OpenStack CCM to associate a pre-allocated floating IP with the load balancer it creates.
 
-DKP automatically adds these annotations to the generated LoadBalancer Service object.
+DKP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
 
-If you use `loadbalancer.openstack.deckhouse.io/load-balancer-id`, the load balancer must meet the following requirements:
+When using the `loadbalancer.openstack.deckhouse.io/load-balancer-id` annotation, the load balancer must meet the following requirements:
 
 - reside in the cluster subnet
 - be in the `ACTIVE` state
 
-For a pre-created load balancer with a custom name, associate the floating IP with its VIP port before creating the cluster, and do not specify `loadbalancer.openstack.deckhouse.io/load-balancer-address`.
+If `loadbalancer.openstack.deckhouse.io/load-balancer-id` is used to reference a pre-created load balancer with a custom name, associate the floating IP with its VIP port before creating the cluster. In this case, do not specify the `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotation.
 
-If you use only `loadbalancer.openstack.deckhouse.io/load-balancer-address`, the floating IP must meet the following requirements:
+When using only `loadbalancer.openstack.deckhouse.io/load-balancer-address`, the floating IP must meet the following requirements:
 
 - not be associated with any port
-- belong to the floating network configured for OpenStack CCM
+- reside in the floating network configured for OpenStack CCM
 
 If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the Service object.
 
-Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` and `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration: DKP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
+Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DKP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
 
 #### IngressNginxController with a pre-created load balancer
 
 In the example below:
 
-- The Ingress controller Pods are scheduled on frontend nodes.
+- Ingress controller pods are scheduled on frontend nodes.
 - `loadbalancer.openstack.org/node-selector` limits the load balancer target pool to those frontend nodes.
-- `loadbalancer.openstack.deckhouse.io/load-balancer-id` specifies a pre-created Octavia load balancer with a floating IP already associated with its VIP port.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-id` references a pre-created Octavia load balancer whose VIP port already has a floating IP associated with it.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -524,7 +524,7 @@ spec:
 
 #### IngressNginxController with a pre-allocated floating IP
 
-In this example, OpenStack CCM creates the load balancer and attaches the specified free floating IP to it:
+In the example below, OpenStack CCM creates a load balancer and associates the specified unassigned floating IP with it:
 
 ```yaml
 apiVersion: deckhouse.io/v1

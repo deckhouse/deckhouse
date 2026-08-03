@@ -455,22 +455,20 @@ spec:
 
 Без ограничения по `node-selector` cloud-controller-manager может использовать в качестве таргетов балансировщика все подходящие узлы кластера. В результате добавление или удаление узлов, не связанных с обслуживаемой балансировщиком нагрузкой, может приводить к обновлению состава пула балансировщика. В крупных или часто изменяющихся кластерах такие обновления могут происходить регулярно, а в некоторых конфигурациях сопровождаться кратковременными нарушениями существующих соединений.
 
-С помощью `loadbalancer.openstack.org/node-selector` рекомендуется выбирать только те узлы, которые должны использоваться в качестве таргетов данного LoadBalancer.
-
 В поле `annotations` соответствующей конфигурации инлета ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) можно указать следующие аннотации:
 
-* `loadbalancer.openstack.org/node-selector` - выбирает узлы, которые будут использоваться как таргеты LoadBalancer.
-* `loadbalancer.openstack.deckhouse.io/load-balancer-id` - заставляет OpenStack CCM использовать заранее созданный Octavia-балансировщик.
-* `loadbalancer.openstack.deckhouse.io/load-balancer-address` - заставляет OpenStack CCM привязать заранее выделенный floating IP к балансировщику, который он создает и которым владеет.
+* `loadbalancer.openstack.org/node-selector` — выбирает узлы, которые будут использоваться как таргеты LoadBalancer.
+* `loadbalancer.openstack.deckhouse.io/load-balancer-id` — указывает OpenStack CCM использовать заранее созданный Octavia-балансировщик.
+* `loadbalancer.openstack.deckhouse.io/load-balancer-address` — указывает OpenStack CCM привязать заранее выделенный floating IP к создаваемому им балансировщику.
 
-DKP автоматически добавит эти аннотации в сгенерированный объект Service типа LoadBalancer.
+DKP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
 
-Если используется `loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
+Если используется аннтоация `loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
 
 * находиться в подсети кластера;
 * иметь состояние `ACTIVE`.
 
-Если используется заранее созданный балансировщик с произвольным именем, привяжите floating IP к его VIP-порту до создания кластера и не указывайте `loadbalancer.openstack.deckhouse.io/load-balancer-address`.
+Если используется `loadbalancer.openstack.deckhouse.io/load-balancer-id` для подключения заранее созданного балансировщика с произвольным именем, привяжите floating IP к его VIP-порту до создания кластера. В этом случае не указывайте аннотацию `loadbalancer.openstack.deckhouse.io/load-balancer-address`.
 
 Если используется только `loadbalancer.openstack.deckhouse.io/load-balancer-address`, floating IP должен соответствовать следующим требованиям:
 
