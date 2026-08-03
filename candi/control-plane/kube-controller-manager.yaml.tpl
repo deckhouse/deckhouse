@@ -3,7 +3,7 @@
   {{- $resourcesRequests = $.settings.resourcesRequests -}}
 {{- end -}}
 {{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
+{{- $memoryMB := $resourcesRequests.memoryMB | default 512 }}
 {{- $nodesCount := .nodesCount | default 0 | int }}
 {{- $gcThresholdCount := 1000 }}
 {{- if lt $nodesCount 100 }}
@@ -113,7 +113,7 @@ spec:
       requests:
         {{- $c := (($resourcesRequests.components | default dict).kubeControllerManager) | default dict }}
         cpu: "{{ $c.milliCPU | default (div (mul $millicpu 20) 100) }}m"
-        memory: "{{ div ($c.memoryBytes | default (div (mul $memory 20) 100)) 1000000 }}M"
+        memory: "{{ $c.memoryMB | default (div (mul $memoryMB 20) 100) }}M"
     securityContext:
       capabilities:
         drop:

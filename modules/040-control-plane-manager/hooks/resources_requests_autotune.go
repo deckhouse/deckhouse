@@ -117,9 +117,10 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		stateDirty = true
 	}
 
-	budgetCPU, budgetMem, _ := minMasterNodeBudget(nodes)
+	budgetCPU, budgetMemBytes, _ := minMasterNodeBudget(nodes)
 	combinedCPU := input.Values.Get(pathMilliCPUControlPlane).Int()
-	combinedMem := input.Values.Get(pathMemoryControlPlane).Int()
+	combinedMemMB := bytesToMB(input.Values.Get(pathMemoryControlPlane).Int())
+	budgetMemMB := bytesToMB(budgetMemBytes)
 
 	fetch := opts.Fetch
 	if fetch == nil {
@@ -135,7 +136,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		recsCPU, cpuUsageOK := fetchRecs(ctx, dc, fetch, resourceCPU, cpuOverridden, budgetCPU, func(comp string, ferr error) {
 			input.Logger.Warn("autotune: metrics API cpu fetch failed", "component", comp, "error", ferr)
 		})
-		recsMem, memUsageOK := fetchRecs(ctx, dc, fetch, resourceMemory, memoryOverridden, budgetMem, func(comp string, ferr error) {
+		recsMem, memUsageOK := fetchRecs(ctx, dc, fetch, resourceMemory, memoryOverridden, budgetMemMB, func(comp string, ferr error) {
 			input.Logger.Warn("autotune: metrics API memory fetch failed", "component", comp, "error", ferr)
 		})
 		usageOK := cpuUsageOK && memUsageOK
@@ -176,11 +177,11 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 				if len(recsMem) == 0 {
 					input.Logger.Warn("autotune: no memory usage datapoints from metrics API, leaving memory state unchanged")
 				}
-				if evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMem, combinedMem, now) {
+				if evaluateMeasurement(input, state, resourceMemory, recsMem, budgetMemMB, combinedMemMB, now) {
 					stateDirty = true
 				}
 				if plan.InitialMem {
-					if fillMissingAppliedFromFallback(state, resourceMemory, combinedMem) {
+					if fillMissingAppliedFromFallback(state, resourceMemory, combinedMemMB) {
 						stateDirty = true
 					}
 				}
@@ -208,7 +209,7 @@ const (
 
 type autotuneComponentState struct {
 	AppliedMilliCPU *int64 `json:"appliedMilliCPU,omitempty"`
-	AppliedBytes    *int64 `json:"appliedBytes,omitempty"`
+	AppliedMB       *int64 `json:"appliedMB,omitempty"`
 	LastChange      string `json:"lastChange,omitempty"`
 }
 
@@ -385,7 +386,7 @@ func fillMissingAppliedFromFallback(state *autotuneState, resourceName resourceK
 		case resourceCPU:
 			cs.AppliedMilliCPU = ptr.To(val)
 		case resourceMemory:
-			cs.AppliedBytes = ptr.To(val)
+			cs.AppliedMB = ptr.To(val)
 		}
 		m.Components[comp] = cs
 		changed = true
@@ -407,8 +408,8 @@ func projectComponentsToValues(state *autotuneState, cpuOverridden, memoryOverri
 		}
 		if !memoryOverridden {
 			if m := state.measurement(resourceMemory); m != nil {
-				if cs, ok := m.Components[comp]; ok && cs.AppliedBytes != nil {
-					entry["memoryBytes"] = *cs.AppliedBytes
+				if cs, ok := m.Components[comp]; ok && cs.AppliedMB != nil {
+					entry["memoryMB"] = *cs.AppliedMB
 				}
 			}
 		}
@@ -461,8 +462,16 @@ func discardAutotuneForLegacy(input *go_hook.HookInput) error {
 
 const (
 	autotuneMinMilliCPU = int64(10)
-	autotuneMinMemory   = int64(15 * 1000 * 1000) // 15 MB
+	autotuneMinMemoryMB = int64(15)
+	bytesPerMB          = int64(1000 * 1000)
 )
+
+func bytesToMB(b int64) int64 {
+	if b <= 0 {
+		return 0
+	}
+	return b / bytesPerMB
+}
 
 // componentUsageFunc reads lookback-average usage for a control-plane component.
 // Returns (value, ok, err); ok=false means no usable datapoint (cold start / missing series).
@@ -481,10 +490,10 @@ func clampRecommendation(raw float64, resourceName resourceKind, nodeBudget int6
 			v = autotuneMinMilliCPU
 		}
 	case resourceMemory:
-		// PodMetric returns MB (rounded in PromQL); convert to bytes.
-		v = int64(math.Round(raw)) * 1000 * 1000
-		if v < autotuneMinMemory {
-			v = autotuneMinMemory
+		// PodMetric returns MB (rounded in PromQL); keep as megabytes.
+		v = int64(math.Round(raw))
+		if v < autotuneMinMemoryMB {
+			v = autotuneMinMemoryMB
 		}
 	}
 	if nodeBudget > 0 && v > nodeBudget {
@@ -682,8 +691,8 @@ func appliedValue(cs autotuneComponentState, resourceName resourceKind) int64 {
 			return *cs.AppliedMilliCPU
 		}
 	case resourceMemory:
-		if cs.AppliedBytes != nil {
-			return *cs.AppliedBytes
+		if cs.AppliedMB != nil {
+			return *cs.AppliedMB
 		}
 	}
 	return 0
@@ -830,7 +839,7 @@ func evaluateMeasurement(
 		case resourceCPU:
 			cs.AppliedMilliCPU = ptr.To(val)
 		case resourceMemory:
-			cs.AppliedBytes = ptr.To(val)
+			cs.AppliedMB = ptr.To(val)
 		}
 		cs.LastChange = now.Format(time.RFC3339)
 		m.Components[comp] = cs
