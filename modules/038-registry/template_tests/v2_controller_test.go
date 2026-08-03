@@ -18,10 +18,12 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tidwall/gjson"
+	"gopkg.in/yaml.v3"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
@@ -948,4 +950,61 @@ var _ = Describe("Module :: registry :: helm template :: v2 what gets deployed",
 			Expect(f.KubernetesResource("Service", "d8-system", "registry-push").Exists()).To(BeFalse())
 		})
 	})
+})
+
+// Two definitions of one object are not merged. Helm renders both, the object store here
+// keys by kind/namespace/name and so silently keeps the last, and nelm refuses the release
+// on install — which means a duplicate is invisible to every other spec in this file and
+// fatal in a cluster. That is how a leftover `Role/registry:storage` reached a test cluster
+// and left the module unable to start.
+var _ = Describe("Module :: registry :: helm template :: no duplicated objects", func() {
+	f := SetupHelmConfig(``)
+
+	// Every configuration that renders anything, since a duplicate can hide in a branch.
+	for name, fixture := range map[string]string{
+		"unmanaged":             v2EnabledUnmanaged,
+		"managed without cache": v2ManagedNoCache,
+		"a pass-through cache":  v2Enabled,
+		"an air-gapped cache":   v2AirGap,
+	} {
+		name, fixture := name, fixture
+
+		It("renders each object exactly once with "+name, func() {
+			rendered := map[string]string{}
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("registry", fixture)
+			f.HelmRender(WithRenderOutput(rendered))
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			type identity struct{ kind, namespace, name string }
+			seen := map[identity][]string{}
+
+			for path, manifests := range rendered {
+				for _, doc := range strings.Split(manifests, "\n---") {
+					if strings.TrimSpace(doc) == "" {
+						continue
+					}
+					var obj struct {
+						Kind     string `yaml:"kind"`
+						Metadata struct {
+							Name      string `yaml:"name"`
+							Namespace string `yaml:"namespace"`
+						} `yaml:"metadata"`
+					}
+					if err := yaml.Unmarshal([]byte(doc), &obj); err != nil || obj.Kind == "" {
+						continue
+					}
+					id := identity{obj.Kind, obj.Metadata.Namespace, obj.Metadata.Name}
+					seen[id] = append(seen[id], path)
+				}
+			}
+
+			for id, paths := range seen {
+				Expect(paths).To(HaveLen(1),
+					"%s %s/%s is defined %d times (%v); one definition would silently win",
+					id.kind, id.namespace, id.name, len(paths), paths)
+			}
+		})
+	}
 })
