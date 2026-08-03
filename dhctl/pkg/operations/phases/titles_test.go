@@ -21,29 +21,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func allPhases() map[string]struct{} {
-	ret := make(map[string]struct{})
+func emittedPhases(t *testing.T) map[OperationPhase]struct{} {
+	t.Helper()
 
+	ret := make(map[OperationPhase]struct{})
+	for _, ph := range allPhases() {
+		ret[ph] = struct{}{}
+	}
 	for _, operationPhases := range allOperationPhases() {
 		for _, ph := range operationPhases {
-			ret[string(ph.Phase)] = struct{}{}
+			ret[ph.Phase] = struct{}{}
 		}
 	}
-
 	return ret
 }
 
-func allSubPhases() map[string]struct{} {
-	ret := make(map[string]struct{})
+func emittedSubPhases(t *testing.T) map[OperationSubPhase]struct{} {
+	t.Helper()
 
-	for _, phaseList := range allOperationPhases() {
-		for _, ph := range phaseList {
-			for _, sub := range ph.SubPhases {
-				ret[string(sub)] = struct{}{}
+	ret := make(map[OperationSubPhase]struct{})
+	for _, sp := range allSubPhases() {
+		ret[sp] = struct{}{}
+	}
+	for _, operationPhases := range allOperationPhases() {
+		for _, ph := range operationPhases {
+			for _, sp := range ph.SubPhases {
+				ret[sp] = struct{}{}
 			}
 		}
 	}
-
 	return ret
 }
 
@@ -63,30 +69,63 @@ func TestTitles_Load(t *testing.T) {
 	}
 }
 
-func TestTitles_Load_Coverage(t *testing.T) {
+// TestTitles_Coverage asserts the two invariants that keep phase reporting and
+// translations in sync:
+//
+//  1. Forward: every phase/subphase code the codebase can emit has a
+//     non-empty title in every supported language. Catches a new code without
+//     a translation.
+//  2. Reverse: every key present in the YAML files corresponds to a known
+//     code. Catches stale translations left behind after a code is renamed
+//     or removed.
+//
+// It exercises LoadTitles directly rather than ToCatalog so a bug in
+// mapToCatalog cannot mask a missing-key failure. ToCatalog has its own
+// dedicated coverage test.
+func TestTitles_Coverage(t *testing.T) {
 	t.Parallel()
 
-	phases := allPhases()
-	subPhases := allSubPhases()
+	phases := emittedPhases(t)
+	subPhases := emittedSubPhases(t)
 	titles, err := LoadTitles()
 	require.NoError(t, err)
 
-	// Every emitted phase code must resolve to a non-empty title in every language.
+	// Forward: every emittable phase resolves to a non-empty title per language.
 	for phase := range phases {
 		for _, lang := range Languages {
-			title, ok := titles.phase[lang][OperationPhase(phase)]
+			title, ok := titles.phase[lang][phase]
 			require.True(t, ok, "phase %q has no %q translation", phase, lang)
 			require.NotEmpty(t, title, "phase %q has empty %q title", phase, lang)
 		}
 	}
 
-	// Every emitted subphase code must resolve to a non-empty title in every language.
+	// Forward: every emittable subphase resolves to a non-empty title per language.
 	for subPhase := range subPhases {
 		for _, lang := range Languages {
-			title, ok := titles.subPhase[lang][OperationSubPhase(subPhase)]
+			title, ok := titles.subPhase[lang][subPhase]
 			require.True(t, ok, "subphase %q has no %q translation", subPhase, lang)
 			require.NotEmpty(t, title, "subphase %q has empty %q title", subPhase, lang)
 		}
+	}
+
+	// Reverse: every YAML phase key is a registered phase.
+	knownPhases := make(map[string]struct{}, len(phases))
+	for ph := range phases {
+		knownPhases[string(ph)] = struct{}{}
+	}
+	for phase := range titles.phase[ENLanguage] {
+		_, ok := knownPhases[string(phase)]
+		require.True(t, ok, "phases.%s.yaml has stale key %q with no matching phase code", ENLanguage, phase)
+	}
+
+	// Reverse: every YAML subphase key is a registered subphase.
+	knownSubPhases := make(map[string]struct{}, len(subPhases))
+	for sp := range subPhases {
+		knownSubPhases[string(sp)] = struct{}{}
+	}
+	for sp := range titles.subPhase[ENLanguage] {
+		_, ok := knownSubPhases[string(sp)]
+		require.True(t, ok, "subphases.%s.yaml has stale key %q with no matching subphase code", ENLanguage, sp)
 	}
 }
 
@@ -112,8 +151,8 @@ func TestTitles_ToCatalog(t *testing.T) {
 func TestTitles_ToCatalog_Coverage(t *testing.T) {
 	t.Parallel()
 
-	phases := allPhases()
-	subPhases := allSubPhases()
+	phases := emittedPhases(t)
+	subPhases := emittedSubPhases(t)
 	titles, err := LoadTitles()
 	require.NoError(t, err)
 
@@ -121,21 +160,19 @@ func TestTitles_ToCatalog_Coverage(t *testing.T) {
 	require.NotEmpty(t, catalog.Phases)
 	require.NotEmpty(t, catalog.SubPhases)
 
-	// Every emitted phase code must resolve to a non-empty title in every language.
 	for phase := range phases {
 		for _, lang := range Languages {
-			title, ok := catalog.Phases[phase][string(lang)]
-			require.True(t, ok, "phase %q has no %q translation", phase, lang)
-			require.NotEmpty(t, title, "phase %q has empty %q title", phase, lang)
+			title, ok := catalog.Phases[string(phase)][string(lang)]
+			require.True(t, ok, "catalog phase %q has no %q translation", phase, lang)
+			require.NotEmpty(t, title, "catalog phase %q has empty %q title", phase, lang)
 		}
 	}
 
-	// Every emitted subphase code must resolve to a non-empty title in every language.
 	for subPhase := range subPhases {
 		for _, lang := range Languages {
-			title, ok := catalog.SubPhases[subPhase][string(lang)]
-			require.True(t, ok, "subphase %q has no %q translation", subPhase, lang)
-			require.NotEmpty(t, title, "subphase %q has empty %q title", subPhase, lang)
+			title, ok := catalog.SubPhases[string(subPhase)][string(lang)]
+			require.True(t, ok, "catalog subphase %q has no %q translation", subPhase, lang)
+			require.NotEmpty(t, title, "catalog subphase %q has empty %q title", subPhase, lang)
 		}
 	}
 }
