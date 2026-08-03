@@ -33,6 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		autotuneNodesBinding(true),
 		autotuneStateBinding(true),
+		autotunePodsBinding(),
 	},
 }, dependency.WithExternalDependencies(autotuneResourcesRequestsSync))
 

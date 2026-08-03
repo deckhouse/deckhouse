@@ -187,6 +187,63 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		})
 	})
 
+	Context("Schedule: raise blocked by other pods on master", func() {
+		BeforeEach(func() {
+			now := dependency.TestDC.GetClock().Now()
+			// 8 CPU master: effective ≈ 7900m after kubelet floor. Other pods take 7000m,
+			// so only ~900m free — four 500m raises (2000m) do not fit.
+			st := autotuneState{
+				CPU: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
+						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
+						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
+						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
+					},
+				},
+			}
+			for _, c := range controlPlaneComponents {
+				usage[c] = map[resourceKind]float64{resourceCPU: 0.5}
+			}
+			otherPod := `
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-api-proxy
+  namespace: kube-system
+  labels:
+    tier: control-plane
+    component: kube-api-proxy
+spec:
+  nodeName: sandbox-0
+  containers:
+  - name: proxy
+    image: proxy
+    resources:
+      requests:
+        cpu: "7"
+        memory: 1Gi
+`
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st) + otherPod)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.RunHook()
+		})
+
+		It("blocks raises that would not fit beside kube-api-proxy and other non-autotuned requests", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(100)))
+			found := false
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == autotuneMetricName {
+					found = true
+					Expect(m.Labels).To(HaveKeyWithValue("resource", "cpu"))
+				}
+			}
+			Expect(found).To(BeTrue())
+		})
+	})
+
 	Context("Schedule: manual CPU override deletes cpu state branch", func() {
 		BeforeEach(func() {
 			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")

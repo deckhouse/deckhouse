@@ -124,6 +124,7 @@ const (
 )
 
 type Node struct {
+	Name                string
 	CapacityMilliCPU    int64
 	CapacityMemory      int64
 	AllocatableMilliCPU int64
@@ -138,6 +139,7 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}
 
 	n := &Node{
+		Name:                node.GetName(),
 		AllocatableMilliCPU: node.Status.Allocatable.Cpu().MilliValue(),
 		AllocatableMemory:   node.Status.Allocatable.Memory().Value(),
 		CapacityMilliCPU:    node.Status.Capacity.Cpu().MilliValue(),
@@ -196,6 +198,118 @@ func minMasterNodeBudget(nodes []Node) (int64, int64, bool) {
 	return discoveryMasterNodeMilliCPU - configEveryNodeMilliCPU,
 		discoveryMasterNodeMemory - configEveryNodeMemory,
 		true
+}
+
+// nodeOtherRequests is the sum of non-control-plane pod requests on one node.
+type nodeOtherRequests struct {
+	NodeName    string
+	MilliCPU    int64
+	MemoryBytes int64
+}
+
+// autotunedControlPlaneComponents are static-pod component labels whose requests
+// are managed by resources autotune. Other tier=control-plane pods (e.g.
+// component=kube-api-proxy) still consume capacity and count as "other".
+var autotunedControlPlaneComponents = map[string]struct{}{
+	containerKubeApiserver:         {},
+	containerEtcd:                  {},
+	containerKubeControllerManager: {},
+	containerKubeScheduler:         {},
+}
+
+func isAutotunedControlPlanePod(pod *v1.Pod) bool {
+	if pod.Labels["tier"] != "control-plane" {
+		return false
+	}
+	_, ok := autotunedControlPlaneComponents[pod.Labels["component"]]
+	return ok
+}
+
+func sumContainerRequests(containers []v1.Container) (milliCPU, memoryBytes int64) {
+	for i := range containers {
+		req := containers[i].Resources.Requests
+		if req == nil {
+			continue
+		}
+		milliCPU += req.Cpu().MilliValue()
+		memoryBytes += req.Memory().Value()
+	}
+	return milliCPU, memoryBytes
+}
+
+// applyAutotunePodRequestsFilter keeps only scheduled, non-terminal pods whose
+// requests are not owned by autotune (the four CP static pods) and returns their
+// request totals for capacity-fit accounting.
+func applyAutotunePodRequestsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	pod := &v1.Pod{}
+	if err := sdk.FromUnstructured(obj, pod); err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
+	}
+	if pod.Spec.NodeName == "" {
+		return nil, nil
+	}
+	switch pod.Status.Phase {
+	case v1.PodSucceeded, v1.PodFailed:
+		return nil, nil
+	}
+	if isAutotunedControlPlanePod(pod) {
+		return nil, nil
+	}
+	cpu, mem := sumContainerRequests(pod.Spec.Containers)
+	initCPU, initMem := sumContainerRequests(pod.Spec.InitContainers)
+	// Scheduling uses max(init) + sum(app); summing both is a slightly stricter
+	// upper bound and avoids under-estimating reserved capacity.
+	return &nodeOtherRequests{
+		NodeName:    pod.Spec.NodeName,
+		MilliCPU:    cpu + initCPU,
+		MemoryBytes: mem + initMem,
+	}, nil
+}
+
+func aggregateOtherRequestsByNode(pods []nodeOtherRequests) map[string]nodeOtherRequests {
+	out := make(map[string]nodeOtherRequests, len(pods))
+	for _, p := range pods {
+		agg := out[p.NodeName]
+		agg.NodeName = p.NodeName
+		agg.MilliCPU += p.MilliCPU
+		agg.MemoryBytes += p.MemoryBytes
+		out[p.NodeName] = agg
+	}
+	return out
+}
+
+// minMasterFitBudget is the tightest free capacity across masters for fitting
+// proposed control-plane requests:
+//
+//	effectiveMasterResources(node) − sum(requests of non-control-plane pods on node)
+//
+// Returns millicpu and megabytes. Unlike minMasterNodeBudget it does not apply
+// the configEveryNode / 40% carve-out — those are for combined-budget discovery.
+func minMasterFitBudget(nodes []Node, otherByNode map[string]nodeOtherRequests) (milliCPU, memoryMB int64, ok bool) {
+	if len(nodes) == 0 {
+		return 0, 0, false
+	}
+	minCPU := int64(-1)
+	minMemBytes := int64(-1)
+	for i := range nodes {
+		effCPU, effMem := effectiveMasterResources(&nodes[i])
+		other := otherByNode[nodes[i].Name]
+		availCPU := effCPU - other.MilliCPU
+		availMem := effMem - other.MemoryBytes
+		if availCPU < 0 {
+			availCPU = 0
+		}
+		if availMem < 0 {
+			availMem = 0
+		}
+		if minCPU < 0 || availCPU < minCPU {
+			minCPU = availCPU
+		}
+		if minMemBytes < 0 || availMem < minMemBytes {
+			minMemBytes = availMem
+		}
+	}
+	return minCPU, bytesToMB(minMemBytes), true
 }
 
 // significantResourceChange reports whether rec differs from applied enough to

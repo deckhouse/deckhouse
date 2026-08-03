@@ -115,11 +115,12 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Control-plane resources autotune cannot raise `{{ $labels.resource }}` requests — master nodes lack free capacity.
+      summary: Control-plane resources autotune cannot raise `{{ $labels.resource }}` requests — not enough free capacity on master nodes.
       description: |-
         The control-plane resources autotune wants to increase `{{ $labels.resource }}` requests for one or more
         control-plane components (kube-apiserver, etcd, kube-controller-manager, kube-scheduler), but the
-        weakest master node does not have enough allocatable budget.
+        proposed total would not fit on the weakest master node after accounting for the kubelet reservation
+        and requests of other (non-control-plane) pods already scheduled there.
 
         {{- if eq $labels.resource "memory" }}
         Missing capacity: `{{ $value }}M`.
@@ -127,7 +128,8 @@
         Missing capacity: `{{ $value }}m` CPU.
         {{- end }}
 
-        Increase CPU/RAM on master servers by at least that amount so autotune can apply the recommendation.
+        Free up resources on master nodes (move or shrink other workloads) or increase CPU/RAM so the new
+        control-plane requests can fit without exceeding allocatable capacity.
 
         The same deficit is stored in ConfigMap `kube-system/d8-control-plane-manager-resources-autotune-state`
         under `data.state.<resource>.capacityBlocked.deficit`:
