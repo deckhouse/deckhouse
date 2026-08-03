@@ -188,6 +188,89 @@
              ```
 
              Delete the `encryptionAlgorithm` field and save.
+    # TODO(kubernetesVersion-deprecation): T+1 remove — delete with hooks/alert_migrate_kubernetes_version.go
+    # and the docs/documentation/_data/deckhouse-alerts.yml entry once ModuleConfig is the only source.
+    - alert: D8UnsetKubernetesVersionInModuleConfig
+      for: 5m
+      expr: |
+        d8_unset_kubernetes_version_in_module_config == 1
+      labels:
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_unset_kubernetes_version_in_module_config: "D8UnsetKubernetesVersionInModuleConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_unset_kubernetes_version_in_module_config: "D8UnsetKubernetesVersionInModuleConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: ModuleConfig `control-plane-manager` has no `kubernetesVersion` setting.
+        description: |-
+          `settings.kubernetesVersion` is unset in ModuleConfig `control-plane-manager`.
+
+          Until it is set, Deckhouse may still fall back to the deprecated `ClusterConfiguration.kubernetesVersion`, then to the release default. Set the ModuleConfig value explicitly.
+
+          **To resolve this alert:**
+
+          1. If ModuleConfig `control-plane-manager` does not exist, create it:
+
+             ```bash
+             d8 s module enable control-plane-manager
+             ```
+
+          2. Set `kubernetesVersion` (pin a concrete version, or `Automatic` to track the Deckhouse default). If ClusterConfiguration still pins a version, copy that value:
+
+             ```bash
+             d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
+             {"spec": {"version": 3, "settings": {"kubernetesVersion": "$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep kubernetesVersion | awk '{gsub(/"/, "", $2); print $2}')"}}}
+             EOF
+             )"
+             ```
+
+             Or set Automatic:
+
+             ```bash
+             d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"kubernetesVersion":"Automatic"}}}'
+             ```
+
+          Once ModuleConfig has the setting, this alert clears.
+    # NOTE(kubernetesVersion-deprecation): keep — permanent soft-guard freeze signal; not about the CC field.
+    #
+    # TODO(kubernetesVersion-deprecation): T+1 rewrite — drop any leftover CC-fallback wording here and in
+    # docs/documentation/_data/deckhouse-alerts.yml after the field is removed.
+    - alert: D8ControlPlaneDefaultVersionDrift
+      for: 5m
+      expr: |
+        d8_control_plane_default_version_drift == 1
+      labels:
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_control_plane_default_version_drift: "D8ControlPlaneDefaultVersionDrift,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_control_plane_default_version_drift: "D8ControlPlaneDefaultVersionDrift,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Control plane Kubernetes version rollback is blocked (Automatic soft-guard freeze).
+        description: |-
+          The cluster tracks the Deckhouse default Kubernetes version (`kubernetesVersion: Automatic` in ModuleConfig `control-plane-manager`, or unset ModuleConfig with no ClusterConfiguration pin). That default is now more than 1 minor below the highest version this cluster has ever run (`maxUsed`).
+
+          **Rollback blocked:** Deckhouse freezes the published target (keeps the previous desired version, or the current control-plane version) and does not roll Automatic down toward the lower default. Control plane and kubelet stay on the frozen target until the Deckhouse default catches up within the `maxUsed−1` window.
+
+          **To resolve this alert:**
+
+          - To keep the current (higher) version, pin it explicitly:
+
+            ```bash
+            d8 k patch mc control-plane-manager --type merge -p '{"spec":{"settings":{"kubernetesVersion":"<current version>"}}}'
+            ```
+
+          - To downgrade deliberately, pin one minor at a time (more than 1 minor below `maxUsed` is rejected):
+
+            ```bash
+            d8 k patch mc control-plane-manager --type merge -p '{"spec":{"settings":{"kubernetesVersion":"<current version - 1 minor>"}}}'
+            ```
     - alert: D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig
       for: 5m
       expr: |
