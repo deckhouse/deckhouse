@@ -24,6 +24,8 @@ from dotmap import DotMap
 from feature_gates_generated import exists_in_component, is_forbidden, is_deprecated
 
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
+# Sentinel meaning "let Deckhouse pick the version".
+AUTOMATIC_VERSION = "Automatic"
 
 config = f"""
 configVersion: v1
@@ -82,6 +84,11 @@ def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
     return None
 
 
+# TODO(kubernetesVersion-deprecation): T+1 remove — drop CC fallback helper/branch once kubernetesVersion
+# leaves ClusterConfiguration. After T+1 only MC → Default.
+#
+# NOTE(kubernetesVersion-deprecation): keep — do NOT drop the d8-cluster-configuration Secret snapshot;
+# it still carries deckhouseDefaultKubernetesVersion for resolving "Automatic".
 def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
     encoded_config = secret_data.get('cluster-configuration.yaml')
     if not encoded_config:
@@ -101,26 +108,34 @@ def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
 
 
 def get_k8s_version(ctx: DotMap) -> Optional[str]:
+    # Mirrors global-hooks/discovery/cluster_configuration.go resolveTargetKubernetesVersion:
+    # a present ModuleConfig setting decides on its own, "Automatic" included (it then means the
+    # Deckhouse default, and ClusterConfiguration is not consulted at all).
+    settings = ctx.review.request.object.get('spec', {}).get('settings', {})
+    mc_version = settings.get('kubernetesVersion')
+    if mc_version and mc_version != AUTOMATIC_VERSION:
+        return mc_version
+
     snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
         return None
-    
+
     secret = snapshot[0]
     if not secret or not hasattr(secret, 'object'):
         return None
-    
+
     data = secret.object.data
     if not data:
         return None
-    
+
+    if mc_version == AUTOMATIC_VERSION:
+        return get_deckhouse_default_version_from_secret(data)
+
     k8s_version = get_k8s_version_from_cluster_config(data)
-    if not k8s_version:
-        return None
-    
-    if k8s_version.lower() == "automatic":
-        k8s_version = get_deckhouse_default_version_from_secret(data)
-    
-    return k8s_version
+    if k8s_version and k8s_version != AUTOMATIC_VERSION:
+        return k8s_version
+
+    return get_deckhouse_default_version_from_secret(data)
 
 
 def validate(ctx: DotMap) -> List[str]:
@@ -164,4 +179,3 @@ def validate(ctx: DotMap) -> List[str]:
 
 if __name__ == "__main__":
     hook.run(main, config=config)
-
