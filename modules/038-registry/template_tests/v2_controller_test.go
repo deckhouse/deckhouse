@@ -1056,3 +1056,59 @@ var _ = Describe("Module :: registry :: helm template :: the auth Secret is gran
 func gjsonString(s string) gjson.Result {
 	return gjson.Result{Type: gjson.String, Str: s}
 }
+
+// The controller's own access to the two Secrets it cannot work without.
+//
+// Missing, this fails in the least legible way there is: a cached client backs every read
+// with an informer, the informer's first list is refused, the cache never starts, and every
+// controller in the manager stalls. Nothing in the module's own status says so — the symptom
+// is an empty cluster (no RegistryStorage, no RegistryNode) and nodes that cannot pull. It
+// took a three-master install to notice, because on a single master the control plane comes
+// up on images the installer pulled and never needs the module at all.
+var _ = Describe("Module :: registry :: helm template :: the controller can reach its Secrets", func() {
+	f := SetupHelmConfig(``)
+
+	BeforeEach(func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("registry", v2Enabled)
+		f.HelmRender()
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+	})
+
+	It("may read the storage access secret and write the resolved auth secret", func() {
+		role := f.KubernetesResource("Role", "d8-system", "registry:controller")
+		Expect(role.Exists()).To(BeTrue())
+
+		verbs := map[string][]string{}
+		for _, rule := range role.Field("rules").Array() {
+			isSecrets := false
+			for _, resource := range rule.Get("resources").Array() {
+				if resource.String() == "secrets" {
+					isSecrets = true
+				}
+			}
+			if !isSecrets {
+				continue
+			}
+			// Always by name: this Role is bound to a ServiceAccount that has no business
+			// reading the rest of d8-system.
+			Expect(rule.Get("resourceNames").Array()).NotTo(BeEmpty(),
+				"a secrets rule without resourceNames grants the whole namespace")
+			for _, name := range rule.Get("resourceNames").Array() {
+				for _, verb := range rule.Get("verbs").Array() {
+					verbs[name.String()] = append(verbs[name.String()], verb.String())
+				}
+			}
+		}
+
+		Expect(verbs).To(HaveKey("registry-storage-access"))
+		Expect(verbs["registry-storage-access"]).To(ContainElements("get", "list", "watch"),
+			"the informer behind a cached read needs list and watch, not only get")
+
+		Expect(verbs).To(HaveKey(constant.AuthSecretName))
+		Expect(verbs[constant.AuthSecretName]).To(ContainElements(
+			"get", "list", "watch", "create", "update", "patch"),
+			"the controller is the only writer of the credentials its layouts reference")
+	})
+})

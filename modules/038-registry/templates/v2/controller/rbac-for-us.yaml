@@ -79,6 +79,18 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
+  # How agents reach the cache — addresses, authority, read credentials — which the
+  # controller turns into node layouts. Read-only: the storage PKI writes this, not us.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["registry-storage-access"]
+    verbs: ["get", "list", "watch"]
+  # The credentials the layouts reference. Written here and nowhere else: this is the object
+  # that exists so the layouts can name a credential instead of carrying it.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["registry-resolved-auth"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
 
 ---
 kind: RoleBinding

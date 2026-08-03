@@ -21,6 +21,7 @@ import (
 	"os"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -30,6 +31,8 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -48,6 +51,10 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(registryv1alpha1.AddToScheme(scheme))
 }
+
+// registryNamespace is where this module's objects live. The same namespace the reconciler
+// reads its secrets from, named once so the cache and the reads cannot disagree about it.
+const registryNamespace = "d8-system"
 
 func main() {
 	var (
@@ -85,6 +92,23 @@ func main() {
 		Scheme:                 scheme,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: probeAddr,
+
+		// Secrets are cached for one namespace, not for the cluster.
+		//
+		// Not an optimization. A cached client backs every read with an informer, and an
+		// informer lists what it watches — so a cluster-wide cache would need cluster-wide
+		// list on secrets, which is precisely the permission this module went to some
+		// trouble to avoid needing. Confined here, the namespaced grants by resource name
+		// are enough. Without this the informer's first list is refused, the cache never
+		// starts, and every controller in this manager stalls with nothing to say beyond a
+		// forbidden error on a resource it only ever wanted two objects from.
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Secret{}: {
+					Namespaces: map[string]cache.Config{registryNamespace: {}},
+				},
+			},
+		},
 
 		LeaderElection:          leaderElect,
 		LeaderElectionID:        "registry-controller.deckhouse.io",
