@@ -73,14 +73,14 @@ The [`update`](/modules/deckhouse/configuration.html#parameters-update) settings
 If a module has no dedicated update policy ([ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy)) and its ModuleConfig does not specify the `updatePolicy` parameter, the module inherits [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) and [`update`](/modules/deckhouse/configuration.html#parameters-update) from the `deckhouse` ModuleConfig.
 {% endalert %}
 
-### Patch versions only within the current minor (`AutoPatch`)
+### Patch versions only within the current minor (AutoPatch)
 
 To keep DKP updates within the current minor version (apply patch versions only), use the `AutoPatch` mode.
 
 For example, if version `v1.70.1` is installed, DKP can automatically update to `v1.70.2`,
 but will not move to `v1.71.*` without [manual approval](#manual-update-approval).
 
-This is the default value. To set the `AutoPatch` mode explicitly, run:
+This is the default value. To set the `AutoPatch` mode explicitly, run the following command:
 
 ```shell
 d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
@@ -93,23 +93,23 @@ run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP v
 d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
 ```
 
-### Automatic updates for all versions (`Auto`)
+### Automatic updates for all versions (Auto)
 
 In the `Auto` mode, DKP automatically applies both patch and minor versions,
 taking [update windows](#update-windows) into account if they are configured.
 
-To enable the `Auto` mode, run:
+To enable the `Auto` mode, the following command:
 
 ```shell
 d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Auto"}}}}'
 ```
 
-### Manual mode (`Manual`)
+### Manual mode (Manual)
 
 In the `Manual` mode, DKP receives information about new versions in the cluster,
 but applying both patch and minor versions requires [manual approval](#manual-update-approval).
 
-To enable the `Manual` mode, run:
+To enable the `Manual` mode, the following command:
 
 ```shell
 d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'

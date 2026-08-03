@@ -70,14 +70,14 @@ DKP поддерживает три режима обновления, кото�
 Если у модуля нет собственной политики обновления ([ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy)) и в его ModuleConfig не указан параметр `updatePolicy`, модуль наследует [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) и [`update`](/modules/deckhouse/configuration.html#parameters-update) из ModuleConfig `deckhouse`.
 {% endalert %}
 
-### Только патч-версии в рамках текущей минорной (`AutoPatch`)
+### Только патч-версии в рамках текущей минорной (AutoPatch)
 
 Чтобы DKP обновлялся только в пределах текущей минорной версии (устанавливались только патч-версии), используйте режим `AutoPatch`.
 
 Например, при установленной версии `v1.70.1` DKP сможет автоматически обновиться до `v1.70.2`,
 но не перейдёт на `v1.71.*` без [ручного подтверждения](#ручное-подтверждение-обновлений).
 
-Это значение задано по умолчанию. Чтобы явно установить режим `AutoPatch`, выполните:
+Это значение задано по умолчанию. Чтобы явно установить режим `AutoPatch`, выполните команду:
 
 ```shell
 d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
@@ -90,23 +90,23 @@ d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"
 d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
 ```
 
-### Автоматическое обновление всех версий (`Auto`)
+### Автоматическое обновление всех версий (Auto)
 
 В режиме `Auto` DKP автоматически применяет и патч-версии, и минорные версии
 с учётом [окон обновлений](#окна-обновлений), если они заданы.
 
-Чтобы включить режим `Auto`, выполните:
+Чтобы включить режим `Auto`, выполните команду:
 
 ```shell
 d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Auto"}}}}'
 ```
 
-### Ручной режим (`Manual`)
+### Ручной режим (Manual)
 
 В режиме `Manual` DKP получает информацию о новых версиях в кластер,
 но применение и патч-версий, и минорных версий требует [ручного подтверждения](#ручное-подтверждение-обновлений).
 
-Чтобы включить режим `Manual`, выполните:
+Чтобы включить режим `Manual`, выполните команду:
 
 ```shell
 d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
