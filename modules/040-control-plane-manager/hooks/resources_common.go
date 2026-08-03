@@ -225,7 +225,8 @@ func isAutotunedControlPlanePod(pod *v1.Pod) bool {
 	return ok
 }
 
-func sumContainerRequests(containers []v1.Container) (milliCPU, memoryBytes int64) {
+func sumContainerRequests(containers []v1.Container) (int64, int64) {
+	var milliCPU, memoryBytes int64
 	for i := range containers {
 		req := containers[i].Resources.Requests
 		if req == nil {
@@ -285,7 +286,7 @@ func aggregateOtherRequestsByNode(pods []nodeOtherRequests) map[string]nodeOther
 //
 // Returns millicpu and megabytes. Unlike minMasterNodeBudget it does not apply
 // the configEveryNode / 40% carve-out — those are for combined-budget discovery.
-func minMasterFitBudget(nodes []Node, otherByNode map[string]nodeOtherRequests) (milliCPU, memoryMB int64, ok bool) {
+func minMasterFitBudget(nodes []Node, otherByNode map[string]nodeOtherRequests) (int64, int64, bool) {
 	if len(nodes) == 0 {
 		return 0, 0, false
 	}
