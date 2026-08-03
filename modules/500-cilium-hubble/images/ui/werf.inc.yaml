@@ -36,7 +36,7 @@ shell:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -85,5 +85,3 @@ git:
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/hubble-ui-backend"]
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName "ui-backend" )) }}
