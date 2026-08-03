@@ -97,19 +97,13 @@ spec:
               name: https
         path: /modules
         pathType: Prefix
-      - backend:
-          service:
-            name: documentation
-            port:
-              name: pprof
-        path: /debug/pprof
-        pathType: Prefix
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:
         - {{ include "helm_lib_module_public_domain" (list . "documentation") }}
       secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
+{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

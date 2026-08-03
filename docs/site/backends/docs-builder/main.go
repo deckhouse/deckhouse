@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -94,6 +95,7 @@ func main() {
 
 	var pprofSrv *http.Server
 	if pprofEnabled {
+		logger.Warn("pprof enabled", slog.String("address", pprofAddress))
 		pprofSrv = pprof.NewServer(pprofAddress)
 	}
 
