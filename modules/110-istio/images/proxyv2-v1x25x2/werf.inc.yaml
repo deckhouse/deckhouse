@@ -148,6 +148,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 fromImage: common/relocate-artifact
+fromCacheVersion: "2026-07-31 23:21"
 final: false
 shell:
   beforeInstall:
