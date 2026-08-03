@@ -67,9 +67,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{Name: autotuneScheduleName, Crontab: "*/5 * * * *"}, // DEBUG: prod "0 3 * * *"
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
-		autotuneNodesBinding(false),
+		autotuneNodesBinding(false, false),
 		autotuneStateBinding(false),
-		autotunePodsBinding(),
+		autotunePodsBinding(false),
 	},
 }, dependency.WithExternalDependencies(autotuneResourcesRequests))
 
@@ -191,6 +191,21 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 				}
 			}
 		}
+	} else {
+		// Node/pod resource changes (OnBeforeAll + kube events): refresh the
+		// capacity-blocked alert against the current fit budget without calling
+		// the metrics API. Cron remains responsible for new raise decisions.
+		now := dc.GetClock().Now().UTC()
+		if !cpuOverridden {
+			if recheckCapacityBlocked(state, resourceCPU, fitCPU, combinedCPU, now) {
+				stateDirty = true
+			}
+		}
+		if !memoryOverridden {
+			if recheckCapacityBlocked(state, resourceMemory, fitMemMB, combinedMemMB, now) {
+				stateDirty = true
+			}
+		}
 	}
 
 	input.MetricsCollector.Expire(autotuneMetricGroup)
@@ -218,8 +233,9 @@ type autotuneComponentState struct {
 }
 
 type capacityBlocked struct {
-	Since   string `json:"since"`
-	Deficit int64  `json:"deficit"`
+	Since       string `json:"since"`
+	Deficit     int64  `json:"deficit"`
+	ProposedSum int64  `json:"proposedSum,omitempty"`
 }
 
 type autotuneMeasurementState struct {
@@ -319,7 +335,7 @@ func persistAutotuneState(input *go_hook.HookInput, state *autotuneState) error 
 	return nil
 }
 
-func autotuneNodesBinding(onSync bool) go_hook.KubernetesConfig {
+func autotuneNodesBinding(onSync, onEvents bool) go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:       "NodesResources",
 		ApiVersion: "v1",
@@ -331,7 +347,7 @@ func autotuneNodesBinding(onSync bool) go_hook.KubernetesConfig {
 			},
 		}},
 		FilterFunc:                   applyNodesResourcesFilter,
-		ExecuteHookOnEvents:          ptr.To(false),
+		ExecuteHookOnEvents:          ptr.To(onEvents),
 		ExecuteHookOnSynchronization: ptr.To(onSync),
 	}
 }
@@ -354,13 +370,13 @@ func autotuneStateBinding(onSync bool) go_hook.KubernetesConfig {
 }
 
 // autotunePodsBinding feeds non-control-plane pod requests into the fit-capacity gate.
-func autotunePodsBinding() go_hook.KubernetesConfig {
+func autotunePodsBinding(onEvents bool) go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:                         "AutotunePodRequests",
 		ApiVersion:                   "v1",
 		Kind:                         "Pod",
 		FilterFunc:                   applyAutotunePodRequestsFilter,
-		ExecuteHookOnEvents:          ptr.To(false),
+		ExecuteHookOnEvents:          ptr.To(onEvents),
 		ExecuteHookOnSynchronization: ptr.To(false),
 	}
 }
@@ -828,9 +844,14 @@ func evaluateMeasurement(
 				}
 			}
 			if m.CapacityBlocked == nil {
-				m.CapacityBlocked = &capacityBlocked{Since: now.Format(time.RFC3339), Deficit: deficit}
+				m.CapacityBlocked = &capacityBlocked{
+					Since:       now.Format(time.RFC3339),
+					Deficit:     deficit,
+					ProposedSum: sum,
+				}
 			} else {
 				m.CapacityBlocked.Deficit = deficit
+				m.CapacityBlocked.ProposedSum = sum
 			}
 			changed = true
 			input.Logger.Info("autotune: raise blocked by capacity gate",
@@ -865,4 +886,51 @@ func evaluateMeasurement(
 	}
 
 	return changed
+}
+
+// recheckCapacityBlocked updates or clears capacityBlocked using the current fit
+// budget (no metrics). Uses the last blocked ProposedSum when present so a node
+// resize can expire the alert once the previously rejected total would fit.
+func recheckCapacityBlocked(
+	state *autotuneState,
+	resourceName resourceKind,
+	fitBudget, combinedBudget int64,
+	now time.Time,
+) bool {
+	m := state.measurement(resourceName)
+	if m == nil {
+		return false
+	}
+	var sumApplied int64
+	for _, comp := range controlPlaneComponents {
+		sumApplied += effectiveApplied(m.Components[comp], resourceName, combinedBudget, comp)
+	}
+
+	proposedSum := sumApplied
+	if m.CapacityBlocked != nil && m.CapacityBlocked.ProposedSum > 0 {
+		proposedSum = m.CapacityBlocked.ProposedSum
+	}
+
+	if proposedSum > fitBudget {
+		deficit := proposedSum - fitBudget
+		if m.CapacityBlocked == nil {
+			m.CapacityBlocked = &capacityBlocked{
+				Since:       now.Format(time.RFC3339),
+				Deficit:     deficit,
+				ProposedSum: proposedSum,
+			}
+			return true
+		}
+		if m.CapacityBlocked.Deficit == deficit && m.CapacityBlocked.ProposedSum == proposedSum {
+			return false
+		}
+		m.CapacityBlocked.Deficit = deficit
+		m.CapacityBlocked.ProposedSum = proposedSum
+		return true
+	}
+	if m.CapacityBlocked != nil {
+		m.CapacityBlocked = nil
+		return true
+	}
+	return false
 }

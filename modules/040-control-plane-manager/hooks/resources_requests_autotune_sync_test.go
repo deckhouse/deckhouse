@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -50,7 +51,8 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
 						componentEtcd:          {AppliedMilliCPU: ptr.To(int64(800)), LastChange: "2026-07-01T00:00:00Z"},
 					},
-					CapacityBlocked: &capacityBlocked{Since: "2026-07-20T00:00:00Z", Deficit: 500},
+					// ProposedSum must still exceed fit budget so recheck keeps the alert.
+					CapacityBlocked: &capacityBlocked{Since: "2026-07-20T00:00:00Z", Deficit: 500, ProposedSum: 20000},
 				},
 				Memory: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
@@ -77,10 +79,44 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 				if m.Name == autotuneMetricName {
 					found = true
 					Expect(m.Labels).To(HaveKeyWithValue("resource", "cpu"))
-					Expect(*m.Value).To(Equal(float64(500)))
+					Expect(*m.Value).To(BeNumerically(">", 0))
 				}
 			}
 			Expect(found).To(BeTrue())
+		})
+	})
+
+	Context("OnBeforeAll: capacityBlocked expires when node fit budget covers proposedSum", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus","prometheus-metrics-adapter"]`))
+			st := autotuneState{
+				CPU: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: "2026-07-01T00:00:00Z"},
+						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: "2026-07-01T00:00:00Z"},
+						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(100)), LastChange: "2026-07-01T00:00:00Z"},
+						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: "2026-07-01T00:00:00Z"},
+					},
+					CapacityBlocked: &capacityBlocked{Since: "2026-07-20T00:00:00Z", Deficit: 1000, ProposedSum: 500},
+				},
+			}
+			// 8 CPU master fit ≫ ProposedSum 500m → alert must clear.
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
+			f.BindingContexts.Set(f.GenerateBeforeAllContext())
+			f.RunHook()
+		})
+
+		It("clears capacityBlocked metric and state", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				Expect(m.Name).NotTo(Equal(autotuneMetricName))
+			}
+			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
+			Expect(ops.Exists()).To(BeTrue())
+			var st autotuneState
+			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+			Expect(st.CPU).ToNot(BeNil())
+			Expect(st.CPU.CapacityBlocked).To(BeNil())
 		})
 	})
 

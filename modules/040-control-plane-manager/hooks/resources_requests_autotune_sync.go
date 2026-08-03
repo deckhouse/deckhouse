@@ -25,15 +25,16 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-// Synchronization entrypoint: repopulate internal values and capacityBlocked
-// metrics from the ConfigMap after Deckhouse restart (no metrics API).
-// Shared engine: runAutotune in resources_requests_autotune.go.
+// Synchronization / OnBeforeAll / Node+Pod events: repopulate values and
+// recheck capacityBlocked metrics against the current fit budget (no metrics API).
+// Cron/OnBeforeHelm in resources_requests_autotune.go still owns raise decisions.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: autotuneQueue,
+	Queue:        autotuneQueue,
+	OnBeforeAll:  &go_hook.OrderedConfig{Order: 25},
 	Kubernetes: []go_hook.KubernetesConfig{
-		autotuneNodesBinding(true),
+		autotuneNodesBinding(true, true),
 		autotuneStateBinding(true),
-		autotunePodsBinding(),
+		autotunePodsBinding(true),
 	},
 }, dependency.WithExternalDependencies(autotuneResourcesRequestsSync))
 
