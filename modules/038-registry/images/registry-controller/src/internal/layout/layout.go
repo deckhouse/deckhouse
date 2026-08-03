@@ -26,6 +26,8 @@ limitations under the License.
 package layout
 
 import (
+	"fmt"
+
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
@@ -115,7 +117,21 @@ type Desired struct {
 	// HeldUpstream is the upstream still in effect, which is not necessarily the
 	// configured one. Reported so the caller can explain to an operator why an
 	// upstream they removed is still being used.
+	//
+	// Carries no credentials: the caller records this and the recorded copy must not be
+	// one more place a credential can be read from. Credentials for it are in
+	// Credentials under AuthKeyUpstream.
 	HeldUpstream *registryv1alpha1.Upstream
+
+	// Credentials are what the references in the layouts above point at, keyed the same
+	// way. The caller persists them into the module's auth Secret before applying
+	// anything that references them.
+	//
+	// Returned rather than written here so this stays a pure function, and returned by
+	// the same code that writes the references so the two cannot disagree about a key —
+	// a mismatch would leave an agent authenticating with nothing and a 401 that says
+	// nothing about why.
+	Credentials map[string]registryv1alpha1.Auth
 }
 
 // Compute derives the desired layout.
@@ -125,6 +141,10 @@ type Desired struct {
 // and are handled here; the fourth (no cache, no upstream) leaves nodes with no
 // source of images and is rejected before it reaches this point.
 func Compute(in Inputs) Desired {
+	return withReferencedAuth(compute(in))
+}
+
+func compute(in Inputs) Desired {
 	if in.Config.Mode == registryv1alpha1.ModeUnmanaged {
 		// The module owns nothing, so there is nothing to lay out. Note this is not
 		// the same as "delete everything": the caller decides what to do with
@@ -218,6 +238,154 @@ func Compute(in Inputs) Desired {
 		DropUpstream: dropUpstream,
 		HeldUpstream: heldUpstream,
 	}
+}
+
+// withReferencedAuth moves every credential out of the derived resources and leaves a
+// reference in its place, returning the credentials for the caller to persist.
+//
+// Keyed by what a credential belongs to rather than by who reads it: every node is handed
+// the same credentials, so a per-node key would multiply one secret into as many copies as
+// there are nodes and give an agent a reason to read another node's.
+func withReferencedAuth(d Desired) Desired {
+	credentials := map[string]registryv1alpha1.Auth{}
+
+	backendKey := func(name registryv1alpha1.BackendName) string {
+		switch name {
+		case registryv1alpha1.BackendStorage:
+			return constant.AuthKeyStorage
+		case registryv1alpha1.BackendUpstream:
+			return constant.AuthKeyUpstream
+		default:
+			// An upstream declared as its own resource. Its name is unique among them,
+			// which is what makes it usable as a key.
+			return string(name)
+		}
+	}
+
+	referenceBackends := func(backends []registryv1alpha1.Backend) {
+		for i := range backends {
+			key := backendKey(backends[i].Name)
+			// Kept before the endpoint is rewritten: the comparison below is against the
+			// credentials it had, and by then it has none.
+			original := backends[i].Endpoint
+			collectAuth(credentials, original, key)
+			backends[i].Endpoint = authRef(original, key)
+			for j := range backends[i].Mirrors {
+				mirrorKey := sharedOrOwnKey(original, backends[i].Mirrors[j], key, j)
+				collectAuth(credentials, backends[i].Mirrors[j], mirrorKey)
+				backends[i].Mirrors[j] = authRef(backends[i].Mirrors[j], mirrorKey)
+			}
+		}
+	}
+
+	referenceRoutes := func(routes []registryv1alpha1.Route) {
+		for i := range routes {
+			// Keyed by what the route intercepts, which is the only thing that
+			// distinguishes one route from another.
+			key := "route-" + routes[i].Match
+			original := routes[i].Endpoint
+			collectAuth(credentials, original, key)
+			routes[i].Endpoint = authRef(original, key)
+			for j := range routes[i].Mirrors {
+				mirrorKey := sharedOrOwnKey(original, routes[i].Mirrors[j], key, j)
+				collectAuth(credentials, routes[i].Mirrors[j], mirrorKey)
+				routes[i].Mirrors[j] = authRef(routes[i].Mirrors[j], mirrorKey)
+			}
+		}
+	}
+
+	for node, spec := range d.Nodes {
+		referenceBackends(spec.Backends)
+		referenceRoutes(spec.AdditionalRoutes)
+		d.Nodes[node] = spec
+	}
+
+	if d.Storage != nil && d.Storage.Upstream != nil {
+		// Copied before it is touched: this is the same object the caller passed in as
+		// the configured upstream, so replacing its credentials in place would rewrite
+		// the input — and the caller would then compare a configuration against itself
+		// and conclude nothing had changed.
+		d.Storage.Upstream = d.Storage.Upstream.DeepCopy()
+		upstream := d.Storage.Upstream
+		originalUpstream := upstream.Endpoint
+		collectAuth(credentials, originalUpstream, constant.AuthKeyUpstream)
+		upstream.Endpoint = authRef(originalUpstream, constant.AuthKeyUpstream)
+		for j := range upstream.Mirrors {
+			key := sharedOrOwnKey(originalUpstream, upstream.Mirrors[j], constant.AuthKeyUpstream, j)
+			collectAuth(credentials, upstream.Mirrors[j], key)
+			upstream.Mirrors[j] = authRef(upstream.Mirrors[j], key)
+		}
+	}
+
+	if d.HeldUpstream != nil {
+		// Recorded for an operator to read, so it keeps the addresses and loses the
+		// credentials outright — a reference here would only invite something to
+		// resolve it, and nothing needs to.
+		held := d.HeldUpstream.DeepCopy()
+		collectAuth(credentials, held.Endpoint, constant.AuthKeyUpstream)
+		held.Endpoint.Auth = nil
+		for j := range held.Mirrors {
+			collectAuth(credentials, held.Mirrors[j], mirrorAuthKey(constant.AuthKeyUpstream, j))
+			held.Mirrors[j].Auth = nil
+		}
+		d.HeldUpstream = held
+	}
+
+	if len(credentials) > 0 {
+		d.Credentials = credentials
+	}
+	return d
+}
+
+// authRef replaces credentials with a reference to where they are kept.
+//
+// Applied to every endpoint of every resource this module derives. Those resources are
+// cluster-scoped, and the agent's role is bound to the `system:nodes` group, so a
+// credential written into one of them is readable through the API by every kubelet in the
+// cluster — including the credentials of registries that node never pulls from.
+func authRef(endpoint registryv1alpha1.Endpoint, key string) registryv1alpha1.Endpoint {
+	out := *endpoint.DeepCopy()
+	if out.Auth.IsEmpty() {
+		out.Auth = nil
+		return out
+	}
+	out.Auth = &registryv1alpha1.Auth{
+		SecretRef: &registryv1alpha1.AuthSecretRef{
+			Name: constant.AuthSecretName,
+			Key:  key,
+		},
+	}
+	return out
+}
+
+// sharedOrOwnKey decides whether a mirror needs a key of its own.
+//
+// Mirrors of one backend can each need different credentials, so they cannot simply share
+// the backend's key. But the in-cluster cache is the opposite case: every replica is a
+// mirror of the same store and every one of them takes the same read credentials, and
+// giving each its own key would write one credential into the Secret as many times as
+// there are masters.
+func sharedOrOwnKey(
+	endpoint, mirror registryv1alpha1.Endpoint, baseKey string, index int,
+) string {
+	if mirror.Auth.Encoded() == endpoint.Auth.Encoded() {
+		return baseKey
+	}
+	return mirrorAuthKey(baseKey, index)
+}
+
+// mirrorAuthKey keys a mirror's own credentials. Mirrors serve the same content but can
+// each need different credentials, so they cannot share one key.
+func mirrorAuthKey(base string, index int) string {
+	return fmt.Sprintf("%s-mirror-%d", base, index)
+}
+
+// collectAuth records an endpoint's credentials under the key its reference will use.
+func collectAuth(into map[string]registryv1alpha1.Auth, endpoint registryv1alpha1.Endpoint, key string) {
+	if endpoint.Auth.IsEmpty() {
+		return
+	}
+	into[key] = *endpoint.Auth.DeepCopy()
 }
 
 // storageBackend describes the in-cluster cache as one backend with one endpoint

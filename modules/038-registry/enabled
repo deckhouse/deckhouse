@@ -20,55 +20,40 @@ function __main__() {
   # By default, the module is disabled
   echo "false" >"$MODULE_ENABLED_RESULT"
 
-  # Enable the module only if all of the following conditions are met:
-
-  # 1. global.clusterConfiguration exists — this indicates that the cluster is managed by Deckhouse.
-  #    If it's missing, the cluster is considered externally managed (e.g., AWS, Yandex Cloud),
-  #    and the module must not be enabled.
-  #    This check is consistent with the validation performed by the control-plane-manager on startup.
-
-  # 2. The effective default CRI is one the module supports.
+  # One condition: global.clusterConfiguration exists, which is what says the cluster is
+  # managed by Deckhouse. Without it the cluster is externally managed (EKS and the like)
+  # and this module has no runtime to configure. The same check control-plane-manager makes
+  # on startup.
   #
-  #    Resolved the same way dhctl resolves it, and for the same reason: this setting
-  #    moved to the node-manager ModuleConfig, and the deprecated
-  #    ClusterConfiguration.defaultCRI lost its schema default along with the move. Read
-  #    only from ClusterConfiguration, this condition would silently stop matching on
-  #    every cluster that follows the new guidance, and a module that manages how the
-  #    whole cluster pulls images would quietly not be there.
+  # Deliberately NOT conditional on the container runtime, which this module used to read
+  # from defaultCRI. Two reasons, and the second is the one that settles it:
   #
-  #    A value of Containerd in the ModuleConfig cannot be told apart from an unset one,
-  #    because that is the ModuleConfig's own schema default. So it does not override the
-  #    deprecated field — otherwise a cluster carrying ContainerdV2 there and nothing in
-  #    the ModuleConfig would resolve to Containerd.
+  #   - There is nothing to gain. The runtime decides per node group, not per cluster, and
+  #     that decision is already made where it belongs: the bashible steps that install the
+  #     node agent are conditional on the CRI of the node group they are rendered for. A
+  #     cluster-wide answer read here could only ever be a worse copy of it. And at its
+  #     default `Unmanaged` this module deploys nothing at all, so being enabled costs
+  #     nothing on a cluster that never configures it.
+  #
+  #   - defaultCRI lives in the node-manager ModuleConfig, and this module is 038 while
+  #     node-manager is 040. Reading a later module's configuration inverts the ordering
+  #     they are numbered for: the value may not be materialized when this runs, so the
+  #     answer would depend on evaluation order rather than on the cluster. The deprecated
+  #     ClusterConfiguration.defaultCRI is no better — it lost its schema default when the
+  #     setting moved, so reading it silently stops matching on any cluster that follows
+  #     the current guidance, and a module that owns how the whole cluster pulls images
+  #     then quietly is not there.
+  #
+  # A cluster whose runtime this module cannot configure, asked to manage the registry
+  # anyway, is not left silent: the controller writes a layout for every node, no agent
+  # applies it, and D8RegistryNodeNotConverged says so — with the node names, which a
+  # cluster-wide gate never could.
 
   if ! values::has global.clusterConfiguration; then
     return 0
   fi
 
-  containerd_mode=""
-
-  if values::has nodeManager.defaultCRI; then
-    from_module_config=$(values::get nodeManager.defaultCRI)
-    if [[ -n "$from_module_config" && "$from_module_config" != "Containerd" ]]; then
-      containerd_mode=$from_module_config
-    fi
-  fi
-
-  if [[ -z "$containerd_mode" ]] && values::has global.clusterConfiguration.defaultCRI; then
-    containerd_mode=$(values::get global.clusterConfiguration.defaultCRI)
-  fi
-
-  # Neither source says anything, which is the ordinary case now: the effective value is
-  # the default both schemas agree on.
-  if [[ -z "$containerd_mode" ]]; then
-    containerd_mode="Containerd"
-  fi
-
-  case "$containerd_mode" in
-    "Containerd" | "ContainerdV2")
-      echo "true" >"$MODULE_ENABLED_RESULT"
-      ;;
-  esac
+  echo "true" >"$MODULE_ENABLED_RESULT"
 }
 
 enabled::run "$@"

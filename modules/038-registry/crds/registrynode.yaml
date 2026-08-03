@@ -116,22 +116,26 @@ spec:
                       auth:
                         type: object
                         description: |
-                          Credentials for the backend.
+                          Where the credentials for this endpoint are kept.
 
-                          **Sensitive.** Inlined so the agent stays self-sufficient while the API server is unreachable.
+                          Named rather than carried. This resource is cluster-scoped and the node agent's role is bound to the `system:nodes` group, so a credential written here would be readable through the API by every kubelet in the cluster — including credentials for registries that node never pulls from. The component that reads this resolves the reference once and keeps the result, so it still works when the API server does not.
                         properties:
-                          username:
-                            type: string
+                          secretRef:
+                            type: object
                             description: |
-                              The username for basic authentication.
-                          password:
-                            type: string
-                            description: |
-                              The password for basic authentication.
-                          auth:
-                            type: string
-                            description: |
-                              Pre-encoded `base64("username:password")`.
+                              The Secret holding the credentials, and the key inside it.
+                            required:
+                              - name
+                              - key
+                            properties:
+                              name:
+                                type: string
+                                description: |
+                                  Name of the Secret in the `d8-system` namespace.
+                              key:
+                                type: string
+                                description: |
+                                  Key inside it. One Secret holds every credential the module resolved, keyed by what it belongs to.
                       mirrors:
                         type: array
                         description: |
@@ -165,22 +169,26 @@ spec:
                             auth:
                               type: object
                               description: |
-                                Credentials for the mirror.
+                                Where the credentials for this mirror are kept.
 
-                                **Sensitive.**
+                                Named rather than carried, for the same reason as the endpoint above: this resource is readable by every node in the cluster. A mirror can need credentials of its own, so it can name a key of its own.
                               properties:
-                                username:
-                                  type: string
+                                secretRef:
+                                  type: object
                                   description: |
-                                    The username for basic authentication.
-                                password:
-                                  type: string
-                                  description: |
-                                    The password for basic authentication.
-                                auth:
-                                  type: string
-                                  description: |
-                                    Pre-encoded `base64("username:password")`.
+                                    The Secret holding the credentials, and the key inside it.
+                                  required:
+                                    - name
+                                    - key
+                                  properties:
+                                    name:
+                                      type: string
+                                      description: |
+                                        Name of the Secret in the `d8-system` namespace.
+                                    key:
+                                      type: string
+                                      description: |
+                                        Key inside it.
                 additionalRoutes:
                   type: array
                   description: |
@@ -227,22 +235,26 @@ spec:
                       auth:
                         type: object
                         description: |
-                          Credentials for the upstream.
+                          Where the credentials for this endpoint are kept.
 
-                          **Sensitive.**
+                          Named rather than carried. This resource is cluster-scoped and the node agent's role is bound to the `system:nodes` group, so a credential written here would be readable through the API by every kubelet in the cluster — including credentials for registries that node never pulls from. The component that reads this resolves the reference once and keeps the result, so it still works when the API server does not.
                         properties:
-                          username:
-                            type: string
+                          secretRef:
+                            type: object
                             description: |
-                              The username for basic authentication.
-                          password:
-                            type: string
-                            description: |
-                              The password for basic authentication.
-                          auth:
-                            type: string
-                            description: |
-                              Pre-encoded `base64("username:password")`.
+                              The Secret holding the credentials, and the key inside it.
+                            required:
+                              - name
+                              - key
+                            properties:
+                              name:
+                                type: string
+                                description: |
+                                  Name of the Secret in the `d8-system` namespace.
+                              key:
+                                type: string
+                                description: |
+                                  Key inside it. One Secret holds every credential the module resolved, keyed by what it belongs to.
                       mirrors:
                         type: array
                         description: |
@@ -276,22 +288,26 @@ spec:
                             auth:
                               type: object
                               description: |
-                                Credentials for the mirror.
+                                Where the credentials for this mirror are kept.
 
-                                **Sensitive.**
+                                Named rather than carried, for the same reason as the endpoint above: this resource is readable by every node in the cluster. A mirror can need credentials of its own, so it can name a key of its own.
                               properties:
-                                username:
-                                  type: string
+                                secretRef:
+                                  type: object
                                   description: |
-                                    The username for basic authentication.
-                                password:
-                                  type: string
-                                  description: |
-                                    The password for basic authentication.
-                                auth:
-                                  type: string
-                                  description: |
-                                    Pre-encoded `base64("username:password")`.
+                                    The Secret holding the credentials, and the key inside it.
+                                  required:
+                                    - name
+                                    - key
+                                  properties:
+                                    name:
+                                      type: string
+                                      description: |
+                                        Name of the Secret in the `d8-system` namespace.
+                                    key:
+                                      type: string
+                                      description: |
+                                        Key inside it.
             status:
               type: object
               description: |

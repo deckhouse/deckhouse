@@ -68,6 +68,10 @@ type Source struct {
 	// Bootstrap is the layout the node was installed with. Optional, and used only
 	// when the API server has never been reached.
 	Bootstrap *Bootstrap
+
+	// Resolver fills in the credentials the layout references. Required whenever a
+	// layout from the API can reference any, which is always in practice.
+	Resolver *Resolver
 }
 
 // Get returns the layout to apply and where it came from.
@@ -97,6 +101,18 @@ func (s *Source) Get(ctx context.Context) (*Snapshot, error) {
 
 	switch {
 	case err == nil:
+		// Before the copy is written, so what lands on disk can authenticate on its own.
+		// A reference cannot be dereferenced when the API server is gone, which is the
+		// one situation the copy exists for.
+		if resolveErr := s.Resolver.Resolve(ctx, &object.Spec); resolveErr != nil {
+			// Treated as a failed read rather than propagated: a layout whose credentials
+			// could not be read is one that cannot pull, and the copy on disk still can.
+			s.Log.Error("cannot resolve the credentials the layout references; "+
+				"falling back to the layout already on disk",
+				"error", resolveErr.Error())
+			return s.withoutTheAPI(resolveErr)
+		}
+
 		stored := Stored{Generation: object.Generation, Spec: &object.Spec}
 		if saveErr := s.Cache.Save(stored); saveErr != nil {
 			// Not fatal: the layout at hand is good, and failing here would trade a

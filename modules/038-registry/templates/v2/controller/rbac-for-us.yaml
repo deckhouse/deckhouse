@@ -138,6 +138,12 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-storage" .Chart.Name))) | nindent 2 }}
 rules:
+  # The credentials the storage spec references. Same one object, named the same way, for
+  # the same reason as the agent's.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["registry-resolved-auth"]
+    verbs: ["get", "list", "watch"]
   # Two leases, and they are deliberately two. One decides which replica fills the cache from
   # the upstream; the other decides whose turn it is to go read-only and reclaim its disk. The
   # replica doing the filling is the last one that should stop accepting writes, so those two
@@ -202,6 +208,49 @@ rules:
   - apiGroups: ["deckhouse.io"]
     resources: ["registrynodes/status"]
     verbs: ["get", "update", "patch"]
+
+---
+# What the node agent may read besides its own layout.
+#
+# A Role rather than more rules on the ClusterRole above, and named down to the single
+# object: the binding for the agent is to the `system:nodes` group, so anything granted here
+# is granted to every kubelet in the cluster. One Secret by name is the whole point of the
+# reference model — before it, the credentials were inline in RegistryNode and a node could
+# read every registry credential in the cluster by listing them.
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Chart.Name }}:agent
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-agent" .Chart.Name))) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    # Spelled out rather than templated from values: nothing publishes this name into
+    # values, and a name that appears in two places drifts. A template test asserts it
+    # equals the Go constant the components resolve against.
+    resourceNames: ["registry-resolved-auth"]
+    verbs: ["get", "list", "watch"]
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Chart.Name }}:agent
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-agent" .Chart.Name))) | nindent 2 }}
+subjects:
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
+  # New nodes resolve their layout before the kubelet has a node identity.
+  - kind: Group
+    name: system:bootstrappers:d8-node-manager
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: {{ .Chart.Name }}:agent
+  apiGroup: rbac.authorization.k8s.io
 
 ---
 kind: ClusterRoleBinding

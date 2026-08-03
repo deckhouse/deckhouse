@@ -299,3 +299,24 @@ func TestTheLegacyBootstrapPathStaysInert(t *testing.T) {
 		})
 	}
 }
+
+// TestTheAgentResolvesThroughTheNode pins the one line that decides whether a node can
+// join the cluster at all.
+//
+// The agent is a static pod so that a node can pull images when the cluster cannot help
+// it, and the names it resolves are upstream registries outside the cluster. Pointed at
+// cluster DNS it depends on the very thing it exists to outlive, and on a joining node that
+// dependency is circular: kube-dns needs its image, the image needs this agent to resolve
+// the upstream, and the agent needs kube-dns. The node stays NotReady and is replaced
+// forever — which is exactly what a test cluster did, while every unit test passed.
+func TestTheAgentResolvesThroughTheNode(t *testing.T) {
+	body := render(t, "all/053_configure_registry_agent.sh.tpl", agentRegistry())
+
+	require.Contains(t, body, "dnsPolicy: Default",
+		"the agent must resolve through the node's resolver")
+	require.NotContains(t, body, "ClusterFirstWithHostNet",
+		"cluster DNS makes the agent depend on the cluster it has to work without")
+	// Host networking is what makes the node's resolver the right one to inherit, so the
+	// two belong together.
+	require.Contains(t, body, "hostNetwork: true")
+}

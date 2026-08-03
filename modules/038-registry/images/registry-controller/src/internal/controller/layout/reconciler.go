@@ -189,6 +189,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	observeAirGapWait(cfg.Spec.Primary.Upstream == nil, desired.HeldUpstream != nil)
 	observeRejections(verdicts)
 
+	// Before anything that references them. The layouts below name keys in this Secret
+	// instead of carrying credentials, so an agent that reads a layout whose key is not
+	// there yet authenticates with nothing and gets a 401 that explains none of this.
+	if err := r.applyAuthSecret(ctx, desired.Credentials); err != nil {
+		return ctrl.Result{}, fmt.Errorf("applying the resolved auth Secret: %w", err)
+	}
 	if err := r.applyStorage(ctx, desired.Storage); err != nil {
 		return ctrl.Result{}, fmt.Errorf("applying RegistryStorage: %w", err)
 	}
@@ -198,7 +204,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// The status is written last, so it describes a layout that is already in
 	// place rather than one that was merely intended.
-	if err := r.patchConfigStatus(ctx, cfg, desired.HeldUpstream, probeFailure); err != nil {
+	// The digest of the credentials that went into the Secret alongside this upstream, so
+	// the record says which credentials are in effect without being able to disclose them.
+	heldAuth := desired.Credentials[constant.AuthKeyUpstream]
+	if err := r.patchConfigStatus(
+		ctx, cfg, desired.HeldUpstream, heldAuth.AuthDigest(), probeFailure,
+	); err != nil {
 		return ctrl.Result{}, fmt.Errorf("patching status of RegistryConfig: %w", err)
 	}
 	if err := r.patchUpstreamVerdicts(ctx, verdicts); err != nil {
@@ -228,6 +239,37 @@ func (r *Reconciler) arbitrateUpstreams(
 	return result.Verdicts, nil
 }
 
+// unchangedUpstream answers whether the configured upstream is the one already in effect.
+//
+// Compared in two parts because the record holds only one of them. The addresses are
+// compared directly; the credentials are compared through the digest that was recorded
+// beside them, since recording the credentials themselves would put a license key in a
+// cluster-scoped resource. Both halves matter: a rotated license under an unchanged address
+// is exactly the change that has to be probed before the cluster is switched onto it.
+func unchangedUpstream(
+	desired, effective *registryv1alpha1.Upstream, effectiveDigest string,
+) bool {
+	if desired == nil || effective == nil {
+		return false
+	}
+
+	// Compared without credentials on either side: the recorded copy has none, so leaving
+	// them in would make every comparison unequal.
+	withoutAuth := func(upstream *registryv1alpha1.Upstream) *registryv1alpha1.Upstream {
+		stripped := upstream.DeepCopy()
+		stripped.Endpoint.Auth = nil
+		for i := range stripped.Mirrors {
+			stripped.Mirrors[i].Auth = nil
+		}
+		return stripped
+	}
+
+	if !equality.Semantic.DeepEqual(withoutAuth(desired), withoutAuth(effective)) {
+		return false
+	}
+	return desired.Endpoint.Auth.AuthDigest() == effectiveDigest
+}
+
 // probeUpstream verifies a CHANGED primary upstream before the cluster is switched
 // to it, and returns the failure that must hold the switch back.
 //
@@ -244,7 +286,7 @@ func (r *Reconciler) probeUpstream(
 		// Air-gap is not probed: it is gated on cache completeness instead.
 		return nil
 	}
-	if effective := cfg.Status.EffectiveUpstream; effective != nil && equality.Semantic.DeepEqual(desired, effective) {
+	if unchangedUpstream(desired, cfg.Status.EffectiveUpstream, cfg.Status.EffectiveUpstreamAuthDigest) {
 		return nil
 	}
 
@@ -316,7 +358,7 @@ func probeOutcome(err error) string {
 // makes a held upstream explainable instead of looking like the change was lost.
 func (r *Reconciler) patchConfigStatus(
 	ctx context.Context, cfg *registryv1alpha1.RegistryConfig,
-	heldUpstream *registryv1alpha1.Upstream, probeFailure error,
+	heldUpstream *registryv1alpha1.Upstream, heldAuthDigest string, probeFailure error,
 ) error {
 	patch := client.MergeFrom(cfg.DeepCopy())
 
@@ -343,10 +385,14 @@ func (r *Reconciler) patchConfigStatus(
 	}
 
 	previous := cfg.Status.EffectiveUpstream
+	previousDigest := cfg.Status.EffectiveUpstreamAuthDigest
 	cfg.Status.EffectiveUpstream = heldUpstream.DeepCopy()
+	cfg.Status.EffectiveUpstreamAuthDigest = heldAuthDigest
 
 	changed := apimeta.SetStatusCondition(&cfg.Status.Conditions, condition)
-	if !changed && equality.Semantic.DeepEqual(previous, cfg.Status.EffectiveUpstream) {
+	if !changed &&
+		equality.Semantic.DeepEqual(previous, cfg.Status.EffectiveUpstream) &&
+		previousDigest == cfg.Status.EffectiveUpstreamAuthDigest {
 		return nil
 	}
 
@@ -545,6 +591,56 @@ func addressWithPort(address string) string {
 		return address
 	}
 	return fmt.Sprintf("%s:%d", address, constant.Port)
+}
+
+// applyAuthSecret persists the credentials the layouts reference.
+//
+// One Secret for the whole module, keyed by what each credential belongs to. One object
+// rather than one per registry because the node agent has to read it, and a single name can
+// be granted by resourceNames — so a node's kubelet reaches exactly this and nothing else,
+// instead of reading credentials out of every RegistryNode in the cluster.
+//
+// Replaced rather than merged: a key that is gone from the layout is a credential nothing
+// references any more, and leaving it behind would keep a rotated license readable for as
+// long as the cluster lives.
+func (r *Reconciler) applyAuthSecret(
+	ctx context.Context, credentials map[string]registryv1alpha1.Auth,
+) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constant.AuthSecretName,
+			Namespace: Namespace,
+		},
+	}
+
+	if len(credentials) == 0 {
+		if err := r.Client.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}
+
+	data := make(map[string][]byte, len(credentials))
+	for key := range credentials {
+		auth := credentials[key]
+		// The pre-encoded form, which is what a containerd hosts.toml wants and what
+		// every reader of this ultimately produces. Storing the pair separately would
+		// mean each reader re-encoding it, and a credential containing a colon would
+		// then decode differently in different readers.
+		data[key] = []byte(auth.Encoded())
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
+		secret.Type = corev1.SecretTypeOpaque
+		secret.Data = data
+		if secret.Labels == nil {
+			secret.Labels = map[string]string{}
+		}
+		secret.Labels["heritage"] = "deckhouse"
+		secret.Labels["module"] = "registry"
+		return nil
+	})
+	return err
 }
 
 // applyStorage converges RegistryStorage on the desired spec and refreshes the

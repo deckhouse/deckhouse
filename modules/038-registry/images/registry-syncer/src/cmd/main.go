@@ -181,9 +181,10 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 	// than from the custom resource: they are the pod's own identity, and the
 	// storage has to stay reachable even when the desired state cannot be read.
 	loop := &run.Loop{
-		Log:    log,
-		Client: kubeClient,
-		Node:   opts.nodeName,
+		Log:       log,
+		Client:    kubeClient,
+		Namespace: opts.namespace,
+		Node:      opts.nodeName,
 		Applier: &distribution.Applier{
 			ConfigPath:     opts.configPath,
 			UpstreamCAPath: opts.upstreamCAPath,

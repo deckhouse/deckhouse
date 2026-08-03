@@ -683,10 +683,24 @@ func TestReconcileAddressesTheStorageByNodeAddress(t *testing.T) {
 	require.Len(t, storage.Mirrors, 1)
 	assert.Equal(t, "10.0.0.2:5001", storage.Mirrors[0].Host)
 
-	// The credentials and authority travel to every one of them, since any may answer.
-	assert.Equal(t, "ro", storage.Auth.Username)
-	assert.Equal(t, "ro", storage.Mirrors[0].Auth.Username)
+	// Every replica takes the same credentials, since any may answer — so they share one
+	// key rather than each getting a copy of the same secret.
+	require.NotNil(t, storage.Auth)
+	require.NotNil(t, storage.Auth.SecretRef)
+	assert.Equal(t, constant.AuthKeyStorage, storage.Auth.SecretRef.Key)
+	assert.Equal(t, storage.Auth.SecretRef.Key, storage.Mirrors[0].Auth.SecretRef.Key)
 	assert.Equal(t, storage.CA, storage.Mirrors[0].CA)
+	// The layout names the key; the credentials themselves are in the Secret the
+	// reconciler wrote before applying it.
+	assert.Empty(t, storage.Auth.Username, "a cluster-scoped layout must carry no credential")
+
+	secret := &corev1.Secret{}
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+		Namespace: Namespace, Name: constant.AuthSecretName,
+	}, secret))
+	assert.Equal(t,
+		(&registryv1alpha1.Auth{Username: "ro", Password: "secret"}).Encoded(),
+		string(secret.Data[constant.AuthKeyStorage]))
 }
 
 // TestReconcileRefusesAStorageWithNoAddress: without an address the cache cannot be
@@ -734,4 +748,53 @@ func TestReconcileAddressesTolerateAnExplicitPort(t *testing.T) {
 	assert.Equal(t, "10.0.0.1:5001", storage.Host)
 	require.Len(t, storage.Mirrors, 1)
 	assert.Equal(t, "10.0.0.2:5001", storage.Mirrors[0].Host)
+}
+
+// TestUnchangedUpstreamComparesCredentialsThroughTheDigest covers the comparison that
+// decides whether an upstream gets probed at all.
+//
+// It has two ways to be wrong and both are silent. Too eager, and every reconciliation
+// probes an unchanged upstream, so a registry that is briefly down becomes a configuration
+// rollback. Too lax, and a rotated license reaches every node without anyone checking it
+// works — which is the one thing the probe exists to prevent. The credentials are no longer
+// recorded, so the digest is the only thing left that can tell them apart.
+func TestUnchangedUpstreamComparesCredentialsThroughTheDigest(t *testing.T) {
+	withAuth := func(auth *registryv1alpha1.Auth) *registryv1alpha1.Upstream {
+		return &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTPS,
+				Host:   "registry.deckhouse.io",
+				Path:   "/deckhouse/ee",
+				Auth:   auth,
+			},
+		}
+	}
+
+	current := &registryv1alpha1.Auth{Username: "license-token", Password: "key"}
+	rotated := &registryv1alpha1.Auth{Username: "license-token", Password: "new-key"}
+
+	// What the controller records: the addresses, and a digest instead of the credentials.
+	recorded := withAuth(nil)
+
+	assert.True(t,
+		unchangedUpstream(withAuth(current), recorded, current.AuthDigest()),
+		"an unchanged upstream must not be probed again")
+
+	assert.False(t,
+		unchangedUpstream(withAuth(rotated), recorded, current.AuthDigest()),
+		"a rotated credential under an unchanged address must be probed")
+
+	moved := withAuth(current)
+	moved.Endpoint.Host = "registry.example.com"
+	assert.False(t,
+		unchangedUpstream(moved, recorded, current.AuthDigest()),
+		"a changed address must be probed")
+
+	assert.False(t,
+		unchangedUpstream(withAuth(current), nil, ""),
+		"with nothing recorded there is no known-good upstream to compare against")
+
+	// And the digest must not be the credential in another coat.
+	assert.NotContains(t, current.AuthDigest(), "key")
+	assert.NotEqual(t, current.AuthDigest(), rotated.AuthDigest())
 }

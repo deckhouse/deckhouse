@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"strings"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tidwall/gjson"
@@ -1008,3 +1009,50 @@ var _ = Describe("Module :: registry :: helm template :: no duplicated objects",
 		})
 	}
 })
+
+// The name of the auth Secret appears in a Helm template and in a Go constant, and the two
+// have to agree: the components resolve credentials against the constant, while RBAC grants
+// access to the name in the template. A drift between them is silent — the agent gets a
+// forbidden error on a Secret nobody granted, and the pull fails with a 401 that mentions
+// neither.
+var _ = Describe("Module :: registry :: helm template :: the auth Secret is granted by name", func() {
+	f := SetupHelmConfig(``)
+
+	BeforeEach(func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("registry", v2Enabled)
+		f.HelmRender()
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+	})
+
+	It("grants the node agent exactly that Secret and nothing else", func() {
+		role := f.KubernetesResource("Role", "d8-system", "registry:agent")
+		Expect(role.Exists()).To(BeTrue())
+
+		rule := role.Field("rules.0")
+		Expect(rule.Get("resources").Array()).To(HaveLen(1))
+		Expect(rule.Get("resources.0").String()).To(Equal("secrets"))
+		Expect(rule.Get("resourceNames").Array()).To(HaveLen(1),
+			"without resourceNames this grants every Secret in the namespace to system:nodes")
+		Expect(rule.Get("resourceNames.0").String()).To(Equal(constant.AuthSecretName))
+		Expect(rule.Get("verbs").Array()).NotTo(ContainElement(gjsonString("create")))
+	})
+
+	It("grants the storage the same one", func() {
+		role := f.KubernetesResource("Role", "d8-system", "registry:storage")
+		Expect(role.Exists()).To(BeTrue())
+
+		var granted []string
+		for _, rule := range role.Field("rules").Array() {
+			for _, name := range rule.Get("resourceNames").Array() {
+				granted = append(granted, name.String())
+			}
+		}
+		Expect(granted).To(ContainElement(constant.AuthSecretName))
+	})
+})
+
+func gjsonString(s string) gjson.Result {
+	return gjson.Result{Type: gjson.String, Str: s}
+}

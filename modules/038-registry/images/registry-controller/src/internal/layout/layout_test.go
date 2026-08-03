@@ -111,7 +111,16 @@ func TestComputePassThroughCache(t *testing.T) {
 	assert.Equal(t, "10.0.0.1:5001", node.Backends[0].Host)
 	assert.Equal(t, constant.Path, node.Backends[0].Path)
 	assert.Equal(t, testAccess().CA, node.Backends[0].CA)
-	assert.Equal(t, "ro", node.Backends[0].Auth.Username)
+	// The layout names where the credentials are, never what they are: this resource is
+	// cluster-scoped and every node's kubelet can read it.
+	require.NotNil(t, node.Backends[0].Auth)
+	require.NotNil(t, node.Backends[0].Auth.SecretRef)
+	assert.Equal(t, constant.AuthSecretName, node.Backends[0].Auth.SecretRef.Name)
+	assert.Equal(t, constant.AuthKeyStorage, node.Backends[0].Auth.SecretRef.Key)
+	assert.Empty(t, node.Backends[0].Auth.Username)
+	assert.Empty(t, node.Backends[0].Auth.Password)
+	// And the credentials come back separately, for the caller to put in that Secret.
+	assert.Equal(t, "ro", got.Credentials[constant.AuthKeyStorage].Username)
 
 	assert.Equal(t, registryv1alpha1.BackendUpstream, node.Backends[1].Name)
 }
@@ -537,4 +546,87 @@ func TestComputeRespectsCollectionTurnedOff(t *testing.T) {
 	assert.False(t, desired.Storage.GarbageCollection.Enabled)
 	// A schedule is still compiled, so that turning it back on does not need one supplied.
 	assert.NotEmpty(t, desired.Storage.GarbageCollection.Schedule)
+}
+
+// TestComputeLeavesNoCredentialInAnyResource is the property the reference model exists
+// for, asserted over the whole result rather than field by field.
+//
+// The resources below are cluster-scoped and the node agent's role is bound to the
+// `system:nodes` group, so one credential left inline in any of them is readable through
+// the API by every kubelet in the cluster — including credentials for registries that node
+// never pulls from. Walking everything is deliberate: the earlier version of this
+// transformation was applied at each return of Compute, and there are four of them.
+func TestComputeLeavesNoCredentialInAnyResource(t *testing.T) {
+	upstream := testUpstream("registry.deckhouse.io")
+	upstream.Mirrors = []registryv1alpha1.Endpoint{{
+		Scheme: registryv1alpha1.SchemeHTTPS,
+		Host:   "mirror.example.com",
+		// Its own credentials, which must not be folded into the primary's key.
+		Auth: &registryv1alpha1.Auth{Username: "mirror-user", Password: "mirror-pass"},
+	}}
+
+	got := Compute(Inputs{
+		Config: registryv1alpha1.RegistryConfigSpec{
+			Mode:    registryv1alpha1.ModeManaged,
+			Primary: registryv1alpha1.PrimarySource{Upstream: upstream},
+			Storage: registryv1alpha1.StorageConfig{Cache: true},
+		},
+		Nodes:         []string{"master-0", "worker-0"},
+		StorageAccess: testAccess(),
+		Routes: []registryv1alpha1.Route{{
+			Match: "images.example.com",
+			Endpoint: registryv1alpha1.Endpoint{
+				Host: "images.example.com",
+				Auth: &registryv1alpha1.Auth{Username: "route-user", Password: "route-pass"},
+			},
+		}},
+	})
+
+	assertReferenceOnly := func(where string, auth *registryv1alpha1.Auth) {
+		if auth == nil {
+			return
+		}
+		assert.Empty(t, auth.Username, where)
+		assert.Empty(t, auth.Password, where)
+		assert.Empty(t, auth.Auth, where)
+		if !auth.SecretRef.IsEmpty() {
+			assert.Equal(t, constant.AuthSecretName, auth.SecretRef.Name, where)
+			assert.Contains(t, got.Credentials, auth.SecretRef.Key,
+				"%s references a key nothing was collected under, so the agent would "+
+					"authenticate with nothing", where)
+		}
+	}
+
+	for node, spec := range got.Nodes {
+		for _, backend := range spec.Backends {
+			assertReferenceOnly(node+" backend "+string(backend.Name), backend.Endpoint.Auth)
+			for i := range backend.Mirrors {
+				assertReferenceOnly(node+" mirror", backend.Mirrors[i].Auth)
+			}
+		}
+		for _, route := range spec.AdditionalRoutes {
+			assertReferenceOnly(node+" route "+route.Match, route.Endpoint.Auth)
+			for i := range route.Mirrors {
+				assertReferenceOnly(node+" route mirror", route.Mirrors[i].Auth)
+			}
+		}
+	}
+
+	require.NotNil(t, got.Storage)
+	require.NotNil(t, got.Storage.Upstream)
+	assertReferenceOnly("storage upstream", got.Storage.Upstream.Endpoint.Auth)
+	for i := range got.Storage.Upstream.Mirrors {
+		assertReferenceOnly("storage upstream mirror", got.Storage.Upstream.Mirrors[i].Auth)
+	}
+
+	// The recorded upstream keeps no reference either: it is there for an operator to
+	// read, and nothing resolves it.
+	require.NotNil(t, got.HeldUpstream)
+	assert.Nil(t, got.HeldUpstream.Endpoint.Auth)
+
+	// Every credential that went in came back out, so nothing was dropped on the way.
+	assert.Equal(t, "license-token", got.Credentials[constant.AuthKeyUpstream].Username)
+	assert.Equal(t, "ro", got.Credentials[constant.AuthKeyStorage].Username)
+	assert.Equal(t, "mirror-user", got.Credentials["upstream-mirror-0"].Username)
+	assert.Equal(t, "route-user", got.Credentials["route-images.example.com"].Username)
 }

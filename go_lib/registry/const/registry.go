@@ -40,6 +40,21 @@ const (
 	// DropInHostsFile is the file name containerd reads inside a host directory.
 	DropInHostsFile = "hosts.toml"
 
+	// AuthSecretName is the one Secret holding every credential this module resolved.
+	//
+	// One object rather than one per registry, because the node agent has to be able to
+	// read it: a single name can be granted by resourceNames, so a node's kubelet reaches
+	// exactly this and nothing else. The keys are what the credentials belong to —
+	// AuthKeyStorage for the in-cluster cache, AuthKeyUpstream for the primary upstream,
+	// and the upstream's own name for anything declared as a RegistryUpstream.
+	AuthSecretName = "registry-resolved-auth"
+
+	// AuthKeyStorage keys the credentials for the in-cluster cache.
+	AuthKeyStorage = "storage"
+
+	// AuthKeyUpstream keys the credentials for the primary upstream.
+	AuthKeyUpstream = "upstream"
+
 	// StorePath is where the registry keeps its blobs on a node.
 	//
 	// A module constant rather than a user setting: the path is part of the

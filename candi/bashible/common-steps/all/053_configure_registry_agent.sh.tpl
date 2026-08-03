@@ -248,7 +248,14 @@ spec:
   # namespace. No hostPort: the agent listens on the loopback address of the node
   # itself, which is the only place the runtime looks.
   hostNetwork: true
-  dnsPolicy: ClusterFirstWithHostNet
+  # The node's own resolver, never the cluster's. This agent exists so that a node can pull
+  # images when the cluster cannot help it, and the names it has to resolve are upstream
+  # registries outside the cluster. Cluster DNS would make it depend on the very thing it
+  # is there to outlive, and on a node joining the cluster that dependency is circular:
+  # kube-dns cannot start until its image is pulled, the image cannot be pulled until this
+  # agent resolves the upstream, and the agent cannot resolve it without kube-dns. The node
+  # then never becomes Ready and is replaced, forever.
+  dnsPolicy: Default
   priorityClassName: system-node-critical
   priority: 2000001000
   containers:

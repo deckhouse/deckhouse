@@ -262,6 +262,12 @@ spec:
                   format: int64
                   description: |
                     The `spec` generation the controller last acted on.
+                effectiveUpstreamAuthDigest:
+                  type: string
+                  description: |
+                    Identifies the credentials in effect without disclosing them.
+
+                    Needed because "has the configuration changed?" has to include the credentials: a rotated license under an unchanged address is exactly the change that must be probed before the cluster is switched onto it. With the credentials no longer recorded here, comparing this against a digest of the configured ones is what keeps that question answerable.
                 effectiveUpstream:
                   type: object
                   description: |
@@ -292,25 +298,6 @@ spec:
                       type: string
                       description: |
                         A PEM-encoded certificate authority bundle used to verify the registry.
-                    auth:
-                      type: object
-                      description: |
-                        Credentials for the registry.
-
-                        **Sensitive.**
-                      properties:
-                        username:
-                          type: string
-                          description: |
-                            The username for basic authentication.
-                        password:
-                          type: string
-                          description: |
-                            The password for basic authentication.
-                        auth:
-                          type: string
-                          description: |
-                            Pre-encoded `base64("username:password")`.
                     mirrors:
                       type: array
                       description: |
@@ -339,25 +326,6 @@ spec:
                             type: string
                             description: |
                               A PEM-encoded certificate authority bundle used to verify the mirror.
-                          auth:
-                            type: object
-                            description: |
-                              Credentials for the mirror.
-
-                              **Sensitive.**
-                            properties:
-                              username:
-                                type: string
-                                description: |
-                                  The username for basic authentication.
-                              password:
-                                type: string
-                                description: |
-                                  The password for basic authentication.
-                              auth:
-                                type: string
-                                description: |
-                                  Pre-encoded `base64("username:password")`.
                 conditions:
                   type: array
                   description: |

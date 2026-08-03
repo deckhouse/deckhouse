@@ -101,8 +101,24 @@ type RegistryConfigStatus struct {
 	//
 	// Empty means no upstream is in effect: either the cluster is air-gapped, or
 	// nothing has been configured yet.
+	// Carries no credentials. This is a record, and a record of a credential is one
+	// more place it can be read from — this resource is cluster-scoped, so that means
+	// anyone allowed to look at the module's own configuration. The credentials that
+	// belong to it are in the module's auth Secret, and EffectiveUpstreamAuthDigest is
+	// what tells them apart without revealing them.
 	// +optional
 	EffectiveUpstream *Upstream `json:"effectiveUpstream,omitempty"`
+
+	// EffectiveUpstreamAuthDigest identifies the credentials in effect without
+	// disclosing them.
+	//
+	// Needed because "has the configuration changed?" has to include the credentials:
+	// a new license under an unchanged address is exactly the change that must be
+	// probed before the cluster is switched to it. With the credentials no longer
+	// recorded, comparing this against a digest of the configured ones is what makes
+	// that question answerable.
+	// +optional
+	EffectiveUpstreamAuthDigest string `json:"effectiveUpstreamAuthDigest,omitempty"`
 
 	// Conditions carry Valid, UpstreamValid and StorageConverged.
 	// +optional

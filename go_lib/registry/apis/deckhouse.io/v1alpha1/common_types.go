@@ -17,7 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"strings"
 )
@@ -43,18 +45,47 @@ func (s Scheme) IsSecure() bool { return s != SchemeHTTP }
 // hosts.toml host key ("https", "http").
 func (s Scheme) Lower() string { return strings.ToLower(string(s)) }
 
-// Auth holds registry credentials.
+// AuthSecretRef names where credentials actually live.
 //
-// Credentials are stored inline rather than behind a secretRef. This is a
-// deliberate trade-off in favour of the agent staying self-sufficient: the
-// agent must keep serving images while the API server is unreachable, working
-// from its on-disk copy of a single RegistryNode, and there is nothing to
-// dereference at that point.
+// Used by every resource this module derives rather than receives: a RegistryNode, a
+// RegistryStorage, and the recorded effective upstream carry this instead of the
+// credentials themselves. The resources are cluster-scoped and the node agent's role is
+// bound to the `system:nodes` group, so inline credentials there mean any node's kubelet
+// can read every registry credential in the cluster through the API. A reference narrows
+// that to one Secret, which is also the object kind that gets audited and encrypted at
+// rest like a credential should be.
 //
-// The consequence is that every object carrying an Auth must be free of
-// per-node secrets, because RegistryNode is readable by the whole
-// `system:nodes` group. See the module security documentation.
+// Deliberately not used in RegistryConfig.spec or RegistryUpstream.spec: those are the
+// inputs an operator writes, holding exactly what the ModuleConfig already holds in the
+// clear, so a reference there would break the API without hiding anything.
+type AuthSecretRef struct {
+	// Name of the Secret in the module's namespace.
+	Name string `json:"name"`
+
+	// Key inside it. One Secret holds every credential the module resolved, keyed by
+	// what it belongs to, so that a node reads one object rather than one per registry.
+	Key string `json:"key"`
+}
+
+// IsEmpty reports whether the reference names nothing.
+func (r *AuthSecretRef) IsEmpty() bool {
+	return r == nil || r.Name == "" || r.Key == ""
+}
+
+// Auth holds registry credentials, or says where they are kept.
+//
+// Resolving a reference is the responsibility of whoever reads it, and so is persisting the
+// result: the node agent must keep serving images while the API server is unreachable,
+// working from its on-disk copy of the layout, and a reference is not dereferenceable at
+// that point. It therefore resolves on receipt and caches what it resolved, never the
+// reference.
 type Auth struct {
+	// SecretRef names where the credentials are kept, for the resources that must not
+	// carry them. Mutually exclusive with the fields below: whoever resolves this
+	// reference produces those.
+	// +optional
+	SecretRef *AuthSecretRef `json:"secretRef,omitempty"`
+
 	// Username for basic authentication.
 	// +optional
 	Username string `json:"username,omitempty"`
@@ -69,9 +100,35 @@ type Auth struct {
 	Auth string `json:"auth,omitempty"`
 }
 
-// IsEmpty reports whether no credentials are set at all.
+// IsEmpty reports whether no usable credentials are set.
+//
+// About the inline fields only, deliberately: an unresolved reference has nothing to write
+// into a hosts.toml, and every caller of this asks in order to write one. Whether the
+// reference names credentials elsewhere is a different question — NeedsResolution.
 func (a *Auth) IsEmpty() bool {
 	return a == nil || (a.Username == "" && a.Password == "" && a.Auth == "")
+}
+
+// AuthDigest identifies credentials without disclosing them.
+//
+// A digest rather than the credentials themselves, so that "have the credentials changed?"
+// stays answerable from a record that is safe to keep: a rotated license under an unchanged
+// address is exactly the change that has to be probed before a cluster is switched onto it.
+// Salted with a fixed string so the value cannot be matched against a rainbow table of
+// plausible tokens; it is compared only against another digest produced here.
+func (a *Auth) AuthDigest() string {
+	if a.IsEmpty() {
+		return ""
+	}
+	sum := sha256.Sum256([]byte("deckhouse-registry-auth\x00" + a.Encoded()))
+	return hex.EncodeToString(sum[:])
+}
+
+// NeedsResolution reports that the credentials live in a Secret and have not been read
+// yet. Writing such an Auth anywhere it is expected to authenticate is a bug: the request
+// would go out unauthenticated and fail with a 401 that says nothing about why.
+func (a *Auth) NeedsResolution() bool {
+	return a != nil && !a.SecretRef.IsEmpty() && a.IsEmpty()
 }
 
 // Encoded returns the credentials in the base64("username:password") form used

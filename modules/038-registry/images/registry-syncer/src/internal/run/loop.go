@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +47,9 @@ type Leadership interface {
 type Loop struct {
 	Log    *slog.Logger
 	Client client.Client
+
+	// Namespace holds the Secret the storage spec references its credentials through.
+	Namespace string
 
 	// Node this replica runs on, and the key of its status entry.
 	Node string
@@ -403,7 +407,38 @@ func (l *Loop) desiredState(ctx context.Context) (*registryv1alpha1.RegistryStor
 		}
 		return nil, fmt.Errorf("reading the desired storage state: %w", err)
 	}
+
+	// The spec names its credentials rather than carrying them, because it is a
+	// cluster-scoped object. Resolved here, at the single place the spec is read, so that
+	// everything downstream — the registry configuration and the fill copier alike — works
+	// with credentials it can actually use.
+	if err := l.resolveAuth(ctx, &storage.Spec); err != nil {
+		return nil, fmt.Errorf("resolving the credentials the storage spec references: %w", err)
+	}
+
 	return &storage.Spec, nil
+}
+
+// resolveAuth turns the references in a storage spec into the credentials they name.
+func (l *Loop) resolveAuth(
+	ctx context.Context, spec *registryv1alpha1.RegistryStorageSpec,
+) error {
+	auths := spec.ReferencedAuths()
+	if len(auths) == 0 {
+		return nil
+	}
+
+	contents := map[string]map[string][]byte{}
+	for _, name := range registryv1alpha1.SecretNames(auths) {
+		secret := &corev1.Secret{}
+		key := types.NamespacedName{Namespace: l.Namespace, Name: name}
+		if err := l.Client.Get(ctx, key, secret); err != nil {
+			return fmt.Errorf("reading %s: %w", key, err)
+		}
+		contents[name] = secret.Data
+	}
+
+	return registryv1alpha1.ResolveAuths(auths, contents)
 }
 
 func (l *Loop) copier(spec *registryv1alpha1.RegistryStorageSpec) (*fill.Copier, error) {

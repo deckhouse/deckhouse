@@ -41,6 +41,13 @@ That single fact is what the rest of the design rests on:
   only at the agent. Nothing on a node has to be reconfigured for a change to take effect.
 - **Registry credentials stay out of the runtime's configuration files.** The agent holds them
   and attaches them per request.
+- **Credentials are not stored in the module's resources.** A RegistryNode, a RegistryStorage and
+  the recorded effective upstream name a key in one Secret instead of carrying the credential
+  itself. They are cluster-scoped and the agent's permission to read them is granted to every
+  node, so a credential inside one of them would be readable through the API by every kubelet in
+  the cluster. What each component reads is narrowed to that one Secret by name; the credential a
+  component resolved is kept with its own copy of the routing, so a pull still works when the API
+  server does not.
 - **A pull works when the API server does not.** The agent keeps a copy of its routing on disk
   and falls back to it, because the images it serves include the ones needed to repair a broken
   control plane. A node that has never reached the API server uses the routing it was installed
