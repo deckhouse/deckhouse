@@ -3,6 +3,7 @@ check_branch_name:
   extends:
     - .rules:on_tag
   needs: []
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
   variables:
     GIT_DEPTH: "0"
   script:
@@ -25,6 +26,7 @@ check_changelog:
   extends:
     - .rules:on_tag
   needs: []
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
   variables:
     GIT_DEPTH: "0"
   script:
