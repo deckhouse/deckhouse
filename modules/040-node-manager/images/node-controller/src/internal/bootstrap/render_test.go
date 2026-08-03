@@ -98,6 +98,18 @@ func TestRenderScriptWithoutBashibleLibrary(t *testing.T) {
 	require.ErrorContains(t, err, "candi/bashible/lib.sh.tpl")
 }
 
+func TestRenderCAPICloudConfigForMetal3(t *testing.T) {
+	got, err := RenderCAPICloudConfig(metal3Input(frozenFiles(t)))
+	require.NoError(t, err)
+
+	cloudConfig := string(got)
+	assert.Contains(t, cloudConfig, "/var/lib/bashible/metal3-early-bootstrap.sh")
+	assert.Contains(t, cloudConfig, "/var/lib/bashible/machine-name")
+	assert.Contains(t, cloudConfig, "/var/lib/bashible/node-spec-provider-id")
+	assert.Contains(t, cloudConfig, "metal3://{bmh_namespace}/{bmh_name}/{machine_name}")
+	assert.Contains(t, cloudConfig, "- /var/lib/bashible/metal3-early-bootstrap.sh\n- /var/lib/bashible/bootstrap.sh")
+}
+
 // frozenFiles loads the templates the goldens were rendered from, under the keys
 // the ConfigMap uses, so the golden compares render to render, not delivery to
 // delivery.
@@ -158,6 +170,12 @@ func capiInput(files *Files) Input {
 	in.BootstrapToken = "myworker"
 	in.SSHPublicKey = "ssh-rsa AAAA"
 	in.Provider = "yandex"
+	return in
+}
+
+func metal3Input(files *Files) Input {
+	in := capiInput(files)
+	in.Provider = "metal3"
 	return in
 }
 

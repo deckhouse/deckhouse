@@ -1,0 +1,51 @@
+{{- $providerID := "metal3" }}
+{{- define "registration_values" }}
+{{- $context := index . 0 }}
+type: {{ b64enc "metal3" | quote }}
+region: {{ b64enc "default" | quote }}
+{{- $zones := list }}
+{{- if and (hasKey $context.Values "cloudProviderMetal3") (hasKey $context.Values.cloudProviderMetal3 "internal") (hasKey $context.Values.cloudProviderMetal3.internal "providerDiscoveryData") (hasKey $context.Values.cloudProviderMetal3.internal.providerDiscoveryData "zones") }}
+  {{- $zones = $context.Values.cloudProviderMetal3.internal.providerDiscoveryData.zones }}
+{{- end }}
+{{- if $zones }}
+zones: {{ $zones | toJson | b64enc | quote }}
+{{- else }}
+zones: {{ list "default" | toJson | b64enc | quote }}
+{{- end }}
+instanceClassKind: {{ b64enc "Metal3InstanceClass" | quote }}
+machineClassKind: {{ b64enc "" | quote }}
+capiClusterKind: {{ b64enc "Metal3Cluster" | quote }}
+capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
+capiClusterAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
+capiClusterName: {{ b64enc "metal3" | quote }}
+capiMachineTemplateKind: {{ b64enc "Metal3MachineTemplate" | quote }}
+capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1beta1" | quote }}
+capiMachineTemplateAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
+
+{{- $metal3Values := dict }}
+metal3: {{ $metal3Values | toJson | b64enc | quote }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict
+    "cloud-provider.deckhouse.io/registration" ""
+    "cloud-provider.deckhouse.io/name" $providerID
+    )) | nindent 2 }}
+type: Opaque
+data: {{- include "registration_values" (list . ) | nindent 2 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ printf "d8-node-manager-cloud-provider-%s" $providerID }}
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict
+    "cloud-provider.deckhouse.io/registration" ""
+    "cloud-provider.deckhouse.io/name" $providerID
+    )) | nindent 2 }}
+type: Opaque
+data: {{- include "registration_values" (list . ) | nindent 2 }}
