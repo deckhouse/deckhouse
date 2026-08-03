@@ -23,6 +23,10 @@ GOTEST_JSON_ENVTEST ?= /tmp/node-controller-envtest.json
 # envtest integration suites are named Test<Name>ControllerEnvtest; this regex splits them from units.
 ENVTEST_RUN_REGEX ?= ControllerEnvtest$$
 
+# MODULE_DIR is the node-manager module root this source tree lives under; the
+# CRDs it ships are four levels up from here.
+MODULE_DIR ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../../..)
+
 # Go tools
 CONTROLLER_GEN = $(GOBIN)/controller-gen
 CONVERSION_GEN = $(GOBIN)/conversion-gen
@@ -116,6 +120,19 @@ generate-conversion: conversion-gen ## Generate conversion functions.
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=node-controller crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+# The module ships this one CRD from crds/, not from config/crd/bases: it is the
+# only API group here whose types are also the on-node agent's, so the schema has
+# to be regenerated whenever they change instead of being edited by hand.
+NODECONFIG_CRD ?= $(MODULE_DIR)/crds/nodeconfig.yaml
+
+.PHONY: nodeconfig-crd
+nodeconfig-crd: controller-gen ## Regenerate modules/040-node-manager/crds/nodeconfig.yaml from the internal.deckhouse.io types.
+	@tmp=$$(mktemp -d); \
+		$(CONTROLLER_GEN) crd paths=./api/internal.deckhouse.io/... output:crd:dir=$$tmp && \
+		awk -f hack/nodeconfig-crd.awk $$tmp/internal.deckhouse.io_nodeconfigs.yaml > $(NODECONFIG_CRD); \
+		rc=$$?; rm -rf $$tmp; test $$rc -eq 0
+	@echo "==> [nodeconfig-crd] wrote $(NODECONFIG_CRD)"
 
 ##@ Tools
 

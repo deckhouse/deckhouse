@@ -31,6 +31,7 @@ import (
 	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -66,6 +67,10 @@ var _ = BeforeSuite(func() {
 	scheme = k8sruntime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
+	// NodeExtensionRequest: the rendered spec merges the operator's extra system
+	// extensions, and listing them fails the whole render when the type is not in
+	// the scheme — which is what a missing entry here looks like from the suite.
+	Expect(deckhousev1alpha1.AddToScheme(scheme)).To(Succeed())
 	Expect(internalv1alpha1.AddToScheme(scheme)).To(Succeed())
 	Expect(bootstrapv1alpha1.AddToScheme(scheme)).To(Succeed())
 	Expect(capiv1beta2.AddToScheme(scheme)).To(Succeed())
