@@ -44,26 +44,26 @@ Description:
 		- control-plane pods with annotation "control-plane-manager.deckhouse.io/kubernetes-version" from kube-system NS
 		- all Nodes (filtering .status.modeInfo.kubeletVersion)
 		- Secret: d8-cluster-configuration from NS: kube-system - get only maxUsedControlPlaneKubernetesVersion field
-	and get desired k8s version from `global.clusterConfiguration.kubernetesVersion`
+	and get desired k8s version from `global.discovery.targetKubernetesVersion`
 
 	Then process following logic:
 	```
-	if global.clusterConfiguration.kubernetesVersion > maxNodeVersion
+	if global.discovery.targetKubernetesVersion > maxNodeVersion
 		if minNodeVersion < minControlPlaneVersion:
 			effectiveKubernetesVersion = minControlPlaneVersion
 		else:
 			effectiveKubernetesVersion =  minControlPlaneVersion.IncMinor() // bumped minor version
-	else if global.clusterConfiguration.kubernetesVersion < maxNodeVersion:
+	else if global.discovery.targetKubernetesVersion < maxNodeVersion:
 		if maxNodeVersion < maxControlPlaneVersion && maxControlPlaneVersion == maxUsedControlPlaneVersion:
 			unbumped := fmt.Sprintf("%d.%d.%d", maxControlPlaneVersion.Major(), maxControlPlaneVersion.Minor()-1, maxControlPlaneVersion.Patch())
 			effectiveKubernetesVersion = semver.MustParse(unbumped) // minor version-1
 		else:
 			effectiveKubernetesVersion = maxControlPlaneVersion
 	else:
-		effectiveKubernetesVersion = global.clusterConfiguration.kubernetesVersion
+		effectiveKubernetesVersion = global.discovery.targetKubernetesVersion
 	```
 
-	then save effectiveKubernetesVersion to Values (`global.clusterConfiguration.kubernetesVersion`)
+	then save effectiveKubernetesVersion to Values (`controlPlaneManager.internal.effectiveKubernetesVersion`)
 	and if effectiveKubernetesVersion >= maxUsedControlPlaneVersion:
 		update maxUsedControlPlaneKubernetesVersion in Secret: d8-cluster-configuration
 
@@ -205,14 +205,14 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	prevEffectiveVersion := input.Values.Get("controlPlaneManager.internal.effectiveKubernetesVersion").String()
 
-	configVersionRaw, ok := input.Values.GetOk("global.clusterConfiguration.kubernetesVersion")
-	if !ok {
-		return fmt.Errorf("global.clusterConfiguration.kubernetesVersion required")
+	configVersionRaw := input.Values.Get("global.discovery.targetKubernetesVersion").String()
+	if configVersionRaw == "" {
+		return fmt.Errorf("kubernetesVersion required (global.discovery.targetKubernetesVersion is empty)")
 	}
 
-	configVersion, err := semver.NewVersion(configVersionRaw.String())
+	configVersion, err := semver.NewVersion(configVersionRaw)
 	if err != nil {
-		return fmt.Errorf("global.clusterConfiguration.kubernetesVersion is not valid semver: %s", configVersionRaw.String())
+		return fmt.Errorf("kubernetesVersion is not valid semver: %s", configVersionRaw)
 	}
 
 	// process pods snapshot

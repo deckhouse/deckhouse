@@ -129,6 +129,20 @@ func init() {
 	}
 }
 
+// The Kubernetes binding below is a trigger only — the hook reads the resolved answer from
+// global.discovery.kubernetesVersionIsAutomatic, not from the snapshot. It exists because
+// Values are not an event source: without it the K8sVersionsWithDeprecations requirement, which
+// gates DeckhouseRelease installation, would keep a stale answer for up to an hour after an
+// operator switches the version between Automatic and a pin. The object changes rarely, so this
+// costs no extra helm-release scans in practice.
+//
+// OnStartup must not be combined with Kubernetes bindings (addon-operator panics); Synchronization
+// of this binding already fires the hook at startup.
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — drop this binding together with the
+// ClusterConfiguration field. Once the field is gone the Secret can no longer change the
+// resolved version, so it is not a useful trigger any more. A ModuleConfig binding should replace
+// it if Operators still need immediate re-scan on pin/Automatic flips.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/helm-releases-scan",
 	Schedule: []go_hook.ScheduleConfig{
@@ -147,7 +161,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:        applyClusterConfigurationYamlFilter,
 		},
 	},
-	// we don't need the startup hook, because this hook will start on synchronization
 }, dependency.WithExternalDependencies(handleHelmReleases))
 
 func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -195,18 +208,8 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
-	var isAutomaticK8s bool
-	var kubernetesVersion string
-	kubernetesVersionSnapshots := input.Snapshots.Get("kubernetesVersion")
-	if len(kubernetesVersionSnapshots) > 0 {
-		err := kubernetesVersionSnapshots[0].UnmarshalTo(&kubernetesVersion)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal 'kubernetesVersion': %w", err)
-		}
-	}
-
-	if kubernetesVersion == "Automatic" {
-		isAutomaticK8s = true
+	isAutomaticK8s := input.Values.Get("global.discovery.kubernetesVersionIsAutomatic").Bool()
+	if isAutomaticK8s {
 		requirements.SaveValue(K8sVersionsWithDeprecations, "initial")
 	}
 

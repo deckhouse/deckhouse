@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io"
 
@@ -35,6 +34,8 @@ import (
 
 var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 	f := HookExecutionConfigInit(`{"global" : {"discovery": {"kubernetesVersion": "1.22.3"}}}`, "")
+	// The hook keeps a ModuleConfig binding purely as a re-run trigger, so the kind must be known
+	// to the fake cluster even though no test here creates a ModuleConfig.
 	Context("helm3 release with deprecated versions", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -277,49 +278,13 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 })
 
 var _ = Describe("helm :: hooks :: automatic kubernetes version ::", func() {
-	var (
-		stateAClusterConfiguration = `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-podSubnetCIDR: 10.122.0.0/16
-podSubnetNodeCIDRPrefix: "26"
-serviceSubnetCIDR: 10.213.0.0/16
-kubernetesVersion: "Automatic"
-`
-		stateAutomatic = `
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration))
-
-		stateBClusterConfiguration = `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-podSubnetCIDR: 10.122.0.0/16
-podSubnetNodeCIDRPrefix: "26"
-serviceSubnetCIDR: 10.213.0.0/16
-kubernetesVersion: "1.32"
-`
-		stateConcreteVersion = `
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateBClusterConfiguration))
-	)
-
 	f := HookExecutionConfigInit("{\"global\": {\"discovery\": {\"kubernetesVersion\": \"1.21.3\"}}}", "{}")
 	Context("helm3 release with deprecated versions", func() {
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+				f.KubeStateSet("")
+				f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+				f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 				var sec corev1.Secret
 				_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
@@ -347,7 +312,9 @@ data:
 
 		Context("check for kubernetesVersion: \"1.32\"", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateConcreteVersion))
+				f.KubeStateSet("")
+				f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", false)
+				f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 				var sec corev1.Secret
 				_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
 
@@ -372,7 +339,8 @@ data:
 
 		Context("check for empty \"ClusterConfiguration\"", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(""))
+				f.KubeStateSet("")
+				f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 				f.RunGoHook()
 			})
 
@@ -385,7 +353,9 @@ data:
 	Context("helm3 release without deprecated apis", func() {
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+				f.KubeStateSet("")
+				f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+				f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 				var sec corev1.Secret
 				_ = yaml.Unmarshal([]byte(helm3ReleaseWithoutDeprecated), &sec)
@@ -414,7 +384,9 @@ data:
 	Context("helm2 release with deprecated versions", func() {
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+				f.KubeStateSet("")
+				f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+				f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 				var cm corev1.ConfigMap
 				_ = yaml.Unmarshal([]byte(helm2ReleaseWithDeprecated), &cm)
@@ -443,7 +415,9 @@ data:
 
 	Context("release with doubled fields", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateAutomatic))
+			f.KubeStateSet("")
+			f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 			var sec corev1.Secret
 			_ = yaml.Unmarshal([]byte(releaseWithDoubleFields), &sec)

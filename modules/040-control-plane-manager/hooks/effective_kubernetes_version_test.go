@@ -161,6 +161,7 @@ podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
 `, caseInput.configVersion)
 	hec.ValuesSetFromYaml("global.clusterConfiguration", []byte(clusterConf))
+	hec.ValuesSet("global.discovery.targetKubernetesVersion", caseInput.configVersion)
 	hec.BindingContexts.Set(hec.KubeStateSet(b.String()))
 }
 
@@ -178,7 +179,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: effective_kuberne
 
 		It("Hook must fail", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
-			Expect(f.GoHookError.Error()).To(BeEquivalentTo("global.clusterConfiguration.kubernetesVersion required"))
+			Expect(f.GoHookError.Error()).To(BeEquivalentTo("kubernetesVersion required (global.discovery.targetKubernetesVersion is empty)"))
 		})
 	})
 
@@ -325,5 +326,36 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: effective_kuberne
 				},
 			),
 		)
+	})
+
+	Context("ModuleConfig kubernetesVersion override", func() {
+		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
+
+		It("MC kubernetesVersion takes precedence over ClusterConfiguration", func() {
+			// Global discovery already resolved MC-over-CC into targetKubernetesVersion.
+			setStateFromTestCase(f, input{
+				nodeVersions:               []string{"v1.34.3", "v1.34.1", "v1.34.5", "v1.34.2"},
+				maxUsedControlPlaneVersion: "1.34",
+				configVersion:              "1.35",
+				controlPlaneVersions:       []string{"1.34", "1.34", "1.34"},
+			})
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal("1.35"))
+		})
+
+		It("Automatic target follows the resolved ClusterConfiguration version", func() {
+			setStateFromTestCase(f, input{
+				nodeVersions:               []string{"v1.34.3", "v1.34.1", "v1.34.5", "v1.34.2"},
+				maxUsedControlPlaneVersion: "1.34",
+				configVersion:              "1.34",
+				controlPlaneVersions:       []string{"1.34", "1.34", "1.34"},
+			})
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal("1.34"))
+		})
 	})
 })

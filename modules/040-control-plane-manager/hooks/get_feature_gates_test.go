@@ -121,13 +121,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 	setClusterConfigWithVersion := func(version string) {
-		f.ValuesSet("global.clusterConfiguration.apiVersion", "deckhouse.io/v1")
-		f.ValuesSet("global.clusterConfiguration.kind", "ClusterConfiguration")
-		f.ValuesSet("global.clusterConfiguration.clusterType", "Static")
-		f.ValuesSet("global.clusterConfiguration.podSubnetCIDR", "10.111.0.0/16")
-		f.ValuesSet("global.clusterConfiguration.serviceSubnetCIDR", "10.222.0.0/16")
-		f.ValuesSet("global.clusterConfiguration.clusterDomain", "cluster.local")
-		f.ValuesSet("global.clusterConfiguration.kubernetesVersion", version)
+		f.ValuesSet("global.discovery.targetKubernetesVersion", version)
 	}
 
 	Context("Kubernetes version not set", func() {
