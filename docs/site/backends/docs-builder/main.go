@@ -19,6 +19,7 @@ import (
 	"errors"
 	"flag"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -41,6 +42,7 @@ var (
 	src              string
 	dst              string
 	metricsAddress   string
+	pprofAddress     string
 	highAvailability bool
 )
 
@@ -49,6 +51,7 @@ func init() {
 	flag.StringVar(&src, "src", "/app/hugo/", "Directory to load source files")
 	flag.StringVar(&dst, "dst", "/mount/", "Directory for site files")
 	flag.StringVar(&metricsAddress, "metrics-address", ":9090", "Address to listen on metrics")
+	flag.StringVar(&pprofAddress, "pprof-address", ":6060", "Address to listen on pprof")
 	flag.BoolVar(&highAvailability, "highAvailability", false, "high availability mod")
 }
 
@@ -86,12 +89,25 @@ func main() {
 		Handler: mStorage.Handler(),
 	}
 
+	pprofMux := http.NewServeMux()
+	pprofMux.HandleFunc("/debug/pprof/", pprof.Index)
+	pprofMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	pprofMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	pprofMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	pprofMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	pprofSrv := &http.Server{
+		Addr:    pprofAddress,
+		Handler: pprofMux,
+	}
+
 	eg, ctx := errgroup.WithContext(ctx)
 
 	logger.Info("starting application")
 
 	eg.Go(srv.ListenAndServe)
 	eg.Go(metricsSrv.ListenAndServe)
+	eg.Go(pprofSrv.ListenAndServe)
 	eg.Go(lManager.Run(ctx))
 
 	logger.Info("application started")
@@ -117,6 +133,9 @@ func main() {
 	})
 	shutdownEg.Go(func() error {
 		return metricsSrv.Shutdown(shutdownCtx)
+	})
+	shutdownEg.Go(func() error {
+		return pprofSrv.Shutdown(shutdownCtx)
 	})
 
 	waitErr := shutdownEg.Wait()
