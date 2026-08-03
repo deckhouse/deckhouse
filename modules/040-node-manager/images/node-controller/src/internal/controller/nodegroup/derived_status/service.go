@@ -90,7 +90,11 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	clusterUUID := s.readClusterUUID(ctx)
 	result.UpdateEpoch = calculateUpdateEpoch(epochTimestampAccessor(), clusterUUID, ng.Name)
 
-	targetVersion, defaultCRI := s.readClusterConfiguration(ctx)
+	targetVersion, err := s.readTargetKubernetesVersion(ctx)
+	if err != nil {
+		return result, err
+	}
+	defaultCRI := s.readClusterConfiguration(ctx)
 	controlPlaneMinVersion := s.readControlPlaneMinVersion(ctx)
 	effectiveKubeVer := effectiveKubernetesVersion(targetVersion, controlPlaneMinVersion)
 	result.KubernetesVersion = semverMajMin(effectiveKubeVer)

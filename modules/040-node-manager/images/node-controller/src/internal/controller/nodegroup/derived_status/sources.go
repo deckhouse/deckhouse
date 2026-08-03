@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -38,14 +37,13 @@ import (
 )
 
 const (
-	cloudProviderSecretName       = ngcommon.CloudProviderSecretName
-	cloudProviderSecretNamespace  = nodecommon.CloudProviderSecretNamespace
-	clusterConfigSecretName       = "d8-cluster-configuration"
-	clusterConfigSecretNamespace  = "kube-system"
-	automaticKubernetesVersion    = "Automatic"
-	deckhouseDefaultK8sVersionKey = "deckhouseDefaultKubernetesVersion"
-	clusterUUIDConfigMapName      = "d8-cluster-uuid"
-	clusterUUIDConfigMapNS        = "kube-system"
+	cloudProviderSecretName        = ngcommon.CloudProviderSecretName
+	cloudProviderSecretNamespace   = nodecommon.CloudProviderSecretNamespace
+	clusterConfigSecretName        = "d8-cluster-configuration"
+	clusterConfigSecretNamespace   = "kube-system"
+	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
+	clusterUUIDConfigMapName       = "d8-cluster-uuid"
+	clusterUUIDConfigMapNS         = "kube-system"
 
 	instanceTypesCatalogName = "for-cluster-autoscaler"
 	instanceClassGroup       = "deckhouse.io"
@@ -88,16 +86,23 @@ func (s *Service) readClusterUUID(ctx context.Context) string {
 }
 
 type clusterConfiguration struct {
-	KubernetesVersion string `json:"kubernetesVersion"`
-	DefaultCRI        string `json:"defaultCRI"`
+	DefaultCRI string `json:"defaultCRI"`
 }
 
-func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version, string) {
+type clusterKubernetesSpec struct {
+	DesiredVersion string `json:"desiredVersion"`
+}
+
+// readClusterConfiguration returns defaultCRI from the ClusterConfiguration Secret.
+//
+// NOTE(kubernetesVersion-deprecation): keep — defaultCRI still lives on ClusterConfiguration;
+// kubernetesVersion is read only from d8-cluster-kubernetes (see readTargetKubernetesVersion).
+func (s *Service) readClusterConfiguration(ctx context.Context) string {
 	// Served from the kube-system Secret informer (watch-fresh); a live GET here used to
 	// cost hundreds of ms on every derived-status pass during a NodeGroup burst.
 	secret := &corev1.Secret{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterConfigSecretNamespace, Name: clusterConfigSecretName}, secret); err != nil {
-		return nil, ""
+		return ""
 	}
 	data := make(map[string]string, len(secret.Data))
 	for k, v := range secret.Data {
@@ -106,7 +111,7 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 
 	raw, ok := []byte(data["cluster-configuration.yaml"]), data["cluster-configuration.yaml"] != ""
 	if !ok {
-		return nil, ""
+		return ""
 	}
 	if decoded, err := base64.StdEncoding.DecodeString(string(raw)); err == nil {
 		raw = decoded
@@ -114,27 +119,45 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 
 	cfg := &clusterConfiguration{}
 	if err := sigsyaml.Unmarshal(raw, cfg); err != nil {
-		return nil, ""
+		return ""
+	}
+	return cfg.DefaultCRI
+}
+
+// readTargetKubernetesVersion reads the resolved target from kube-system/d8-cluster-kubernetes
+// data.spec.desiredVersion. That block is written by the global discovery hook; this controller
+// never falls back to ModuleConfig or ClusterConfiguration.
+//
+// An empty or missing spec is a cold-start condition: return an error so the reconciler requeues
+// until the ConfigMap is populated (R9).
+func (s *Service) readTargetKubernetesVersion(ctx context.Context) (*semver.Version, error) {
+	configMap := &corev1.ConfigMap{}
+	if err := s.Client.Get(ctx, types.NamespacedName{
+		Namespace: clusterConfigSecretNamespace,
+		Name:      clusterKubernetesConfigMapName,
+	}, configMap); err != nil {
+		return nil, fmt.Errorf("get ConfigMap %s/%s: %w", clusterConfigSecretNamespace, clusterKubernetesConfigMapName, err)
 	}
 
-	var target *semver.Version
-	switch {
-	case cfg.KubernetesVersion == automaticKubernetesVersion:
-		if enc, ok := data[deckhouseDefaultK8sVersionKey]; ok {
-			verRaw := []byte(enc)
-			if decoded, err := base64.StdEncoding.DecodeString(enc); err == nil {
-				verRaw = decoded
-			}
-			if ver, err := semver.NewVersion(strings.TrimSpace(string(verRaw))); err == nil {
-				target = ver
-			}
-		}
-	case cfg.KubernetesVersion != "":
-		if ver, err := semver.NewVersion(cfg.KubernetesVersion); err == nil {
-			target = ver
-		}
+	rawSpec, ok := configMap.Data["spec"]
+	if !ok || rawSpec == "" {
+		return nil, fmt.Errorf("configMap %s/%s has no 'spec' data key yet", clusterConfigSecretNamespace, clusterKubernetesConfigMapName)
 	}
-	return target, cfg.DefaultCRI
+
+	var spec clusterKubernetesSpec
+	if err := sigsyaml.Unmarshal([]byte(rawSpec), &spec); err != nil {
+		return nil, fmt.Errorf("unmarshal ConfigMap %s/%s 'spec': %w", clusterConfigSecretNamespace, clusterKubernetesConfigMapName, err)
+	}
+	if spec.DesiredVersion == "" {
+		return nil, fmt.Errorf("configMap %s/%s 'spec.desiredVersion' is empty", clusterConfigSecretNamespace, clusterKubernetesConfigMapName)
+	}
+
+	version, err := semver.NewVersion(spec.DesiredVersion)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ConfigMap %s/%s 'spec.desiredVersion' %q: %w",
+			clusterConfigSecretNamespace, clusterKubernetesConfigMapName, spec.DesiredVersion, err)
+	}
+	return version, nil
 }
 
 // readControlPlaneMinVersion returns the lowest version among the running kube-apiservers,

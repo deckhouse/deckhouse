@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
-func TestSecretToAllNodeGroups_ReturnsRequestPerNodeGroup(t *testing.T) {
+func TestAllNodeGroups_ReturnsRequestPerNodeGroup(t *testing.T) {
 	scheme := runtime.NewScheme()
 	if err := v1.AddToScheme(scheme); err != nil {
 		t.Fatalf("add v1 scheme: %v", err)

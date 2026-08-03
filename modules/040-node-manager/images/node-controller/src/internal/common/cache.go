@@ -101,9 +101,13 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			&corev1.ConfigMap{}: {
 				Namespaces: map[string]cache.Config{
-					"kube-system": {
-						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-cluster-uuid"}),
-					},
+					// Unfiltered on purpose, same reasoning as the kube-system Secrets above: a
+					// name FieldSelector can pin exactly one object, and the derived-status
+					// service now needs two of them — d8-cluster-uuid and d8-cluster-kubernetes,
+					// the latter on every pass as the source of the target Kubernetes version.
+					// With the selector still in place that read silently returned NotFound (and
+					// the ConfigMap watch never fired), so reconcile would requeue forever.
+					"kube-system": {},
 					"d8-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},
