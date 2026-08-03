@@ -92,6 +92,8 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 
 	targetVersion, err := s.readTargetKubernetesVersion(ctx)
 	if err != nil {
+		logger.Error(err, "cannot read target kubernetesVersion from ConfigMap; requeue",
+			"configMap", "kube-system/d8-cluster-kubernetes")
 		return result, err
 	}
 	defaultCRI := s.readClusterConfiguration(ctx)
