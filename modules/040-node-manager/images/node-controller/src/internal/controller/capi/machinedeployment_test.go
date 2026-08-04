@@ -21,8 +21,10 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -190,6 +192,30 @@ func TestSerializeNodeGroupTaints(t *testing.T) {
 			t.Fatalf("taints not sorted: %q", got)
 		}
 	})
+}
+
+func TestBuildCAPIMachineDeploymentScaleFromZeroCapacity(t *testing.T) {
+	ng := &deckhousev1.NodeGroup{}
+	ng.Name = "worker"
+	resolved := derived_status.ResolvedNodeGroup{
+		NodeCapacity: map[string]interface{}{"cpu": "4", "memory": "8Gi"},
+	}
+
+	md := buildCAPIMachineDeployment(capiMDInput{ng: ng, resolved: resolved})
+	annotations := md.Object["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})
+
+	for key, want := range map[string]string{
+		"capacity.cluster-autoscaler.kubernetes.io/cpu":    "4",
+		"capacity.cluster-autoscaler.kubernetes.io/memory": "8Gi",
+	} {
+		got, ok := annotations[key].(string)
+		if !ok || got != want {
+			t.Fatalf("annotation %q = %v, want %q", key, annotations[key], want)
+		}
+		if _, err := resource.ParseQuantity(got); err != nil {
+			t.Fatalf("annotation %q has invalid Kubernetes quantity %q: %v", key, got, err)
+		}
+	}
 }
 
 func TestApplyMachineDeploymentSpecPatch(t *testing.T) {
