@@ -689,9 +689,6 @@ func decide(rec, applied int64, lastChange, now time.Time) decideAction {
 		}
 		return decideSkip
 	}
-	if !significantResourceChange(rec, applied) {
-		return decideSkip
-	}
 	delta := float64(rec-applied) / float64(applied)
 	switch {
 	case delta > raiseThreshold:
