@@ -13,47 +13,31 @@
       exit 1
     fi
     WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "${WERF_ENVS_FILE}" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-    if [[ ! "${WERF_VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-      echo "Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected vX.Y.Z" >&2
-      exit 1
-    fi
     export WERF_VERSION
     echo "Detected WERF_VERSION=${WERF_VERSION}"
 
   install_werf: |
     if [[ -z "${WERF_VERSION:-}" ]]; then
-      echo "WERF_VERSION is not set" >&2
+      echo "WERF_VERSION is not set. Run read_werf_version before install_werf." >&2
       exit 1
     fi
-    MINIMAL_DDK_VERSION="v2.62.1"
-    if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-      minimal_ddk_major=${BASH_REMATCH[1]}
-      minimal_ddk_minor=${BASH_REMATCH[2]}
-      minimal_ddk_patch=${BASH_REMATCH[3]}
-    fi
-    if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-      werf_current_major=${BASH_REMATCH[1]}
-      werf_current_minor=${BASH_REMATCH[2]}
-      werf_current_patch=${BASH_REMATCH[3]}
-    fi
-    if (( werf_current_major > minimal_ddk_major )); then
+    if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
       werf_fallback=false
-    elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-      werf_fallback=false
-    elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-      werf_fallback=false
-    else
+    elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
       werf_fallback=true
+    else
+      echo "Invalid WERF_VERSION '${WERF_VERSION}', expected format vX.Y.Z or vX.Y.Z-dk.W" >&2
+      exit 1
     fi
-    WERF_PATH="${HOME}/.werf-dk/${WERF_VERSION}-dk"
+    WERF_PATH="${HOME}/.bin"
     mkdir -p "${WERF_PATH}"
     export PATH="${WERF_PATH}:${PATH}"
     CACHED_VERSION="$("${WERF_PATH}/werf" version 2>/dev/null | tr -d '\n' || true)"
-    if [[ "${WERF_VERSION}-dk" != "${CACHED_VERSION}" && "${werf_fallback}" == "false" ]]; then
-      echo "Current werf is ${CACHED_VERSION:-none}, downloading ${WERF_VERSION}-dk"
-      curl -Lsfo "${WERF_PATH}/werf" "https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf"
+    if [[ "${WERF_VERSION}" != "${CACHED_VERSION}" && "${werf_fallback}" == "false" ]]; then
+      echo "Current werf is ${CACHED_VERSION:-none}, downloading ${WERF_VERSION}"
+      curl -Lsfo "${WERF_PATH}/werf" "https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf"
       chmod +x "${WERF_PATH}/werf"
-    elif [[ "${WERF_VERSION}-dk" != "${CACHED_VERSION}" && "${werf_fallback}" == "true" ]]; then
+    elif [[ "${WERF_VERSION}" != "${CACHED_VERSION}" && "${werf_fallback}" == "true" ]]; then
       echo "Current werf is ${CACHED_VERSION:-none}, fallback to ${WERF_VERSION}"
       curl -Lsfo "${WERF_PATH}/werf" "https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf"
       chmod +x "${WERF_PATH}/werf"
@@ -97,12 +81,12 @@
   detect_build_mode: |
     if [[ -n "${CI_COMMIT_TAG:-}" ]]; then
       export BUILD_MODE=release
-    elif [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
-      export BUILD_MODE=dev
     elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
       export BUILD_MODE=pre-release
-    else
+    elif [[ "${CI_COMMIT_BRANCH:-}" == "main" ]]; then
       export BUILD_MODE=main
+    else
+      export BUILD_MODE=dev
     fi
     echo "BUILD_MODE=${BUILD_MODE}"
 
