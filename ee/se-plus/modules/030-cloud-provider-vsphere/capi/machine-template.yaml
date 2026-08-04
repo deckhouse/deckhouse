@@ -53,7 +53,10 @@
 {{- if gt (len $shares) 0 }}{{- $_ := set $resources "shares" $shares }}{{- end }}
 {{- if gt (len $limits) 0 }}{{- $_ := set $resources "limits" $limits }}{{- end }}
 {{- if gt (len $requests) 0 }}{{- $_ := set $resources "requests" $requests }}{{- end }}
-{{- $tags := list (printf "deckhouse-cluster-name=%s" .Values.global.discovery.clusterUUID) (printf "deckhouse-node-role=%s-%s" .nodeGroup.name .zoneName) }}
+{{- /* CAPV runtime requires URN-format tag IDs (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL).
+       Sourced from providerDiscoveryData.tagURNs, which cloud-data-discoverer populates.
+       Empty until discovery ships tag URNs — VM creation must not depend on tags. */ -}}
+{{- $tags := dig "providerDiscoveryData" "tagURNs" (list) $vsphere }}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: VSphereMachineTemplate
@@ -96,13 +99,9 @@ spec:
       resources:
         {{- toYaml $resources | nindent 8 }}
       {{- end }}
-      # NOTE: CAPV type comment states tagIDs must be URN-notation
-      # (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL), but the validating webhook
-      # does not enforce format. Display names are shipped here as a compatibility
-      # fallback until images/cloud-data-discoverer is extended to enumerate tag
-      # URNs into providerDiscoveryData. If CAPV starts rejecting these, resolve
-      # via the discovery Secret rather than at Helm render time.
+      {{- if gt (len $tags) 0 }}
       tagIDs:
       {{- range $tags }}
         - {{ . | quote }}
+      {{- end }}
       {{- end }}
