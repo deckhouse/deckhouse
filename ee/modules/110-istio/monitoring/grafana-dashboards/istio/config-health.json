@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Istio configuration analysis health (EE). Shows findings from the periodic analyzer (same engine as istioctl analyze): issue counts by type/severity/namespace, trends over time, and the current issue list. Filter by revision, namespace, severity, and type. Note: InvalidApplicationUID (IST0144) often appears for Deckhouse Istio components that intentionally use UID 1337.",
+  "description": "Istio configuration analysis health (EE). Shows findings from the periodic analyzer (same engine as istioctl analyze): issue counts by type/severity/namespace, trends over time, and the current issue list with Message text. Filter by revision, namespace, severity, and type. Click a Code to open Istio analysis docs. Note: InvalidApplicationUID (IST0144) often appears for Deckhouse Istio components that intentionally use UID 1337.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -929,7 +929,7 @@
         "type": "prometheus",
         "uid": "$ds_prometheus"
       },
-      "description": "Full list of currently reported issues. Columns are filterable and sortable (default sort: Namespace).",
+      "description": "Full list of currently reported issues, including the analyzer Message. Columns are filterable and sortable (default sort: Namespace). Click Code to open the Istio analysis docs for that code.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -997,12 +997,46 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Code"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "Open Istio analysis docs for ${__value.raw}",
+                    "url": "https://istio.io/latest/docs/reference/config/analysis/${__value.raw}/"
+                  }
+                ]
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "Resource"
             },
             "properties": [
               {
                 "id": "custom.width",
-                "value": 360
+                "value": 280
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Message"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 420
               }
             ]
           }
@@ -1068,15 +1102,17 @@
               "service": true
             },
             "indexByName": {
-              "code": 4,
+              "code": 3,
+              "message": 5,
               "namespace": 0,
               "resource": 1,
-              "revision": 5,
-              "severity": 3,
+              "revision": 6,
+              "severity": 4,
               "type": 2
             },
             "renameByName": {
               "code": "Code",
+              "message": "Message",
               "namespace": "Namespace",
               "resource": "Resource",
               "revision": "Revision",
