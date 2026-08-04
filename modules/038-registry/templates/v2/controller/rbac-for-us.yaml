@@ -94,7 +94,20 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     resourceNames: ["registry-resolved-auth"]
-    verbs: ["get", "create", "update", "patch"]
+    verbs: ["get", "update", "patch"]
+  # And `create` on its own, unnamed, because RBAC cannot name it.
+  #
+  # The rules above restrict by resourceNames, which only works for verbs that address an
+  # object that already exists — get, update, patch, delete. A create carries its name in the
+  # body rather than the path, so a rule with resourceNames never matches one and the request
+  # is refused; the same reason list and watch cannot be named either.
+  #
+  # What this adds is the ability to create a Secret in this namespace under some other name.
+  # Not the ability to read one: nothing here grants get or list beyond the two names above,
+  # and a create against an existing name is refused as a conflict rather than overwriting it.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
 
 ---
 kind: RoleBinding

@@ -1083,7 +1083,16 @@ var _ = Describe("Module :: registry :: helm template :: the controller can reac
 		role := f.KubernetesResource("Role", "d8-system", "registry:controller")
 		Expect(role.Exists()).To(BeTrue())
 
-		verbs := map[string][]string{}
+		// The rule this encodes, which cost two cluster installs to get right: resourceNames
+		// authorizes only the verbs that address an object already there — get, update,
+		// patch, delete. A create names itself in the body, and a list names nothing at all,
+		// so a rule carrying resourceNames never matches either and the request is refused.
+		//
+		// So the shape has to be: everything that reads or modifies these two Secrets is
+		// named, `create` stands alone unnamed because it cannot be named, and list and watch
+		// appear nowhere — the components read uncached for exactly that reason.
+		named := map[string][]string{}
+		var unnamed []string
 		for _, rule := range role.Field("rules").Array() {
 			isSecrets := false
 			for _, resource := range rule.Get("resources").Array() {
@@ -1094,33 +1103,37 @@ var _ = Describe("Module :: registry :: helm template :: the controller can reac
 			if !isSecrets {
 				continue
 			}
-			// Always by name: this Role is bound to a ServiceAccount that has no business
-			// reading the rest of d8-system.
-			Expect(rule.Get("resourceNames").Array()).NotTo(BeEmpty(),
-				"a secrets rule without resourceNames grants the whole namespace")
-			for _, name := range rule.Get("resourceNames").Array() {
-				for _, verb := range rule.Get("verbs").Array() {
-					verbs[name.String()] = append(verbs[name.String()], verb.String())
+
+			names := rule.Get("resourceNames").Array()
+			for _, verb := range rule.Get("verbs").Array() {
+				if len(names) == 0 {
+					unnamed = append(unnamed, verb.String())
+					continue
+				}
+				for _, name := range names {
+					named[name.String()] = append(named[name.String()], verb.String())
 				}
 			}
 		}
 
-		Expect(verbs).To(HaveKey("registry-storage-access"))
-		Expect(verbs["registry-storage-access"]).To(ContainElement("get"))
+		Expect(named).To(HaveKey("registry-storage-access"))
+		Expect(named["registry-storage-access"]).To(ContainElement("get"))
 
-		Expect(verbs).To(HaveKey(constant.AuthSecretName))
-		Expect(verbs[constant.AuthSecretName]).To(ContainElements("get", "create", "update", "patch"),
+		Expect(named).To(HaveKey(constant.AuthSecretName))
+		Expect(named[constant.AuthSecretName]).To(ContainElements("get", "update", "patch"),
 			"the controller is the only writer of the credentials its layouts reference")
 
-		// No list, no watch, anywhere in these rules. RBAC cannot restrict either to named
-		// objects — a list is not a request for a name, so a rule carrying resourceNames
-		// never matches one and the request is refused. Granting them here would state
-		// something untrue about what works and invite an informer that cannot start.
-		for name, granted := range verbs {
+		Expect(unnamed).To(ConsistOf("create"),
+			"create is the one verb that cannot be restricted by name; nothing else belongs "+
+				"in an unnamed rule, least of all a read")
+
+		for name, granted := range named {
 			Expect(granted).NotTo(ContainElement("list"),
 				"%s: list cannot be authorized by name, so this grant is a trap", name)
 			Expect(granted).NotTo(ContainElement("watch"),
 				"%s: watch cannot be authorized by name, so this grant is a trap", name)
+			Expect(granted).NotTo(ContainElement("create"),
+				"%s: create cannot be authorized by name, so this grant does nothing", name)
 		}
 	})
 })
