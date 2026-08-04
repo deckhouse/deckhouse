@@ -103,12 +103,12 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		input.Logger.Info("autotune: memory measurement overridden by config, skipping memory autotune")
 	}
 
-	if cpuOverridden && state.CPU != nil {
-		state.deleteMeasurement(resourceCPU)
+	if cpuOverridden && state[resourceCPU] != nil {
+		delete(state, resourceCPU)
 		stateDirty = true
 	}
-	if memoryOverridden && state.Memory != nil {
-		state.deleteMeasurement(resourceMemory)
+	if memoryOverridden && state[resourceMemory] != nil {
+		delete(state, resourceMemory)
 		stateDirty = true
 	}
 
@@ -234,34 +234,7 @@ type autotuneMeasurementState struct {
 
 // autotuneState nests by measurement (cpu/memory) so a manual override can delete
 // a whole measurement branch for all four components in one patch.
-type autotuneState struct {
-	CPU    *autotuneMeasurementState `json:"cpu,omitempty"`
-	Memory *autotuneMeasurementState `json:"memory,omitempty"`
-}
-
-func (s *autotuneState) measurement(resourceName resourceKind) *autotuneMeasurementState {
-	switch resourceName {
-	case resourceCPU:
-		return s.CPU
-	case resourceMemory:
-		return s.Memory
-	default:
-		return nil
-	}
-}
-
-func (s *autotuneState) setMeasurement(resourceName resourceKind, m *autotuneMeasurementState) {
-	switch resourceName {
-	case resourceCPU:
-		s.CPU = m
-	case resourceMemory:
-		s.Memory = m
-	}
-}
-
-func (s *autotuneState) deleteMeasurement(resourceName resourceKind) {
-	s.setMeasurement(resourceName, nil)
-}
+type autotuneState map[resourceKind]*autotuneMeasurementState
 
 func applyAutotuneStateFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	cm := &v1.ConfigMap{}
@@ -270,28 +243,34 @@ func applyAutotuneStateFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}
 	raw, ok := cm.Data[autotuneStateKey]
 	if !ok || raw == "" {
-		return &autotuneState{}, nil
+		return make(autotuneState), nil
 	}
 	var st autotuneState
 	if err := json.Unmarshal([]byte(raw), &st); err != nil {
 		return nil, fmt.Errorf("unmarshal autotune state: %w", err)
 	}
-	return &st, nil
+	if st == nil {
+		st = make(autotuneState)
+	}
+	return st, nil
 }
 
-func readAutotuneState(input *go_hook.HookInput) (*autotuneState, error) {
+func readAutotuneState(input *go_hook.HookInput) (autotuneState, error) {
 	snapshots := input.Snapshots.Get("AutotuneState")
 	if len(snapshots) == 0 {
-		return &autotuneState{}, nil
+		return make(autotuneState), nil
 	}
 	var st autotuneState
 	if err := snapshots[0].UnmarshalTo(&st); err != nil {
 		return nil, fmt.Errorf("unmarshal AutotuneState snapshot: %w", err)
 	}
-	return &st, nil
+	if st == nil {
+		st = make(autotuneState)
+	}
+	return st, nil
 }
 
-func persistAutotuneState(input *go_hook.HookInput, state *autotuneState) error {
+func persistAutotuneState(input *go_hook.HookInput, state autotuneState) error {
 	raw, err := json.Marshal(state)
 	if err != nil {
 		return fmt.Errorf("marshal autotune state: %w", err)
@@ -425,14 +404,14 @@ func measurementHasAnyApplied(m *autotuneMeasurementState, resourceName resource
 
 // fillMissingAppliedFromFallback writes %-split baselines into empty applied*
 // slots so the first values snapshot covers every component in one ModuleRun.
-func fillMissingAppliedFromFallback(state *autotuneState, resourceName resourceKind, combinedBudget int64) bool {
+func fillMissingAppliedFromFallback(state autotuneState, resourceName resourceKind, combinedBudget int64) bool {
 	if combinedBudget <= 0 {
 		return false
 	}
-	m := state.measurement(resourceName)
+	m := state[resourceName]
 	if m == nil {
 		m = &autotuneMeasurementState{Components: map[string]autotuneComponentState{}}
-		state.setMeasurement(resourceName, m)
+		state[resourceName] = m
 	}
 	if m.Components == nil {
 		m.Components = map[string]autotuneComponentState{}
@@ -457,19 +436,19 @@ func fillMissingAppliedFromFallback(state *autotuneState, resourceName resourceK
 }
 
 // projectComponentsToValues builds the internal values map from persistent state.
-func projectComponentsToValues(state *autotuneState, cpuOverridden, memoryOverridden bool) map[string]any {
+func projectComponentsToValues(state autotuneState, cpuOverridden, memoryOverridden bool) map[string]any {
 	components := map[string]any{}
 	for _, comp := range controlPlaneComponents {
 		entry := map[string]any{}
 		if !cpuOverridden {
-			if m := state.measurement(resourceCPU); m != nil {
+			if m := state[resourceCPU]; m != nil {
 				if cs, ok := m.Components[comp]; ok && cs.AppliedMilliCPU != nil {
 					entry["milliCPU"] = *cs.AppliedMilliCPU
 				}
 			}
 		}
 		if !memoryOverridden {
-			if m := state.measurement(resourceMemory); m != nil {
+			if m := state[resourceMemory]; m != nil {
 				if cs, ok := m.Components[comp]; ok && cs.AppliedMB != nil {
 					entry["memoryMB"] = *cs.AppliedMB
 				}
@@ -482,7 +461,7 @@ func projectComponentsToValues(state *autotuneState, cpuOverridden, memoryOverri
 	return components
 }
 
-func repopulateComponents(input *go_hook.HookInput, state *autotuneState, cpuOverridden, memoryOverridden bool) {
+func repopulateComponents(input *go_hook.HookInput, state autotuneState, cpuOverridden, memoryOverridden bool) {
 	components := projectComponentsToValues(state, cpuOverridden, memoryOverridden)
 	if len(components) == 0 {
 		if input.Values.Exists(pathComponents) {
@@ -494,9 +473,9 @@ func repopulateComponents(input *go_hook.HookInput, state *autotuneState, cpuOve
 	input.Values.Set(pathComponents, components)
 }
 
-func emitCapacityBlockedMetrics(input *go_hook.HookInput, state *autotuneState) {
+func emitCapacityBlockedMetrics(input *go_hook.HookInput, state autotuneState) {
 	for _, res := range []resourceKind{resourceCPU, resourceMemory} {
-		m := state.measurement(res)
+		m := state[res]
 		if m == nil || m.CapacityBlocked == nil {
 			continue
 		}
@@ -783,13 +762,13 @@ type initialSnapshotPlan struct {
 // When both measurements need a first commit, both must have complete recs so
 // cpu+memory land in one values write.
 func planInitialSnapshot(
-	state *autotuneState,
+	state autotuneState,
 	cpuOverridden, memoryOverridden bool,
 	recsCPU, recsMem map[string]int64,
 ) initialSnapshotPlan {
 	p := initialSnapshotPlan{
-		InitialCPU: !cpuOverridden && !measurementHasAnyApplied(state.CPU, resourceCPU),
-		InitialMem: !memoryOverridden && !measurementHasAnyApplied(state.Memory, resourceMemory),
+		InitialCPU: !cpuOverridden && !measurementHasAnyApplied(state[resourceCPU], resourceCPU),
+		InitialMem: !memoryOverridden && !measurementHasAnyApplied(state[resourceMemory], resourceMemory),
 	}
 	p.CPUReady = !p.InitialCPU || completeComponentRecs(recsCPU)
 	p.MemReady = !p.InitialMem || completeComponentRecs(recsMem)
@@ -802,7 +781,7 @@ func planInitialSnapshot(
 
 func evaluateMeasurement(
 	input *go_hook.HookInput,
-	state *autotuneState,
+	state autotuneState,
 	resourceName resourceKind,
 	recs map[string]int64,
 	nodeBudget int64,
@@ -813,10 +792,10 @@ func evaluateMeasurement(
 		return false
 	}
 
-	m := state.measurement(resourceName)
+	m := state[resourceName]
 	if m == nil {
 		m = &autotuneMeasurementState{Components: map[string]autotuneComponentState{}}
-		state.setMeasurement(resourceName, m)
+		state[resourceName] = m
 	}
 	if m.Components == nil {
 		m.Components = map[string]autotuneComponentState{}
@@ -914,12 +893,12 @@ func evaluateMeasurement(
 // budget (no metrics). Uses the last blocked ProposedSum when present so a node
 // resize can expire the alert once the previously rejected total would fit.
 func recheckCapacityBlocked(
-	state *autotuneState,
+	state autotuneState,
 	resourceName resourceKind,
 	fitBudget, combinedBudget int64,
 	now time.Time,
 ) bool {
-	m := state.measurement(resourceName)
+	m := state[resourceName]
 	if m == nil {
 		return false
 	}

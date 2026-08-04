@@ -46,7 +46,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			}
 
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
 						componentEtcd:          {AppliedMilliCPU: ptr.To(int64(800)), LastChange: "2026-07-01T00:00:00Z"},
@@ -54,7 +54,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 					// ProposedSum must still exceed fit budget so recheck keeps the alert.
 					CapacityBlocked: &capacityBlocked{Since: "2026-07-20T00:00:00Z", Deficit: 500, ProposedSum: 20000},
 				},
-				Memory: &autotuneMeasurementState{
+				resourceMemory: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMB: ptr.To(int64(1024)), LastChange: "2026-07-01T00:00:00Z"},
 					},
@@ -90,7 +90,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus","prometheus-metrics-adapter"]`))
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: "2026-07-01T00:00:00Z"},
 						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: "2026-07-01T00:00:00Z"},
@@ -115,8 +115,8 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			Expect(ops.Exists()).To(BeTrue())
 			var st autotuneState
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(st.CPU).ToNot(BeNil())
-			Expect(st.CPU.CapacityBlocked).To(BeNil())
+			Expect(st[resourceCPU]).ToNot(BeNil())
+			Expect(st[resourceCPU].CapacityBlocked).To(BeNil())
 		})
 	})
 
@@ -128,7 +128,7 @@ kubeApiserver:
   milliCPU: 700
 `))
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
 					},

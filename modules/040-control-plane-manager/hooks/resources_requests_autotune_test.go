@@ -131,7 +131,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		BeforeEach(func() {
 			now := dependency.TestDC.GetClock().Now()
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
 						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
@@ -159,7 +159,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 				cpu: "1", memory: "2Gi", capCPU: "1", capMem: "2Gi",
 			}})
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
 						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
@@ -196,7 +196,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			// 8 CPU master: effective ≈ 7900m after kubelet floor. Other pods take 7000m,
 			// so only ~900m free — four 500m raises (2000m) do not fit.
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
 						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
@@ -260,13 +260,13 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		BeforeEach(func() {
 			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
 						componentEtcd:          {AppliedMilliCPU: ptr.To(int64(800)), LastChange: "2026-07-01T00:00:00Z"},
 					},
 				},
-				Memory: &autotuneMeasurementState{
+				resourceMemory: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMB: ptr.To(int64(512)), LastChange: "2026-07-01T00:00:00Z"},
 					},
@@ -287,8 +287,8 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			Expect(ops.Exists()).To(BeTrue())
 			var st autotuneState
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(st.CPU).To(BeNil())
-			Expect(st.Memory).ToNot(BeNil())
+			Expect(st[resourceCPU]).To(BeNil())
+			Expect(st[resourceMemory]).ToNot(BeNil())
 		})
 	})
 
@@ -296,13 +296,13 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		BeforeEach(func() {
 			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
 						componentEtcd:          {AppliedMilliCPU: ptr.To(int64(800)), LastChange: "2026-07-01T00:00:00Z"},
 					},
 				},
-				Memory: &autotuneMeasurementState{
+				resourceMemory: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMB: ptr.To(int64(512)), LastChange: "2026-07-01T00:00:00Z"},
 					},
@@ -323,8 +323,8 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			Expect(ops.Exists()).To(BeTrue())
 			var st autotuneState
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(st.CPU).To(BeNil())
-			Expect(st.Memory).ToNot(BeNil())
+			Expect(st[resourceCPU]).To(BeNil())
+			Expect(st[resourceMemory]).ToNot(BeNil())
 		})
 	})
 
@@ -342,12 +342,12 @@ etcd:
 			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
 			f.ValuesSet("controlPlaneManager.resourcesRequests.memory", "2Gi")
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
 					},
 				},
-				Memory: &autotuneMeasurementState{
+				resourceMemory: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMB: ptr.To(int64(512)), LastChange: "2026-07-01T00:00:00Z"},
 					},
@@ -366,8 +366,8 @@ etcd:
 			Expect(ops.Exists()).To(BeTrue())
 			var st autotuneState
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(st.CPU).To(BeNil())
-			Expect(st.Memory).To(BeNil())
+			Expect(st[resourceCPU]).To(BeNil())
+			Expect(st[resourceMemory]).To(BeNil())
 		})
 	})
 
@@ -440,7 +440,7 @@ kubeApiserver:
   milliCPU: 420
 `))
 			st := autotuneState{
-				CPU: &autotuneMeasurementState{
+				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
 						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(420)), LastChange: "2026-07-01T00:00:00Z"},
 					},
