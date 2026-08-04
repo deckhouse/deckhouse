@@ -213,14 +213,6 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	}
 
-	// update modules settings in the package manager
-	r.packageManager.UpdateModulesSettings(
-		moduleConfig.Name,
-		moduleConfig.Spec.Version,
-		moduleConfig.Spec.Settings.GetMap(),
-		moduleConfig.Spec.Maintenance,
-		moduleConfig.Spec.Enabled)
-
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{Requeue: true}, nil
 	}

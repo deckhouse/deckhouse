@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -37,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -57,9 +57,9 @@ const (
 	finalizerRequeueAfter = 500 * time.Millisecond
 	// defaultScanInterval mirrors the CRD default and backs a non-positive interval.
 	defaultScanInterval = 15 * time.Second
-	// digestTimeout bounds a digest lookup so an unreachable registry cannot stall the
+	// digestFetchTimeout bounds a digest lookup so an unreachable registry cannot stall the
 	// controller's single worker.
-	digestTimeout = 30 * time.Second
+	digestFetchTimeout = 30 * time.Second
 )
 
 // RegisterController registers the ModulePullOverride controller with the manager.
@@ -69,14 +69,12 @@ func RegisterController(
 	ctrlManager ctrlmanager.Manager,
 	manager packageManager,
 	preflight *sync.WaitGroup,
-	dc dependency.Container,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
 		init:    preflight,
 		client:  ctrlManager.GetClient(),
 		manager: manager,
-		dc:      dc,
 		logger:  logger.Named(controllerName),
 	}
 
@@ -101,7 +99,6 @@ type reconciler struct {
 	init    *sync.WaitGroup
 	client  client.Client
 	manager packageManager
-	dc      dependency.Container
 	logger  *log.Logger
 }
 
@@ -224,7 +221,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	digestCtx, cancel := context.WithTimeout(ctx, digestTimeout)
+	digestCtx, cancel := context.WithTimeout(ctx, digestFetchTimeout)
 	digest, err := r.manager.GetModuleDigest(digestCtx, registry.BuildRemote(source), mpo.Name, mpo.Spec.ImageTag)
 	cancel()
 
@@ -263,7 +260,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	// Use mount point path: /modules/<module> (modules are mounted at /deckhouse/downloaded/modules/deployed/<module>)
-	modulePath := fmt.Sprintf("/modules/deployed/%s", mpo.GetModuleName())
+	modulePath := filepath.Join("/modules/deployed", mpo.GetModuleName())
 	ownerRef := metav1.OwnerReference{
 		APIVersion: v1alpha2.ModulePullOverrideGVK.GroupVersion().String(),
 		Kind:       v1alpha2.ModulePullOverrideGVK.Kind,
@@ -369,7 +366,7 @@ func (r *reconciler) setStatusMessage(ctx context.Context, mpo *v1alpha2.ModuleP
 
 // updateModulePullOverrideStatus stamps the update time and writes the override status.
 func (r *reconciler) updateModulePullOverrideStatus(ctx context.Context, mpo *v1alpha2.ModulePullOverride) error {
-	mpo.Status.UpdatedAt = metav1.NewTime(r.dc.GetClock().Now().UTC())
+	mpo.Status.UpdatedAt = metav1.NewTime(time.Now())
 	if err := r.client.Status().Update(ctx, mpo); err != nil {
 		return fmt.Errorf("update: %w", err)
 	}
