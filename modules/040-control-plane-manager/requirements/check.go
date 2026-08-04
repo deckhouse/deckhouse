@@ -24,9 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-const (
-	minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKubernetesVersion"
-)
+const minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKubernetesVersion"
 
 func init() {
 	f := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {

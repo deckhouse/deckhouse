@@ -46,7 +46,7 @@ func newReconciler(t *testing.T, objs ...runtime.Object) (*Status, *record.FakeR
 	// without it every reconcile errors and requeues. Tests that assert a specific version
 	// pass their own ConfigMap; everyone else gets a default.
 	if !hasClusterKubernetesConfigMap(objs) {
-		objs = append([]runtime.Object{clusterKubernetesConfigMap("1.29")}, objs...)
+		objs = append([]runtime.Object{clusterKubernetesConfigMap("1.32")}, objs...)
 	}
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -296,12 +296,12 @@ func TestReconcile_StatusKubernetesVersionUpdated(t *testing.T) {
 		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
 
-	r, _ := newReconciler(t, ng, clusterKubernetesConfigMap("1.29"))
+	r, _ := newReconciler(t, ng, clusterKubernetesConfigMap("1.32"))
 	doReconcile(t, r, "worker")
 
 	updated := getNodeGroup(t, r, "worker")
-	if updated.Status.KubernetesVersion != "1.29" {
-		t.Fatalf("expected KubernetesVersion=1.29, got %q", updated.Status.KubernetesVersion)
+	if updated.Status.KubernetesVersion != "1.32" {
+		t.Fatalf("expected KubernetesVersion=1.32, got %q", updated.Status.KubernetesVersion)
 	}
 }
 

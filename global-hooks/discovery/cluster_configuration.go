@@ -129,8 +129,9 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			// global.clusterConfiguration.kubernetesVersion with the CC field; keep discovery.target*.
 			// After T+1 the MC enum also drops Automatic; only Default remains as track-default.
 			if kubernetesVersionFromMetaConfig == automaticKubernetesVersion {
-				b, _ := json.Marshal(hooks.DefaultKubernetesVersion)
-				metaConfig.ClusterConfig["kubernetesVersion"] = b
+				// ClusterConfig values are json.RawMessage, so the version has to go back in encoded.
+				defaultKubernetesVersionJSON, _ := json.Marshal(hooks.DefaultKubernetesVersion)
+				metaConfig.ClusterConfig["kubernetesVersion"] = defaultKubernetesVersionJSON
 			}
 		}
 

@@ -171,7 +171,7 @@ func TestChecksumDependsOnlyOnInstanceClassAndRollout(t *testing.T) {
 				"nodeType":          "CloudEphemeral",
 				"cri":               map[string]interface{}{"type": "Containerd"},
 				"zones":             []interface{}{"a", "b"},
-				"kubernetesVersion": "1.29",
+				"kubernetesVersion": "1.32",
 			}
 
 			gotMinimal, err := RenderChecksum(tc.tmpl, minimal, nil)
