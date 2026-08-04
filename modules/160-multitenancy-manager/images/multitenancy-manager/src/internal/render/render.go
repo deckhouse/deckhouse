@@ -245,8 +245,9 @@ func (r *renderer) networkPolicies(spec *v1alpha2.ProjectTemplateSpec) ([]map[st
 			"podSelector":       map[string]any{"matchLabels": map[string]any{podKey: podVal}},
 		}
 	}
-	// Разрешаем трафик внутри ВСЕГО проекта (main + дополнительные namespace) по общему лейблу проекта,
-	// а не только внутри главного namespace — иначе доп. namespace изолируются и от собственного проекта.
+	// Traffic is allowed across the whole project -- the main namespace and the additional ones --
+	// by the label they all share, rather than within the main namespace alone: selecting the
+	// namespace would isolate an additional namespace from the project it belongs to.
 	projectSelector := map[string]any{
 		"namespaceSelector": map[string]any{"matchLabels": map[string]any{v1alpha3.ResourceLabelProject: r.name}},
 	}

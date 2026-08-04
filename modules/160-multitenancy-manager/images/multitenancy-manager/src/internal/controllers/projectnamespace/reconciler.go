@@ -158,7 +158,8 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 		return fmt.Errorf("get namespace %q: %w", name, err)
 	}
 
-	// Главный namespace проекта носит имя проекта; читаем его лейблы, чтобы унаследовать политики/гранты.
+	// The main namespace of a project is named after the project; its labels are read so that the
+	// policies and grants they carry can be inherited.
 	mainLabels := map[string]string{}
 	main := &corev1.Namespace{}
 	switch err := r.Get(ctx, types.NamespacedName{Name: project}, main); {
@@ -176,8 +177,9 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 		ns.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
 		ns.Labels[v1alpha3.ResourceLabelProject] = project
 		ns.Labels[v1alpha3.ResourceLabelProjectNamespace] = pns.Name
-		// Наследуем policy/grant-лейблы главного namespace; отсутствующие — снимаем, чтобы доп. namespace
-		// оставался синхронным (например, при выключении фичи в шаблоне).
+		// Inherit the policy and grant labels of the main namespace, and drop the ones it no longer
+		// carries: an additional namespace that keeps a label the project has switched off in its
+		// template would quietly diverge from the rest of the project.
 		for _, key := range inheritedNamespaceLabels {
 			if value, ok := mainLabels[key]; ok {
 				ns.Labels[key] = value

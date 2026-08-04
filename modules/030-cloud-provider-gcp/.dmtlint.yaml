@@ -1,4 +1,12 @@
 linters-settings:
+  no-cyrillic:
+    exclude-rules:
+      directories:
+        # The RBACv2 templates carry the localized title and description of every role and
+        # capability they ship. That is product text, not a source comment: the console shows it
+        # to whoever is choosing what to grant, and `d8:namespace-capability:kubernetes:view_logs`
+        # on its own tells that person nothing.
+        - templates/rbacv2
   module:
     oss:
       disable: false
