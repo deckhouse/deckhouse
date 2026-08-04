@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
@@ -278,6 +279,21 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		}
 	}
 
+	// Attribute the cluster resources to the modules that ship them. Reads only
+	// CRD metadata; without it the coverage report loses its grouping but stays
+	// correct, so a failure here is not fatal.
+	var moduleIndex *resolver.ModuleIndex
+	if initRes.restConfig != nil {
+		metadataClient, err := metadata.NewForConfig(initRes.restConfig)
+		if err != nil {
+			klog.Warningf("Failed to create metadata client, the inventory will carry no module names: %v", err)
+		} else {
+			moduleIndex = resolver.NewModuleIndex(metadataClient)
+			go moduleIndex.StartRefreshLoop(ctx.Done())
+			klog.Info("Module index initialized and refresh loop started")
+		}
+	}
+
 	// Create namespace resolver for AccessibleNamespace API
 	var nsResolver *resolver.NamespaceResolver
 	var subjectAccess *resolver.SubjectAccessResolver
@@ -307,6 +323,9 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		klog.Info("Subject access resolver initialized for SubjectAccessReport API")
 
 		roleAccess = resolver.NewRoleAccessResolver(rbacInformers.ClusterRoles().Lister(), scopeCache)
+		if moduleIndex != nil {
+			roleAccess = roleAccess.WithModuleIndex(moduleIndex)
+		}
 		klog.Info("Role access resolver initialized for RoleAccessReport API")
 	}
 

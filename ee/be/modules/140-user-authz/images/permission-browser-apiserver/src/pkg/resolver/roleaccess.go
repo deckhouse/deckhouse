@@ -78,6 +78,7 @@ var namespacedScopes = map[string]struct{}{
 type RoleAccessResolver struct {
 	clusterRoleLister rbaclisters.ClusterRoleLister
 	scopeCache        *ResourceScopeCache
+	moduleIndex       *ModuleIndex
 	limits            ReportLimits
 	// now is the clock, replaced in tests so a report has a fixed timestamp.
 	now func() time.Time
@@ -92,6 +93,15 @@ func NewRoleAccessResolver(clusterRoleLister rbaclisters.ClusterRoleLister, scop
 		limits:            DefaultReportLimits,
 		now:               time.Now,
 	}
+}
+
+// WithModuleIndex attributes the inventory to the modules that ship it. Without
+// the index the inventory is still reported, just without module names: the CRDs
+// may be unreadable, and a coverage report without grouping beats none.
+func (r *RoleAccessResolver) WithModuleIndex(index *ModuleIndex) *RoleAccessResolver {
+	r.moduleIndex = index
+
+	return r
 }
 
 // RoleAccessRequest is the resolved input of a role report.
@@ -194,13 +204,22 @@ func (r *RoleAccessResolver) inventory() []v1alpha1.InventoryResource {
 
 	inventory := make([]v1alpha1.InventoryResource, 0, len(discovered))
 	for _, resource := range discovered {
-		inventory = append(inventory, v1alpha1.InventoryResource{
+		entry := v1alpha1.InventoryResource{
 			Group:      resource.Group,
 			Resource:   resource.Resource,
 			Kind:       resource.Kind,
 			Namespaced: resource.Namespaced,
 			Verbs:      resource.Verbs,
-		})
+		}
+
+		if r.moduleIndex != nil {
+			if origin, known := r.moduleIndex.Origin(resource.Group, resource.Resource); known {
+				entry.Module = origin.Module
+				entry.Custom = origin.Custom
+			}
+		}
+
+		inventory = append(inventory, entry)
 	}
 
 	return inventory

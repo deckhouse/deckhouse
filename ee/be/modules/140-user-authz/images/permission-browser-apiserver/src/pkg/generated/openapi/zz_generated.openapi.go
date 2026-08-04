@@ -3294,6 +3294,20 @@ func schema_pkg_apis_authorization_v1alpha1_InventoryResource(ref common.Referen
 							Format:      "",
 						},
 					},
+					"module": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Module is the Deckhouse module that installs the resource, read from the labels of its CustomResourceDefinition. The API group is not a substitute: operator-trivy ships aquasecurity.github.io.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"custom": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Custom is true for a CRD the platform does not install -- the resources of the cluster owner. Built-in and aggregated APIs are not custom.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"verbs": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{

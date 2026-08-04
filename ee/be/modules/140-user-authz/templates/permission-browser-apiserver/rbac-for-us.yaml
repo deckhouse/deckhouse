@@ -32,6 +32,12 @@ rules:
 # Access to discovery API for checking if resources are namespaced
 - nonResourceURLs: ["/version", "/api", "/api/*", "/apis", "/apis/*"]
   verbs: ["get"]
+# Access to CRD labels for attributing a resource to the module that ships it.
+# The coverage report groups by module, and the API group is not a substitute:
+# operator-trivy ships aquasecurity.github.io. Only metadata is ever read.
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list", "watch"]
 # Access to admission webhooks for generic apiserver
 - apiGroups: ["admissionregistration.k8s.io"]
   resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations", "validatingadmissionpolicies", "validatingadmissionpolicybindings"]

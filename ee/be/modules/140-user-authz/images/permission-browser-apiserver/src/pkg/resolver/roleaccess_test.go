@@ -551,6 +551,11 @@ func TestRoleReport_InventoryNamesWhatThereIsToCover(t *testing.T) {
 
 	secrets := inventoryOf(t, status, "", "secrets")
 	assert.True(t, secrets.Namespaced)
+	// Built-in resources have no CRD, so no module is attributed and they are
+	// never "custom": the checkbox that hides platform resources must not hide
+	// half of Kubernetes with them.
+	assert.Empty(t, secrets.Module)
+	assert.False(t, secrets.Custom)
 	// Nothing in the fixture grants secrets: the report still has to say the
 	// resource exists, otherwise the gap is invisible.
 	for _, role := range status.Roles {

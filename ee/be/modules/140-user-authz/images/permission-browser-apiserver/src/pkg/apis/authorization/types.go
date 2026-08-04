@@ -615,6 +615,17 @@ type InventoryResource struct {
 	// +optional
 	Namespaced bool
 
+	// Module is the Deckhouse module that installs the resource, read from the
+	// labels of its CustomResourceDefinition. The API group is not a substitute:
+	// operator-trivy ships aquasecurity.github.io.
+	// +optional
+	Module string
+
+	// Custom is true for a CRD the platform does not install -- the resources of
+	// the cluster owner. Built-in and aggregated APIs are not custom.
+	// +optional
+	Custom bool
+
 	// Verbs are the ones the API server accepts for this resource. Coverage is
 	// measured against them rather than against a fixed list of eight:
 	// tokenreviews only ever accept create, and "1 of 8" would read as a gap in
