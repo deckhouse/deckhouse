@@ -215,7 +215,7 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 
 	target, isDefault := resolveTargetKubernetesVersion(mcVersion, ccRawVersion, hooks.DefaultKubernetesVersion)
 
-	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV resolve",
 		slog.String("mc", mcVersion),
 		slog.String("cc", ccRawVersion),
@@ -271,7 +271,7 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 		}
 		// No baseline → fail-open: publish Default + track-default mode.
 
-		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 		input.Logger.Info("E2E-KV soft-guard",
 			slog.String("secretMaxUsed", secretMaxUsed),
 			slog.String("cmLabelMaxUsed", cmSnap.MaxUsed),
@@ -283,7 +283,7 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 			slog.String("freezeFromCurrent", cmSnap.CurrentVersion),
 		)
 	} else {
-		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 		input.Logger.Info("E2E-KV soft-guard",
 			slog.String("skipped", "manual-pin"),
 			slog.String("publishedTarget", publishedTarget),
@@ -321,7 +321,7 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 	specYAML := string(specBytes)
 
 	if existingSpecYAML == specYAML {
-		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 		input.Logger.Info("E2E-KV publish CM.spec",
 			slog.String("desired", desired),
 			slog.Bool("isDefault", isDefault),
@@ -330,7 +330,7 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 		return nil
 	}
 
-	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV publish CM.spec",
 		slog.String("desired", desired),
 		slog.Bool("isDefault", isDefault),

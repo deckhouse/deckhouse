@@ -219,8 +219,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-	logger.Debug("E2E-KV observer",
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	logger.Info("E2E-KV observer",
 		"specDesired", clusterCfg.DesiredVersion,
 		"specMode", string(clusterCfg.UpdateMode),
 		"statusCurrent", clusterState.CurrentVersion,

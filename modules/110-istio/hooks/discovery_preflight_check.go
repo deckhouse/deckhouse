@@ -60,7 +60,7 @@ func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput,
 	}
 
 	isAutomatic := input.Values.Get("global.discovery.kubernetesVersionIsDefault").Bool()
-	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV istio-preflight",
 		"source", "global.discovery.kubernetesVersionIsDefault",
 		"isAutomatic", isAutomatic,

@@ -119,13 +119,13 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
     settings = ctx.review.request.object.get('spec', {}).get('settings', {})
     mc_version = settings.get('kubernetesVersion')
     if mc_version and not is_track_default_version(mc_version):
-        # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-feature-gates source=mc-pin version=%s", mc_version)
         return mc_version
 
     snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
-        # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-feature-gates source=none reason=no-secret mc=%s", mc_version)
         return None
 
@@ -141,18 +141,18 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
 
     if is_track_default_version(mc_version):
         version = get_deckhouse_default_version_from_secret(data)
-        # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-feature-gates source=mc-track-default version=%s mc=%s", version, mc_version)
         return version
 
     k8s_version = get_k8s_version_from_cluster_config(data)
     if k8s_version and not is_track_default_version(k8s_version):
-        # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-feature-gates source=cc-pin version=%s", k8s_version)
         return k8s_version
 
     version = get_deckhouse_default_version_from_secret(data)
-    # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+    # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
     logging.info("E2E-KV python-feature-gates source=deckhouse-default version=%s", version)
     return version
 

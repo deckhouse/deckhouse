@@ -208,31 +208,31 @@ def resolve_effective_version(
     # Deckhouse default, and ClusterConfiguration is not consulted at all). Only an absent setting
     # falls back to ClusterConfiguration, where "Automatic" is not a pin either.
     if mc_kubernetes_version and not is_track_default_version(mc_kubernetes_version):
-        # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-k8s-fg source=mc-pin version=%s", mc_kubernetes_version)
         return mc_kubernetes_version
 
     if secret_data is None:
         secret_data = get_cluster_configuration_secret_data(ctx)
     if not secret_data:
-        # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-k8s-fg source=none reason=no-secret mc=%s", mc_kubernetes_version)
         return None
 
     if is_track_default_version(mc_kubernetes_version):
         version = get_deckhouse_default_version_from_secret(secret_data)
-        # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-k8s-fg source=mc-track-default version=%s mc=%s", version, mc_kubernetes_version)
         return version
 
     cc_version = get_k8s_version_from_cluster_config(secret_data)
     if cc_version and not is_track_default_version(cc_version):
-        # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-k8s-fg source=cc-pin version=%s", cc_version)
         return cc_version
 
     version = get_deckhouse_default_version_from_secret(secret_data)
-    # TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+    # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
     logging.info("E2E-KV python-k8s-fg source=deckhouse-default version=%s", version)
     return version
 

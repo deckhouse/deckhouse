@@ -51,7 +51,7 @@ func checkKubernetesVersionMigration(_ context.Context, input *go_hook.HookInput
 	mcVersion := input.Values.Get("controlPlaneManager.kubernetesVersion").String()
 	migrated := isKubernetesVersionMigrated(mcVersion)
 
-	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV migrate-gate",
 		"mcVersion", mcVersion,
 		"migrated", migrated,

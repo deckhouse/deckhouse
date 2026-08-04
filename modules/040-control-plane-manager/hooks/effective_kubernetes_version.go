@@ -213,7 +213,7 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 		return fmt.Errorf("kubernetesVersion required (global.discovery.targetKubernetesVersion is empty)")
 	}
 
-	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV effective-k8s",
 		"source", "global.discovery.targetKubernetesVersion",
 		"target", configVersionRaw,
@@ -280,7 +280,7 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 	input.Values.Set("controlPlaneManager.internal.effectiveKubernetesVersion", resultStr)
 	input.MetricsCollector.Set("d8_kubernetes_version", 1, map[string]string{"k8s_version": resultStr})
 
-	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV effective-k8s result",
 		"target", configVersionRaw,
 		"effective", resultStr,

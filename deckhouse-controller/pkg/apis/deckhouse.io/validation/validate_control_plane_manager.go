@@ -110,8 +110,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	switch {
 	case isTrackDefaultKubernetesVersion(newVersion):
 		// Handing the choice back to Deckhouse — self-limiting, see the doc comment above.
-		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-		log.Debug("E2E-KV admission",
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		log.Info("E2E-KV admission",
 			"decision", "allow",
 			"reason", "track-default",
 			"newVersion", newVersion,
@@ -124,8 +124,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		// Clearing or deleting the setting: effective falls back to CC, then the Deckhouse default.
 		ccVersion, ok := v.readRawClusterConfigurationVersion(ctx)
 		if !ok {
-			// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-			log.Debug("E2E-KV admission",
+			// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+			log.Info("E2E-KV admission",
 				"decision", "allow",
 				"reason", "clear-fail-open-no-cc",
 				"oldVersion", oldVersion,
@@ -133,8 +133,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 			return nil, nil
 		}
 		if !isPinnedKubernetesVersion(ccVersion) {
-			// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-			log.Debug("E2E-KV admission",
+			// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+			log.Info("E2E-KV admission",
 				"decision", "allow",
 				"reason", "clear-fail-open-cc-unpinned",
 				"oldVersion", oldVersion,
@@ -157,8 +157,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		return nil, err
 	}
 	if res != nil && !res.Valid {
-		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-		log.Debug("E2E-KV admission",
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		log.Info("E2E-KV admission",
 			"decision", "reject",
 			"reason", "module-compatibility",
 			"effective", effective,
@@ -173,8 +173,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	// no longer encodes maxUsed-1 after a Deckhouse/edition change.
 	if res, err := v.rejectKubernetesVersionBelowMaxUsed(ctx, effective, fromFallback); res != nil || err != nil {
 		if res != nil && !res.Valid {
-			// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-			log.Debug("E2E-KV admission",
+			// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+			log.Info("E2E-KV admission",
 				"decision", "reject",
 				"reason", "below-maxUsed",
 				"effective", effective,
@@ -187,8 +187,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 
 	available, ok := v.readAvailableKubernetesVersions(ctx)
 	if !ok || len(available) == 0 {
-		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-		log.Debug("E2E-KV admission",
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		log.Info("E2E-KV admission",
 			"decision", "allow",
 			"reason", "fail-open-no-availableVersions",
 			"effective", effective,
@@ -219,8 +219,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 				effective, available, reason,
 			)
 		}
-		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-		log.Debug("E2E-KV admission",
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		log.Info("E2E-KV admission",
 			"decision", "reject",
 			"reason", "not-in-availableVersions",
 			"effective", effective,
@@ -229,8 +229,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		)
 		return rejectResult(msg)
 	}
-	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-	log.Debug("E2E-KV admission",
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	log.Info("E2E-KV admission",
 		"decision", "allow",
 		"reason", "in-availableVersions",
 		"effective", effective,

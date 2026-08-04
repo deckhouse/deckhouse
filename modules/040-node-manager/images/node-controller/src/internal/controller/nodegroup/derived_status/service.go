@@ -103,8 +103,8 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	effectiveKubeVer := effectiveKubernetesVersion(targetVersion, controlPlaneMinVersion)
 	result.KubernetesVersion = semverMajMin(effectiveKubeVer)
 
-	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
-	logger.V(1).Info("E2E-KV node-controller target",
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	logger.Info("E2E-KV node-controller target",
 		"desired", versionString(targetVersion),
 		"effective", result.KubernetesVersion,
 	)
