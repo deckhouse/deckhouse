@@ -520,11 +520,7 @@ func reconcileTenantDeckhouseServiceAccount(ctx context.Context, tc client.Clien
 
 	err := tc.Get(ctx, client.ObjectKeyFromObject(target), &corev1.ServiceAccount{})
 	if apierrors.IsNotFound(err) {
-		if err := tc.Create(ctx, target); err != nil && !apierrors.IsAlreadyExists(err) {
-			return err
-		}
-
-		return nil
+		return tc.Create(ctx, target)
 	}
 
 	return err
