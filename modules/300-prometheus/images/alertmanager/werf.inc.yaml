@@ -56,3 +56,5 @@ shell:
     {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "${LDFLAGS}" -o alertmanager cmd/alertmanager/main.go`) | indent 6 }}
   - chown -R 64535:64535 /src/
   - chmod 0700 /src/alertmanager
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

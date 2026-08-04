@@ -3,7 +3,7 @@
   "@id": "merged-vex-loki-loki",
   "author": "Deckhouse <contact@deckhouse.io>",
   "timestamp": "2026-05-21T12:00:00.000000+03:00",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -46,6 +46,20 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-44903 (GHSA-fw8g-cg8f-9j28, CWE-79) — Stored XSS в legacy веб-интерфейсе Prometheus при отображении heatmap (histogram bucket label values), активируемый флагом --enable-feature=old-ui. Образ loki в Deckhouse собирается из Grafana Loki v2.9.15; зависимость github.com/prometheus/prometheus в pseudo-версии v0.43.1-0.20230419161410-69155c6ba1e9 используется только как библиотека Go-типов для PromQL/LogQL-совместимости (parser, labels, model, storage). Бинарь /usr/bin/loki не запускает Prometheus-сервер, не открывает legacy web UI Prometheus и не имеет флага --enable-feature=old-ui; код пакета github.com/prometheus/prometheus/web/ui в loki не импортируется и не компилируется в исполняемый путь. Эксплуатация в рамках данного образа недоступна."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932: пакет golang.org/x/crypto/openpgp не сопровождается и небезопасен по дизайну. В бинаре /usr/bin/loki он не импортируется — компонент не выполняет операций OpenPGP, поэтому уязвимость неэксплуатируема.",
+      "timestamp": "2026-07-31T12:00:00Z"
     }
   ]
 }

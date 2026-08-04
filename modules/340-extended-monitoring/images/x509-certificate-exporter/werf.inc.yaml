@@ -49,3 +49,5 @@ import:
 imageSpec:
   config:
     entrypoint: ["/x509-certificate-exporter"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

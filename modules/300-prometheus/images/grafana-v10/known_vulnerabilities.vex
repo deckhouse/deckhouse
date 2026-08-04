@@ -3,7 +3,7 @@
   "@id": "merged-vex-95eac040f5c3fb4dba36eb88b4c422ba1cda07dcee0ccd749dd0e6bacd5a8137",
   "author": "Deckhouse <contact@deckhouse.io>",
   "timestamp": "2026-07-28T12:00:00.000000+03:00",
-  "version": 5,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -214,6 +214,20 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-42505 находится в стандартной библиотеке Go (пакет crypto/tls): TLS-рукопожатия, использующие Encrypted Client Hello (ECH), могут быть деанонимизированы пассивным наблюдателем сети из-за раскрытия идентификаторов pre-shared key в незашифрованном ClientHello. Исправлено в Go 1.25.12/1.26.5. Бинарник usr/share/grafana/bin/grafana собирается тулчейном базового образа builder/golang-bookworm (в настоящее время Go 1.25.11), поэтому сканер фиксирует stdlib v1.25.11. Encrypted Client Hello требует явной конфигурации (EncryptedClientHelloConfigList в crypto/tls.Config); Grafana не включает и не использует ECH ни в клиентских, ни в серверных TLS-соединениях. Поскольку кодовый путь ECH не активируется, уязвимый код в данном образе не исполняется. Исправление stdlib будет получено при обновлении общего базового образа builder/golang-bookworm до Go 1.25.12."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932: пакет golang.org/x/crypto/openpgp не сопровождается и небезопасен по дизайну. В бинаре usr/share/grafana/bin/grafana он не импортируется — компонент не выполняет операций OpenPGP, поэтому уязвимость неэксплуатируема.",
+      "timestamp": "2026-07-31T12:00:00Z"
     }
   ]
 }

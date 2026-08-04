@@ -3,7 +3,7 @@
   "@id": "merged-vex-865d72013a3c26ee54a5a122ff23bd39f2f94de489a07c167aab7e3c3b28a6db",
   "author": "Deckhouse <contact@deckhouse.io>",
   "timestamp": "2026-06-02T15:00:00.000000+03:00",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -102,6 +102,20 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-41568 представляет собой состояние гонки (race condition) при создании точки монтирования во время операции 'docker cp' демона Docker, позволяющее вредоносному контейнеру через подмену символьной ссылки создавать пустые файлы или каталоги по произвольным путям на файловой системе хоста с правами root (отказ в обслуживании). Promxy использует исключительно клиентский SDK Docker (github.com/docker/docker/client) как транзитивную зависимость через prometheus/prometheus для service discovery Docker и Docker Swarm контейнеров и никогда не выполняет операции 'docker cp' / 'PUT /containers/{id}/archive'. Уязвимый код находится в функции createIfNotExists Docker-демона, который не компилируется и не вызывается в составе Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932: пакет golang.org/x/crypto/openpgp не сопровождается и небезопасен по дизайну. В бинаре app/promxy он не импортируется — компонент не выполняет операций OpenPGP, поэтому уязвимость неэксплуатируема.",
+      "timestamp": "2026-07-31T12:00:00Z"
     }
   ]
 }
