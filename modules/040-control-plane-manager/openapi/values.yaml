@@ -55,10 +55,11 @@ properties:
                     type: integer
                     format: int64
                     minimum: 0
-                  memoryMB:
+                  memoryBytes:
                     type: integer
                     format: int64
                     minimum: 0
+                    description: Memory request in plain bytes.
               etcd:
                 type: object
                 additionalProperties: false
@@ -67,10 +68,11 @@ properties:
                     type: integer
                     format: int64
                     minimum: 0
-                  memoryMB:
+                  memoryBytes:
                     type: integer
                     format: int64
                     minimum: 0
+                    description: Memory request in plain bytes.
               kubeControllerManager:
                 type: object
                 additionalProperties: false
@@ -79,10 +81,11 @@ properties:
                     type: integer
                     format: int64
                     minimum: 0
-                  memoryMB:
+                  memoryBytes:
                     type: integer
                     format: int64
                     minimum: 0
+                    description: Memory request in plain bytes.
               kubeScheduler:
                 type: object
                 additionalProperties: false
@@ -91,10 +94,11 @@ properties:
                     type: integer
                     format: int64
                     minimum: 0
-                  memoryMB:
+                  memoryBytes:
                     type: integer
                     format: int64
                     minimum: 0
+                    description: Memory request in plain bytes.
       effectiveKubernetesVersion:
         type: string
         enum: ["1.32", "1.33", "1.34", "1.35", "1.36"]

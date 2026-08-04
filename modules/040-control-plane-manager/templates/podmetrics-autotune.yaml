@@ -42,6 +42,5 @@ spec:
           container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7m:1m]
         )
       ) by (<<.GroupBy>>)
-      / 1000 / 1000
     )
 {{- end }}

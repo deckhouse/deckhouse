@@ -256,7 +256,7 @@ func otherRequestsFromPod(pod *v1.Pod) (int64, int64) {
 //
 //	effectiveMasterResources(node) − sum(requests of non-control-plane pods on node)
 //
-// Returns millicpu and megabytes. Unlike minMasterNodeBudget it does not apply
+// Returns millicpu and bytes. Unlike minMasterNodeBudget it does not apply
 // the configEveryNode / 40% carve-out — those are for combined-budget discovery.
 func minMasterFitBudget(nodes []Node, otherByNode map[string]nodeOtherRequests) (int64, int64, bool) {
 	if len(nodes) == 0 {
@@ -282,7 +282,7 @@ func minMasterFitBudget(nodes []Node, otherByNode map[string]nodeOtherRequests) 
 			minMemBytes = availMem
 		}
 	}
-	return minCPU, bytesToMB(minMemBytes), true
+	return minCPU, minMemBytes, true
 }
 
 // significantResourceChange reports whether rec differs from applied enough to
