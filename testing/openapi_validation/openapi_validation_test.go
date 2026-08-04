@@ -212,7 +212,7 @@ func readYAML(t *testing.T, relPath string, out interface{}) {
 	require.NoError(t, err, "read %s (tried %v)", relPath, tried)
 }
 
-// TestKubernetesVersionEnumConsistency keeps the kubernetesVersion pin lists in sync.
+// TestKubernetesVersionEnumValidation keeps the kubernetesVersion pin lists in sync.
 //
 // ModuleConfig adds the Default sentinel (Automatic remains a deprecated alias). ClusterConfiguration
 // still only offers Automatic. Pin versions (numeric) must match across CC and MC for each edition,
@@ -220,7 +220,7 @@ func readYAML(t *testing.T, relPath string, out interface{}) {
 //
 // TODO(kubernetesVersion-deprecation): T+1 rewrite — after CC field removal use ModuleConfig
 // enum as reference vs edition version_map; drop Automatic alias checks; do not delete this test.
-func TestKubernetesVersionEnumConsistency(t *testing.T) {
+func TestKubernetesVersionEnumValidation(t *testing.T) {
 	sentinelsCC := map[string]struct{}{"Automatic": {}}
 	sentinelsMC := map[string]struct{}{"Automatic": {}, "Default": {}}
 
