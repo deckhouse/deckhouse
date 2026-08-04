@@ -671,12 +671,12 @@ const (
 	lowerCooldown = 15 * time.Minute
 )
 
-type decideAction int
+type decideAction string
 
 const (
-	decideSkip decideAction = iota
-	decideRaise
-	decideLower
+	decideSkip  decideAction = "skip"
+	decideRaise decideAction = "raise"
+	decideLower decideAction = "lower"
 )
 
 // decide returns whether a recommendation should be committed given asymmetric
@@ -704,17 +704,6 @@ func decide(rec, applied int64, lastChange, now time.Time) decideAction {
 		}
 	}
 	return decideSkip
-}
-
-func actionName(a decideAction) string {
-	switch a {
-	case decideRaise:
-		return "raise"
-	case decideLower:
-		return "lower"
-	default:
-		return "skip"
-	}
 }
 
 func appliedValue(cs autotuneComponentState, resourceName resourceKind) int64 {
@@ -883,7 +872,7 @@ func evaluateMeasurement(
 		m.Components[comp] = cs
 		changed = true
 		input.Logger.Info("autotune: committed recommendation",
-			"component", comp, "resource", resourceName, "action", actionName(action), "value", val)
+			"component", comp, "resource", resourceName, "action", action, "value", val)
 	}
 
 	return changed
