@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"go.yaml.in/yaml/v2"
@@ -78,9 +79,22 @@ func getDesiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuratio
 		return nil, fmt.Errorf("invalid configMap %s/%s 'spec.desiredVersion': %w", configMap.Namespace, configMap.Name, err)
 	}
 
+	// desiredVersion gets three checks above; updateMode used to get none, so a typo was cast
+	// straight into the typed constant and then matched nothing — degrading the Automatic-mode
+	// drift detection in cluster/state.go into a mislabeled phase instead of failing. External
+	// input deserves the same loud failure as the version next to it.
+	updateMode := cluster.UpdateMode(strings.TrimSpace(spec.UpdateMode))
+	switch updateMode {
+	case "", cluster.UpdateModeAutomatic, cluster.UpdateModeManual:
+	default:
+		return nil, fmt.Errorf("invalid configMap %s/%s 'spec.updateMode': %q, want %q or %q",
+			configMap.Namespace, configMap.Name, spec.UpdateMode,
+			cluster.UpdateModeAutomatic, cluster.UpdateModeManual)
+	}
+
 	return &cluster.Configuration{
 		DesiredVersion: desiredVersion,
-		UpdateMode:     cluster.UpdateMode(spec.UpdateMode),
+		UpdateMode:     updateMode,
 	}, nil
 }
 

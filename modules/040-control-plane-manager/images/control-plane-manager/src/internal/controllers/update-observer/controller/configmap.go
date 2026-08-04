@@ -25,7 +25,6 @@ import (
 
 	"go.yaml.in/yaml/v2"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"control-plane-manager/internal/controllers/update-observer/cluster"
@@ -76,17 +75,13 @@ func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error
 		return nil, err
 	}
 
+	// No synthesis on NotFound. The global discovery hook is the creator of this ConfigMap
+	// (CreateIfNotExists together with data.spec); this controller only ever updates data.status.
+	// Returning a bare in-memory object used to look like a bootstrap path, but it could never
+	// become one: Reconcile rejects it immediately for having no data.spec, so the Create branch
+	// below was unreachable. Report the absence instead and let Reconcite requeue.
 	if err != nil {
-		cm = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        common.ConfigMapName,
-				Namespace:   common.KubeSystemNamespace,
-				Annotations: map[string]string{},
-				Labels: map[string]string{
-					common.HeritageLabelKey: common.DeckhouseLabel,
-				},
-			},
-		}
+		return nil, err
 	}
 
 	return cm, nil
@@ -199,15 +194,13 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 	}
 }
 
+// touchConfigMap writes the reconciled object back. Update only: the object always came from a
+// successful Get, so it always carries a ResourceVersion — which also makes this write
+// optimistically concurrent, so a data.spec patch racing in from the global hook yields a conflict
+// rather than clobbering the hook's value.
 func (r *reconciler) touchConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
-	if configMap.ResourceVersion == "" {
-		if err := r.client.Create(ctx, configMap); err != nil {
-			return fmt.Errorf("failed to create configMap: %w", err)
-		}
-	} else {
-		if err := r.client.Update(ctx, configMap); err != nil {
-			return fmt.Errorf("failed to update configMap: %w", err)
-		}
+	if err := r.client.Update(ctx, configMap); err != nil {
+		return fmt.Errorf("failed to update configMap: %w", err)
 	}
 
 	return nil

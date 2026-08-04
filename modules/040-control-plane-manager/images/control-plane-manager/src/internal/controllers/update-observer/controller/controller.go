@@ -118,20 +118,38 @@ func getConfigMapSpecPredicate() predicate.Predicate {
 		return spec
 	}
 
+	isTarget := func(cm *corev1.ConfigMap) bool {
+		// Namespace is checked too so correctness does not depend on the cache scoping in
+		// manager.go: a widened informer must not turn a same-named ConfigMap elsewhere into a
+		// trigger for the singleton this controller owns.
+		return cm.Name == common.ConfigMapName && cm.Namespace == common.KubeSystemNamespace
+	}
+
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			cm, ok := e.Object.(*corev1.ConfigMap)
 			if !ok {
 				return false
 			}
-			return cm.Name == common.ConfigMapName
+			return isTarget(cm)
 		},
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			newCM, ok1 := e.ObjectNew.(*corev1.ConfigMap)
 			oldCM, ok2 := e.ObjectOld.(*corev1.ConfigMap)
-			if !ok1 || !ok2 || newCM.Name != common.ConfigMapName {
+			if !ok1 || !ok2 || !isTarget(newCM) {
 				return false
+			}
+			// Comparing data.spec alone is what keeps this controller from re-triggering itself:
+			// fillConfigMap stamps lastReconciliationTime on every pass, so any broader comparison
+			// would spin forever.
+			//
+			// The status escape hatch is separate: once the cluster is UpToDate, Reconcile returns
+			// without a requeue, so data.spec is the only remaining wake-up. If status is then
+			// wiped externally, nothing would ever restore it. Reacting to a *missing* status (not
+			// to its contents) re-arms recovery without reintroducing the self-trigger loop.
+			if newCM.Data["spec"] != "" && newCM.Data["status"] == "" {
+				return true
 			}
 			return parseSpec(oldCM) != parseSpec(newCM)
 		},
@@ -226,7 +244,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 func determineReconcileTrigger(configMap *corev1.ConfigMap, clusterCfg *cluster.Configuration) ReconcileTrigger {
 	previousVersion, exists := configMap.GetLabels()[common.K8sVersionLabelKey]
 
-	if configMap.ResourceVersion == "" || !exists {
+	// A missing k8s-version label is the real first-run signal: the hook seeds the ConfigMap with
+	// heritage and data.spec only, so this controller's first pass over it has no version label yet.
+	if !exists {
 		return ReconcileTriggerInit
 	}
 
