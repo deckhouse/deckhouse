@@ -20,6 +20,13 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  # This is a cluster-wide grant on purpose: a platform operator manages the
+  # tenants and has to see all of them. It is also what puts such an operator
+  # outside the project visibility filter, which narrows a list to the projects
+  # the caller has a namespace in -- the filter only has something to narrow
+  # when the grant is not cluster-wide. Removing the grant here is what would
+  # subject this capability to the filter, and that is a product decision about
+  # the operator role, not an oversight of the filter.
   - projects
   - projecttemplates
   - clusterprojectrolebindings

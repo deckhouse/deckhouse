@@ -37,6 +37,28 @@ func TestNewResourceScopeCache(t *testing.T) {
 	assert.True(t, cache.IsNamespaced("apps", "deployments"), "deployments should be namespaced")
 }
 
+// The inventory carries what a coverage review divides by: the verbs the API
+// server accepts. Measuring against a fixed list of eight would report a gap in
+// the role model where the resource simply has no such verb.
+func TestInventory_CarriesKindAndVerbs(t *testing.T) {
+	cache := NewResourceScopeCache(newMockDiscovery([]*metav1.APIResourceList{
+		{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{Name: "pods", Namespaced: true, Kind: "Pod", Verbs: []string{"get", "list", "create"}},
+				{Name: "nodes", Namespaced: false, Kind: "Node", Verbs: []string{"get"}},
+			},
+		},
+	}, nil))
+
+	inventory := cache.Inventory()
+
+	require.Len(t, inventory, 2)
+	// Sorted, so the reader of a document can find a resource in it.
+	assert.Equal(t, ResourceInfo{Resource: "nodes", Kind: "Node", Verbs: []string{"get"}}, inventory[0])
+	assert.Equal(t, ResourceInfo{Resource: "pods", Kind: "Pod", Namespaced: true, Verbs: []string{"get", "list", "create"}}, inventory[1])
+}
+
 // TestNewResourceScopeCache_NilDiscovery tests creation with nil discovery client
 func TestNewResourceScopeCache_NilDiscovery(t *testing.T) {
 	cache := NewResourceScopeCache(nil)

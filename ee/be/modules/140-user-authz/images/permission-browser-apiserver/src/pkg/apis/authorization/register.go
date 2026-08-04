@@ -41,6 +41,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&AccessibleNamespaceList{},
 		&WhoCan{},
 		&SubjectAccessReport{},
+		&RoleAccessReport{},
 	)
 	return nil
 }
