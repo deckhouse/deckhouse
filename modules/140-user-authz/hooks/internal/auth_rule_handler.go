@@ -29,18 +29,18 @@ import (
 )
 
 type authorizationRule struct {
-	Name      string                 `json:"name"`
-	Spec      map[string]interface{} `json:"spec"`
-	Namespace string                 `json:"namespace,omitempty"`
+	Name      string         `json:"name"`
+	Spec      map[string]any `json:"spec"`
+	Namespace string         `json:"namespace,omitempty"`
 }
 
 func ApplyAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
-	if !found {
-		return nil, fmt.Errorf(`".spec is not a map[string]interface{} or contains non-string values in the map: %s`, spew.Sdump(obj.Object))
-	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read .spec as a map: %w", err)
+	}
+	if !found {
+		return nil, fmt.Errorf(".spec is required but was not found in the object: %s", spew.Sdump(obj.Object))
 	}
 
 	car := &authorizationRule{
