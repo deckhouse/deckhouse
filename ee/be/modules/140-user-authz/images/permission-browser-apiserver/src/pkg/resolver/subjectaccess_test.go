@@ -429,7 +429,7 @@ func TestReport_RoleDescriptorIsAttached(t *testing.T) {
 	}, rule([]string{""}, []string{"pods"}, []string{"get"}))
 	role.Annotations = map[string]string{
 		"en.meta.deckhouse.io/title": "Networking Manager",
-		"ru.meta.deckhouse.io/title": "Менеджер сети",
+		"ru.meta.deckhouse.io/title": "Networking Manager [ru]",
 	}
 
 	objs := []runtime.Object{
@@ -448,7 +448,7 @@ func TestReport_RoleDescriptorIsAttached(t *testing.T) {
 	assert.Equal(t, "networking", descriptor.Subsystem)
 	assert.Equal(t, "manager", descriptor.Level)
 	assert.Equal(t, "Networking Manager", descriptor.Titles["en"])
-	assert.Equal(t, "Менеджер сети", descriptor.Titles["ru"])
+	assert.Equal(t, "Networking Manager [ru]", descriptor.Titles["ru"])
 }
 
 func TestReport_ResourceNamesAndSubresources(t *testing.T) {
