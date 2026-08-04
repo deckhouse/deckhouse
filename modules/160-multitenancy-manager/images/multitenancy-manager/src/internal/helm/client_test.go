@@ -71,6 +71,11 @@ func Test(t *testing.T) {
 			basePath := filepath.Join("./testdata", c)
 			templatePath := filepath.Join(basePath, "template.yaml")
 			if shipped, ok := shippedTemplates[c]; ok {
+				// Asked for outright: read() answers a missing file with an empty object, so a
+				// renamed template would arrive here as a template with nothing in it and fail as a
+				// golden mismatch rather than as the rename it is.
+				_, statErr := os.Stat(shipped)
+				assert.NoErrorf(t, statErr, "the shipped template %s is gone", shipped)
 				templatePath = shipped
 			}
 			assert.Nil(t, test(templates, basePath, templatePath))
