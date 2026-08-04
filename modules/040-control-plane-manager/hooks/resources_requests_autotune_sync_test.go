@@ -56,7 +56,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 				},
 				resourceMemory: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
-						componentKubeApiserver: {AppliedMB: ptr.To(int64(1024)), LastChange: "2026-07-01T00:00:00Z"},
+						componentKubeApiserver: {AppliedBytes: ptr.To(int64(1024000000)), LastChange: "2026-07-01T00:00:00Z"},
 					},
 				},
 			}
@@ -73,7 +73,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			Expect(called).To(BeFalse())
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(700)))
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.milliCPU").Int()).To(Equal(int64(800)))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryMB").Int()).To(Equal(int64(1024)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(1024000000)))
 			found := false
 			for _, m := range f.MetricsCollector.CollectedMetrics() {
 				if m.Name == autotuneMetricName {

@@ -10,7 +10,7 @@
   {{- $resourcesRequests = .settings.resourcesRequests -}}
 {{- end -}}
 {{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memoryMB := $resourcesRequests.memoryMB | default 512 }}
+{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
 {{- /* etcd */ -}}
 apiVersion: v1
 kind: Pod
@@ -93,7 +93,7 @@ spec:
       requests:
         {{- $c := (($resourcesRequests.components | default dict).etcd) | default dict }}
         cpu: "{{ $c.milliCPU | default (div (mul $millicpu 35) 100) }}m"
-        memory: "{{ $c.memoryMB | default (div (mul $memoryMB 35) 100) }}M"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 35) 100) }}"
     securityContext:
       capabilities:
         drop:

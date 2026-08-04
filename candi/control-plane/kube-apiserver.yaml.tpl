@@ -85,7 +85,7 @@
   {{- $resourcesRequests = .settings.resourcesRequests -}}
 {{- end -}}
 {{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memoryMB := $resourcesRequests.memoryMB | default 512 }}
+{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
 {{- /* kube-apiserver */ -}}
 apiVersion: v1
 kind: Pod
@@ -257,7 +257,7 @@ spec:
       requests:
         {{- $c := (($resourcesRequests.components | default dict).kubeApiserver) | default dict }}
         cpu: "{{ $c.milliCPU | default (div (mul $millicpu 33) 100) }}m"
-        memory: "{{ $c.memoryMB | default (div (mul $memoryMB 33) 100) }}M"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 33) 100) }}"
     securityContext:
       capabilities:
         drop:
