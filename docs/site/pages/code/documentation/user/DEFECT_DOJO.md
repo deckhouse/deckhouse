@@ -1,54 +1,55 @@
 ---
 title: "DefectDojo integration"
-menuTitle: DefectDojo
+menuTitle: DefectDojo integration
 force_searchable: true
 description: "Configure DefectDojo vulnerability management integration for Deckhouse Code."
 permalink: en/code/documentation/user/defect-dojo.html
 weight: 50
 ---
 
-DefectDojo integration lets you collect vulnerabilities from Deckhouse Code security reports in a single vulnerability management system.
+This integration lets you automatically import security report results from Deckhouse Code into DefectDojo, a single vulnerability management system.
 
 ![DefectDojo integration form](/images/code/defect_dojo_integration_form_en.png)
 
 ## Prerequisites
 
-Before you enable the integration, make sure that:
+Before configuring the integration, make sure that:
 
-- You have a reachable DefectDojo instance.
-- You have a DefectDojo API token with access to scan import.
-- You have the **Maintainer** role in the Deckhouse Code project.
+- A DefectDojo instance is available.
+- You obtained a DefectDojo API token eligible to import scanning results.
+- The **Maintainer** role has been configured in the Deckhouse Code project.
 - Your CI pipeline produces supported security artifacts.
 
-## Enable DefectDojo integration
+## Configuring DefectDojo integration
 
 To configure the integration:
 
 1. Open your project in Deckhouse Code.
-1. Go to **Settings** → **Integrations**.
-1. Open **DefectDojo**.
+1. Go to "Settings" → "Integrations" → "DefectDojo".
 1. Fill in the integration fields:
-   - **URL**.
-   - **API token**.
-   - **Product name** (optional, defaults to project full path).
-   - **Product type name**.
-   - **Engagement name** (optional, defaults to branch name).
-   - **Minimum severity**.
-   - **Auto-create context** (`auto_create_context`).
-   - **Imported findings (active)** (`findings_active`).
-   - **Verified findings** (`findings_verified`).
-   - **Close old findings** (`close_old_findings`).
-1. Click **Save changes**.
+   - "URL": DefectDojo instance address.
+   - "API token": DefectDojo API token.
+   - "Product name" (optional): Product name in DefectDojo. By default, it's the project full path.
+   - "Product type name": Product type in DefectDojo.
+   - "Engagement name" (optional): By default, it's the branch name.
+   - "Minimum severity": Minimum severity of imported findings.
+   - "Auto-create context" (`auto_create_context`): Automatically create missing entities in DefectDojo.
+   - "Imported findings (active)" (`findings_active`): Mark imported findings as active.
+   - "Verified findings" (`findings_verified`): Mark imported findings as verified.
+   - "Close old findings" (`close_old_findings`): Close findings that are missing from the new report.
+1. Click "Save changes".
 
-## Validate connection settings
+### Validating connection
 
-Click **Test settings** on the DefectDojo integration page to verify that Deckhouse Code can reach DefectDojo and use the provided token.
+To verify that Deckhouse Code can reach DefectDojo and use the provided API token, click "Test settings" on the integration page.
 
-## How automatic upload works
+## Using the integration
 
-After each pipeline build finishes with security artifacts, Deckhouse Code automatically uploads the scan reports to DefectDojo using the `reimport-scan` API.
+### Automatic importing of scanning results
 
-The integration uploads reports from these scanners:
+After each CI pipeline build finishes with scanning reports, Deckhouse Code automatically imports them to DefectDojo using the `reimport-scan` API.
+
+The following scanning type results are supported:
 
 - SAST
 - Secret detection
@@ -56,25 +57,25 @@ The integration uploads reports from these scanners:
 - Container scanning
 - DAST
 
-## Mapping used for DefectDojo entities
+### Mapping DefectDojo entities
 
 By default, Deckhouse Code maps uploaded data as follows:
 
-- **Product** = project full path (or custom Product name).
-- **Engagement** = branch name (or custom Engagement name).
+- **Product** = project full path (or specified "Product name").
+- **Engagement** = branch name (or specified "Engagement name").
 - **Test** = CI job name.
 - **test_title** = CI job name.
 
-## Import defaults
+### Import parameters
 
-Deckhouse Code sends import parameters according to integration settings:
+When importing scanning results, Deckhouse Code sends parameters to DefectDojo according to integration settings:
 
-- Minimum severity threshold.
-- `auto_create_context`.
-- Active state for imported findings.
-- Verified state for imported findings.
-- `close_old_findings`.
+- "Minimum severity" (minimum severity of imported findings)
+- `auto_create_context`
+- `findings_active`
+- `findings_verified`
+- `close_old_findings`
 
 ## Secure CI credentials
 
-If you use built-in CI variables for DefectDojo integration (`DD_URL` and `DD_TOKEN`), mark them as **masked** and **protected**.
+If you use built-in `DD_URL` and `DD_TOKEN` CI variables for DefectDojo integration, mark them as **masked** and **protected**.
