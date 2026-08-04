@@ -232,6 +232,7 @@
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - backendtlspolicies
   - gatewayclasses
   - gateways
   - grpcroutes
@@ -247,6 +248,7 @@
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - backendtlspolicies/status
   - gatewayclasses/status
   - gateways/status
   - grpcroutes/status
