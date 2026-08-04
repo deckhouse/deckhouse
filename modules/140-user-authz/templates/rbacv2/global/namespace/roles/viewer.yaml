@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace:viewer
+  annotations:
+    en.meta.deckhouse.io/title: "Namespace Viewer"
+    ru.meta.deckhouse.io/title: "Просмотр в пространстве имён"
+    en.meta.deckhouse.io/description: "Read-only access to user resources in a namespace."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к пользовательским ресурсам в пространстве имён."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/delegatable: "true"
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: user
+    rbac.deckhouse.io/aggregate-to-project-as: viewer
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+rules: []

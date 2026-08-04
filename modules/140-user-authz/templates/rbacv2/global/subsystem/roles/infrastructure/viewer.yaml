@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:infrastructure:viewer
+  annotations:
+    en.meta.deckhouse.io/title: "Infrastructure: Viewer"
+    ru.meta.deckhouse.io/title: "Просмотр подсистемы инфраструктуры"
+    en.meta.deckhouse.io/description: "Read-only access to the Infrastructure subsystem configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации подсистемы инфраструктуры."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: viewer
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: infrastructure
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
+    rbac.deckhouse.io/aggregate-to-system-as: viewer
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
+rules: []

@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace:manager
+  annotations:
+    en.meta.deckhouse.io/title: "Namespace Manager"
+    ru.meta.deckhouse.io/title: "Менеджер пространства имён"
+    en.meta.deckhouse.io/description: "Namespace User plus management of quotas and basic policies (NetworkPolicy, PodLoggingConfig, OperationPolicy). No RBAC management."
+    ru.meta.deckhouse.io/description: "Права пользователя плюс управление квотами и базовыми политиками (NetworkPolicy, PodLoggingConfig, OperationPolicy). Без управления RBAC."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/delegatable: "true"
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: admin
+    rbac.deckhouse.io/aggregate-to-project-as: manager
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-namespace-as: manager
+rules: []
