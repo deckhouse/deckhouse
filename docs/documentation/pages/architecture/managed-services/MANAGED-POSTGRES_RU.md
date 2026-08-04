@@ -26,7 +26,6 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 
 Архитектура модуля [`managed-postgres`](/modules/managed-postgres/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображена на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля managed-postgres](../../../images/architecture/managed-services/c4-l2-managed-postgres.ru.png)
 
 ## Компоненты модуля
@@ -37,7 +36,7 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 
    * согласование состояния кастомных ресурсов [Postgres](/modules/managed-postgres/stable/cr.html#postgres) во всех пользовательских пространствах имён. Ресурс Postgres определяет настройки кластера PostgreSQL, включая топологию размещения и режим репликации, конфигурацию инстансов PostgreSQL и прочие параметры, такие как списки логических баз данных и внутренних пользователей;
 
-   * согласование состояния кастомных ресурсов [PostgresSnapshot](/modules/managed-postgres/stable/cr.html#postgressnapshot). Ресурс PostgresSnapshot предназначен для [резервного копирования и восстановления инстансов PostgreSQL](https://deckhouse.ru/modules/managed-postgres/stable/snapshots.html);
+   * согласование состояния кастомных ресурсов [PostgresSnapshot](/modules/managed-postgres/stable/cr.html#postgressnapshot). Ресурс PostgresSnapshot предназначен для [резервного копирования и восстановления инстансов PostgreSQL](/modules/managed-postgres/stable/snapshots.html);
 
    * валидация кастомных ресурсов Postgres и PostgresClass, мутация кастомных ресурсов Postgres с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 

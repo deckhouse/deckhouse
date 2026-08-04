@@ -29,7 +29,6 @@ description: Архитектура модуля managed-memcached в Deckhouse 
 
 Архитектура модуля [`managed-memcached`](/modules/managed-memcached/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображена на следующей диаграмме:
 
-<!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля managed-memcached](../../../images/architecture/managed-services/c4-l2-managed-memcached.ru.png)
 
 ## Компоненты модуля
