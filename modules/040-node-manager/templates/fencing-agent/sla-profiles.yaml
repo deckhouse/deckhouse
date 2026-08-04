@@ -1,0 +1,127 @@
+{{- /* Built-in FencingSLAProfile objects shipped by the module. */}}
+{{- /* They are cluster-scoped configuration objects with no runtime state, */}}
+{{- /* so operators can inspect timings with `kubectl get/describe fencingslaprofiles`. */}}
+---
+apiVersion: node-manager.deckhouse.io/v1alpha1
+kind: FencingSLAProfile
+metadata:
+  name: critical
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent" "node-manager.deckhouse.io/builtin-profile" "true")) | nindent 2 }}
+spec:
+  reactionGoal: 2-3s
+  detectionWindowTarget: 0.8-1.2s
+  memberlist:
+    probeInterval: 100ms
+    probeTimeout: 50ms
+    suspicionMult: 2
+    suspicionMaxTimeoutMult: 6
+    indirectChecks: 4
+    awarenessMaxMultiplier: 8
+    gossipInterval: 100ms
+    retransmitMult: 4
+    gossipToTheDeadTime: 2s
+  fallback:
+    heartbeat: 250ms
+    ttl: 1s
+    kubernetesAPITimeout: 500ms
+  rejoin:
+    interval: 500ms
+    maxInterval: 3s
+  evacuation:
+    delay: 1.2s
+  watchdog:
+    feedInterval: 250ms
+    timeout: 3s
+---
+apiVersion: node-manager.deckhouse.io/v1alpha1
+kind: FencingSLAProfile
+metadata:
+  name: medium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent" "node-manager.deckhouse.io/builtin-profile" "true")) | nindent 2 }}
+spec:
+  reactionGoal: 10s
+  detectionWindowTarget: 3s
+  memberlist:
+    probeInterval: 300ms
+    probeTimeout: 120ms
+    suspicionMult: 3
+    suspicionMaxTimeoutMult: 6
+    indirectChecks: 3
+    awarenessMaxMultiplier: 8
+    gossipInterval: 200ms
+    retransmitMult: 4
+    gossipToTheDeadTime: 5s
+  fallback:
+    heartbeat: 1s
+    ttl: 4s
+    kubernetesAPITimeout: 2s
+  rejoin:
+    interval: 1s
+    maxInterval: 10s
+  evacuation:
+    delay: 6s
+  watchdog:
+    feedInterval: 1s
+    timeout: 10s
+---
+apiVersion: node-manager.deckhouse.io/v1alpha1
+kind: FencingSLAProfile
+metadata:
+  name: moderate
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent" "node-manager.deckhouse.io/builtin-profile" "true")) | nindent 2 }}
+spec:
+  reactionGoal: 30s
+  detectionWindowTarget: 8s
+  memberlist:
+    probeInterval: 500ms
+    probeTimeout: 200ms
+    suspicionMult: 4
+    suspicionMaxTimeoutMult: 6
+    indirectChecks: 3
+    awarenessMaxMultiplier: 8
+    gossipInterval: 300ms
+    retransmitMult: 4
+    gossipToTheDeadTime: 10s
+  fallback:
+    heartbeat: 2s
+    ttl: 10s
+    kubernetesAPITimeout: 5s
+  rejoin:
+    interval: 2s
+    maxInterval: 20s
+  evacuation:
+    delay: 20s
+  watchdog:
+    feedInterval: 2s
+    timeout: 30s
+---
+apiVersion: node-manager.deckhouse.io/v1alpha1
+kind: FencingSLAProfile
+metadata:
+  name: slow
+  {{- include "helm_lib_module_labels" (list . (dict "app" "fencing-agent" "node-manager.deckhouse.io/builtin-profile" "true")) | nindent 2 }}
+spec:
+  reactionGoal: 60s
+  detectionWindowTarget: 15s
+  memberlist:
+    probeInterval: 1000ms
+    probeTimeout: 400ms
+    suspicionMult: 4
+    suspicionMaxTimeoutMult: 6
+    indirectChecks: 3
+    awarenessMaxMultiplier: 8
+    gossipInterval: 500ms
+    retransmitMult: 4
+    gossipToTheDeadTime: 20s
+  fallback:
+    heartbeat: 5s
+    ttl: 20s
+    kubernetesAPITimeout: 10s
+  rejoin:
+    interval: 5s
+    maxInterval: 30s
+  evacuation:
+    delay: 45s
+  watchdog:
+    feedInterval: 5s
+    timeout: 60s

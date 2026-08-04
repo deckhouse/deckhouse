@@ -17,170 +17,90 @@ limitations under the License.
 package memberlist
 
 import (
-	"context"
-	"errors"
+	"fmt"
+	stdlog "log"
 	"time"
 
-	"github.com/hashicorp/memberlist"
+	hcml "github.com/hashicorp/memberlist"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
 
-	"fencing-agent/internal/domain"
-	"fencing-agent/internal/lib/backoff"
-	"fencing-agent/internal/lib/logger"
-	"fencing-agent/internal/lib/logger/sl"
+const (
+	bindAddress  = "0.0.0.0"
+	leaveTimeout = 3 * time.Second
+
+	// deadNodeReclaimTime lets a hard-died node rejoin under the same name with a
+	// new address; the zero default makes peers refuse it forever.
+	deadNodeReclaimTime = 10 * time.Second
 )
 
 type Config struct {
-	MemberListPort      uint          `env:"MEMBERLIST_PORT" env-default:"8500"`
-	ProbeInterval       time.Duration `env:"PROBE_INTERVAL" env-default:"500ms"`
-	ProbeTimeout        time.Duration `env:"PROBE_TIMEOUT" env-default:"200ms"`
-	SuspicionMult       uint          `env:"SUSPICION_MULT" env-default:"2"`
-	IndirectChecks      uint          `env:"INDIRECT_CHECKS" env-default:"3"`
-	GossipInterval      time.Duration `env:"GOSSIP_INTERVAL" env-default:"200ms"`
-	RetransmitMult      uint          `env:"RETRANSMIT_MULT" env-default:"4"`
-	GossipToTheDeadTime time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME" env-default:"2s"`
+	NodeName  string
+	NodeGroup string
+	// AdvertiseAddr must be the Node InternalIP: peers reach the pod only through
+	// the hostPort on the Node, so the auto-detected pod IP is unreachable.
+	AdvertiseAddr string
+	Port          int
 }
 
-func (c *Config) Validate() error {
-	if c.MemberListPort == 0 {
-		return errors.New("MEMBERLIST_PORT env var is empty")
-	}
-
-	if c.SuspicionMult == 0 {
-		return errors.New("SUSPICION_MULT env var must be greater than zero")
-	}
-
-	if c.ProbeTimeout >= c.ProbeInterval {
-		return errors.New("PROBE_TIMEOUT env var must be less than probe interval")
-	}
-	return nil
+type Cluster struct {
+	list   *hcml.Memberlist
+	logger *log.Logger
+	stop   chan struct{}
 }
 
-type EventHandler interface {
-	NotifyJoin(node *memberlist.Node)
-	NotifyLeave(node *memberlist.Node)
-	NotifyUpdate(node *memberlist.Node)
-}
+func New(cfg Config, logger *log.Logger) (*Cluster, error) {
+	events := newEventDelegate(logger)
 
-type Memberlist struct {
-	list     *memberlist.Memberlist
-	delegate *Delegate
-	logger   *log.Logger
-}
-
-func New(
-	cfg Config,
-	log *log.Logger,
-	nodeIP string,
-	nodeName string,
-	numNodes int,
-	eventHandler EventHandler,
-	receiver NodesNumberReceiver,
-) (*Memberlist, error) {
-	config := memberlist.DefaultLANConfig()
-
-	config.Name = nodeName
-	config.AdvertiseAddr = nodeIP
-
-	config.BindPort = int(cfg.MemberListPort)
-	config.AdvertisePort = int(cfg.MemberListPort)
-
-	delegate := NewDelegate(log, func() int {
-		return numNodes
-	}, receiver)
-
-	config.Delegate = delegate
-
-	config.Events = eventHandler
-
-	config.LogOutput = logger.NewLogWriter(log)
-
-	// gossip config
-	config.ProbeInterval = cfg.ProbeInterval
-	config.ProbeTimeout = cfg.ProbeTimeout
-	config.SuspicionMult = int(cfg.SuspicionMult)
-	config.IndirectChecks = int(cfg.IndirectChecks)
-	config.GossipInterval = cfg.GossipInterval
-	config.RetransmitMult = int(cfg.RetransmitMult)
-	config.GossipToTheDeadTime = cfg.GossipToTheDeadTime
-
-	list, err := memberlist.Create(config)
+	list, err := hcml.Create(buildConfig(cfg, logger, events))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create memberlist: %w", err)
 	}
 
-	ml := &Memberlist{
-		list:     list,
-		delegate: delegate,
-		logger:   log,
-	}
+	stop := make(chan struct{})
+	go events.run(stop)
 
-	return ml, nil
+	return &Cluster{list: list, logger: logger, stop: stop}, nil
 }
 
-func (ml *Memberlist) GetNodes(ctx context.Context) (domain.Nodes, error) {
-	res := make(chan domain.Nodes, 1)
+func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcml.Config {
+	mlCfg := hcml.DefaultLANConfig()
 
-	go func() {
-		members := ml.list.Members()
-		nodes := domain.Nodes{
-			Nodes: make([]domain.Node, 0, len(members)),
-		}
+	mlCfg.Name = cfg.NodeName
+	mlCfg.BindAddr = bindAddress
+	mlCfg.BindPort = cfg.Port
+	mlCfg.AdvertiseAddr = cfg.AdvertiseAddr
+	mlCfg.AdvertisePort = cfg.Port
+	// Label keeps each NodeGroup a separate gossip network; foreign packets are dropped.
+	mlCfg.Label = cfg.NodeGroup
+	mlCfg.DeadNodeReclaimTime = deadNodeReclaimTime
+	mlCfg.Logger = stdlog.New(newLogWriter(logger), "", 0)
+	mlCfg.Events = events
 
-		for _, member := range members {
-			var node domain.Node
-			node.Name = member.Name
-			node.Addr = member.Addr.String()
-			nodes.Nodes = append(nodes.Nodes, node)
-		}
-
-		res <- nodes
-	}()
-
-	select {
-	case <-ctx.Done():
-		return domain.Nodes{}, ctx.Err()
-	case r := <-res:
-		return r, nil
-	}
+	return mlCfg
 }
 
-func (ml *Memberlist) Start(ctx context.Context, peersIPs []string) error {
-	wrapped := backoff.Wrap(ctx, ml.logger, 5, "memberlist",
-		func() error {
-			_, err := ml.list.Join(peersIPs)
-			return err
-		})
+func (c *Cluster) Join(seeds []string) (int, error) {
+	return c.list.Join(seeds)
+}
 
-	err := wrapped()
-	if err != nil {
-		return err
+func (c *Cluster) NumMembers() int {
+	return c.list.NumMembers()
+}
+
+// Shutdown leaves before closing so peers see the node as left, not dead: a
+// planned restart must not look like a failure.
+func (c *Cluster) Shutdown() error {
+	defer close(c.stop)
+
+	if err := c.list.Leave(leaveTimeout); err != nil {
+		c.logger.Warn("memberlist leave failed, forcing shutdown", "error", err)
 	}
 
-	ml.logger.Info("memberlist started successfully")
+	if err := c.list.Shutdown(); err != nil {
+		return fmt.Errorf("shutdown memberlist: %w", err)
+	}
+
 	return nil
-}
-
-// BroadcastNodesNumber sends current total nodes count to all cluster members
-func (ml *Memberlist) BroadcastNodesNumber(nodesNumber int) {
-	ml.delegate.BroadcastNodesNumber(nodesNumber)
-}
-
-func (ml *Memberlist) Stop() {
-	tmpTimeout := 3 * time.Second
-	if err := ml.list.Leave(tmpTimeout); err != nil {
-		ml.logger.Error("failed to leave cluster, shutdown", sl.Err(err))
-		if err = ml.list.Shutdown(); err != nil {
-			ml.logger.Error("failed to shutdown", sl.Err(err))
-			return
-		}
-		ml.logger.Info("shutdown successfully")
-		return
-	}
-	ml.logger.Info("left cluster correctly")
-}
-
-func (ml *Memberlist) NumMembers() int {
-	return ml.list.NumMembers()
 }

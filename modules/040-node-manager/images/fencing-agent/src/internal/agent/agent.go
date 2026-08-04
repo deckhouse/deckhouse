@@ -1,0 +1,121 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package agent
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"golang.org/x/sync/errgroup"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/adapters/kubeclient"
+	"fencing-agent/internal/adapters/memberlist"
+	"fencing-agent/internal/config"
+	"fencing-agent/internal/controllers/health"
+	"fencing-agent/internal/domain"
+	"fencing-agent/internal/usecase/join"
+)
+
+type Agent struct {
+	cfg      *config.Config
+	deps     Deps
+	identity domain.NodeIdentity
+	logger   *log.Logger
+}
+
+func New(cfg *config.Config, deps Deps, identity domain.NodeIdentity, logger *log.Logger) *Agent {
+	return &Agent{
+		cfg:      cfg,
+		deps:     deps,
+		identity: identity,
+		logger:   logger,
+	}
+}
+
+func (a *Agent) Run(ctx context.Context) error {
+	if a.deps.K8sClient == nil || a.deps.FencingClient == nil {
+		return errors.New("agent dependencies are not wired: K8sClient and FencingClient are required")
+	}
+
+	a.logger.Info("fencing-agent starting",
+		"node", a.identity.Name,
+		"node_uid", a.identity.UID,
+		"node_ip", a.identity.IP,
+		"node_group", a.cfg.NodeGroup,
+		"profile", a.cfg.ProfileRefName,
+		"memberlist_port", a.cfg.MemberlistPort,
+		"watchdog_device", a.cfg.WatchdogDevice,
+		"api_socket_path", a.cfg.APISocketPath,
+	)
+
+	cluster, err := memberlist.New(memberlist.Config{
+		NodeName:      a.identity.Name,
+		NodeGroup:     a.cfg.NodeGroup,
+		AdvertiseAddr: a.identity.IP,
+		Port:          a.cfg.MemberlistPort,
+	}, a.logger)
+	if err != nil {
+		return fmt.Errorf("create gossip network: %w", err)
+	}
+
+	defer func() {
+		if shutdownErr := cluster.Shutdown(); shutdownErr != nil {
+			a.logger.Error("shutdown gossip network", "error", shutdownErr)
+		}
+	}()
+
+	joiner := join.New(kubeclient.NewNodes(a.deps.K8sClient), cluster, join.Params{
+		NodeName:         a.identity.Name,
+		NodeIP:           a.identity.IP,
+		NodeGroup:        a.cfg.NodeGroup,
+		MemberlistPort:   a.cfg.MemberlistPort,
+		APITimeout:       a.cfg.KubernetesAPITimeout,
+		RetryInterval:    a.cfg.RejoinInterval,
+		MaxRetryInterval: a.cfg.RejoinMaxInterval,
+	}, a.logger)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		return health.NewServer(a.cfg.HealthProbeBindAddress, a.logger, joiner.Joined).Run(gctx)
+	})
+
+	g.Go(func() error {
+		joiner.Bootstrap(gctx)
+
+		if gctx.Err() != nil {
+			return nil
+		}
+
+		a.logger.Info("gossip network joined, fencing flow is not started")
+
+		<-gctx.Done()
+
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	a.logger.Info("fencing-agent stopped")
+
+	return nil
+}
