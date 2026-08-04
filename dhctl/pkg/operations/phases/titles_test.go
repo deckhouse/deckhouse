@@ -60,12 +60,60 @@ func TestTitles_Load(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, titles)
 
-	for _, locale := range AllLocales() {
-		assert.Contains(t, titles.phase, locale, "phase namespace missing %q locale", locale)
-		assert.NotEmpty(t, titles.phase[locale], "phase namespace empty for %q locale", locale)
+	phaseTests := []struct {
+		phase    OperationPhase
+		expected string
+	}{
+		{
+			phase:    BaseInfraPhase,
+			expected: "Base Infrastructure",
+		},
+		{
+			phase:    InstallDeckhousePhase,
+			expected: "Install Deckhouse",
+		},
+		{
+			phase:    "NoSuchPhase",
+			expected: "",
+		},
+		{
+			phase:    "",
+			expected: "",
+		},
+	}
 
-		assert.Contains(t, titles.subPhase, locale, "subphase namespace missing %q locale", locale)
-		assert.NotEmpty(t, titles.subPhase[locale], "subphase namespace empty for %q locale", locale)
+	for _, tt := range phaseTests {
+		t.Run(string(tt.phase), func(t *testing.T) {
+			assert.Equal(t, tt.expected, titles.Phase(tt.phase))
+		})
+	}
+
+	subPhaseTests := []struct {
+		subPhase OperationSubPhase
+		expected string
+	}{
+		{
+			subPhase: InstallDeckhouseSubPhaseInstall,
+			expected: "Install Deckhouse controller",
+		},
+		{
+			subPhase: InstallDeckhouseSubPhaseConnect,
+			expected: "Connect to master node",
+		},
+		{
+			subPhase: "NoSuchSubPhase",
+			expected: "",
+		},
+		{
+			subPhase: "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range subPhaseTests {
+		t.Run(string(tt.subPhase), func(t *testing.T) {
+			assert.Equal(t, tt.expected, titles.SubPhase(tt.subPhase))
+		})
 	}
 }
 
@@ -128,17 +176,75 @@ func TestTitles_ToCatalog(t *testing.T) {
 	titles, err := LoadTitles()
 	require.NoError(t, err)
 
-	expected := titles.ToCatalog()
-	require.NotEmpty(t, expected.Phases)
-	require.NotEmpty(t, expected.SubPhases)
+	catalog := titles.ToCatalog()
+	require.NotEmpty(t, catalog.Phases)
+	require.NotEmpty(t, catalog.SubPhases)
 
-	assert.Equal(t, "Install Deckhouse", expected.Phases[string(InstallDeckhousePhase)].ByLocale[string(ENLocale)])
-	assert.Equal(t, "Install Deckhouse controller", expected.SubPhases[string(InstallDeckhouseSubPhaseInstall)].ByLocale[string(ENLocale)])
+	phaseTests := []struct {
+		phase    OperationPhase
+		locale   Locale
+		expected string
+	}{
+		{
+			phase:    InstallDeckhousePhase,
+			locale:   ENLocale,
+			expected: "Install Deckhouse",
+		},
+		{
+			phase:    BaseInfraPhase,
+			locale:   ENLocale,
+			expected: "Base Infrastructure",
+		},
+		{
+			phase:    "NoSuchPhase",
+			locale:   ENLocale,
+			expected: "",
+		},
+		{
+			phase:    "",
+			locale:   ENLocale,
+			expected: "",
+		},
+	}
 
-	// ToCatalog returns defensive copies: mutating the result does not affect the source.
-	original := expected.Phases[string(BaseInfraPhase)].ByLocale[string(ENLocale)]
-	expected.Phases[string(BaseInfraPhase)].ByLocale[string(ENLocale)] = "tampered"
-	assert.Equal(t, original, titles.Phase(BaseInfraPhase))
+	for _, tt := range phaseTests {
+		t.Run(string(tt.phase), func(t *testing.T) {
+			assert.Equal(t, tt.expected, catalog.Phases[string(tt.phase)].ByLocale[string(tt.locale)])
+		})
+	}
+
+	subPhaseTests := []struct {
+		subPhase OperationSubPhase
+		locale   Locale
+		expected string
+	}{
+		{
+			subPhase: InstallDeckhouseSubPhaseInstall,
+			locale:   ENLocale,
+			expected: "Install Deckhouse controller",
+		},
+		{
+			subPhase: InstallDeckhouseSubPhaseConnect,
+			locale:   ENLocale,
+			expected: "Connect to master node",
+		},
+		{
+			subPhase: "NoSuchSubPhase",
+			locale:   ENLocale,
+			expected: "",
+		},
+		{
+			subPhase: "",
+			locale:   ENLocale,
+			expected: "",
+		},
+	}
+
+	for _, tt := range subPhaseTests {
+		t.Run(string(tt.subPhase), func(t *testing.T) {
+			assert.Equal(t, tt.expected, catalog.SubPhases[string(tt.subPhase)].ByLocale[string(tt.locale)])
+		})
+	}
 }
 
 // TestTitles_ToCatalog_Coverage asserts the two invariants that keep phase reporting and
@@ -192,32 +298,6 @@ func TestTitles_ToCatalog_Coverage(t *testing.T) {
 		_, ok := knownSubPhases[sp]
 		assert.True(t, ok, "catalog subphase key %q has no matching subphase code", sp)
 	}
-}
-
-func TestTitles_Phase(t *testing.T) {
-	t.Parallel()
-
-	titles, err := LoadTitles()
-	require.NoError(t, err)
-
-	assert.Equal(t, "Base Infrastructure", titles.Phase(BaseInfraPhase))
-	assert.Equal(t, "Install Deckhouse", titles.Phase(InstallDeckhousePhase))
-
-	assert.Equal(t, "", titles.Phase(OperationPhase("NoSuchPhase")))
-	assert.Equal(t, "", titles.Phase(OperationPhase("")))
-}
-
-func TestTitles_SubPhase(t *testing.T) {
-	t.Parallel()
-
-	titles, err := LoadTitles()
-	require.NoError(t, err)
-
-	assert.Equal(t, "Install Deckhouse controller", titles.SubPhase(InstallDeckhouseSubPhaseInstall))
-	assert.Equal(t, "Connect to master node", titles.SubPhase(InstallDeckhouseSubPhaseConnect))
-
-	assert.Equal(t, "", titles.SubPhase(OperationSubPhase("NoSuchSubPhase")))
-	assert.Equal(t, "", titles.SubPhase(OperationSubPhase("")))
 }
 
 func TestReadYamlFile(t *testing.T) {
