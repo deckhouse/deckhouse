@@ -26,7 +26,7 @@ check_changelog:
   extends:
     - .rules:on_tag
   needs: []
-  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/bash:${CI_IMAGES_TAG}
   variables:
     GIT_DEPTH: "0"
   script:
