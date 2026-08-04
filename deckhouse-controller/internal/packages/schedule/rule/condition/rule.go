@@ -31,23 +31,31 @@ type Condition func() bool
 type Rule struct {
 	condition Condition // Function to evaluate
 	reason    string
+	message   string
 }
 
 // NewRule creates a condition rule.
-func NewRule(condition Condition, reason string) *Rule {
+//
+// A condition function returns a bare bool, so it cannot explain itself: message
+// is the caller's description of what an unsatisfied condition means. It is
+// required - on the admission path the reason is dropped and the message is all
+// the user gets, so an empty one denies the request without any explanation.
+func NewRule(condition Condition, reason, message string) *Rule {
 	r := new(Rule)
 
 	r.condition = condition
 	r.reason = reason
+	r.message = message
 
 	return r
 }
 
 // Decide evaluates the condition function: an unmet condition is a hard veto
-// (Forbid) carrying the configured reason; a met condition yields Undefined.
+// (Forbid) carrying the configured reason and message; a met condition yields
+// Undefined.
 func (r *Rule) Decide() rule.Decision {
 	if !r.condition() {
-		return rule.Decision{Kind: rule.Forbid, Reason: r.reason}
+		return rule.Decision{Kind: rule.Forbid, Reason: r.reason, Message: r.message}
 	}
 
 	return rule.Decision{Kind: rule.Undefined}
