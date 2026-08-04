@@ -243,15 +243,12 @@ func sumContainerRequests(containers []v1.Container) (int64, int64) {
 	return milliCPU, memoryBytes
 }
 
-func otherRequestsFromPod(pod *v1.Pod) (int64, int64, bool) {
-	if isAutotunedControlPlanePod(pod) {
-		return 0, 0, false
-	}
+func otherRequestsFromPod(pod *v1.Pod) (int64, int64) {
 	cpu, mem := sumContainerRequests(pod.Spec.Containers)
 	initCPU, initMem := sumContainerRequests(pod.Spec.InitContainers)
 	// Scheduling uses max(init) + sum(app); summing both is a slightly stricter
 	// upper bound and avoids under-estimating reserved capacity.
-	return cpu + initCPU, mem + initMem, true
+	return cpu + initCPU, mem + initMem
 }
 
 // minMasterFitBudget is the tightest free capacity across masters for fitting

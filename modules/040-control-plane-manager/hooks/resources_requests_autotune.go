@@ -367,10 +367,11 @@ func fetchOtherRequestsByMasterNodes(ctx context.Context, dc dependency.Containe
 		}
 		var milliCPU, memoryBytes int64
 		for j := range items {
-			cpu, mem, ok := otherRequestsFromPod(&items[j])
-			if !ok {
+			pod := &items[j]
+			if isAutotunedControlPlanePod(pod) {
 				continue
 			}
+			cpu, mem := otherRequestsFromPod(pod)
 			milliCPU += cpu
 			memoryBytes += mem
 		}
