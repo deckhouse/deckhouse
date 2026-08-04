@@ -614,15 +614,7 @@ func fetchRecs(
 }
 
 func completeComponentRecs(recs map[string]int64) bool {
-	if len(recs) < len(controlPlaneComponents) {
-		return false
-	}
-	for _, comp := range controlPlaneComponents {
-		if _, ok := recs[comp]; !ok {
-			return false
-		}
-	}
-	return true
+	return len(recs) == len(controlPlaneComponents)
 }
 
 // customMetricValueList is the subset of custom.metrics.k8s.io MetricValueList we need.
