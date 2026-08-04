@@ -36,6 +36,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,6 +67,28 @@ type leadership struct {
 }
 
 func (l *leadership) IsLeader() bool { return l.leader.Load() }
+
+// buildScheme registers every kind this process reads or writes.
+//
+// Core types included, and that is not incidental: the storage spec names its credentials
+// instead of carrying them, so a pass has to read a Secret. A scheme without core types does
+// not fail at startup — it fails on the first read, with "no kind is registered for the type
+// v1.Secret", which leaves this replica unable to render a configuration and the registry
+// beside it crash-looping on a config file that never appears. Nothing about that error
+// mentions a scheme.
+//
+// A function so it can be asserted. Tests build their own schemes and would never have caught
+// this one being short.
+func buildScheme() (*runtime.Scheme, error) {
+	scheme := runtime.NewScheme()
+	if err := registryv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("building the scheme: %w", err)
+	}
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("adding the core types to the scheme: %w", err)
+	}
+	return scheme, nil
+}
 
 func main() {
 	var (
@@ -167,9 +190,9 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		return fmt.Errorf("reading the cluster configuration: %w", err)
 	}
 
-	scheme := runtime.NewScheme()
-	if err := registryv1alpha1.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("building the scheme: %w", err)
+	scheme, err := buildScheme()
+	if err != nil {
+		return err
 	}
 
 	kubeClient, err := client.New(restConfig, client.Options{Scheme: scheme})

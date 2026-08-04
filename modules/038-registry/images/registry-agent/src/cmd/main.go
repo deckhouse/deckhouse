@@ -37,6 +37,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -61,6 +62,27 @@ import (
 // `system:nodes` group, and the layout objects are readable by that group precisely
 // because they carry no per-node secrets.
 const DefaultKubeconfig = "/etc/kubernetes/kubelet.conf"
+
+// buildScheme registers every kind this agent reads or writes.
+//
+// Core types included, because a layout names its credentials rather than carrying them and
+// resolving one means reading a Secret. Left out, the read fails with "no kind is registered
+// for the type v1.Secret" — and the agent treats a failed resolution as an unreachable API,
+// so it quietly falls back to the layout it was installed with and reports success. The node
+// keeps pulling, nothing looks broken, and the layout the cluster is actually trying to apply
+// never takes effect.
+//
+// A function so it can be asserted, because the failure above is invisible from the outside.
+func buildScheme() (*runtime.Scheme, error) {
+	scheme := runtime.NewScheme()
+	if err := registryv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("building the scheme: %w", err)
+	}
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("adding the core types to the scheme: %w", err)
+	}
+	return scheme, nil
+}
 
 func main() {
 	var (
@@ -242,13 +264,12 @@ func run(ctx context.Context, log *slog.Logger, opts options) error {
 // The fallback exists for the service account path: the kubelet's credentials are the
 // default, but a node may be running the agent before the kubelet has any.
 func newClient(kubeconfig string) (client.Client, error) {
-	scheme := runtime.NewScheme()
-	if err := registryv1alpha1.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("building the scheme: %w", err)
+	scheme, err := buildScheme()
+	if err != nil {
+		return nil, err
 	}
 
 	var config *rest.Config
-	var err error
 
 	if _, statErr := os.Stat(kubeconfig); statErr == nil {
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
