@@ -65,6 +65,12 @@ const (
 	pathGlobalMemory = "global.modules.resourcesRequests.controlPlane.memory"
 )
 
+// measurementOverridePaths is ModuleConfig then global fallback for each measurement.
+var measurementOverridePaths = map[resourceKind][]string{
+	resourceCPU:    {pathCPMCPU, pathGlobalCPU},
+	resourceMemory: {pathCPMMemory, pathGlobalMemory},
+}
+
 // controlPlaneComponents lists components in a stable order.
 var controlPlaneComponents = []string{
 	componentKubeApiserver,
@@ -314,23 +320,11 @@ func getAndParseResourceQuantity(input gjson.Result) (resource.Quantity, error) 
 	return quantity, nil
 }
 
-// measurementOverridePaths returns ModuleConfig then global fallback paths for a measurement.
-func measurementOverridePaths(resourceName resourceKind) []string {
-	switch resourceName {
-	case resourceCPU:
-		return []string{pathCPMCPU, pathGlobalCPU}
-	case resourceMemory:
-		return []string{pathCPMMemory, pathGlobalMemory}
-	default:
-		return nil
-	}
-}
-
 // isMeasurementOverridden is true when CPM or global config sets a non-empty quantity
 // for the measurement. Empty strings left by openapi/merge after clearing ModuleConfig
 // are ignored so autotune is not permanently skipped.
 func isMeasurementOverridden(input *go_hook.HookInput, resourceName resourceKind) bool {
-	for _, path := range measurementOverridePaths(resourceName) {
+	for _, path := range measurementOverridePaths[resourceName] {
 		if configQuantityPresent(input.Values.Get(path)) {
 			return true
 		}
