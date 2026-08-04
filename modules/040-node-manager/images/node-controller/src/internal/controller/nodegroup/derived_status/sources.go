@@ -45,7 +45,6 @@ const (
 	deckhouseDefaultK8sVersionKey = "deckhouseDefaultKubernetesVersion"
 	clusterUUIDConfigMapName      = "d8-cluster-uuid"
 	clusterUUIDConfigMapNS        = "kube-system"
-	nodeManagerModuleConfigName   = "node-manager"
 
 	instanceTypesCatalogName = "for-cluster-autoscaler"
 	instanceClassGroup       = "deckhouse.io"
@@ -132,24 +131,6 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 		}
 	}
 	return target, cfg.DefaultCRI
-}
-
-// readDefaultCRIFromModuleConfig returns spec.settings.defaultCRI from the
-// node-manager ModuleConfig, or an empty string when the ModuleConfig or the
-// field is absent. Because the raw object is read (not an addon-operator value
-// with a default), an empty result unambiguously means "not set", so the caller
-// treats any non-empty value as an explicit choice that wins over the deprecated
-// ClusterConfiguration.defaultCRI. The ModuleConfig is optional, so a missing
-// object, CRD/kind, or read error falls back to an empty string. This mirrors
-// the webhook's loadDefaultCRIFromModuleConfig so validation and rendering agree.
-func (s *Service) readDefaultCRIFromModuleConfig(ctx context.Context) string {
-	mc := &unstructured.Unstructured{}
-	mc.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"})
-	if err := s.Client.Get(ctx, types.NamespacedName{Name: nodeManagerModuleConfigName}, mc); err != nil {
-		return ""
-	}
-	cri, _, _ := unstructured.NestedString(mc.Object, "spec", "settings", "defaultCRI")
-	return cri
 }
 
 // readControlPlaneMinVersion returns the lowest version among the running kube-apiservers,
