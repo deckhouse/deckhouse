@@ -523,12 +523,16 @@ func emitCapacityBlockedMetrics(input *go_hook.HookInput, state *autotuneState) 
 // autotune state so templates use the fixed %-split of milliCpuControlPlane /
 // memoryControlPlane from the legacy calculate hook.
 func discardAutotuneForLegacy(input *go_hook.HookInput) error {
-	input.Logger.Info("autotune: prometheus or prometheus-metrics-adapter disabled, discarding autotune and falling back to legacy combined budget")
 	input.MetricsCollector.Expire(autotuneMetricGroup)
 	if input.Values.Exists(pathComponents) {
 		input.Values.Remove(pathComponents)
 	}
-	input.PatchCollector.Delete("v1", "ConfigMap", kubeSystemNS, autotuneStateCMName)
+	// Only delete when the CM is in snapshots — otherwise every OnBeforeHelm /
+	// schedule tick on clusters without PMA would spam Delete for a missing object.
+	if len(input.Snapshots.Get("AutotuneState")) > 0 {
+		input.Logger.Info("autotune: prometheus or prometheus-metrics-adapter disabled, discarding autotune and falling back to legacy combined budget")
+		input.PatchCollector.Delete("v1", "ConfigMap", kubeSystemNS, autotuneStateCMName)
+	}
 	return nil
 }
 
@@ -672,7 +676,6 @@ func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric stri
 
 	var list customMetricValueList
 	if err := json.Unmarshal(body, &list); err != nil {
-		snippet := string(body)
 		return 0, false, fmt.Errorf("decode metrics response for %s: %w; body=%.256s", podName, err, body)
 	}
 	if len(list.Items) == 0 {
