@@ -18,23 +18,14 @@ package requirements
 
 import (
 	"errors"
-	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
 const (
 	minK8sVersionRequirementKey = "controlPlaneManager:minUsedControlPlaneKubernetesVersion"
-
-	// kubernetesVersionMigratedRequirementsKey is what a DeckhouseRelease declares under
-	// requirements: (T+1 declare). The matching SaveValue key lives in hooks — see
-	// hooks.KubernetesVersionMigratedRequirementKey.
-	kubernetesVersionMigratedRequirementsKey = "kubernetesVersionMigrated"
 )
 
 func init() {
@@ -60,52 +51,4 @@ func init() {
 	}
 
 	requirements.RegisterCheck("k8s", f)
-	requirements.RegisterCheck(kubernetesVersionMigratedRequirementsKey, checkKubernetesVersionMigrated)
-}
-
-// checkKubernetesVersionMigrated blocks a DeckhouseRelease that requires ModuleConfig
-// control-plane-manager to have kubernetesVersion set.
-//
-// requirementValue comes from the release. No release declares this key yet, so the check is inert.
-//
-// TODO(kubernetesVersion-deprecation): T+1 verify — stand-check with a test DeckhouseRelease
-// before arming the real gate.
-//
-// TODO(kubernetesVersion-deprecation): T+1 declare — add kubernetesVersionMigrated: "true" to
-// DeckhouseRelease requirements in the release AFTER ASAP migrate + CC strip; never co-ship with ASAP.
-func checkKubernetesVersionMigrated(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-	requirementValue = strings.TrimSpace(requirementValue)
-	if requirementValue == "" {
-		return true, nil
-	}
-	gateEnabled, err := strconv.ParseBool(requirementValue)
-	if err != nil {
-		return false, fmt.Errorf("invalid %s requirement value %q: %w", kubernetesVersionMigratedRequirementsKey, requirementValue, err)
-	}
-	if !gateEnabled {
-		return true, nil
-	}
-
-	migratedRaw, exists := getter.Get(hooks.KubernetesVersionMigratedRequirementKey)
-	if !exists {
-		// Hook has not published yet (startup race). Fail open — same posture as other boolean gates.
-		return true, nil
-	}
-
-	migrated, ok := migratedRaw.(bool)
-	if !ok {
-		return false, fmt.Errorf("invalid %s value type", hooks.KubernetesVersionMigratedRequirementKey)
-	}
-
-	if migrated {
-		return true, nil
-	}
-
-	return false, errors.New(
-		"kubernetesVersion is not set in ModuleConfig control-plane-manager.\n" +
-			"Set it before upgrading (pin a version, or Default to track the Deckhouse default):\n" +
-			"  d8 k patch moduleconfig control-plane-manager --type merge -p " +
-			`'{"spec":{"version":3,"settings":{"kubernetesVersion":"Default"}}}'` + "\n" +
-			"If ClusterConfiguration still pins a version, copy that value into ModuleConfig instead of Default.",
-	)
 }

@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -49,11 +48,6 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: alert_migrate_kub
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(metricIsSet()).To(Equal(expectSet))
-
-			// Same predicate feeds the T+1 release gate; keep alert and requirement in lockstep.
-			migrated, exists := requirements.GetValue(KubernetesVersionMigratedRequirementKey)
-			Expect(exists).To(BeTrue())
-			Expect(migrated.(bool)).To(Equal(!expectSet))
 		},
 		// Conscious fleet spam: unset ModuleConfig kubernetesVersion always fires.
 		Entry("MC unset — fires", "", true),
