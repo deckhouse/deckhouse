@@ -139,13 +139,6 @@ func (c *Client) DebugLog(format string, args ...interface{}) {
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
 	ch := buildChart(c.templates, project.Name)
 
-	// Repeated here rather than left to admission: the release is applied with cluster-admin, and a
-	// project can reach this point without a passing admission check -- the webhook may be bypassed,
-	// and an object admitted before this check existed is reconciled just the same.
-	if err := c.ensureParametersStayValues(project, template); err != nil {
-		return err
-	}
-
 	versions, err := c.discoverAPI()
 	if err != nil {
 		return fmt.Errorf("discover api: %w", err)
@@ -160,6 +153,15 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 		if errors.Is(err, driver.ErrReleaseNotFound) {
 			isFirstInstall = true
 			c.logger.Info("the release not found, install it", "release", project.Name, "namespace", project.Name)
+
+			// Repeated here rather than left to admission: the release is applied with
+			// cluster-admin, and a project can reach this point without a passing admission check --
+			// the webhook may be bypassed, and an object admitted before this check existed is
+			// reconciled just the same.
+			if err = c.ensureParametersStayValues(project, template); err != nil {
+				return err
+			}
+
 			post := newPostRenderer(project, versions, c.logger, isFirstInstall)
 			install := action.NewInstall(c.conf)
 			install.ReleaseName = project.Name
@@ -184,6 +186,14 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			c.logger.Info("the release is up to date", "release", project.Name, "namespace", project.Name)
 			return nil
 		}
+	}
+
+	// Below the up-to-date return above, and not at the top of this method: an unchanged release
+	// applies nothing, so re-checking it could only refuse a project that already reconciled --
+	// which a module upgrade would then do to every project whose template turns a parameter into
+	// structure on purpose.
+	if err = c.ensureParametersStayValues(project, template); err != nil {
+		return err
 	}
 
 	if releases[0].Info.Status.IsPending() {
@@ -374,8 +384,9 @@ func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.Pr
 	}
 
 	// Before post-rendering: injected manifests tend to fail there too, and "post render: yaml: line
-	// 6: ..." says nothing about the parameter that caused it.
-	if err = c.ensureParametersStayValues(project, template); err != nil {
+	// 6: ..." says nothing about the parameter that caused it. Reuses the render above rather than
+	// asking for its own.
+	if err = c.ensureRenderedParametersStayValues(project, template, manifests); err != nil {
 		return err
 	}
 

@@ -41,41 +41,56 @@ var ErrParameterInjection = errors.New("a project parameter changes the structur
 // applied by a ServiceAccount bound to cluster-admin, so such an object is applied with cluster-admin.
 var lineBreakToSpace = strings.NewReplacer("\n", " ", "\r", " ", "\u0085", " ", "\u2028", " ", "\u2029", " ")
 
-// ensureParametersStayValues refuses parameters that render into structure instead of into values.
-//
-// Quoting every substitution in the shipped templates fixes those templates. It cannot fix the ones
-// a cluster administrator writes: a ProjectTemplate is free-form text, and its author is not obliged
-// to know that an unquoted substitution ends at the first line break. This check is what covers them,
-// and it needs no knowledge of the template at all.
-//
-// The method: render the template twice, once with the parameters as given and once with every line
-// break in them replaced by a space, then compare the two outputs as sets of objects, with the same
-// replacement applied to every string inside. For an input that carries no line breaks the two
-// renders are identical by construction, so there is nothing to report; for an input whose line
-// breaks only ever land inside a value -- a quoted substitution, a block scalar -- the outputs differ
-// in that value alone, and the replacement makes them equal again. What is left is the case where the
-// value produced structure, and that is exactly what is refused.
+// ensureParametersStayValues renders the template and checks that no parameter became structure in
+// it. Callers that have the render already should use ensureRenderedParametersStayValues.
 func (c *Client) ensureParametersStayValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	// A project without parameters has nothing that could become structure. Checked separately
-	// because the rewrite below turns no parameters into empty ones, which do not compare equal.
-	if len(project.Spec.Parameters) == 0 {
+	if _, carries := sanitizedParameters(project); !carries {
 		return nil
 	}
-
-	parameters := rewriteStringsIn(project.Spec.Parameters, lineBreakToSpace.Replace)
-	if reflect.DeepEqual(parameters, project.Spec.Parameters) {
-		// Nothing in them can end a scalar, so nothing in them can produce structure and the second
-		// render would be the same as the first.
-		return nil
-	}
-
-	sanitized := project.DeepCopy()
-	sanitized.Spec.Parameters = parameters
 
 	actual, err := c.renderTemplate(project, template)
 	if err != nil {
 		return err
 	}
+
+	return c.ensureRenderedParametersStayValues(project, template, actual)
+}
+
+// ensureRenderedParametersStayValues refuses parameters that render into structure instead of into
+// values, given the manifests the project renders into as it stands.
+//
+// Quoting every substitution in the shipped templates fixes those templates. It cannot fix the ones
+// a cluster administrator writes: a ProjectTemplate is free-form text, and its author is not obliged
+// to know that an unquoted substitution ends at the first line break. This check is what covers them
+// -- that one escape, in any template, without reading the template.
+//
+// The method: render the template a second time with every line break in the parameters replaced by
+// a space, then compare the two outputs as sets of objects, with the same replacement applied to
+// every string inside. For an input that carries no line breaks the two renders are identical by
+// construction, so there is nothing to report; for an input whose line breaks only ever land inside
+// a value -- a quoted substitution, a block scalar -- the outputs differ in that value alone, and the
+// replacement makes them equal again. What is left is the case where the value produced structure,
+// and that is what is refused, in either direction: an object the parameter conjured and an object
+// it made disappear are equally interesting, since suppressing the Isolated NetworkPolicy or the
+// ResourceQuota buys an attacker as much as adding a ClusterRoleBinding.
+//
+// What this does not cover: a substitution inside a YAML flow context ({...}, [...]) needs no line
+// break to add a key or a list item, and such a parameter passes here untouched. It is bounded --
+// a new document requires a --- at the start of a line, so a flow-style payload cannot conjure an
+// object of its own -- but it is not nothing.
+//
+// A template that fans a parameter out on its line breaks (splitList "\n") or reads YAML out of one
+// (fromYaml) is refused as well: it does turn the parameter into structure, and nothing here can
+// tell that structure from an injected one. That is why the check runs where a release is about to
+// be applied rather than on every reconcile -- a project that already reconciled is left alone.
+func (c *Client) ensureRenderedParametersStayValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate, actual string) error {
+	parameters, carries := sanitizedParameters(project)
+	if !carries {
+		return nil
+	}
+
+	sanitized := project.DeepCopy()
+	sanitized.Spec.Parameters = parameters
 
 	expected, err := c.renderTemplate(sanitized, template)
 	if err != nil {
@@ -97,18 +112,37 @@ func (c *Client) ensureParametersStayValues(project *v1alpha2.Project, template 
 		return fmt.Errorf("%w: %w", ErrParameterInjection, err)
 	}
 
-	if extra := extraObjects(actualObjects, expectedObjects); len(extra) > 0 {
-		return fmt.Errorf("%w: %s", ErrParameterInjection, strings.Join(extra, ", "))
+	if added := extraObjects(actualObjects, expectedObjects); len(added) > 0 {
+		return fmt.Errorf("%w, adding: %s", ErrParameterInjection, strings.Join(added, ", "))
+	}
+
+	if removed := extraObjects(expectedObjects, actualObjects); len(removed) > 0 {
+		return fmt.Errorf("%w, removing: %s", ErrParameterInjection, strings.Join(removed, ", "))
 	}
 
 	return nil
 }
 
-// extraObjects describes every object the first render produces that the second one does not.
-func extraObjects(actual, expected map[string]string) []string {
+// sanitizedParameters returns the parameters with their line breaks replaced, and whether they
+// carried any. Nothing in them that can end a scalar means the second render would repeat the first,
+// so the check has nothing to compare.
+func sanitizedParameters(project *v1alpha2.Project) (map[string]any, bool) {
+	// A project without parameters is answered separately: the rewrite turns no parameters into
+	// empty ones, and DeepEqual does not call an empty map equal to a nil one.
+	if len(project.Spec.Parameters) == 0 {
+		return nil, false
+	}
+
+	parameters := rewriteStringsIn(project.Spec.Parameters, lineBreakToSpace.Replace)
+
+	return parameters, !reflect.DeepEqual(parameters, project.Spec.Parameters)
+}
+
+// extraObjects describes every object the first map has and the second does not.
+func extraObjects(first, second map[string]string) []string {
 	var extra []string
-	for canonical, description := range actual {
-		if _, ok := expected[canonical]; !ok {
+	for canonical, description := range first {
+		if _, ok := second[canonical]; !ok {
 			extra = append(extra, description)
 		}
 	}

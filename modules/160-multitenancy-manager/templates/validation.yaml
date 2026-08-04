@@ -25,9 +25,10 @@ spec:
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-restartedAt'
-      # On CREATE there is no oldObject to compare against, and reading through it would fail the
-      # condition itself -- which, with failurePolicy: Fail, would deny the request instead of
-      # letting the rule below answer it.
+      # This condition exempts a rollout restart, which needs two objects to compare; on CREATE
+      # there is only one. Said outright rather than left to the has() chain below, which reaches
+      # the same answer only because a presence test on a null oldObject is false rather than an
+      # error.
       expression: 'oldObject == null || !((has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
           && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata))
           && ((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
@@ -40,15 +41,22 @@ spec:
           && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
           && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
           != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"])))'
+  variables:
+    # DELETE carries no object, so the one to name in the message is whichever of the two is there.
+    # A messageExpression that fails is not an error the apiserver reports: it falls back to the
+    # static message, and a denied delete would lose the name of the project it belongs to.
+    - name: subject
+      expression: 'object == null ? oldObject : object'
   validations:
     - expression: 'request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"'
       reason: Forbidden
+      message: 'This resource is managed by the multitenancy-manager module. Manual modification is forbidden.'
       # A cluster-scoped object has no namespace to name, and now that CREATE is matched it reaches
       # this expression as well.
-      messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed
-            by '' + object.metadata.name + '' Project. Manual modification is forbidden.''
-            : (has(object.metadata.namespace) && object.metadata.namespace != ''''
-            ? ''This resource is managed by '' + object.metadata.namespace + '' Project. Manual modification is forbidden.''
+      messageExpression: 'variables.subject.kind == ''Namespace'' ? ''This resource is managed
+            by '' + variables.subject.metadata.name + '' Project. Manual modification is forbidden.''
+            : (has(variables.subject.metadata.namespace) && variables.subject.metadata.namespace != ''''
+            ? ''This resource is managed by '' + variables.subject.metadata.namespace + '' Project. Manual modification is forbidden.''
             : ''This resource is managed by the multitenancy-manager module. Manual modification is forbidden.'')'
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}

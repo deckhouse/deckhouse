@@ -128,8 +128,11 @@ spec:
             If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
             The names of the custom resource must be specified in the `clusterLogDestinationName` field.
           type: string
-          # The value names a ClusterLogDestination, so it is a Kubernetes object name and nothing else.
-          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+          # The value names a ClusterLogDestination, so it is a Kubernetes object name and nothing
+          # else. Empty stays allowed: the template skips the whole block for it, which is how
+          # logging is turned off, and refusing it here would break such a project on its next
+          # reconcile rather than on its next edit.
+          pattern: '^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)?$'
   resourcesTemplate: |
     ---
     apiVersion: v1

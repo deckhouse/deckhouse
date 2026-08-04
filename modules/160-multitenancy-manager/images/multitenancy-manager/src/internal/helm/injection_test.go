@@ -133,6 +133,35 @@ spec:
 			messagePart: "PodLoggingConfig deckhouse.io/v1alpha1/logs",
 		},
 		{
+			// The other direction: the line break costs the project an object instead of gaining it
+			// one. Suppressing the NetworkPolicy that isolates a project is worth as much to an
+			// attacker as adding a ClusterRoleBinding, so the comparison has to look both ways.
+			name: "a suppressed object",
+			template: func(*testing.T) *v1alpha1.ProjectTemplate {
+				return customTemplate("tier", `
+{{- if eq .parameters.tier "gold plated" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolated
+spec:
+  podSelector: {}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tier
+data:
+  tier: {{ .parameters.tier | quote }}
+`)
+			},
+			parameters:  map[string]any{"tier": "gold\nplated"},
+			refused:     true,
+			messagePart: "removing: NetworkPolicy networking.k8s.io/v1/isolated",
+		},
+		{
 			// Refusing this would make the check unusable for templates that legitimately take a
 			// multi-line parameter.
 			name: "a multi-line value in a quoted field",
@@ -241,6 +270,42 @@ func TestAdministratorNameWithLineBreakIsRefusedBySchema(t *testing.T) {
 			err := validate.Project(project, template)
 			require.Error(t, err, "the schema accepted a subject name carrying a line break")
 			assert.Contains(t, err.Error(), "administrators")
+		})
+	}
+}
+
+// Pinning the log destination to a Kubernetes object name must not take the empty string with it:
+// the template skips the whole logging block for it, so that is how a project turns logging off, and
+// the schema is checked on every reconcile rather than only on edit -- refusing it would have broken
+// such a project without anybody touching it.
+func TestEmptyLogDestinationStaysAllowed(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{"default", "secure", "secure-with-dedicated-nodes"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			template := shippedTemplate(t, name)
+			require.NoError(t, validate.ProjectTemplate(template))
+
+			project := new(v1alpha2.Project)
+			project.Name = "test"
+			project.Spec.ProjectTemplateName = name
+			project.Spec.Parameters = map[string]any{
+				"resourceQuota":             map[string]any{"requests": map[string]any{"cpu": "1"}},
+				"administrators":            []any{map[string]any{"subject": "User", "name": "user@example.com"}},
+				"clusterLogDestinationName": "",
+			}
+
+			require.NoError(t, validate.Project(project, template))
+
+			manifests, err := injectionTestClient(t).renderTemplate(project, template)
+			require.NoError(t, err)
+			assert.NotContains(t, manifests, "PodLoggingConfig", "an empty destination still rendered the logging block")
+
+			// And the pattern still does its work on a value that is not empty.
+			project.Spec.Parameters["clusterLogDestinationName"] = "loki\n---"
+			assert.Error(t, validate.Project(project, template))
 		})
 	}
 }
