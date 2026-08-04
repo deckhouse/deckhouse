@@ -1170,3 +1170,50 @@ var _ = Describe("Module :: registry :: helm template :: the storage runs as roo
 		Expect(security.Get("seccompProfile.type").String()).To(Equal("RuntimeDefault"))
 	})
 })
+
+// Who may sign a token, and who may only check one.
+//
+// The registry answers the network; the auth service beside it issues the tokens the registry
+// checks. Both facts have to hold at once: the signer needs the private key, and the registry
+// must not have it — otherwise a compromised registry can mint a token granting more than it
+// already holds. Getting this wrong in either direction is quiet. Without the key the auth
+// container cannot start and every pull fails with a 401 raised two containers away; with the
+// key in the shared mount nothing fails at all and the property is simply gone.
+var _ = Describe("Module :: registry :: helm template :: only the auth service can sign tokens", func() {
+	f := SetupHelmConfig(``)
+
+	BeforeEach(func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("registry", v2Enabled)
+		f.HelmRender()
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+	})
+
+	It("gives the signing key to the auth service and to nothing else", func() {
+		authConfig := f.KubernetesResource("Secret", "d8-system", "registry-storage-auth-config")
+		Expect(authConfig.Exists()).To(BeTrue())
+		// stringData, because that is how this secret is written: the config is meant to be
+		// readable in a manifest review, and the key travels with it.
+		Expect(authConfig.Field("stringData").Get("token\\.key").Exists()).To(BeTrue(),
+			"without the signing key the auth service cannot start, and no pull can be authorized")
+
+		pki := f.KubernetesResource("Secret", "d8-system", "registry-storage-pki")
+		Expect(pki.Exists()).To(BeTrue())
+		Expect(pki.Field("data").Get("token\\.crt").Exists()).To(BeTrue(),
+			"the registry verifies tokens, so it needs the certificate")
+		Expect(pki.Field("data").Get("token\\.key").Exists()).To(BeFalse(),
+			"the registry answers the network; it must not be able to issue tokens")
+	})
+
+	It("points the auth service at the key it actually has", func() {
+		authConfig := f.KubernetesResource("Secret", "d8-system", "registry-storage-auth-config")
+		config := authConfig.Field("stringData").Get("auth_config\\.yaml").String()
+		Expect(config).NotTo(BeEmpty())
+
+		// The path has to name the mount only this container has, not the shared one.
+		Expect(config).To(ContainSubstring(`key: "/auth/token.key"`))
+		Expect(config).NotTo(ContainSubstring(`key: "/pki/token.key"`),
+			"the shared PKI does not carry the signing key, so this path cannot resolve")
+	})
+})
