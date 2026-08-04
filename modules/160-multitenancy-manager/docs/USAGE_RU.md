@@ -7,12 +7,14 @@ title: "Модуль multitenancy-manager: примеры использован
 
 В Deckhouse Kubernetes Platform есть набор шаблонов для создания проектов:
 
+- `simple` — минимальный шаблон, создающий только пространство имён проекта (с возможностью задать дополнительные лейблы и аннотации). Используйте его, когда нужно лишь изолированное пространство имён, управляемое как проект, а доступ и ограничения настраиваются через [стандартные поля](#стандартные-поля-проекта) и [привязки ролей проекта](#предоставление-доступа-внутри-проекта).
+
+  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/simple.yaml).
+
 - `default` — шаблон для базовых сценариев использования проектов:
-  - ограничение ресурсов;
   - сетевая изоляция;
   - автоматические алерты и сбор логов;
-  - выбор профиля безопасности;
-  - настройка администраторов проекта.
+  - выбор профиля безопасности.
 
     Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/default.yaml).
 
@@ -29,6 +31,8 @@ title: "Модуль multitenancy-manager: примеры использован
 
   Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure-with-dedicated-nodes.yaml).
 
+Шаблоны `default`, `secure` и `secure-with-dedicated-nodes` описаны в [структурированном виде](#структурированные-шаблоны) (`deckhouse.io/v1alpha2`); шаблон `simple` — минимальный устаревший (`v1alpha1`) шаблон.
+
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
 ```shell
@@ -37,35 +41,44 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 ## Создание проекта
 
-1. Для создания проекта создайте ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename).
-1. В параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) ресурса Project укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса ProjectTemplate.
+1. Для создания проекта создайте ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha3-spec-projecttemplatename).
+1. Задайте [стандартные поля](#стандартные-поля-проекта) — [.spec.administrators](cr.html#project-v1alpha3-spec-administrators) и [.spec.quota](cr.html#project-v1alpha3-spec-quota), — которые теперь управляются непосредственно ресурсом Project независимо от шаблона.
+1. В параметре [.spec.parameters](cr.html#project-v1alpha3-spec-parameters) ресурса Project укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса ProjectTemplate.
 
    Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha2
+   apiVersion: deckhouse.io/v1alpha3
    kind: Project
    metadata:
      name: my-project
    spec:
      description: This is an example from the Deckhouse documentation.
      projectTemplateName: default
+     # Стандартные поля, управляемые самим ресурсом Project.
+     administrators:
+       - kind: Group
+         name: k8s-admins
+     quota:
+       requests.cpu: "5"
+       requests.memory: 5Gi
+       requests.storage: 1Gi
+       limits.cpu: "5"
+       limits.memory: 5Gi
+     # Параметры конкретного шаблона.
      parameters:
-       resourceQuota:
-         requests:
-           cpu: 5
-           memory: 5Gi
-           storage: 1Gi
-         limits:
-           cpu: 5
-           memory: 5Gi
        networkPolicy: Isolated
        podSecurityProfile: Restricted
        extendedMonitoringEnabled: true
-       administrators:
-       - subject: Group
-         name: k8s-admins
    ```
+
+   {% endraw %}
+
+   {% alert level="info" %}
+   API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Старые манифесты `v1alpha1`/`v1alpha2` продолжают работать: webhook конвертации автоматически переносит `parameters.administrators` и `parameters.resourceQuota` в стандартные поля `.spec.administrators` и `.spec.quota`.
+   {% endalert %}
+
+   {% raw %}
 
 1. Для проверки статуса проекта выполните команду:
 
@@ -75,9 +88,154 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
    Успешно созданный проект должен отображаться в статусе `Deployed` (синхронизирован). Если отображается статус `Error` (ошибка), добавьте аргумент `-o yaml` к команде (например, `d8 k get projects my-project -o yaml`) для получения более подробной информации о причине ошибки.
 
-### Автоматическое создание проекта для пространства имён
+### Проект без шаблона
 
-Для пространства имён возможно создать новый проект. Для этого пометьте пространство имён аннотацией `projects.deckhouse.io/adopt`. Например:
+Поле `projectTemplateName` необязательно. Проект без шаблона состоит только из пространства имён и [стандартных полей](#стандартные-поля-проекта) (администраторы, квота) — никакие политики из шаблонов в нём не создаются. Это удобно, когда настройки не нужны или управляются другими средствами:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: my-plain-project
+spec:
+  administrators:
+    - kind: Group
+      name: k8s-admins
+  quota:
+    requests.cpu: "2"
+```
+
+Шаблон можно назначить позже, указав его в `.spec.projectTemplateName`.
+
+### Правила именования проектов
+
+Имя проекта одновременно является именем его основного пространства имён, поэтому при создании проекта проверяются следующие правила:
+
+- имя не может начинаться с `d8-` и `kube-` — эти префиксы зарезервированы за системными пространствами имён;
+- имя не может быть длиннее 61 символа;
+- если существует проект `foo`, нельзя создать проект `foo-bar` — и наоборот, при существующем проекте `foo-bar` нельзя создать проект `foo`. Имена вида `<проект>-*` зарезервированы под [дополнительные пространства имён](#дополнительные-пространства-имён-проекта) проекта: без этого правила дополнительное пространство имён одного проекта могло бы совпасть по имени с чужим проектом.
+
+## Статус и диагностика проекта
+
+Поле `.status.state` проекта принимает значение `Deployed` (все ресурсы проекта синхронизированы) либо `Error`. Причина ошибки раскрывается в условиях (`.status.conditions`):
+
+```shell
+d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.status}: {.message}{"\n"}{end}'
+```
+
+| Условие | Значение `False` означает |
+|---------|---------------------------|
+| `ProjectTemplateFound` | Шаблон, указанный в `.spec.projectTemplateName`, не найден |
+| `Validated` | Параметры проекта не прошли валидацию по схеме шаблона (`parametersSchema`) |
+| `ResourcesUpgraded` | Не удалось создать или обновить ресурсы проекта из шаблона (детали — в `message`) |
+| `StandardFieldsApplied` | Не удалось применить [стандартные поля](#стандартные-поля-проекта) (квоту или администраторов) |
+| `TemplateRolesAllowed` | Шаблон создаёт привязку к роли, [запрещённой для выдачи в проектах](#предоставление-доступа-внутри-проекта), — проект переводится в `Error`, в `message` указана роль |
+| `TemplateResourcesFiltered` | Из шаблона были отброшены объекты `ResourceQuota`/`AuthorizationRule` (см. [стандартные поля](#стандартные-поля-проекта)). Условие информационное — проект продолжает работать |
+
+Прочие полезные поля статуса:
+
+- `.status.namespaces` — все пространства имён проекта с их типом (`Main`/`Additional`);
+- `.status.usage` — текущее потребление квоты (заполняется при заданном `.spec.quota`);
+- `.status.resources` — состояние отдельных ресурсов, созданных из шаблона.
+
+### Служебные объекты проекта
+
+Контроллер создаёт в пространствах имён проекта служебные объекты. Они управляются автоматически — редактировать их вручную нельзя (попытка будет отклонена):
+
+| Объект | Где | Откуда берётся |
+|--------|-----|----------------|
+| `ResourceQuota/d8-project-quota` | Основное пространство имён | Поле [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) проекта |
+| `ProjectRoleBinding/d8-administrators` | Основное пространство имён | Поле [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) проекта |
+| `RoleBinding/d8:prb:<имя>` | Каждое пространство имён проекта | Разворачивание [ProjectRoleBinding](cr.html#projectrolebinding) с именем `<имя>` |
+| `RoleBinding/d8:cprb:<имя>` | Каждое пространство имён каждого проекта | Разворачивание [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) с именем `<имя>` |
+
+При удалении исходного объекта (привязки, поля квоты и т. д.) соответствующие служебные объекты удаляются автоматически.
+
+## Виртуальные проекты
+
+Помимо созданных пользователями проектов, в списке `d8 k get projects` всегда присутствуют два **виртуальных** проекта (лейбл `projects.deckhouse.io/virtual-project: "true"`):
+
+- `deckhouse` — объединяет системные пространства имён (с префиксами `d8-` и `kube-`);
+- `default` — объединяет все остальные пространства имён, не принадлежащие ни одному проекту.
+
+Виртуальные проекты нужны для полноты картины: с ними каждое пространство имён кластера относится к какому-то проекту. Управлять ими нельзя: они не редактируются, в них нельзя создавать [ProjectNamespace](cr.html#projectnamespace) и [ProjectRoleBinding](cr.html#projectrolebinding), и на них не распространяются [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding).
+
+## Дополнительные пространства имён проекта
+
+Если приложению нужно несколько пространств имён (например, отдельное для кэша или очередей), добавьте их в проект ресурсом [ProjectNamespace](cr.html#projectnamespace). Ресурс создаётся **в основном пространстве имён проекта**; итоговое пространство имён получает имя `<имя проекта>-<spec.name>`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectNamespace
+metadata:
+  name: cache
+  namespace: my-project
+spec:
+  name: cache   # Будет создано пространство имён my-project-cache.
+```
+
+Проверить состав проекта можно по его статусу:
+
+```shell
+d8 k get project my-project -o jsonpath='{.status.namespaces}'
+```
+
+Правила работы с `ProjectNamespace`:
+
+- Поле `spec.name` неизменяемо: чтобы переименовать пространство имён, удалите ресурс и создайте новый.
+- Итоговое имя `<имя проекта>-<spec.name>` не может быть длиннее 63 символов (ограничение Kubernetes на имена пространств имён).
+- Создавать `ProjectNamespace` можно только в основном пространстве имён проекта — «вложить» его в дополнительное пространство имён или чужой проект нельзя. Если пространство имён с таким именем уже существует и принадлежит другому проекту, запрос будет отклонён.
+- При удалении ресурса `ProjectNamespace` удаляется его пространство имён; при удалении проекта — все его пространства имён.
+
+### Что распространяется на дополнительные пространства имён
+
+Автоматически действует во **всех** пространствах имён проекта (и в основном, и в дополнительных):
+
+- **Доступ**: привязки [ProjectRoleBinding](cr.html#projectrolebinding) и [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding), включая автоматический доступ администраторов проекта. При добавлении нового пространства имён все существующие привязки разворачиваются в него без каких-либо действий со стороны пользователя.
+- **Namespaced-объекты шаблона**: сетевая политика (`networkPolicy.mode: Isolated`) и настройка сбора логов (`logShipping`) создаются в каждом пространстве имён проекта. Сетевая изоляция при этом разрешает трафик между пространствами имён одного проекта.
+- **Кластерные политики шаблона** (`OperationPolicy`, `SecurityPolicy` из `allowedUIDs`/`allowedGIDs`): выбирают пространства имён по лейблу `projects.deckhouse.io/project`, то есть покрывают весь проект.
+- **Наследуемые лейблы**: профиль безопасности подов (`security.deckhouse.io/pod-policy`), расширенный мониторинг (`extended-monitoring.deckhouse.io/enabled`), сканирование уязвимостей (`security-scanning.deckhouse.io/enabled`) и лейбл шаблона (`projects.deckhouse.io/project-template`) синхронизируются с основного пространства имён на дополнительные. Синхронизация полная: если фичу выключили в шаблоне, лейбл снимется и с дополнительных пространств имён. Благодаря лейблу шаблона [правила доступности кластерных ресурсов](#выдача-кластерных-ресурсов-проектам) тоже действуют во всех пространствах имён проекта.
+
+Остаётся только в **основном** пространстве имён:
+
+- квота проекта (`ResourceQuota` из [`.spec.quota`](cr.html#project-v1alpha3-spec-quota));
+- дополнительные лейблы и аннотации из `namespaceMetadata` шаблона;
+- аннотации размещения на узлах (из полей `nodeSelector` и `tolerations` шаблона).
+
+### Лейблы пространств имён проекта
+
+| Лейбл | Основное | Дополнительные | Назначение |
+|-------|:--------:|:--------------:|------------|
+| `projects.deckhouse.io/project: <имя проекта>` | ✓ | ✓ | Принадлежность проекту — общий лейбл всех пространств имён проекта |
+| `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Признак дополнительного пространства имён (имя ресурса `ProjectNamespace`) |
+| `projects.deckhouse.io/project-template: <имя шаблона>` | ✓ | ✓ | Шаблон проекта; по нему применяются правила доступности кластерных ресурсов |
+| `heritage: multitenancy-manager` | ✓ | ✓ | Пространство имён управляется контроллером проектов; вручную его менять нельзя |
+| `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (наследуются) | Политики и фичи из шаблона проекта |
+
+Общий лейбл `projects.deckhouse.io/project` позволяет выбирать пространства имён проекта обычным `get ns`:
+
+```shell
+# Все пространства имён проекта (основное + дополнительные):
+d8 k get ns -l projects.deckhouse.io/project=my-project
+
+# Только дополнительные:
+d8 k get ns -l 'projects.deckhouse.io/project=my-project,projects.deckhouse.io/project-namespace'
+
+# Только основное:
+d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/project-namespace'
+```
+
+## Автоматическое создание проекта для пространства имён
+
+По умолчанию (параметр [`allowNamespacesWithoutProjects: true`](configuration.html#parameters-allownamespaceswithoutprojects)) пространство имён, созданное напрямую (например, `d8 k create ns my-app`), автоматически оборачивается в проект с тем же именем:
+
+- проект создаётся без шаблона и помечается лейблом `multitenancy.deckhouse.io/project-managed-by-namespace: "true"`;
+- источник истины — пространство имён: его лейблы и аннотации синхронизируются в параметры проекта; редактируйте и удаляйте именно пространство имён (при его удалении проект удаляется автоматически);
+- редактировать спецификацию такого проекта вручную нельзя. Чтобы превратить его в обычный проект (например, назначить шаблон), снимите с проекта лейбл `multitenancy.deckhouse.io/project-managed-by-namespace` — после этого проект управляется как обычно.
+
+Если параметр `allowNamespacesWithoutProjects` выключен, создание пространств имён вне проектов запрещено — попытка `d8 k create ns` будет отклонена с пояснением.
+
+Существующее пространство имён также можно явно принять в управление проектом, пометив его аннотацией `projects.deckhouse.io/adopt`. Например:
 
 1. Создайте новое пространство имён:
 
@@ -116,9 +274,184 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 {% raw %}
 
-## Создание собственного шаблона для проекта
+## Стандартные поля проекта
 
-Шаблоны проектов по умолчанию включают базовые сценарии использования и служат примером возможностей шаблонов.
+Администраторы проекта и квоты ресурсов больше не являются параметрами шаблона — это поля верхнего уровня ресурса [Project](cr.html#project), работающие с любым шаблоном (включая `simple` и проекты без шаблона):
+
+- `.spec.administrators` — список субъектов (`kind: User` или `kind: Group` и `name`), получающих административный доступ к проекту. Контроллер реализует этот доступ через автоматически создаваемый [ProjectRoleBinding](cr.html#projectrolebinding) в пространстве имён проекта.
+- `.spec.quota` — набор жёстких лимитов [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) (например, `requests.cpu`, `limits.memory`). Контроллер поддерживает `ResourceQuota` в пространстве имён проекта и сообщает текущее потребление в `.status.usage`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: my-project
+spec:
+  projectTemplateName: simple
+  administrators:
+    - kind: Group
+      name: k8s-admins
+  quota:
+    requests.cpu: "5"
+    requests.memory: 5Gi
+    limits.cpu: "10"
+    limits.memory: 10Gi
+```
+
+{% alert level="warning" %}
+Объекты `ResourceQuota` и `AuthorizationRule`, описанные внутри шаблонов проектов, больше не отрисовываются: такие ресурсы теперь управляются исключительно через `.spec.quota` и `.spec.administrators`. Существующие шаблоны, в которых они объявлены, продолжают работать, но эти объекты отфильтровываются при рендеринге.
+{% endalert %}
+
+## Предоставление доступа внутри проекта
+
+Чтобы предоставить доступ к пространствам имён проекта помимо администраторов проекта, используйте привязки ролей, которые ссылаются на кластерные роли и автоматически разворачиваются в нужные пространства имён проектов:
+
+- [ProjectRoleBinding](cr.html#projectrolebinding) (пространство имён, короткое имя `prb`) — предоставляет роль в рамках **одного** проекта. Должен создаваться в главном пространстве имён проекта (имя которого совпадает с именем проекта). Контроллер создаёт `RoleBinding` в каждом пространстве имён этого проекта.
+- [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) (кластерный, короткое имя `cprb`) — предоставляет роль во **всех** невиртуальных проектах. Контроллер создаёт `RoleBinding` в каждом пространстве имён каждого проекта и сообщает количество затронутых проектов в `.status.boundProjects`.
+
+`roleRef` должен ссылаться на `ClusterRole`, имя которого начинается с одного из разрешённых префиксов (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). Описание ролей — [в документации модуля user-authz](../user-authz/).
+
+При создании привязок действуют следующие проверки:
+
+- **Защита от повышения привилегий**: создать привязку может только пользователь, у которого есть право привязывать (`bind`) указанную роль. Например, администратор проекта (`d8:project:admin`) может выдавать встроенные роли `d8:project:*` и `d8:namespace:*`, но не может выдать роль шире своих полномочий.
+- Роль должна существовать: привязка к несуществующей роли отклоняется.
+- `ServiceAccount` в качестве субъекта `ProjectRoleBinding` должен принадлежать пространству имён этого же проекта.
+- Системные и подсистемные роли (`d8:system:*`, `d8:subsystem:*`), а также произвольные роли вне перечисленных префиксов через проектные привязки выдать нельзя.
+- Роли с аннотацией `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` запрещены для выдачи в проектах. Эту аннотацию администратор кластера может поставить на роль, чтобы вывести её из употребления: существующие привязки продолжают работать, но новые не создаются. Если такую роль использует шаблон проекта, проект переходит в статус `Error` с пояснением в условии `TemplateRolesAllowed`.
+
+Привязка `d8-administrators`, создаваемая контроллером из поля [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators), управляется только контроллером — редактировать её вручную нельзя. Чтобы изменить состав администраторов, измените поле `.spec.administrators` проекта.
+
+### Какие роли доступны в RoleBinding внутри проекта
+
+Кроме проектных привязок, внутри пространства имён проекта можно использовать и обычный `RoleBinding` — тогда роль действует только в этом одном пространстве имён. Но в проектах набор ролей, доступных для обычного `RoleBinding`, ограничен: разрешены только кластерные роли с лейблом `rbac.deckhouse.io/delegatable: "true"`. Из встроенных это роли `d8:namespace:*` и `d8:project:*`, а также роли уровней доступа устаревшей ролевой модели (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
+
+`RoleBinding` на любую другую кластерную роль (например, `cluster-admin`, системные роли или capabilities) в проекте будет отклонён с сообщением `references "<роль>" which is not available to project`. Это защита от обхода изоляции проекта через привязку к слишком широкой роли.
+
+Чтобы использовать в проектах [собственную роль](../user-authz/faq.html#создание-собственной-namespace--или-проектной-роли), добавьте на неё лейбл `rbac.deckhouse.io/delegatable: "true"`:
+
+```shell
+d8 k label clusterrole d8:custom:namespace:developer rbac.deckhouse.io/delegatable=true
+```
+
+Ограничение действует только в пространствах имён «настоящих» проектов. На [автоматически обёрнутые](#автоматическое-создание-проекта-для-пространства-имён) пространства имён (с лейблом `multitenancy.deckhouse.io/project-managed-by-namespace`) оно не распространяется.
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: viewers
+  namespace: my-project
+spec:
+  subjects:
+    - kind: User
+      name: viewer@example.com
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
+metadata:
+  name: platform-viewers
+spec:
+  subjects:
+    - kind: Group
+      name: platform
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+```
+
+## Структурированные шаблоны
+
+Начиная с API-версии `deckhouse.io/v1alpha2`, шаблон проекта описывается **структурированными полями** — вместо текстового Helm-шаблона вы декларативно указываете, какие настройки получат пространства имён проекта. Контроллер сам создаёт из этих полей нужные объекты (сетевые политики, политики безопасности, настройки сбора логов и т. д.) в каждом пространстве имён проекта и поддерживает их в актуальном состоянии.
+
+Доступные поля (все — необязательные; полный справочник — [в описании ресурса](cr.html#projecttemplate)):
+
+| Поле | Что настраивает |
+|------|-----------------|
+| `podSecurityStandard` | Профиль безопасности подов: `Privileged`, `Baseline` или `Restricted` |
+| `networkPolicy.mode` | Сетевая изоляция: `Isolated` (трафик разрешён только внутри проекта и от системных компонентов платформы) или `NotRestricted` |
+| `features.monitoring` | Расширенный мониторинг пространств имён проекта |
+| `features.vulnerabilityScanning` | Сканирование образов контейнеров на уязвимости |
+| `logShipping.clusterDestinationRef` | Сбор логов подов проекта в указанное хранилище (`ClusterLogDestination`) |
+| `nodeSelector`, `tolerations` | Размещение подов проекта на выделенных узлах |
+| `allowedUIDs`, `allowedGIDs` | Допустимые диапазоны UID/GID контейнеров проекта |
+| `runtimeAudit.enabled` | Аудит обращений процессов проекта к ядру Linux |
+| `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Дополнительные лейблы и аннотации пространств имён проекта |
+| `resources`, `grantPolicies` | [Выдача кластерных ресурсов проектам](#выдача-кластерных-ресурсов-проектам) |
+| `parametersSchema.openAPIV3Schema` | Схема параметров, которые задаются при создании проекта |
+
+Пример структурированного шаблона:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: my-template
+spec:
+  title: "Шаблон команды"
+  description: "Изолированный проект с мониторингом"
+  podSecurityStandard: Baseline
+  networkPolicy:
+    mode: Isolated
+  features:
+    monitoring: true
+    vulnerabilityScanning: true
+```
+
+### Параметризация шаблона
+
+Любое «листовое» значение структурированного поля можно сделать параметром: вместо конкретного значения укажите `{fromParam: <имя параметра>}` и объявите параметр в `parametersSchema`. Тогда каждый проект задаёт своё значение в `.spec.parameters`, а если значение не задано — используется `default` из схемы.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: my-parametrized-template
+spec:
+  podSecurityStandard:
+    fromParam: securityProfile
+  networkPolicy:
+    mode:
+      fromParam: networkMode
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties:
+        securityProfile:
+          type: string
+          enum: [Baseline, Restricted]
+          default: Baseline
+        networkMode:
+          type: string
+          enum: [Isolated, NotRestricted]
+          default: Isolated
+```
+
+Проект, использующий такой шаблон:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: my-project
+spec:
+  projectTemplateName: my-parametrized-template
+  parameters:
+    securityProfile: Restricted
+```
+
+Ссылки `fromParam` проверяются при создании шаблона: ссылка на необъявленный параметр или параметр несовместимого типа (например, строковый параметр для булева поля) будет отклонена.
+
+### Проверки шаблонов
+
+- Шаблон, который используется хотя бы одним проектом, нельзя удалить.
+- Изменение шаблона автоматически применяется ко всем проектам, созданным из него.
+- Устаревшие шаблоны `deckhouse.io/v1alpha1` с текстовым полем `resourcesTemplate` (Helm-шаблонизация) продолжают работать, но признаны устаревшими — новые шаблоны создавайте в структурированном виде. Ресурсы `ResourceQuota` и `AuthorizationRule` из таких шаблонов отфильтровываются при рендеринге (см. [стандартные поля проекта](#стандартные-поля-проекта)).
+
+## Создание собственного шаблона для проекта
 
 Для создания своего шаблона:
 
@@ -129,14 +462,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
    d8 k get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
-1. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
-
-   {% alert level="info" %}
-   Необходимо изменить не только шаблон, но и схему входных параметров под него.
-
-   Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
-   {% endalert %}
-
+1. Отредактируйте файл `my-project-template.yaml`: измените [структурированные поля](#структурированные-шаблоны) и схему входных параметров под свои задачи.
 1. Измените имя шаблона в поле `.metadata.name`.
 1. Примените полученный шаблон командой:
 
@@ -327,9 +653,7 @@ data:
   `projectSelector`) и для каждого ресурса (`resourceName`) задаёт разрешённые имена (`allowed`,
   `allowedSelector`) и `default`. Allow-лист ограничивает ресурс этим списком.
 - `AvailableClusterResource` (namespaced, read-only, короткое имя `available`) — формируемый контроллером каталог доступных для проекта кластерных ресурсов. Пользователи проекта читают его, чтобы узнать
-  доступные имена.
-- `ClusterResourceGrant` (namespaced) — пул объектной квоты проекта (лимиты на количество объектов и
-  на измеряемые величины, например запрошенный объём хранилища). В статусе объекта отображается текущее потребление.
+  доступные имена. Изменять и удалять объекты каталога вручную нельзя.
 
 {% raw %}
 
@@ -387,3 +711,26 @@ spec:
   ссылки, помеченные `default: true`. Ссылки без неё (например, аннотации-переключатели) никогда
   не заполняются.
 - Grant без совпавших проектов (или проект без совпавших grant’ов) ничего не ограничивает.
+
+### Выдача кластерных ресурсов через шаблон проекта
+
+Правила доступности кластерных ресурсов можно задавать прямо в [структурированном шаблоне](#структурированные-шаблоны) — тогда они автоматически применяются ко всем проектам, созданным из этого шаблона:
+
+- `spec.resources` — правила «внутри» шаблона: тот же формат, что и `resources` в `ClusterResourceGrantPolicy` (имя ресурса, `allowed`/`allowedSelector`, `default`);
+- `spec.grantPolicies` — список имён **библиотечных** политик `ClusterResourceGrantPolicy`. Библиотечная политика описывает переиспользуемый набор правил и не должна иметь `projectSelector` — к каким проектам её применять, определяет ссылающийся шаблон. Так, например, политику «корпоративные StorageClass» может поддерживать один администратор, а использовать — несколько шаблонов.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: my-template
+spec:
+  resources:
+    - resourceName: storageclasses
+      allowed: ["standard"]
+      default: standard
+  grantPolicies:
+    - corporate-issuers   # Библиотечная ClusterResourceGrantPolicy без projectSelector.
+```
+
+Для каждого источника контроллер создаёт служебную политику с именем `template-<шаблон>-<источник>` (для `spec.resources` — `template-<шаблон>-inline`); имя `inline` для библиотечной политики зарезервировано. Ссылка на несуществующую политику или на политику с `projectSelector` отклоняется при создании шаблона.
