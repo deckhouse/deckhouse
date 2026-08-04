@@ -128,6 +128,35 @@ spec:
 			messagePart: "PodLoggingConfig deckhouse.io/v1alpha1/logs",
 		},
 		{
+			// The other direction: the line break costs the project an object instead of gaining it
+			// one. Suppressing the NetworkPolicy that isolates a project is worth as much to an
+			// attacker as adding a ClusterRoleBinding, so the comparison has to look both ways.
+			name: "a suppressed object",
+			template: func(*testing.T) *v1alpha1.ProjectTemplate {
+				return customTemplate("tier", `
+{{- if eq .parameters.tier "gold plated" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolated
+spec:
+  podSelector: {}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tier
+data:
+  tier: {{ .parameters.tier | quote }}
+`)
+			},
+			parameters:  map[string]any{"tier": "gold\nplated"},
+			refused:     true,
+			messagePart: "removing: NetworkPolicy networking.k8s.io/v1/isolated",
+		},
+		{
 			// Refusing this would make the check unusable for templates that legitimately take a
 			// multi-line parameter.
 			name: "a multi-line value in a quoted field",
