@@ -185,8 +185,8 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			if err != nil {
 				return err
 			}
-			// we use dummy preparator because metaConfig was prepared early
-			cfg, err = mc.DeepCopy().Prepare(ctx.Ctx(), config.DummyPreparatorProvider())
+			// we use dummy validator because metaConfig was prepared early
+			cfg, err = mc.DeepCopy().Prepare(ctx.Ctx(), config.DummyValidatorProvider())
 			if err != nil {
 				return fmt.Errorf("unable to prepare copied config: %v", err)
 			}
@@ -194,11 +194,10 @@ func (c *NodeGroupController) deleteRedundantNodes(
 		}
 	}
 
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
-
+	// No kube client is resolved here on purpose: DestroyPipeline below removes a node, and for a
+	// master that switches the converge over to a surviving one and stops the client tunneled
+	// through the node being destroyed. The deletions after it take the provider and resolve the
+	// current client per attempt instead.
 	var allErrs *multierror.Error
 	for _, nodeToDeleteInfo := range nodesToDeleteInfo {
 		if _, ok := c.excludedNodes[nodeToDeleteInfo.name]; ok {
@@ -246,7 +245,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			return allErrs.ErrorOrNil()
 		}
 
-		if err := entity.DeleteNode(ctx.Ctx(), kubeClient, nodeToDeleteInfo.name); err != nil {
+		if err := entity.DeleteNode(ctx.Ctx(), ctx, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -256,7 +255,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			continue
 		}
 
-		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), kubeClient, fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
+		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), ctx, fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -338,13 +337,8 @@ func (c *NodeGroupController) tryDeleteNodeGroup(ctx *context.Context) error {
 		return nil
 	}
 
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
-
 	return dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), fmt.Sprintf("Delete NodeGroup %s", c.name), func(gocontext.Context) error {
-		return entity.DeleteNodeGroup(ctx.Ctx(), kubeClient, c.name)
+		return entity.DeleteNodeGroup(ctx.Ctx(), ctx, c.name)
 	})
 }
 
@@ -375,11 +369,6 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 		return err
 	}
 
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
-
 	for _, nodeName := range nodeNames {
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
@@ -392,6 +381,14 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			err = c.nodeGroup.updateNode(ctx, nodeName)
 			if err != nil {
 				return err
+			}
+
+			// Resolved after the update, not before the loop: updating a master node makes the
+			// pipeline hook switch the converge to another master and stop the client tunneled
+			// through this one.
+			kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+			if err != nil {
+				return fmt.Errorf("Could not get kube client: %w", err)
 			}
 
 			// we hide deckhouse logs because we always have config

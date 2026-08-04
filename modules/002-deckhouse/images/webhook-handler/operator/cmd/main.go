@@ -584,6 +584,25 @@ func main() {
 	// and tells shell-operator to drain.
 	ctx := ctrl.SetupSignalHandler()
 
+	// Pre-populate hook files from existing ValidationWebhook / ConversionWebhook
+	// CRs BEFORE shell-operator bootstraps. shell-operator creates and starts its
+	// admission HTTPS server (port 9680) only if it discovers at least one
+	// validating/mutating hook on disk during NewShellOperator below. The
+	// reconcilers deliver those hooks too late: they register the
+	// ValidatingWebhookConfiguration but reloadHooks never (re)starts the server,
+	// so without presync — on clusters whose enabled modules ship no static
+	// validating hook — the server never comes up and the API server gets
+	// "connection refused" on :9680.
+	//
+	// GetAPIReader returns a direct (uncached) reader, usable before the manager's
+	// cache is started.
+	setupLog.Info("presync: writing webhook files before starting shell-operator")
+	if err := controller.PresyncWebhookFiles(ctx, mgr.GetAPIReader(), string(conversionTpl), string(validationTpl), logger); err != nil {
+		// Degraded, not fatal: the reconcilers will still write the files and
+		// trigger a reload later.
+		setupLog.Error(err, "presync: failed to pre-populate webhook files, shell-operator may need a reload")
+	}
+
 	// --- Initialise shell-operator as an in-process library ---
 	shCfg := sh_app.NewConfig()
 	if err := sh_app.ParseEnv(shCfg); err != nil {

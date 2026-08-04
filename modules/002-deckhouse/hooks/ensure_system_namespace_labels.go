@@ -43,8 +43,11 @@ func enableExtendedMonitoring(_ context.Context, input *go_hook.HookInput) error
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
 				"heritage": "deckhouse",
-				"extended-monitoring.deckhouse.io/enabled":      "",
-				"prometheus.deckhouse.io/rules-watcher-enabled": "true",
+				"extended-monitoring.deckhouse.io/enabled":           "",
+				"prometheus.deckhouse.io/rules-watcher-enabled":      "true",
+				"security.deckhouse.io/pod-policy":                   "restricted",
+				"security.deckhouse.io/pod-policy-action":            "warn",
+				"security.deckhouse.io/enable-security-policy-check": "true",
 			},
 		},
 	}

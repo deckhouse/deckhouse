@@ -62,11 +62,13 @@ func TestLoadPlanRules_MalformedYAML(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestLoadSettings_DVPRequiresPlanRules(t *testing.T) {
-	dir := t.TempDir()
-	infraVersionsFile := filepath.Join(dir, "terraform_versions.yml")
+// writeBundleVersions lays out a single-provider bundle versions file and
+// returns its path, so the plan-rules tests below start from a parsed store.
+func writeBundleVersions(t *testing.T) string {
+	t.Helper()
 
-	require.NoError(t, os.WriteFile(infraVersionsFile, []byte(`
+	path := filepath.Join(t.TempDir(), versionFile)
+	require.NoError(t, os.WriteFile(path, []byte(`
 opentofu: 1.12.0
 terraform: 0.14.8
 kubernetes:
@@ -81,32 +83,22 @@ kubernetes:
   useOpentofu: true
 `), 0o644))
 
-	_, err := loadTerraformVersionFileSettings(context.TODO(), infraVersionsFile)
+	return path
+}
+
+func TestAttachBundlePlanRules_RequiresPlanRules(t *testing.T) {
+	versions := writeBundleVersions(t)
+	store, err := loadProvidersForTest(context.TODO(), versions)
+	require.NoError(t, err)
+
+	err = attachBundlePlanRules(versions, store)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "DVP")
 	require.Contains(t, err.Error(), "plan_rules.yml")
 }
 
-func TestLoadSettings_DVPWithPlanRulesSucceeds(t *testing.T) {
-	dir := t.TempDir()
-	infraVersionsFile := filepath.Join(dir, "terraform_versions.yml")
-
-	require.NoError(t, os.WriteFile(infraVersionsFile, []byte(`
-opentofu: 1.12.0
-terraform: 0.14.8
-kubernetes:
-  namespace: hashicorp
-  cloudName: DVP
-  type: kubernetes
-  version: "2.38.0"
-  artifact: terraform-provider-kubernetes
-  artifactBinary: terraform-provider-kubernetes
-  destinationBinary: terraform-provider-kubernetes
-  vmResourceType: kubernetes_manifest
-  useOpentofu: true
-`), 0o644))
-
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "plan_rules.yml"), []byte(`
+func TestAttachBundlePlanRules_AttachesRule(t *testing.T) {
+	versions := writeBundleVersions(t)
+	require.NoError(t, os.WriteFile(filepath.Join(filepath.Dir(versions), planRulesFilename), []byte(`
 vmResource:
   type: kubernetes_manifest
   fieldEquals:
@@ -114,7 +106,9 @@ vmResource:
     value: VirtualMachine
 `), 0o644))
 
-	store, err := loadTerraformVersionFileSettings(context.TODO(), infraVersionsFile)
+	store, err := loadProvidersForTest(context.TODO(), versions)
 	require.NoError(t, err)
+
+	require.NoError(t, attachBundlePlanRules(versions, store))
 	require.NotNil(t, store["dvp"].VMResource())
 }

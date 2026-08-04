@@ -1431,6 +1431,245 @@ alerts:
         A peer cluster requests private metadata using a deprecated subdomain.
       severity: "5"
       markupFormat: markdown
+    - name: D8IstioConfigAnalysisConflictingGateways
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The Istio configuration analyzer found conflicting Gateways in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`ConflictingGateways`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        Two or more Gateways share the same selector, port, and host match. Ingress traffic may be routed unpredictably or return 404.
+
+        Steps to resolve:
+
+        1. List Gateways and compare `spec.selector`, server ports, and hosts for overlaps involving `{{$labels.resource}}`.
+        2. Deduplicate or narrow hosts/ports so each combination is unique.
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0145/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="ConflictingGateways",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+      summary: |
+        Conflicting Istio Gateways detected (IST0145).
+      severity: "5"
+      markupFormat: markdown
+    - name: D8IstioConfigAnalysisError
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The Istio configuration analyzer found an error in revision `{{$labels.revision}}`.
+
+        Type: `{{$labels.type}}` (`{{$labels.code}}`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        Inspect the reported resource in namespace `{{$labels.namespace}}`.
+
+        Documentation for analysis codes: https://istio.io/latest/docs/reference/config/analysis/
+
+        List analysis issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{revision="{{$labels.revision}}",severity="Error"}
+        ```
+
+        Check analyzer pods and logs:
+
+        ```bash
+        d8 k -n d8-istio get pods -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}}
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+      summary: |
+        Istio configuration analysis detected an error-level issue.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8IstioConfigAnalysisImageAutoWithoutInjection
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The Istio configuration analyzer found pods with `image: auto` that are not targeted for sidecar injection in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`ImageAutoWithoutInjectionError`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        `image: auto` is rewritten only when the Istio injector mutates the pod. Without injection the container image stays literally `auto` and the pod will not run correctly.
+
+        Steps to resolve:
+
+        1. Enable sidecar injection for the namespace or workload (`istio-injection=enabled` / `istio.io/rev={{$labels.revision}}`, or a matching RevisionTag).
+        2. Restart / recreate the affected pods after injection is enabled.
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0147/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="ImageAutoWithoutInjectionError",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+      summary: |
+        Pod uses image auto without Istio injection (IST0147).
+      severity: "5"
+      markupFormat: markdown
+    - name: D8IstioConfigAnalysisInvalidGatewayCredential
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The Istio configuration analyzer found an invalid Gateway credential in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`InvalidGatewayCredential`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        The Secret referenced by the Gateway for TLS is missing or does not contain a usable certificate/key. HTTPS listeners on that Gateway will fail.
+
+        Steps to resolve:
+
+        1. Open the Gateway `{{$labels.resource}}` in namespace `{{$labels.namespace}}` and note `credentialName` / TLS secret references.
+        2. Verify the Secret exists in the same namespace as the ingress Gateway workload and has valid `tls.crt` / `tls.key` (or the expected keys).
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0161/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="InvalidGatewayCredential",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+      summary: |
+        Gateway TLS credential is invalid (IST0161).
+      severity: "5"
+      markupFormat: markdown
+    - name: D8IstioConfigAnalysisReferencedResourceNotFound
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The Istio configuration analyzer found a missing reference in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`ReferencedResourceNotFound`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        An Istio object points to a Gateway, Service, ServiceEntry, or another dependency that does not exist (typo, wrong namespace, or resource not created yet). Traffic to that route may fail.
+
+        Steps to resolve:
+
+        1. Inspect the reported resource in namespace `{{$labels.namespace}}` and fix the broken reference (use FQDN for cross-namespace hosts, e.g. `reviews.backend.svc.cluster.local`).
+        2. Confirm the target object exists.
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0101/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="ReferencedResourceNotFound",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+      summary: |
+        Istio resource references a missing dependency (IST0101).
+      severity: "5"
+      markupFormat: markdown
+    - name: D8IstioConfigAnalysisSchemaValidationError
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The Istio configuration analyzer found a schema validation error in revision `{{$labels.revision}}`.
+
+        Code: `{{$labels.code}}` (`SchemaValidationError`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        The resource does not match the Istio API schema and may be ignored or rejected by the control plane.
+
+        Steps to resolve:
+
+        1. Inspect `{{$labels.resource}}` in namespace `{{$labels.namespace}}` and compare fields with the Istio API for your control plane version.
+        2. Fix invalid or unknown fields, then re-apply the manifest.
+        3. See https://istio.io/latest/docs/reference/config/analysis/ist0106/
+
+        List matching issues in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{type="SchemaValidationError",revision="{{$labels.revision}}"}
+        ```
+
+        Check analyzer logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+      summary: |
+        Istio resource failed schema validation (IST0106).
+      severity: "5"
+      markupFormat: markdown
+    - name: D8IstioConfigAnalysisWarning
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The Istio configuration analyzer found a warning in revision `{{$labels.revision}}`.
+
+        Type: `{{$labels.type}}` (`{{$labels.code}}`)
+        Namespace: `{{$labels.namespace}}`
+        Resource: `{{$labels.resource}}`
+
+        Inspect the reported resource in namespace `{{$labels.namespace}}`.
+
+        Documentation for analysis codes: https://istio.io/latest/docs/reference/config/analysis/
+
+        List analysis warnings in Prometheus (Grafana → Explore):
+
+        ```promql
+        d8_istio_config_analysis_issue{revision="{{$labels.revision}}",severity="Warning"}
+        ```
+
+        Check analyzer pods and logs:
+
+        ```bash
+        d8 k -n d8-istio get pods -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}}
+        d8 k -n d8-istio logs -l app=istio-config-analyzer,istio.io/rev={{$labels.revision}} --tail=100
+        ```
+      summary: |
+        Istio configuration analysis detected a warning-level issue.
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
@@ -1447,7 +1686,7 @@ alerts:
            max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
            ```
 
-        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
+        1. Use the [automatic Istio data plane upgrade](https://deckhouse.io/modules/istio/examples.html#auto-upgrading-istio-data-plane).
       summary: |
         There are pods with data plane version different from the control plane version.
       severity: "8"
@@ -2613,25 +2852,6 @@ alerts:
         Okmeter agent is not Ready.
       severity: "6"
       markupFormat: markdown
-    - name: D8OldPrometheusTargetFormat
-      sourceFile: ee/fe/modules/340-monitoring-applications/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-applications
-      module: monitoring-applications
-      edition: fe
-      description: |-
-        Deckhouse has detected that services with the `prometheus-target` label are being used to collect metrics in the cluster.
-
-        The label format has been changed. To resolve the issue, replace the `prometheus-target` label with `prometheus.deckhouse.io/target`.
-
-        To list all services labeled with `prometheus-target`, run the following command:
-
-        ```bash
-        d8 k get service --all-namespaces --show-labels | grep prometheus-target
-        ```
-      summary: |
-        Services with the prometheus-target label are being used for metric collection.
-      severity: "6"
-      markupFormat: markdown
     - name: D8ProblematicFeatureGateInUse
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -2943,6 +3163,35 @@ alerts:
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
       markupFormat: markdown
+    - name: D8UserAuthzLegacyRBACv2CustomRoleFound
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The ClusterRole `{{ $labels.name }}` is a custom role or capability created with the legacy experimental RBACv2 scheme. Such roles have a `custom:*` name and use either the `rbac.deckhouse.io/kind: manage` or `use` labels, or aggregation selectors based on these labels.
+
+        In DKP 1.78, the role model changes the labels that drive aggregation. Legacy custom roles get **no compatibility aliases** and will stop aggregating permissions entirely after the upgrade.
+
+        Until every such role is migrated, the upgrade to DKP 1.78 is blocked by the `legacyRBACv2CustomRolesCount` release requirement.
+
+        Migrate the role to the new scheme:
+
+        - Rename it using the `d8:custom:` name prefix.
+        - Replace the labels with the `rbac.deckhouse.io/kind: custom-role` or `custom-capability` label.
+        - Update aggregation selectors to use the new labels.
+
+        For migration instructions, refer to the [corresponding section](https://deckhouse.io/modules/user-authz/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178) in the `user-authz` module FAQ.
+
+        List all legacy custom roles:
+
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | startswith("custom:")) and ((.metadata.labels["rbac.deckhouse.io/kind"] // "" | IN("manage", "use")) or ([.aggregationRule.clusterRoleSelectors[]?.matchLabels["rbac.deckhouse.io/kind"] // ""] | any(IN("manage", "use"))))) | .metadata.name'
+        ```
+      summary: |
+        A legacy RBACv2 custom role is present in the cluster.
+      severity: "7"
+      markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
       moduleUrl: 140-user-authz
@@ -3119,7 +3368,7 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        The '{{ $labels.module }}' Module update has failed.
+        The '{{ $labels.module }}' module update has failed.
 
         Current version: {{ $labels.actualVersion }}.
         Desired version: {{ $labels.version }}.
@@ -3127,9 +3376,9 @@ alerts:
         Attempt to download interim releases failed.
 
         Possible reasons:
-         - The necessary versions of the Module image is not available in the registry.
+         - The necessary versions of the module image is not available in the registry.
 
-        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' Module image between {{ $labels.actualVersion }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' module image between {{ $labels.actualVersion }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
       summary: |
         Module update has failed. Updating sequence is broken.
       severity: "4"
@@ -3140,14 +3389,26 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        The '{{ $labels.module }}' Module update has failed.
+        The '{{ $labels.module }}' module update has failed.
 
         Desired version: {{ $labels.version }}.
 
         Possible reasons:
-         - The Module image is corrupted.
+         - The module image is corrupted.
 
-        To resolve this issue, ensure that {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid .
+        To resolve this issue, ensure that the {{ $labels.version }} image in the registry '{{ $labels.registry }}' is valid.
+
+        Check which versions of the '{{ $labels.module }}' module are available in the registry:
+
+        ```bash
+        d8 cr ls {{ $labels.registry }}/{{ $labels.module }}/release
+        ```
+
+        For a private registry, pass the credentials from the corresponding ModuleSource:
+
+        ```bash
+        d8 cr ls -u <USERNAME> -p <PASSWORD> {{ $labels.registry }}/{{ $labels.module }}/release
+        ```
 
         To get the exact error, check Deckhouse logs:
         `d8 k -n d8-system logs deploy/deckhouse | grep "failed to download module"`
@@ -3799,7 +4060,7 @@ alerts:
            - Get the route table name:
 
              ```bash
-             d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
+             d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.prefix // .global.clusterConfiguration.cloud.prefix'
              ```
 
            - Get the NAT instance name:
@@ -4497,7 +4758,6 @@ modules-having-alerts:
     - istio
     - kube-dns
     - metallb
-    - monitoring-applications
     - multitenancy-manager
     - node-local-dns
     - node-manager

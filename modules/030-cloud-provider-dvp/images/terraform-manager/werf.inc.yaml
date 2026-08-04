@@ -16,8 +16,8 @@ git:
   stageDependencies:
     install:
     - '**/*'
-# plan_rules.yml must sit next to terraform_versions.yml so dhctl's
-# copyTFVersionFile delivers it into candi (loadPlanRules reads it adjacent).
+# plan_rules.yml must sit next to terraform_versions.yml: dhctl reads the pair
+# straight from the unpacked bundle, and the rules describe that versions file.
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/plan_rules.yml
   to: /terraform-manager/plan_rules.yml
   stageDependencies:

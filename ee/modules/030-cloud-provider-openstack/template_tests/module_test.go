@@ -352,6 +352,12 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(ccmCRB.Exists()).To(BeTrue())
 		Expect(ccmVPA.Exists()).To(BeTrue())
 		Expect(ccmDeploy.Exists()).To(BeTrue())
+		Expect(ccmDeploy.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(
+			And(
+				WithTransform(func(v gjson.Result) string { return v.Get("name").String() }, Equal("SKIP_NODE_DELETION")),
+				WithTransform(func(v gjson.Result) string { return v.Get("value").String() }, Equal("1")),
+			),
+		))
 		Expect(ccmSecret.Exists()).To(BeTrue())
 		ccmExpectedConfig := `
 [Global]
@@ -402,6 +408,7 @@ rescan-on-resize = true`
 		Expect(capoWebhookConfig.Exists()).To(BeTrue())
 		Expect(capoWebhookConfig.Field("webhooks.1.clientConfig.service.namespace").String()).To(Equal(moduleNamespace))
 		Expect(capoDeployment.Field("spec.template.metadata.annotations").Map()["checksum/config"].String()).ToNot(BeEmpty())
+		Expect(capoDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 
 		Expect(scFast.Exists()).To(BeTrue())
 		Expect(scFast.Field("metadata.annotations").String()).To(MatchYAML(`

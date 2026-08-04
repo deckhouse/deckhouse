@@ -66,5 +66,7 @@ shell:
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X version.Version={{ $version }}" -o /vsphere-cloud-controller-manager ./cmd/vsphere-cloud-controller-manager/main.go
   - chown 64535:64535 /vsphere-cloud-controller-manager
   - chmod 0755 /vsphere-cloud-controller-manager
-  {{- end }}
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version )) }}
+{{- end }}
 {{- end }}

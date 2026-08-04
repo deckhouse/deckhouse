@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-41a5cb02200a981d0e152bffdd0754addf47f69efe2db1b00812aff0a07fe3f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -17,8 +17,195 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-04T09:42:58.078449Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
+        },
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (stored XSS, CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79). Бинарники istioctl в debug-container не запускают сервер Prometheus и не открывают указанный UI; зависимость github.com/prometheus/prometheus подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-05-04T09:03:17.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42151"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
+        },
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к раскрытию client_secret конфигурации Azure AD remote write через HTTP API /-/config сервера Prometheus 3.x (CVE-2026-42151, GHSA-wg65-39gg-5wfj, CWE-312). Бинарники istioctl в debug-container не запускают сервер Prometheus и не предоставляют указанный endpoint; зависимость github.com/prometheus/prometheus используется как библиотека без исполняемого пути уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-05-19T08:20:01.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42154"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
+        },
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к endpoint удалённого чтения /api/v1/read сервера Prometheus: некорректная валидация длины snappy-payload может привести к исчерпанию памяти и отказу в обслуживании (CVE-2026-42154, GHSA-8rm2-7qqf-34qm, CWE-400). Бинарники istioctl в debug-container не запускают сервер Prometheus и не обрабатывают запросы к /api/v1/read; зависимость github.com/prometheus/prometheus подтягивается как библиотека. Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-05-19T08:20:22.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-44903"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
+        },
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к stored XSS в устаревшем веб-UI сервера Prometheus (heatmap, histogram bucket label values, флаг --enable-feature=old-ui, CVE-2026-44903, GHSA-fw8g-cg8f-9j28, CWE-79). Бинарники istioctl в debug-container не запускают сервер Prometheus и не открывают указанный UI; зависимость github.com/prometheus/prometheus подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-05-27T12:03:22.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-32386"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        },
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.17.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Компонент istioctl использует библиотеку Helm для подготовки Kubernetes API манифестов Istio. Для эксплуатации уязвимости требуется предоставить специально сформированный chart-архив. В штатном использовании istioctl внутри debug-container Deckhouse chart-артефакты не загружаются из недоверенных источников во время отладки кластера, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-10T15:32:08.129204108Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-32387"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        },
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.17.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Компонент istioctl использует библиотеку Helm для подготовки Kubernetes API манифестов Istio. Для эксплуатации уязвимости требуется предоставить специально сформированную JSON Schema chart. В штатном использовании istioctl внутри debug-container Deckhouse chart-артефакты не загружаются из недоверенных источников во время отладки кластера, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-10T15:33:13.264855875Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-53547"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        },
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.17.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Компонент istioctl использует библиотеку Helm для подготовки Kubernetes API манифестов Istio. Для эксплуатации уязвимости требуется предоставить скомпрометированный шаблон манифеста/chart. В штатном использовании istioctl внутри debug-container Deckhouse chart-артефакты не загружаются из недоверенных источников во время отладки кластера, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-10T15:29:44.644944464Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-55198"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        },
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.17.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Компонент istioctl использует библиотеку Helm для подготовки Kubernetes API манифестов Istio. Для эксплуатации уязвимости требуется предоставить специально сформированный YAML chart. В штатном использовании istioctl внутри debug-container Deckhouse chart-артефакты не загружаются из недоверенных источников во время отладки кластера, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-10T15:34:40.216094508Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-55199"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        },
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.17.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Компонент istioctl использует библиотеку Helm для подготовки Kubernetes API манифестов Istio. Для эксплуатации уязвимости требуется предоставить специально сформированную JSON Schema chart. В штатном использовании istioctl внутри debug-container Deckhouse chart-артефакты не загружаются из недоверенных источников во время отладки кластера, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-10T15:35:45.218482198Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35206"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        },
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.17.0"
+        },
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.18.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm pull с распаковкой chart (флаг --untar) из произвольного URL или имени из репозитория (CVE-2026-35206, GHSA-hr2v-4r36-88hr, CWE-22) не используется в штатном сценарии istioctl внутри debug-container Deckhouse. Chart-артефакты не подменяются из недоверенных источников во время отладки кластера, что исключает возможность эксплуатации данной уязвимости. Обновление helm до 3.20.2 невозможно без несовместимого апгрейда k8s.io/* зависимостей Istio.",
+      "timestamp": "2026-03-30T10:15:22.100000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарники istioctl не импортируют golang.org/x/crypto/openpgp; модуль golang.org/x/crypto подтягивается транзитивно (в частности через bcrypt/sprig) без исполняемого пути openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
+      "timestamp": "2026-07-22T14:00:00.000000000Z"
     }
   ],
-  "timestamp": "2026-03-04T09:42:58Z",
-  "last_updated": "2026-03-24T10:09:40Z"
+  "timestamp": "2026-07-22T14:00:00Z",
+  "last_updated": "2026-07-22T14:00:00Z"
 }

@@ -88,5 +88,42 @@ func TestCloudFiller_NeitherMarker(t *testing.T) {
 	_, err := filler.Cloud(context.Background(), mc)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "ModuleConfig")
-	require.Contains(t, err.Error(), legacyProviderClusterConfigSecretName)
+	require.Contains(t, err.Error(), LegacyProviderClusterConfigSecret)
+}
+
+func mustSeedGlobalMC(t *testing.T, kubeCl *client.KubernetesClient, prefix string) {
+	t.Helper()
+	settings := map[string]interface{}{}
+	if prefix != "" {
+		settings["prefix"] = prefix
+	}
+	mc := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ModuleConfig",
+		"metadata":   map[string]interface{}{"name": "global"},
+		"spec": map[string]interface{}{
+			"version":  float64(2),
+			"settings": settings,
+		},
+	}}
+	_, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Create(t.Context(), mc, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func TestLoadGlobalModuleConfig_Present(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+	mustSeedGlobalMC(t, kubeCl, "mcprefix")
+
+	gmc := loadGlobalModuleConfig(context.Background(), kubeCl)
+	require.NotNil(t, gmc)
+	require.Equal(t, "mcprefix", gmc.Spec.Settings["prefix"])
+}
+
+func TestLoadGlobalModuleConfig_Absent(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+
+	// Missing global ModuleConfig must be a soft miss (nil), never an error:
+	// converge/destroy fall back to ClusterConfiguration.cloud.prefix.
+	gmc := loadGlobalModuleConfig(context.Background(), kubeCl)
+	require.Nil(t, gmc)
 }

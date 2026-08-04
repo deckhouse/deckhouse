@@ -41,6 +41,7 @@ spec:
         safe-agent-updater-daemonset-generation: {{ include "agent_daemonset_template" (list . "undefined") | sha256sum | quote }}
       labels:
         app: safe-agent-updater
+        security.deckhouse.io/security-policy-exception: safe-agent-updater
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized" "with-storage-problems") | nindent 6 }}
@@ -66,6 +67,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
         securityContext:
           readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'

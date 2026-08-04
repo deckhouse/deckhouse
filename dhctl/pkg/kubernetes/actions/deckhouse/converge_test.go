@@ -541,7 +541,7 @@ func testCreateMetaConfigForConvergeManifests(t *testing.T, ctx context.Context,
 	metaConfig, err := config.ParseConfigFromData(
 		ctx,
 		configData,
-		config.DummyPreparatorProvider(),
+		config.DummyValidatorProvider(),
 		nil,
 	)
 

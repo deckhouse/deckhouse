@@ -25,25 +25,23 @@ import (
 	"time"
 
 	"golang.org/x/sync/singleflight"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var (
@@ -55,10 +53,15 @@ var (
 	CommaSeparatedEEEditions = "EE,FE,CSE"
 )
 
+// errParseConfigTransient marks a transport/API-level failure while reading the cluster
+// configuration secret, as opposed to a permanent parse/schema-validation failure of the
+// secret's own content that will fail identically on every attempt.
+var errParseConfigTransient = errors.New("parse cluster config: transient error, may succeed on retry")
+
 func LoadConfigFromFile(
 	ctx context.Context,
 	paths []string,
-	preparatorProvider MetaConfigPreparatorProvider,
+	validatorProvider MetaConfigValidatorProvider,
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
@@ -81,8 +84,8 @@ func LoadConfigFromFile(
 		return nil, err
 	}
 
-	// Resolved before ParseConfig: the external preparator binary lives under
-	// <DownloadRootDir>/<provider>/.
+	// Resolved before ParseConfig: an external provider's unpacked bundle lives
+	// under <DownloadRootDir>/<provider>/.
 	downloadRootDir := withDownloadDir(globalOptions).DownloadDir
 	downloadCacheDir := globalOptions.DownloadCacheDir
 	if downloadCacheDir == "" {
@@ -90,7 +93,7 @@ func LoadConfigFromFile(
 	}
 	opts = append(opts, ValidateOptionDownloadRootDir(downloadRootDir))
 
-	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, globalOptions, opts...)
+	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), validatorProvider, globalOptions, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +152,7 @@ func numerateManifestLines(manifest []byte) string {
 func ParseConfig(
 	ctx context.Context,
 	paths []string,
-	preparatorProvider MetaConfigPreparatorProvider,
+	validatorProvider MetaConfigValidatorProvider,
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
@@ -167,23 +170,30 @@ func ParseConfig(
 		content = content + "\n\n---\n\n" + string(fileContent)
 	}
 
-	return ParseConfigFromData(ctx, content, preparatorProvider, globalOptions, opts...)
+	return ParseConfigFromData(ctx, content, validatorProvider, globalOptions, opts...)
 }
 
 func ParseConfigFromCluster(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
-	preparatorProvider MetaConfigPreparatorProvider,
+	validatorProvider MetaConfigValidatorProvider,
 	globalOptions *options.GlobalOptions,
 	operation string,
 ) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Get cluster configuration from Kubernetes cluster"),
+		retry.WithAttempts(50),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errParseConfigTransient, registrydata.ErrRegistryDataTransient),
+	)
+
 	return metaConfig, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Get cluster configuration", func(ctx context.Context) error {
-		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 50, 1*time.Second).
+		return retry.NewLoopWithParams(loopParams).
 			RunContext(ctx, func() error {
-				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions, operation)
+				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, validatorProvider, globalOptions, operation)
 				return err
 			})
 	})
@@ -192,7 +202,7 @@ func ParseConfigFromCluster(
 func ParseConfigInCluster(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
-	preparatorProvider MetaConfigPreparatorProvider,
+	validatorProvider MetaConfigValidatorProvider,
 	globalOptions *options.GlobalOptions,
 	operation string,
 ) (*MetaConfig, error) {
@@ -201,9 +211,16 @@ func ParseConfigInCluster(
 		err        error
 	)
 
-	err = retry.NewSilentLoop("Get cluster configuration from inside Kubernetes cluster", 25, 1*time.Second).
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Get cluster configuration from inside Kubernetes cluster"),
+		retry.WithAttempts(25),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(errParseConfigTransient, registrydata.ErrRegistryDataTransient),
+	)
+
+	err = retry.NewSilentLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
-			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions, operation)
+			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, validatorProvider, globalOptions, operation)
 			return err
 		})
 	if err != nil {
@@ -212,45 +229,28 @@ func ParseConfigInCluster(
 	return metaConfig, nil
 }
 
-func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, globalOptions *options.GlobalOptions, operation string) (*MetaConfig, error) {
+func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, validatorProvider MetaConfigValidatorProvider, globalOptions *options.GlobalOptions, operation string) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{Operation: operation}
 
-	// panic mitigation + ensure the provider-bundle download dir and the
-	// preparator agree on one location even when DownloadDir was left empty.
+	// panic mitigation + ensure the provider-bundle download dir and the schema
+	// lookup agree on one location even when DownloadDir was left empty.
 	globalOptions = withDownloadDir(globalOptions)
 
-	clusterConfig, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
+	clusterConfig, err := readClusterConfigFromCluster(ctx, kubeCl)
 	if err != nil {
 		return nil, err
 	}
-	clusterConfigData := clusterConfig.Data["cluster-configuration.yaml"]
-
-	var parsedClusterConfig map[string]json.RawMessage
-	if err := yaml.Unmarshal(clusterConfigData, &parsedClusterConfig); err != nil {
-		return nil, err
-	}
-	var clusterType string
-	if err := json.Unmarshal(parsedClusterConfig["clusterType"], &clusterType); err != nil {
-		return nil, err
-	}
-
-	var cloudProvider string
-	if clusterType == CloudClusterType {
-		var cloudSpec struct {
-			Provider string `json:"provider"`
-		}
-		if err := json.Unmarshal(parsedClusterConfig["cloud"], &cloudSpec); err != nil {
-			return nil, fmt.Errorf("parse cloud provider from cluster config: %w", err)
-		}
-		cloudProvider = strings.ToLower(cloudSpec.Provider)
-	}
+	cloudProvider := clusterConfig.Provider
 	needProviderCandi := cloudProvider != "" && !providerCandiPresent(cloudProvider, globalOptions)
 
 	// Cloud clusters need registry data even without downloads: provider
 	// plugins are pulled lazily and read DeckhouseConfig.RegistryDockerCfg.
-	needRegistryData := globalOptions.EnsureCandiAvailable || needProviderCandi || clusterType == CloudClusterType
+	needRegistryData := globalOptions.EnsureCandiAvailable || needProviderCandi || clusterConfig.Type == CloudClusterType
 	if needRegistryData {
-		conf, b64dc, err := registrydata.GetRegistryData(ctx, kubeCl)
+		// Out of the cluster (manual dhctl over SSH) the deckhouse-registry mirror
+		// registry.d8-system.svc is unresolvable, so prefer the upstream registry
+		// for the candi/provider-bundle download; in-cluster callers keep the mirror.
+		conf, b64dc, err := registrydata.GetRegistryDataPreferUpstream(ctx, kubeCl, globalOptions.KubeInCluster)
 		if err != nil {
 			return nil, err
 		}
@@ -283,13 +283,13 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 
 	schemaStore := NewSchemaStore(globalOptions)
 
-	_, err = schemaStore.Validate(&clusterConfigData)
+	_, err = schemaStore.Validate(&clusterConfig.Raw)
 	if err != nil {
 		return nil, err
 	}
 
-	metaConfig.ClusterConfig = parsedClusterConfig
-	metaConfig.ClusterType = clusterType
+	metaConfig.ClusterConfig = clusterConfig.Parsed
+	metaConfig.ClusterType = clusterConfig.Type
 
 	_, err = DoByClusterType(ctx, metaConfig, newFromClusterMetaConfigFiller(kubeCl, schemaStore))
 	if err != nil {
@@ -297,10 +297,10 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	}
 
 	// For cloud clusters, pre-load provider resources from the cluster so that
-	// CloudProviderVars is available when the preparator runs. The Cloud filler
+	// CloudProviderVars is available when the provider validator runs. The Cloud filler
 	// above has already populated ProviderName (and the mc-flow ModuleConfig or
 	// legacy ProviderClusterConfig).
-	if clusterType == CloudClusterType {
+	if clusterConfig.Type == CloudClusterType {
 		cv, err := CloudProviderVarsFromCluster(ctx, kubeCl, metaConfig.ProviderName)
 		if err != nil {
 			return nil, fmt.Errorf("read cloud provider resources: %w", err)
@@ -308,7 +308,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		metaConfig.CloudProviderVars = cv
 	}
 
-	return metaConfig.Prepare(ctx, preparatorProvider)
+	return metaConfig.Prepare(ctx, validatorProvider)
 }
 
 // parseDocument
@@ -460,7 +460,7 @@ func detectMergedDocuments(doc string) error {
 func ParseConfigFromData(
 	ctx context.Context,
 	configData string,
-	preparatorProvider MetaConfigPreparatorProvider,
+	validatorProvider MetaConfigValidatorProvider,
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
@@ -538,14 +538,14 @@ deckhouse: {}
 		metaConfig.DownloadRootDir = options.downloadRootDir
 	}
 
-	return metaConfig.Prepare(ctx, preparatorProvider)
+	return metaConfig.Prepare(ctx, validatorProvider)
 }
 
 // ParseConfigFromDataEnsureProvider behaves like ParseConfigFromData but first
-// ensures the external provider bundle is downloaded and unpacked (so the
-// provider validator binary is available) and points the preparator at the
-// download dir. Use it on cold server pods (check/converge/destroy/detach)
-// where the bundle is not pre-baked in the install image.
+// ensures the external provider bundle is downloaded and unpacked (so its
+// OpenAPI schemas are available) and points the parse at the download dir. Use
+// it on cold server pods (check/converge/destroy/detach) where the bundle is
+// not pre-baked in the install image.
 //
 // registryConfig carries registry access only (an InitConfiguration and/or a
 // deckhouse ModuleConfig document). It feeds bundle resolution together with
@@ -554,21 +554,20 @@ deckhouse: {}
 func ParseConfigFromDataEnsureProvider(
 	ctx context.Context,
 	configData string,
-	registryConfig string,
-	preparatorProvider MetaConfigPreparatorProvider,
+	validatorProvider MetaConfigValidatorProvider,
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
 	globalOptions = withDownloadDir(globalOptions)
 
-	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(input.CombineYAMLs(configData, registryConfig)), -1)
+	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
 	if err := EnsureProviderBundle(ctx, "", docs, globalOptions); err != nil {
 		return nil, err
 	}
 
 	opts = append(opts, ValidateOptionDownloadRootDir(globalOptions.DownloadDir))
 
-	metaConfig, err := ParseConfigFromData(ctx, configData, preparatorProvider, globalOptions, opts...)
+	metaConfig, err := ParseConfigFromData(ctx, configData, validatorProvider, globalOptions, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -580,11 +579,10 @@ func ParseConfigFromDataEnsureProvider(
 	metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
 
 	// Lazy provider-plugin / terraform-manager downloads read registry creds
-	// from DeckhouseConfig. In commander mode those creds arrive in
-	// registryConfig (a separate doc), not in configData, so copy them onto
-	// DeckhouseConfig here; otherwise the cold-pod download decodes an empty
-	// dockercfg ("unmarshaling dockerconfig JSON: unexpected end of JSON
-	// input"). Mirrors parseConfigFromCluster.
+	// from DeckhouseConfig. When configData itself carries an InitConfiguration
+	// or a deckhouse ModuleConfig (CLI paths), copy them onto DeckhouseConfig so
+	// the cold-pod download has credentials; commander operations resolve the
+	// registry from the target cluster instead. No-op when the docs hold none.
 	if err := applyRegistryToDeckhouseConfig(metaConfig, docs); err != nil {
 		return nil, err
 	}
@@ -679,9 +677,9 @@ func FetchDocuments(ctx context.Context, paths []string) ([]string, error) {
 	return docs, nil
 }
 
-// inTreePreparatorProviders mirrors selectPreparator in infrastructureprovider
+// inTreeValidatorProviders mirrors selectValidator in infrastructureprovider
 // (not imported from here to avoid a cycle).
-var inTreePreparatorProviders = map[string]struct{}{
+var inTreeValidatorProviders = map[string]struct{}{
 	"yandex": {},
 	"vcd":    {},
 }
@@ -720,7 +718,7 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 		schemaPresent = true
 	}
 
-	if _, inTree := inTreePreparatorProviders[provider]; inTree {
+	if _, inTree := inTreeValidatorProviders[provider]; inTree {
 		return schemaPresent
 	}
 
@@ -740,7 +738,7 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 // process's store (built once at startup). In-tree providers (schemas loaded
 // from candi at build time) and already-loaded providers are a no-op.
 func loadDeliveredProviderSchemas(provider string, globalOptions *options.GlobalOptions) error {
-	if _, inTree := inTreePreparatorProviders[provider]; inTree {
+	if _, inTree := inTreeValidatorProviders[provider]; inTree {
 		return nil
 	}
 	store := NewSchemaStore(globalOptions)
@@ -1065,7 +1063,7 @@ func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, globa
 		return nil
 	}
 
-	conf, _, err := registrydata.GetRegistryData(ctx, kubeCl)
+	conf, _, err := registrydata.GetRegistryDataPreferUpstream(ctx, kubeCl, globalOptions.KubeInCluster)
 	if err != nil {
 		return err
 	}

@@ -27,14 +27,14 @@ const defaultEdition = "_default"
 type Licensing struct {
 	// Editions maps an edition name to its license. The special key
 	// defaultEdition supplies the fallback used when an edition has no entry.
-	Editions map[string]EditionLicense
+	Editions map[string]EditionLicense `json:"editions" yaml:"editions"`
 }
 
 // EditionLicense is a single edition's license: whether the package ships in
 // that edition and which bundles enable it by default.
 type EditionLicense struct {
-	Available        bool
-	EnabledInBundles []string
+	Available        bool     `json:"available" yaml:"available"`
+	EnabledInBundles []string `json:"enabledInBundles" yaml:"enabledInBundles"`
 }
 
 // IsAvailable reports whether the package is available in this edition. The

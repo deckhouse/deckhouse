@@ -1,0 +1,103 @@
+{{- if and .Values.controlPlaneManager.internal.authn.enableBasicAuth .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: basic-auth-proxy
+  namespace: kube-system
+  annotations:
+  {{- if or (.Values.global.enabledModules | has "cert-manager") (eq .Values.global.modules.https.mode "CustomCertificate") }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+  {{- end }}
+    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+  {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges | join "," }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  ingressClassName: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "api") }}
+    http:
+      paths:
+      - path: /basic-auth(\/?)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: basic-auth-proxy
+            port:
+              number: 7332
+{{- if and
+      (or
+        (.Values.global.enabledModules | has "cert-manager")
+        (eq .Values.global.modules.https.mode "CustomCertificate")
+      )
+      (include "helm_lib_module_https_ingress_tls_enabled" .)
+}}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "api") }}
+    secretName: {{ include "publish_api_certificate_name" . }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: basic-auth-proxy
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  type: ExternalName
+  externalName: {{ printf "basic-auth-proxy.d8-user-authn.svc.%s" .Values.global.discovery.clusterDomain }}
+  ports:
+  - name: http
+    port: 7332
+    protocol: TCP
+    targetPort: 7332
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- $apiHost := include "helm_lib_module_public_domain" (list . "api") }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: basic-auth-proxy
+  namespace: kube-system
+  annotations:
+    alb.network.deckhouse.io/request-body-buffer-limit: "10485760"
+  {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges | join "," }}
+  {{- end }}
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ $apiHost }}
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: control-plane-manager
+    namespace: kube-system
+    sectionName: api
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: basic-auth-proxy
+      port: 7332
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+      headers:
+      - name: Authorization
+        type: RegularExpression
+        value: ^(.*)Basic(.*)$
+{{- end }}
+{{- end }}

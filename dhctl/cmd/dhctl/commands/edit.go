@@ -83,6 +83,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 				Editor:      opts.Render.Editor,
 				TmpDir:      opts.Global.TmpDir,
 				SanityCheck: opts.Global.SanityCheck,
+				OnAbsent:    operations.OnAbsentFor(secret),
 			},
 		)
 	})

@@ -1,0 +1,72 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: openvpn
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          OpenVPN server, admin UI and iptables init containers must run as root to
+          create TUN devices, manage routing/NAT and operate EasyRSA materials.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for TUN device creation, iptables and certificate management.
+    capabilities:
+      allowedValues:
+        add:
+          - NET_ADMIN
+          - NET_RAW
+          - MKNOD
+          - SETGID
+          - SETUID
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_ADMIN/NET_RAW are required for TUN routing and iptables NAT;
+          MKNOD/SETUID/SETGID are required to create the TUN device and drop privileges after setup.
+          NET_RAW is also used by optional pmacct traffic accounting containers.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          hostPath is required to share the host xtables lock with other iptables users on the node.
+    hostPath:
+      allowedValues:
+        - path: /run/xtables.lock
+          readOnly: false
+          metadata:
+            description: Host xtables lock used to serialize iptables updates.
+  {{- if and (hasKey .Values.openvpn "inlet") (eq .Values.openvpn.inlet "HostPort") }}
+  network:
+    hostNetwork:
+      allowedValue: false
+      metadata:
+        description: |
+          Allow OpenVPN to expose a node-local hostPort without joining the host network namespace.
+    hostPorts:
+    {{- if .Values.openvpn.tcpEnabled }}
+      - port: {{ .Values.openvpn.hostPort | default 5416 }}
+        protocol: TCP
+        metadata:
+          description: OpenVPN TCP listener published via HostPort inlet.
+    {{- end }}
+    {{- if .Values.openvpn.udpEnabled }}
+      - port: {{ .Values.openvpn.hostPort | default 5416 }}
+        protocol: UDP
+        metadata:
+          description: OpenVPN UDP listener published via HostPort inlet.
+    {{- end }}
+  {{- end }}
+{{- end }}

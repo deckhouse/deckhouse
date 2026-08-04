@@ -64,7 +64,7 @@ func validateConfigSchema(ctx context.Context, payload string, _ *SchemaStore, o
 		return nil
 	}
 	opts = append(opts, ValidateOptionCollectAllErrors(true))
-	if _, err := ParseConfigFromData(ctx, payload, DummyPreparatorProvider(), nil, opts...); err != nil {
+	if _, err := ParseConfigFromData(ctx, payload, DummyValidatorProvider(), nil, opts...); err != nil {
 		if ve, ok := errors.AsType[*ValidationError](err); ok {
 			return ve
 		}

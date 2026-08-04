@@ -31,7 +31,7 @@ kind: ModuleConfig
 metadata:
   name: sds-replicated-volume
 spec:
-  version: 1
+  version: 2
   enabled: true
 EOF
 ```

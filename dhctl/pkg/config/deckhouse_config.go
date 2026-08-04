@@ -33,6 +33,7 @@ import (
 
 const (
 	DefaultBundle   = "Default"
+	MinimalBundle   = "Minimal"
 	DefaultLogLevel = "Info"
 )
 
@@ -87,13 +88,6 @@ func (c *DeckhouseInstaller) HasProviderModuleConfig() bool {
 		}
 	}
 	return false
-}
-
-// HasLegacyProviderConfig reports whether the installer carries a non-empty
-// d8-provider-cluster-configuration payload (the legacy provider format).
-// Mirrors MetaConfig.HasLegacyProviderConfig.
-func (c *DeckhouseInstaller) HasLegacyProviderConfig() bool {
-	return c != nil && len(c.ProviderClusterConfig) > 0
 }
 
 func (c *DeckhouseInstaller) GetImageTag(ctx context.Context, forceVersionTag bool) (string, error) {

@@ -1,4 +1,4 @@
-2787
+2794
 1GB
 2GB
 5XX
@@ -177,6 +177,7 @@ cdi
 cdi-uploadproxy
 ce
 CEF
+CEL
 centiseconds
 centos
 Centos
@@ -949,6 +950,7 @@ MiB
 MicroK
 MicroK8s
 microservices
+microversion
 milli
 millicore
 minikube
@@ -1668,6 +1670,7 @@ VNet
 VNets
 VNIC
 VNicProfileId
+VolumeAttachment
 VolumeGroup
 volumeMounts
 VolumeSnapshot
@@ -1776,6 +1779,7 @@ ZvirtInstanceClass
 авторизовывать
 авторизовываться
 авторизующий
+авторизующим
 автоскейлерам
 автоскейлинг
 автосогласования
@@ -1838,6 +1842,7 @@ ZvirtInstanceClass
 бакету
 балансировщик
 балансировщика
+балансировщиками
 балансировщиках
 балансировщике
 балансировщики
@@ -1862,6 +1867,7 @@ ZvirtInstanceClass
 блокирующе
 блокчейном
 буквенно
+Булевый
 бутстрап
 бутстрапа
 бутстрапится
@@ -2653,6 +2659,7 @@ ZvirtInstanceClass
 таймауты
 тайминги
 таргетов
+таргеты
 тегирование
 тегирования
 тегируются

@@ -369,11 +369,15 @@ spec:
   - matchConditions: optional match conditions
   - sideEffects: side effects (default: "None")
   - timeoutSeconds: timeout (default: 5)
+  - controllerName: name of the webhook-serving controller Deployment this configuration
+    depends on (default: "controller"). werf.io/deploy-dependency annotations are added so
+    the ValidatingWebhookConfiguration is deployed only after that Deployment is ready and
+    the webhook Service (serviceName) is present.
 */ -}}
 {{- define "helm_lib_module_validating_webhook_configuration" }}
   {{- $context := index . 0 }}
   {{- $config := index . 1 }}
-  
+
   {{- $name := $config.name | required "$config.name is required" }}
   {{- $webhookName := $config.webhookName | required "$config.webhookName is required" }}
   {{- $valuesKey := $config.valuesKey | required "$config.valuesKey is required" }}
@@ -384,6 +388,7 @@ spec:
   {{- $matchConditions := $config.matchConditions }}
   {{- $sideEffects := $config.sideEffects | default "None" }}
   {{- $timeoutSeconds := $config.timeoutSeconds | default 5 }}
+  {{- $controllerName := $config.controllerName | default "controller" }}
 
   {{- /* Get module values and cert */ -}}
   {{- $moduleValues := index $context.Values $valuesKey }}
@@ -397,6 +402,9 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: "d8-{{ $context.Chart.Name }}-{{ $name }}"
+  annotations:
+    werf.io/deploy-dependency-controller: state=ready,kind=Deployment,name={{ $controllerName }},namespace=d8-{{ $context.Chart.Name }}
+    werf.io/deploy-dependency-service: state=present,kind=Service,name={{ $serviceName }},namespace=d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 webhooks:
   - name: "d8-{{ $context.Chart.Name }}-{{ $webhookName }}.deckhouse.io"

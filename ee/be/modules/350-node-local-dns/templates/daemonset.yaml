@@ -63,6 +63,7 @@ spec:
       labels:
         app: node-local-dns
         k8s-app: node-local-dns # added for compatibility with cilium connectivity tests
+        security.deckhouse.io/security-policy-exception: node-local-dns
     spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}

@@ -1,3 +1,21 @@
+## List of required OpenStack services
+
+The following {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services must be available for Deckhouse Kubernetes Platform to operate:
+
+| Service                      |                         API Version                      |
+| :------------------------- | :--------------------------------------------------------: |
+| Identity (Keystone)        |    [v3](https://docs.openstack.org/api-ref/identity/v3/)   |
+| Compute (Nova)             |     [v2.1](https://docs.openstack.org/api-ref/compute/)    |
+| Network (Neutron)          |     [v2.0](https://docs.openstack.org/api-ref/network/)    |
+| Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
+| Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
+
+\* If you need to order a Load Balancer.
+
+{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
+API endpoints and ports are listed in the [official documentation](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
+{% endif %}
+
 ## Layouts
 
 This section describes the possible node placement layouts in {{ site.data.admin.cloud-types.types[page.cloud_type].name }} infrastructure and the related configuration options.
@@ -79,7 +97,7 @@ nodeGroups:
     # is no DHCP in the network that is used as a default gateway.
     configDrive: false
     # Required, the gateway of this network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
@@ -170,7 +188,7 @@ nodeGroups:
     # gateway.
     configDrive: false
     # Required, the gateway of the network will be used as the default gateway.
-    # Matches the cloud.prefix in the ClusterConfiguration resource.
+    # Matches the prefix parameter in the global ModuleConfig.
     mainNetwork: kube
     additionalNetworks:                          # Optional.
     - office
@@ -439,33 +457,47 @@ spec:
       owner: default
 ```
 
-### List of required services
-
-Below is the list of {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services required for DKP to operate in {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
-
-| Service                           | API version |
-|:---------------------------------|:----------:|
-| Identity (Keystone)              | v3         |
-| Compute (Nova)                   | v2         |
-| Network (Neutron)                | v2         |
-| Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) *       | v2         |
-
-\* If you need to provision a LoadBalancer.
-
-{% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
-For the API endpoints and ports, refer to the [official documentation](https://cloud.vk.com/docs/en/tools-for-using-services/api/rest-api/endpoints).
-{% endif %}
-
 ### LoadBalancer configuration
 
 {% alert level="warning" %}
-To correctly detect client IP addresses, you must use a LoadBalancer that supports Proxy Protocol.
+To correctly determine the client IP address, use a LoadBalancer with Proxy Protocol support.
 {% endalert %}
 
-#### Example: IngressNginxController
+It is recommended to limit the list of nodes added to the load balancer pool using the [`loadbalancer.openstack.org/node-selector`](https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#load-balancer) annotation.
 
-The following is a simple configuration example for an [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
+Without a `node-selector` restriction, cloud-controller-manager may use all suitable cluster nodes as load balancer targets. As a result, adding or removing nodes that are not related to the workload served by the load balancer may trigger an update of the load balancer pool membership. In large or frequently changing clusters, such updates may occur regularly and, in some configurations, may cause brief disruptions to existing connections.
+
+The `annotations` field of the corresponding inlet configuration in the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource supports the following annotations:
+
+- `loadbalancer.openstack.org/node-selector`: Selects the nodes that will be used as LoadBalancer targets.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-id`: Instructs OpenStack CCM to use a pre-created Octavia load balancer.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-address`: Instructs OpenStack CCM to associate a pre-allocated floating IP with the load balancer it creates.
+
+DKP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
+
+When using the `loadbalancer.openstack.deckhouse.io/load-balancer-id` annotation, the load balancer must meet the following requirements:
+
+- reside in the cluster subnet
+- be in the `ACTIVE` state
+
+If `loadbalancer.openstack.deckhouse.io/load-balancer-id` is used to reference a pre-created load balancer with a custom name, associate the floating IP with its VIP port before creating the cluster. In this case, do not specify the `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotation.
+
+When using only `loadbalancer.openstack.deckhouse.io/load-balancer-address`, the floating IP must meet the following requirements:
+
+- not be associated with any port
+- reside in the floating network configured for OpenStack CCM
+
+If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the Service object.
+
+Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DKP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
+
+#### IngressNginxController with a pre-created load balancer
+
+In the example below:
+
+- Ingress controller pods are scheduled on frontend nodes.
+- `loadbalancer.openstack.org/node-selector` limits the load balancer target pool to those frontend nodes.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-id` references a pre-created Octavia load balancer whose VIP port already has a floating IP associated with it.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -477,6 +509,35 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-id: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b"
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
+      loadbalancer.openstack.org/proxy-protocol: "true"
+      loadbalancer.openstack.org/timeout-member-connect: "2000"
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    operator: Equal
+    value: frontend
+```
+
+#### IngressNginxController with a pre-allocated floating IP
+
+In the example below, OpenStack CCM creates a load balancer and associates the specified unassigned floating IP with it:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancerWithProxyProtocol
+  loadBalancerWithProxyProtocol:
+    annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-address: "203.0.113.10"
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
   nodeSelector:

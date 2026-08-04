@@ -8,3 +8,11 @@ stage: General Availability
 descriptions:
   en: Manages interaction with zVirt resources. Allows to use zVirt resources for provisioning nodes.
   ru: Управляет взаимодействием с облачными ресурсами zVirt. Позволяет использовать ресурсы zVirt при создании узлов.
+accessibility:
+  editions:
+    se-plus:
+      available: true
+    ee:
+      available: true
+    fe:
+      available: true

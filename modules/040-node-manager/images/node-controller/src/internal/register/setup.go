@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
@@ -44,10 +45,14 @@ func setupController(mgr ctrl.Manager, c client.Client, name string, obj client.
 
 	b := ctrl.NewControllerManagedBy(mgr).
 		Named(name).
-		For(obj).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: maxConcurrentReconciles,
 		})
+	if v, ok := r.(NeedsForPredicates); ok {
+		b = b.For(obj, builder.WithPredicates(v.ForPredicates()...))
+	} else {
+		b = b.For(obj)
+	}
 
 	w := &builderWatcher{b: b}
 	r.SetupWatches(w)

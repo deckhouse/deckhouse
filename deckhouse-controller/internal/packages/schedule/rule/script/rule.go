@@ -14,10 +14,11 @@
 
 // Package script models a module's enabled script as a scheduler rule. A module
 // may ship an `enabled` shell script that inspects the values of the
-// already-enabled modules and reports whether this module should run. Its true
-// result is a soft Enable vote and its false result a hard Forbid; a script that
-// cannot be evaluated also forbids the module, so a broken script never leaves a
-// module running by default.
+// already-enabled modules and reports whether this module should run. The script
+// is veto-only: a true result is no opinion (Undefined) — it cannot turn a module
+// on — while a false result is a hard Forbid; a script that cannot be evaluated
+// also forbids the module, so a broken script never leaves a module running by
+// default.
 package script
 
 import (
@@ -40,9 +41,9 @@ const (
 	reasonScriptError = "EnabledScriptError"
 )
 
-// Rule is driven by a module's enabled script: a true result votes to enable the
-// module (a soft Enable), a false result vetoes it (Forbid), and a script that
-// cannot be evaluated also vetoes it.
+// Rule is driven by a module's enabled script: a true result is no opinion
+// (Undefined) and cannot turn the module on, a false result vetoes it (Forbid),
+// and a script that cannot be evaluated also vetoes it.
 type Rule struct {
 	pkg    Package
 	logger *log.Logger
@@ -73,11 +74,12 @@ func NewRule(pkg Package, logger *log.Logger) *Rule {
 }
 
 // Decide runs the module's enabled script and folds its outcome onto the rule
-// lattice: a missing script is no opinion (Undefined); a true result is a soft
-// Enable vote; a false result vetoes the module (Forbid); a failure to run or
-// parse the script also vetoes it, so a broken script cannot leave a module
-// running by default. The rule.Rule interface carries no context and one must
-// not be stored on the Rule, so the script runs under context.Background.
+// lattice: a missing script is no opinion (Undefined); a true result is also no
+// opinion (Undefined) — the script is veto-only and cannot turn a module on; a
+// false result vetoes the module (Forbid); a failure to run or parse the script
+// also vetoes it, so a broken script cannot leave a module running by default.
+// The rule.Rule interface carries no context and one must not be stored on the
+// Rule, so the script runs under context.Background.
 func (r *Rule) Decide() rule.Decision {
 	script := r.pkg.GetEnabledScriptDescriptor()
 	if script == nil {
@@ -93,5 +95,5 @@ func (r *Rule) Decide() rule.Decision {
 		return rule.Decision{Kind: rule.Forbid, Reason: reasonDisabledByScript, Message: res.reason}
 	}
 
-	return rule.Decision{Kind: rule.Enable, Reason: reasonEnabledByScript}
+	return rule.Decision{Kind: rule.Undefined, Reason: reasonEnabledByScript}
 }

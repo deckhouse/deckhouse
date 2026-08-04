@@ -178,7 +178,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
-			config.DummyPreparatorProvider(),
+			config.DummyValidatorProvider(),
 			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
@@ -242,7 +242,6 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
-			[]byte(p.request.RegistryConfig),
 		),
 		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter).
 			WithUseTfCache(opts.Cache.UseTfCache).
