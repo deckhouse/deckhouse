@@ -436,7 +436,12 @@ status:
 4. **The legacy model resolves an access level the way the fan-out hook does**:
    the level's own ClusterRole plus every ClusterRole annotated
    `user-authz.deckhouse.io/access-level` for that level or a lower one.
-5. **`excludeCustom` reports the model the platform ships.** Custom roles belong
+5. **Roles run from the narrowest access to the widest**: by scope (namespace,
+   project, subsystem, system) and by level inside it (viewer, user, manager,
+   admin, superadmin), with subsystems ordered by name. Alphabetical order would
+   open the document with the administrator, and the legacy model already reads
+   this way, since its levels include one another in that order.
+6. **`excludeCustom` reports the model the platform ships.** Custom roles belong
    to one cluster, and listing them beside the model reads as if the platform
    shipped them - but they are real access, so leaving them out is the caller's
    decision, the count of skipped ones goes into `notes`, and a role named in

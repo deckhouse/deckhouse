@@ -483,6 +483,51 @@ func TestRoleReport_CustomRolesFollowTheSelection(t *testing.T) {
 	assert.Contains(t, excluded.Notes[0], "1 custom roles")
 }
 
+// The catalogue is read from the narrowest access to the widest. By name it
+// would open with the administrator, and telling the levels apart would take
+// knowing the model by heart.
+func TestRoleReport_RolesRunFromTheNarrowestAccessToTheWidest(t *testing.T) {
+	t.Parallel()
+
+	objs := []runtime.Object{
+		aggregatingRole("d8:namespace:admin", "namespace"),
+		aggregatingRole("d8:namespace:viewer", "namespace"),
+		aggregatingRole("d8:namespace:superadmin", "namespace"),
+		aggregatingRole("d8:namespace:user", "namespace"),
+		aggregatingRole("d8:namespace:manager", "namespace"),
+		aggregatingRole("d8:project:admin", "project"),
+		aggregatingRole("d8:project:viewer", "project"),
+		aggregatingRole("d8:system:admin", "system"),
+		aggregatingRole("d8:subsystem:networking:manager", "subsystem"),
+		aggregatingRole("d8:subsystem:networking:viewer", "subsystem"),
+		aggregatingRole("d8:subsystem:cloud:viewer", "subsystem"),
+	}
+
+	status, err := setupRoleAccessResolver(t, objs).Report(context.Background(), RoleAccessRequest{})
+	require.NoError(t, err)
+
+	names := make([]string, 0, len(status.Roles))
+	for _, role := range status.Roles {
+		names = append(names, role.Name)
+	}
+
+	assert.Equal(t, []string{
+		"d8:namespace:viewer",
+		"d8:namespace:user",
+		"d8:namespace:manager",
+		"d8:namespace:admin",
+		"d8:namespace:superadmin",
+		"d8:project:viewer",
+		"d8:project:admin",
+		// Subsystems are peers, ordered by name; the levels inside each one
+		// still run from the narrowest access to the widest.
+		"d8:subsystem:cloud:viewer",
+		"d8:subsystem:networking:viewer",
+		"d8:subsystem:networking:manager",
+		"d8:system:admin",
+	}, names)
+}
+
 // Excluding custom roles must not make one unreachable: an audit of a named
 // role still has to be possible.
 func TestRoleReport_NamedCustomRoleSurvivesTheExclusion(t *testing.T) {

@@ -266,7 +266,44 @@ func (r *RoleAccessResolver) primaryRoles(index *roleIndex, req RoleAccessReques
 		reported = append(reported, r.describeRole(index, role, descriptor, req))
 	}
 
+	slices.SortFunc(reported, compareRoles)
+
 	return reported, skippedCustom
+}
+
+// The catalogue is read from the narrowest access to the widest, so that is how
+// it is ordered. By name it would open with the administrator and close with the
+// viewer, and the reader has to hold the model in their head to see that.
+var (
+	scopeOrder = map[string]int{"namespace": 0, "project": 1, "subsystem": 2, "system": 3}
+	levelOrder = map[string]int{"viewer": 0, "user": 1, "manager": 2, "admin": 3, "superadmin": 4}
+)
+
+// rankOf places what the order does not know after what it does: a custom role
+// with a level of its own belongs at the end of its scope, not in the middle of
+// the model.
+func rankOf(order map[string]int, key string) int {
+	if rank, ok := order[key]; ok {
+		return rank
+	}
+
+	return len(order)
+}
+
+func compareRoles(a, b v1alpha1.RoleAccess) int {
+	if by := rankOf(scopeOrder, a.Role.Scope) - rankOf(scopeOrder, b.Role.Scope); by != 0 {
+		return by
+	}
+	// Subsystems are peers: they are ordered by name, and the levels inside
+	// each of them still run from the narrowest access to the widest.
+	if by := strings.Compare(a.Role.Subsystem, b.Role.Subsystem); by != 0 {
+		return by
+	}
+	if by := rankOf(levelOrder, a.Role.Level) - rankOf(levelOrder, b.Role.Level); by != 0 {
+		return by
+	}
+
+	return strings.Compare(a.Name, b.Name)
 }
 
 // describeRole expands one role of the primary model.
