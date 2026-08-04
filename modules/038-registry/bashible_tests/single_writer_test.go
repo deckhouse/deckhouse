@@ -320,3 +320,30 @@ func TestTheAgentResolvesThroughTheNode(t *testing.T) {
 	// two belong together.
 	require.Contains(t, body, "hostNetwork: true")
 }
+
+// TestTheAgentAlwaysGetsTheKubeconfigMount pins the mount whose absence is permanent.
+//
+// The agent reads its layout with the kubelet's own credentials. Mounted only once
+// /etc/kubernetes/kubelet.conf exists — which is what this step did — the question is decided
+// at the one moment the answer is "not yet", because the manifest is written before the node
+// finishes its TLS bootstrap. It is never revisited: bashible skips a bundle it has already
+// applied, so the step does not run again, and that node's agent stays without API access for
+// the life of the node. It pulls from the layout it was installed with and reports success, so
+// nothing looks wrong; whether it happened at all depended on which came first, this step or
+// the kubeconfig.
+//
+// The directory is mounted instead, unconditionally. That grants nothing new — the agent is
+// root in the host's namespaces on that node — and the agent re-reads the path on every
+// connection attempt, so the credentials are found whenever they land.
+func TestTheAgentAlwaysGetsTheKubeconfigMount(t *testing.T) {
+	body := render(t, "all/053_configure_registry_agent.sh.tpl", agentRegistry())
+
+	require.Contains(t, body, "mountPath: /etc/kubernetes\n",
+		"the agent must be able to read the kubeconfig whenever it appears")
+	require.Contains(t, body, "path: /etc/kubernetes\n")
+	require.NotContains(t, body, `if [[ -f /etc/kubernetes/kubelet.conf ]]`,
+		"a conditional mount is decided once, at the moment the answer is still no")
+	// FileOrCreate would have the kubelet create an empty kubelet.conf, and step 061 skips
+	// generating the bootstrap kubeconfig when that file exists.
+	require.NotContains(t, body, "type: FileOrCreate")
+}

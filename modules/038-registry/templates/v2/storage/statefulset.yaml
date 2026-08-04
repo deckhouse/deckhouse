@@ -225,7 +225,9 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
         - --config-path=/config/config.yaml
-        - --upstream-ca-path=/pki/upstream-registry-ca.crt
+        # Beside the configuration, on the writable emptyDir: /pki is a Secret mount and
+        # the syncer has to be able to remove this file when the upstream stops carrying a CA.
+        - --upstream-ca-path=/config/upstream-registry-ca.crt
         - --registry-process-name=registry
         env:
         - name: NODE_NAME

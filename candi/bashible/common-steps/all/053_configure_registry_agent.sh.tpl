@@ -195,24 +195,29 @@ if [[ ! -e "${bootstrap_layout}" ]]; then
 fi
 chmod 0600 "${bootstrap_layout}"
 
-# The kubelet's own credentials are how the agent reads this node's layout, so that
-# nothing has to be distributed to the node for it. They are mounted only once they
-# exist, and the two obvious alternatives are both wrong:
+# The kubelet's own credentials are how the agent reads this node's layout, so that nothing
+# has to be distributed to the node for it. The directory is mounted, not the file, and
+# unconditionally — every narrower choice has been tried and each fails differently:
 #
-#   - FileOrCreate would have the kubelet create an empty /etc/kubernetes/kubelet.conf,
-#     and step 061 skips generating the bootstrap kubeconfig when that file is present —
-#     so the node would never complete its TLS bootstrap;
-#   - File would leave the pod pending until the file appears, which is precisely the
-#     window in which a node being bootstrapped has nothing else able to pull images.
+#   - FileOrCreate on kubelet.conf has the kubelet create an empty one, and step 061 skips
+#     generating the bootstrap kubeconfig when that file exists, so the node never completes
+#     its TLS bootstrap;
+#   - File on kubelet.conf leaves the pod pending until it appears, which is exactly the
+#     window in which a node being bootstrapped has nothing else able to pull images;
+#   - mounting it only once it exists — what this step did until a test cluster showed
+#     otherwise — decides the question at the one moment the answer is "not yet" and never
+#     revisits it. The comment here used to claim the mount would appear on a later bashible
+#     pass. It does not: bashible skips a bundle it has already applied ("Configuration is in
+#     sync, nothing to do"), so the step never runs again and the agent on that node stays
+#     without API access for the life of the node — pulling from the layout it was installed
+#     with, reporting success, and never applying anything the cluster configures. Whether it
+#     happened at all depended on which came first, the step or the kubeconfig.
 #
-# So the agent starts without API access and routes from the layout the node was
-# installed with. The mount appears on a later bashible pass, the kubelet restarts the
-# pod, and from then on the cluster's layout wins.
-kubeconfig_mount=""
-kubeconfig_volume=""
-if [[ -f /etc/kubernetes/kubelet.conf ]]; then
-  kubeconfig_mount="$(cat << "MOUNT"
-    - mountPath: /etc/kubernetes/kubelet.conf
+# Mounting the directory read-only costs nothing this agent does not already have: it runs as
+# root in the host's namespaces on this node. What it buys is that the agent finds the
+# credentials whenever they appear, because it re-reads the path on every connection attempt.
+kubeconfig_mount="$(cat << "MOUNT"
+    - mountPath: /etc/kubernetes
       name: kubeconfig
       readOnly: true
     - mountPath: /var/lib/kubelet/pki
@@ -220,10 +225,10 @@ if [[ -f /etc/kubernetes/kubelet.conf ]]; then
       readOnly: true
 MOUNT
 )"
-  kubeconfig_volume="$(cat << "VOLUME"
+kubeconfig_volume="$(cat << "VOLUME"
   - hostPath:
-      path: /etc/kubernetes/kubelet.conf
-      type: File
+      path: /etc/kubernetes
+      type: Directory
     name: kubeconfig
   - hostPath:
       path: /var/lib/kubelet/pki
@@ -231,7 +236,6 @@ MOUNT
     name: kubelet-pki
 VOLUME
 )"
-fi
 
 bb-sync-file /etc/kubernetes/manifests/registry-agent.yaml - << EOF
 apiVersion: v1

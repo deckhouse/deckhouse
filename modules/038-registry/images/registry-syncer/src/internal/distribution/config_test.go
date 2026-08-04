@@ -18,6 +18,7 @@ package distribution
 
 import (
 	"encoding/base64"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -270,4 +271,32 @@ func TestRenderWithoutPublicationHasNoWritePath(t *testing.T) {
 
 	http, _ := config["http"].(map[string]any)
 	assert.NotContains(t, http, "realip")
+}
+
+// TestTheUpstreamCALivesOnAWritableVolume pins a path whose only wrong value fails in a way
+// that names nothing relevant.
+//
+// The syncer both writes this file and removes it — when a configuration stops carrying a
+// certificate authority, the stale copy has to go. Placed under the PKI directory, which is a
+// Secret mount and therefore read-only, the removal fails with "read-only file system", the
+// pass never completes, the configuration is never written, and the registry beside it
+// crash-loops on `open /config/config.yaml: no such file or directory`. Three symptoms, none
+// of them mentioning a certificate authority or a volume.
+func TestTheUpstreamCALivesOnAWritableVolume(t *testing.T) {
+	assert.True(t, strings.HasPrefix(UpstreamCAFile, ConfigDir+"/"),
+		"the syncer writes and removes this file, so it cannot live under a Secret mount")
+	assert.False(t, strings.HasPrefix(UpstreamCAFile, PKIDir+"/"),
+		"%s is mounted from a Secret and is read-only", PKIDir)
+
+	// The rendered configuration has to point the registry at wherever it actually is.
+	config := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Host: "registry.deckhouse.io",
+				CA:   "-----BEGIN CERTIFICATE-----upstream",
+			},
+		},
+	})
+	proxy, _ := config["proxy"].(map[string]any)
+	assert.Equal(t, UpstreamCAFile, proxy["ca"])
 }

@@ -53,10 +53,23 @@ const (
 	// authorities.
 	PKIDir = "/pki"
 
-	// UpstreamCAFile is where the upstream certificate authority is written when
-	// the configuration carries one. Written by this package alongside the config,
-	// since the two have to change together.
-	UpstreamCAFile = PKIDir + "/upstream-registry-ca.crt"
+	// ConfigDir is the writable directory the rendered configuration lives in. An
+	// emptyDir shared with the registry: derived state, rewritten on every change.
+	ConfigDir = "/config"
+
+	// UpstreamCAFile is where the upstream certificate authority is written when the
+	// configuration carries one, and removed when it stops carrying one.
+	//
+	// Under ConfigDir rather than PKIDir, which is where it used to be and could not work:
+	// PKIDir is a Secret mount and therefore read-only, so every pass failed on removing a
+	// stale copy — "read-only file system" — and with the pass never completing, the
+	// configuration was never written and the registry beside it crash-looped on a file that
+	// was never going to appear. Nothing in that error mentioned a certificate authority.
+	//
+	// This belongs beside the configuration in any case: the two are written by the same pass
+	// and have to change together, and unlike the material in PKIDir it is not cluster
+	// material — it is a copy of what the upstream configuration says.
+	UpstreamCAFile = ConfigDir + "/upstream-registry-ca.crt"
 
 	// IngressClientCAFile is the authority the write path trusts. Mounted from the
 	// storage PKI rather than written here: it is cluster material, not something
