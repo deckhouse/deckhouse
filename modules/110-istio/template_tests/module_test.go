@@ -1609,6 +1609,7 @@ MY_VAR: "myvalue"
 			Expect(ingressSvc.Exists()).To(BeTrue())
 
 			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"hostport-test","istio":"ingressgateway","istio.deckhouse.io/ingress-gateway-class":"hp","istio.io/dataplane-mode":"none","module":"istio"}`))
+			Expect(ingressDs.Field("spec.template.metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"hostport-test","istio":"ingressgateway","istio.deckhouse.io/ingress-gateway-class":"hp","istio.io/dataplane-mode":"none","module":"istio","security.deckhouse.io/security-policy-exception":"ingress-gateway-controller","sidecar.istio.io/inject":"false"}`))
 			istioProxyContainer := ingressDs.Field("spec.template.spec.containers").Array()
 			Expect(len(istioProxyContainer)).To(Equal(1))
 			Expect((istioProxyContainer[0].Get("ports"))).To(MatchJSON(`[
