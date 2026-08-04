@@ -28,14 +28,6 @@ const (
 	ModuleResource = "modules"
 	ModuleKind     = "Module"
 
-	// ModuleConditionTypeCompleted changes only by module controller
-	ModuleConditionTypeCompleted                = "Completed"
-	ModuleConditionReasonVersionNotFound        = "VersionNotFound"
-	ModuleConditionReasonModulePackageNotFound  = "ModulePackageNotFound"
-	ModuleConditionReasonVersionIsDraft         = "VersionIsDraft"
-	ModuleConditionReasonVersionSpecIsCorrupted = "VersionSpecIsCorrupted"
-	ModuleConditionReasonRepositoryNotFound     = "RepositoryNotFound"
-
 	ModuleFinalizerStatisticRegistered = "module.deckhouse.io/statistic-registered"
 
 	ModuleAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"

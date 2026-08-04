@@ -23,10 +23,6 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -55,13 +52,15 @@ const (
 	// defaultRequeueAfter is the retry delay for states that need an external change to
 	// make progress, such as a missing package or a version still in draft.
 	defaultRequeueAfter = 30 * time.Second
-	// finalizerRequeueAfter is the short delay used to re-read the module right after
-	// its finalizer has been added.
-	finalizerRequeueAfter = 500 * time.Millisecond
 )
 
 // RegisterController registers the Module controller with the manager.
-func RegisterController(sync *sync.WaitGroup, runtime ctrlmanager.Manager, manager packageManager, logger *log.Logger) error {
+func RegisterController(
+	sync *sync.WaitGroup,
+	runtime ctrlmanager.Manager,
+	manager packageManager,
+	logger *log.Logger,
+) error {
 	r := &reconciler{
 		init:    sync,
 		client:  runtime.GetClient(),
@@ -119,18 +118,32 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle delete event
 	if !module.DeletionTimestamp.IsZero() {
-		r.logger.Info("deleting the module", slog.String("name", req.Name))
-		return r.handleDelete(ctx, module)
+		if err := r.handleDelete(ctx, module); err != nil {
+			return ctrl.Result{}, fmt.Errorf("delete: %w", err)
+		}
+
+		return ctrl.Result{}, nil
 	}
 
 	// handle create/update events
-	return r.handleCreateOrUpdate(ctx, module)
+	if err := r.handleCreateOrUpdate(ctx, module); err != nil {
+		r.logger.Warn("failed to handle module", slog.String("name", req.Name), log.Err(err))
+
+		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // handleCreateOrUpdate validates the module's package and version, moves the module
 // onto them and hands it to the package runtime.
-func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
-	defer r.logger.Debug("module reconciled", slog.String("name", module.Name))
+func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.Module) error {
+	logger := r.logger.With(slog.String("name", module.Name))
+
+	logger.Debug("handle module")
+	defer logger.Debug("handle module complete")
+
+	original := module.DeepCopy()
 
 	// The finalizer is claimed before the module reaches the runtime: it is what
 	// guarantees handleDelete gets to call RemoveModule and release the installed lists.
@@ -139,154 +152,128 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 		controllerutil.AddFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered)
 
 		if err := r.client.Patch(ctx, module, patch); err != nil {
-			r.logger.Error("failed to add the module finalizer", slog.String("name", module.Name), log.Err(err))
-			return ctrl.Result{}, fmt.Errorf("patch: %w", err)
+			logger.Error("failed to add the module finalizer", log.Err(err))
+			return fmt.Errorf("patch module '%s': %w", module.Name, err)
 		}
 
-		return ctrl.Result{RequeueAfter: finalizerRequeueAfter}, nil
+		original = module.DeepCopy()
 	}
 
 	pkg := new(v1alpha1.ModulePackage)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Spec.PackageName}, pkg); err != nil {
-		if !apierrors.IsNotFound(err) {
-			r.logger.Error("failed to get the module package", slog.String("package", module.Spec.PackageName), log.Err(err))
-			return ctrl.Result{}, fmt.Errorf("get module package: %w", err)
-		}
+		logger.Debug("module package not found", slog.String("package", module.Spec.PackageName), log.Err(err))
 
-		return r.blocked(ctx, module, v1alpha2.ModuleConditionReasonModulePackageNotFound,
-			fmt.Sprintf("module package %q not found", module.Spec.PackageName))
+		return fmt.Errorf("get module package '%s': %w", module.Spec.PackageName, err)
 	}
 
 	versionName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Spec.PackageName, module.Spec.PackageVersion)
 
 	mpv := new(v1alpha1.ModulePackageVersion)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: versionName}, mpv); err != nil {
-		if !apierrors.IsNotFound(err) {
-			r.logger.Error("failed to get the module package version", slog.String("version", versionName), log.Err(err))
-			return ctrl.Result{}, fmt.Errorf("get module package version: %w", err)
-		}
+		logger.Debug("module package version not found", slog.String("mpv", versionName), log.Err(err))
 
-		return r.blocked(ctx, module, v1alpha2.ModuleConditionReasonVersionNotFound,
-			fmt.Sprintf("module package version %q not found", versionName))
+		return fmt.Errorf("get module package version '%s': %w", versionName, err)
 	}
 
 	// a draft version is not published, so it must never reach the runtime
 	if mpv.IsDraft() {
-		return r.blocked(ctx, module, v1alpha2.ModuleConditionReasonVersionIsDraft,
-			fmt.Sprintf("module package version %q is draft", versionName))
+		logger.Debug("module package version is in draft", slog.String("mpv", versionName))
+
+		return fmt.Errorf("module package version '%s' is draft", versionName)
 	}
 
+	// The repository is read before any installed list is touched, so a missing
+	// repository cannot leave the lists half-updated.
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
-		if !apierrors.IsNotFound(err) {
-			r.logger.Error("failed to get the package repository", slog.String("repository", module.Spec.PackageRepositoryName), log.Err(err))
-			return ctrl.Result{}, fmt.Errorf("get package repository: %w", err)
-		}
-
-		return r.blocked(ctx, module, v1alpha2.ModuleConditionReasonRepositoryNotFound,
-			fmt.Sprintf("package repository %q not found", module.Spec.PackageRepositoryName))
+		logger.Error("get package repository", log.Err(err))
+		return fmt.Errorf("get package repository '%s': %w", module.Spec.PackageRepositoryName, err)
 	}
 
 	if err := r.relink(ctx, module, pkg, mpv); err != nil {
-		r.logger.Error("failed to relink the module", slog.String("name", module.Name), log.Err(err))
-		return ctrl.Result{}, err
+		logger.Error("failed to relink the module", log.Err(err))
+		return err
 	}
 
-	r.deployPackage(registry.BuildRemote(repo), module)
-
-	patch := client.MergeFrom(module.DeepCopy())
-	setOwnerReferences(module, pkg, mpv)
-	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
-
-	if err := r.client.Patch(ctx, module, patch); err != nil {
-		r.logger.Error("failed to patch the module", slog.String("name", module.Name), log.Err(err))
-		return ctrl.Result{}, fmt.Errorf("patch: %w", err)
-	}
-
-	if err := r.setCompleted(ctx, module, metav1.ConditionTrue, v1alpha2.ModuleConditionTypeCompleted, ""); err != nil {
-		r.logger.Error("failed to update the module status", slog.String("name", module.Name), log.Err(err))
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
-}
-
-// deployPackage registers the module in the package runtime.
-//
-// Settings go first: UpdateModulesSettings records the enabled intent even for a module
-// the runtime does not track yet, so the scheduler's config rule sees it the moment
-// UpdateModule registers the package. Once the module is tracked, a settings-only change
-// is fully applied here and the following UpdateModule detects nothing left to do, which
-// keeps the light Reschedule path instead of the Disable/Deploy/Load pipeline.
-//
-// The update is never forced: a module package version is immutable, so a cached copy of
-// it is never stale.
-func (r *reconciler) deployPackage(repo registry.Remote, module *v1alpha2.Module) {
-	settings := module.Spec.Settings.GetMap()
-
-	r.manager.UpdateModulesSettings(module.Name, module.Spec.SettingsVersion, settings, module.Spec.Maintenance, module.Spec.Enabled)
-
-	// Definition.Name carries the package name for completeness; the runtime pulls a
-	// module by its own name, so today the two have to match.
-	r.manager.UpdateModule(repo, packageruntime.Module{
+	r.manager.UpdateModule(registry.BuildRemote(repo), packageruntime.Module{
 		Name: module.Name,
 		Definition: modules.Definition{
 			Name:    module.Spec.PackageName,
 			Version: module.Spec.PackageVersion,
 		},
-		Settings:        settings,
+		Settings:        module.Spec.Settings.GetMap(),
 		SettingsVersion: module.Spec.SettingsVersion,
 		Maintenance:     module.Spec.Maintenance,
 	}, false)
+
+	// Both references are non-controller and block owner deletion, so neither the package
+	// nor the version can disappear from under a running module.
+	ctrlutils.ReplaceOwnerReferences(module,
+		ctrlutils.OwnerReference(v1alpha1.ModulePackageVersionGVK, mpv.Name, mpv.UID),
+		ctrlutils.OwnerReference(v1alpha1.ModulePackageGVK, pkg.Name, pkg.UID),
+	)
+	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+
+	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
+		logger.Error("failed to patch the module", log.Err(err))
+		return fmt.Errorf("patch module '%s': %w", module.Name, err)
+	}
+
+	return nil
 }
 
 // handleDelete detaches the module from its package and version, unregisters it from
 // the package runtime and releases the finalizer.
-func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
-	if !controllerutil.ContainsFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered) {
-		return ctrl.Result{}, nil
-	}
+func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) error {
+	logger := r.logger.With(slog.String("name", module.Name))
+
+	logger.Debug("handle delete module")
+	defer logger.Debug("handle delete module complete")
 
 	// Detach by owner reference, not by spec: the references name what the module was
 	// actually attached to, which a spec edit just before deletion would have changed.
-	if name := ownerRefName(module, v1alpha1.ModulePackageVersionKind); name != "" {
+	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); name != "" {
 		if err := r.detachVersion(ctx, module, name); err != nil {
-			r.logger.Error("failed to detach the module package version", slog.String("version", name), log.Err(err))
-			return ctrl.Result{}, err
+			logger.Error("failed to detach the module package version", slog.String("mpv", name), log.Err(err))
+			return err
 		}
 	}
 
-	if name := ownerRefName(module, v1alpha1.ModulePackageKind); name != "" {
+	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageKind); name != "" {
 		if err := r.detachPackage(ctx, module, name); err != nil {
-			r.logger.Error("failed to detach the module package", slog.String("package", name), log.Err(err))
-			return ctrl.Result{}, err
+			logger.Error("failed to detach the module package", slog.String("package", name), log.Err(err))
+			return err
 		}
 	}
 
 	r.manager.RemoveModule(module.Name)
 
+	if !controllerutil.ContainsFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered) {
+		return nil
+	}
+
 	patch := client.MergeFrom(module.DeepCopy())
 	controllerutil.RemoveFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered)
 
 	if err := r.client.Patch(ctx, module, patch); err != nil {
-		r.logger.Error("failed to remove the module finalizer", slog.String("name", module.Name), log.Err(err))
-		return ctrl.Result{}, fmt.Errorf("patch: %w", err)
+		logger.Error("failed to remove the module finalizer", log.Err(err))
+		return fmt.Errorf("patch module '%s': %w", module.Name, err)
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 // relink moves the module onto pkg and version, releasing the ones it switched away
 // from. Detaching first keeps the installed counts correct when only one of the two
 // changed, which is the common case of a version bump within the same package.
 func (r *reconciler) relink(ctx context.Context, module *v1alpha2.Module, pkg *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
-	if old := ownerRefName(module, v1alpha1.ModulePackageVersionKind); old != "" && old != mpv.Name {
+	if old := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); old != "" && old != mpv.Name {
 		if err := r.detachVersion(ctx, module, old); err != nil {
 			return err
 		}
 	}
 
-	if old := ownerRefName(module, v1alpha1.ModulePackageKind); old != "" && old != pkg.Name {
+	if old := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageKind); old != "" && old != pkg.Name {
 		if err := r.detachPackage(ctx, module, old); err != nil {
 			return err
 		}
@@ -388,83 +375,4 @@ func (r *reconciler) detachPackage(ctx context.Context, module *v1alpha2.Module,
 	}
 
 	return nil
-}
-
-// blocked records why the module cannot reach the runtime and asks for a retry. Every
-// reason routed here needs a change to another object to clear.
-func (r *reconciler) blocked(ctx context.Context, module *v1alpha2.Module, reason, message string) (ctrl.Result, error) {
-	r.logger.Warn("module cannot be deployed", slog.String("name", module.Name), slog.String("reason", reason))
-
-	if err := r.setCompleted(ctx, module, metav1.ConditionFalse, reason, message); err != nil {
-		r.logger.Error("failed to update the module status", slog.String("name", module.Name), log.Err(err))
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
-}
-
-// setCompleted patches the Completed condition, the only condition this controller owns.
-func (r *reconciler) setCompleted(ctx context.Context, module *v1alpha2.Module, status metav1.ConditionStatus, reason, message string) error {
-	original := module.DeepCopy()
-
-	// SetStatusCondition keeps LastTransitionTime unless the status actually flips, so a
-	// steady state patches an empty diff instead of rewriting the condition every scan.
-	meta.SetStatusCondition(&module.Status.Conditions, metav1.Condition{
-		Type:               v1alpha2.ModuleConditionTypeCompleted,
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		ObservedGeneration: module.Generation,
-	})
-
-	if err := r.client.Status().Patch(ctx, module, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch status: %w", err)
-	}
-
-	return nil
-}
-
-// setOwnerReferences points the module at its current package and version, dropping the
-// references it switched away from. Both are non-controller references that block owner
-// deletion, so neither object can disappear from under a running module.
-func setOwnerReferences(module *v1alpha2.Module, pkg *v1alpha1.ModulePackage, version *v1alpha1.ModulePackageVersion) {
-	refs := make([]metav1.OwnerReference, 0, len(module.GetOwnerReferences())+2)
-	for _, ref := range module.GetOwnerReferences() {
-		if ref.Kind == v1alpha1.ModulePackageKind || ref.Kind == v1alpha1.ModulePackageVersionKind {
-			continue
-		}
-
-		refs = append(refs, ref)
-	}
-
-	refs = append(refs,
-		ownerReference(v1alpha1.ModulePackageVersionGVK, version.Name, version.UID),
-		ownerReference(v1alpha1.ModulePackageGVK, pkg.Name, pkg.UID),
-	)
-
-	module.SetOwnerReferences(refs)
-}
-
-// ownerReference builds a non-controller owner reference that blocks the owner's deletion.
-func ownerReference(gvk schema.GroupVersionKind, name string, uid types.UID) metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion:         gvk.GroupVersion().String(),
-		Kind:               gvk.Kind,
-		Name:               name,
-		UID:                uid,
-		Controller:         new(false),
-		BlockOwnerDeletion: new(true),
-	}
-}
-
-// ownerRefName returns the name of the module's owner reference of the given kind, or an
-// empty string when it has none. It is how a package or version switch is detected.
-func ownerRefName(module *v1alpha2.Module, kind string) string {
-	for _, ref := range module.GetOwnerReferences() {
-		if ref.Kind == kind {
-			return ref.Name
-		}
-	}
-
-	return ""
 }

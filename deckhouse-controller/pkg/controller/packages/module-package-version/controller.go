@@ -82,15 +82,18 @@ func RegisterController(sync *sync.WaitGroup, runtimeManager manager.Manager, dc
 type reconciler struct {
 	init     *sync.WaitGroup
 	client   client.Client
-	logger   *log.Logger
 	registry *registry.Service
 	dc       dependency.Container
+	logger   *log.Logger
 }
 
 // Reconcile handles a single ModulePackageVersion event. Draft resources are
 // promoted by loading metadata; deleted resources have their finalizers removed
 // once no Module references remain (usedByCount == 0).
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// wait for init
+	r.init.Wait()
+
 	logger := r.logger.With(slog.String("name", req.Name))
 
 	logger.Debug("reconcile resource")
