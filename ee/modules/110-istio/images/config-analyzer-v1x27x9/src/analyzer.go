@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,13 +67,63 @@ func runAnalysis(ctx context.Context, istioNamespace, revision string, allNamesp
 
 	messages := make([]diag.Message, 0, len(result.Messages))
 	for _, message := range result.Messages {
-		if message.Type.Level().IsWorseThanOrEqualTo(outputThreshold) {
+		if shouldReportMessage(message) {
 			messages = append(messages, message)
 		}
 	}
 
 	log.Infof("analysis completed: revision=%s messages=%d", revision, len(messages))
 	return messages, nil
+}
+
+const (
+	heritageLabel     = "heritage"
+	heritageDeckhouse = "deckhouse"
+)
+
+// mutedCodesForDeckhouseHeritage are Info-level findings that are noise for
+// Deckhouse-managed resources (heritage=deckhouse): system namespaces are not
+// meant for sidecar injection, and Deckhouse Service ports do not follow Istio
+// naming because those Services are not mesh workloads.
+//
+// Ingress / ALB namespaces (d8-ingress-*) are excluded from this mute: ingress
+// controllers may use Istio sidecars / gateways, so IST0102 and IST0118 remain useful.
+var mutedCodesForDeckhouseHeritage = map[string]struct{}{
+	"IST0102": {}, // NamespaceNotInjected
+	"IST0118": {}, // PortNameIsNotUnderNamingConvention
+}
+
+func shouldReportMessage(message diag.Message) bool {
+	if !message.Type.Level().IsWorseThanOrEqualTo(outputThreshold) {
+		return false
+	}
+	if _, muted := mutedCodesForDeckhouseHeritage[message.Type.Code()]; muted &&
+		isDeckhouseHeritageResource(message) &&
+		!isIngressOrALBRelated(message) {
+		return false
+	}
+	return true
+}
+
+func isDeckhouseHeritageResource(message diag.Message) bool {
+	if message.Resource == nil {
+		return false
+	}
+	return message.Resource.Metadata.Labels[heritageLabel] == heritageDeckhouse
+}
+
+func isIngressOrALBRelated(message diag.Message) bool {
+	if message.Resource == nil {
+		return false
+	}
+	name := string(message.Resource.Metadata.FullName.Name)
+	ns := string(message.Resource.Metadata.FullName.Namespace)
+	// Namespace objects are cluster-scoped: name is the namespace itself.
+	return isIngressRelatedNamespace(ns) || isIngressRelatedNamespace(name)
+}
+
+func isIngressRelatedNamespace(ns string) bool {
+	return strings.HasPrefix(ns, "d8-ingress-")
 }
 
 func messageLabels(message diag.Message, revision string) (messageType, namespace, resourceName, severity, code, messageText string) {
