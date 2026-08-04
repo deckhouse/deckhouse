@@ -663,6 +663,12 @@ type RoleSelection struct {
 	// +optional
 	// +listType=atomic
 	AccessLevels []string `json:"accessLevels,omitempty" protobuf:"bytes,3,rep,name=accessLevels"`
+
+	// ExcludeCustom leaves out the roles created in this cluster, reporting
+	// only the model the platform ships. A role named in Names is reported
+	// either way. Primary model only. Defaults to false.
+	// +optional
+	ExcludeCustom bool `json:"excludeCustom,omitempty" protobuf:"varint,4,opt,name=excludeCustom"`
 }
 
 // RoleAccessReportStatus contains what the selected roles grant.

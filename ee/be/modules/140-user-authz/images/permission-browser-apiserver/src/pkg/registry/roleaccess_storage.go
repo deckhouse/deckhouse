@@ -140,6 +140,9 @@ func validateRoleAccessSpec(spec *v1alpha1.RoleAccessReportSpec) error {
 	if spec.Model != resolver.RoleModelLegacy && len(spec.Roles.AccessLevels) > 0 {
 		return apierrors.NewBadRequest("spec.roles.accessLevels applies to the legacy model only")
 	}
+	if spec.Model == resolver.RoleModelLegacy && spec.Roles.ExcludeCustom {
+		return apierrors.NewBadRequest("spec.roles.excludeCustom applies to the primary model only")
+	}
 
 	return nil
 }
@@ -150,6 +153,7 @@ func buildRoleAccessRequest(spec *v1alpha1.RoleAccessReportSpec) resolver.RoleAc
 		Names:              spec.Roles.Names,
 		Scopes:             spec.Roles.Scopes,
 		AccessLevels:       spec.Roles.AccessLevels,
+		ExcludeCustom:      spec.Roles.ExcludeCustom,
 		ExpandWildcards:    boolValue(spec.ExpandWildcards, true),
 		IncludeComposition: boolValue(spec.IncludeComposition, false),
 	}

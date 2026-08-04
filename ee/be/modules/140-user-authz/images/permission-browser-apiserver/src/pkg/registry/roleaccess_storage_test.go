@@ -65,8 +65,12 @@ func TestRoleAccessStorage_PassesTheSelectionThrough(t *testing.T) {
 	yes := true
 
 	reporter, _, err := createRoleReport(t, v1alpha1.RoleAccessReportSpec{
-		Model:              resolver.RoleModelPrimary,
-		Roles:              v1alpha1.RoleSelection{Names: []string{"d8:namespace:admin"}, Scopes: []string{"namespace"}},
+		Model: resolver.RoleModelPrimary,
+		Roles: v1alpha1.RoleSelection{
+			ExcludeCustom: true,
+			Names:         []string{"d8:namespace:admin"},
+			Scopes:        []string{"namespace"},
+		},
 		ExpandWildcards:    &no,
 		IncludeComposition: &yes,
 	})
@@ -75,6 +79,7 @@ func TestRoleAccessStorage_PassesTheSelectionThrough(t *testing.T) {
 	assert.Equal(t, resolver.RoleModelPrimary, reporter.got.Model)
 	assert.Equal(t, []string{"d8:namespace:admin"}, reporter.got.Names)
 	assert.Equal(t, []string{"namespace"}, reporter.got.Scopes)
+	assert.True(t, reporter.got.ExcludeCustom)
 	assert.False(t, reporter.got.ExpandWildcards)
 	assert.True(t, reporter.got.IncludeComposition)
 }
@@ -108,6 +113,14 @@ func TestRoleAccessStorage_RefusesAnUnanswerableRequest(t *testing.T) {
 			name: "access levels asked of the primary model",
 			spec: v1alpha1.RoleAccessReportSpec{Roles: v1alpha1.RoleSelection{AccessLevels: []string{"Admin"}}},
 			says: "legacy model only",
+		},
+		{
+			name: "custom roles excluded from the legacy model, which has none",
+			spec: v1alpha1.RoleAccessReportSpec{
+				Model: resolver.RoleModelLegacy,
+				Roles: v1alpha1.RoleSelection{ExcludeCustom: true},
+			},
+			says: "primary model only",
 		},
 	}
 

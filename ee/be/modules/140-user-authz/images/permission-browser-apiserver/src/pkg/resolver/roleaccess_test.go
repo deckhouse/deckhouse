@@ -445,6 +445,65 @@ func TestRoleReport_CapabilitiesAreNotRoles(t *testing.T) {
 	assert.Empty(t, status.Roles)
 }
 
+// customRole builds a ClusterRole created in the cluster, not shipped by the model.
+func customRole(name, scope string, rules ...rbacv1.PolicyRule) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{labelRoleKind: "custom-role", labelRoleScope: scope},
+		},
+		Rules: rules,
+	}
+}
+
+// A custom role belongs to one cluster; listing it beside the model reads as if
+// the platform shipped it. The caller decides, and the catalogue reports both
+// the roles it kept and how many it left out.
+func TestRoleReport_CustomRolesFollowTheSelection(t *testing.T) {
+	t.Parallel()
+
+	objs := []runtime.Object{
+		aggregatingRole("d8:namespace:admin", "namespace"),
+		capability("d8:namespace-capability:kubernetes:workloads", "namespace", policyRule("apps", "deployments", "get")),
+		customRole("d8:custom:namespace:release-manager", "namespace", policyRule("", "secrets", "get")),
+	}
+
+	resolver := setupRoleAccessResolver(t, objs)
+
+	included, err := resolver.Report(context.Background(), RoleAccessRequest{})
+	require.NoError(t, err)
+	assert.Len(t, included.Roles, 2)
+	assert.Empty(t, included.Notes)
+
+	excluded, err := resolver.Report(context.Background(), RoleAccessRequest{ExcludeCustom: true})
+	require.NoError(t, err)
+	require.Len(t, excluded.Roles, 1)
+	assert.Equal(t, "d8:namespace:admin", excluded.Roles[0].Name)
+	require.Len(t, excluded.Notes, 1)
+	assert.Contains(t, excluded.Notes[0], "1 custom roles")
+}
+
+// Excluding custom roles must not make one unreachable: an audit of a named
+// role still has to be possible.
+func TestRoleReport_NamedCustomRoleSurvivesTheExclusion(t *testing.T) {
+	t.Parallel()
+
+	objs := []runtime.Object{
+		aggregatingRole("d8:namespace:admin", "namespace"),
+		customRole("d8:custom:namespace:release-manager", "namespace", policyRule("", "secrets", "get")),
+	}
+
+	status, err := setupRoleAccessResolver(t, objs).Report(context.Background(), RoleAccessRequest{
+		ExcludeCustom: true,
+		Names:         []string{"d8:custom:namespace:release-manager"},
+	})
+	require.NoError(t, err)
+
+	require.Len(t, status.Roles, 1)
+	rowOf(t, status.Roles[0], "", "secrets")
+	assert.Empty(t, status.Notes)
+}
+
 // The rows are read from the capabilities, so a role the aggregation controller
 // has not filled still reports its access -- and says that it did so.
 func TestRoleReport_NotesAnUnfilledAggregation(t *testing.T) {

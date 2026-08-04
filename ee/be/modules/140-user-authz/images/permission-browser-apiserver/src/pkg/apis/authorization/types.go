@@ -559,6 +559,12 @@ type RoleSelection struct {
 	// AccessLevels lists the access levels to report on. Legacy model only.
 	// +optional
 	AccessLevels []string
+
+	// ExcludeCustom leaves out the roles created in this cluster, reporting
+	// only the model the platform ships. A role named in Names is reported
+	// either way. Primary model only. Defaults to false.
+	// +optional
+	ExcludeCustom bool
 }
 
 // RoleAccessReportStatus contains what the selected roles grant.

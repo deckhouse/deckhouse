@@ -104,6 +104,8 @@ type RoleAccessRequest struct {
 	Scopes []string
 	// AccessLevels restricts the legacy model to these levels.
 	AccessLevels []string
+	// ExcludeCustom leaves out the roles created in this cluster.
+	ExcludeCustom bool
 	// ExpandWildcards expands wildcard rules against discovery.
 	ExpandWildcards bool
 	// IncludeComposition reports what each role is assembled from.
@@ -128,7 +130,15 @@ func (r *RoleAccessResolver) Report(_ context.Context, req RoleAccessRequest) (v
 	case RoleModelLegacy:
 		reported = r.legacyRoles(index, req)
 	default:
-		reported = r.primaryRoles(index, req)
+		var skippedCustom int
+
+		reported, skippedCustom = r.primaryRoles(index, req)
+		if skippedCustom > 0 {
+			notes = append(notes, fmt.Sprintf(
+				"%d custom roles are left out: the catalogue describes the platform role model. Name a custom role explicitly to include it",
+				skippedCustom,
+			))
+		}
 	}
 
 	truncated := false
@@ -218,9 +228,16 @@ func newRoleIndex(roles []*rbacv1.ClusterRole) *roleIndex {
 
 // primaryRoles reports the scope-based model: every ClusterRole the model calls
 // a role, assembled from the capabilities it aggregates.
-func (r *RoleAccessResolver) primaryRoles(index *roleIndex, req RoleAccessRequest) []v1alpha1.RoleAccess {
+//
+// req.ExcludeCustom leaves out the roles created in this cluster -- a catalogue
+// mixing them with the model reads as if the platform shipped them. A role named
+// explicitly is reported either way, and the count of the skipped ones is
+// returned so that the omission stays visible in the document.
+func (r *RoleAccessResolver) primaryRoles(index *roleIndex, req RoleAccessRequest) ([]v1alpha1.RoleAccess, int) {
 	wantName := setOf(req.Names)
 	wantScope := setOf(req.Scopes)
+
+	skippedCustom := 0
 
 	reported := make([]v1alpha1.RoleAccess, 0, len(index.all))
 	for _, role := range index.all {
@@ -228,10 +245,15 @@ func (r *RoleAccessResolver) primaryRoles(index *roleIndex, req RoleAccessReques
 		if kind != roleKindRole && kind != roleKindCustomRole {
 			continue
 		}
-		if len(wantName) > 0 {
-			if _, ok := wantName[role.Name]; !ok {
-				continue
-			}
+
+		_, named := wantName[role.Name]
+		if req.ExcludeCustom && kind == roleKindCustomRole && !named {
+			skippedCustom++
+
+			continue
+		}
+		if len(wantName) > 0 && !named {
+			continue
 		}
 
 		descriptor := DescribeRole(&role.ObjectMeta, role.Name)
@@ -244,7 +266,7 @@ func (r *RoleAccessResolver) primaryRoles(index *roleIndex, req RoleAccessReques
 		reported = append(reported, r.describeRole(index, role, descriptor, req))
 	}
 
-	return reported
+	return reported, skippedCustom
 }
 
 // describeRole expands one role of the primary model.

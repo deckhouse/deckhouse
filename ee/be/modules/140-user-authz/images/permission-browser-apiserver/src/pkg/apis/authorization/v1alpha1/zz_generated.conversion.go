@@ -1027,6 +1027,7 @@ func autoConvert_v1alpha1_RoleSelection_To_authorization_RoleSelection(in *RoleS
 	out.Names = *(*[]string)(unsafe.Pointer(&in.Names))
 	out.Scopes = *(*[]string)(unsafe.Pointer(&in.Scopes))
 	out.AccessLevels = *(*[]string)(unsafe.Pointer(&in.AccessLevels))
+	out.ExcludeCustom = in.ExcludeCustom
 	return nil
 }
 
@@ -1039,6 +1040,7 @@ func autoConvert_authorization_RoleSelection_To_v1alpha1_RoleSelection(in *autho
 	out.Names = *(*[]string)(unsafe.Pointer(&in.Names))
 	out.Scopes = *(*[]string)(unsafe.Pointer(&in.Scopes))
 	out.AccessLevels = *(*[]string)(unsafe.Pointer(&in.AccessLevels))
+	out.ExcludeCustom = in.ExcludeCustom
 	return nil
 }
 

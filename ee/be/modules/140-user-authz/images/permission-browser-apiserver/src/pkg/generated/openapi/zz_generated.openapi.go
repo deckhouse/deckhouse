@@ -4230,6 +4230,13 @@ func schema_pkg_apis_authorization_v1alpha1_RoleSelection(ref common.ReferenceCa
 							},
 						},
 					},
+					"excludeCustom": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExcludeCustom leaves out the roles created in this cluster, reporting only the model the platform ships. A role named in Names is reported either way. Primary model only. Defaults to false.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

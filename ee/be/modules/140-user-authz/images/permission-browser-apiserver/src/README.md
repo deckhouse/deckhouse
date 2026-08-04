@@ -386,6 +386,7 @@ spec:
     names: []
     scopes: []          # namespace | project | subsystem | system (primary)
     accessLevels: []    # User | PrivilegedUser | ... (legacy)
+    excludeCustom: false  # leave out the roles created in this cluster (primary)
   expandWildcards: true   # expand "*" against the discovery snapshot
   includeComposition: false  # the detailed mode: which capability granted what
 
@@ -435,6 +436,11 @@ status:
 4. **The legacy model resolves an access level the way the fan-out hook does**:
    the level's own ClusterRole plus every ClusterRole annotated
    `user-authz.deckhouse.io/access-level` for that level or a lower one.
+5. **`excludeCustom` reports the model the platform ships.** Custom roles belong
+   to one cluster, and listing them beside the model reads as if the platform
+   shipped them - but they are real access, so leaving them out is the caller's
+   decision, the count of skipped ones goes into `notes`, and a role named in
+   `names` is reported either way.
 
 #### Caveats
 
