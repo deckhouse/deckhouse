@@ -74,6 +74,26 @@ type Source struct {
 	Resolver *Resolver
 }
 
+// Validate refuses a Source that cannot do its job, at startup rather than per pass.
+//
+// Worth a method of its own because of how the alternative failed. With no resolver wired,
+// every pass reported "the API server is unreachable, running on the layout the node was
+// installed with" — true in effect and false in fact, and an operator reading it would go and
+// examine a healthy API server. The node kept pulling from its bootstrap layout and the agent
+// reported success, so nothing else said otherwise.
+func (s *Source) Validate() error {
+	switch {
+	case s.Node == "":
+		return fmt.Errorf("no node name, so there is no layout to look for")
+	case s.Cache == nil:
+		return fmt.Errorf("no on-disk copy, so an API outage would stop this node pulling")
+	case s.Resolver == nil:
+		return fmt.Errorf("no credential resolver, so any layout naming its credentials " +
+			"would be refused and quietly replaced by the one this node was installed with")
+	}
+	return nil
+}
+
 // Get returns the layout to apply and where it came from.
 //
 // A read failure is not propagated as long as there is a copy on disk. That is the

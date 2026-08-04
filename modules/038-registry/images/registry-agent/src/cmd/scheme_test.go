@@ -17,6 +17,8 @@ limitations under the License.
 package main
 
 import (
+	"io"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,4 +49,30 @@ func TestSchemeKnowsWhatThisProcessReads(t *testing.T) {
 	assert.True(t, scheme.Recognizes(registryv1alpha1.GroupVersion.WithKind("RegistryNode")),
 		"the module's own kinds must stay registered")
 	assert.True(t, scheme.Recognizes(registryv1alpha1.GroupVersion.WithKind("RegistryStorage")))
+}
+
+// TestTheSourceIsWiredToResolveCredentials asserts the construction main uses, not one a test
+// assembled to its own liking.
+//
+// A Source without a resolver does not fail. It refuses every layout that names its
+// credentials, treats the refusal as an unreachable API server, serves the layout the node was
+// installed with instead, and reports success — so the node keeps pulling while nothing the
+// cluster configures ever reaches it. That is what happened, and every test in the layout
+// package passed throughout, because each of them wires the resolver it is testing.
+func TestTheSourceIsWiredToResolveCredentials(t *testing.T) {
+	source := buildSource(
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+		nil,
+		options{nodeName: "worker-1", cachePath: "/tmp/layout.json", bootstrap: "/tmp/bootstrap.json"},
+	)
+
+	require.NotNil(t, source.Resolver, "without this the agent can never apply what the cluster gives it")
+	assert.Equal(t, moduleNamespace, source.Resolver.Namespace)
+
+	// And the same requirement stated where it stops the process rather than degrading it.
+	assert.NoError(t, source.Validate())
+
+	source.Resolver = nil
+	assert.Error(t, source.Validate(),
+		"a Source that cannot resolve credentials has to be refused, not quietly downgraded")
 }

@@ -73,6 +73,28 @@ const DefaultKubeconfig = "/etc/kubernetes/kubelet.conf"
 // never takes effect.
 //
 // A function so it can be asserted, because the failure above is invisible from the outside.
+// buildSource assembles where the agent gets its layout from.
+//
+// Lifted out of main so the wiring can be asserted. Every test of this package builds a Source
+// with whatever it is testing, so none of them could notice that the real one was missing its
+// resolver — and a missing resolver does not fail, it degrades: the layout from the API is
+// refused, the one the node was installed with is used instead, and the agent reports success.
+func buildSource(log *slog.Logger, kubeClient client.Client, opts options) *layout.Source {
+	return &layout.Source{
+		Log:       log,
+		Client:    kubeClient,
+		Node:      opts.nodeName,
+		Cache:     &layout.Cache{Path: opts.cachePath},
+		Bootstrap: &layout.Bootstrap{Path: opts.bootstrap},
+		// The layouts name their credentials rather than carrying them, so reading one means
+		// reading a Secret. Without this the agent can never apply what the cluster gives it.
+		Resolver: &layout.Resolver{Client: kubeClient, Namespace: moduleNamespace},
+	}
+}
+
+// moduleNamespace is where the Secret holding the resolved credentials lives.
+const moduleNamespace = "d8-system"
+
 func buildScheme() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 	if err := registryv1alpha1.AddToScheme(scheme); err != nil {
@@ -200,15 +222,14 @@ func run(ctx context.Context, log *slog.Logger, opts options) error {
 			"error", err.Error())
 	}
 
+	source := buildSource(log, kubeClient, opts)
+	if err := source.Validate(); err != nil {
+		return fmt.Errorf("the layout source is unusable: %w", err)
+	}
+
 	loop := &agent.Loop{
-		Log: log,
-		Source: &layout.Source{
-			Log:       log,
-			Client:    kubeClient,
-			Node:      opts.nodeName,
-			Cache:     &layout.Cache{Path: opts.cachePath},
-			Bootstrap: &layout.Bootstrap{Path: opts.bootstrap},
-		},
+		Log:           log,
+		Source:        source,
 		Writer:        writer,
 		PKI:           material,
 		Publisher:     &status.Publisher{Client: kubeClient, Node: opts.nodeName},
