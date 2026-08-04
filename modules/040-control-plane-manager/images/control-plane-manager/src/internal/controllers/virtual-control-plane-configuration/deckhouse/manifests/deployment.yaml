@@ -182,3 +182,4 @@ spec:
         - name: sa-token
           secret:
             secretName: ${TOKEN_SECRET_NAME}
+            defaultMode: 0400

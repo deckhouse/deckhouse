@@ -17,6 +17,7 @@ limitations under the License.
 package virtualcontrolplaneconfiguration
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -429,14 +430,12 @@ func (r *reconciler) reconcileDeckhouseServiceAccountToken(
 
 	name := constants.VirtualResourceName(constants.VirtualDeckhouseTokenSecretName, vcp.Name)
 	current, err := r.getSecret(ctx, vcp.Namespace, name)
-	notFound := apierrors.IsNotFound(err)
-	if err != nil && !notFound {
+	switch {
+	case apierrors.IsNotFound(err):
+		current = nil
+	case err != nil:
 		return fmt.Errorf("get token Secret: %w", err)
-	}
-
-	if !notFound &&
-		!deckhouseTokenNeedsRenewal(current) &&
-		equality.Semantic.DeepEqual(current.Data["ca.crt"], tenantCA) {
+	case isDeckhouseTokenInSync(current, tenantCA):
 		return nil
 	}
 
@@ -469,7 +468,7 @@ func (r *reconciler) reconcileDeckhouseServiceAccountToken(
 		return err
 	}
 
-	if notFound {
+	if current == nil {
 		return r.createSecret(ctx, target)
 	}
 
@@ -482,9 +481,13 @@ func (r *reconciler) reconcileDeckhouseServiceAccountToken(
 	return r.patchSecret(ctx, base, current)
 }
 
+func isDeckhouseTokenInSync(secret *corev1.Secret, tenantCA []byte) bool {
+	return !deckhouseTokenNeedsRenewal(secret) && bytes.Equal(secret.Data["ca.crt"], tenantCA)
+}
+
 // deckhouseTokenNeedsRenewal reports whether half of the token lifetime has passed.
 func deckhouseTokenNeedsRenewal(secret *corev1.Secret) bool {
-	if len(secret.Data["token"]) == 0 {
+	if secret == nil || len(secret.Data["token"]) == 0 {
 		return true
 	}
 
