@@ -9,8 +9,8 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/out/operator
   to: /usr/local/bin/operator
-  owner: 1337
-  group: 1337
+  owner: 64535
+  group: 64535
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/manifests
@@ -18,7 +18,7 @@ import:
   after: setup
 imageSpec:
   config:
-    user: "1337:1337"
+    user: "64535:64535"
     entrypoint: ["/usr/local/bin/operator"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
