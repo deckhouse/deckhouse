@@ -580,7 +580,7 @@ func (r *reconciler) ensureModuleDocumentation(ctx context.Context, module *v1al
 	for i := range releases.Items {
 		release := &releases.Items[i]
 
-// Use mount point path: /modules/deployed/<module> (modules are mounted at /deckhouse/downloaded/modules/deployed/<module>)
+		// Use mount point path: /modules/deployed/<module> (modules are mounted at /deckhouse/downloaded/modules/deployed/<module>)
 		modulePath := filepath.Join("/modules/deployed", release.GetModuleName())
 		moduleVersion := "v" + release.GetVersion().String()
 
