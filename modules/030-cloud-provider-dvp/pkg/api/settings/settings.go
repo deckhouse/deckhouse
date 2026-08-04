@@ -168,7 +168,7 @@ type NodesParameters struct {
 	// To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
 	// [Read more about topological labels](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
 	//
-	// > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+	// > To set the required label for a DVP node, follow the [NodeGroup documentation](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
 	// +deckhouse:ru:description:value="Название региона."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="Чтобы использовать эту настройку, на узлах DVP должен быть установлен лейбл `topology.kubernetes.io/region`."
@@ -182,7 +182,7 @@ type NodesParameters struct {
 	// To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
 	// [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 	//
-	// > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+	// > To set the required label for a DVP node, follow the [NodeGroup documentation](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
 	// +deckhouse:ru:description:value="Набор зон, в которых могут быть созданы узлы."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/zone`."
