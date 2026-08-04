@@ -35,11 +35,11 @@
     CACHED_VERSION="$("${WERF_PATH}/werf" version 2>/dev/null | tr -d '\n' || true)"
     if [[ "${WERF_VERSION}" != "${CACHED_VERSION}" && "${werf_fallback}" == "false" ]]; then
       echo "Current werf is ${CACHED_VERSION:-none}, downloading ${WERF_VERSION}"
-      curl -Lsfo "${WERF_PATH}/werf" "https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf"
+      curl -Lsf -o "${WERF_PATH}/werf" "https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}/werf"
       chmod +x "${WERF_PATH}/werf"
     elif [[ "${WERF_VERSION}" != "${CACHED_VERSION}" && "${werf_fallback}" == "true" ]]; then
       echo "Current werf is ${CACHED_VERSION:-none}, fallback to ${WERF_VERSION}"
-      curl -Lsfo "${WERF_PATH}/werf" "https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf"
+      curl -Lsf -o "${WERF_PATH}/werf" "https://tuf.werf.io/targets/releases/${WERF_VERSION#v}/linux-amd64/bin/werf"
       chmod +x "${WERF_PATH}/werf"
     else
       echo "Current werf is ${CACHED_VERSION}, skipping download"
