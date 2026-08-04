@@ -119,13 +119,12 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	fitCPU, fitMemMB, _ := minMasterFitBudget(nodes, otherByNode)
 	combinedCPU := input.Values.Get(pathMilliCPUControlPlane).Int()
 	combinedMemMB := bytesToMB(input.Values.Get(pathMemoryControlPlane).Int())
+	now := dc.GetClock().Now().UTC()
 
 	// Evaluate path: recommendations from metrics. Repopulate values exactly
 	// once at the end — a second Remove of `components` fails merge when Exists
 	// still sees the pre-patch snapshot.
 	if evaluate {
-		now := dc.GetClock().Now().UTC()
-
 		recsCPU, cpuUsageOK := fetchRecs(ctx, dc, fetchComponentUsage, resourceCPU, cpuOverridden, fitCPU, func(comp string, ferr error) {
 			input.Logger.Warn("autotune: metrics API cpu fetch failed", "component", comp, "error", ferr)
 		})
@@ -184,7 +183,6 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		// Node resource changes (OnBeforeAll + node events): refresh the
 		// capacity-blocked alert against the current fit budget without calling
 		// the metrics API. Cron remains responsible for new raise decisions.
-		now := dc.GetClock().Now().UTC()
 		if !cpuOverridden {
 			if recheckCapacityBlocked(state, resourceCPU, fitCPU, combinedCPU, now) {
 				stateDirty = true
