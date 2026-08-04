@@ -38,12 +38,18 @@ type DeployTimeService struct {
 }
 
 func NewDeployTimeService(dc dependency.Container, settings *Settings, logger *log.Logger) *DeployTimeService {
+	return NewDeployTimeServiceAt(dc.GetClock().Now().UTC(), settings, logger)
+}
+
+// NewDeployTimeServiceAt builds the service against an explicit now, for callers that carry no
+// dependency container. The service pins now once, so every check in one pass sees one instant.
+func NewDeployTimeServiceAt(now time.Time, settings *Settings, logger *log.Logger) *DeployTimeService {
 	return &DeployTimeService{
 		releaseNotifier: NewReleaseNotifier(settings),
 
 		settings: settings,
 
-		now: dc.GetClock().Now().UTC(),
+		now: now,
 
 		logger: logger,
 	}

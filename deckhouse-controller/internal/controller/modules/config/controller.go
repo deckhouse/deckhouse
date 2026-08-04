@@ -56,9 +56,9 @@ const (
 	maxConcurrentReconciles = 3
 	// cacheSyncTimeout bounds the initial informer cache sync.
 	cacheSyncTimeout = 3 * time.Minute
-	// moduleNotFoundInterval is the retry delay for a config whose module does not exist
+	// defaultRequeueAfter is the retry delay for a config whose module does not exist
 	// yet, a state only an external change can resolve.
-	moduleNotFoundInterval = 3 * time.Minute
+	defaultRequeueAfter = 3 * time.Minute
 
 	// moduleDeckhouse and moduleGlobal name the system modules, whose source and update
 	// policy are not driven by their config.
@@ -189,7 +189,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mc *v1alpha1.Modu
 			return ctrl.Result{}, err
 		}
 
-		return ctrl.Result{RequeueAfter: moduleNotFoundInterval}, nil
+		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
 	return r.processModule(ctx, mc, module)
