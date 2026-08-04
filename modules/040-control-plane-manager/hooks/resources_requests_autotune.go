@@ -374,7 +374,7 @@ func fetchOtherRequestsByMasterNodes(ctx context.Context, dc dependency.Containe
 			milliCPU += cpu
 			memoryBytes += mem
 		}
-		out[name] = nodeOtherRequests{NodeName: name, MilliCPU: milliCPU, MemoryBytes: memoryBytes}
+		out[name] = nodeOtherRequests{MilliCPU: milliCPU, MemoryBytes: memoryBytes}
 	}
 	return out, nil
 }
