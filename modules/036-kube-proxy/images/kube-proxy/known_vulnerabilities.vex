@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -73,8 +73,50 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-11T10:20:24.189832Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41579"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма; таким образом, она не эксплуатируема в данном контексте.",
+      "timestamp": "2026-08-04T19:30:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.41.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она затрагивает только системы под управлением BSD и Solaris. Уязвимый код (перехват PATH при вызове внешних утилит определения ресурсов) не выполняется на Linux, под управлением которого работают все компоненты Deckhouse.",
+      "timestamp": "2026-08-04T19:30:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp отсутствует в графе импортов бинарного файла kube-proxy. Проверки go mod why, go list -deps и govulncheck подтверждают, что уязвимый пакет не входит в число зависимостей и не вызывается кодом kube-proxy.",
+      "timestamp": "2026-08-04T19:30:00Z"
     }
   ],
   "timestamp": "2025-10-10T08:22:16Z",
-  "last_updated": "2026-03-11T10:20:24Z"
+  "last_updated": "2026-08-04T19:30:00Z"
 }
