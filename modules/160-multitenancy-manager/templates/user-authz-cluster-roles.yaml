@@ -12,6 +12,9 @@ rules:
   resources:
   - projects
   - projecttemplates
+  - projectnamespaces
+  - projectrolebindings
+  - clusterprojectrolebindings
   verbs:
   - get
   - list
@@ -39,6 +42,9 @@ rules:
   resources:
   - projects
   - projecttemplates
+  - projectnamespaces
+  - projectrolebindings
+  - clusterprojectrolebindings
   verbs:
   - create
   - delete
