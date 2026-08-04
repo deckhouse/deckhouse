@@ -56,3 +56,5 @@ If anything works in an unexpected manner or you have any questions, feel free t
 # Online community
 
 Besides using the standard GitHub features to contribute and collaborate, you can also join our Telegram chats. These are a great place to ask questions, discuss Deckhouse Kubernetes Platform and our other products, as well as connect with the user community and the Deckhouse engineering team. The chats are available in [English](https://t.me/deckhouse) and [Russian](https://t.me/deckhouse_ru). 
+
+# Test
