@@ -12,7 +12,7 @@
   restart still resolve (plain avg_over_time[window] is flakier).
 */}}
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1beta1
 kind: PodMetric
 metadata:
   name: d8-cpm-autotune-cpu
