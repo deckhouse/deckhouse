@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/base64"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -147,6 +148,45 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(dp.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
   - operator: Exists
 `))
+		})
+	})
+
+	// What the Deckhouse controller fetches over HTTP must name a registry its own client can
+	// reach, which is not necessarily the one image references point at.
+	//
+	// `global.modulesImages.registry.base` is the address container image references are
+	// rendered from, and the registry module may point it at the in-cluster registry — an
+	// address only the container runtime resolves, because a node agent stands in that path.
+	// Nothing stands in the path of the controller's HTTP client. Reading `base` here worked
+	// only for as long as the two were always the same value, and taking them apart is what
+	// lets the pull path move without the release check and the module source moving with it.
+	//
+	// The fixture gives them different values on purpose, so this is observable at all.
+	Context("What the controller fetches itself", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues+clusterIsBootstrapped)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.HelmRender()
+		})
+
+		It("names the registry that client can reach, not the one images render from", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			reachable := "registry.deckhouse.io/deckhouse/fe"
+			renderedFrom := "registry.example.com"
+
+			secret := f.KubernetesResource("Secret", "d8-system", "deckhouse-registry")
+			Expect(secret.Exists()).To(BeTrue())
+			imagesRegistry, err := base64.StdEncoding.DecodeString(secret.Field("data.imagesRegistry").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(imagesRegistry)).To(Equal(reachable))
+			Expect(string(imagesRegistry)).ToNot(ContainSubstring(renderedFrom))
+
+			source := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(source.Exists()).To(BeTrue())
+			Expect(source.Field("spec.registry.repo").String()).To(Equal(reachable + "/modules"))
+			Expect(source.Field("spec.registry.repo").String()).ToNot(ContainSubstring(renderedFrom))
 		})
 	})
 

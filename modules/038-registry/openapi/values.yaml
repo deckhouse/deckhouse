@@ -132,6 +132,24 @@ properties:
 
               The same set the serving certificate is issued for, which is why the
               two are produced together.
+          imageAddress:
+            type: string
+            description: |
+              The address container image references may be rendered from, published
+              for the platform in the `registry-image-address` ConfigMap.
+
+              The same in-cluster address nodes are given as `bashibleConfig.imagesBase`,
+              but held back until every node's agent is applying the layout the cluster
+              gave it. Nothing resolves this address except through that agent: no DNS
+              record answers it and no pull secret carries credentials for it. A node
+              learns it through a bashible rollout that takes minutes, while the platform
+              renders every image reference in the cluster in one pass — so rendering it
+              too early points every workload at something nothing can pull yet.
+
+              Empty until then, and once set it stays set: taking it away because one
+              node's agent fell behind would re-render the whole cluster back onto the
+              upstream, which in an air-gapped cluster answers nothing at all. It is
+              withdrawn by the mode leaving `Managed` or the module being disabled.
           bashibleConfig:
             type: object
             description: |

@@ -76,6 +76,16 @@ Agents reach a replica by node address rather than by the service name.
 what a request is matched against — but nothing dials it: an agent runs in the host network,
 where a cluster DNS name does not resolve.
 
+That address takes effect in two steps, and the order matters. Nodes are given it as soon as
+the module starts managing the pull path, through the same bashible rollout that installs the
+agent. The image references of the platform's own workloads move only once every node's agent
+is applying the layout it was given: nothing resolves this address except through that agent,
+so re-rendering the cluster onto it any earlier would point every workload at something that
+cannot be pulled yet. Until then image references keep naming the registry the cluster was
+installed with, which is also where they return if the module is set to `Unmanaged` or
+disabled. Whether the step has happened is visible as the `registry-image-address` ConfigMap
+in `d8-system`.
+
 {% alert level="warning" %}
 Use a separate disk for the cache (`/opt/deckhouse/registry`) and for etcd data. Sharing one
 disk degrades etcd while the cache is being filled.

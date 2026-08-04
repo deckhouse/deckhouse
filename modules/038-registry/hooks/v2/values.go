@@ -65,6 +65,15 @@ type Values struct {
 	// BashibleConfig is what nodes are told, including the marker that hands the
 	// container runtime's registry configuration to the node agent.
 	BashibleConfig *bashible_model.Config `json:"bashibleConfig,omitempty"`
+
+	// ImageAddress is the address container image references may be rendered from,
+	// empty until every node's agent is applying the layout the cluster gave it.
+	//
+	// Nodes have been told this address all along — it is `ImagesBase` in
+	// BashibleConfig — but a node learns it through a bashible rollout, while the
+	// platform renders every image reference in one pass. This is what keeps the
+	// second from running ahead of the first.
+	ImageAddress string `json:"imageAddress,omitempty"`
 }
 
 func accessor(input *go_hook.HookInput) helpers.ValuesAccessor[Values] {

@@ -10,5 +10,13 @@ spec:
     ca: | {{ $.Values.global.modulesImages.registry.CA | nindent 6 }}
     {{- end }}
     dockerCfg: {{ $.Values.global.modulesImages.registry.dockercfg }}
-    repo: {{ printf "%s/modules" $.Values.global.modulesImages.registry.base }}
+    {{- /*
+      From `address` and `path`, not from `base`. The two hold the same value on a cluster
+      whose pull path the registry module does not manage, but they answer different
+      questions: `base` is where image references point, and that may be the in-cluster
+      registry, reachable only through the node agent in the container runtime's path.
+      This repository is fetched by the Deckhouse controller itself, over HTTP, with the
+      credentials below — so it names the registry that client can reach.
+    */}}
+    repo: {{ printf "%s%s/modules" $.Values.global.modulesImages.registry.address $.Values.global.modulesImages.registry.path }}
     scheme: {{ $.Values.global.modulesImages.registry.scheme | upper }}

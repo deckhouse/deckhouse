@@ -1217,3 +1217,85 @@ var _ = Describe("Module :: registry :: helm template :: only the auth service c
 			"the shared PKI does not carry the signing key, so this path cannot resolve")
 	})
 })
+
+// The address image references are rendered from, published for a reader outside this module.
+//
+// A global hook renders the image references of every embedded module, and until this
+// existed it took the address from the `deckhouse-registry` secret — the contour this
+// implementation removes. It runs before any module and cannot see module values, so the
+// answer has to be a cluster object.
+//
+// What these specs are really about is the withdrawal. Its absence means "render images from
+// the registry the cluster was installed with", and that has to be what happens the instant
+// the module stops managing the pull path — including when the module is disabled outright,
+// when no hook of it runs to clean up after itself. That is why the object is rendered by
+// Helm rather than written by the hook: the release is what takes it away.
+var _ = Describe("Module :: registry :: helm template :: the published image address", func() {
+	f := SetupHelmConfig(``)
+
+	renderWith := func(registryValues, imageAddress string) {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("registry", registryValues)
+		if imageAddress != "" {
+			f.ValuesSet("registry.internal.v2.imageAddress", imageAddress)
+		}
+		f.HelmRender()
+	}
+
+	published := func() object_store.KubeObject {
+		return f.KubernetesResource("ConfigMap", "d8-system", "registry-image-address")
+	}
+
+	Context("managing the pull path, with every node applying its layout", func() {
+		BeforeEach(func() { renderWith(v2Enabled, constant.HostWithPath) })
+
+		It("publishes the in-cluster address", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(published().Exists()).To(BeTrue())
+			Expect(published().Field("data.base").String()).To(Equal(constant.HostWithPath))
+		})
+
+		It("publishes the same address the nodes were given", func() {
+			// Two halves of one decoupling: nodes learn this through bashible, the
+			// platform through the ConfigMap. If they disagree, image references name a
+			// registry the node's agent does not recognise as its own, and the agent
+			// forwards them to an upstream that has never heard of the repository.
+			config := decodeBashibleConfig(f.KubernetesResource("Secret", "d8-system", "registry-bashible-config"))
+			Expect(config).To(ContainSubstring(published().Field("data.base").String()))
+		})
+	})
+
+	Context("managing the pull path, before the nodes have applied their layouts", func() {
+		BeforeEach(func() { renderWith(v2Enabled, "") })
+
+		It("publishes nothing, so image references stay on the upstream registry", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(published().Exists()).To(BeFalse())
+		})
+	})
+
+	Context("no longer managing the pull path", func() {
+		// The address is still in the values — nothing clears it on the way to Unmanaged,
+		// and the hook that would is beside the point here. It is the render condition
+		// that has to withdraw the object.
+		BeforeEach(func() { renderWith(v2EnabledUnmanaged, constant.HostWithPath) })
+
+		It("withdraws it, so the cluster falls back to the registry it was installed with", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(published().Exists()).To(BeFalse())
+		})
+	})
+
+	Context("still on the previous implementation", func() {
+		BeforeEach(func() { renderWith(v2Disabled, constant.HostWithPath) })
+
+		It("publishes nothing", func() {
+			// The previous implementation moves the address by rewriting the
+			// `deckhouse-registry` secret. Publishing here would put two answers to one
+			// question in front of the same global hook.
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(published().Exists()).To(BeFalse())
+		})
+	})
+})
