@@ -34,8 +34,15 @@ const (
 
 // Where a role says what it is.
 const (
-	roleKindRole          = "role"
-	roleKindCustomRole    = "custom-role"
+	roleKindRole       = "role"
+	roleKindCustomRole = "custom-role"
+	// roleKindCapability marks the building blocks a role aggregates. A
+	// capability belongs to a module and names that module's resources.
+	roleKindCapability = "capability"
+	// labelModule names the module an object belongs to; every Deckhouse
+	// object carries it.
+	labelModule = "module"
+
 	annotationReplacedBy  = "rbac.deckhouse.io/deprecated-replaced-by"
 	annotationAccessLevel = "user-authz.deckhouse.io/access-level"
 )
@@ -180,7 +187,7 @@ func (r *RoleAccessResolver) Report(_ context.Context, req RoleAccessRequest) (v
 	}
 
 	if req.IncludeInventory {
-		status.Inventory = r.inventory()
+		status.Inventory = r.inventory(index)
 		if len(status.Inventory) == 0 {
 			notes = append(notes, "the cluster inventory was requested but no discovery snapshot is available: coverage cannot be measured")
 			status.Notes = notes
@@ -195,12 +202,13 @@ func (r *RoleAccessResolver) Report(_ context.Context, req RoleAccessRequest) (v
 // inventory is every resource of the cluster, so that a coverage review can
 // name the ones no role reaches. The roles alone cannot answer that: a resource
 // nobody grants leaves no trace in them.
-func (r *RoleAccessResolver) inventory() []v1alpha1.InventoryResource {
+func (r *RoleAccessResolver) inventory(index *roleIndex) []v1alpha1.InventoryResource {
 	if r.scopeCache == nil {
 		return nil
 	}
 
 	discovered := r.scopeCache.Inventory()
+	byCapability := capabilityModules(index)
 
 	inventory := make([]v1alpha1.InventoryResource, 0, len(discovered))
 	for _, resource := range discovered {
@@ -219,10 +227,85 @@ func (r *RoleAccessResolver) inventory() []v1alpha1.InventoryResource {
 			}
 		}
 
+		// Not every CRD the platform installs says which module installed it --
+		// the older ones carry only the heritage label. The role model does
+		// know: a capability belongs to a module and names the resources of
+		// that module, which is the same statement of ownership, made for the
+		// same reason.
+		if entry.Module == "" {
+			entry.Module = byCapability[capabilityKey(resource.Group, resource.Resource)]
+		}
+
 		inventory = append(inventory, entry)
 	}
 
 	return inventory
+}
+
+// ambiguousModule marks a resource claimed by capabilities of more than one
+// module. Picking one of them would be a guess, and the report says "we do not
+// know" by leaving the module empty.
+const ambiguousModule = "\x00ambiguous"
+
+func capabilityKey(group, resource string) string {
+	// A subresource belongs to its parent: a capability granting "pods" owns
+	// "pods/log" too.
+	base, _, _ := strings.Cut(resource, "/")
+
+	return group + "/" + base
+}
+
+// capabilityModules reads resource ownership out of the role model: every
+// capability carries the module it belongs to and names that module's
+// resources.
+//
+// Wildcard rules are skipped. A capability written as "*/*" grants everything
+// the cluster has, and reading that as ownership would file the whole cluster
+// under one module.
+func capabilityModules(index *roleIndex) map[string]string {
+	if index == nil {
+		return nil
+	}
+
+	owners := make(map[string]string)
+
+	for _, role := range index.all {
+		if role.Labels[labelRoleKind] != roleKindCapability {
+			continue
+		}
+
+		module := role.Labels[labelModule]
+		if module == "" {
+			continue
+		}
+
+		for _, rule := range role.Rules {
+			if slices.Contains(rule.APIGroups, "*") || slices.Contains(rule.Resources, "*") {
+				continue
+			}
+
+			for _, group := range rule.APIGroups {
+				for _, resource := range rule.Resources {
+					key := capabilityKey(group, resource)
+
+					switch owner := owners[key]; owner {
+					case "", module:
+						owners[key] = module
+					default:
+						owners[key] = ambiguousModule
+					}
+				}
+			}
+		}
+	}
+
+	for key, owner := range owners {
+		if owner == ambiguousModule {
+			delete(owners, key)
+		}
+	}
+
+	return owners
 }
 
 func modelOf(model string) string {

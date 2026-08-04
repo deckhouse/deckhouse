@@ -565,6 +565,57 @@ func TestRoleReport_InventoryNamesWhatThereIsToCover(t *testing.T) {
 	}
 }
 
+// Not every CRD the platform installs says which module installed it: the older
+// ones carry only the heritage label, and cert-manager.io is one of them. The
+// role model knows anyway -- a capability belongs to a module and names that
+// module's resources.
+func TestRoleReport_InventoryTakesTheModuleFromTheCapabilities(t *testing.T) {
+	t.Parallel()
+
+	moduleCapability := func(name, module string, rules ...rbacv1.PolicyRule) *rbacv1.ClusterRole {
+		role := capability(name, "namespace", rules...)
+		role.Labels[labelModule] = module
+
+		return role
+	}
+
+	objs := []runtime.Object{
+		aggregatingRole("d8:namespace:admin", "namespace"),
+		moduleCapability("d8:namespace-capability:cert-manager:view", "cert-manager", policyRule("cert-manager.io", "certificates", "get")),
+		// Two modules claiming one resource is not ownership, and picking one
+		// of them would be a guess.
+		moduleCapability("d8:namespace-capability:a:view", "module-a", policyRule("shared.io", "widgets", "get")),
+		moduleCapability("d8:namespace-capability:b:view", "module-b", policyRule("shared.io", "widgets", "get")),
+		// A capability written as "*" grants the cluster, not a module.
+		moduleCapability("d8:namespace-capability:wide:view", "module-wide", policyRule("*", "*", "get")),
+	}
+
+	resolver := setupRoleAccessResolver(t, objs)
+	resolver.scopeCache = scopeCacheWith(map[string]bool{
+		"cert-manager.io/certificates": true,
+		"shared.io/widgets":            true,
+		"/pods":                        true,
+	})
+
+	status, err := resolver.Report(context.Background(), RoleAccessRequest{IncludeInventory: true})
+	require.NoError(t, err)
+
+	assert.Equal(t, "cert-manager", inventoryOf(t, status, "cert-manager.io", "certificates").Module)
+	assert.Empty(t, inventoryOf(t, status, "shared.io", "widgets").Module, "two modules claim it, so the report says it does not know")
+	assert.Empty(t, inventoryOf(t, status, "", "pods").Module, "a wildcard capability owns nothing")
+}
+
+// scopeCacheWith builds a discovery snapshot of exactly these resources.
+func scopeCacheWith(resources map[string]bool) *ResourceScopeCache {
+	cache := NewResourceScopeCache(nil)
+
+	cache.mu.Lock()
+	cache.scopeMap = resources
+	cache.mu.Unlock()
+
+	return cache
+}
+
 func inventoryOf(t *testing.T, status v1alpha1.RoleAccessReportStatus, group, resource string) v1alpha1.InventoryResource {
 	t.Helper()
 
