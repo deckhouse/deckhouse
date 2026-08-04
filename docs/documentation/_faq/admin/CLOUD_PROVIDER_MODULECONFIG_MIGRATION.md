@@ -18,7 +18,7 @@ Deckhouse Kubernetes Platform is transitioning from a single `<PROVIDER>ClusterC
 Migration is mandatory. This is not an optional step: support for `<PROVIDER>ClusterConfiguration` will be removed. Until the migration is completed, DKP upgrades may be blocked.
 {% endalert %}
 
-The migration is safe: applying the prepared resources **does not cause nodes to be recreated**. However, explicit administrator action is required — the resources must be reviewed and applied manually.
+The migration is safe. It implies the applying of automatically prepared DKP resources **does not cause nodes to be recreated**. However, explicit administrator action is required — the resources must be reviewed and applied manually.
 
 ## How to migrate
 

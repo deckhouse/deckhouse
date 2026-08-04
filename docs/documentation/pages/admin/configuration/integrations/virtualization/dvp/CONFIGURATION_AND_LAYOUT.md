@@ -12,7 +12,7 @@ permalink: en/admin/integrations/virtualization/dvp/configuration-and-layout-sch
 If the cluster was installed with the DVPClusterConfiguration schema, migration to ModuleConfig-based configuration is required.
 Until the migration is completed, the `D8CloudProviderDVPMigrationPending` alert may fire and Deckhouse updates may be blocked.
 
-See: [How to migrate a cloud provider to ModuleConfig-based configuration](/faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
+See: [How to migrate a cloud provider to ModuleConfig-based configuration](../../../../faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
 {% endalert %}
 
 Example of the layout configuration:
