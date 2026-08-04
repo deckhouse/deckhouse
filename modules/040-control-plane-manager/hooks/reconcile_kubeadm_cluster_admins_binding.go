@@ -25,11 +25,13 @@ limitations under the License.
 // on cluster-admin (kubeadm-default wildcard). The supplement (extra ClusterRole bound to the same
 // kubeadm:cluster-admins group) is enabled while user-authz is on (single gate).
 //
-// The hook publishes its decision into Helm values so templates/rbac-for-us.yaml renders verbatim
-// and does NOT re-evaluate the gates:
+// The main kubeadm:cluster-admins binding is owned entirely by this hook: it left the Helm template
+// in v1.77 (Helm orphaned the live object via helm.sh/resource-policy: keep, so no binding gap ever
+// opened). The hook still publishes its decision into Helm values:
 //
-//	controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName  string
-//	controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled bool
+//	controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName  string  (observability only)
+//	controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled bool  (read by the template
+//	                                                                          to gate the supplement)
 //
 // Why a hook is needed at all: ClusterRoleBinding.roleRef is immutable in Kubernetes RBAC, Helm
 // SSA cannot mutate it. We Delete+Create via PatchCollector on OnBeforeHelm, before Helm runs.
@@ -67,18 +69,11 @@ const (
 	kubeadmTargetRoleNameValuePath    = "controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName"
 	kubeadmSupplementEnabledValuePath = "controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled"
 
-	// Helm ownership keys. Helm refuses to adopt a resource that lacks all three; without them
-	// the control-plane-manager release fails on every converge on pre-v1.76 clusters.
-	helmManagedByLabel             = "app.kubernetes.io/managed-by"
-	helmManagedByValue             = "Helm"
-	helmReleaseNameAnnotation      = "meta.helm.sh/release-name"
-	helmReleaseNamespaceAnnotation = "meta.helm.sh/release-namespace"
-	cpmHelmReleaseName             = "control-plane-manager"
-	cpmHelmReleaseNamespace        = "d8-system"
-
-	// resource-policy: keep mirrors the template annotation so the live object always carries it,
-	// even right after the hook (re)creates it. This guards the eventual hook-only migration: when
-	// this CRB is dropped from the Helm template, Helm must not prune it (admin.conf would lose root).
+	// resource-policy: keep is stamped on every object the hook writes. It was the one-time guard for
+	// the v1.77 converge that dropped this CRB from the Helm template: with the annotation on the live
+	// object, Helm orphaned it (kept it) instead of pruning, so kubeadm:cluster-admins never lost its
+	// binding and admin.conf never lost root. After that converge the object is Helm-orphaned and this
+	// hook is its sole owner; the annotation is now a harmless no-op we keep for defence in depth.
 	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
 	helmResourcePolicyKeep       = "keep"
 
@@ -87,10 +82,9 @@ const (
 	forceWildcardClusterAdmin = true
 )
 
-// kubeadmClusterAdminsBindingState keeps the moving pieces of the CRB we care about.
+// kubeadmClusterAdminsBindingState keeps the only moving piece of the CRB we care about.
 type kubeadmClusterAdminsBindingState struct {
-	RoleRefName      string `json:"roleRefName"`
-	HasHelmOwnership bool   `json:"hasHelmOwnership"`
+	RoleRefName string `json:"roleRefName"`
 }
 
 // userAuthzClusterAdminCRState is just a presence marker (snapshot length > 0 == role exists).
@@ -103,12 +97,8 @@ func filterKubeadmClusterAdminsBinding(obj *unstructured.Unstructured) (go_hook.
 	if err := sdk.FromUnstructured(obj, &crb); err != nil {
 		return nil, fmt.Errorf("convert ClusterRoleBinding %s: %w", obj.GetName(), err)
 	}
-	hasHelm := crb.Labels[helmManagedByLabel] == helmManagedByValue &&
-		crb.Annotations[helmReleaseNameAnnotation] == cpmHelmReleaseName &&
-		crb.Annotations[helmReleaseNamespaceAnnotation] == cpmHelmReleaseNamespace
 	return kubeadmClusterAdminsBindingState{
-		RoleRefName:      crb.RoleRef.Name,
-		HasHelmOwnership: hasHelm,
+		RoleRefName: crb.RoleRef.Name,
 	}, nil
 }
 
@@ -166,8 +156,9 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 		desiredRoleName = userAuthzClusterAdminClusterRoleName
 	}
 
-	// Single source of truth: publish the already-made decision into values so the Helm template
-	// renders verbatim. Helm picks up values updates of OnBeforeHelm hooks before rendering.
+	// Publish the already-made decision into values. supplementEnabled gates the supplement CRB that
+	// is still template-rendered; targetRoleName is exported for observability only (the main binding
+	// is hook-owned). Helm picks up values updates of OnBeforeHelm hooks before rendering.
 	input.Values.Set(kubeadmTargetRoleNameValuePath, desiredRoleName)
 	input.Values.Set(kubeadmSupplementEnabledValuePath, userAuthzEnabled)
 
@@ -194,27 +185,9 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 
 	current := bindingSnaps[len(bindingSnaps)-1]
 	if current.RoleRefName == desiredRoleName {
-		if !current.HasHelmOwnership {
-			// Pre-v1.76 clusters have this CRB without Helm ownership metadata.
-			// Helm refuses to adopt a resource that lacks all three keys and the release fails.
-			// Patch them in before Helm runs so it can take ownership cleanly.
-			logger.Info("patching helm ownership metadata onto clusterrolebinding")
-			input.PatchCollector.PatchWithMerge(
-				map[string]interface{}{
-					"metadata": map[string]interface{}{
-						"labels": map[string]string{
-							helmManagedByLabel: helmManagedByValue,
-						},
-						"annotations": map[string]string{
-							helmReleaseNameAnnotation:      cpmHelmReleaseName,
-							helmReleaseNamespaceAnnotation: cpmHelmReleaseNamespace,
-							helmResourcePolicyAnnotation:   helmResourcePolicyKeep,
-						},
-					},
-				},
-				rbacv1.SchemeGroupVersion.String(), "ClusterRoleBinding", "", kubeadmClusterAdminsBindingName,
-			)
-		}
+		// roleRef already correct: nothing to do. The hook does not touch ownership metadata — the
+		// object is Helm-orphaned (or hook-created) and this hook is its sole owner. Any residual Helm
+		// labels inherited from the pre-v1.77 template are left untouched; Helm no longer manages it.
 		return nil
 	}
 
@@ -224,9 +197,10 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 	return nil
 }
 
-// buildKubeadmClusterAdminsBinding renders the desired ClusterRoleBinding state.
-// Helm ownership metadata is included so that Helm can adopt the object on the next release run,
-// and helm.sh/resource-policy: keep is set so Helm never prunes it (mirrors the template).
+// buildKubeadmClusterAdminsBinding renders the desired ClusterRoleBinding state. This hook is the
+// sole owner of the object (it left the Helm template in v1.77), so no Helm ownership metadata is
+// set. helm.sh/resource-policy: keep is still stamped: it is the guard for the drop-from-template
+// converge (if the hook (re)creates the CRB right before that Helm run, keep prevents a prune).
 func buildKubeadmClusterAdminsBinding(roleName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
@@ -236,14 +210,11 @@ func buildKubeadmClusterAdminsBinding(roleName string) *rbacv1.ClusterRoleBindin
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeadmClusterAdminsBindingName,
 			Labels: map[string]string{
-				"heritage":         "deckhouse",
-				"module":           "control-plane-manager",
-				helmManagedByLabel: helmManagedByValue,
+				"heritage": "deckhouse",
+				"module":   "control-plane-manager",
 			},
 			Annotations: map[string]string{
-				helmReleaseNameAnnotation:      cpmHelmReleaseName,
-				helmReleaseNamespaceAnnotation: cpmHelmReleaseNamespace,
-				helmResourcePolicyAnnotation:   helmResourcePolicyKeep,
+				helmResourcePolicyAnnotation: helmResourcePolicyKeep,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{

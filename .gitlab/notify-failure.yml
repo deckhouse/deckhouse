@@ -1,0 +1,22 @@
+.notify-failure-base:
+  image:
+    name: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/notify:${CI_IMAGES_TAG}
+  variables:
+    GIT_STRATEGY: none
+    GIT_SUBMODULE_STRATEGY: none
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+    JOB_NAME: $CI_JOB_NAME
+    WORKFLOW_NAME: $CI_PIPELINE_SCHEDULE_DESCRIPTION
+    WORKFLOW_URL: $CI_PIPELINE_URL
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    LOOP_SERVICE_NOTIFICATIONS:
+      token: $VAULT_ID_TOKEN
+      file: false
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop/webhook_url@projects
+  when: on_failure
+  script:
+    - send-report.sh --webhook "ci_fail"

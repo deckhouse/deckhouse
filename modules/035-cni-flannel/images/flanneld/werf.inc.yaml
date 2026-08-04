@@ -79,3 +79,5 @@ import:
 imageSpec:
   config:
     entrypoint: ["/entrypoint"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

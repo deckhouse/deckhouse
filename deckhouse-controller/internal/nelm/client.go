@@ -47,6 +47,9 @@ const (
 	// ReleaseLabelPackageChecksum stores the rendered-manifests checksum on the release storage secret.
 	ReleaseLabelPackageChecksum = "packageChecksum"
 
+	// ReleaseLabelModuleChecksum stores the module checksum on the release storage secret.
+	ReleaseLabelModuleChecksum = "moduleChecksum"
+
 	// ReleaseLabelMaintenance marks a release whose resources must not be reconciled.
 	// The value is "true" while the package is under maintenance, "false" otherwise.
 	// It doubles as a resource label key (with an empty value) so the deckhouse
@@ -360,7 +363,9 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			RootSetJSON: valuesSet,
 		},
 		TrackingOptions: common.TrackingOptions{
-			NoPodLogs: true,
+			NoPodLogs:                    true,
+			NoFinalTracking:              true,
+			LegacyHelmCompatibleTracking: true,
 		},
 		Chart:                  opts.Path,
 		DefaultChartName:       releaseName,

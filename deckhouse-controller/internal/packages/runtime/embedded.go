@@ -76,7 +76,7 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionRequirementsMet)
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionReadyOnFilesystem)
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionLoaded)
-	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), 0, make(addonutils.Values), "")
+	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), 0, make(addonutils.Values), "", false)
 
 	return nil
 }
@@ -129,8 +129,7 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 			conf.ScheduleManager = r.scheduleManager
 			conf.KubeEventsManager = r.kubeEventsManager
 			conf.GlobalValuesGetter = r.global.GetValues
-			// TODO(ipaqsa): set deckhouse version instead
-			conf.Definition.Version = "v0.0.0"
+			conf.Definition.Version = r.edition.Version
 
 			module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 			if err != nil {
@@ -141,7 +140,7 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 			// with r.mu; status.Service is internally synchronized.
 			r.mu.Lock()
 			r.modules[module.GetName()] = module
-			r.packages.Update(module.GetName(), module.GetVersion().String(), 0, make(addonutils.Values), "")
+			r.packages.Update(module.GetName(), module.GetVersion().String(), 0, make(addonutils.Values), "", false)
 			r.mu.Unlock()
 
 			// register package in status store

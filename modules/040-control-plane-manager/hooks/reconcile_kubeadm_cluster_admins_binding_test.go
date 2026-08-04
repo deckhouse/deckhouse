@@ -149,11 +149,23 @@ rules:
 		Expect(f.ValuesGet(supplementEnabledPath).Bool()).To(Equal(supplementEnabled))
 	}
 
+	// expectHelmOwnership asserts pre-existing Helm labels are still present. Since v1.77 the hook no
+	// longer writes them, but it must not strip Helm labels inherited (orphaned) from the pre-v1.77
+	// template — Helm no longer manages the object, so thrashing those labels would be pointless churn.
 	expectHelmOwnership := func(f *HookExecutionConfig) {
 		crb := f.KubernetesGlobalResource("ClusterRoleBinding", "kubeadm:cluster-admins")
 		Expect(crb.Field(`metadata.labels.app\.kubernetes\.io/managed-by`).String()).To(Equal("Helm"))
 		Expect(crb.Field(`metadata.annotations.meta\.helm\.sh/release-name`).String()).To(Equal("control-plane-manager"))
 		Expect(crb.Field(`metadata.annotations.meta\.helm\.sh/release-namespace`).String()).To(Equal("d8-system"))
+	}
+
+	// expectNoHelmOwnership asserts the object the hook wrote carries NO Helm ownership metadata:
+	// since v1.77 the hook is the sole owner and never stamps Helm adoption keys.
+	expectNoHelmOwnership := func(f *HookExecutionConfig) {
+		crb := f.KubernetesGlobalResource("ClusterRoleBinding", "kubeadm:cluster-admins")
+		Expect(crb.Field(`metadata.labels.app\.kubernetes\.io/managed-by`).Exists()).To(BeFalse())
+		Expect(crb.Field(`metadata.annotations.meta\.helm\.sh/release-name`).Exists()).To(BeFalse())
+		Expect(crb.Field(`metadata.annotations.meta\.helm\.sh/release-namespace`).Exists()).To(BeFalse())
 	}
 
 	// expectKeepPolicy guards the hook-only migration: any object the hook writes must carry
@@ -289,18 +301,17 @@ rules:
 		})
 	})
 
-	// ── Helm ownership migration: CRB exists without Helm labels ──
-	Context("user-authz disabled, CRB on cluster-admin WITHOUT Helm labels (pre-v1.76 state)", func() {
+	// ── Hook-only ownership (v1.77+): the hook never writes Helm ownership metadata ──
+	Context("user-authz disabled, CRB on cluster-admin WITHOUT Helm labels", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOffBootstrapped, "")
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(crbCurrentClusterAdmin))
 			f.RunHook()
 		})
-		It("patches Helm ownership onto the existing CRB without changing roleRef", func() {
+		It("is a no-op (roleRef already correct) and does NOT stamp Helm ownership onto the CRB", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
-			expectHelmOwnership(f)
-			expectKeepPolicy(f)
+			expectNoHelmOwnership(f)
 			expectInternalDecision(f, "cluster-admin", false)
 		})
 	})
@@ -311,23 +322,23 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(crbUserAuthzClusterAdminWithHelmLabels + userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("rolls the binding back to the wildcard cluster-admin (Delete+Create) and re-stamps Helm ownership + keep", func() {
+		It("rolls the binding back to the wildcard cluster-admin (Delete+Create) with keep and NO Helm ownership", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
-			expectHelmOwnership(f)
+			expectNoHelmOwnership(f)
 			expectKeepPolicy(f)
 			expectInternalDecision(f, "cluster-admin", true)
 		})
 	})
 
-	// ── True no-op: CRB already carries Helm labels ──
-	Context("user-authz disabled, CRB on cluster-admin WITH Helm labels already", func() {
+	// ── True no-op: CRB inherited Helm labels from the pre-v1.77 template ──
+	Context("user-authz disabled, CRB on cluster-admin WITH inherited Helm labels", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOffBootstrapped, "")
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(crbClusterAdminWithHelmLabels))
 			f.RunHook()
 		})
-		It("is a true no-op: roleRef correct and Helm labels already present", func() {
+		It("is a true no-op: roleRef correct and inherited Helm labels are left untouched (not stripped)", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
 			expectHelmOwnership(f)

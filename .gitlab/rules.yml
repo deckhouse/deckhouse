@@ -32,3 +32,7 @@ workflow:
 .rules:on_release_branch:
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
+
+.rules:on_schedule_cve_scans:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_CVE_SCANS_ENABLE == "true"
