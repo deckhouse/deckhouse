@@ -169,11 +169,9 @@ strategy:
 {{- define "helm_lib_deployment_strategy_and_replicas_for_ha" }}
 {{- /* Template context with .Values, .Chart, etc */ -}}
 replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
-{{- if (include "helm_lib_ha_enabled" .) }}
 strategy:
   type: RollingUpdate
   rollingUpdate:
     maxSurge: 0
     maxUnavailable: 1
-{{- end }}
 {{- end }}
