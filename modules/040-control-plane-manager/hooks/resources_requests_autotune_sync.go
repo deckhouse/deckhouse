@@ -39,5 +39,5 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(autotuneResourcesRequestsSync))
 
 func autotuneResourcesRequestsSync(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	return runAutotune(ctx, input, dc, runAutotuneOptions{Evaluate: false})
+	return runAutotune(ctx, input, dc, false)
 }
