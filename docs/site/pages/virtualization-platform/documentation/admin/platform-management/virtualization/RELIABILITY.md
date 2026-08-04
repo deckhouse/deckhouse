@@ -16,10 +16,55 @@ Virtual machine migration is an important feature in virtualized infrastructure 
 {% alert level="warning" %}
 Live migration has the following limitations:
 
-- Only one virtual machine can migrate from each node simultaneously.
+- By default, each node prepares and transfers the memory of only one virtual machine at a time, and accepts the memory of only one incoming migration at a time. See the [Tuning live migration concurrency](#tuning-live-migration-concurrency) section to change these limits.
 - The total number of concurrent migrations in the cluster cannot exceed the number of nodes where running virtual machines is permitted.
 - The bandwidth for a single migration is limited to 5 Gbps.
 {% endalert %}
+
+#### Tuning live migration concurrency
+
+A live migration goes through two phases that matter for throughput:
+
+1. **Preparation**: The target pod is scheduled and its devices are attached, up to the `TargetReady` state. No memory is transferred yet.
+1. **Sync**: The memory of the virtual machine is copied to the target over the network. This is the phase that consumes migration bandwidth.
+
+Concurrency is bounded by three independent limits, each counted per node and defaulting to `1`. They are configured with annotations on the `virtualization` ModuleConfig:
+
+| Limit              | Annotation                                                          | Counted per | Bounds                                             |
+|--------------------|---------------------------------------------------------------------|-------------|----------------------------------------------------|
+| Preparation pool   | `virtualization.deckhouse.io/parallel-outbound-migrations-per-node` | source node | migrations being prepared in parallel              |
+| Outbound sync pool | `virtualization.deckhouse.io/parallel-sync-migrations-per-node`     | source node | migrations transferring memory **out of** the node |
+| Inbound sync pool  | `virtualization.deckhouse.io/parallel-inbound-migrations-per-node`  | target node | migrations transferring memory **into** the node   |
+
+A migration starts transferring memory only when a sync slot is free on its source node **and** an inbound slot is free on its target node. Until then it stays prepared and parked at `TargetReady`, and its [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) stays in the `Pending` phase:
+
+- waiting for a source-node sync slot — reason `WaitingForSyncSlot`;
+- waiting for a target-node inbound slot — message `Target node has no free inbound migration slots.`
+
+**Speeding up a node drain.** With every limit at the default `1`, a drain migrates virtual machines strictly one at a time: prepare one, transfer it, then start the next. Raising only the preparation pool turns the drain into a pipeline — the next virtual machines prepare their targets while the current one transfers memory, and each starts its transfer as soon as the previous one finishes. Because the sync pools stay at `1`, at most one memory transfer runs per node at a time, so no extra network contention is introduced.
+
+Example — pipeline a drain while keeping memory transfers serialized:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: virtualization
+  annotations:
+    # Prepare up to 3 migrations per source node in parallel.
+    virtualization.deckhouse.io/parallel-outbound-migrations-per-node: "3"
+    # Transfer the memory of one migration at a time out of a node.
+    virtualization.deckhouse.io/parallel-sync-migrations-per-node: "1"
+    # Transfer the memory of one migration at a time into a node.
+    virtualization.deckhouse.io/parallel-inbound-migrations-per-node: "1"
+```
+
+To disable a sync limiter entirely, so that concurrency is bounded only by the preparation pool and by KubeVirt's own limits, set the corresponding annotation to `disabled`:
+
+```yaml
+    virtualization.deckhouse.io/sync-migration-limit: "disabled"
+    virtualization.deckhouse.io/inbound-migration-limit: "disabled"
+```
 
 #### Start migration of an arbitrary machine
 
@@ -87,6 +132,29 @@ How to start VM migration in the web interface:
 - Select the desired virtual machine from the list and click the ellipsis button.
 - Select `Migrate` from the pop-up menu.
 - Confirm or cancel the migration in the pop-up window.
+
+#### Dedicated migration network
+
+By default, live migration traffic flows over the node's default network and competes with workload traffic. You can also route it over a dedicated VLAN provisioned by the [`sdn`](/modules/sdn/) module.
+
+Prerequisites:
+
+- The `sdn` module is enabled.
+- A [SystemNetwork](/modules/sdn/cr.html#systemnetwork) resource exists and is in the `Ready` state.
+
+To enable the feature, set `spec.settings.liveMigration.network` on the `virtualization` ModuleConfig: use `type: SystemNetwork` and specify the name of the prepared `SystemNetwork` under `systemNetwork.name`. Once configured, every VM migration in the cluster runs over the specified `SystemNetwork` VLAN.
+
+```yaml
+spec:
+  settings:
+    liveMigration:
+      network:
+        type: SystemNetwork
+        systemNetwork:
+          name: migration-net
+```
+
+To route migration traffic back over the default node network, remove the `network` block (it is the implicit default when unset).
 
 #### Maintenance mode
 

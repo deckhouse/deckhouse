@@ -126,3 +126,15 @@ Components used to create and import virtual machine images or disks (they run o
 |----------------|---------------|---------|
 | `importer-*`   | system/worker |         |
 | `uploader-*`   | system/worker |         |
+
+## Cluster with taints on all nodes
+
+In some clusters, taints are configured on every node. This lets administrators explicitly control which nodes pods and virtual machines can be scheduled onto.
+
+When running Deckhouse Virtualization Platform in this setup, keep the following in mind:
+
+1. When creating a [VirtualDisk](/modules/virtualization/cr.html#virtualdisk), pay attention to the StorageClass `volumeBindingMode`. With `Immediate`, a PersistentVolume is created as soon as the disk is created — before the virtual machine is scheduled. Make sure the provisioner can create volumes on nodes that are allowed for virtual machines through [placement settings](/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placement-of-vms-by-nodes), including `nodeSelector`, `tolerations`, and settings in the virtual machine `spec` or [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass). Otherwise, the disk may end up on a node where the virtual machine cannot run. With `WaitForFirstConsumer`, the volume is created on the node where the virtual machine is scheduled, and this issue does not occur.
+
+1. [VirtualImage](/modules/virtualization/cr.html#virtualimage) and [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) require the `importer-*` and `uploader-*` pods from the table above. They have a toleration for the `dedicated.deckhouse.io=system` taint.
+
+1. The cluster must have a `system` NodeGroup, or the administrator can add the `dedicated.deckhouse.io=system` taint to selected nodes without creating a NodeGroup. Without such nodes, the `importer-*` and `uploader-*` pods will not be scheduled, and images will not reach the `Ready` phase.

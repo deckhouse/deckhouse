@@ -12,7 +12,7 @@ The administrator can modify the parameters of the `generic` VirtualMachineClass
 {% alert level="info" %}
 It is not recommended to use the `generic` VirtualMachineClass for running workloads in production environments, since this class corresponds to a CPU with the smallest feature set.
 
-After all nodes are configured and added to the cluster, it is recommended to create at least one VirtualMachineClass resource of the `Discovery` type. This ensures that the best available CPU configuration compatible with all CPUs in your cluster is selected, allows virtual machines to make full use of CPU capabilities, and enables seamless migration between nodes.
+After all nodes are configured and added to the cluster, it is recommended to create at least one VirtualMachineClass resource of the `Discovery` type. This ensures that the best available CPU configuration compatible with all CPUs in your cluster is selected, allows virtual machines to make full use of CPU capabilities, and enables seamless migration between nodes. For the `Discovery` type, the instruction set is fixed when the resource is created and does not change when nodes are added to or removed from the cluster.
 
 For a configuration example, see [vCPU Discovery configuration example](#vcpu-discovery-configuration-example).
 {% endalert %}
