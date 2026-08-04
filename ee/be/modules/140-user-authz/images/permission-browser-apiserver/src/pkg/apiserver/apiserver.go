@@ -288,8 +288,8 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		if err != nil {
 			klog.Warningf("Failed to create metadata client, the inventory will carry no module names: %v", err)
 		} else {
-			moduleIndex = resolver.NewModuleIndex(metadataClient)
-			go moduleIndex.StartRefreshLoop(ctx.Done())
+			moduleIndex = resolver.NewModuleIndex(ctx, metadataClient)
+			go moduleIndex.StartRefreshLoop(ctx)
 			klog.Info("Module index initialized and refresh loop started")
 		}
 	}

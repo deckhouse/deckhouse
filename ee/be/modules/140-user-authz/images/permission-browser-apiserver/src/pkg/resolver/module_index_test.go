@@ -28,11 +28,13 @@ func apiServiceMetadata(name string, labels map[string]string) *metav1.PartialOb
 	}
 }
 
-func newTestModuleIndex(objects ...runtime.Object) *ModuleIndex {
+func newTestModuleIndex(t *testing.T, objects ...runtime.Object) *ModuleIndex {
+	t.Helper()
+
 	scheme := metadatafake.NewTestScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 
-	return NewModuleIndex(metadatafake.NewSimpleMetadataClient(scheme, objects...))
+	return NewModuleIndex(t.Context(), metadatafake.NewSimpleMetadataClient(scheme, objects...))
 }
 
 // The API group does not name the module: operator-trivy ships
@@ -41,8 +43,7 @@ func newTestModuleIndex(objects ...runtime.Object) *ModuleIndex {
 func TestModuleIndex_ReadsTheModuleFromTheCRD(t *testing.T) {
 	t.Parallel()
 
-	index := newTestModuleIndex(
-		crdMetadata("vulnerabilityreports.aquasecurity.github.io", map[string]string{"heritage": "deckhouse", "module": "operator-trivy"}),
+	index := newTestModuleIndex(t, crdMetadata("vulnerabilityreports.aquasecurity.github.io", map[string]string{"heritage": "deckhouse", "module": "operator-trivy"}),
 		crdMetadata("projects.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "multitenancy-manager"}),
 	)
 
@@ -58,9 +59,7 @@ func TestModuleIndex_ReadsTheModuleFromTheCRD(t *testing.T) {
 func TestModuleIndex_SubresourceBelongsToItsParent(t *testing.T) {
 	t.Parallel()
 
-	index := newTestModuleIndex(
-		crdMetadata("virtualmachines.virtualization.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "virtualization"}),
-	)
+	index := newTestModuleIndex(t, crdMetadata("virtualmachines.virtualization.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "virtualization"}))
 
 	origin, known := index.Origin("virtualization.deckhouse.io", "virtualmachines/console")
 
@@ -73,8 +72,7 @@ func TestModuleIndex_SubresourceBelongsToItsParent(t *testing.T) {
 func TestModuleIndex_CustomIsWhatThePlatformDoesNotInstall(t *testing.T) {
 	t.Parallel()
 
-	index := newTestModuleIndex(
-		crdMetadata("widgets.example.com", nil),
+	index := newTestModuleIndex(t, crdMetadata("widgets.example.com", nil),
 		crdMetadata("projects.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "multitenancy-manager"}),
 	)
 
@@ -93,7 +91,7 @@ func TestModuleIndex_CustomIsWhatThePlatformDoesNotInstall(t *testing.T) {
 func TestModuleIndex_KnowsNothingAboutBuiltInResources(t *testing.T) {
 	t.Parallel()
 
-	index := newTestModuleIndex(crdMetadata("projects.deckhouse.io", map[string]string{"heritage": "deckhouse"}))
+	index := newTestModuleIndex(t, crdMetadata("projects.deckhouse.io", map[string]string{"heritage": "deckhouse"}))
 
 	_, known := index.Origin("", "secrets")
 
@@ -106,8 +104,7 @@ func TestModuleIndex_KnowsNothingAboutBuiltInResources(t *testing.T) {
 func TestModuleIndex_AggregatedAPIComesFromItsAPIService(t *testing.T) {
 	t.Parallel()
 
-	index := newTestModuleIndex(
-		apiServiceMetadata("v1alpha1.authorization.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "user-authz"}),
+	index := newTestModuleIndex(t, apiServiceMetadata("v1alpha1.authorization.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "user-authz"}),
 		// The local APIServices of the built-in APIs carry no group and no module.
 		apiServiceMetadata("v1.", nil),
 	)
@@ -124,8 +121,7 @@ func TestModuleIndex_AggregatedAPIComesFromItsAPIService(t *testing.T) {
 func TestModuleIndex_CRDWinsOverTheGroup(t *testing.T) {
 	t.Parallel()
 
-	index := newTestModuleIndex(
-		crdMetadata("projects.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "multitenancy-manager"}),
+	index := newTestModuleIndex(t, crdMetadata("projects.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "multitenancy-manager"}),
 		apiServiceMetadata("v1alpha1.deckhouse.io", map[string]string{"module": "deckhouse"}),
 	)
 

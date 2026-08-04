@@ -7,6 +7,7 @@ package resolver
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +25,11 @@ const (
 	moduleLabel = "module"
 
 	deckhouseHeritage = "deckhouse"
+
+	// refreshTimeout bounds one pass over the CRDs and APIServices. A refresh
+	// that hangs would hold the loop forever and the index would silently stop
+	// following the cluster.
+	refreshTimeout = 30 * time.Second
 )
 
 var (
@@ -76,7 +82,9 @@ type ModuleIndex struct {
 	groupModules map[string]string
 }
 
-func NewModuleIndex(client metadata.Interface) *ModuleIndex {
+// NewModuleIndex builds the index and fills it once, so the first report does
+// not have to wait for the refresh loop.
+func NewModuleIndex(ctx context.Context, client metadata.Interface) *ModuleIndex {
 	index := &ModuleIndex{
 		client:          client,
 		refreshInterval: defaultRefreshInterval,
@@ -84,7 +92,7 @@ func NewModuleIndex(client metadata.Interface) *ModuleIndex {
 		groupModules:    make(map[string]string),
 	}
 
-	index.refresh()
+	index.refresh(ctx)
 
 	return index
 }
@@ -127,15 +135,16 @@ func (i *ModuleIndex) HasData() bool {
 	return len(i.origins) > 0
 }
 
-// StartRefreshLoop keeps the index current. Blocks until stopCh is closed.
-func (i *ModuleIndex) StartRefreshLoop(stopCh <-chan struct{}) {
+// StartRefreshLoop keeps the index current. Blocks until ctx is cancelled, and
+// cancelling it also aborts a refresh already in flight.
+func (i *ModuleIndex) StartRefreshLoop(ctx context.Context) {
 	for {
 		timer := time.NewTimer(i.refreshInterval)
 
 		select {
 		case <-timer.C:
-			i.refresh()
-		case <-stopCh:
+			i.refresh(ctx)
+		case <-ctx.Done():
 			timer.Stop()
 			klog.Info("ModuleIndex: refresh loop stopped")
 
@@ -149,12 +158,16 @@ func (i *ModuleIndex) StartRefreshLoop(stopCh <-chan struct{}) {
 // refresh rebuilds the index. On error the previous one is kept: a stale module
 // name is a cosmetic problem, an empty index turns every resource into "no
 // module" and the coverage report loses its grouping.
-func (i *ModuleIndex) refresh() {
+//
+// Both maps are swapped under one lock. Swapping them separately would leave a
+// window where a resource is attributed by a CRD read now and by an APIService
+// read five minutes ago -- rare, harmless, and impossible to reason about.
+func (i *ModuleIndex) refresh(ctx context.Context) {
 	if i.client == nil {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, refreshTimeout)
 	defer cancel()
 
 	crds, err := i.client.Resource(crdGVR).List(ctx, metav1.ListOptions{})
@@ -172,24 +185,28 @@ func (i *ModuleIndex) refresh() {
 		}
 	}
 
+	groupModules, err := i.aggregatedGroups(ctx)
+	if err != nil {
+		// The CRDs are still worth having: aggregated groups are a handful, and
+		// losing their module names is not a reason to lose the rest.
+		klog.Warningf("ModuleIndex: listing APIServices failed, aggregated APIs stay unattributed: %v", err)
+	}
+
 	i.mu.Lock()
 	i.origins = origins
+	if err == nil {
+		i.groupModules = groupModules
+	}
 	i.mu.Unlock()
 
-	klog.V(4).Infof("ModuleIndex: refreshed with %d CRDs", len(origins))
-
-	i.refreshAPIServices(ctx)
+	klog.V(4).Infof("ModuleIndex: refreshed with %d CRDs and %d aggregated API groups", len(origins), len(groupModules))
 }
 
-// refreshAPIServices attributes the aggregated APIs. A failure here leaves the
-// CRDs attributed: aggregated groups are a handful, and losing their module
-// names is not a reason to lose the rest.
-func (i *ModuleIndex) refreshAPIServices(ctx context.Context) {
+// aggregatedGroups maps an API group to the module whose APIService serves it.
+func (i *ModuleIndex) aggregatedGroups(ctx context.Context) (map[string]string, error) {
 	list, err := i.client.Resource(apiServiceGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		klog.Warningf("ModuleIndex: listing APIServices failed: %v, aggregated APIs stay unattributed: %v", err, err)
-
-		return
+		return nil, fmt.Errorf("list apiservices: %w", err)
 	}
 
 	groupModules := make(map[string]string)
@@ -206,9 +223,5 @@ func (i *ModuleIndex) refreshAPIServices(ctx context.Context) {
 		}
 	}
 
-	i.mu.Lock()
-	i.groupModules = groupModules
-	i.mu.Unlock()
-
-	klog.V(4).Infof("ModuleIndex: refreshed with %d aggregated API groups", len(groupModules))
+	return groupModules, nil
 }

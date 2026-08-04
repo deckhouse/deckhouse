@@ -674,15 +674,20 @@ func stripInternal(roles []v1alpha1.RoleAccess) []v1alpha1.RoleAccess {
 // can verify instead of having to diff two documents by eye. The snapshot
 // itself is not hashed -- the timestamp would make every digest unique, which
 // is the opposite of the point.
+// digestOf hashes the reported roles.
+//
+// The JSON is streamed into the hash rather than marshalled into memory first:
+// a report of a large cluster is tens of megabytes, and holding a second copy
+// of it only to throw it away is the most expensive thing this function could
+// do. The digest itself is opaque -- it is compared between two reports, never
+// to a constant -- so the framing of the stream does not matter.
 func digestOf(roles []v1alpha1.RoleAccess) string {
-	encoded, err := json.Marshal(roles)
-	if err != nil {
+	hasher := sha256.New()
+	if err := json.NewEncoder(hasher).Encode(roles); err != nil {
 		return ""
 	}
 
-	sum := sha256.Sum256(encoded)
-
-	return hex.EncodeToString(sum[:])
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 func setOf(values []string) map[string]struct{} {

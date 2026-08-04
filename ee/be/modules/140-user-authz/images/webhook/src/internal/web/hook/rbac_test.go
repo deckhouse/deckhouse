@@ -10,6 +10,7 @@ import (
 	"log"
 	"regexp"
 	"testing"
+	"time"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,67 @@ func newTestRBACEvaluator(t *testing.T, objs ...runtime.Object) *RBACEvaluator {
 	informerFactory.WaitForCacheSync(stopCh)
 
 	return evaluator
+}
+
+// The index answers the hot path instead of the cluster, so it has to follow
+// the cluster: a binding created after start-up counts, and one deleted stops
+// counting. A stale index would either miss a deliberate cluster-wide grant or
+// keep honouring a revoked one.
+func TestSubjectIndexFollowsTheCluster(t *testing.T) {
+	role := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: "pod-reader"},
+		Rules:      []rbacv1.PolicyRule{{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"list"}}},
+	}
+
+	client := fake.NewSimpleClientset(role)
+	informerFactory := informers.NewSharedInformerFactory(client, 0)
+	evaluator := NewRBACEvaluator(log.New(io.Discard, "", 0), informerFactory)
+
+	stopCh := make(chan struct{})
+	t.Cleanup(func() { close(stopCh) })
+	informerFactory.Start(stopCh)
+	informerFactory.WaitForCacheSync(stopCh)
+
+	spec := &WebhookResourceSpec{
+		User:               "system:serviceaccount:tenant:deployer",
+		ResourceAttributes: WebhookResourceAttributes{Verb: "list", Resource: "pods"},
+	}
+
+	if evaluator.AllowsIndependently(spec) {
+		t.Fatal("nothing grants the ServiceAccount yet")
+	}
+
+	binding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "deployer-pods"},
+		RoleRef:    rbacv1.RoleRef{Kind: "ClusterRole", Name: "pod-reader"},
+		Subjects:   []rbacv1.Subject{{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: "tenant"}},
+	}
+
+	if _, err := client.RbacV1().ClusterRoleBindings().Create(t.Context(), binding, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("creating the binding: %v", err)
+	}
+	waitFor(t, func() bool { return evaluator.AllowsIndependently(spec) }, "the new binding must be seen")
+
+	if err := client.RbacV1().ClusterRoleBindings().Delete(t.Context(), binding.Name, metav1.DeleteOptions{}); err != nil {
+		t.Fatalf("deleting the binding: %v", err)
+	}
+	waitFor(t, func() bool { return !evaluator.AllowsIndependently(spec) }, "the removed binding must stop counting")
+}
+
+// waitFor polls until the informer event reaches the index. The delay is the
+// watch round-trip of the fake client, not a cost of the check itself.
+func waitFor(t *testing.T, condition func() bool, message string) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if condition() {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	t.Fatal(message)
 }
 
 // TestAuthorizeRequestWithIndependentRBAC covers the interaction between
