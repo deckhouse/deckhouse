@@ -65,7 +65,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
-	modulev2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
 	modulepackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package"
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
@@ -401,7 +401,7 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register module package version controller: %w", err)
 		}
 
-		err = modulev2.RegisterController(runtimeManager, dc, logger.Named("module-v2-controller"))
+		err = module.RegisterController(preflightCountDown, runtimeManager, pkgRuntime, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register module v2 controller: %w", err)
 		}
