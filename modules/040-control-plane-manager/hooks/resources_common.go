@@ -208,7 +208,6 @@ func minMasterNodeBudget(nodes []Node) (int64, int64, bool) {
 
 // nodeOtherRequests is the sum of non-control-plane pod requests on one node.
 type nodeOtherRequests struct {
-	NodeName    string
 	MilliCPU    int64
 	MemoryBytes int64
 }
