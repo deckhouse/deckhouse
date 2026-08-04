@@ -220,19 +220,26 @@ func (r *RoleAccessResolver) inventory(index *roleIndex) []v1alpha1.InventoryRes
 			Verbs:      resource.Verbs,
 		}
 
+		defined := false
 		if r.moduleIndex != nil {
 			if origin, known := r.moduleIndex.Origin(resource.Group, resource.Resource); known {
 				entry.Module = origin.Module
 				entry.Custom = origin.Custom
+				defined = true
 			}
 		}
 
 		// Not every CRD the platform installs says which module installed it --
-		// the older ones carry only the heritage label. The role model does
-		// know: a capability belongs to a module and names the resources of
-		// that module, which is the same statement of ownership, made for the
-		// same reason.
-		if entry.Module == "" {
+		// the older ones carry only the heritage label. The roles do know: a
+		// role of a module names the resources of that module, which is the
+		// same statement of ownership, made for the same reason.
+		//
+		// Only a resource that has a definition of its own is attributed this
+		// way. Built-in Kubernetes resources belong to Kubernetes, and roles
+		// name them constantly -- the capabilities that grant pods are shipped
+		// by user-authz, and reading that as ownership would file half of
+		// Kubernetes under it.
+		if defined && entry.Module == "" {
 			entry.Module = byCapability[capabilityKey(resource.Group, resource.Resource)]
 		}
 
@@ -255,13 +262,17 @@ func capabilityKey(group, resource string) string {
 	return group + "/" + base
 }
 
-// capabilityModules reads resource ownership out of the role model: every
-// capability carries the module it belongs to and names that module's
-// resources.
+// capabilityModules reads resource ownership out of the roles a module ships.
 //
-// Wildcard rules are skipped. A capability written as "*/*" grants everything
-// the cluster has, and reading that as ownership would file the whole cluster
-// under one module.
+// Both models say it, in their own words. In the primary model that is a
+// capability: it carries the module it belongs to and names that module's
+// resources. In the legacy model it is the module's own access-level role,
+// d8:user-authz:<module>:<level> -- the same statement, and the only one
+// available on a cluster that never adopted capabilities.
+//
+// Wildcard rules are skipped. A role written as "*/*" grants everything the
+// cluster has, and reading that as ownership would file the whole cluster under
+// one module.
 func capabilityModules(index *roleIndex) map[string]string {
 	if index == nil {
 		return nil
@@ -270,12 +281,19 @@ func capabilityModules(index *roleIndex) map[string]string {
 	owners := make(map[string]string)
 
 	for _, role := range index.all {
-		if role.Labels[labelRoleKind] != roleKindCapability {
+		module := role.Labels[labelModule]
+		if module == "" {
 			continue
 		}
 
-		module := role.Labels[labelModule]
-		if module == "" {
+		// The seven roles of the levels themselves carry no access-level
+		// annotation -- they are what the annotation points at -- so they never
+		// reach here. They belong to user-authz and name the resources of the
+		// whole cluster.
+		isCapability := role.Labels[labelRoleKind] == roleKindCapability
+		isModuleLevelRole := role.Annotations[annotationAccessLevel] != ""
+
+		if !isCapability && !isModuleLevelRole {
 			continue
 		}
 

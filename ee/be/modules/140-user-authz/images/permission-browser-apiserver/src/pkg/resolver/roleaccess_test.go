@@ -596,6 +596,7 @@ func TestRoleReport_InventoryTakesTheModuleFromTheCapabilities(t *testing.T) {
 		"shared.io/widgets":            true,
 		"/pods":                        true,
 	})
+	resolver = resolver.WithModuleIndex(moduleIndexOfCRDs(t, "certificates.cert-manager.io", "widgets.shared.io"))
 
 	status, err := resolver.Report(context.Background(), RoleAccessRequest{IncludeInventory: true})
 	require.NoError(t, err)
@@ -603,6 +604,66 @@ func TestRoleReport_InventoryTakesTheModuleFromTheCapabilities(t *testing.T) {
 	assert.Equal(t, "cert-manager", inventoryOf(t, status, "cert-manager.io", "certificates").Module)
 	assert.Empty(t, inventoryOf(t, status, "shared.io", "widgets").Module, "two modules claim it, so the report says it does not know")
 	assert.Empty(t, inventoryOf(t, status, "", "pods").Module, "a wildcard capability owns nothing")
+}
+
+// The capabilities that grant pods are shipped by user-authz. Reading a role as
+// ownership of everything it names would file half of Kubernetes under it, so
+// only a resource with a definition of its own is attributed this way.
+func TestRoleReport_InventoryDoesNotGiveKubernetesToTheModuleGrantingIt(t *testing.T) {
+	t.Parallel()
+
+	granting := capability("d8:namespace-capability:kubernetes:manage_resources", "namespace", policyRule("", "pods", "get"))
+	granting.Labels[labelModule] = "user-authz"
+
+	resolver := setupRoleAccessResolver(t, []runtime.Object{aggregatingRole("d8:namespace:admin", "namespace"), granting})
+	resolver.scopeCache = scopeCacheWith(map[string]bool{"/pods": true})
+	// The index knows the CRDs of the cluster; pods are not among them.
+	resolver = resolver.WithModuleIndex(moduleIndexOfCRDs(t, "projects.deckhouse.io"))
+
+	status, err := resolver.Report(context.Background(), RoleAccessRequest{IncludeInventory: true})
+	require.NoError(t, err)
+
+	assert.Empty(t, inventoryOf(t, status, "", "pods").Module)
+}
+
+// The legacy model says the same thing in its own words, and on a cluster that
+// never adopted capabilities it is the only source there is.
+func TestRoleReport_InventoryTakesTheModuleFromTheLegacyRoles(t *testing.T) {
+	t.Parallel()
+
+	moduleRole := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "d8:user-authz:cert-manager:user",
+			Labels:      map[string]string{labelModule: "cert-manager"},
+			Annotations: map[string]string{annotationAccessLevel: "User"},
+		},
+		Rules: []rbacv1.PolicyRule{policyRule("cert-manager.io", "certificates", "get")},
+	}
+
+	resolver := setupRoleAccessResolver(t, []runtime.Object{moduleRole})
+	resolver.scopeCache = scopeCacheWith(map[string]bool{"cert-manager.io/certificates": true})
+	resolver = resolver.WithModuleIndex(moduleIndexOfCRDs(t, "certificates.cert-manager.io"))
+
+	status, err := resolver.Report(context.Background(), RoleAccessRequest{Model: RoleModelLegacy, IncludeInventory: true})
+	require.NoError(t, err)
+
+	assert.Equal(t, "cert-manager", inventoryOf(t, status, "cert-manager.io", "certificates").Module)
+}
+
+// moduleIndexOfCRDs builds an index knowing exactly these CRDs, none of which
+// says which module installed it.
+func moduleIndexOfCRDs(t *testing.T, names ...string) *ModuleIndex {
+	t.Helper()
+
+	objects := make([]runtime.Object, 0, len(names))
+	for _, name := range names {
+		objects = append(objects, &metav1.PartialObjectMetadata{
+			TypeMeta:   metav1.TypeMeta{APIVersion: "apiextensions.k8s.io/v1", Kind: "CustomResourceDefinition"},
+			ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{heritageLabel: deckhouseHeritage}},
+		})
+	}
+
+	return newTestModuleIndex(t, objects...)
 }
 
 // scopeCacheWith builds a discovery snapshot of exactly these resources.
