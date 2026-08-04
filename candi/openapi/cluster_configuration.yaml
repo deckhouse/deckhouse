@@ -158,7 +158,7 @@ apiVersions:
 
           When the ModuleConfig field is set, it takes precedence over this field.
           The field is optional: if omitted here and unset in ModuleConfig, Deckhouse uses the current release default.
-          Keeping an explicit pin only in ClusterConfiguration (without migrating it to ModuleConfig) triggers the `D8ObsoleteKubernetesVersionInClusterConfiguration` alert.
+          While `kubernetesVersion` is unset in ModuleConfig — whether or not it is pinned here — Deckhouse raises the `D8UnsetKubernetesVersionInModuleConfig` alert.
 
           Do not change this field in a running cluster to upgrade or downgrade Kubernetes — change ModuleConfig instead.
 

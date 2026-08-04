@@ -99,7 +99,7 @@ apiVersions:
 
           Если поле задано в ModuleConfig, оно имеет приоритет над этим полем.
           Поле необязательно: если его нет здесь и оно не задано в ModuleConfig, Deckhouse использует версию по умолчанию текущего релиза.
-          Явный пин только в ClusterConfiguration (без переноса в ModuleConfig) приводит к алерту `D8ObsoleteKubernetesVersionInClusterConfiguration`.
+          Пока `kubernetesVersion` не задан в ModuleConfig — независимо от того, есть ли пин здесь, — Deckhouse поднимает алерт `D8UnsetKubernetesVersionInModuleConfig`.
 
           Не изменяйте это поле в работающем кластере для обновления или отката Kubernetes — меняйте ModuleConfig.
 
