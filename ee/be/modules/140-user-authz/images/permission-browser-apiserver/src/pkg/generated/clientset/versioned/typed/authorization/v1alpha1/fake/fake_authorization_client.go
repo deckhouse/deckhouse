@@ -37,6 +37,14 @@ func (c *FakeAuthorizationV1alpha1) BulkSubjectAccessReviews() v1alpha1.BulkSubj
 	return newFakeBulkSubjectAccessReviews(c)
 }
 
+func (c *FakeAuthorizationV1alpha1) SubjectAccessReports() v1alpha1.SubjectAccessReportInterface {
+	return newFakeSubjectAccessReports(c)
+}
+
+func (c *FakeAuthorizationV1alpha1) WhoCans() v1alpha1.WhoCanInterface {
+	return newFakeWhoCans(c)
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeAuthorizationV1alpha1) RESTClient() rest.Interface {
