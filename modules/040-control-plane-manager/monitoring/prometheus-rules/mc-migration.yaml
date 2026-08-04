@@ -258,6 +258,8 @@
 
           **Rollback blocked:** Deckhouse freezes the published target (keeps the previous desired version, or the current control-plane version) and does not roll Default down toward the lower default. Control plane and kubelet stay on the frozen target until the Deckhouse default catches up within the `maxUsed−1` window.
 
+          Check the `frozen` label on the metric: `frozen="true"` means the digit is held as described above. `frozen="false"` means the window is violated but nothing was left to hold the digit at (for example the `d8-cluster-kubernetes` ConfigMap was deleted), so the published target **has** moved down to the Deckhouse default — pin the intended version explicitly.
+
           **To resolve this alert:**
 
           - To keep the current (higher) version, pin it explicitly:

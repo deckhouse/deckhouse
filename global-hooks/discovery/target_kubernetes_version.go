@@ -35,6 +35,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -241,18 +242,28 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 		if maxUsed != "" {
 			inWindow, err := kubernetesVersionInMaxUsedWindow(target, maxUsed)
 			if err == nil && !inWindow {
+				// Freeze memory, most authoritative first. The first two live inside the very
+				// ConfigMap this hook recreates, so `kubectl delete cm d8-cluster-kubernetes` wipes
+				// both at once — while maxUsed survives in the Secret. Without the third source the
+				// guard would know the window is violated and still publish the lower Default.
 				frozen := cmSnap.DesiredVersion
 				if frozen == "" {
 					frozen = cmSnap.CurrentVersion
+				}
+				if frozen == "" {
+					frozen = input.Values.Get("global.discovery.targetKubernetesVersion").String()
 				}
 				if frozen != "" {
 					publishedTarget = frozen
 					froze = true
 				}
+				// Two distinct states, one alert: froze=true means the digit is held; froze=false
+				// means the window is violated and there is nothing left to hold it at, so the
+				// version is about to move down. Do not collapse them into a single signal.
 				input.MetricsCollector.Set(
 					defaultVersionDriftMetricName,
 					1,
-					map[string]string{},
+					map[string]string{"frozen": strconv.FormatBool(froze)},
 					metrics.WithGroup(defaultVersionDriftMetricGroup),
 				)
 			}
