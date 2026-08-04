@@ -215,6 +215,15 @@ spec:
   # if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA", do not declare the replicaCount in spec.
       rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
       image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" $imageSuffix )) }}
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 64535
+        runAsGroup: 64535
+        capabilities:
+          drop:
+          - ALL
       resources:
 {{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 8 }}
   {{- if $.Values.istio.controlPlane.nodeSelector }}
