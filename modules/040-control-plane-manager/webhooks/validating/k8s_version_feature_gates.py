@@ -105,7 +105,15 @@ def main(ctx: hook.Context):
         else:
             ctx.output.validations.allow()
     except Exception as e:
-        ctx.output.validations.deny(str(e))
+        # Stays fail-closed, and deliberately not validations.error(): in deckhouse==0.4.11 (the
+        # version this image pins) error() builds {"allowed": False, <message>: "..."} — it uses the
+        # message as the dict *key*, so the response carries no "message" field at all. It rejects
+        # just like deny() but leaves the operator with no explanation.
+        #
+        # This binding now also covers ModuleConfig, so a bug in this webhook blocks edits to
+        # `mc control-plane-manager` — including the edit that would work around it. Keeping the
+        # text explicit at least makes the cause obvious in kubectl output.
+        ctx.output.validations.deny(f"internal error in the kubernetesVersion feature gates webhook: {e}")
 
 
 def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
@@ -284,6 +292,16 @@ def validate_cluster_configuration_change(ctx: DotMap) -> Optional[str]:
         return None
 
     mc_version = get_module_config_settings(ctx).get('kubernetesVersion')
+
+    # Whenever ModuleConfig carries a value at all, this edit cannot move the effective version:
+    # resolve_effective_version returns the MC pin outright, and for Default/Automatic it reads the
+    # deckhouseDefaultKubernetesVersion key — never ClusterConfiguration.kubernetesVersion. Denying
+    # here blocked exactly the documented migration step (dropping the deprecated field from
+    # ClusterConfiguration) that the D8UnsetKubernetesVersionInModuleConfig alert asks operators to
+    # perform. The ModuleConfig branch guards against this class of error explicitly; this one did not.
+    if mc_version:
+        return None
+
     target_version = resolve_effective_version(mc_version, ctx, new_data)
     if not target_version:
         return None

@@ -71,6 +71,7 @@ def _prepare_validation_binding_context(
     new_k8s_version: str,
     enabled_feature_gates: list,
     default_version: str = "1.30.0",
+    mc_kubernetes_version: str = None,
 ) -> DotMap:
     binding_context_json = """
 {
@@ -165,7 +166,14 @@ def _prepare_validation_binding_context(
         encoded_new_config = base64.b64encode(new_cluster_config_yaml.encode('utf-8')).decode('utf-8')
         ctx.review.request.object.data['cluster-configuration.yaml'] = encoded_new_config
     
-    if enabled_feature_gates:
+    if enabled_feature_gates or mc_kubernetes_version:
+        settings = {}
+        if enabled_feature_gates:
+            settings["enabledFeatureGates"] = enabled_feature_gates
+        # ModuleConfig owns the version now, so what it says decides whether a ClusterConfiguration
+        # edit can move the effective version at all.
+        if mc_kubernetes_version:
+            settings["kubernetesVersion"] = mc_kubernetes_version
         module_config_snapshot = [DotMap({
             "object": {
                 "apiVersion": "deckhouse.io/v1alpha1",
@@ -174,9 +182,7 @@ def _prepare_validation_binding_context(
                     "name": "control-plane-manager"
                 },
                 "spec": {
-                    "settings": {
-                        "enabledFeatureGates": enabled_feature_gates
-                    }
+                    "settings": settings
                 }
             }
         })]
@@ -257,6 +263,31 @@ class TestK8sVersionFeatureGatesValidationWebhook(unittest.TestCase):
             "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
         )
         tests.assert_validation_deny(self, out, error_msg)
+
+    def test_removing_cc_version_is_allowed_when_module_config_pins_the_version(self):
+        """The documented migration step must not be blocked.
+
+        Operators are told (by D8UnsetKubernetesVersionInModuleConfig) to move the pin into
+        ModuleConfig and drop the deprecated ClusterConfiguration field. Once ModuleConfig pins a
+        version, resolve_effective_version never consults ClusterConfiguration.kubernetesVersion, so
+        this edit cannot change the effective version and must not be denied — not even when a
+        deprecated feature gate is enabled.
+        """
+        ctx = _prepare_validation_binding_context(
+            '1.30.0', None, ['New123'], default_version='1.32.0',
+            mc_kubernetes_version='1.32',
+        )
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_removing_cc_version_is_allowed_when_module_config_tracks_default(self):
+        """Default/Automatic in ModuleConfig also takes ClusterConfiguration out of the picture."""
+        ctx = _prepare_validation_binding_context(
+            '1.30.0', None, ['New123'], default_version='1.32.0',
+            mc_kubernetes_version='Default',
+        )
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(self, out, None)
 
     def test_validate_missing_kind_should_allow_not_raise(self):
         # DotMap returns an empty DotMap for missing keys; .kind.kind.lower() would
