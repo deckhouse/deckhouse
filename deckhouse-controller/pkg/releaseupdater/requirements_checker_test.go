@@ -235,6 +235,17 @@ func TestKubernetesVersionCheck_AutomaticDetection(t *testing.T) {
 			}},
 			wantAutomatic: false,
 		},
+		{
+			// data.spec is preserved byte-for-byte from a user-editable ConfigMap, so a hand-broken
+			// key must not fail the constructor: that error reaches both the DeckhouseRelease
+			// reconciler and its admission webhook and would stall release processing cluster-wide.
+			name: "malformed spec → not Automatic, constructor still succeeds",
+			objects: []client.Object{&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: deckhouseClusterKubernetesConfigMap, Namespace: "kube-system"},
+				Data:       map[string]string{"spec": "\tdesiredVersion: [unclosed\nupdateMode: :::\n"},
+			}},
+			wantAutomatic: false,
+		},
 	}
 
 	for _, tt := range tests {

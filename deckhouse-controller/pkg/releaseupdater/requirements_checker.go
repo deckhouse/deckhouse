@@ -256,7 +256,14 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 
 	spec := new(clusterKubernetesSpec)
 	if err := yaml.Unmarshal([]byte(specRaw), spec); err != nil {
-		return fmt.Errorf("failed to unmarshal ConfigMap %q spec: %w", deckhouseClusterKubernetesConfigMap, err)
+		// Degrade to "update mode unknown" instead of failing. This error propagates out of
+		// NewDeckhouseReleaseRequirementsChecker into both the DeckhouseRelease reconciler and its
+		// admission webhook, so returning it would let one hand-broken key in a user-editable
+		// ConfigMap stop all release processing cluster-wide — the opposite of what the comment
+		// above promises. An unknown mode only means the autoK8sVersion requirement is skipped.
+		log.Warn("cannot parse the cluster kubernetes ConfigMap spec, treating the update mode as unknown",
+			slog.String("configMap", deckhouseClusterKubernetesConfigMap), log.Err(err))
+		return nil
 	}
 	c.clusterKubernetesUpdateMode = spec.UpdateMode
 	return nil
