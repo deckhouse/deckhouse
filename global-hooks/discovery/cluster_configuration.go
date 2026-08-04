@@ -284,12 +284,15 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 
 	// What Values mirror for ClusterConfiguration.kubernetesVersion after Automatic→Default
 	// substitution (must NOT equal MC-resolved target when MC owns the pin).
+	//
+	// TODO(E2E-KV): this variable is used ONLY by the debug log below. Delete it together with
+	// that log, otherwise the package stops compiling with "declared and not used".
 	ccMirroredInValues := ccRawVersion
 	if ccRawVersion == automaticKubernetesVersion {
 		ccMirroredInValues = hooks.DefaultKubernetesVersion
 	}
 
-	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV resolve",
 		slog.String("mc", mcVersion),
 		slog.String("cc", ccRawVersion),
@@ -336,7 +339,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		}
 		// No baseline → fail-open: publish Default + track-default mode.
 
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 		input.Logger.Info("E2E-KV soft-guard",
 			slog.String("secretMaxUsed", secretMaxUsed),
 			slog.String("cmLabelMaxUsed", cmSnap.MaxUsed),
@@ -348,7 +351,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			slog.String("freezeFromCurrent", cmSnap.CurrentVersion),
 		)
 	} else {
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 		input.Logger.Info("E2E-KV soft-guard",
 			slog.String("skipped", "manual-pin"),
 			slog.String("publishedTarget", publishedTarget),
@@ -385,7 +388,7 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 	specYAML := string(specBytes)
 
 	if existingSpecYAML == specYAML {
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 		input.Logger.Info("E2E-KV publish CM.spec",
 			slog.String("desired", desired),
 			slog.Bool("automatic", isAutomatic),
@@ -394,7 +397,7 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 		return nil
 	}
 
-	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV publish CM.spec",
 		slog.String("desired", desired),
 		slog.Bool("automatic", isAutomatic),

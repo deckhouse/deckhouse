@@ -209,7 +209,7 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
 	isAutomaticK8s := input.Values.Get("global.discovery.kubernetesVersionIsAutomatic").Bool()
-	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV helm-deprecations",
 		"source", "global.discovery.kubernetesVersionIsAutomatic",
 		"isAutomatic", isAutomaticK8s,
