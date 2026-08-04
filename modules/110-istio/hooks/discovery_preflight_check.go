@@ -45,6 +45,20 @@ func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput,
 		return fmt.Errorf("cannot parse istioToK8sCompatibilityMap: %w", err)
 	}
 	requirements.SaveValue(istioToK8sCompatibilityMapKey, k8sCompatibleVersions)
+
+	// Fail rather than assume "pinned". requirements/check.go treats false as "gate not applicable"
+	// and returns true, so a false published here silently skips the Istio↔Kubernetes compatibility
+	// check on Deckhouse upgrades. The previous implementation read the ClusterConfiguration Secret
+	// directly and errored when it could not determine the version; reading a bool whose schema
+	// default is false lost that fail-closed behaviour.
+	//
+	// targetKubernetesVersion is the tell: it has no schema default, so an empty value means the
+	// global discovery hook has not published yet (or failed) and the bool cannot be trusted.
+	if input.Values.Get("global.discovery.targetKubernetesVersion").String() == "" {
+		return fmt.Errorf("cannot determine whether the Kubernetes version is pinned: " +
+			"global.discovery.targetKubernetesVersion is empty")
+	}
+
 	isAutomatic := input.Values.Get("global.discovery.kubernetesVersionIsDefault").Bool()
 	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV istio-preflight",

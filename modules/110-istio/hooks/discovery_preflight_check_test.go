@@ -35,6 +35,7 @@ istio:
 
 	Context("kubernetesVersionIsDefault is true", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.36")
 			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -57,6 +58,7 @@ istio:
 
 	Context("kubernetesVersionIsDefault is false", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")
 			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", false)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -71,18 +73,20 @@ istio:
 		})
 	})
 
-	Context("kubernetesVersionIsDefault is unset", func() {
+	// The gate this hook feeds is skipped whenever the published value is false
+	// (requirements/check.go returns true early), so "could not determine" must not be reported as
+	// false. The flag has a schema default of false, which is indistinguishable from a real pin —
+	// targetKubernetesVersion has no default, so its emptiness is what marks "not resolved yet".
+	Context("global discovery has not published a target version", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.discovery.targetKubernetesVersion", "")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
-		It("Should treat missing flag as not automatic", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			isAutomatic, exists := requirements.GetValue(isK8sVersionAutomaticKey)
-			Expect(exists).To(BeTrue())
-			Expect(isAutomatic).To(BeEquivalentTo(false))
+		It("Should fail instead of silently disabling the compatibility gate", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("global.discovery.targetKubernetesVersion is empty"))
 		})
 	})
 })
