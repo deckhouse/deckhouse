@@ -90,8 +90,14 @@ type clusterKubernetesSpec struct {
 func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	ctx context.Context, newSettings, oldSettings map[string]interface{},
 ) (*kwhvalidating.ValidatorResult, error) {
-	newVersion := settingsKubernetesVersion(newSettings)
-	oldVersion := settingsKubernetesVersion(oldSettings)
+	newVersion, newIsString := settingsKubernetesVersion(newSettings)
+	if !newIsString {
+		return rejectResult("kubernetesVersion must be a string, for example \"1.35\" or \"Default\"" +
+			" (an unquoted version is parsed as a number)")
+	}
+	// The old value is only a reference point; a historical non-string is treated as "unset" rather
+	// than blocking an edit that may well be the fix for it.
+	oldVersion, _ := settingsKubernetesVersion(oldSettings)
 
 	if newVersion == oldVersion {
 		return nil, nil
@@ -192,19 +198,25 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	}
 
 	if !slices.Contains(available, effective) {
+		// availableVersions is bounded on both ends, so a miss is not necessarily a downgrade:
+		// a version newer than everything the release offers lands here too, and telling that
+		// operator about "downgrading more than one minor" sends them looking for the wrong thing.
+		reason := "downgrading more than one minor below the highest version the cluster has ever run is forbidden"
+		if aboveEveryVersion(effective, available) {
+			reason = "that version is newer than any version this Deckhouse release supports"
+		}
+
 		msg := ""
 		if fromFallback {
 			msg = fmt.Sprintf(
 				"clearing or deleting the ModuleConfig kubernetesVersion override would fall back to "+
-					"ClusterConfiguration.kubernetesVersion %q, which is not in the cluster's availableVersions %v; "+
-					"downgrading more than one minor below the highest version the cluster has ever run is forbidden",
-				effective, available,
+					"ClusterConfiguration.kubernetesVersion %q, which is not in the cluster's availableVersions %v; %s",
+				effective, available, reason,
 			)
 		} else {
 			msg = fmt.Sprintf(
-				"kubernetesVersion %q is not in the cluster's availableVersions %v; "+
-					"downgrading more than one minor below the highest version the cluster has ever run is forbidden",
-				effective, available,
+				"kubernetesVersion %q is not in the cluster's availableVersions %v; %s",
+				effective, available, reason,
 			)
 		}
 		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
@@ -292,15 +304,54 @@ func moduleConfigOwnsKubernetesVersion(ctx context.Context, cli client.Client) b
 		}
 		return false
 	}
-	return settingsKubernetesVersion(rawModuleConfigSettings(cfg)) != ""
+	// Presence decides ownership, so a non-string value still means ModuleConfig owns the field —
+	// its own webhook rejects it, and ClusterConfiguration must not silently take over meanwhile.
+	version, isString := settingsKubernetesVersion(rawModuleConfigSettings(cfg))
+	return version != "" || !isString
 }
 
-func settingsKubernetesVersion(settings map[string]interface{}) string {
-	if settings == nil {
-		return ""
+// aboveEveryVersion reports whether target is higher than every entry in available. Unparsable
+// input answers false: the caller only uses this to pick a message, and the generic downgrade
+// wording is the safer guess.
+func aboveEveryVersion(target string, available []string) bool {
+	targetV, err := parseVersion(target)
+	if err != nil {
+		return false
 	}
-	version, _ := settings["kubernetesVersion"].(string)
-	return version
+	for _, raw := range available {
+		v, err := parseVersion(raw)
+		if err != nil {
+			return false
+		}
+		if !targetV.GreaterThan(v) {
+			return false
+		}
+	}
+	return len(available) > 0
+}
+
+// settingsKubernetesVersion returns the kubernetesVersion setting. ok=false means the key is
+// present but not a string.
+//
+// The distinction matters because spec.settings is x-kubernetes-preserve-unknown-fields: an
+// unquoted `kubernetesVersion: 1.35` arrives as a number, and the enum in the schema does not
+// always catch it first — validateCR returns before validateSettings when spec.enabled is false
+// (go_lib/configtools/validator.go), yet result.Settings is already populated by then. Collapsing
+// that to "" made the guard read it as "the field was cleared" and validate the ClusterConfiguration
+// fallback instead of what the operator actually wrote.
+func settingsKubernetesVersion(settings map[string]interface{}) (string, bool) {
+	if settings == nil {
+		return "", true
+	}
+	raw, present := settings["kubernetesVersion"]
+	if !present || raw == nil {
+		return "", true
+	}
+	version, isString := raw.(string)
+	if !isString {
+		return "", false
+	}
+	return version, true
 }
 
 // isTrackDefaultKubernetesVersion reports Default or its deprecated Automatic alias.

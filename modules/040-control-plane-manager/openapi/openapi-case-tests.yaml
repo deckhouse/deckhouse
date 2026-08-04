@@ -16,6 +16,12 @@ positive:
     - resourcesRequests:
         cpu: "1000m"
         memory: "500Mi"
+    - kubernetesVersion: "1.32"
+    - kubernetesVersion: "1.36"
+    # Default is the recommended way to track the Deckhouse default; Automatic is the deprecated
+    # alias kept for the ClusterConfiguration migration window.
+    - kubernetesVersion: "Default"
+    - kubernetesVersion: "Automatic"
   values:
     - internal:
         effectiveKubernetesVersion: "1.32"
@@ -23,3 +29,12 @@ positive:
         - 1.2.3.4
         - 4.3.2.1
         kubeSchedulerExtenders: []
+negative:
+  configValues:
+    # Outside the supported window for this edition.
+    - kubernetesVersion: "1.31"
+    - kubernetesVersion: "1.37"
+    # The sentinels are case-sensitive and must not accept free-form text.
+    - kubernetesVersion: "automatic"
+    - kubernetesVersion: "default"
+    - kubernetesVersion: "latest"

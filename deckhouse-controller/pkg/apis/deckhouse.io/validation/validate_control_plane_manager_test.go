@@ -527,6 +527,54 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.33")
 	})
 
+	// spec.settings is x-kubernetes-preserve-unknown-fields, so an unquoted 1.35 reaches the guard
+	// as a number. It used to collapse to "" and be read as "the field was cleared", sending the
+	// guard off to validate the ClusterConfiguration fallback instead of the operator's input.
+	t.Run("a non-string kubernetesVersion is rejected, not read as cleared", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
+
+		newCfg := newControlPlaneManagerConfig("")
+		newCfg.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"kubernetesVersion": 1.35})
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "must be a string")
+	})
+
+	// availableVersions is bounded at both ends; a version above the whole list is not a downgrade,
+	// and the downgrade wording sent operators looking for the wrong problem.
+	t.Run("a too-new version is not reported as a downgrade", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
+
+		newCfg := newControlPlaneManagerConfig("1.99")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "newer than any version")
+		assert.NotContains(t, resp.Result.Message, "downgrading more than one minor")
+	})
+
+	// The floor is parsed with parseVersion, which trims. The ClusterConfiguration path had a test
+	// for this byte since forever; the ModuleConfig guard reads the same Secret key and had none.
+	t.Run("maxUsed with surrounding whitespace still rejects", func(t *testing.T) {
+		handler := withObjs(t, newClusterConfigurationSecretWithMaxUsed("1.36", "  1.36  \n"))
+
+		newCfg := newControlPlaneManagerConfig("1.32")
+		oldCfg := newControlPlaneManagerConfig("1.36")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "more than one minor below")
+	})
+
 	t.Run("fail-open: no ConfigMap and no maxUsed baseline — allowed", func(t *testing.T) {
 		handler := withObjs(t)
 

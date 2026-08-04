@@ -226,6 +226,30 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
 
+    def test_validate_with_default_version_should_use_deckhouse_default(self):
+        # Default is the sentinel this change makes canonical; every case here used to exercise only
+        # the deprecated Automatic alias, so the recommended value was untested.
+        ctx = _prepare_validation_binding_context('Default', ['CPUManager'])
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_validate_default_module_config_ignores_pinned_cc_version(self):
+        # Same contract as the Automatic case below, stated for the canonical spelling: presence of
+        # the ModuleConfig setting decides, so Default resolves to the Deckhouse default (1.33, where
+        # SomeProblematicFeature is forbidden) rather than the ClusterConfiguration pin (1.31).
+        ctx = _prepare_validation_binding_context(
+            '1.31.0',
+            ['SomeProblematicFeature'],
+            mc_k8s_version='Default',
+            default_version='1.33.0',
+        )
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(
+            self,
+            out,
+            "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied",
+        )
+
     def test_validate_prefers_pinned_module_config_version(self):
         ctx = _prepare_validation_binding_context(
             '1.31.0', ['SomeProblematicFeature'], mc_k8s_version='1.33.0',
