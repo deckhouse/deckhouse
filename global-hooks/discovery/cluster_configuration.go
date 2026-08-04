@@ -280,7 +280,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
-	target, isAutomatic := resolveTargetKubernetesVersion(mcVersion, ccRawVersion, hooks.DefaultKubernetesVersion)
+	target, isDefault := resolveTargetKubernetesVersion(mcVersion, ccRawVersion, hooks.DefaultKubernetesVersion)
 
 	// What Values mirror for ClusterConfiguration.kubernetesVersion after Automatic→Default
 	// substitution (must NOT equal MC-resolved target when MC owns the pin).
@@ -298,18 +298,18 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		slog.String("cc", ccRawVersion),
 		slog.String("ccMirroredInValues", ccMirroredInValues),
 		slog.String("target", target),
-		slog.Bool("isAutomatic", isAutomatic),
+		slog.Bool("isDefault", isDefault),
 	)
 
 	// Soft-guard: only track-default mode (MC Default, or deprecated Automatic alias, or
 	// unset→Default). Manual pins are admission-filtered and skip this block.
 	// When Default is below the maxUsed−1 window, FREEZE the digit (previous desired, else current)
-	// but keep isAutomatic=true / CM updateMode=Automatic and raise the drift metric.
+	// but keep isDefault=true / CM updateMode=Automatic and raise the drift metric.
 	//
 	// NOTE(kubernetesVersion-deprecation): keep — soft-guard survives after the Automatic alias
 	// is dropped; the flag/Values key still mean "tracking Deckhouse default" (Default only).
 	publishedTarget := target
-	if isAutomatic {
+	if isDefault {
 		// Secret maxUsedControlPlaneKubernetesVersion is the canonical baseline (same source
 		// admission uses). ConfigMap label max-k8s-version is a fallback when the Secret key
 		// is still absent.
@@ -359,23 +359,24 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("global.discovery.targetKubernetesVersion", publishedTarget)
-	// kubernetesVersionIsAutomatic means "tracking Deckhouse default" (MC Default or deprecated
-	// Automatic alias). The Values key name stays for compatibility; the MC enum value Automatic
-	// goes away on T+1 — see TODO on automaticKubernetesVersion.
-	input.Values.Set("global.discovery.kubernetesVersionIsAutomatic", isAutomatic)
+	// kubernetesVersionIsDefault means "tracking the Deckhouse default" — MC Default, the
+	// deprecated Automatic alias, or nothing pinned anywhere. Named after Default, not the alias:
+	// the alias goes away on T+1 (see TODO on automaticKubernetesVersion) and this key is new in
+	// this change, so there is no older name to stay compatible with.
+	input.Values.Set("global.discovery.kubernetesVersionIsDefault", isDefault)
 
-	return publishDesiredKubernetesVersionSpec(input, publishedTarget, isAutomatic, cmSnap.SpecYAML)
+	return publishDesiredKubernetesVersionSpec(input, publishedTarget, isDefault, cmSnap.SpecYAML)
 }
 
 // publishDesiredKubernetesVersionSpec is the single writer of data.spec on
 // kube-system/d8-cluster-kubernetes. It never touches status/labels (update-observer owns those).
-func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired string, isAutomatic bool, existingSpecYAML string) error {
+func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired string, isDefault bool, existingSpecYAML string) error {
 	if desired == "" {
 		return nil
 	}
 
 	updateMode := "Manual"
-	if isAutomatic {
+	if isDefault {
 		// CM protocol value: UpdateMode Automatic = "follow Deckhouse default".
 		// Unrelated to the deprecated MC enum alias "Automatic"; this string stays after T+1.
 		updateMode = "Automatic"
@@ -391,7 +392,7 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 		// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 		input.Logger.Info("E2E-KV publish CM.spec",
 			slog.String("desired", desired),
-			slog.Bool("automatic", isAutomatic),
+			slog.Bool("isDefault", isDefault),
 			slog.Bool("noop", true),
 		)
 		return nil
@@ -400,7 +401,7 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV publish CM.spec",
 		slog.String("desired", desired),
-		slog.Bool("automatic", isAutomatic),
+		slog.Bool("isDefault", isDefault),
 		slog.Bool("noop", false),
 	)
 

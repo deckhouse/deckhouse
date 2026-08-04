@@ -283,7 +283,7 @@ var _ = Describe("helm :: hooks :: automatic kubernetes version ::", func() {
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
 				f.KubeStateSet("")
-				f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 				f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 				var sec corev1.Secret
@@ -313,7 +313,7 @@ var _ = Describe("helm :: hooks :: automatic kubernetes version ::", func() {
 		Context("check for kubernetesVersion: \"1.32\"", func() {
 			BeforeEach(func() {
 				f.KubeStateSet("")
-				f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", false)
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", false)
 				f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 				var sec corev1.Secret
 				_ = yaml.Unmarshal([]byte(helm3ReleaseWithDeprecated), &sec)
@@ -354,7 +354,7 @@ var _ = Describe("helm :: hooks :: automatic kubernetes version ::", func() {
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
 				f.KubeStateSet("")
-				f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 				f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 				var sec corev1.Secret
@@ -385,7 +385,7 @@ var _ = Describe("helm :: hooks :: automatic kubernetes version ::", func() {
 		Context("check for kubernetesVersion: \"Automatic\"", func() {
 			BeforeEach(func() {
 				f.KubeStateSet("")
-				f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 				f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 				var cm corev1.ConfigMap
@@ -416,7 +416,7 @@ var _ = Describe("helm :: hooks :: automatic kubernetes version ::", func() {
 	Context("release with doubled fields", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
-			f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 * * * *"))
 
 			var sec corev1.Secret

@@ -233,8 +233,8 @@ type clusterKubernetesSpec struct {
 }
 
 // initClusterKubernetesVersion reads updateMode from ConfigMap kube-system/d8-cluster-kubernetes
-// (written by control-plane-manager from global.discovery.kubernetesVersionIsAutomatic). Values are
-// not visible to deckhouse-controller.
+// (written by the global discovery hook from global.discovery.kubernetesVersionIsDefault). Values
+// are not visible to deckhouse-controller.
 //
 // A missing ConfigMap or empty updateMode is treated as non-Automatic (fail-open), matching the
 // historical Secret-NotFound behaviour for managed clusters. Controllers that own the ConfigMap

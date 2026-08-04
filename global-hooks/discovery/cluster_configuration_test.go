@@ -143,7 +143,7 @@ spec:
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.222.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
 
 			var maxNodes *float64
 			for _, m := range f.MetricsCollector.CollectedMetrics() {
@@ -176,7 +176,7 @@ spec:
 				Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 				Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 				Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
-				Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
+				Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
 
 				var maxNodes *float64
 				for _, m := range f.MetricsCollector.CollectedMetrics() {
@@ -201,7 +201,7 @@ spec:
 
 				Expect(f.ValuesGet("global.clusterConfiguration").Exists()).To(Not(BeTrue()))
 				Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
-				Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+				Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 			})
 		})
 	})
@@ -220,7 +220,7 @@ spec:
 
 			Expect(f.ValuesGet("global.clusterConfiguration").Exists()).To(Not(BeTrue()))
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 		})
 	})
 
@@ -245,7 +245,7 @@ spec:
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 
 			var maxNodes *float64
 			for _, m := range f.MetricsCollector.CollectedMetrics() {
@@ -266,7 +266,7 @@ spec:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.35"))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
 			// Backward-compat: global.clusterConfiguration still reflects the Secret (CC pin).
 			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.33"))
 		})
@@ -279,7 +279,7 @@ spec:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 			// Backward-compat: global.clusterConfiguration still reflects the Secret (CC pin).
 			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.33"))
 		})
@@ -290,7 +290,7 @@ spec:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.33"))
 		})
 
@@ -300,7 +300,7 @@ spec:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
 		})
 
 		It("unset ModuleConfig and Automatic ClusterConfiguration resolve to Default", func() {
@@ -309,7 +309,7 @@ spec:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 		})
 	})
 
@@ -405,7 +405,7 @@ data:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 
 			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
 			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.38"`))
@@ -436,7 +436,7 @@ data:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 			_, found := findDriftMetric()
 			Expect(found).To(BeFalse())
 		})
@@ -447,7 +447,7 @@ data:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 			_, found := findDriftMetric()
 			Expect(found).To(BeFalse())
 		})
@@ -488,7 +488,7 @@ data:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 			value, found := findDriftMetric()
 			Expect(found).To(BeTrue())
 			Expect(value).To(Equal(1.0))
@@ -513,7 +513,7 @@ data:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
 			_, found := findDriftMetric()
 			Expect(found).To(BeFalse())
 		})

@@ -33,9 +33,9 @@ istio:
 `
 	f := HookExecutionConfigInit(initValues, "")
 
-	Context("kubernetesVersionIsAutomatic is true", func() {
+	Context("kubernetesVersionIsDefault is true", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", true)
+			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
@@ -55,9 +55,9 @@ istio:
 		})
 	})
 
-	Context("kubernetesVersionIsAutomatic is false", func() {
+	Context("kubernetesVersionIsDefault is false", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.discovery.kubernetesVersionIsAutomatic", false)
+			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", false)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
@@ -71,7 +71,7 @@ istio:
 		})
 	})
 
-	Context("kubernetesVersionIsAutomatic is unset", func() {
+	Context("kubernetesVersionIsDefault is unset", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()

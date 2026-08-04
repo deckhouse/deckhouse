@@ -130,7 +130,7 @@ func init() {
 }
 
 // The Kubernetes binding below is a trigger only — the hook reads the resolved answer from
-// global.discovery.kubernetesVersionIsAutomatic, not from the snapshot. It exists because
+// global.discovery.kubernetesVersionIsDefault, not from the snapshot. It exists because
 // Values are not an event source: without it the K8sVersionsWithDeprecations requirement, which
 // gates DeckhouseRelease installation, would keep a stale answer for up to an hour after an
 // operator switches the version between Automatic and a pin. The object changes rarely, so this
@@ -208,14 +208,14 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
-	isAutomaticK8s := input.Values.Get("global.discovery.kubernetesVersionIsAutomatic").Bool()
+	isDefaultK8s := input.Values.Get("global.discovery.kubernetesVersionIsDefault").Bool()
 	// TODO(E2E-KV): temporary stand debug logs — remove before final PR (`rg E2E-KV`).
 	input.Logger.Info("E2E-KV helm-deprecations",
-		"source", "global.discovery.kubernetesVersionIsAutomatic",
-		"isAutomatic", isAutomaticK8s,
+		"source", "global.discovery.kubernetesVersionIsDefault",
+		"isDefault", isDefaultK8s,
 		"clusterKubernetesVersion", k8sCurrentVersion.String(),
 	)
-	if isAutomaticK8s {
+	if isDefaultK8s {
 		requirements.SaveValue(K8sVersionsWithDeprecations, "initial")
 	}
 
@@ -245,7 +245,7 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 		return err
 	}
 
-	if isAutomaticK8s {
+	if isDefaultK8s {
 		if deprecations != "" {
 			requirements.SaveValue(K8sVersionsWithDeprecations, deprecations)
 		} else {
