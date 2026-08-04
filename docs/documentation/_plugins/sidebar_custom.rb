@@ -58,6 +58,11 @@ module Jekyll
           end
       end
 
+      if doc_edition == 'cse'
+        not_avail_in_this_edition = false
+        avail_in_commercial_editions_only = false
+      end
+
       entry_with_lang = "/%s%s" % [lang, entry['url']]
       page_url = @context.registers[:page]['url'].sub(/\/index.html?$/, '/')
       sidebar_group_page = @context.registers[:page]['sidebar_group_page']
@@ -114,9 +119,10 @@ module Jekyll
            </ul>
          </li>))
       elsif entry.has_key?('external_url')
-        result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['external_url'] }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
+        result.push("3<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['external_url'] }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
       elsif !external_url.nil? && external_url.size > 0
-        result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
+        result.push("edition-'#{ doc_edition}', module - #{ module_name }")
+        result.push("4<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
       elsif page_url == entry['url'] or page_url == entry_with_lang or sidebar_group_page == entry['url']
         result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ getTrueRelativeUrl(entry['url']) }'>#{entry.dig('title', lang)}</a></li>")
       else

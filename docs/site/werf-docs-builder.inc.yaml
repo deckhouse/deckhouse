@@ -14,7 +14,9 @@ import:
   add: /export
   to: /app/hugo-init/data/dkp
   includePaths:
+{{ if ne .Edition "CSE" }}
     - embedded_modules.json
+{{- end }}
     - editions.json
   before: setup
 {{- if ne .ModuleName "website-docs" }}

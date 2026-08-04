@@ -147,6 +147,7 @@
     <link data-proofer-ignore rel="alternate" hreflang="en" href="{{ site.urls['en'] }}{{ escaped_page_meta_url }}" />
 {%- endif %}
 
+{% unless site.d8Revision == 'CSE' %}
 <!-- Primary Meta Tags -->
 <link rel="canonical" href="{{ site.urls[page.lang] }}{{ escaped_page_meta_url }}" />
 <meta name="title" content="{{ escaped_meta_title }}">
@@ -169,3 +170,4 @@
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
+{% endunless %}

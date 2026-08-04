@@ -17,6 +17,7 @@
                     {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item active{% endif %}
                     {%- endunless %}"
         {%- if item.items %} data-proofer-ignore{% endif %}
+        {%- if item.moduleType %} data-module-type="{{ item.moduleType }}"{% endif %}
     >
       <a
         {%- if item.external_url %} href="{{ item.external_url }}"
