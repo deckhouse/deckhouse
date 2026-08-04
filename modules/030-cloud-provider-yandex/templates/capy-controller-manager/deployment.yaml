@@ -48,7 +48,7 @@ security.deckhouse.io/security-policy-exception: capy-controller-manager
 {{- $_ := set $capiConfig "resources" (dict "cpu" "25m" "memory" "64Mi") -}}
 {{- $_ := set $capiConfig "vpaMaxAllowed" (dict "cpu" "100m" "memory" "128Mi") -}}
 {{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
-{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "with-uninitialized") -}}
+{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "uninitialized") -}}
 {{- $_ := set $capiConfig "additionalEnv" (include "capy_controller_manager_envs" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalVolumeMounts" (include "capy_controller_manager_volume_mounts" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalVolumes" (include "capy_controller_manager_volumes" . | fromYamlArray) -}}
