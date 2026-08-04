@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -130,6 +131,14 @@ func createControlPlaneNode(name, kubeletVersion string) *corev1.Node {
 	return node
 }
 
+// defaultDesiredKubernetesVersion seeds every spec via BeforeEach. Status.Reconcile reads
+// d8-cluster-kubernetes before it patches anything and returns an error when the ConfigMap is
+// missing, so without the fixture no spec ever gets a ConditionSummary and every Eventually
+// times out. Specs that assert on the version override it by calling the helper again.
+const defaultDesiredKubernetesVersion = "1.33"
+
+// createClusterKubernetesConfigMap upserts the ConfigMap so a spec-specific desiredVersion wins
+// over the one seeded in BeforeEach instead of silently losing to an AlreadyExists no-op.
 func createClusterKubernetesConfigMap(desiredVersion string) *corev1.ConfigMap {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-kubernetes", Namespace: kubeSystemNamespace},
@@ -137,7 +146,17 @@ func createClusterKubernetesConfigMap(desiredVersion string) *corev1.ConfigMap {
 			"spec": "desiredVersion: \"" + desiredVersion + "\"\nupdateMode: Manual\n",
 		},
 	}
-	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, cm))).To(Succeed())
+
+	err := k8sClient.Create(suiteCtx, cm)
+	if apierrors.IsAlreadyExists(err) {
+		existing := &corev1.ConfigMap{}
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
+			Namespace: kubeSystemNamespace, Name: "d8-cluster-kubernetes"}, existing)).To(Succeed())
+		existing.Data = cm.Data
+		Expect(k8sClient.Update(suiteCtx, existing)).To(Succeed())
+		return existing
+	}
+	Expect(err).To(Succeed())
 	return cm
 }
 
@@ -233,6 +252,12 @@ func processedDeckhouse(name string) (synced, observedCheckSum, processedCheckSu
 // up-to-date counters, cloud desired/min/max, machine failures and an overall readiness summary, so
 // that I can monitor the health and scaling of my node pool at a glance.
 var _ = Describe("NodeGroup status controller", func() {
+	// Every spec needs d8-cluster-kubernetes: AfterEach -> cleanupNodeGroupEnv deletes it, so a
+	// BeforeSuite fixture would not survive past the first spec.
+	BeforeEach(func() {
+		createClusterKubernetesConfigMap(defaultDesiredKubernetesVersion)
+	})
+
 	Context("Static NodeGroup", func() {
 		It("reports zero counters and a Ready summary when there are no nodes", func() {
 			name := uniqueNG("static-empty")
