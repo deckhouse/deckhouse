@@ -185,6 +185,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
+	specBefore := configMap.Data["spec"]
+
 	reconcileTrigger := determineReconcileTrigger(configMap, clusterCfg)
 
 	clusterState, err := r.getClusterState(ctx, clusterCfg, configMap.Labels, reconcileTrigger == ReconcileTriggerDowngradeK8s)
@@ -198,6 +200,15 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		logger.Error("Failed to fill configMap", log.Err(err))
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
+
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	logger.Info("E2E-KV observer",
+		"specDesired", clusterCfg.DesiredVersion,
+		"specMode", string(clusterCfg.UpdateMode),
+		"statusCurrent", clusterState.CurrentVersion,
+		"preservingSpec", configMap.Data["spec"] == specBefore,
+		"reconcileTrigger", string(reconcileTrigger),
+	)
 
 	if err = r.touchConfigMap(ctx, configMap); err != nil {
 		logger.Error("Failed to write configMap", "namespace", common.KubeSystemNamespace, "name", common.ConfigMapName, log.Err(err))

@@ -275,6 +275,22 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 
 	target, isAutomatic := resolveTargetKubernetesVersion(mcVersion, ccRawVersion, hooks.DefaultKubernetesVersion)
 
+	// What Values mirror for ClusterConfiguration.kubernetesVersion after Automatic→Default
+	// substitution (must NOT equal MC-resolved target when MC owns the pin).
+	ccMirroredInValues := ccRawVersion
+	if ccRawVersion == automaticKubernetesVersion {
+		ccMirroredInValues = hooks.DefaultKubernetesVersion
+	}
+
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	input.Logger.Info("E2E-KV resolve",
+		slog.String("mc", mcVersion),
+		slog.String("cc", ccRawVersion),
+		slog.String("ccMirroredInValues", ccMirroredInValues),
+		slog.String("target", target),
+		slog.Bool("isAutomatic", isAutomatic),
+	)
+
 	// Soft-guard (§C.2): only Automatic. Manual pins are admission-filtered.
 	// When Default is below the maxUsed−1 window, FREEZE the digit (previous desired, else current)
 	// but keep isAutomatic=true / updateMode=Automatic and raise the drift metric.
@@ -287,6 +303,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		if maxUsed == "" {
 			maxUsed = cmSnap.MaxUsed
 		}
+		froze := false
 		if maxUsed != "" {
 			inWindow, err := kubernetesVersionInMaxUsedWindow(target, maxUsed)
 			if err == nil && !inWindow {
@@ -296,6 +313,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 				}
 				if frozen != "" {
 					publishedTarget = frozen
+					froze = true
 				}
 				input.MetricsCollector.Set(
 					defaultVersionDriftMetricName,
@@ -306,6 +324,24 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			}
 		}
 		// No baseline → fail-open: publish Default + Automatic.
+
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		input.Logger.Info("E2E-KV soft-guard",
+			slog.String("secretMaxUsed", secretMaxUsed),
+			slog.String("cmLabelMaxUsed", cmSnap.MaxUsed),
+			slog.String("maxUsedChosen", maxUsed),
+			slog.String("defaultTarget", target),
+			slog.String("publishedTarget", publishedTarget),
+			slog.Bool("froze", froze),
+			slog.String("freezeFromDesired", cmSnap.DesiredVersion),
+			slog.String("freezeFromCurrent", cmSnap.CurrentVersion),
+		)
+	} else {
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		input.Logger.Info("E2E-KV soft-guard",
+			slog.String("skipped", "manual-pin"),
+			slog.String("publishedTarget", publishedTarget),
+		)
 	}
 
 	input.Values.Set("global.discovery.targetKubernetesVersion", publishedTarget)
@@ -333,8 +369,21 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 	specYAML := string(specBytes)
 
 	if existingSpecYAML == specYAML {
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		input.Logger.Info("E2E-KV publish CM.spec",
+			slog.String("desired", desired),
+			slog.Bool("automatic", isAutomatic),
+			slog.Bool("noop", true),
+		)
 		return nil
 	}
+
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	input.Logger.Info("E2E-KV publish CM.spec",
+		slog.String("desired", desired),
+		slog.Bool("automatic", isAutomatic),
+		slog.Bool("noop", false),
+	)
 
 	input.PatchCollector.CreateIfNotExists(&v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "ConfigMap"},

@@ -95,6 +95,12 @@ func isFeatureGateDeprecatedInFutureVersions(currentVersion KubernetesVersion, f
 func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 	k8sVersionStr := input.Values.Get("global.discovery.targetKubernetesVersion").String()
 
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	input.Logger.Info("E2E-KV feature-gates",
+		"source", "global.discovery.targetKubernetesVersion",
+		"target", k8sVersionStr,
+	)
+
 	result := featureGatesResult{
 		APIServer:             []string{},
 		KubeControllerManager: []string{},

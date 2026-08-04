@@ -45,7 +45,13 @@ func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput,
 		return fmt.Errorf("cannot parse istioToK8sCompatibilityMap: %w", err)
 	}
 	requirements.SaveValue(istioToK8sCompatibilityMapKey, k8sCompatibleVersions)
-	requirements.SaveValue(isK8sVersionAutomaticKey, input.Values.Get("global.discovery.kubernetesVersionIsAutomatic").Bool())
+	isAutomatic := input.Values.Get("global.discovery.kubernetesVersionIsAutomatic").Bool()
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	input.Logger.Info("E2E-KV istio-preflight",
+		"source", "global.discovery.kubernetesVersionIsAutomatic",
+		"isAutomatic", isAutomatic,
+	)
+	requirements.SaveValue(isK8sVersionAutomaticKey, isAutomatic)
 
 	return nil
 }
