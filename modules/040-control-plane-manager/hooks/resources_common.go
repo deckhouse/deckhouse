@@ -238,45 +238,15 @@ func sumContainerRequests(containers []v1.Container) (int64, int64) {
 	return milliCPU, memoryBytes
 }
 
-// applyAutotunePodRequestsFilter keeps only scheduled, non-terminal pods whose
-// requests are not owned by autotune (the four CP static pods) and returns their
-// request totals for capacity-fit accounting.
-func applyAutotunePodRequestsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	pod := &v1.Pod{}
-	if err := sdk.FromUnstructured(obj, pod); err != nil {
-		return nil, fmt.Errorf("from unstructured: %w", err)
-	}
-	if pod.Spec.NodeName == "" {
-		return nil, nil
-	}
-	switch pod.Status.Phase {
-	case v1.PodSucceeded, v1.PodFailed:
-		return nil, nil
-	}
+func otherRequestsFromPod(pod *v1.Pod) (int64, int64, bool) {
 	if isAutotunedControlPlanePod(pod) {
-		return nil, nil
+		return 0, 0, false
 	}
 	cpu, mem := sumContainerRequests(pod.Spec.Containers)
 	initCPU, initMem := sumContainerRequests(pod.Spec.InitContainers)
 	// Scheduling uses max(init) + sum(app); summing both is a slightly stricter
 	// upper bound and avoids under-estimating reserved capacity.
-	return &nodeOtherRequests{
-		NodeName:    pod.Spec.NodeName,
-		MilliCPU:    cpu + initCPU,
-		MemoryBytes: mem + initMem,
-	}, nil
-}
-
-func aggregateOtherRequestsByNode(pods []nodeOtherRequests) map[string]nodeOtherRequests {
-	out := make(map[string]nodeOtherRequests, len(pods))
-	for _, p := range pods {
-		agg := out[p.NodeName]
-		agg.NodeName = p.NodeName
-		agg.MilliCPU += p.MilliCPU
-		agg.MemoryBytes += p.MemoryBytes
-		out[p.NodeName] = agg
-	}
-	return out
+	return cpu + initCPU, mem + initMem, true
 }
 
 // minMasterFitBudget is the tightest free capacity across masters for fitting

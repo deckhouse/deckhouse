@@ -25,6 +25,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -205,29 +208,38 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			for _, c := range controlPlaneComponents {
 				usage[c] = map[resourceKind]float64{resourceCPU: 0.5}
 			}
-			otherPod := `
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-api-proxy
-  namespace: kube-system
-  labels:
-    tier: control-plane
-    component: kube-api-proxy
-spec:
-  nodeName: sandbox-0
-  containers:
-  - name: proxy
-    image: proxy
-    resources:
-      requests:
-        cpu: "7"
-        memory: 1Gi
-`
-			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st) + otherPod)
+			// client-go fakes do not index spec.nodeName; stub the per-node list.
+			listPodsOnNode = func(_ context.Context, _ dependency.Container, nodeName string) ([]v1.Pod, error) {
+				if nodeName != "sandbox-0" {
+					return nil, nil
+				}
+				return []v1.Pod{{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-api-proxy",
+						Namespace: "kube-system",
+						Labels:    map[string]string{"tier": "control-plane", "component": "kube-api-proxy"},
+					},
+					Spec: v1.PodSpec{
+						NodeName: "sandbox-0",
+						Containers: []v1.Container{{
+							Name: "proxy",
+							Resources: v1.ResourceRequirements{
+								Requests: v1.ResourceList{
+									v1.ResourceCPU:    resource.MustParse("7"),
+									v1.ResourceMemory: resource.MustParse("1Gi"),
+								},
+							},
+						}},
+					},
+				}}, nil
+			}
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 			f.RunHook()
+		})
+
+		AfterEach(func() {
+			listPodsOnNode = listPodsOnNodeFromAPI
 		})
 
 		It("blocks raises that would not fit beside kube-api-proxy and other non-autotuned requests", func() {
