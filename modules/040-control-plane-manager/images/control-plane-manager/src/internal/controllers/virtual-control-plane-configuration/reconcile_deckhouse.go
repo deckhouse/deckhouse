@@ -53,9 +53,8 @@ const (
 
 	deckhouseServiceAccountName = "deckhouse"
 
-	deckhouseTokenTTL          = 365 * 24 * time.Hour
-	deckhouseTokenIssuedAtKey  = "control-plane.deckhouse.io/token-issued-at"
-	deckhouseTokenExpiresAtKey = "control-plane.deckhouse.io/token-expires-at"
+	deckhouseTokenTTL         = 365 * 24 * time.Hour
+	deckhouseTokenRenewBefore = deckhouseTokenTTL / 2
 
 	deckhouseClusterConfigurationSecretName = "d8-cluster-configuration"
 	deckhouseClusterUUIDConfigMapName       = "d8-cluster-uuid"
@@ -453,8 +452,7 @@ func (r *reconciler) reconcileDeckhouseServiceAccountToken(
 				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
 			},
 			Annotations: map[string]string{
-				deckhouseTokenIssuedAtKey:  time.Now().UTC().Format(time.RFC3339),
-				deckhouseTokenExpiresAtKey: expiresAt.UTC().Format(time.RFC3339),
+				tokenExpiresAtKey: expiresAt.UTC().Format(time.RFC3339),
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -482,26 +480,8 @@ func (r *reconciler) reconcileDeckhouseServiceAccountToken(
 }
 
 func isDeckhouseTokenInSync(secret *corev1.Secret, tenantCA []byte) bool {
-	return !deckhouseTokenNeedsRenewal(secret) && bytes.Equal(secret.Data["ca.crt"], tenantCA)
-}
-
-// deckhouseTokenNeedsRenewal reports whether half of the token lifetime has passed.
-func deckhouseTokenNeedsRenewal(secret *corev1.Secret) bool {
-	if secret == nil || len(secret.Data["token"]) == 0 {
-		return true
-	}
-
-	issuedAt, err := time.Parse(time.RFC3339, secret.Annotations[deckhouseTokenIssuedAtKey])
-	if err != nil {
-		return true
-	}
-
-	expiresAt, err := time.Parse(time.RFC3339, secret.Annotations[deckhouseTokenExpiresAtKey])
-	if err != nil {
-		return true
-	}
-
-	return time.Now().After(issuedAt.Add(expiresAt.Sub(issuedAt) / 2))
+	return !tokenNeedsRenewal(secret, deckhouseTokenRenewBefore) &&
+		bytes.Equal(secret.Data["ca.crt"], tenantCA)
 }
 
 func requestTenantDeckhouseToken(ctx context.Context, tcs kubernetes.Interface) (string, time.Time, error) {
@@ -540,7 +520,11 @@ func reconcileTenantDeckhouseServiceAccount(ctx context.Context, tc client.Clien
 
 	err := tc.Get(ctx, client.ObjectKeyFromObject(target), &corev1.ServiceAccount{})
 	if apierrors.IsNotFound(err) {
-		return tc.Create(ctx, target)
+		if err := tc.Create(ctx, target); err != nil && !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+
+		return nil
 	}
 
 	return err

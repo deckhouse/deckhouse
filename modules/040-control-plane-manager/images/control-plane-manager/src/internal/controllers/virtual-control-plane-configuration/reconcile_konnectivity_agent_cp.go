@@ -38,7 +38,6 @@ const (
 	konnectivityAgentTokenTTL           = 24 * time.Hour
 	konnectivityAgentTokenRegenBelow    = 6 * time.Hour
 	konnectivityAgentCPPlaceholderToken = "placeholder"
-	konnectivityAgentCPTokenExpiresAt   = "control-plane.deckhouse.io/token-expires-at"
 )
 
 func konnectivityAgentCPSecretName(vcpName string) string {
@@ -107,7 +106,7 @@ func (r *reconciler) ensureKonnectivityCPAgentSecretBootstrap(
 		return err
 	}
 
-	target := r.konnectivityCPAgentSecret(vcp, caPEM, string(current.Data["token"]), current.Annotations[konnectivityAgentCPTokenExpiresAt])
+	target := r.konnectivityCPAgentSecret(vcp, caPEM, string(current.Data["token"]), current.Annotations[tokenExpiresAtKey])
 	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
 		return err
 	}
@@ -167,14 +166,9 @@ func (r *reconciler) ensureKonnectivityCPAgentToken(
 ) (string, string, error) {
 	if current, err := r.getSecret(ctx, vcp.Namespace, konnectivityAgentCPSecretName(vcp.Name)); err == nil {
 		token := string(current.Data["token"])
-		if token != "" && token != konnectivityAgentCPPlaceholderToken {
-			if expRaw := current.Annotations[konnectivityAgentCPTokenExpiresAt]; expRaw != "" {
-				if exp, err := time.Parse(time.RFC3339, expRaw); err == nil {
-					if time.Until(exp) > konnectivityAgentTokenRegenBelow {
-						return token, expRaw, nil
-					}
-				}
-			}
+		if token != konnectivityAgentCPPlaceholderToken &&
+			!tokenNeedsRenewal(current, konnectivityAgentTokenRegenBelow) {
+			return token, current.Annotations[tokenExpiresAtKey], nil
 		}
 	}
 
@@ -209,7 +203,7 @@ func (r *reconciler) konnectivityCPAgentSecret(
 ) *corev1.Secret {
 	annotations := map[string]string{}
 	if exp != "" {
-		annotations[konnectivityAgentCPTokenExpiresAt] = exp
+		annotations[tokenExpiresAtKey] = exp
 	}
 
 	return &corev1.Secret{
