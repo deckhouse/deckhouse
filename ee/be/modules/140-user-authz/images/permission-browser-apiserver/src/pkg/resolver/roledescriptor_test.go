@@ -115,14 +115,14 @@ func TestDescribeRole(t *testing.T) {
 func TestDescribeRole_Titles(t *testing.T) {
 	meta := &metav1.ObjectMeta{Annotations: map[string]string{
 		"en.meta.deckhouse.io/title":       "Namespace Administrator",
-		"ru.meta.deckhouse.io/title":       "Администратор пространства имён",
+		"ru.meta.deckhouse.io/title":       "Namespace Administrator [ru]",
 		"en.meta.deckhouse.io/description": "Manages the namespace.",
 	}}
 
 	descriptor := DescribeRole(meta, "d8:namespace:admin")
 
 	assert.Equal(t, "Namespace Administrator", descriptor.Titles["en"])
-	assert.Equal(t, "Администратор пространства имён", descriptor.Titles["ru"])
+	assert.Equal(t, "Namespace Administrator [ru]", descriptor.Titles["ru"])
 	assert.Equal(t, "Manages the namespace.", descriptor.Descriptions["en"])
 	assert.NotContains(t, descriptor.Descriptions, "ru")
 }
@@ -130,7 +130,7 @@ func TestDescribeRole_Titles(t *testing.T) {
 func TestDescribeRole_CustomTitleOverridesShippedOne(t *testing.T) {
 	meta := &metav1.ObjectMeta{Annotations: map[string]string{
 		"en.meta.deckhouse.io/title":     "Namespace Administrator",
-		"ru.meta.deckhouse.io/title":     "Администратор пространства имён",
+		"ru.meta.deckhouse.io/title":     "Namespace Administrator [ru]",
 		"custom.meta.deckhouse.io/title": "Team lead",
 	}}
 

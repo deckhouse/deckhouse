@@ -7,13 +7,3 @@ linters-settings:
         # to whoever is choosing what to grant, and `d8:namespace-capability:kubernetes:view_logs`
         # on its own tells that person nothing.
         - templates/rbacv2
-  module:
-    conversions:
-      disable: true
-  openapi:
-    exclude-rules:
-      enum:
-        - properties.addressPools.items.properties.protocol
-  templates:
-    grafana-dashboards:
-      disable: true

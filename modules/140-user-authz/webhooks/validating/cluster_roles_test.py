@@ -248,7 +248,7 @@ class TestClusterRolesValidation(unittest.TestCase):
                     "custom.meta.deckhouse.io/title": "Developer (custom)",
                     "custom.meta.deckhouse.io/description": "Custom developer role",
                     "en.meta.deckhouse.io/title": "Developer",
-                    "ru.meta.deckhouse.io/title": "Разработчик",
+                    "ru.meta.deckhouse.io/title": "Developer [ru]",
                 },
                 selector_labels=[{"rbac.deckhouse.io/aggregate-to-namespace-as": "viewer"}],
             )
