@@ -62,6 +62,20 @@ cntrd_version_change_check() {
 
 command -v containerd &>/dev/null && cntrd_version_change_check
 
+{{- $integrityEditions := list "CSE" }}
+{{- if and (eq .cri "ContainerdV2") (has .deckhouse.edition $integrityEditions) }}
+cntrd_integrity_migration_check() {
+  if containerd --help 2>/dev/null | grep -q -- '--integrity-check-interval'; then
+    return 0
+  fi
+  bb-log-info "Switching to containerd with integrity checks, containerd state wipe is required"
+  bb-flag-set cntrd-integrity-migration-required
+  bb-deckhouse-get-disruptive-update-approval
+}
+
+command -v containerd &>/dev/null && cntrd_integrity_migration_check
+{{- end }}
+
 if bb-is-distro-like? "rhel"; then
   if bb-dnf-package? "selinux-policy"; then
     if ! bb-dnf-package? "container-selinux"; then

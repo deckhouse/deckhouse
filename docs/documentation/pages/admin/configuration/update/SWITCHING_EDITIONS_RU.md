@@ -219,6 +219,19 @@ d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(
 
 {% endcapture %}
 
+{% capture cse_containerd_migration %}
+Каждый узел один раз перезагрузится с очисткой кэша образов containerd. После перезагрузки узел заново скачает все образы из хранилища образов контейнеров.
+
+Подтверждайте узлы по одному, дожидаясь возвращения каждого в состояние `Ready`:
+
+```shell
+d8 k annotate node <ИМЯ_УЗЛА> update.node.deckhouse.io/disruption-approved=
+```
+
+До подтверждения узел работает штатно, но не переходит в состояние `UPTODATE`.
+
+{% endcapture %}
+
 {% capture enable_chrony_cse %}
 
 ```shell
@@ -586,6 +599,13 @@ d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
 
 {% tab "На DKP CSE" %}
 1. При переключении на DKP CSE возможна временная недоступность компонентов кластера.
+1. Каждый узел кластера будет поочерёдно перезагружен с очисткой кэша образов containerd. Чтобы управлять моментом перезагрузки, заранее переведите все NodeGroup, включая `master`, в ручной режим подтверждения простоя:
+
+   ```shell
+   d8 k patch ng <ИМЯ_NODEGROUP> --type=merge -p '{"spec":{"disruptions":{"approvalMode":"Manual"}}}'
+   ```
+
+   Исходное значение верните после завершения переключения.
 1. Переключение на DKP CSE возможно только с DKP EE (Enterprise Edition). Переключение поддерживается только **между одинаковыми минорными версиями** DKP. Например, с DKP EE 1.67.x на DKP CSE 1.67.x.
 
    При необходимости, выполните обновление DKP EE до соответствующей минорной версии и последней патч-версии.
@@ -891,6 +911,10 @@ d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
 
    {{ check_old_pods | regex_replace: "^", "   " }}
 
+1. **Только для DKP CSE** — подтвердите перезагрузку узлов:
+
+   {{ cse_containerd_migration | regex_replace: "^", "   " }}
+
 1. **Только для DKP CSE** — установите `releaseChannel` в moduleConfig `deckhouse`:
 
    {{ enable_release_channel_cse | regex_replace: "^", "   " }}
@@ -1107,6 +1131,10 @@ d8 k delete ngc containerdv2-$NEW_EDITION-config.sh
    }}
 
    {{ take_care_deckhuse_imagepullbackoff }}
+
+1. Подтвердите перезагрузку узлов:
+
+   {{ cse_containerd_migration | regex_replace: "^", "   " }}
 
 1. Дождитесь готовности DKP:
 
