@@ -55,7 +55,7 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-1. **Kube-apiserver**: Validates Memcached и MemcachedClass custom resources, mutates Memcached custom resources.
+1. **Kube-apiserver**: Validates Memcached and MemcachedClass custom resources, mutates Memcached custom resources.
 
 1. **Prometheus-main**: Collects Memcached instances metrics.
 

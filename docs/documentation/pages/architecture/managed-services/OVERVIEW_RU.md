@@ -15,7 +15,7 @@ description: Архитектура подсистемы Managed Services в Dec
 * [`managed-hive-metastore`](/modules/managed-hive-metastore/) — управляет кластерами Hive Metastore;
 * [`managed-kafka`](/modules/managed-kafka/) — управляет инстансами Kafka;
 * [`managed-memcached`](/modules/managed-memcached/) — управляет инстансами Memcached;
-* [`managed-opensearch`](/modules/managed-opensearch) — управляет инстансами Opensearch;
+* [`managed-opensearch`](/modules/managed-opensearch) — управляет инстансами OpenSearch;
 * [`managed-postgres`](/modules/managed-postgres/) — управляет кластерами PostgreSQL;
 * [`managed-starrocks`](/modules/managed-starrocks/) — управляет кластерами StarRocks;
 * [`managed-trino`](/modules/managed-trino/) — управляет кластерами Trino;
