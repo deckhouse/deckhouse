@@ -442,6 +442,15 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	// Combine all resources into a single YAML document with separators
 	var result strings.Builder
 	for _, resource := range res.Resources {
+		// Keep only regular release resources. Helm hooks live in the cluster just
+		// for the duration of a hook, and standalone crds/ CRDs are never applied at
+		// all because Install passes NoInstallStandaloneCRDs. Both are legitimately
+		// absent from the cluster, so they must not reach the release checksum and
+		// the absent-resources monitor.
+		if resource.StoreAs != common.StoreAsRegular {
+			continue
+		}
+
 		marshalled, err := yaml.Marshal(resource.Unstruct)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
