@@ -164,6 +164,14 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 	return request
 }
 
+// namesAVersion reports whether the request pinned an API version itself, rather than leaving the
+// webhook to resolve the preferred one.
+func namesAVersion(request *WebhookRequest) bool {
+	version := request.Spec.ResourceAttributes.Version
+
+	return version != "" && version != "*"
+}
+
 func (h *Handler) fillDenyRequest(request *WebhookRequest, reason, logEntry string) *WebhookRequest {
 	if logEntry != "" {
 		h.logger.Println(logEntry)
@@ -213,6 +221,19 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 	}
 
 	namespaced, err := h.cache.Get(apiGroup, resource)
+	if err != nil && group != "" && namesAVersion(request) {
+		// The request named a version the cluster no longer serves: a client with a stale discovery
+		// snapshot, or one generated against the previous version of a CRD, goes on asking about it
+		// long after that version is retired. Denying is wrong twice over. What is being asked here
+		// is whether the resource is namespaced, and no two versions of a resource disagree about
+		// that. And the denial reaches the user as "you have no access" rather than "that version is
+		// gone" -- authorization runs on the request path before the version is resolved, so even a
+		// plain read of a retired version comes back as 403 instead of 404.
+		if preferred, preferredErr := h.cache.GetPreferredVersion(group, resource); preferredErr == nil {
+			namespaced, err = h.cache.Get(group+"/"+preferred, resource)
+		}
+	}
+
 	if err != nil {
 		// could not check whether resource is namespaced or not (from cache) - deny access
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
