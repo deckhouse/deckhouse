@@ -137,6 +137,7 @@ The module consists of the following components:
    - SYS_RESOURCE
    - IPC_LOCK
    - NET_RAW
+
    This is required to observe container behavior by using eBPF programs.
 
    Node-agent runs in profiling mode and does not perform active rule-based attack detection.
@@ -148,7 +149,7 @@ The module consists of the following components:
 
 1. **Scan-vulnerabilityreport-&lt;hash&gt;** (Job): A component that launches tasks for security scanning of Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob, and Job resources by using the trivy-server component. The task is created and managed by the `operator` component.
 
-   Consists of a set of **&lt;container-name&gt;** containers, each responsible for scanning the corresponding workload container. Their base image is Trivy with an added trivy-wrapper. The target container image from the workload specification is passed in arguments. Trivy-wrapper authenticates to the image storage by using the `trivy registry login` command and then hands control over to Trivy.
+   Consists of a set of **&lt;container-name&gt;** containers, each responsible for scanning the corresponding workload container. Their base image is Trivy with an added trivy-wrapper. The target container image from the workload specification is passed in arguments. Trivy-wrapper authenticates to the registry storage by using the `trivy registry login` command and then hands control over to Trivy.
 
 ## Module interactions
 
@@ -164,7 +165,7 @@ The module interacts with the following components:
 
 1. [**Registry**](/modules/registry/): Pulls OCI images with the vulnerability database and the BDU database.
 
-1. **Image storage**: Scanning images.
+1. **Container registry**: Scanning images.
 
 The following external components interact with the module:
 
