@@ -60,7 +60,7 @@ func TestGetPhaseCatalog(t *testing.T) {
 	phaseTitle := got.Phases[installDeckhousePhase].ByLocale[string(phases.ENLocale)]
 	subTitle := got.SubPhases[installDeckhousePhase].ByLocale[string(phases.ENLocale)]
 	assert.Equal(t, "Install Deckhouse", phaseTitle)
-	assert.Equal(t, "Install...", subTitle)
+	assert.Equal(t, "Install Deckhouse controller", subTitle)
 
 	phaseTitle = got.Phases[installDeckhousePhase].ByLocale[string(phases.RULocale)]
 	subTitle = got.SubPhases[installDeckhousePhase].ByLocale[string(phases.RULocale)]

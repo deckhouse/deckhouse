@@ -133,7 +133,7 @@ func TestTitles_ToCatalog(t *testing.T) {
 	require.NotEmpty(t, expected.SubPhases)
 
 	assert.Equal(t, "Install Deckhouse", expected.Phases[string(InstallDeckhousePhase)].ByLocale[string(ENLocale)])
-	assert.Equal(t, "Install...", expected.SubPhases[string(InstallDeckhouseSubPhaseInstall)].ByLocale[string(ENLocale)])
+	assert.Equal(t, "Install Deckhouse controller", expected.SubPhases[string(InstallDeckhouseSubPhaseInstall)].ByLocale[string(ENLocale)])
 
 	// ToCatalog returns defensive copies: mutating the result does not affect the source.
 	original := expected.Phases[string(BaseInfraPhase)].ByLocale[string(ENLocale)]
@@ -213,8 +213,8 @@ func TestTitles_SubPhase(t *testing.T) {
 	titles, err := LoadTitles()
 	require.NoError(t, err)
 
-	assert.Equal(t, "Install...", titles.SubPhase(InstallDeckhouseSubPhaseInstall))
-	assert.Equal(t, "Connect to master host", titles.SubPhase(InstallDeckhouseSubPhaseConnect))
+	assert.Equal(t, "Install Deckhouse controller", titles.SubPhase(InstallDeckhouseSubPhaseInstall))
+	assert.Equal(t, "Connect to master node", titles.SubPhase(InstallDeckhouseSubPhaseConnect))
 
 	assert.Equal(t, "", titles.SubPhase(OperationSubPhase("NoSuchSubPhase")))
 	assert.Equal(t, "", titles.SubPhase(OperationSubPhase("")))
