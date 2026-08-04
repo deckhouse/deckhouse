@@ -8,6 +8,15 @@ lang: ru
 weight: 50
 ---
 
+{% alert level="warning" %}
+Перед настройкой интеграции включите флаг функций (feature flag) в Rails-консоли:
+
+```ruby
+::Feature.enable(:defect_dojo_integration)
+```
+
+{% endalert %}
+
 Эта интеграция позволяет автоматически импортировать результаты проверок безопасности из Deckhouse Code в DefectDojo, единую систему управления уязвимостями.
 
 ![Форма интеграции DefectDojo](/images/code/defect_dojo_integration_form_en.png)

@@ -7,6 +7,15 @@ permalink: en/code/documentation/user/defect-dojo.html
 weight: 50
 ---
 
+{% alert level="warning" %}
+Before configuring the integration, enable the following feature flag in the Rails console:
+
+```ruby
+::Feature.enable(:defect_dojo_integration)
+```
+
+{% endalert %}
+
 This integration lets you automatically import security report results from Deckhouse Code into DefectDojo, a single vulnerability management system.
 
 ![DefectDojo integration form](/images/code/defect_dojo_integration_form_en.png)
