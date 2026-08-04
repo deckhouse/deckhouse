@@ -542,6 +542,13 @@ type RoleAccessReportSpec struct {
 	// matrix is what most of the export needs.
 	// +optional
 	IncludeComposition *bool
+
+	// IncludeInventory adds every resource of the cluster to the report, not
+	// only the ones some role grants. Defaults to false. It is what a coverage
+	// review needs: the resources no role covers are the answer, and they
+	// cannot be derived from the roles.
+	// +optional
+	IncludeInventory *bool
 }
 
 // RoleSelection narrows which roles a report covers. The fields are combined
@@ -583,6 +590,37 @@ type RoleAccessReportStatus struct {
 	// Truncated is true when output limits were hit.
 	// +optional
 	Truncated bool
+
+	// Inventory lists every resource of the cluster, present when the request
+	// asked for it. Roles say what is covered; this says what there is to cover.
+	// +optional
+	Inventory []InventoryResource
+}
+
+// InventoryResource is one resource of the cluster as discovery describes it.
+type InventoryResource struct {
+	// Group is the API group; empty for the core group.
+	// +optional
+	Group string
+
+	// Resource is the plural name, carrying the subresource when there is one:
+	// "pods", "pods/exec".
+	Resource string
+
+	// Kind is the object kind, as discovery reports it.
+	// +optional
+	Kind string
+
+	// Namespaced is true when the resource lives inside a namespace.
+	// +optional
+	Namespaced bool
+
+	// Verbs are the ones the API server accepts for this resource. Coverage is
+	// measured against them rather than against a fixed list of eight:
+	// tokenreviews only ever accept create, and "1 of 8" would read as a gap in
+	// the role model where there is none.
+	// +optional
+	Verbs []string
 }
 
 // ReportSnapshot is what makes a report reproducible: the same cluster,

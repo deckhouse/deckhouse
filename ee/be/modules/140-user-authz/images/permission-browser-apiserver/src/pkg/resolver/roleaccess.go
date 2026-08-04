@@ -110,6 +110,8 @@ type RoleAccessRequest struct {
 	ExpandWildcards bool
 	// IncludeComposition reports what each role is assembled from.
 	IncludeComposition bool
+	// IncludeInventory adds every resource of the cluster to the report.
+	IncludeInventory bool
 }
 
 // Report builds the catalogue for the requested roles.
@@ -166,9 +168,42 @@ func (r *RoleAccessResolver) Report(_ context.Context, req RoleAccessRequest) (v
 		Notes:     notes,
 		Truncated: truncated,
 	}
+
+	if req.IncludeInventory {
+		status.Inventory = r.inventory()
+		if len(status.Inventory) == 0 {
+			notes = append(notes, "the cluster inventory was requested but no discovery snapshot is available: coverage cannot be measured")
+			status.Notes = notes
+		}
+	}
+
 	status.Snapshot.Digest = digestOf(status.Roles)
 
 	return status, nil
+}
+
+// inventory is every resource of the cluster, so that a coverage review can
+// name the ones no role reaches. The roles alone cannot answer that: a resource
+// nobody grants leaves no trace in them.
+func (r *RoleAccessResolver) inventory() []v1alpha1.InventoryResource {
+	if r.scopeCache == nil {
+		return nil
+	}
+
+	discovered := r.scopeCache.Inventory()
+
+	inventory := make([]v1alpha1.InventoryResource, 0, len(discovered))
+	for _, resource := range discovered {
+		inventory = append(inventory, v1alpha1.InventoryResource{
+			Group:      resource.Group,
+			Resource:   resource.Resource,
+			Kind:       resource.Kind,
+			Namespaced: resource.Namespaced,
+			Verbs:      resource.Verbs,
+		})
+	}
+
+	return inventory
 }
 
 func modelOf(model string) string {

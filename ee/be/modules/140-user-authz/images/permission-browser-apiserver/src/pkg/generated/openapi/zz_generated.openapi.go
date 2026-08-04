@@ -90,6 +90,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.BulkSubjectAccessReview":       schema_pkg_apis_authorization_v1alpha1_BulkSubjectAccessReview(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.BulkSubjectAccessReviewSpec":   schema_pkg_apis_authorization_v1alpha1_BulkSubjectAccessReviewSpec(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.BulkSubjectAccessReviewStatus": schema_pkg_apis_authorization_v1alpha1_BulkSubjectAccessReviewStatus(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.InventoryResource":             schema_pkg_apis_authorization_v1alpha1_InventoryResource(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.NonResourceAccess":             schema_pkg_apis_authorization_v1alpha1_NonResourceAccess(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.NonResourceAttributes":         schema_pkg_apis_authorization_v1alpha1_NonResourceAttributes(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ReportSnapshot":                schema_pkg_apis_authorization_v1alpha1_ReportSnapshot(ref),
@@ -3257,6 +3258,69 @@ func schema_pkg_apis_authorization_v1alpha1_BulkSubjectAccessReviewStatus(ref co
 	}
 }
 
+func schema_pkg_apis_authorization_v1alpha1_InventoryResource(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "InventoryResource is one resource of the cluster as discovery describes it.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"group": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Group is the API group; empty for the core group.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resource is the plural name, carrying the subresource when there is one: \"pods\", \"pods/exec\".",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is the object kind, as discovery reports it.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"namespaced": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespaced is true when the resource lives inside a namespace.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"verbs": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Verbs are the ones the API server accepts for this resource. Coverage is measured against them rather than against a fixed list of eight: tokenreviews only ever accept create, and \"1 of 8\" would read as a gap in the role model where there is none.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"resource"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_authorization_v1alpha1_NonResourceAccess(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3906,6 +3970,13 @@ func schema_pkg_apis_authorization_v1alpha1_RoleAccessReportSpec(ref common.Refe
 							Format:      "",
 						},
 					},
+					"includeInventory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IncludeInventory adds every resource of the cluster to the report, not only the ones some role grants. Defaults to false. It is what a coverage review needs: the resources no role covers are the answer, and they cannot be derived from the roles.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -3974,12 +4045,31 @@ func schema_pkg_apis_authorization_v1alpha1_RoleAccessReportStatus(ref common.Re
 							Format:      "",
 						},
 					},
+					"inventory": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Inventory lists every resource of the cluster, present when the request asked for it. Roles say what is covered; this says what there is to cover.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.InventoryResource"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"snapshot"},
 			},
 		},
 		Dependencies: []string{
-			"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ReportSnapshot", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccess"},
+			"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.InventoryResource", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ReportSnapshot", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccess"},
 	}
 }
 

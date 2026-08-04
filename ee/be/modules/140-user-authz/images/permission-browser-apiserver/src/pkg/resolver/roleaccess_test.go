@@ -528,6 +528,52 @@ func TestRoleReport_RolesRunFromTheNarrowestAccessToTheWidest(t *testing.T) {
 	}, names)
 }
 
+// A resource no role grants leaves no trace in the roles, so coverage cannot be
+// derived from them. The inventory is what makes the gap visible.
+func TestRoleReport_InventoryNamesWhatThereIsToCover(t *testing.T) {
+	t.Parallel()
+
+	objs := []runtime.Object{
+		aggregatingRole("d8:namespace:admin", "namespace"),
+		capability("d8:namespace-capability:kubernetes:workloads", "namespace", policyRule("apps", "deployments", "get")),
+	}
+
+	resolver := setupRoleAccessResolver(t, objs)
+
+	without, err := resolver.Report(context.Background(), RoleAccessRequest{})
+	require.NoError(t, err)
+	assert.Empty(t, without.Inventory, "the inventory is extra weight in the document and is only sent when asked for")
+
+	status, err := resolver.Report(context.Background(), RoleAccessRequest{IncludeInventory: true})
+	require.NoError(t, err)
+
+	require.NotEmpty(t, status.Inventory)
+
+	secrets := inventoryOf(t, status, "", "secrets")
+	assert.True(t, secrets.Namespaced)
+	// Nothing in the fixture grants secrets: the report still has to say the
+	// resource exists, otherwise the gap is invisible.
+	for _, role := range status.Roles {
+		for _, row := range role.Resources {
+			assert.NotEqual(t, "secrets", row.Resource)
+		}
+	}
+}
+
+func inventoryOf(t *testing.T, status v1alpha1.RoleAccessReportStatus, group, resource string) v1alpha1.InventoryResource {
+	t.Helper()
+
+	for _, entry := range status.Inventory {
+		if entry.Group == group && entry.Resource == resource {
+			return entry
+		}
+	}
+
+	t.Fatalf("the inventory has no %s/%s", group, resource)
+
+	return v1alpha1.InventoryResource{}
+}
+
 // Excluding custom roles must not make one unreachable: an audit of a named
 // role still has to be possible.
 func TestRoleReport_NamedCustomRoleSurvivesTheExclusion(t *testing.T) {

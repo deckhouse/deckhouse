@@ -389,6 +389,7 @@ spec:
     excludeCustom: false  # leave out the roles created in this cluster (primary)
   expandWildcards: true   # expand "*" against the discovery snapshot
   includeComposition: false  # the detailed mode: which capability granted what
+  includeInventory: false    # every resource of the cluster, for coverage
 
 status:
   snapshot:
@@ -415,6 +416,12 @@ status:
             - roleKind: ClusterRole
               roleName: d8:namespace-capability:kubernetes:manage_workloads
               verbs: [get, list, watch]
+  inventory:                  # only when includeInventory is set
+    - group: apps
+      resource: deployments
+      kind: Deployment
+      namespaced: true
+      verbs: [get, list, watch, create, update, patch, delete, deletecollection]
   notes: []
   truncated: false
 ```
@@ -441,7 +448,13 @@ status:
    admin, superadmin), with subsystems ordered by name. Alphabetical order would
    open the document with the administrator, and the legacy model already reads
    this way, since its levels include one another in that order.
-6. **`excludeCustom` reports the model the platform ships.** Custom roles belong
+6. **`includeInventory` answers what the roles cannot.** A resource no role
+   grants leaves no trace in the roles, so a coverage review cannot be built
+   from them: the inventory lists every resource of the discovery snapshot with
+   the verbs the API server accepts for it. Coverage is measured against those
+   verbs and not against a fixed list of eight - `tokenreviews` only ever accept
+   `create`, and "1 of 8" would read as a gap in the model where there is none.
+7. **`excludeCustom` reports the model the platform ships.** Custom roles belong
    to one cluster, and listing them beside the model reads as if the platform
    shipped them - but they are real access, so leaving them out is the caller's
    decision, the count of skipped ones goes into `notes`, and a role named in

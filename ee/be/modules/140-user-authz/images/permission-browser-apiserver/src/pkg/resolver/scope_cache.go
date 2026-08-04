@@ -34,10 +34,15 @@ type ResourceScopeCache struct {
 	// If zero, bootstrapRefreshInterval is used.
 	bootstrapInterval time.Duration
 
-	// mu protects scopeMap and partial.
+	// mu protects scopeMap, details and partial.
 	// Key format: "apiGroup/resource" (core group is empty string).
 	mu       sync.RWMutex
 	scopeMap map[string]bool // true = namespaced, false = cluster-scoped
+	// details carries what discovery says about a resource beyond its scope:
+	// the kind and the verbs the API server accepts for it. Kept apart from
+	// scopeMap because the scope alone answers most questions here, and the
+	// hot paths should not pay for the rest.
+	details map[string]resourceDetails
 	// partial records that the snapshot was built from an incomplete discovery
 	// response, which ServerPreferredResources returns whenever an aggregated
 	// APIService is unavailable. Callers that enumerate the snapshot report less
@@ -54,6 +59,7 @@ func NewResourceScopeCache(discoveryClient discovery.DiscoveryInterface) *Resour
 		refreshInterval:   defaultRefreshInterval,
 		bootstrapInterval: bootstrapRefreshInterval,
 		scopeMap:          make(map[string]bool),
+		details:           make(map[string]resourceDetails),
 	}
 
 	// Perform initial population
@@ -143,6 +149,62 @@ type GroupResource struct {
 	Group      string
 	Resource   string
 	Namespaced bool
+}
+
+// resourceDetails is what discovery says about a resource beyond its scope.
+type resourceDetails struct {
+	kind  string
+	verbs []string
+}
+
+// ResourceInfo is one resource of the cluster as discovery describes it.
+type ResourceInfo struct {
+	Group      string
+	Resource   string
+	Kind       string
+	Namespaced bool
+	// Verbs are the ones the API server accepts for this resource. A coverage
+	// report divides by them rather than by a fixed list of eight: tokenreviews
+	// only ever accept create, and "1 of 8" would read as a gap in the model.
+	Verbs []string
+}
+
+// Inventory returns every resource of the current discovery snapshot, sorted.
+//
+// It answers the question the role catalogue cannot: which resources exist at
+// all. A report built only from what the roles grant cannot show a resource no
+// role covers -- and that is exactly what a coverage review looks for.
+func (c *ResourceScopeCache) Inventory() []ResourceInfo {
+	c.mu.RLock()
+
+	inventory := make([]ResourceInfo, 0, len(c.scopeMap))
+	for key, namespaced := range c.scopeMap {
+		group, resource, ok := strings.Cut(key, "/")
+		if !ok {
+			continue
+		}
+
+		detail := c.details[key]
+		inventory = append(inventory, ResourceInfo{
+			Group:      group,
+			Resource:   resource,
+			Kind:       detail.kind,
+			Namespaced: namespaced,
+			Verbs:      slices.Clone(detail.verbs),
+		})
+	}
+
+	c.mu.RUnlock()
+
+	slices.SortFunc(inventory, func(a, b ResourceInfo) int {
+		if cmp := strings.Compare(a.Group, b.Group); cmp != 0 {
+			return cmp
+		}
+
+		return strings.Compare(a.Resource, b.Resource)
+	})
+
+	return inventory
 }
 
 // ResourcesMatching returns the discovered resources matched by the RBAC
@@ -284,6 +346,7 @@ func (c *ResourceScopeCache) refresh() {
 	}
 
 	newMap := make(map[string]bool)
+	newDetails := make(map[string]resourceDetails)
 
 	for _, resourceList := range resourceLists {
 		if resourceList == nil {
@@ -304,6 +367,7 @@ func (c *ResourceScopeCache) refresh() {
 		for _, res := range resourceList.APIResources {
 			key := group + "/" + res.Name
 			newMap[key] = res.Namespaced
+			newDetails[key] = resourceDetails{kind: res.Kind, verbs: slices.Clone(res.Verbs)}
 		}
 	}
 
@@ -314,6 +378,7 @@ func (c *ResourceScopeCache) refresh() {
 
 	c.mu.Lock()
 	c.scopeMap = newMap
+	c.details = newDetails
 	c.partial = partial
 	c.mu.Unlock()
 

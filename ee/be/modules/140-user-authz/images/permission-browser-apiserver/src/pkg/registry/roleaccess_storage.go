@@ -156,6 +156,7 @@ func buildRoleAccessRequest(spec *v1alpha1.RoleAccessReportSpec) resolver.RoleAc
 		ExcludeCustom:      spec.Roles.ExcludeCustom,
 		ExpandWildcards:    boolValue(spec.ExpandWildcards, true),
 		IncludeComposition: boolValue(spec.IncludeComposition, false),
+		IncludeInventory:   boolValue(spec.IncludeInventory, false),
 	}
 }
 
