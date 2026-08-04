@@ -88,7 +88,7 @@ func buildSource(log *slog.Logger, kubeClient client.Client, opts options) *layo
 		Bootstrap: &layout.Bootstrap{Path: opts.bootstrap},
 		// The layouts name their credentials rather than carrying them, so reading one means
 		// reading a Secret. Without this the agent can never apply what the cluster gives it.
-		Resolver: &layout.Resolver{Client: kubeClient, Namespace: moduleNamespace},
+		Resolver: &layout.Resolver{Namespace: moduleNamespace},
 	}
 }
 

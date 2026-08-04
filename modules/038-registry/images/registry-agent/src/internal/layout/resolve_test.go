@@ -96,10 +96,11 @@ func TestResolveFillsInEveryReference(t *testing.T) {
 		constant.AuthKeyStorage:  "cm86c2VjcmV0",
 		constant.AuthKeyUpstream: "bGljZW5zZS10b2tlbjprZXk=",
 	})
-	resolver := &Resolver{Client: clientWithSecrets(t, secret), Namespace: testNamespace}
+	kubeClient := clientWithSecrets(t, secret)
+	resolver := &Resolver{Namespace: testNamespace}
 
 	spec := referencingLayout()
-	require.NoError(t, resolver.Resolve(context.Background(), spec))
+	require.NoError(t, resolver.Resolve(context.Background(), kubeClient, spec))
 
 	storage := spec.Backends[0]
 	assert.Equal(t, "cm86c2VjcmV0", storage.Endpoint.Auth.Auth)
@@ -117,17 +118,18 @@ func TestResolveFillsInEveryReference(t *testing.T) {
 // nothing about a missing key. Refusing here is what turns that into a legible error.
 func TestResolveRefusesAMissingKey(t *testing.T) {
 	secret := authSecret(map[string]string{constant.AuthKeyStorage: "cm86c2VjcmV0"})
-	resolver := &Resolver{Client: clientWithSecrets(t, secret), Namespace: testNamespace}
+	kubeClient := clientWithSecrets(t, secret)
+	resolver := &Resolver{Namespace: testNamespace}
 
-	err := resolver.Resolve(context.Background(), referencingLayout())
+	err := resolver.Resolve(context.Background(), kubeClient, referencingLayout())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), constant.AuthKeyUpstream)
 }
 
-func TestResolveWithoutAClientRefusesRatherThanSilentlySkipping(t *testing.T) {
+func TestResolveWithoutAReaderRefusesRatherThanSilentlySkipping(t *testing.T) {
 	resolver := &Resolver{Namespace: testNamespace}
 
-	require.Error(t, resolver.Resolve(context.Background(), referencingLayout()))
+	require.Error(t, resolver.Resolve(context.Background(), nil, referencingLayout()))
 
 	// A layout with nothing to resolve is fine without a client, which is what a node
 	// running from its bootstrap layout has.
@@ -135,7 +137,7 @@ func TestResolveWithoutAClientRefusesRatherThanSilentlySkipping(t *testing.T) {
 		Name:     registryv1alpha1.BackendUpstream,
 		Endpoint: registryv1alpha1.Endpoint{Host: "registry.deckhouse.io"},
 	}}}
-	assert.NoError(t, resolver.Resolve(context.Background(), inline))
+	assert.NoError(t, resolver.Resolve(context.Background(), nil, inline))
 }
 
 // TestTheCachedLayoutIsTheResolvedOne is the property that makes the reference model safe
@@ -161,7 +163,7 @@ func TestTheCachedLayoutIsTheResolvedOne(t *testing.T) {
 		Client:   kubeClient,
 		Node:     "worker-1",
 		Cache:    &Cache{Path: cachePath},
-		Resolver: &Resolver{Client: kubeClient, Namespace: testNamespace},
+		Resolver: &Resolver{Namespace: testNamespace},
 	}
 
 	got, err := source.Get(context.Background())
@@ -184,4 +186,45 @@ func TestTheCachedLayoutIsTheResolvedOne(t *testing.T) {
 		"the copy on disk cannot authenticate, so a node that restarts during an "+
 			"API outage cannot pull")
 	assert.False(t, storage.Endpoint.Auth.NeedsResolution())
+}
+
+// TestTheResolverFollowsTheSourcesClient is the regression this signature exists for.
+//
+// The agent constructs everything before a node has credentials — that is the whole point of
+// it — and the client appears later, when the kubelet's kubeconfig does. While the resolver
+// carried a client of its own, handed to it at construction, that copy stayed nil forever: the
+// Source's was replaced on connect and the resolver's was not. Every layout naming a
+// credential was refused for the life of the node, and refused in the words of an unreachable
+// API server. There is now one client, and it is the Source's.
+func TestTheResolverFollowsTheSourcesClient(t *testing.T) {
+	node := &registryv1alpha1.RegistryNode{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker-1", Generation: 3},
+		Spec:       *referencingLayout(),
+	}
+	secret := authSecret(map[string]string{
+		constant.AuthKeyStorage:  "cm86c2VjcmV0",
+		constant.AuthKeyUpstream: "bGljZW5zZS10b2tlbjprZXk=",
+	})
+
+	// As the agent starts on a node that has not finished its TLS bootstrap: no client yet.
+	source := &Source{
+		Log:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Node:      "worker-1",
+		Cache:     &Cache{Path: filepath.Join(t.TempDir(), "layout.json")},
+		Bootstrap: &Bootstrap{Path: filepath.Join(t.TempDir(), "absent.json")},
+		Resolver:  &Resolver{Namespace: testNamespace},
+	}
+
+	_, err := source.Get(context.Background())
+	require.Error(t, err, "with no credentials and nothing on disk there is nothing to apply")
+
+	// And then the credentials appear, which is what the loop does on connect.
+	source.Client = clientWithSecrets(t, node, secret)
+
+	got, err := source.Get(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, OriginAPI, got.Origin,
+		"the layout from the API was refused, so the resolver is not using the client the "+
+			"Source was given")
+	assert.Equal(t, "cm86c2VjcmV0", got.Spec.Backends[0].Endpoint.Auth.Auth)
 }

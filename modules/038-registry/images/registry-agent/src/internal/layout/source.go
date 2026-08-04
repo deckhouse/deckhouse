@@ -124,7 +124,7 @@ func (s *Source) Get(ctx context.Context) (*Snapshot, error) {
 		// Before the copy is written, so what lands on disk can authenticate on its own.
 		// A reference cannot be dereferenced when the API server is gone, which is the
 		// one situation the copy exists for.
-		if resolveErr := s.Resolver.Resolve(ctx, &object.Spec); resolveErr != nil {
+		if resolveErr := s.Resolver.Resolve(ctx, s.Client, &object.Spec); resolveErr != nil {
 			// Treated as a failed read rather than propagated: a layout whose credentials
 			// could not be read is one that cannot pull, and the copy on disk still can.
 			s.Log.Error("cannot resolve the credentials the layout references; "+

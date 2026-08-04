@@ -35,9 +35,14 @@ import (
 // cannot authenticate the moment the API server goes away, which is exactly the moment the
 // cached copy exists for.
 type Resolver struct {
-	Client client.Client
-
 	// Namespace holds the Secrets referenced by a layout.
+	//
+	// No client of its own, deliberately. It used to have one, handed over at construction —
+	// and the agent constructs everything before a node has credentials, so on every node
+	// that bootstraps into a cluster the copy here stayed nil while the Source's was replaced
+	// the moment credentials appeared. Every layout naming a credential was then refused, for
+	// the life of the node, and reported as an unreachable API server. One client, held in one
+	// place, cannot fall out of step with itself.
 	Namespace string
 }
 
@@ -46,14 +51,16 @@ type Resolver struct {
 // Each Secret is read once however many endpoints point into it: every replica of the cache
 // shares one credential, and re-reading it per endpoint would turn one layout into a dozen
 // API calls on every reconciliation.
-func (r *Resolver) Resolve(ctx context.Context, spec *registryv1alpha1.RegistryNodeSpec) error {
+func (r *Resolver) Resolve(
+	ctx context.Context, reader client.Client, spec *registryv1alpha1.RegistryNodeSpec,
+) error {
 	auths := spec.ReferencedAuths()
 	if len(auths) == 0 {
 		return nil
 	}
 
-	if r == nil || r.Client == nil {
-		return fmt.Errorf("the layout references credentials and there is no client to read them")
+	if r == nil || reader == nil {
+		return fmt.Errorf("the layout references credentials and there is nothing to read them with")
 	}
 
 	// Each Secret once, however many endpoints point into it.
@@ -61,7 +68,7 @@ func (r *Resolver) Resolve(ctx context.Context, spec *registryv1alpha1.RegistryN
 	for _, name := range registryv1alpha1.SecretNames(auths) {
 		secret := &corev1.Secret{}
 		key := types.NamespacedName{Namespace: r.Namespace, Name: name}
-		if err := r.Client.Get(ctx, key, secret); err != nil {
+		if err := reader.Get(ctx, key, secret); err != nil {
 			return fmt.Errorf("reading %s: %w", key, err)
 		}
 		contents[name] = secret.Data
