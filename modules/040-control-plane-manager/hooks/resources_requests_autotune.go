@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -324,11 +323,6 @@ func persistAutotuneState(input *go_hook.HookInput, state *autotuneState) error 
 		Data: map[string]string{
 			autotuneStateKey: string(raw),
 		},
-	}
-
-	gvks, _, err := scheme.Scheme.ObjectKinds(cm)
-	if err == nil && len(gvks) > 0 {
-		cm.SetGroupVersionKind(gvks[0])
 	}
 
 	input.PatchCollector.CreateOrUpdate(cm)
