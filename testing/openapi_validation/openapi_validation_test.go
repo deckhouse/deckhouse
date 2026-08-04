@@ -188,7 +188,13 @@ type k8sVersionMap struct {
 	K8s map[string]interface{} `yaml:"k8s"`
 }
 
-func readYAML(t *testing.T, relPath string, out interface{}) {
+// readYAML loads relPath if it is present in this checkout, reporting whether it was found.
+//
+// Absence is not a failure: the CE test image ships no ee/ directory at all, so the EE and CSE
+// schemas simply do not exist there. Failing on that would make the test un-runnable in CE — and
+// it is the caller's job (see requireAnythingChecked) to ensure the whole test does not silently
+// degrade into checking nothing.
+func readYAML(t *testing.T, relPath string, out interface{}) bool {
 	t.Helper()
 
 	roots := []string{deckhousePath}
@@ -197,19 +203,16 @@ func readYAML(t *testing.T, relPath string, out interface{}) {
 		roots = append(roots, filepath.Clean(filepath.Join(wd, "../..")), wd)
 	}
 
-	var data []byte
-	var err error
-	var tried []string
 	for _, root := range roots {
 		path := filepath.Join(root, relPath)
-		tried = append(tried, path)
-		data, err = os.ReadFile(path)
-		if err == nil {
-			require.NoError(t, yaml.Unmarshal(data, out), "unmarshal %s", path)
-			return
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
 		}
+		require.NoError(t, yaml.Unmarshal(data, out), "unmarshal %s", path)
+		return true
 	}
-	require.NoError(t, err, "read %s (tried %v)", relPath, tried)
+	return false
 }
 
 // TestKubernetesVersionEnumValidation keeps the kubernetesVersion pin lists in sync.
@@ -224,10 +227,16 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 	sentinelsCC := map[string]struct{}{"Automatic": {}}
 	sentinelsMC := map[string]struct{}{"Automatic": {}, "Default": {}}
 
+	// Guards against the test quietly becoming a no-op: it was inert for a while because its name
+	// did not match the CI -run filter, and skipping absent editions must not recreate that.
+	checkedSchemas := 0
+
 	for _, edition := range kubernetesVersionEditions {
 		t.Run(edition.name, func(t *testing.T) {
 			var cc clusterConfigurationSchema
-			readYAML(t, edition.clusterConfiguration, &cc)
+			if !readYAML(t, edition.clusterConfiguration, &cc) {
+				t.Skipf("%s is absent in this checkout (edition not shipped here)", edition.clusterConfiguration)
+			}
 			require.NotEmpty(t, cc.APIVersions, "%s has no apiVersions", edition.clusterConfiguration)
 
 			ccEnum := cc.APIVersions[0].OpenAPISpec.Properties.KubernetesVersion.Enum
@@ -238,25 +247,31 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 
 			for _, mcPath := range edition.moduleConfigs {
 				var mc moduleConfigValuesSchema
-				readYAML(t, mcPath, &mc)
+				if !readYAML(t, mcPath, &mc) {
+					continue
+				}
 
 				mcEnum := mc.Properties.KubernetesVersion.Enum
 				require.Contains(t, mcEnum, "Default", "%s must offer Default", mcPath)
 				require.Contains(t, mcEnum, "Automatic", "%s must keep Automatic alias", mcPath)
 				assert.Equal(t, ccPins, pinVersions(mcEnum, sentinelsMC),
 					"pinned kubernetesVersion values in %s differ from %s", mcPath, edition.clusterConfiguration)
+				checkedSchemas++
 			}
 
 			var vm k8sVersionMap
-			readYAML(t, edition.versionMap, &vm)
-			require.NotEmpty(t, vm.K8s, "%s has no k8s section", edition.versionMap)
-
-			for _, version := range ccPins {
-				assert.Contains(t, vm.K8s, version,
-					"version %q is offered by %s but absent from %s", version, edition.clusterConfiguration, edition.versionMap)
+			if readYAML(t, edition.versionMap, &vm) {
+				require.NotEmpty(t, vm.K8s, "%s has no k8s section", edition.versionMap)
+				for _, version := range ccPins {
+					assert.Contains(t, vm.K8s, version,
+						"version %q is offered by %s but absent from %s", version, edition.clusterConfiguration, edition.versionMap)
+				}
 			}
 		})
 	}
+
+	require.Positive(t, checkedSchemas,
+		"no ModuleConfig kubernetesVersion schema was checked in this checkout — the enum guard is inert")
 }
 
 func pinVersions(enum []string, sentinels map[string]struct{}) []string {

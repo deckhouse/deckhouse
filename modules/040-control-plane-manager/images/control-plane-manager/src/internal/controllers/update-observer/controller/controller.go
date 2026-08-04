@@ -221,11 +221,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 	logger.Info("E2E-KV observer",
-		"specDesired", clusterCfg.DesiredVersion,
-		"specMode", string(clusterCfg.UpdateMode),
-		"statusCurrent", clusterState.CurrentVersion,
-		"preservingSpec", configMap.Data["spec"] == specBefore,
-		"reconcileTrigger", string(reconcileTrigger),
+		"spec_desired", clusterCfg.DesiredVersion,
+		"spec_mode", string(clusterCfg.UpdateMode),
+		"status_current", clusterState.CurrentVersion,
+		"preserving_spec", configMap.Data["spec"] == specBefore,
+		"reconcile_trigger", string(reconcileTrigger),
 	)
 
 	if err = r.touchConfigMap(ctx, configMap); err != nil {
