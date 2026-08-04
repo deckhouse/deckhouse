@@ -48,14 +48,6 @@ const (
 	// templates/podmetrics-autotune.yaml and must stay in sync (DEBUG 7m ← prod 7d).
 )
 
-type runAutotuneOptions struct {
-	// Evaluate runs the metrics → decide → commit path (schedule). When false,
-	// only repopulate values and re-emit capacityBlocked metrics (sync).
-	Evaluate bool
-	// Fetch overrides the metrics client; nil uses fetchComponentUsage.
-	Fetch componentUsageFunc
-}
-
 // Schedule + OnBeforeHelm entrypoint: metrics → decide → commit.
 // Nodes/state snapshots are passive (no sync — that is resources_requests_autotune_sync.go).
 // OnBeforeHelm re-runs when controlPlaneManager values change (e.g. manual
@@ -73,10 +65,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(autotuneResourcesRequests))
 
 func autotuneResourcesRequests(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	return runAutotune(ctx, input, dc, runAutotuneOptions{Evaluate: true})
+	return runAutotune(ctx, input, dc, true)
 }
 
-func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Container, opts runAutotuneOptions) error {
+// runAutotune runs the autotune path. When evaluate is true (schedule /
+// OnBeforeHelm), it fetches metrics and may raise/lower. When false (sync),
+// it only repopulates values and rechecks capacityBlocked.
+func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Container, evaluate bool) error {
 	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.Snapshots, "NodesResources")
 	if err != nil {
 		return fmt.Errorf("unmarshal NodesResources snapshots: %w", err)
@@ -125,21 +120,16 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	combinedCPU := input.Values.Get(pathMilliCPUControlPlane).Int()
 	combinedMemMB := bytesToMB(input.Values.Get(pathMemoryControlPlane).Int())
 
-	fetch := opts.Fetch
-	if fetch == nil {
-		fetch = fetchComponentUsage
-	}
-
 	// Evaluate path: recommendations from metrics. Repopulate values exactly
 	// once at the end — a second Remove of `components` fails merge when Exists
 	// still sees the pre-patch snapshot.
-	if opts.Evaluate {
+	if evaluate {
 		now := dc.GetClock().Now().UTC()
 
-		recsCPU, cpuUsageOK := fetchRecs(ctx, dc, fetch, resourceCPU, cpuOverridden, fitCPU, func(comp string, ferr error) {
+		recsCPU, cpuUsageOK := fetchRecs(ctx, dc, fetchComponentUsage, resourceCPU, cpuOverridden, fitCPU, func(comp string, ferr error) {
 			input.Logger.Warn("autotune: metrics API cpu fetch failed", "component", comp, "error", ferr)
 		})
-		recsMem, memUsageOK := fetchRecs(ctx, dc, fetch, resourceMemory, memoryOverridden, fitMemMB, func(comp string, ferr error) {
+		recsMem, memUsageOK := fetchRecs(ctx, dc, fetchComponentUsage, resourceMemory, memoryOverridden, fitMemMB, func(comp string, ferr error) {
 			input.Logger.Warn("autotune: metrics API memory fetch failed", "component", comp, "error", ferr)
 		})
 		usageOK := cpuUsageOK && memUsageOK
