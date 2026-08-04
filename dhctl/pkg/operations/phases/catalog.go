@@ -24,46 +24,47 @@ import (
 //go:embed i18n/*.yaml
 var TitlesFS embed.FS
 
-type Language string
+type Locale string
 
 const (
-	ENLanguage Language = "en"
-	RULanguage Language = "ru"
+	ENLocale Locale = "en"
+	RULocale Locale = "ru"
 )
 
-var Languages = []Language{ENLanguage, RULanguage}
+func AllLocales() []Locale {
+	return []Locale{ENLocale, RULocale}
+}
 
 // Titles stores all phase and subphase titles.
-// It is immutable after LoadTitles returns.
 type Titles struct {
-	phase    map[Language]map[OperationPhase]string
-	subPhase map[Language]map[OperationSubPhase]string
+	phase    map[Locale]map[OperationPhase]string
+	subPhase map[Locale]map[OperationSubPhase]string
 }
 
 func LoadTitles() (*Titles, error) {
 	ret := &Titles{
-		phase:    make(map[Language]map[OperationPhase]string),
-		subPhase: make(map[Language]map[OperationSubPhase]string),
+		phase:    make(map[Locale]map[OperationPhase]string),
+		subPhase: make(map[Locale]map[OperationSubPhase]string),
 	}
 
-	for _, lang := range Languages {
+	for _, locale := range AllLocales() {
 		titles := make(map[OperationPhase]string)
-		path := fmt.Sprintf("i18n/phases.%s.yaml", lang)
+		path := fmt.Sprintf("i18n/phases.%s.yaml", locale)
 
 		if err := readYamlFile(path, &titles); err != nil {
 			return nil, fmt.Errorf("load phase titles: %w", err)
 		}
-		ret.phase[lang] = titles
+		ret.phase[locale] = titles
 	}
 
-	for _, lang := range Languages {
+	for _, locale := range AllLocales() {
 		titles := make(map[OperationSubPhase]string)
-		path := fmt.Sprintf("i18n/subphases.%s.yaml", lang)
+		path := fmt.Sprintf("i18n/subphases.%s.yaml", locale)
 
 		if err := readYamlFile(path, &titles); err != nil {
 			return nil, fmt.Errorf("load subphase titles: %w", err)
 		}
-		ret.subPhase[lang] = titles
+		ret.subPhase[locale] = titles
 	}
 
 	return ret, nil
@@ -71,24 +72,26 @@ func LoadTitles() (*Titles, error) {
 
 // Phase returns the English title of a phase by its code.
 func (t *Titles) Phase(phase OperationPhase) string {
-	return t.phase[ENLanguage][phase]
+	return t.phase[ENLocale][phase]
 }
 
 // SubPhase returns the English title of a subphase by its code.
 func (t *Titles) SubPhase(subPhase OperationSubPhase) string {
-	return t.subPhase[ENLanguage][subPhase]
+	return t.subPhase[ENLocale][subPhase]
 }
 
 // TitlesCatalog represents the transport-neutral representation of the full set
-// of titles. It is consumed by both the gRPC GetPhaseCatalog handler and the
-// phase-catalog CLI command. Keeping output generation in one place prevents
-// the two transports from diverging.
+// of titles.
 type TitlesCatalog struct {
-	Phases    map[string]map[string]string `json:"phases"`
-	SubPhases map[string]map[string]string `json:"subPhases"`
+	Phases    map[string]LocaleTitles `json:"phases"`
+	SubPhases map[string]LocaleTitles `json:"subPhases"`
 }
 
-// ToCatalog returns the titles as code -> locale -> title maps.
+type LocaleTitles struct {
+	ByLocale map[string]string `json:"byLocale"`
+}
+
+// ToCatalog returns the titles as code -> LocaleTitles maps.
 // Both namespaces are kept separate because phase and subphase codes overlap
 // by string value (e.g. "InstallDeckhouse", "BaseInfra", "Check") with
 // different titles. The returned maps are defensive copies.
@@ -99,24 +102,26 @@ func (t *Titles) ToCatalog() TitlesCatalog {
 	}
 }
 
-// mapToCatalog converts a map[Language]map[K]string to map[string]map[string]string.
+// mapToCatalog converts a map[Locale]map[K]string to map[string]LocaleTitles.
 // It supports any key type that has string as its underlying type.
-func mapToCatalog[K ~string](in map[Language]map[K]string) map[string]map[string]string {
+func mapToCatalog[K ~string](in map[Locale]map[K]string) map[string]LocaleTitles {
 	if in == nil {
 		return nil
 	}
 
-	ret := make(map[string]map[string]string)
+	ret := make(map[string]LocaleTitles)
 
-	for lang, titles := range in {
+	for locale, titles := range in {
 		for code, title := range titles {
 			codeStr := string(code)
-			langStr := string(lang)
+			localeStr := string(locale)
 
-			if ret[codeStr] == nil {
-				ret[codeStr] = make(map[string]string)
+			lt, ok := ret[codeStr]
+			if !ok {
+				lt = LocaleTitles{ByLocale: make(map[string]string)}
+				ret[codeStr] = lt
 			}
-			ret[codeStr][langStr] = title
+			lt.ByLocale[localeStr] = title
 		}
 	}
 

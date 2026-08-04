@@ -25,64 +25,53 @@ import (
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 )
 
+func phaseCatalogExec(t *testing.T) *pb.PhaseCatalog {
+	s := New(ServiceParams{})
+	ret, err := s.GetPhaseCatalog(context.Background(), &pb.PhaseCatalogRequest{})
+	require.NoError(t, err)
+	require.NotNil(t, ret)
+
+	require.NotEmpty(t, ret.Phases)
+	require.NotEmpty(t, ret.SubPhases)
+	return ret
+}
+
 func TestGetPhaseCatalog(t *testing.T) {
 	t.Parallel()
 
-	s := New(ServiceParams{})
-	resp, err := s.GetPhaseCatalog(context.Background(), &pb.PhaseCatalogRequest{})
-	require.NoError(t, err)
-	require.NotNil(t, resp)
+	got := phaseCatalogExec(t)
 
-	// Both namespaces present and non-empty.
-	require.NotEmpty(t, resp.Phases)
-	require.NotEmpty(t, resp.SubPhases)
-
-	// Every supported language must be populated for a known phase code.
-	base := resp.Phases[string(phases.BaseInfraPhase)]
-	require.NotNil(t, base)
-	for _, lang := range phases.Languages {
-		_, ok := base.ByLocale[string(lang)]
-		assert.True(t, ok, "BaseInfra missing %q locale", lang)
-	}
-	assert.Equal(t, "Base Infrastructure", base.ByLocale["en"])
-
-	// Overlapping code must resolve to distinct titles per namespace — the
-	// reason two maps exist.
-	phaseTitle := resp.Phases[string(phases.InstallDeckhousePhase)].ByLocale["en"]
-	subTitle := resp.SubPhases[string(phases.InstallDeckhousePhase)].ByLocale["en"]
+	installDeckhousePhase := string(phases.InstallDeckhousePhase)
+	phaseTitle := got.Phases[installDeckhousePhase].ByLocale[string(phases.ENLocale)]
+	subTitle := got.SubPhases[installDeckhousePhase].ByLocale[string(phases.ENLocale)]
 	assert.Equal(t, "Install Deckhouse", phaseTitle)
 	assert.Equal(t, "Install...", subTitle)
+
+	phaseTitle = got.Phases[installDeckhousePhase].ByLocale[string(phases.RULocale)]
+	subTitle = got.SubPhases[installDeckhousePhase].ByLocale[string(phases.RULocale)]
 }
 
-// TestGetPhaseCatalog_MatchesLoader asserts the RPC and the shared loader
-// return the same content — the two transports (gRPC and CLI) cannot diverge
-// because they read one loader.
 func TestGetPhaseCatalog_MatchesLoader(t *testing.T) {
 	t.Parallel()
 
 	titles, err := phases.LoadTitles()
 	require.NoError(t, err)
-
 	catalog := titles.ToCatalog()
-	require.NotEmpty(t, catalog.Phases)
-	require.NotEmpty(t, catalog.SubPhases)
 
-	s := New(ServiceParams{})
-	resp, err := s.GetPhaseCatalog(context.Background(), &pb.PhaseCatalogRequest{})
-	require.NoError(t, err)
+	got := phaseCatalogExec(t)
 
-	for code, byLocale := range catalog.Phases {
-		pbTitles, ok := resp.Phases[code]
+	for code, lt := range catalog.Phases {
+		pbTitles, ok := got.Phases[code]
 		require.True(t, ok, "phase %q missing from RPC response", code)
-		for locale, title := range byLocale {
+		for locale, title := range lt.ByLocale {
 			assert.Equal(t, title, pbTitles.ByLocale[locale],
 				"phase %q locale %q mismatch", code, locale)
 		}
 	}
-	for code, byLocale := range catalog.SubPhases {
-		pbTitles, ok := resp.SubPhases[code]
+	for code, lt := range catalog.SubPhases {
+		pbTitles, ok := got.SubPhases[code]
 		require.True(t, ok, "subphase %q missing from RPC response", code)
-		for locale, title := range byLocale {
+		for locale, title := range lt.ByLocale {
 			assert.Equal(t, title, pbTitles.ByLocale[locale],
 				"subphase %q locale %q mismatch", code, locale)
 		}

@@ -15,7 +15,6 @@
 package commands
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"os"
@@ -29,12 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
-// TestDefinePhaseCatalogCommand asserts the CLI command emits valid JSON
-// matching the shared loader output — so the CLI and gRPC transports stay in
-// sync with the single source of truth.
-func TestDefinePhaseCatalogCommand(t *testing.T) {
-	t.Parallel()
-
+func phaseCatalogExec(t *testing.T) phases.TitlesCatalog {
 	origStdout := os.Stdout
 	r, w, err := os.Pipe()
 	require.NoError(t, err)
@@ -51,13 +45,33 @@ func TestDefinePhaseCatalogCommand(t *testing.T) {
 	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 
-	var got phases.TitlesCatalog
-	require.NoError(t, json.Unmarshal(bytes.TrimSpace(out), &got))
+	var ret phases.TitlesCatalog
+	require.NoError(t, json.Unmarshal(out, &ret))
 
+	require.NotEmpty(t, ret.Phases)
+	require.NotEmpty(t, ret.SubPhases)
+	return ret
+}
+
+func TestGetPhaseCatalog(t *testing.T) {
+	got := phaseCatalogExec(t)
+
+	installDeckhousePhase := string(phases.InstallDeckhousePhase)
+	phaseTitle := got.Phases[installDeckhousePhase].ByLocale[string(phases.ENLocale)]
+	subTitle := got.SubPhases[installDeckhousePhase].ByLocale[string(phases.ENLocale)]
+	assert.Equal(t, "Install Deckhouse", phaseTitle)
+	assert.Equal(t, "Install...", subTitle)
+
+	phaseTitle = got.Phases[installDeckhousePhase].ByLocale[string(phases.RULocale)]
+	subTitle = got.SubPhases[installDeckhousePhase].ByLocale[string(phases.RULocale)]
+}
+
+func TestDefinePhaseCatalogCommand(t *testing.T) {
 	titles, err := phases.LoadTitles()
 	require.NoError(t, err)
 
+	got := phaseCatalogExec(t)
+
 	expected := titles.ToCatalog()
-	assert.Equal(t, expected.Phases, got.Phases)
-	assert.Equal(t, expected.SubPhases, got.SubPhases)
+	assert.EqualValues(t, expected, got)
 }

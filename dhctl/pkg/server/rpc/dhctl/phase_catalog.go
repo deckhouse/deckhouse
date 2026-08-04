@@ -39,10 +39,10 @@ func (s *Service) GetPhaseCatalog(_ context.Context, _ *pb.PhaseCatalogRequest) 
 	}, nil
 }
 
-func toPBTitles(byCode map[string]map[string]string) map[string]*pb.Titles {
+func toPBTitles(byCode map[string]phases.LocaleTitles) map[string]*pb.Titles {
 	out := make(map[string]*pb.Titles, len(byCode))
-	for code, byLocale := range byCode {
-		out[code] = &pb.Titles{ByLocale: byLocale}
+	for code, lt := range byCode {
+		out[code] = &pb.Titles{ByLocale: lt.ByLocale}
 	}
 	return out
 }

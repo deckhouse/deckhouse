@@ -60,29 +60,18 @@ func TestTitles_Load(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, titles)
 
-	for _, lang := range Languages {
-		require.Contains(t, titles.phase, lang, "phase namespace missing %q language", lang)
-		require.NotEmpty(t, titles.phase[lang], "phase namespace empty for %q language", lang)
+	for _, locale := range AllLocales() {
+		assert.Contains(t, titles.phase, locale, "phase namespace missing %q locale", locale)
+		assert.NotEmpty(t, titles.phase[locale], "phase namespace empty for %q locale", locale)
 
-		require.Contains(t, titles.subPhase, lang, "subphase namespace missing %q language", lang)
-		require.NotEmpty(t, titles.subPhase[lang], "subphase namespace empty for %q language", lang)
+		assert.Contains(t, titles.subPhase, locale, "subphase namespace missing %q locale", locale)
+		assert.NotEmpty(t, titles.subPhase[locale], "subphase namespace empty for %q locale", locale)
 	}
 }
 
-// TestTitles_Coverage asserts the two invariants that keep phase reporting and
-// translations in sync:
-//
-//  1. Forward: every phase/subphase code the codebase can emit has a
-//     non-empty title in every supported language. Catches a new code without
-//     a translation.
-//  2. Reverse: every key present in the YAML files corresponds to a known
-//     code. Catches stale translations left behind after a code is renamed
-//     or removed.
-//
-// It exercises LoadTitles directly rather than ToCatalog so a bug in
-// mapToCatalog cannot mask a missing-key failure. ToCatalog has its own
-// dedicated coverage test.
-func TestTitles_Coverage(t *testing.T) {
+// TestTitles_Load_Coverage asserts the two invariants that keep phase reporting and
+// translations in sync.
+func TestTitles_Load_Coverage(t *testing.T) {
 	t.Parallel()
 
 	phases := emittedPhases(t)
@@ -90,32 +79,34 @@ func TestTitles_Coverage(t *testing.T) {
 	titles, err := LoadTitles()
 	require.NoError(t, err)
 
-	// Forward: every emittable phase resolves to a non-empty title per language.
+	// Forward: every emittable phase resolves to a non-empty title per locale.
 	for phase := range phases {
-		for _, lang := range Languages {
-			title, ok := titles.phase[lang][phase]
-			require.True(t, ok, "phase %q has no %q translation", phase, lang)
-			require.NotEmpty(t, title, "phase %q has empty %q title", phase, lang)
+		for _, locale := range AllLocales() {
+			title, ok := titles.phase[locale][phase]
+			assert.True(t, ok, "phase %q has no %q translation", phase, locale)
+			assert.NotEmpty(t, title, "phase %q has empty %q title", phase, locale)
 		}
 	}
 
-	// Forward: every emittable subphase resolves to a non-empty title per language.
+	// Forward: every emittable subphase resolves to a non-empty title per locale.
 	for subPhase := range subPhases {
-		for _, lang := range Languages {
-			title, ok := titles.subPhase[lang][subPhase]
-			require.True(t, ok, "subphase %q has no %q translation", subPhase, lang)
-			require.NotEmpty(t, title, "subphase %q has empty %q title", subPhase, lang)
+		for _, locale := range AllLocales() {
+			title, ok := titles.subPhase[locale][subPhase]
+			assert.True(t, ok, "subphase %q has no %q translation", subPhase, locale)
+			assert.NotEmpty(t, title, "subphase %q has empty %q title", subPhase, locale)
 		}
 	}
 
-	// Reverse: every YAML phase key is a registered phase.
+	// Reverse: every YAML subphase key is a registered subphase.
 	knownPhases := make(map[string]struct{}, len(phases))
 	for ph := range phases {
 		knownPhases[string(ph)] = struct{}{}
 	}
-	for phase := range titles.phase[ENLanguage] {
-		_, ok := knownPhases[string(phase)]
-		require.True(t, ok, "phases.%s.yaml has stale key %q with no matching phase code", ENLanguage, phase)
+	for _, locale := range AllLocales() {
+		for phase := range titles.phase[locale] {
+			_, ok := knownPhases[string(phase)]
+			assert.True(t, ok, "phases.%s.yaml has stale key %q with no matching phase code", locale, phase)
+		}
 	}
 
 	// Reverse: every YAML subphase key is a registered subphase.
@@ -123,9 +114,11 @@ func TestTitles_Coverage(t *testing.T) {
 	for sp := range subPhases {
 		knownSubPhases[string(sp)] = struct{}{}
 	}
-	for sp := range titles.subPhase[ENLanguage] {
-		_, ok := knownSubPhases[string(sp)]
-		require.True(t, ok, "subphases.%s.yaml has stale key %q with no matching subphase code", ENLanguage, sp)
+	for _, locale := range AllLocales() {
+		for sp := range titles.subPhase[locale] {
+			_, ok := knownSubPhases[string(sp)]
+			assert.True(t, ok, "subphases.%s.yaml has stale key %q with no matching subphase code", locale, sp)
+		}
 	}
 }
 
@@ -139,15 +132,17 @@ func TestTitles_ToCatalog(t *testing.T) {
 	require.NotEmpty(t, expected.Phases)
 	require.NotEmpty(t, expected.SubPhases)
 
-	assert.Equal(t, "Install Deckhouse", expected.Phases[string(InstallDeckhousePhase)][string(ENLanguage)])
-	assert.Equal(t, "Install...", expected.SubPhases[string(InstallDeckhouseSubPhaseInstall)][string(ENLanguage)])
+	assert.Equal(t, "Install Deckhouse", expected.Phases[string(InstallDeckhousePhase)].ByLocale[string(ENLocale)])
+	assert.Equal(t, "Install...", expected.SubPhases[string(InstallDeckhouseSubPhaseInstall)].ByLocale[string(ENLocale)])
 
 	// ToCatalog returns defensive copies: mutating the result does not affect the source.
-	original := expected.Phases[string(BaseInfraPhase)][string(ENLanguage)]
-	expected.Phases[string(BaseInfraPhase)][string(ENLanguage)] = "tampered"
+	original := expected.Phases[string(BaseInfraPhase)].ByLocale[string(ENLocale)]
+	expected.Phases[string(BaseInfraPhase)].ByLocale[string(ENLocale)] = "tampered"
 	assert.Equal(t, original, titles.Phase(BaseInfraPhase))
 }
 
+// TestTitles_ToCatalog_Coverage asserts the two invariants that keep phase reporting and
+// translations in sync.
 func TestTitles_ToCatalog_Coverage(t *testing.T) {
 	t.Parallel()
 
@@ -160,20 +155,42 @@ func TestTitles_ToCatalog_Coverage(t *testing.T) {
 	require.NotEmpty(t, catalog.Phases)
 	require.NotEmpty(t, catalog.SubPhases)
 
+	// Forward: every emittable phase resolves to a non-empty title per locale.
 	for phase := range phases {
-		for _, lang := range Languages {
-			title, ok := catalog.Phases[string(phase)][string(lang)]
-			require.True(t, ok, "catalog phase %q has no %q translation", phase, lang)
-			require.NotEmpty(t, title, "catalog phase %q has empty %q title", phase, lang)
+		for _, locale := range AllLocales() {
+			title, ok := catalog.Phases[string(phase)].ByLocale[string(locale)]
+			assert.True(t, ok, "catalog phase %q has no %q translation", phase, locale)
+			assert.NotEmpty(t, title, "catalog phase %q has empty %q title", phase, locale)
 		}
 	}
 
+	// Forward: every emittable subphase resolves to a non-empty title per locale.
 	for subPhase := range subPhases {
-		for _, lang := range Languages {
-			title, ok := catalog.SubPhases[string(subPhase)][string(lang)]
-			require.True(t, ok, "catalog subphase %q has no %q translation", subPhase, lang)
-			require.NotEmpty(t, title, "catalog subphase %q has empty %q title", subPhase, lang)
+		for _, locale := range AllLocales() {
+			title, ok := catalog.SubPhases[string(subPhase)].ByLocale[string(locale)]
+			assert.True(t, ok, "catalog subphase %q has no %q translation", subPhase, locale)
+			assert.NotEmpty(t, title, "catalog subphase %q has empty %q title", subPhase, locale)
 		}
+	}
+
+	// Reverse: every subphase key is a registered subphase.
+	knownPhases := make(map[string]struct{}, len(phases))
+	for ph := range phases {
+		knownPhases[string(ph)] = struct{}{}
+	}
+	for phase := range catalog.Phases {
+		_, ok := knownPhases[phase]
+		assert.True(t, ok, "catalog phase key %q has no matching phase code", phase)
+	}
+
+	// Reverse: every subphase key is a registered subphase.
+	knownSubPhases := make(map[string]struct{}, len(subPhases))
+	for sp := range subPhases {
+		knownSubPhases[string(sp)] = struct{}{}
+	}
+	for sp := range catalog.SubPhases {
+		_, ok := knownSubPhases[sp]
+		assert.True(t, ok, "catalog subphase key %q has no matching subphase code", sp)
 	}
 }
 
@@ -183,11 +200,9 @@ func TestTitles_Phase(t *testing.T) {
 	titles, err := LoadTitles()
 	require.NoError(t, err)
 
-	// Known code returns the English title.
 	assert.Equal(t, "Base Infrastructure", titles.Phase(BaseInfraPhase))
 	assert.Equal(t, "Install Deckhouse", titles.Phase(InstallDeckhousePhase))
 
-	// Unknown code falls back to the raw code.
 	assert.Equal(t, "", titles.Phase(OperationPhase("NoSuchPhase")))
 	assert.Equal(t, "", titles.Phase(OperationPhase("")))
 }
@@ -198,11 +213,9 @@ func TestTitles_SubPhase(t *testing.T) {
 	titles, err := LoadTitles()
 	require.NoError(t, err)
 
-	// Known code returns the English title.
 	assert.Equal(t, "Install...", titles.SubPhase(InstallDeckhouseSubPhaseInstall))
 	assert.Equal(t, "Connect to master host", titles.SubPhase(InstallDeckhouseSubPhaseConnect))
 
-	// Unknown code falls back to the raw code.
 	assert.Equal(t, "", titles.SubPhase(OperationSubPhase("NoSuchSubPhase")))
 	assert.Equal(t, "", titles.SubPhase(OperationSubPhase("")))
 }
