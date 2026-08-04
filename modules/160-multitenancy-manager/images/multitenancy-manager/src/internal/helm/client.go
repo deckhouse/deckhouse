@@ -156,15 +156,18 @@ type ReleaseOutcome struct {
 // Upgrade renders a legacy resourcesTemplate (helm-string) template and installs/upgrades the project
 // release from it.
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (ReleaseOutcome, error) {
+	values := buildValues(project, template)
+
 	// Repeated here rather than left to admission: the release is applied with cluster-admin, and a
 	// project can reach this point without a passing admission check -- the webhook may be bypassed,
-	// and an object admitted before this check existed is reconciled just the same.
-	if err := c.ensureParametersStayValues(project, template); err != nil {
-		return ReleaseOutcome{}, err
+	// and an object admitted before this check existed is reconciled just the same. Handed to
+	// release as a callback so it runs where a release is about to be applied and not on a reconcile
+	// that has nothing to do (see release).
+	beforeApply := func() error {
+		return c.ensureParametersStayValues(project, template)
 	}
 
-	values := buildValues(project, template)
-	return c.release(ctx, project, buildChart(c.templates, project.Name), values, hashMD5(c.templates, values), "")
+	return c.release(ctx, project, buildChart(c.templates, project.Name), values, hashMD5(c.templates, values), "", beforeApply)
 }
 
 // UpgradeManifests installs/upgrades the project release from manifests rendered natively from a
@@ -173,7 +176,9 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, templat
 // while Helm still drives the release lifecycle (install/upgrade/prune/history). The hash is taken
 // over the rendered manifests so a structural or parameter change re-applies the release.
 func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string) (ReleaseOutcome, error) {
-	return c.release(ctx, project, buildEmptyChart(project.Name), map[string]any{}, hashString(manifests), manifests)
+	// No injection check on this path: the parameters never reach a template engine here -- the
+	// objects are built from the schema and handed to the post-renderer as they are.
+	return c.release(ctx, project, buildEmptyChart(project.Name), map[string]any{}, hashString(manifests), manifests, nil)
 }
 
 // release runs the shared install/upgrade machinery: discovery, history lookup, up-to-date short
@@ -181,7 +186,11 @@ func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project
 // helm-string path and set to the natively rendered objects for the schema-based path. On an
 // up-to-date release it short-circuits WITHOUT post-rendering and returns Applied=false, so the caller
 // must analyze the manifests to recover Filtered/RoleRefs.
-func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *chart.Chart, values map[string]any, hash, manifestsOverride string) (ReleaseOutcome, error) {
+//
+// beforeApply, if given, runs only where a release is about to be applied -- not on a reconcile that
+// finds nothing to do. A check that refuses a project belongs there: an unchanged release applies
+// nothing, so running it anyway could only break a project that already reconciled.
+func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *chart.Chart, values map[string]any, hash, manifestsOverride string, beforeApply func() error) (ReleaseOutcome, error) {
 	versions, err := c.discoverAPI()
 	if err != nil {
 		return ReleaseOutcome{}, fmt.Errorf("discover api: %w", err)
@@ -199,6 +208,13 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *cha
 		if errors.Is(err, driver.ErrReleaseNotFound) {
 			isFirstInstall = true
 			c.logger.Info("the release not found, install it", "release", rel, "namespace", project.Name)
+
+			if beforeApply != nil {
+				if err = beforeApply(); err != nil {
+					return ReleaseOutcome{}, err
+				}
+			}
+
 			post := newPostRenderer(project, versions, c.logger, isFirstInstall)
 			post.manifests = manifestsOverride
 			install := action.NewInstall(c.conf)
@@ -223,6 +239,12 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *cha
 		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
 			c.logger.Info("the release is up to date", "release", rel, "namespace", project.Name)
 			return ReleaseOutcome{Applied: false}, nil
+		}
+	}
+
+	if beforeApply != nil {
+		if err = beforeApply(); err != nil {
+			return ReleaseOutcome{}, err
 		}
 	}
 
@@ -481,8 +503,9 @@ func (c *Client) ValidateRender(project *v1alpha3.Project, template *v1alpha1.Pr
 	}
 
 	// Before post-rendering: injected manifests tend to fail there too, and "post render: yaml: line
-	// 6: ..." says nothing about the parameter that caused it.
-	if err = c.ensureParametersStayValues(project, template); err != nil {
+	// 6: ..." says nothing about the parameter that caused it. Reuses the render above rather than
+	// asking for its own.
+	if err = c.ensureRenderedParametersStayValues(project, template, manifests); err != nil {
 		return err
 	}
 
