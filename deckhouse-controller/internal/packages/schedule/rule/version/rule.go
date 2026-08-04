@@ -35,6 +35,7 @@ type Getter func() (*semver.Version, error)
 type Rule struct {
 	versionGetter Getter              // Function to get current version
 	constraints   *semver.Constraints // Required version constraint (e.g., ">=1.21, <2.0")
+	subject       string              // What is being versioned, e.g. "Kubernetes" - names the version in failure messages
 	reason        string
 }
 
@@ -45,10 +46,16 @@ type Rule struct {
 //   - ">=1.21, <2.0"     - Range from 1.21 to 2.0
 //   - "~1.21"            - Patch releases of 1.21
 //   - "^1.21"            - Minor releases of 1.x
-func NewRule(getter Getter, constraints *semver.Constraints, reason string) *Rule {
+//
+// subject names what the version belongs to ("Kubernetes", "Deckhouse"). It
+// carries the same information as reason, but in a form fit for a message shown
+// to the user: the reason is a Kubernetes condition reason and is dropped on the
+// admission path, where the message is all the user gets.
+func NewRule(getter Getter, constraints *semver.Constraints, subject, reason string) *Rule {
 	return &Rule{
 		versionGetter: getter,
 		constraints:   constraints,
+		subject:       subject,
 		reason:        reason,
 	}
 }
@@ -65,16 +72,19 @@ func (r *Rule) Decide() rule.Decision {
 		return rule.Decision{
 			Kind:    rule.Forbid,
 			Reason:  "VersionLookupFailed",
-			Message: fmt.Sprintf("get version: %s", err.Error()),
+			Message: fmt.Sprintf("cannot determine the current %s version: %s", r.subject, err.Error()),
 		}
 	}
 
-	// Validate returns (bool, []error) - we only use the errors
-	if _, errs := r.constraints.Validate(version); len(errs) != 0 {
+	// The errors semver returns are discarded on purpose: they render as a bare
+	// comparison of two versions ("1.34.9 is less than v1.35") that names
+	// neither the subject nor the operator of the constraint it came from, so on
+	// the admission path the user cannot tell which requirement was violated.
+	if ok, _ := r.constraints.Validate(version); !ok {
 		return rule.Decision{
 			Kind:    rule.Forbid,
 			Reason:  r.reason,
-			Message: fmt.Errorf("check version error: %w", errs[0]).Error(),
+			Message: fmt.Sprintf("requires %s version '%s', current version is '%s'", r.subject, r.constraints, version),
 		}
 	}
 
