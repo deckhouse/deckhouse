@@ -37,6 +37,10 @@ func (c *FakeAuthorizationV1alpha1) BulkSubjectAccessReviews() v1alpha1.BulkSubj
 	return newFakeBulkSubjectAccessReviews(c)
 }
 
+func (c *FakeAuthorizationV1alpha1) RoleAccessReports() v1alpha1.RoleAccessReportInterface {
+	return newFakeRoleAccessReports(c)
+}
+
 func (c *FakeAuthorizationV1alpha1) SubjectAccessReports() v1alpha1.SubjectAccessReportInterface {
 	return newFakeSubjectAccessReports(c)
 }

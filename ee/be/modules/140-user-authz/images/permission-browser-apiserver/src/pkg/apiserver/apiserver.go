@@ -281,6 +281,7 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	// Create namespace resolver for AccessibleNamespace API
 	var nsResolver *resolver.NamespaceResolver
 	var subjectAccess *resolver.SubjectAccessResolver
+	var roleAccess *resolver.RoleAccessResolver
 	if initRes.informerFactory != nil {
 		rbacInformers := initRes.informerFactory.Rbac().V1()
 		nsResolver = resolver.NewNamespaceResolver(
@@ -304,6 +305,9 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 			resolver.NewGroupCatalog(initRes.dynamicClient),
 		)
 		klog.Info("Subject access resolver initialized for SubjectAccessReport API")
+
+		roleAccess = resolver.NewRoleAccessResolver(rbacInformers.ClusterRoles().Lister(), scopeCache)
+		klog.Info("Role access resolver initialized for RoleAccessReport API")
 	}
 
 	// Register API group
@@ -315,6 +319,9 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	// A typed nil in the interface would register a storage that panics on use.
 	if subjectAccess != nil {
 		storages.SubjectAccess = subjectAccess
+	}
+	if roleAccess != nil {
+		storages.RoleAccess = roleAccess
 	}
 
 	if err := registerAPIGroup(genericServer, storages); err != nil {

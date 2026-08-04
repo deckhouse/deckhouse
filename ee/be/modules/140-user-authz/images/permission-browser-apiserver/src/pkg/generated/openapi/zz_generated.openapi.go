@@ -92,12 +92,19 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.BulkSubjectAccessReviewStatus": schema_pkg_apis_authorization_v1alpha1_BulkSubjectAccessReviewStatus(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.NonResourceAccess":             schema_pkg_apis_authorization_v1alpha1_NonResourceAccess(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.NonResourceAttributes":         schema_pkg_apis_authorization_v1alpha1_NonResourceAttributes(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ReportSnapshot":                schema_pkg_apis_authorization_v1alpha1_ReportSnapshot(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ResolvedGroup":                 schema_pkg_apis_authorization_v1alpha1_ResolvedGroup(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ResolvedSubject":               schema_pkg_apis_authorization_v1alpha1_ResolvedSubject(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ResourceAccess":                schema_pkg_apis_authorization_v1alpha1_ResourceAccess(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ResourceAttributes":            schema_pkg_apis_authorization_v1alpha1_ResourceAttributes(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccess":                    schema_pkg_apis_authorization_v1alpha1_RoleAccess(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccessReport":              schema_pkg_apis_authorization_v1alpha1_RoleAccessReport(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccessReportSpec":          schema_pkg_apis_authorization_v1alpha1_RoleAccessReportSpec(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccessReportStatus":        schema_pkg_apis_authorization_v1alpha1_RoleAccessReportStatus(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAssignment":                schema_pkg_apis_authorization_v1alpha1_RoleAssignment(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleComponent":                 schema_pkg_apis_authorization_v1alpha1_RoleComponent(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleDescriptor":                schema_pkg_apis_authorization_v1alpha1_RoleDescriptor(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleSelection":                 schema_pkg_apis_authorization_v1alpha1_RoleSelection(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ServiceAccountReference":       schema_pkg_apis_authorization_v1alpha1_ServiceAccountReference(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.SubjectAccessReport":           schema_pkg_apis_authorization_v1alpha1_SubjectAccessReport(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.SubjectAccessReportSpec":       schema_pkg_apis_authorization_v1alpha1_SubjectAccessReportSpec(ref),
@@ -3347,6 +3354,57 @@ func schema_pkg_apis_authorization_v1alpha1_NonResourceAttributes(ref common.Ref
 	}
 }
 
+func schema_pkg_apis_authorization_v1alpha1_ReportSnapshot(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ReportSnapshot is what makes a report reproducible: the same cluster, unchanged, must produce the same document, and a reader must be able to tell what the document was built from.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"time": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Time is when the report was built.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"model": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Model is the role model the report covers.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"expandedWildcards": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpandedWildcards is true when wildcard rules were expanded.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"discoveryResources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DiscoveryResources is the number of resources in the discovery snapshot the wildcards were expanded against. Without it a wildcard row cannot be interpreted: \"every resource\" means one thing on a cluster with virtualization installed and another without it.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"digest": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Digest is a hash over the canonical form of the reported roles. Two reports of an unchanged cluster carry the same digest, so a reader can tell \"nothing changed\" from \"I did not look\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"time", "model"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_pkg_apis_authorization_v1alpha1_ResolvedGroup(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3621,6 +3679,310 @@ func schema_pkg_apis_authorization_v1alpha1_ResourceAttributes(ref common.Refere
 	}
 }
 
+func schema_pkg_apis_authorization_v1alpha1_RoleAccess(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RoleAccess is what one role grants.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the ClusterRole name, or the access level in the legacy model.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"role": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Role carries the display metadata of the role.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleDescriptor"),
+						},
+					},
+					"legacyNames": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "LegacyNames lists the names this role had in the previous model. There can be more than one: the rename folded the kubernetes-suffixed variants into a single role. The export carries them so a document can be compared against one issued before the rename.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"namespaced": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespaced is true when the role only ever applies inside a namespace. Its cluster-scoped rules, if any, are left out: they exist in RBAC but can never be exercised, and an export that lists them overstates access.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"composition": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Composition lists the capabilities the role aggregates, and for the legacy model the roles an access level binds. Filled when spec.includeComposition is set.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleComponent"),
+									},
+								},
+							},
+						},
+					},
+					"resources": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources lists the resource access the role grants.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ResourceAccess"),
+									},
+								},
+							},
+						},
+					},
+					"nonResourceRules": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "NonResourceRules lists the non-resource URL access the role grants.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.NonResourceAccess"),
+									},
+								},
+							},
+						},
+					},
+					"truncated": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Truncated is true when this role alone hit the output limits.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"notes": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Notes carries remarks about this role alone.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.NonResourceAccess", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ResourceAccess", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleComponent", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleDescriptor"},
+	}
+}
+
+func schema_pkg_apis_authorization_v1alpha1_RoleAccessReport(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RoleAccessReport answers \"what does this role grant\", the catalogue side of the question SubjectAccessReport answers for a subject. It exists for the export a security officer keeps and a regulator reads: which resources are covered by which role, in a form that can be diffed against the previous one. This resource is ephemeral - it is not stored, only created.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec describes the roles to report on.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccessReportSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status is filled in by the server with what those roles grant.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccessReportStatus"),
+						},
+					},
+				},
+				Required: []string{"spec"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccessReportSpec", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccessReportStatus"},
+	}
+}
+
+func schema_pkg_apis_authorization_v1alpha1_RoleAccessReportSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RoleAccessReportSpec is the specification for a role access report.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"model": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Model selects the role model to report on: \"primary\" for the scope-based roles, \"legacy\" for the access levels of ClusterAuthorizationRule. Defaults to primary.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"roles": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Roles narrows the report. An empty selection reports every role of the model.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleSelection"),
+						},
+					},
+					"expandWildcards": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpandWildcards expands wildcard rules into concrete resources against the discovery snapshot. Defaults to true.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"includeComposition": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IncludeComposition reports which capability contributed each row, and the list of capabilities a role aggregates. Defaults to false: the plain matrix is what most of the export needs.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleSelection"},
+	}
+}
+
+func schema_pkg_apis_authorization_v1alpha1_RoleAccessReportStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RoleAccessReportStatus contains what the selected roles grant.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"snapshot": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Snapshot describes when and against what the report was built.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ReportSnapshot"),
+						},
+					},
+					"roles": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Roles holds one entry per reported role, ordered by name.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccess"),
+									},
+								},
+							},
+						},
+					},
+					"notes": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Notes carries non-fatal remarks about how the report was built.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"truncated": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Truncated is true when output limits were hit.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"snapshot"},
+			},
+		},
+		Dependencies: []string{
+			"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ReportSnapshot", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleAccess"},
+	}
+}
+
 func schema_pkg_apis_authorization_v1alpha1_RoleAssignment(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3690,6 +4052,37 @@ func schema_pkg_apis_authorization_v1alpha1_RoleAssignment(ref common.ReferenceC
 	}
 }
 
+func schema_pkg_apis_authorization_v1alpha1_RoleComponent(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RoleComponent is one part a role is assembled from: a capability in the primary model, a bound ClusterRole in the legacy one.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the ClusterRole name of the component.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"role": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Role carries the display metadata of the component.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleDescriptor"),
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.RoleDescriptor"},
+	}
+}
+
 func schema_pkg_apis_authorization_v1alpha1_RoleDescriptor(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3754,6 +4147,79 @@ func schema_pkg_apis_authorization_v1alpha1_RoleDescriptor(ref common.ReferenceC
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_authorization_v1alpha1_RoleSelection(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RoleSelection narrows which roles a report covers. The fields are combined with AND; an empty selection matches every role of the model.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"names": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Names lists roles by name.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"scopes": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Scopes lists the scopes to report on: namespace, project, subsystem, system. Primary model only.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"accessLevels": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "AccessLevels lists the access levels to report on. Legacy model only.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Default: "",

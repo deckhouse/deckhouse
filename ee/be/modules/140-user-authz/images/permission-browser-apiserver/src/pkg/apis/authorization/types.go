@@ -498,6 +498,171 @@ type AccessSource struct {
 	ViaVerbWildcard bool
 }
 
+// +genclient
+// +genclient:nonNamespaced
+// +genclient:onlyVerbs=create
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// RoleAccessReport answers "what does this role grant", the catalogue side of
+// the question SubjectAccessReport answers for a subject. It exists for the
+// export a security officer keeps and a regulator reads: which resources are
+// covered by which role, in a form that can be diffed against the previous one.
+// This resource is ephemeral - it is not stored, only created.
+type RoleAccessReport struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	// Spec describes the roles to report on.
+	Spec RoleAccessReportSpec
+
+	// Status is filled in by the server with what those roles grant.
+	Status RoleAccessReportStatus
+}
+
+// RoleAccessReportSpec is the specification for a role access report.
+type RoleAccessReportSpec struct {
+	// Model selects the role model to report on: "primary" for the scope-based
+	// roles, "legacy" for the access levels of ClusterAuthorizationRule.
+	// Defaults to primary.
+	// +optional
+	Model string
+
+	// Roles narrows the report. An empty selection reports every role of the
+	// model.
+	// +optional
+	Roles RoleSelection
+
+	// ExpandWildcards expands wildcard rules into concrete resources against
+	// the discovery snapshot. Defaults to true.
+	// +optional
+	ExpandWildcards *bool
+
+	// IncludeComposition reports which capability contributed each row, and the
+	// list of capabilities a role aggregates. Defaults to false: the plain
+	// matrix is what most of the export needs.
+	// +optional
+	IncludeComposition *bool
+}
+
+// RoleSelection narrows which roles a report covers. The fields are combined
+// with AND; an empty selection matches every role of the model.
+type RoleSelection struct {
+	// Names lists roles by name.
+	// +optional
+	Names []string
+
+	// Scopes lists the scopes to report on: namespace, project, subsystem,
+	// system. Primary model only.
+	// +optional
+	Scopes []string
+
+	// AccessLevels lists the access levels to report on. Legacy model only.
+	// +optional
+	AccessLevels []string
+}
+
+// RoleAccessReportStatus contains what the selected roles grant.
+type RoleAccessReportStatus struct {
+	// Snapshot describes when and against what the report was built.
+	Snapshot ReportSnapshot
+
+	// Roles holds one entry per reported role, ordered by name.
+	// +optional
+	Roles []RoleAccess
+
+	// Notes carries non-fatal remarks about how the report was built.
+	// +optional
+	Notes []string
+
+	// Truncated is true when output limits were hit.
+	// +optional
+	Truncated bool
+}
+
+// ReportSnapshot is what makes a report reproducible: the same cluster,
+// unchanged, must produce the same document, and a reader must be able to tell
+// what the document was built from.
+type ReportSnapshot struct {
+	// Time is when the report was built.
+	Time metav1.Time
+
+	// Model is the role model the report covers.
+	Model string
+
+	// ExpandedWildcards is true when wildcard rules were expanded.
+	// +optional
+	ExpandedWildcards bool
+
+	// DiscoveryResources is the number of resources in the discovery snapshot
+	// the wildcards were expanded against. Without it a wildcard row cannot be
+	// interpreted: "every resource" means one thing on a cluster with
+	// virtualization installed and another without it.
+	// +optional
+	DiscoveryResources int
+
+	// Digest is a hash over the canonical form of the reported roles. Two
+	// reports of an unchanged cluster carry the same digest, so a reader can
+	// tell "nothing changed" from "I did not look".
+	// +optional
+	Digest string
+}
+
+// RoleAccess is what one role grants.
+type RoleAccess struct {
+	// Name is the ClusterRole name, or the access level in the legacy model.
+	Name string
+
+	// Role carries the display metadata of the role.
+	// +optional
+	Role RoleDescriptor
+
+	// LegacyNames lists the names this role had in the previous model. There
+	// can be more than one: the rename folded the kubernetes-suffixed variants
+	// into a single role. The export carries them so a document can be compared
+	// against one issued before the rename.
+	// +optional
+	LegacyNames []string
+
+	// Namespaced is true when the role only ever applies inside a namespace.
+	// Its cluster-scoped rules, if any, are left out: they exist in RBAC but
+	// can never be exercised, and an export that lists them overstates access.
+	// +optional
+	Namespaced bool
+
+	// Composition lists the capabilities the role aggregates, and for the
+	// legacy model the roles an access level binds. Filled when
+	// spec.includeComposition is set.
+	// +optional
+	Composition []RoleComponent
+
+	// Resources lists the resource access the role grants.
+	// +optional
+	Resources []ResourceAccess
+
+	// NonResourceRules lists the non-resource URL access the role grants.
+	// +optional
+	NonResourceRules []NonResourceAccess
+
+	// Truncated is true when this role alone hit the output limits.
+	// +optional
+	Truncated bool
+
+	// Notes carries remarks about this role alone.
+	// +optional
+	Notes []string
+}
+
+// RoleComponent is one part a role is assembled from: a capability in the
+// primary model, a bound ClusterRole in the legacy one.
+type RoleComponent struct {
+	// Name is the ClusterRole name of the component.
+	Name string
+
+	// Role carries the display metadata of the component.
+	// +optional
+	Role RoleDescriptor
+}
+
 // AccessCaveat describes restrictions applied on top of RBAC by admission
 // webhooks.
 type AccessCaveat struct {

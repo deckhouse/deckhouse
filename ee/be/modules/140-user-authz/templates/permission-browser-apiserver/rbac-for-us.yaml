@@ -133,6 +133,22 @@ rules:
   resources: ["subjectaccessreports/nonself"]
   verbs: ["create"]
 ---
+# ClusterRole for clients who export the role catalogue: what each role of the
+# model grants, in the form a security officer keeps and a regulator reads.
+# It reports on roles, never on subjects, and every row of it is already
+# readable in the ClusterRoles themselves -- so unlike the two above this is not
+# an elevated capability. It exists as a role of its own for identities that
+# should produce the export without being able to read the whole RBAC tree.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:role-catalogue-reader
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+rules:
+- apiGroups: ["authorization.deckhouse.io"]
+  resources: ["roleaccessreports"]
+  verbs: ["create"]
+---
 # ClusterRole for users who can only report on their own permissions (self
 # mode). Self reports disclose nothing the user cannot already discover with
 # SelfSubjectRulesReview, so this one is bound to every authenticated user.
