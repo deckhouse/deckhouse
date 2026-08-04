@@ -1,23 +1,23 @@
 # RoleBinding referencing a ClusterRole. The clusterroles GrantableClusterResourceDefinition makes available by
 # default only the roles marked with the rbac.deckhouse.io/delegatable label — the namespace-level
-# access roles: d8:use:role:{viewer,user,manager,admin} and user-authz:{user,privileged-user,editor,
-# admin}. Everything else (use capabilities, cluster-admin/super-admin and other cluster-scoped roles,
-# the d8:manage:* permission roles, admin-kubeconfig, raw component roles) is rejected.
+# access roles: d8:namespace:{viewer,user,manager,admin,superadmin} and user-authz:{user,privileged-user,editor,
+# admin}. Everything else (namespace capabilities, cluster-admin/super-admin and other cluster-scoped roles,
+# the d8:system:* and d8:subsystem:* roles, admin-kubeconfig, raw component roles) is rejected.
 #
-# ALLOW  rb-use          -> ClusterRole d8:use:role:viewer
+# ALLOW  rb-namespace    -> ClusterRole d8:namespace:viewer
 # ALLOW  rb-userauthz    -> ClusterRole user-authz:admin
 # DENY   rb-clusteradmin -> ClusterRole cluster-admin
-# DENY   rb-manage       -> ClusterRole d8:manage:all:manager
+# DENY   rb-system       -> ClusterRole d8:system:manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: rb-use
+  name: rb-namespace
   namespace: demo
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:use:role:viewer
+  name: d8:namespace:viewer
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
@@ -54,12 +54,12 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: rb-manage
+  name: rb-system
   namespace: demo
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:manage:all:manager   # DENY: manage permission role, not delegatable
+  name: d8:system:manager   # DENY: system role, not delegatable
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group

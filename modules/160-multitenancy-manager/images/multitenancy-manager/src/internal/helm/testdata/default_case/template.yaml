@@ -1,0 +1,173 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectTemplate
+metadata:
+  name: default
+  labels:
+    heritage: deckhouse
+spec:
+  description: A template that covers basic project use cases.
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties:
+        namespace:
+          type: object
+          default: {}
+          description: |
+            Additional labels and annotations for the project namespace.
+          properties:
+            labels:
+              type: object
+              additionalProperties:
+                type: string
+            annotations:
+              type: object
+              additionalProperties:
+                type: string
+        networkPolicy:
+          description: |
+            NotRestricted — Allow all traffic by default.
+            Isolated — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
+          enum:
+            - Isolated
+            - NotRestricted
+          type: string
+          default: Isolated
+        podSecurityProfile:
+          description: |
+            Pod security profile name.
+
+            The Pod Security Standards define three different profiles to broadly cover the security spectrum. These profiles are cumulative and range from highly-permissive to highly-restrictive.
+            - Privileged — Unrestricted policy. Provides the widest possible permission level;
+            - Baseline — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
+            - Restricted — Heavily restricted policy. Follows the most current Pod hardening best practices.
+          type: string
+          default: Baseline
+          enum:
+            - Baseline
+            - Restricted
+            - Privileged
+        extendedMonitoringEnabled:
+          description: |
+            Enable extended monitoring for the project.
+            When enabled, the project will be monitored by the Deckhouse monitoring system and send the following alerts:
+             - Controller outages and restarts
+             - 5xx errors in ingress-nginx
+             - Low free space on the persistent volumes
+          type: boolean
+          default: true
+        clusterLogDestinationName:
+          description: |
+            If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
+            The names of the custom resource must be specified in the `clusterLogDestinationName` field.
+          type: string
+  resourcesTemplate: |
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: {{ .projectName }}
+      labels:
+        {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
+        {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
+        {{- with .parameters.namespace.labels }}
+        {{- toYaml . | nindent 4 }}
+        {{- end }}
+      {{- with .parameters.namespace.annotations }}
+      annotations:
+        {{- toYaml . | nindent 4 }}
+      {{- end }}
+
+    {{- if eq .parameters.networkPolicy "Isolated" }}
+    ---
+    # Deny all network traffic by default except namespaced traffic and dns.
+    # Refer to https://kubernetes.io/docs/concepts/services-networking/network-policies/
+    kind: NetworkPolicy
+    apiVersion: networking.k8s.io/v1
+    metadata:
+      name: isolated
+    spec:
+      podSelector:
+        matchLabels: {}
+      policyTypes:
+        - Ingress
+        - Egress
+      ingress:
+        - from:
+            # Traffic within the project is allowed.
+            - namespaceSelector:
+                matchLabels:
+                  projects.deckhouse.io/project: "{{ .projectName }}"
+            # Metrics scraping from Prometheus.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "d8-monitoring"
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/name: prometheus
+            # Ingress nginx traffic.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "d8-ingress-nginx"
+              podSelector:
+                matchLabels:
+                  app: controller
+            # ServiceWithHealthChecks agents traffic.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "d8-service-with-healthchecks"
+              podSelector:
+                matchLabels:
+                  app: agent
+      egress:
+        - to:
+          # Traffic within the project is allowed.
+          - namespaceSelector:
+              matchLabels:
+                projects.deckhouse.io/project: "{{ .projectName }}"
+        # Allow DNS traffic (both kube-dns and nodelocaldns).
+        - to:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: kube-system
+          ports:
+            - protocol: UDP
+              port: 53
+            - protocol: TCP
+              port: 53
+            - protocol: UDP
+              port: 5353
+            - protocol: TCP
+              port: 5353
+    {{- end }}
+
+    {{- with .parameters.clusterLogDestinationName }}
+    ---
+    # Refer to https://deckhouse.io/modules/log-shipper/
+    apiVersion: deckhouse.io/v1alpha1
+    kind: PodLoggingConfig
+    metadata:
+      name: default
+    spec:
+      clusterDestinationRefs:
+        - {{ . }}
+    {{- end }}
+
+    ---
+    # Referer to https://deckhouse.io/modules/admission-policy-engine/
+    apiVersion: deckhouse.io/v1alpha1
+    kind: OperationPolicy
+    metadata:
+      name: required-requests-{{ .projectName | sha256sum | trunc 8 }}
+    spec:
+      policies:
+        requiredResources:
+          requests:
+            - cpu
+            - memory
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              projects.deckhouse.io/project: "{{ .projectName }}"

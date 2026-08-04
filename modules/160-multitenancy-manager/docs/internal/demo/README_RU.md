@@ -26,12 +26,12 @@ k apply -f 00-setup.yaml
 
 ## Что настроено для проекта `demo`
 
-| Ресурс                | Разрешено                                                      | Дефолт       | Дефолтинг |
-|-----------------------|----------------------------------------------------------------|--------------|-----------|
-| storageclasses        | `local`                                                       | `local`      | Coerce    |
-| clusterissuers        | `selfsigned`                                                  | `selfsigned` | FillEmpty (Certificate) / None (аннотация Ingress) |
-| loadbalancerclasses   | `internal`                                                    | —            | FillEmpty |
-| clusterroles          | d8:use:role:* + user-authz access (user,priv-user,editor,admin) | —            | None      |
+| Ресурс                | Разрешено                                                       | Дефолт       | Дефолтинг |
+|-----------------------|-----------------------------------------------------------------|--------------|-----------|
+| storageclasses        | `local`                                                        | `local`      | Coerce    |
+| clusterissuers        | `selfsigned`                                                   | `selfsigned` | FillEmpty (Certificate) / None (аннотация Ingress) |
+| loadbalancerclasses   | `internal`                                                     | —            | FillEmpty |
+| clusterroles          | d8:namespace:* + user-authz access (user,priv-user,editor,admin) | —            | None      |
 
 Ключевое отличие: у PVC-пути storageclasses `defaulting: Coerce` (встроенный DefaultStorageClass
 предзаполняет `storageClassName`), поэтому недопустимый/опущенный класс переписывается в `local`.

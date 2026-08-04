@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:project:superadmin
+  annotations:
+    en.meta.deckhouse.io/title: "Project Superadmin"
+    ru.meta.deckhouse.io/title: "Суперадминистратор проекта"
+    en.meta.deckhouse.io/description: "Project Administrator plus management of system resources placed in project namespaces."
+    ru.meta.deckhouse.io/description: "Права администратора проекта плюс управление системными ресурсами в пространствах имён проекта."
+    rbac.deckhouse.io/bindable-only-via: "ProjectRoleBinding,ClusterProjectRoleBinding"
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/delegatable: "true"
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: project
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-project-as: superadmin
+rules: []

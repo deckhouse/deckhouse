@@ -1,0 +1,46 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectTemplate
+metadata:
+  name: legacy-filtered
+  labels:
+    heritage: deckhouse
+spec:
+  description: A template that still renders ResourceQuota and AuthorizationRule to exercise the post-renderer filter.
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+  resourcesTemplate: |
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: {{ .projectName }}
+
+    ---
+    apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: all-pods
+    spec:
+      hard:
+        requests.cpu: "1"
+
+    ---
+    apiVersion: deckhouse.io/v1alpha1
+    kind: AuthorizationRule
+    metadata:
+      name: legacy-admin
+    spec:
+      accessLevel: Admin
+      subjects:
+        - kind: User
+          name: user@gmail.com
+
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: keep-me
+    data:
+      foo: bar
