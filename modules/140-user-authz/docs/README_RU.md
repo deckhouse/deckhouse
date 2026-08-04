@@ -648,6 +648,9 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
+create:
+    - authorization.deckhouse.io/bulksubjectaccessreviews
+    - authorization.deckhouse.io/subjectaccessreports
 delete,deletecollection,get,list,patch,update,watch:
     - machine.sapcloud.io/alicloudmachineclasses
     - machine.sapcloud.io/awsmachineclasses
