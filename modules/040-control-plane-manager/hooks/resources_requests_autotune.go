@@ -367,16 +367,7 @@ func fetchOtherRequestsByMasterNodes(ctx context.Context, dc dependency.Containe
 		}
 		var milliCPU, memoryBytes int64
 		for j := range items {
-			pod := &items[j]
-			// Enforce selector constraints for fakes / partial API support.
-			if pod.Spec.NodeName != name {
-				continue
-			}
-			switch pod.Status.Phase {
-			case v1.PodSucceeded, v1.PodFailed:
-				continue
-			}
-			cpu, mem, ok := otherRequestsFromPod(pod)
+			cpu, mem, ok := otherRequestsFromPod(&items[j])
 			if !ok {
 				continue
 			}
