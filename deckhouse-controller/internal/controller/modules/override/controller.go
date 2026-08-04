@@ -259,7 +259,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{}, err
 	}
 
-	// Use mount point path: /modules/<module> (modules are mounted at /deckhouse/downloaded/modules/deployed/<module>)
+// Use mount point path: /modules/deployed/<module> (modules are mounted at /deckhouse/downloaded/modules/deployed/<module>)
 	modulePath := filepath.Join("/modules/deployed", mpo.GetModuleName())
 	ownerRef := metav1.OwnerReference{
 		APIVersion: v1alpha2.ModulePullOverrideGVK.GroupVersion().String(),
@@ -366,7 +366,7 @@ func (r *reconciler) setStatusMessage(ctx context.Context, mpo *v1alpha2.ModuleP
 
 // updateModulePullOverrideStatus stamps the update time and writes the override status.
 func (r *reconciler) updateModulePullOverrideStatus(ctx context.Context, mpo *v1alpha2.ModulePullOverride) error {
-	mpo.Status.UpdatedAt = metav1.NewTime(time.Now())
+mpo.Status.UpdatedAt = metav1.NewTime(time.Now().UTC())
 	if err := r.client.Status().Update(ctx, mpo); err != nil {
 		return fmt.Errorf("update: %w", err)
 	}
