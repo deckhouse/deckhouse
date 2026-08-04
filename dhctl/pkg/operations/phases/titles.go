@@ -22,7 +22,7 @@ import (
 )
 
 //go:embed i18n/*.yaml
-var TitlesFS embed.FS
+var titlesFS embed.FS
 
 type Locale string
 
@@ -130,7 +130,7 @@ func mapToCatalog[K ~string](in map[Locale]map[K]string) map[string]LocaleTitles
 
 // readYamlFile reads and unmarshals a title file directly into the provided map.
 func readYamlFile(path string, target any) error {
-	data, err := TitlesFS.ReadFile(path)
+	data, err := titlesFS.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read file %s: %w", path, err)
 	}
