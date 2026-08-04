@@ -3,6 +3,206 @@ title: "Release notes"
 permalink: en/virtualization-platform/documentation/release-notes.html
 ---
 
+## v1.10.2
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: August 3, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### Fixes
+
+- [module] Fixed an issue where the task queue would block when enabling a module or changing its version in a cluster without the `vertical-pod-autoscaler` module enabled. The cause was an infinite loop of attempts to delete VPA objects. Instead of `PatchCollector`, a separate request is now used that ignores the absence of VPA objects and prevents the queue from being blocked.
+- [core] Fixed an issue where USB device passthrough to virtual machines was unavailable on hosts where the usbip driver was running more than one virtual host controller.
+- [module] Fixed a `CrashLoopBackOff` error in the `virtualization-dra` pod on hosts with USB devices, caused by starting controller worker processes before the initial connection information had been collected. Initialization now occurs before the workers start, which prevents the error caused by accessing data that has not yet been populated.
+
+## v1.10.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: July 29, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### Fixes
+
+- [module] An optional dependency has been added for the virtualization module, requiring that the `sdn` module be version 0.6.2 or later. This prevents launching virtualization from running with earlier versions of `sdn`. The dependency applies only when the `sdn` module is enabled.
+
+### Security
+
+- [core] Fixed vulnerabilities:
+  - CVE-2026-46600
+  - CVE-2026-56852
+  - GHSA-hrxh-6v49-42gf
+  - CVE-2026-34986
+  - CVE-2025-27144
+
+## v1.10.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: July 23, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### New features
+
+- [vmpool] Added the [VirtualMachinePool](/modules/virtualization/cr.html#virtualmachinepool) resource (EE/SE+) for declarative group management of identical virtual machines. The pool supports scaling via the standard `scale` subresource and HPA.
+- [vi] Added automatic recovery of [VirtualImage](/modules/virtualization/cr.html#virtualimage) and [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) from the `ImageLost` phase when the image reappears in DVCR, without re-importing the data.
+- [module] Virtual disks and virtual images in `WaitForFirstConsumer` mode are created 22% faster.
+- [vd] The [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) name length limit has been raised from 60 to 253 characters.
+- [vi] The name length limit has been raised from 49 to 253 characters for [VirtualImage](/modules/virtualization/cr.html#virtualimage) and from 48 to 253 for [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+- [dvcr] Added per-namespace authorization for DVCR: image access is isolated between namespaces.
+- [module] Added a limit on concurrent inbound live migrations per target node.
+- [network] Added the ability to route live migration traffic over a dedicated SystemNetwork via `liveMigration.network` in the ModuleConfig of the `virtualization` module.
+- [vm] Added IPAM for additional network interfaces: automatic (DHCP) and static IP allocation via SDN `IPAddress` resources.
+- [vm] Added the ability to change CPU and memory of a running VM without live migration (in-place resize). To enable this functionality, add `HotplugCPUAndMemoryWithInPlaceResize` to `.spec.settings.featureGates` in the ModuleConfig of the `virtualization` module.
+- [vm] Switched VM networks to eBPF, providing more stable connectivity for additional networks with lower overhead.
+- [vmop] [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resources can now supersede other active operations on the same VM.
+
+### Fixes
+
+- [vm] Fixed VM update failures while an image is being attached via [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) (hotplug): VM changes could previously be interrupted at the moment of attachment.
+- [vm] Fixed flapping of the `VirtualMachineIPAddressReady` condition: guest-agent data now augments rather than clears the VM's already-known IP address.
+- [vd,vi,cvi] Fixed Upload-type disks and images getting stuck in `Pending` when the upload host certificate becomes invalid, and restored automatic recovery when the upload host changes (for example, after `publicDomainTemplate` is updated).
+- [vi] Fixed PVC storage-type virtual images being attached to virtual machines in read-write mode; they are now attached read-only, like ContainerRegistry storage-type images.
+- [module] Closed unauthorized access to the virtualization USB/IP gateway port.
+- [vm] Fixed disks and CD-ROMs remaining on the SATA bus after enabling paravirtualization, which prevented unplugging ISO drives from a running VM.
+- [vm] Fixed a live migration hanging when its target never became ready (`OOMKilled`, unschedulable, a disk that never attaches): it now fails by timeout and the migration slots it held are released.
+- [vm] Fixed virtual machines with local disks getting stuck and unable to migrate while a restart was pending; they can now be evacuated, updated, and re-migrated.
+- [vm] Fixed a false reboot requirement for VMs with only the `Main` network caused by implicit default network template synchronization.
+- [vm] Fixed CPU and memory hotplug updates failing when project quota cannot fit migration-time resources. Such changes now fall back to a restart.
+
+### Security
+
+- [module] Fixed vulnerabilities:
+  - CVE-2026-2303
+  - CVE-2026-25680
+  - CVE-2026-25681
+  - CVE-2026-27136
+  - CVE-2026-33814
+  - CVE-2026-39821
+  - CVE-2026-39822
+  - CVE-2026-39824
+  - CVE-2026-39827
+  - CVE-2026-39828
+  - CVE-2026-39829
+  - CVE-2026-39830
+  - CVE-2026-39831
+  - CVE-2026-39832
+  - CVE-2026-39833
+  - CVE-2026-39834
+  - CVE-2026-39835
+  - CVE-2026-41579
+  - CVE-2026-42502
+  - CVE-2026-42505
+  - CVE-2026-42506
+  - CVE-2026-42508
+  - CVE-2026-46595
+  - CVE-2026-46597
+  - CVE-2026-46598
+  - GO-2026-5932
+
+## v1.9.6
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: August 3, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### Fixes
+
+- [core] Fixed an issue where USB device passthrough to virtual machines was unavailable on hosts where the preinstalled usbip kernel modules were compressed (using xz or gzip). USB device passthrough is now available if kernel modules are compressed using xz or gzip, not just zstd. Also, for Debian, the `linux-modules-extra-${kernel_release}` package is now used instead of attempting to install the Ubuntu-specific `linux-modules-extra`.
+- [core] Fixed an issue where USB device passthrough to virtual machines was unavailable on hosts where the usbip driver was running more than one virtual host controller.
+- [module] Fixed a `CrashLoopBackOff` error in the `virtualization-dra` pod on hosts with USB devices, caused by starting controller worker processes before the initial connection information had been collected. Initialization now occurs before the workers start, which prevents the error caused by accessing data that has not yet been populated.
+
+## v1.9.5
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: July 29, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### Fixes
+
+- [observability] Fixed an issue where no notification was displayed when the transmission of audit logs was interrupted due to the use of outdated certificate authority data or because the audit resources lacked a certificate and key: when the transmission of audit logs is interrupted, a warning now appears prompting the user to take action.
+- [module] An optional dependency has been added for the virtualization module, requiring that the `sdn` module be version 0.6.2 or later. This prevents launching virtualization from running with earlier versions of `sdn`. The dependency applies only when the `sdn` module is enabled.
+
+### Security
+
+- [core] Fixed vulnerabilities:
+  - CVE-2026-46600
+  - CVE-2026-56852
+  - GHSA-hrxh-6v49-42gf
+  - CVE-2026-34986
+  - CVE-2025-27144
+  - CVE-2026-39822
+  - CVE-2026-42505
+
+## v1.9.4
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: July 13, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### Fixes
+
+- [observability] Fixed an issue that prevented the audit server from starting when TLS certificate paths were not passed explicitly.
+
+## v1.9.3
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: July 7, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### Fixes
+
+- [module] Fixed slow downloading of images from DVCR to the node when attaching them to a virtual machine.
+- [vm] Fixed a volume mount leak that could leave a VM with hotplugged images stuck in the Terminating state during deletion.
+
+## v1.9.2
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: July 1, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### Fixes
+
+- [vm] Fixed reduced throughput during live migration of running VMs compared to v1.8.3.
+- [dvcr] Fixed slow import and upload of images to DVCR when network bandwidth was not the bottleneck.
+- [observability] Fixed loss of audit events and false `D8LogShipperDestinationErrors` alerts during certificate rotation of the `virtualization-audit` pod.
+
+## v1.9.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: June 24, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### Fixes
+
+- [vd] Fixed cancellation of virtual disk storage class changes and cancellation of local disk migration.
+- [vm] Fixed live migration of VMs with disks on local storage attached via [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) (hotplug). The target node no longer matches the source node.
+- [vm] Fixed an issue that prevented a VM from starting after a failed migration of a disk on local storage.
+- [vm] Fixed a false reboot requirement for VMs with only the Main network after upgrading to v1.9.1. Such VMs now do not receive the RestartRequired status if their configuration has not actually changed.
+
+### Security
+
+- [module] Fixed vulnerabilities:
+  - CVE-2026-42504
+  - CVE-2026-27145
+  - CVE-2026-42507
+
 ## v1.9.0
 
 <span style="opacity:0.6; font-style:italic; font-size:0.9em;">
@@ -39,6 +239,40 @@ Release date: June 10, 2026.
 ### Security
 
 - [vm] System virtual machine resources (pods with `d8v-hp-` and `d8v-vm-` prefixes) now run as the `deckhouse` user, without root privileges.
+
+## v1.8.4
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: July 13, 2026.
+</span>
+
+**Note:** During the upgrade to this version, running virtual machines will be automatically migrated to update their firmware version.
+
+### Security
+
+- [module] Fixed vulnerabilities:
+  - CVE-2026-25680
+  - CVE-2026-25681
+  - CVE-2026-27136
+  - CVE-2026-33814
+  - CVE-2026-39821
+  - CVE-2026-39827
+  - CVE-2026-39828
+  - CVE-2026-39829
+  - CVE-2026-39830
+  - CVE-2026-39832
+  - CVE-2026-39835
+  - CVE-2026-41579
+  - CVE-2026-42502
+  - CVE-2026-42506
+  - CVE-2026-42508
+  - CVE-2026-46595
+  - CVE-2026-46597
+  - CVE-2026-53935
+- [module] Fixed vulnerabilities:
+  - CVE-2026-42504
+  - CVE-2026-27145
+  - CVE-2026-42507
 
 ## v1.8.3
 
