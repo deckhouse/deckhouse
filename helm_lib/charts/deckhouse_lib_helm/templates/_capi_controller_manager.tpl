@@ -75,7 +75,7 @@ periodSeconds: 10
   {{- $hostNetwork := dig "hostNetwork" false $config -}}
   {{- $dnsPolicy := dig "dnsPolicy" nil $config -}}
   {{- $nodeSelectorStrategy := dig "nodeSelectorStrategy" "master" $config -}}
-  {{- $tolerationsStrategies := dig "tolerationsStrategies" (list "any-node" "with-uninitialized") $config -}}
+  {{- $tolerationsStrategies := dig "tolerationsStrategies" (list "any-node" "uninitialized") $config -}}
   {{- $livenessProbe := dig "livenessProbe" (include "capi_controller_manager_liveness_probe" $context | fromYaml) $config }}
   {{- $readinessProbe := dig "readinessProbe" (include "capi_controller_manager_readiness_probe" $context | fromYaml) $config }}
   {{- $additionalArgs := dig "additionalArgs" (list) $config -}}
