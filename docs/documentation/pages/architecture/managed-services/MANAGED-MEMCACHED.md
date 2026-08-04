@@ -37,7 +37,7 @@ The module consists of the following components:
 
 1. **Managed-memcached-operator**: Kubernetes operator consisting of a single container **manager** that performs the following operations:
 
-   * It reconcyles [Memcached](/modules/managed-memcached/stable/cr.html#memcached) custom resources in all user namespaces. The Memcached resource defines the settings of the Memcached instance, including the topology and the deployment type.
+   * It reconciles [Memcached](/modules/managed-memcached/stable/cr.html#memcached) custom resources in all user namespaces. The Memcached resource defines the settings of the Memcached instance, including the topology and the deployment type.
 
    * It performs Memcached and MemcachedClass custom resources validation, as well as Memcached custom resources mutation using the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
 
