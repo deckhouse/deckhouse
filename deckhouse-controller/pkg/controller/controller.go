@@ -49,6 +49,9 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/config"
+	moduleoverride "github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/override"
+	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -56,10 +59,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
-	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/config"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
-	moduleoverride "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/override"
-	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
@@ -319,24 +319,28 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, pkgRuntime, conversionsStore, edition, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
-	if err != nil {
-		return nil, fmt.Errorf("register module config controller: %w", err)
-	}
-
 	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, edition, dc, operator.MetricStorage, embeddedPolicy, settingsContainer, logger.Named("module-source-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
 
-	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, loader.Installer(), dc, exts, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
+	synced := new(sync.WaitGroup)
+	synced.Add(1)
+	defer synced.Done()
+
+	err = modulerelease.RegisterController(runtimeManager, pkgRuntime, synced, embeddedPolicy, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module release controller: %w", err)
 	}
 
-	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, loader, edition, dc, logger.Named("module-pull-override-controller"))
+	err = moduleoverride.RegisterController(runtimeManager, pkgRuntime, synced, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
+	}
+
+	err = moduleconfig.RegisterController(runtimeManager, pkgRuntime, synced, edition, operator.MetricStorage, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
 	err = docbuilder.RegisterController(runtimeManager, dc, logger.Named("module-documentation-controller"))
