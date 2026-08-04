@@ -109,7 +109,7 @@ func TestKubernetesVersionMigratedRequirement(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not set in ModuleConfig control-plane-manager")
 		assert.Contains(t, err.Error(), "d8 k patch moduleconfig control-plane-manager")
-		assert.Contains(t, err.Error(), "Automatic")
+		assert.Contains(t, err.Error(), "Default")
 	})
 
 	t.Run("value not published yet — fail open", func(t *testing.T) {

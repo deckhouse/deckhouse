@@ -102,8 +102,10 @@ const (
 	defaultClusterMasterRPPServerPort          = 5444
 	defaultClusterMasterRPPBootstrapServerPort = 4282
 
-	// automaticKubernetesVersion is the sentinel meaning "let Deckhouse pick the version".
+	// automaticKubernetesVersion is the ClusterConfiguration sentinel and a deprecated MC alias.
 	automaticKubernetesVersion = "Automatic"
+	// defaultKubernetesVersionSentinel is the ModuleConfig-recommended name for "track Deckhouse default".
+	defaultKubernetesVersionSentinel = "Default"
 )
 
 func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigValidatorProvider, m *MetaConfig) (*MetaConfig, error) {
@@ -645,21 +647,25 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 }
 
 func resolveKubernetesVersion(v string) string {
-	if v == "" || v == automaticKubernetesVersion {
+	if v == "" || isTrackDefaultKubernetesVersion(v) {
 		return DefaultKubernetesVersion
 	}
 	return v
 }
 
+func isTrackDefaultKubernetesVersion(version string) bool {
+	return version == defaultKubernetesVersionSentinel || version == automaticKubernetesVersion
+}
+
 func isPinnedKubernetesVersion(version string) bool {
-	return version != "" && version != automaticKubernetesVersion
+	return version != "" && !isTrackDefaultKubernetesVersion(version)
 }
 
 // kubernetesVersionRaw returns the unresolved kubernetesVersion with the same preference as
 // global-hooks resolveTargetKubernetesVersion: a present ModuleConfig setting → pinned
 // ClusterConfiguration → empty (resolveKubernetesVersion turns empty into Default).
 //
-// The ModuleConfig setting wins whenever it is present, "Automatic" included: there it means
+// The ModuleConfig setting wins whenever it is present, Default/Automatic included: there it means
 // "let Deckhouse choose", so it returns empty here and bootstrap starts on Default — which is
 // exactly what the running Deckhouse will target afterwards. A leftover ClusterConfiguration pin
 // is deliberately ignored in that case.
@@ -690,7 +696,7 @@ func (m *MetaConfig) kubernetesVersionRaw() string {
 	}
 
 	switch {
-	case mcVersion == automaticKubernetesVersion:
+	case isTrackDefaultKubernetesVersion(mcVersion):
 		return ""
 	case mcVersion != "":
 		return mcVersion

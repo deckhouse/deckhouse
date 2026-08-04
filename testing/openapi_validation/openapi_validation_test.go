@@ -212,15 +212,18 @@ func readYAML(t *testing.T, relPath string, out interface{}) {
 	require.NoError(t, err, "read %s (tried %v)", relPath, tried)
 }
 
-// TestKubernetesVersionEnumConsistency keeps the kubernetesVersion enums in sync.
+// TestKubernetesVersionEnumConsistency keeps the kubernetesVersion pin lists in sync.
 //
-// The same choice is offered in ClusterConfiguration (deprecated) and ModuleConfig
-// control-plane-manager across editions. A release that updates one list and forgets
-// another would silently break the migration path.
+// ModuleConfig adds the Default sentinel (Automatic remains a deprecated alias). ClusterConfiguration
+// still only offers Automatic. Pin versions (numeric) must match across CC and MC for each edition,
+// and every pin must exist in that edition's version_map.
 //
 // TODO(kubernetesVersion-deprecation): T+1 rewrite — after CC field removal use ModuleConfig
-// enum as reference vs edition version_map; do not delete this test.
+// enum as reference vs edition version_map; drop Automatic alias checks; do not delete this test.
 func TestKubernetesVersionEnumConsistency(t *testing.T) {
+	sentinelsCC := map[string]struct{}{"Automatic": {}}
+	sentinelsMC := map[string]struct{}{"Automatic": {}, "Default": {}}
+
 	for _, edition := range kubernetesVersionEditions {
 		t.Run(edition.name, func(t *testing.T) {
 			var cc clusterConfigurationSchema
@@ -229,26 +232,40 @@ func TestKubernetesVersionEnumConsistency(t *testing.T) {
 
 			ccEnum := cc.APIVersions[0].OpenAPISpec.Properties.KubernetesVersion.Enum
 			require.NotEmpty(t, ccEnum, "%s: kubernetesVersion has no enum", edition.clusterConfiguration)
+			require.Contains(t, ccEnum, "Automatic")
+
+			ccPins := pinVersions(ccEnum, sentinelsCC)
 
 			for _, mcPath := range edition.moduleConfigs {
 				var mc moduleConfigValuesSchema
 				readYAML(t, mcPath, &mc)
 
-				assert.Equal(t, ccEnum, mc.Properties.KubernetesVersion.Enum,
-					"kubernetesVersion enum in %s differs from %s", mcPath, edition.clusterConfiguration)
+				mcEnum := mc.Properties.KubernetesVersion.Enum
+				require.Contains(t, mcEnum, "Default", "%s must offer Default", mcPath)
+				require.Contains(t, mcEnum, "Automatic", "%s must keep Automatic alias", mcPath)
+				assert.Equal(t, ccPins, pinVersions(mcEnum, sentinelsMC),
+					"pinned kubernetesVersion values in %s differ from %s", mcPath, edition.clusterConfiguration)
 			}
 
 			var vm k8sVersionMap
 			readYAML(t, edition.versionMap, &vm)
 			require.NotEmpty(t, vm.K8s, "%s has no k8s section", edition.versionMap)
 
-			for _, version := range ccEnum {
-				if version == "Automatic" {
-					continue
-				}
+			for _, version := range ccPins {
 				assert.Contains(t, vm.K8s, version,
 					"version %q is offered by %s but absent from %s", version, edition.clusterConfiguration, edition.versionMap)
 			}
 		})
 	}
+}
+
+func pinVersions(enum []string, sentinels map[string]struct{}) []string {
+	out := make([]string, 0, len(enum))
+	for _, v := range enum {
+		if _, skip := sentinels[v]; skip {
+			continue
+		}
+		out = append(out, v)
+	}
+	return out
 }

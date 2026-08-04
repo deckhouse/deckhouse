@@ -218,7 +218,7 @@
              d8 s module enable control-plane-manager
              ```
 
-          2. Set `kubernetesVersion` (pin a concrete version, or `Automatic` to track the Deckhouse default). If ClusterConfiguration still pins a version, copy that value:
+          2. Set `kubernetesVersion` (pin a concrete version, or `Default` to track the Deckhouse default; `Automatic` is a deprecated alias). If ClusterConfiguration still pins a version, copy that value:
 
              ```bash
              d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
@@ -227,10 +227,10 @@
              )"
              ```
 
-             Or set Automatic:
+             Or set Default:
 
              ```bash
-             d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"kubernetesVersion":"Automatic"}}}'
+             d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"kubernetesVersion":"Default"}}}'
              ```
 
           Once ModuleConfig has the setting, this alert clears.
@@ -252,11 +252,11 @@
         plk_markup_format: "markdown"
         plk_create_group_if_not_exists__d8_control_plane_default_version_drift: "D8ControlPlaneDefaultVersionDrift,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_control_plane_default_version_drift: "D8ControlPlaneDefaultVersionDrift,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: Control plane Kubernetes version rollback is blocked (Automatic soft-guard freeze).
+        summary: Control plane Kubernetes version rollback is blocked (Default soft-guard freeze).
         description: |-
-          The cluster tracks the Deckhouse default Kubernetes version (`kubernetesVersion: Automatic` in ModuleConfig `control-plane-manager`, or unset ModuleConfig with no ClusterConfiguration pin). That default is now more than 1 minor below the highest version this cluster has ever run (`maxUsed`).
+          The cluster tracks the Deckhouse default Kubernetes version (`kubernetesVersion: Default` in ModuleConfig `control-plane-manager`, or unset ModuleConfig with no ClusterConfiguration pin). That default is now more than 1 minor below the highest version this cluster has ever run (`maxUsed`).
 
-          **Rollback blocked:** Deckhouse freezes the published target (keeps the previous desired version, or the current control-plane version) and does not roll Automatic down toward the lower default. Control plane and kubelet stay on the frozen target until the Deckhouse default catches up within the `maxUsed−1` window.
+          **Rollback blocked:** Deckhouse freezes the published target (keeps the previous desired version, or the current control-plane version) and does not roll Default down toward the lower default. Control plane and kubelet stay on the frozen target until the Deckhouse default catches up within the `maxUsed−1` window.
 
           **To resolve this alert:**
 

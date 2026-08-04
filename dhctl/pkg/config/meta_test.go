@@ -580,6 +580,18 @@ func TestKubernetesVersionResolution(t *testing.T) {
 		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
 	})
 
+	t.Run("ModuleConfig Default overrides a pinned ClusterConfiguration", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("Default")},
+		}
+		require.Equal(t, "", m.kubernetesVersionRaw())
+
+		ccm, err := m.ClusterConfigMap()
+		require.NoError(t, err)
+		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
+	})
+
 	t.Run("unset ModuleConfig defers to pinned ClusterConfiguration", func(t *testing.T) {
 		m := &MetaConfig{
 			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},

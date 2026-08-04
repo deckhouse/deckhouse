@@ -26,6 +26,11 @@ from feature_gates_generated import exists_in_component, is_forbidden, is_deprec
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
 # Sentinel meaning "let Deckhouse pick the version".
 AUTOMATIC_VERSION = "Automatic"
+DEFAULT_VERSION = "Default"
+
+
+def is_track_default_version(version) -> bool:
+    return version in (AUTOMATIC_VERSION, DEFAULT_VERSION)
 
 config = f"""
 configVersion: v1
@@ -109,11 +114,11 @@ def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
 
 def get_k8s_version(ctx: DotMap) -> Optional[str]:
     # Mirrors global-hooks/discovery/cluster_configuration.go resolveTargetKubernetesVersion:
-    # a present ModuleConfig setting decides on its own, "Automatic" included (it then means the
+    # a present ModuleConfig setting decides on its own, Default/Automatic included (it then means the
     # Deckhouse default, and ClusterConfiguration is not consulted at all).
     settings = ctx.review.request.object.get('spec', {}).get('settings', {})
     mc_version = settings.get('kubernetesVersion')
-    if mc_version and mc_version != AUTOMATIC_VERSION:
+    if mc_version and not is_track_default_version(mc_version):
         return mc_version
 
     snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
@@ -128,11 +133,11 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
     if not data:
         return None
 
-    if mc_version == AUTOMATIC_VERSION:
+    if is_track_default_version(mc_version):
         return get_deckhouse_default_version_from_secret(data)
 
     k8s_version = get_k8s_version_from_cluster_config(data)
-    if k8s_version and k8s_version != AUTOMATIC_VERSION:
+    if k8s_version and not is_track_default_version(k8s_version):
         return k8s_version
 
     return get_deckhouse_default_version_from_secret(data)

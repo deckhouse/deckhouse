@@ -53,8 +53,10 @@ const (
 	defaultVersionDriftMetricGroup = "D8ControlPlaneDefaultVersionDrift"
 	defaultVersionDriftMetricName  = "d8_control_plane_default_version_drift"
 
-	// automaticKubernetesVersion is the sentinel meaning "let Deckhouse pick the version".
+	// automaticKubernetesVersion is the ClusterConfiguration sentinel and a deprecated MC alias.
 	automaticKubernetesVersion = "Automatic"
+	// defaultKubernetesVersionSentinel is the ModuleConfig-recommended name for "track Deckhouse default".
+	defaultKubernetesVersionSentinel = "Default"
 )
 
 type ClusterConfigurationYaml struct {
@@ -362,10 +364,10 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 }
 
 // resolveTargetKubernetesVersion returns the operator-declared Kubernetes version and whether the
-// cluster is in Automatic mode (tracking the Deckhouse default).
+// cluster is tracking the Deckhouse default (Default / deprecated Automatic).
 //
-// The ModuleConfig setting wins whenever it is present, including when it holds "Automatic" —
-// presence of the field, not its value, decides which document owns the version.
+// The ModuleConfig setting wins whenever it is present, including when it holds Default or
+// Automatic — presence of the field, not its value, decides which document owns the version.
 //
 // Only when ModuleConfig says nothing at all does the deprecated ClusterConfiguration field apply;
 // "Automatic" there is not a pin either and falls through to the Deckhouse default.
@@ -374,7 +376,7 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 // (isPinnedKubernetesVersion / ccVersion). After T+1 only MC → Default.
 func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string) (string, bool) {
 	switch {
-	case mcVersion == automaticKubernetesVersion:
+	case isTrackDefaultKubernetesVersion(mcVersion):
 		return defaultVersion, true
 	case mcVersion != "":
 		return mcVersion, false
@@ -385,9 +387,14 @@ func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string)
 	}
 }
 
+// isTrackDefaultKubernetesVersion reports Default or its deprecated Automatic alias.
+func isTrackDefaultKubernetesVersion(version string) bool {
+	return version == defaultKubernetesVersionSentinel || version == automaticKubernetesVersion
+}
+
 // TODO(kubernetesVersion-deprecation): T+1 remove — dies together with the ClusterConfiguration field.
 func isPinnedKubernetesVersion(version string) bool {
-	return version != "" && version != automaticKubernetesVersion
+	return version != "" && !isTrackDefaultKubernetesVersion(version)
 }
 
 // kubernetesVersionInMaxUsedWindow reports whether target is within the maxUsed−1 floor window

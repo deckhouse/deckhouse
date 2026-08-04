@@ -108,7 +108,7 @@ These settings do not apply if the cluster control plane is managed by a cloud p
 
 **Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the DKP version updates. You can't manage patch version upgrades.
 
-Upgrading **minor versions** of control plane components (e.g. from `1.32.*` to `1.33.*`) can be managed using the [`kubernetesVersion`](configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` ModuleConfig. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Upgrading **minor versions** of control plane components (e.g. from `1.32.*` to `1.33.*`) can be managed using the [`kubernetesVersion`](configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` ModuleConfig. It specifies tracking the Deckhouse default (if set to `Default`; `Automatic` is a deprecated alias) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Default`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 Example of pinning a Kubernetes version:
 

@@ -362,7 +362,8 @@ properties:
       - "ECDSA-P256"
     x-examples:
       - "ECDSA-P256"
-  # TODO(kubernetesVersion-deprecation): T+1 rewrite — rename Automatic→Default and drop CC fallback wording after CC field removal
+  # TODO(kubernetesVersion-deprecation): T+1 remove — drop Automatic alias from this enum after
+  # ClusterConfiguration.kubernetesVersion is gone and the fleet has moved to Default.
   kubernetesVersion:
     type: string
     description: |
@@ -374,7 +375,9 @@ properties:
       d8 k edit mc control-plane-manager
       ```
 
-      If `Automatic` is specified, Deckhouse selects the version considered stable for the current release, and the deprecated `ClusterConfiguration.kubernetesVersion` is ignored. If the stable version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
+      If `Default` is specified, Deckhouse selects the version considered stable for the current release, and the deprecated `ClusterConfiguration.kubernetesVersion` is ignored. If the stable version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
+
+      `Automatic` is accepted as a deprecated alias of `Default` (same behaviour). Prefer `Default` in new configs.
 
       If the parameter is not set at all, the value from `ClusterConfiguration.kubernetesVersion` is used (deprecated); if that is not set either, the current Deckhouse release's default version is used.
 
@@ -385,10 +388,11 @@ properties:
       - "1.34"
       - "1.35"
       - "1.36"
+      - "Default"
       - "Automatic"
     x-examples:
       - "1.35"
-      - "Automatic"
+      - "Default"
   rootKubeconfigSymlink:
     type: boolean
     default: true

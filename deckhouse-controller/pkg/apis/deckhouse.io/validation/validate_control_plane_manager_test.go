@@ -143,6 +143,17 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
+	t.Run("HV-06b: Default is allowed without membership check", func(t *testing.T) {
+		handler := withObjs(t, newClusterKubernetesConfigMap([]string{"1.34", "1.35"}))
+
+		newCfg := newControlPlaneManagerConfig("Default")
+		oldCfg := newControlPlaneManagerConfig("")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
+	})
+
 	t.Run("HV-05: upgrade to a version in availableVersions is allowed", func(t *testing.T) {
 		handler := withObjs(t, newClusterKubernetesConfigMap(defaultAvailable))
 

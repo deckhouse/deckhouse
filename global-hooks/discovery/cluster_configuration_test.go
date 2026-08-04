@@ -284,6 +284,16 @@ spec:
 			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.33"))
 		})
 
+		It("ModuleConfig Default overrides a pinned ClusterConfiguration", func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("Default"), 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsAutomatic").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("global.clusterConfiguration.kubernetesVersion").String()).To(Equal("1.33"))
+		})
+
 		It("unset ModuleConfig defers to a pinned ClusterConfiguration", func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML(""), 1))
 			f.RunHook()

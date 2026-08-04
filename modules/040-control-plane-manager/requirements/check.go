@@ -103,9 +103,9 @@ func checkKubernetesVersionMigrated(requirementValue string, getter requirements
 
 	return false, errors.New(
 		"kubernetesVersion is not set in ModuleConfig control-plane-manager.\n" +
-			"Set it before upgrading (pin a version, or Automatic to track the Deckhouse default):\n" +
+			"Set it before upgrading (pin a version, or Default to track the Deckhouse default):\n" +
 			"  d8 k patch moduleconfig control-plane-manager --type merge -p " +
-			`'{"spec":{"version":3,"settings":{"kubernetesVersion":"Automatic"}}}'` + "\n" +
-			"If ClusterConfiguration still pins a version, copy that value into ModuleConfig instead of Automatic.",
+			`'{"spec":{"version":3,"settings":{"kubernetesVersion":"Default"}}}'` + "\n" +
+			"If ClusterConfiguration still pins a version, copy that value into ModuleConfig instead of Default.",
 	)
 }

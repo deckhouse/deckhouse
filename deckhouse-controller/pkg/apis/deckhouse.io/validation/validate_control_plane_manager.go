@@ -39,8 +39,10 @@ const (
 	clusterConfigurationDataKey    = "cluster-configuration.yaml"
 	clusterKubernetesStatusDataKey = "status"
 
-	// automaticKubernetesVersion is the sentinel meaning "let Deckhouse pick the version".
+	// automaticKubernetesVersion is the ClusterConfiguration sentinel and a deprecated MC alias.
 	automaticKubernetesVersion = "Automatic"
+	// defaultKubernetesVersionSentinel is the ModuleConfig-recommended name for "track Deckhouse default".
+	defaultKubernetesVersionSentinel = "Default"
 )
 
 // clusterKubernetesStatus is the subset of ConfigMap d8-cluster-kubernetes data.status
@@ -58,9 +60,9 @@ type clusterKubernetesStatus struct {
 // kube-system/d8-cluster-kubernetes (the set update-observer publishes as Supported[maxUsed-1:]).
 // Explicit versions are also checked against module compatibility (validateKubernetesVersion).
 //
-// An explicit "Automatic" is deliberately exempt from membership. It means "track the Deckhouse
-// default", and that path cannot run away: effective_kubernetes_version.go refuses to unbump below
-// maxUsed-1.
+// An explicit "Default" (or deprecated "Automatic" alias) is deliberately exempt from membership.
+// It means "track the Deckhouse default", and that path cannot run away:
+// effective_kubernetes_version.go refuses to unbump below maxUsed-1.
 //
 // Removing the setting (or deleting the ModuleConfig) falls back to the deprecated
 // ClusterConfiguration field, so the future effective version is resolved and membership-checked.
@@ -87,7 +89,7 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		fromFallback bool
 	)
 	switch {
-	case newVersion == automaticKubernetesVersion:
+	case isTrackDefaultKubernetesVersion(newVersion):
 		// Handing the choice back to Deckhouse — self-limiting, see the doc comment above.
 		return nil, nil
 	case newVersion != "":
@@ -226,11 +228,16 @@ func settingsKubernetesVersion(settings map[string]interface{}) string {
 	return version
 }
 
+// isTrackDefaultKubernetesVersion reports Default or its deprecated Automatic alias.
+func isTrackDefaultKubernetesVersion(version string) bool {
+	return version == defaultKubernetesVersionSentinel || version == automaticKubernetesVersion
+}
+
 // isPinnedKubernetesVersion reports whether a kubernetesVersion value names a concrete version.
 // Only ever applied to the ClusterConfiguration value here: for the ModuleConfig setting what
 // matters is presence, not pinning (see validateControlPlaneManagerKubernetesVersion).
 func isPinnedKubernetesVersion(version string) bool {
-	return version != "" && version != automaticKubernetesVersion
+	return version != "" && !isTrackDefaultKubernetesVersion(version)
 }
 
 // rawModuleConfigSettings returns spec.settings as stored on the object, without schema
