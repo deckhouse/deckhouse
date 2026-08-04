@@ -17,5 +17,6 @@ description: Архитектура подсистемы Managed Services в Dec
 * [`managed-memcached`](/modules/managed-memcached/) — управляет инстансами Memcached;
 * [`managed-opensearch`](/modules/managed-opensearch) — управляет инстансами Opensearch;
 * [`managed-postgres`](/modules/managed-postgres/) — управляет кластерами PostgreSQL;
+* [`managed-starrocks`](/modules/managed-starrocks/) — управляет кластерами StarRocks;
 * [`managed-trino`](/modules/managed-trino/) — управляет кластерами Trino;
 * [`managed-valkey`](/modules/managed-valkey/) — управляет кластерами Valkey.

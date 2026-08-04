@@ -6,7 +6,7 @@ search: managed-memcached, memcached
 description: Архитектура модуля managed-memcached в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`managed-memcached`](/modules/managed-memcached/) упрощает развертывание и управление Memcached инстансами в кластере Deckhouse Kubernetes Platform (DKP). Он предоставляет:
+Модуль [`managed-memcached`](/modules/managed-memcached/) упрощает развертывание и управление Memcached инстансами в Deckhouse Kubernetes Platform (DKP). Он предоставляет:
 
 * **Автоматическое развертывание** — развертывание Memcached-инстансов при помощи простой YAML-конфигурации;
 * **Высокая доступность** — поддержка как одиночных (Standalone), так и групповых (Group) развертываний;
@@ -41,11 +41,11 @@ description: Архитектура модуля managed-memcached в Deckhouse 
    * согласование состояния кастомных ресурсов [Memcached](/modules/managed-memcached/stable/cr.html#memcached) во всех пользовательских пространствах имён. Ресурс Memcached определяет настройки инстанса Memcached, включая топологию размещения и тип развёртывания;
 
    * валидация кастомных ресурсов Memcached и MemcachedClass, мутация кастомных ресурсов Memcached с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
- 
-1. **d8ms-mc-\<instance name>** (StatefulSet) — один или несколько инстансов Memcached в зависимости от [типа развёртывания](/modules/managed-memcached/stable/user_guide.html#standalone-vs-group). Создается компонентом managed-memcached-operator.
+
+1. **d8ms-mc-\<instance name>** (StatefulSet) — один или несколько инстансов Memcached в зависимости от [типа развёртывания](/modules/managed-memcached/stable/user_guide.html#standalone-vs-group). Создаются компонентом managed-memcached-operator.
 
    Состоит из одного контейнера:
-   
+
    * **memcached** — является [Open Source-проектом](https://github.com/memcached/memcached.git).
 
 ## Взаимодействия модуля
@@ -61,4 +61,3 @@ description: Архитектура модуля managed-memcached в Deckhouse 
 1. **Prometheus-main** — собирает метрики инстансов Memcached.
 
 1. **Пользовательские приложения** — отправляют запросы к инстансам Memcached.
-
