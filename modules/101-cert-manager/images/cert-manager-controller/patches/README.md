@@ -12,5 +12,6 @@ Fix CVEs:
 - CVE-2026-56852
 
 GHSA:
+- GHSA-gcjh-h69q-9w9g
 - GHSA-hrxh-6v49-42gf
 
