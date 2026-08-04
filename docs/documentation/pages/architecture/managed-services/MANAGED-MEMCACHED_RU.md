@@ -46,7 +46,7 @@ description: Архитектура модуля managed-memcached в Deckhouse 
 
    Состоит из одного контейнера:
 
-   * **memcached** — является [Open Source-проектом](https://github.com/memcached/memcached.git).
+   * **memcached** — является [Open Source-проектом](https://github.com/memcached/memcached).
 
 ## Взаимодействия модуля
 

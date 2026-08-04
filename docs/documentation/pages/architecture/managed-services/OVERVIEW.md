@@ -1,6 +1,6 @@
 ---
 title: Managed Services subsystem
-permalink: ru/architecture/managed-services/
+permalink: en/architecture/managed-services/
 search: managed services
 description: Architecture of the Managed Services subsystem in Deckhouse Kubernetes Platform.
 ---

@@ -45,7 +45,7 @@ The module consists of the following components:
 
    It consists of a single container:
 
-   * **memcached**: It is an [open-source project](https://github.com/memcached/memcached.git).
+   * **memcached**: It is an [open-source project](https://github.com/memcached/memcached).
 
 ## Module interactions
 

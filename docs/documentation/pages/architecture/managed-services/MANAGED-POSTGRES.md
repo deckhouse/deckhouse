@@ -11,7 +11,7 @@ Main features:
 
 * **Automatic Deployment**: Deploys a Postgres instance using a simple YAML configuration
 * **High Availability**: Supports deployment of a highly available Postgres cluster or a standalone instance of your choice.
-* **Configuration Management**: Separate PostgresClass custom resource for templating the cluster creation approach with the ability to flexibly validate user configs
+* **Configuration Management**: Separate PostgresClass custom resource for templating the cluster creation approach with the ability to flexibly validate user configs.
 * **User and Database Management**: Declarative model for creating users and logical databases.
 * **Status**: Informative set of states for tracking the deployed Postgres.
 
@@ -96,7 +96,7 @@ The module consists of the following components:
 
      * It starts PostgreSQL processes.
      * It manages PostreSQL instance lifecycle, including server monitoring, handling server shutdown and restart.
-     * It participates `switchover`/`failover` procedures. `switchover` is a planned and controlled process in which an active primary instance is intentionally decommissioned and an assigned backup instance (replica) is promoted to the primary instance role. Its main goal is to ensure zero data loss: before transferring the role to the replica, we wait until all current transactions are replicated. A `Failover` is an emergency situation: the primary instance has failed, become unavailable, or cannot be safely used to write data. In this case, the designated backup instance (replica) is promoted to the primary instance role, and data loss is possible.
+     * It participates `switchover`/`failover` procedures. `Switchover` is a planned and controlled process in which an active primary instance is intentionally decommissioned and an assigned backup instance (replica) is promoted to the primary instance role. Its main goal is to ensure zero data loss: before transferring the role to the replica, we wait until all current transactions are replicated. A `failover` is an emergency situation: the primary instance has failed, become unavailable, or cannot be safely used to write data. In this case, the designated backup instance (replica) is promoted to the primary instance role, and data loss is possible.
      * It interacts with the operator and publish instance status;
      * It watches Cluster, Database, Publication and Subscription custom resources.
 
