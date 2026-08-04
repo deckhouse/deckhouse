@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package resolver
 
 import (
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -33,10 +34,15 @@ type ResourceScopeCache struct {
 	// If zero, bootstrapRefreshInterval is used.
 	bootstrapInterval time.Duration
 
-	// mu protects scopeMap.
+	// mu protects scopeMap and partial.
 	// Key format: "apiGroup/resource" (core group is empty string).
 	mu       sync.RWMutex
 	scopeMap map[string]bool // true = namespaced, false = cluster-scoped
+	// partial records that the snapshot was built from an incomplete discovery
+	// response, which ServerPreferredResources returns whenever an aggregated
+	// APIService is unavailable. Callers that enumerate the snapshot report less
+	// than the truth while this holds, so they need a way to say so.
+	partial bool
 }
 
 // NewResourceScopeCache creates a new cache and performs initial population from discovery.
@@ -76,6 +82,33 @@ func (c *ResourceScopeCache) IsNamespaced(group, resource string) bool {
 	return namespaced
 }
 
+// Scope reports whether the resource is namespaced and whether the snapshot knows
+// it at all.
+//
+// IsNamespaced collapses "cluster-scoped" and "unknown" into the same false
+// because for namespace resolution both must fail closed. Callers that treat a
+// false as a reason to drop something need the two apart: dropping a row because
+// discovery was incomplete makes the answer quietly smaller than the truth.
+func (c *ResourceScopeCache) Scope(group, resource string) (bool, bool) {
+	key := group + "/" + resource
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	namespaced, known := c.scopeMap[key]
+
+	return namespaced, known
+}
+
+// Partial reports whether the current snapshot was built from an incomplete
+// discovery response.
+func (c *ResourceScopeCache) Partial() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.partial
+}
+
 // HasNamespacedResourceMatching reports whether the discovery snapshot
 // contains at least one namespaced resource matched by the RBAC apiGroups and
 // resources fields. Both top-level resources and subresources participate so
@@ -102,6 +135,67 @@ func (c *ResourceScopeCache) HasNamespacedResourceMatching(apiGroups, resources 
 	}
 
 	return false
+}
+
+// GroupResource is a discovered resource identified by its API group and name.
+// Name may carry a subresource ("pods/log"), mirroring discovery output.
+type GroupResource struct {
+	Group      string
+	Resource   string
+	Namespaced bool
+}
+
+// ResourcesMatching returns the discovered resources matched by the RBAC
+// apiGroups and resources fields of a single PolicyRule.
+//
+// It is the expansion counterpart of HasNamespacedResourceMatching: instead of
+// answering "does anything match", it enumerates what matches, so a wildcard
+// rule can be turned into concrete rows. Matching uses the same semantics as
+// Kubernetes RBAC, including "*/subresource" rules.
+//
+// Subresources are only returned when the rule names them explicitly (either
+// as "resource/subresource" or "*/subresource"): a bare "*" resources rule
+// grants top-level resources, and listing every subresource of the cluster
+// would bury the meaningful rows.
+//
+// The result is sorted for deterministic output.
+func (c *ResourceScopeCache) ResourcesMatching(apiGroups, resources []string) []GroupResource {
+	wantsSubresources := false
+	for _, ruleResource := range resources {
+		if strings.Contains(ruleResource, "/") {
+			wantsSubresources = true
+			break
+		}
+	}
+
+	c.mu.RLock()
+	matched := make([]GroupResource, 0, len(c.scopeMap))
+	for key, namespaced := range c.scopeMap {
+		group, resource, ok := strings.Cut(key, "/")
+		if !ok {
+			continue
+		}
+		if !wantsSubresources && strings.Contains(resource, "/") {
+			continue
+		}
+		if !matchesAPIGroup(apiGroups, group) {
+			continue
+		}
+		if !matchesResource(resources, resource) {
+			continue
+		}
+		matched = append(matched, GroupResource{Group: group, Resource: resource, Namespaced: namespaced})
+	}
+	c.mu.RUnlock()
+
+	slices.SortFunc(matched, func(a, b GroupResource) int {
+		if cmp := strings.Compare(a.Group, b.Group); cmp != 0 {
+			return cmp
+		}
+		return strings.Compare(a.Resource, b.Resource)
+	})
+
+	return matched
 }
 
 func matchesAPIGroup(ruleGroups []string, group string) bool {
@@ -177,6 +271,7 @@ func (c *ResourceScopeCache) refresh() {
 	// ServerPreferredResources returns resources for all groups in one call.
 	// It may return partial results along with an error for some groups.
 	resourceLists, err := c.discoveryClient.ServerPreferredResources()
+	partial := false
 	if err != nil {
 		// ServerPreferredResources may return partial results with an error.
 		// If we got some results, use them; otherwise preserve the old cache.
@@ -185,6 +280,7 @@ func (c *ResourceScopeCache) refresh() {
 			return
 		}
 		klog.V(4).Infof("ResourceScopeCache: discovery returned partial results: %v", err)
+		partial = true
 	}
 
 	newMap := make(map[string]bool)
@@ -218,6 +314,7 @@ func (c *ResourceScopeCache) refresh() {
 
 	c.mu.Lock()
 	c.scopeMap = newMap
+	c.partial = partial
 	c.mu.Unlock()
 
 	klog.V(4).Infof("ResourceScopeCache: refreshed with %d resources", len(newMap))
