@@ -53,9 +53,15 @@ const (
 	defaultVersionDriftMetricGroup = "D8ControlPlaneDefaultVersionDrift"
 	defaultVersionDriftMetricName  = "d8_control_plane_default_version_drift"
 
-	// automaticKubernetesVersion is the ClusterConfiguration sentinel and a deprecated MC alias.
+	// automaticKubernetesVersion is the ClusterConfiguration sentinel and a deprecated
+	// ModuleConfig alias of Default ("track Deckhouse default").
+	//
+	// TODO(kubernetesVersion-deprecation): T+1 remove — drop the Automatic alias everywhere
+	// (MC enum, this constant, isTrackDefaultKubernetesVersion). After that only Default
+	// remains as the ModuleConfig track-default sentinel; CC field itself is also gone.
 	automaticKubernetesVersion = "Automatic"
 	// defaultKubernetesVersionSentinel is the ModuleConfig-recommended name for "track Deckhouse default".
+	// Prefer this over Automatic in new configs and docs.
 	defaultKubernetesVersionSentinel = "Default"
 )
 
@@ -241,6 +247,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			//
 			// TODO(kubernetesVersion-deprecation): T+1 remove — drop Automatic→Default substitution into
 			// global.clusterConfiguration.kubernetesVersion with the CC field; keep discovery.target*.
+			// After T+1 the MC enum also drops Automatic; only Default remains as track-default.
 			if kubernetesVersionFromMetaConfig == automaticKubernetesVersion {
 				b, _ := json.Marshal(hooks.DefaultKubernetesVersion)
 				metaConfig.ClusterConfig["kubernetesVersion"] = b
@@ -291,9 +298,13 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		slog.Bool("isAutomatic", isAutomatic),
 	)
 
-	// Soft-guard (§C.2): only Automatic. Manual pins are admission-filtered.
+	// Soft-guard: only track-default mode (MC Default, or deprecated Automatic alias, or
+	// unset→Default). Manual pins are admission-filtered and skip this block.
 	// When Default is below the maxUsed−1 window, FREEZE the digit (previous desired, else current)
-	// but keep isAutomatic=true / updateMode=Automatic and raise the drift metric.
+	// but keep isAutomatic=true / CM updateMode=Automatic and raise the drift metric.
+	//
+	// NOTE(kubernetesVersion-deprecation): keep — soft-guard survives after the Automatic alias
+	// is dropped; the flag/Values key still mean "tracking Deckhouse default" (Default only).
 	publishedTarget := target
 	if isAutomatic {
 		// Secret maxUsedControlPlaneKubernetesVersion is the canonical baseline (same source
@@ -323,7 +334,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 				)
 			}
 		}
-		// No baseline → fail-open: publish Default + Automatic.
+		// No baseline → fail-open: publish Default + track-default mode.
 
 		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 		input.Logger.Info("E2E-KV soft-guard",
@@ -345,6 +356,9 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("global.discovery.targetKubernetesVersion", publishedTarget)
+	// kubernetesVersionIsAutomatic means "tracking Deckhouse default" (MC Default or deprecated
+	// Automatic alias). The Values key name stays for compatibility; the MC enum value Automatic
+	// goes away on T+1 — see TODO on automaticKubernetesVersion.
 	input.Values.Set("global.discovery.kubernetesVersionIsAutomatic", isAutomatic)
 
 	return publishDesiredKubernetesVersionSpec(input, publishedTarget, isAutomatic, cmSnap.SpecYAML)
@@ -359,6 +373,8 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 
 	updateMode := "Manual"
 	if isAutomatic {
+		// CM protocol value: UpdateMode Automatic = "follow Deckhouse default".
+		// Unrelated to the deprecated MC enum alias "Automatic"; this string stays after T+1.
 		updateMode = "Automatic"
 	}
 
@@ -413,16 +429,17 @@ func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired strin
 }
 
 // resolveTargetKubernetesVersion returns the operator-declared Kubernetes version and whether the
-// cluster is tracking the Deckhouse default (Default / deprecated Automatic).
+// cluster is tracking the Deckhouse default (MC Default, or deprecated Automatic alias).
 //
 // The ModuleConfig setting wins whenever it is present, including when it holds Default or
 // Automatic — presence of the field, not its value, decides which document owns the version.
+// Prefer Default in new ModuleConfigs; Automatic is accepted only as a deprecated alias.
 //
 // Only when ModuleConfig says nothing at all does the deprecated ClusterConfiguration field apply;
-// "Automatic" there is not a pin either and falls through to the Deckhouse default.
+// "Automatic" / empty there is not a pin either and falls through to the Deckhouse default.
 //
 // TODO(kubernetesVersion-deprecation): T+1 remove — drop CC fallback branch
-// (isPinnedKubernetesVersion / ccVersion). After T+1 only MC → Default.
+// (isPinnedKubernetesVersion / ccVersion). After T+1 only MC → Default (no Automatic alias).
 func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string) (string, bool) {
 	switch {
 	case isTrackDefaultKubernetesVersion(mcVersion):
@@ -437,10 +454,15 @@ func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string)
 }
 
 // isTrackDefaultKubernetesVersion reports Default or its deprecated Automatic alias.
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — drop Automatic from this helper once the
+// MC enum alias and CC field are gone; keep only Default.
 func isTrackDefaultKubernetesVersion(version string) bool {
 	return version == defaultKubernetesVersionSentinel || version == automaticKubernetesVersion
 }
 
+// isPinnedKubernetesVersion reports a concrete minor pin (not empty, not track-default).
+//
 // TODO(kubernetesVersion-deprecation): T+1 remove — dies together with the ClusterConfiguration field.
 func isPinnedKubernetesVersion(version string) bool {
 	return version != "" && !isTrackDefaultKubernetesVersion(version)
