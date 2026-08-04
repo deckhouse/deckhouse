@@ -137,9 +137,9 @@ spec:
           sleep:
             duration: 15s
 
-    - name: verify-machine-deployment-labels-annotation
+    - name: verify-machine-deployment-capacity-annotations
       try:
-        - description: Check that MachineDeployment has node.deckhouse.io/group in capacity labels annotation
+        - description: Check MachineDeployment scale-from-zero labels, CPU, and memory annotations
           script:
             timeout: 300s
             content: |
@@ -149,18 +149,21 @@ spec:
                   -l node-group=e2e-worker-infra --no-headers \
                   -o custom-columns=':metadata.name' 2>/dev/null | head -1)
                 if [ -n "$MD_NAME" ]; then
-                  LABELS_ANN=$(kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
-                    "$MD_NAME" -o jsonpath='{.metadata.annotations.capacity\.cluster-autoscaler\.kubernetes\.io/labels}' 2>/dev/null || echo "")
-                  if echo "$LABELS_ANN" | grep -q "node.deckhouse.io/group=e2e-worker-infra"; then
-                    echo "Found node.deckhouse.io/group=e2e-worker-infra in capacity labels annotation"
+                  MD_JSON=$(kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                    "$MD_NAME" -o json 2>/dev/null || echo '{}')
+                  LABELS_ANN=$(echo "$MD_JSON" | jq -r '.metadata.annotations["capacity.cluster-autoscaler.kubernetes.io/labels"] // ""')
+                  CPU_ANN=$(echo "$MD_JSON" | jq -r '.metadata.annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] // ""')
+                  MEMORY_ANN=$(echo "$MD_JSON" | jq -r '.metadata.annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] // ""')
+                  if echo "$LABELS_ANN" | grep -q "node.deckhouse.io/group=e2e-worker-infra" \
+                    && [ "$CPU_ANN" = "2" ] && [ "$MEMORY_ANN" = "4Gi" ]; then
+                    echo "Found expected labels, CPU, and memory capacity annotations"
                     exit 0
                   fi
-                  echo "Annotation content: $LABELS_ANN"
+                  echo "Annotations: labels=$LABELS_ANN cpu=$CPU_ANN memory=$MEMORY_ANN"
                 fi
                 sleep 10
               done
-              echo "Timed out: node.deckhouse.io/group not found in MachineDeployment capacity labels annotation"
-              echo "This indicates the PR #20174 fix is not applied"
+              echo "Timed out: expected MachineDeployment scale-from-zero capacity annotations were not found"
               exit 1
             check:
               ($error == null): true
@@ -171,6 +174,7 @@ spec:
             content: |
               kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
                 -l node-group=e2e-worker-infra -o yaml 2>/dev/null || true
+              kubectl get configmap d8-node-manager-capi-node-capacity -n d8-cloud-instance-manager -o yaml 2>/dev/null || true
 
     - name: apply-deployment
       try:

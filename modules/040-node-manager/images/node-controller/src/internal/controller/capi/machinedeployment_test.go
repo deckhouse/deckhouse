@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
@@ -186,6 +187,29 @@ func TestSerializeNodeGroupTaints(t *testing.T) {
 			t.Fatalf("taints not sorted: %q", got)
 		}
 	})
+}
+
+func TestSetScaleFromZeroCapacityAnnotations(t *testing.T) {
+	annotations := map[string]interface{}{}
+	setScaleFromZeroCapacityAnnotations(annotations, "4", "8Gi")
+
+	for key, want := range map[string]string{
+		"capacity.cluster-autoscaler.kubernetes.io/cpu":    "4",
+		"capacity.cluster-autoscaler.kubernetes.io/memory": "8Gi",
+	} {
+		got, ok := annotations[key].(string)
+		if !ok || got != want {
+			t.Fatalf("annotation %q = %v, want %q", key, annotations[key], want)
+		}
+		if _, err := resource.ParseQuantity(got); err != nil {
+			t.Fatalf("annotation %q has invalid Kubernetes quantity %q: %v", key, got, err)
+		}
+	}
+
+	setScaleFromZeroCapacityAnnotations(annotations, "", "")
+	if got := annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"]; got != "4" {
+		t.Fatalf("empty cpu overwrote existing annotation: %v", got)
+	}
 }
 
 func TestApplyMachineDeploymentSpecPatch(t *testing.T) {
