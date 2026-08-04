@@ -95,6 +95,7 @@ autoK
 autoK8sVersion
 autoload
 Autoloading
+AutoPatch
 AutoplaceTarget
 autoscaler
 autoscalers
