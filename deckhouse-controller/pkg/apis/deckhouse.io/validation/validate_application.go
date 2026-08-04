@@ -66,7 +66,12 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 		}
 
 		if err = validateAppAgainstApv(ctx, cli, manager, app); err != nil {
-			return rejectResult(err.Error())
+			// The denial message is the only feedback `kubectl apply` prints, and
+			// it arrives without the object it belongs to: name the Application
+			// and the package version whose requirements were evaluated, so the
+			// rejection is traceable when several manifests are applied at once.
+			return rejectResult(fmt.Sprintf("Application '%s/%s' (package '%s' version '%s'): %s",
+				app.Namespace, app.Name, app.Spec.PackageName, app.Spec.PackageVersion, err))
 		}
 
 		return allowResult(res.Warnings)
