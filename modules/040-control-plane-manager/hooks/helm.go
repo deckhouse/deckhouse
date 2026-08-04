@@ -22,7 +22,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -38,12 +37,9 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/golang/protobuf/proto" // nolint: staticcheck
 	"helm.sh/helm/v3/pkg/releaseutil"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -130,19 +126,19 @@ func init() {
 }
 
 // The Kubernetes binding below is a trigger only — the hook reads the resolved answer from
-// global.discovery.kubernetesVersionIsDefault, not from the snapshot. It exists because
-// Values are not an event source: without it the K8sVersionsWithDeprecations requirement, which
-// gates DeckhouseRelease installation, would keep a stale answer for up to an hour after an
-// operator switches the version between Automatic and a pin. The object changes rarely, so this
-// costs no extra helm-release scans in practice.
+// global.discovery.kubernetesVersionIsDefault, not from the snapshot (nothing here reads
+// input.Snapshots at all, hence the nil FilterFunc result). It exists because Values are not an
+// event source: without it the K8sVersionsWithDeprecations requirement, which gates
+// DeckhouseRelease installation, would keep a stale answer for up to an hour after an operator
+// switches the version between Default and a pin.
+//
+// It watches ModuleConfig, not the ClusterConfiguration Secret: ModuleConfig owns the version now,
+// and patching it does not touch the Secret — so a Secret binding no longer fires on the very
+// change it was added to catch. The object changes rarely, so this costs no extra helm-release
+// scans in practice.
 //
 // OnStartup must not be combined with Kubernetes bindings (addon-operator panics); Synchronization
 // of this binding already fires the hook at startup.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop this binding together with the
-// ClusterConfiguration field. Once the field is gone the Secret can no longer change the
-// resolved version, so it is not a useful trigger any more. A ModuleConfig binding should replace
-// it if Operators still need immediate re-scan on pin/Automatic flips.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/helm-releases-scan",
 	Schedule: []go_hook.ScheduleConfig{
@@ -153,49 +149,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              "kubernetesVersion",
-			ApiVersion:        "v1",
-			Kind:              "Secret",
-			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
-			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
-			FilterFunc:        applyClusterConfigurationYamlFilter,
+			Name:         "kubernetesVersion",
+			ApiVersion:   "deckhouse.io/v1alpha1",
+			Kind:         "ModuleConfig",
+			NameSelector: &types.NameSelector{MatchNames: []string{"control-plane-manager"}},
+			FilterFunc:   filterModuleConfigTriggerOnly,
 		},
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
 
-func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
+// filterModuleConfigTriggerOnly keeps the snapshot empty on purpose: the binding is a re-run
+// trigger and the resolved version comes from Values. Returning the object would make the hook
+// re-run on every unrelated ModuleConfig field change as well.
+func filterModuleConfigTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	version, _, err := unstructured.NestedString(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested string kubernetesVersion: %w", err)
 	}
-
-	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
-	}
-
-	kubernetesVersion, err := getKubernetesVersion(ccYaml)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetesVersion, err
-}
-
-func getKubernetesVersion(data []byte) (string, error) {
-	if err := validation.ValidateData([]string{}, &data); err != nil {
-		if !errors.Is(err, validation.ErrSchemaNotFound) {
-			return "", err
-		}
-	}
-	var cfg struct {
-		KubernetesVersion string `yaml:"kubernetesVersion"`
-	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return "", fmt.Errorf("unmarshal YAML: %w", err)
-	}
-	return cfg.KubernetesVersion, nil
+	return version, nil
 }
 
 func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
