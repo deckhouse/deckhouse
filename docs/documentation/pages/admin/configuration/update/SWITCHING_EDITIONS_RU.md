@@ -653,6 +653,13 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
 {% tab "На DKP CSE" %}
 1. При переключении на DKP CSE возможна временная недоступность компонентов кластера.
+1. Каждый узел кластера будет поочерёдно перезагружен с очисткой кэша образов containerd. Чтобы управлять моментом перезагрузки, заранее переведите все NodeGroup, включая `master`, в ручной режим подтверждения простоя:
+
+   ```shell
+   d8 k patch ng <ИМЯ_NODEGROUP> --type=merge -p '{"spec":{"disruptions":{"approvalMode":"Manual"}}}'
+   ```
+
+   Исходное значение верните после завершения переключения.
 1. Переключение на DKP CSE возможно только с DKP EE (Enterprise Edition). Переключение поддерживается только **между одинаковыми минорными версиями** DKP. Например, с DKP EE 1.67.x на DKP CSE 1.67.x.
 
    При необходимости, выполните обновление DKP EE до соответствующей минорной версии и последней патч-версии.
@@ -868,6 +875,10 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
 
    {{ check_old_pods | regex_replace: "^", "   " }}
+
+1. **Только для DKP CSE** — подтвердите перезагрузку узлов:
+
+   {{ cse_containerd_migration | regex_replace: "^", "   " }}
 
 1. **Только для DKP CSE** — установите `releaseChannel` в moduleConfig `deckhouse`:
 
@@ -1116,6 +1127,10 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       | regex_replace: "<!/?REMOVE_FOR_CSE_1_58>\n?", ""
       | regex_replace: "^", "   "
    }}
+
+1. Подтвердите перезагрузку узлов:
+
+   {{ cse_containerd_migration | regex_replace: "^", "   " }}
 
 1. Дождитесь готовности DKP:
 
