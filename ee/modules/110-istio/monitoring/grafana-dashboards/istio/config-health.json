@@ -97,7 +97,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"}) or vector(0)",
+          "expr": "sum(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=~\"$severity\",type=~\"$type\"}) or on() vector(0)",
           "instant": true,
           "legendFormat": "issues",
           "refId": "A"
@@ -164,7 +164,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=\"Error\",type=~\"$type\"}) or vector(0)",
+          "expr": "sum(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=\"Error\",type=~\"$type\"}) or on() vector(0)",
           "instant": true,
           "legendFormat": "errors",
           "refId": "A"
@@ -178,7 +178,7 @@
         "type": "prometheus",
         "uid": "$ds_prometheus"
       },
-      "description": "Issues with severity Warning. InvalidApplicationUID (IST0144) is excluded by default in this panel to match alert policy (Deckhouse components use UID 1337).",
+      "description": "Issues with severity Warning matching the selected filters.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -231,7 +231,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=\"Warning\",type=~\"$type\",type!=\"InvalidApplicationUID\"}) or vector(0)",
+          "expr": "sum(d8_istio_config_analysis_issue{revision=~\"$revision\",namespace=~\"$namespace\",severity=\"Warning\",type=~\"$type\"}) or on() vector(0)",
           "instant": true,
           "legendFormat": "warnings",
           "refId": "A"
@@ -369,7 +369,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(increase(d8_istio_config_analysis_run_errors_total[$__range])) or vector(0)",
+          "expr": "sum(increase(d8_istio_config_analysis_run_errors_total[$__range])) or on() vector(0)",
           "instant": true,
           "legendFormat": "errors",
           "refId": "A"
