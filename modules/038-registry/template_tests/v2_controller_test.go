@@ -1037,6 +1037,9 @@ var _ = Describe("Module :: registry :: helm template :: the auth Secret is gran
 			"without resourceNames this grants every Secret in the namespace to system:nodes")
 		Expect(rule.Get("resourceNames.0").String()).To(Equal(constant.AuthSecretName))
 		Expect(rule.Get("verbs").Array()).NotTo(ContainElement(gjsonString("create")))
+		// The agent reads this with an uncached client, which is what lets the grant stay
+		// name-scoped: a cached read would need a list nobody can authorize by name.
+		Expect(rule.Get("verbs").Array()).NotTo(ContainElement(gjsonString("list")))
 	})
 
 	It("grants the storage the same one", func() {
@@ -1103,12 +1106,21 @@ var _ = Describe("Module :: registry :: helm template :: the controller can reac
 		}
 
 		Expect(verbs).To(HaveKey("registry-storage-access"))
-		Expect(verbs["registry-storage-access"]).To(ContainElements("get", "list", "watch"),
-			"the informer behind a cached read needs list and watch, not only get")
+		Expect(verbs["registry-storage-access"]).To(ContainElement("get"))
 
 		Expect(verbs).To(HaveKey(constant.AuthSecretName))
-		Expect(verbs[constant.AuthSecretName]).To(ContainElements(
-			"get", "list", "watch", "create", "update", "patch"),
+		Expect(verbs[constant.AuthSecretName]).To(ContainElements("get", "create", "update", "patch"),
 			"the controller is the only writer of the credentials its layouts reference")
+
+		// No list, no watch, anywhere in these rules. RBAC cannot restrict either to named
+		// objects — a list is not a request for a name, so a rule carrying resourceNames
+		// never matches one and the request is refused. Granting them here would state
+		// something untrue about what works and invite an informer that cannot start.
+		for name, granted := range verbs {
+			Expect(granted).NotTo(ContainElement("list"),
+				"%s: list cannot be authorized by name, so this grant is a trap", name)
+			Expect(granted).NotTo(ContainElement("watch"),
+				"%s: watch cannot be authorized by name, so this grant is a trap", name)
+		}
 	})
 })

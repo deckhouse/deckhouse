@@ -31,7 +31,6 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -52,9 +51,23 @@ func init() {
 	utilruntime.Must(registryv1alpha1.AddToScheme(scheme))
 }
 
-// registryNamespace is where this module's objects live. The same namespace the reconciler
-// reads its secrets from, named once so the cache and the reads cannot disagree about it.
-const registryNamespace = "d8-system"
+// clientOptions keeps secrets out of the manager's cache.
+//
+// A cached read is served by an informer, and an informer must list and watch. RBAC cannot
+// restrict either to named objects — a list is not a request for a name, so a rule carrying
+// resourceNames never matches one. Caching secrets would therefore require read access to
+// every Secret in the namespace, which is the access the reference model exists to stop
+// needing; uncached, the two secrets this controller wants are fetched by name with `get`.
+//
+// Returned from a function so the decision is testable. It was already made once as
+// "confine the cache to one namespace", which is not the same thing and does not work.
+func clientOptions() client.Options {
+	return client.Options{
+		Cache: &client.CacheOptions{
+			DisableFor: []client.Object{&corev1.Secret{}},
+		},
+	}
+}
 
 func main() {
 	var (
@@ -93,26 +106,7 @@ func main() {
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: probeAddr,
 
-		// Secrets are cached for one namespace, not for the cluster.
-		//
-		// Not an optimization. A cached client backs every read with an informer, and an
-		// informer lists what it watches — so a cluster-wide cache would need cluster-wide
-		// list on secrets, which is precisely the permission this module went to some
-		// trouble to avoid needing. Confined here, the namespaced grants by resource name
-		// are enough. Without this the informer's first list is refused, the cache never
-		// starts, and every controller in this manager stalls with nothing to say beyond a
-		// forbidden error on a resource it only ever wanted two objects from.
-		Cache: cache.Options{
-			ByObject: map[client.Object]cache.ByObject{
-				&corev1.Secret{}: {
-					Namespaces: map[string]cache.Config{registryNamespace: {}},
-				},
-			},
-		},
-
-		LeaderElection:          leaderElect,
-		LeaderElectionID:        "registry-controller.deckhouse.io",
-		LeaderElectionNamespace: os.Getenv("POD_NAMESPACE"),
+		Client: clientOptions(),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

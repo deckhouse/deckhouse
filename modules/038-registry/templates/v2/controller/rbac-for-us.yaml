@@ -81,16 +81,20 @@ rules:
     verbs: ["get", "list", "watch", "create", "update", "patch"]
   # How agents reach the cache — addresses, authority, read credentials — which the
   # controller turns into node layouts. Read-only: the storage PKI writes this, not us.
+  #
+  # `get` alone, and the components read these uncached for that reason: a rule with
+  # resourceNames cannot authorize list or watch, so anything backed by an informer would be
+  # refused here no matter how the cache is scoped.
   - apiGroups: [""]
     resources: ["secrets"]
     resourceNames: ["registry-storage-access"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get"]
   # The credentials the layouts reference. Written here and nowhere else: this is the object
   # that exists so the layouts can name a credential instead of carrying it.
   - apiGroups: [""]
     resources: ["secrets"]
     resourceNames: ["registry-resolved-auth"]
-    verbs: ["get", "list", "watch", "create", "update", "patch"]
+    verbs: ["get", "create", "update", "patch"]
 
 ---
 kind: RoleBinding
@@ -155,7 +159,7 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     resourceNames: ["registry-resolved-auth"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get"]
   # Two leases, and they are deliberately two. One decides which replica fills the cache from
   # the upstream; the other decides whose turn it is to go read-only and reclaim its disk. The
   # replica doing the filling is the last one that should stop accepting writes, so those two
@@ -242,7 +246,7 @@ rules:
     # values, and a name that appears in two places drifts. A template test asserts it
     # equals the Go constant the components resolve against.
     resourceNames: ["registry-resolved-auth"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get"]
 
 ---
 kind: RoleBinding
