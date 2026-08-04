@@ -157,15 +157,15 @@ func (s *Scheduler) addNode(pkg Package) {
 	}
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		n.rules = append(n.rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
+		n.rules = append(n.rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, subjectKubernetes, reasonRequirementsKubernetes))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		n.rules = append(n.rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
+		n.rules = append(n.rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, subjectDeckhouse, reasonRequirementsDeckhouse))
 	}
 
 	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		n.rules = append(n.rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap))
+		n.rules = append(n.rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
