@@ -388,6 +388,26 @@ func (v *moduleConfigValidator) validateCommon(
 
 	warnings := make([]string, 0, 1)
 
+	// check if spec.version value is valid and the version is the latest
+	result := v.configValidator.Validate(cfg)
+
+	// The kubernetesVersion guard runs before resolveModuleSource on purpose. That call returns a
+	// non-nil *allow* result when the Module CR is missing (fresh install, or the window while the
+	// loader recreates it), which returns from validateCommon before anything below runs — so a
+	// guard placed after it can be bypassed by deleting Module/control-plane-manager and then
+	// applying an out-of-window pin. The DELETE path already runs the guard first for this reason.
+	//
+	// Scoped to control-plane-manager so ordering for every other module is untouched: a
+	// ModuleConfig for a not-yet-installed module must keep being allowed with a warning.
+	if cfg.Name == controlPlaneManagerModuleName {
+		if result.HasError() {
+			return rejectResult(result.Error)
+		}
+		if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, result.Settings, oldSettingsForKubernetesVersionGuard); res != nil || err != nil {
+			return res, err
+		}
+	}
+
 	sourceResult, sourceWarnings, err := v.resolveModuleSource(ctx, cfg)
 	if sourceResult != nil || err != nil {
 		return sourceResult, err
@@ -398,19 +418,11 @@ func (v *moduleConfigValidator) validateCommon(
 		return res, err
 	}
 
-	// check if spec.version value is valid and the version is the latest
-	result := v.configValidator.Validate(cfg)
 	if result.HasError() {
 		return rejectResult(result.Error)
 	}
 	if result.Warning != "" {
 		warnings = append(warnings, result.Warning)
-	}
-
-	if cfg.Name == controlPlaneManagerModuleName {
-		if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, result.Settings, oldSettingsForKubernetesVersionGuard); res != nil || err != nil {
-			return res, err
-		}
 	}
 
 	v.setAllowedToDisableMetric(cfg, allowedToDisableMetricValue(cfg, v.isModuleEnabledByBundle(cfg.Name)))

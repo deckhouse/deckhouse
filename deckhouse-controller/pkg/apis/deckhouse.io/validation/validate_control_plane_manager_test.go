@@ -382,6 +382,71 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.32")
 	})
 
+	// resolveModuleSource returns a non-nil *allow* result when Module/control-plane-manager is
+	// absent (fresh install, or the window while the loader recreates it). While the guard ran
+	// after that call, deleting the Module CR was enough to push any pin through admission.
+	// expectEnabling: CREATE runs validateCreate (and its dependency check) before validateCommon,
+	// so the mock has to answer CheckEnabling on that path.
+	withoutModuleCR := func(t *testing.T, expectEnabling bool, objs ...client.Object) http.Handler {
+		t.Helper()
+		storage, manager := buildHandler(t)
+		dependencyExtender := moduledependency.NewIExtenderMock(t)
+		if expectEnabling {
+			dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
+		}
+		return newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, objs...)
+	}
+
+	t.Run("no Module CR: pin below maxUsed-1 is still rejected on UPDATE", func(t *testing.T) {
+		handler := withoutModuleCR(t, false, newClusterKubernetesConfigMap(defaultAvailable),
+			newClusterConfigurationSecretWithMaxUsed("1.36", "1.36"))
+
+		newCfg := newControlPlaneManagerConfig("1.32")
+		oldCfg := newControlPlaneManagerConfig("1.36")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "1.32")
+	})
+
+	// CREATE is the main migration path — an unmigrated cluster has no ModuleConfig at all, so the
+	// first apply is a CREATE — yet every other case here is UPDATE/DELETE. A missing Module CR is
+	// already fail-closed on CREATE (validateCreate → validateModuleEnabling rejects it), so this
+	// covers the normal case: the CR exists and the guard must still reject an out-of-window pin.
+	t.Run("CREATE: pin below maxUsed-1 is rejected", func(t *testing.T) {
+		storage, manager := buildHandler(t)
+		dependencyExtender := moduledependency.NewIExtenderMock(t)
+		dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
+		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator,
+			newModuleCR(moduleName, []string{"alpha"}, ""),
+			newClusterKubernetesConfigMap(defaultAvailable),
+			newClusterConfigurationSecretWithMaxUsed("1.36", "1.36"))
+
+		newCfg := newControlPlaneManagerConfig("1.32")
+		review := newModuleConfigAdmissionReview("CREATE", newCfg, nil)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "1.32")
+	})
+
+	// The missing-Module allow path itself must survive: a legitimate config for a module that is
+	// not installed yet is still allowed, guard or no guard.
+	t.Run("no Module CR: an in-window pin is still allowed", func(t *testing.T) {
+		handler := withoutModuleCR(t, false, newClusterKubernetesConfigMap(defaultAvailable),
+			newClusterConfigurationSecretWithMaxUsed("1.36", "1.36"))
+
+		newCfg := newControlPlaneManagerConfig("1.35")
+		oldCfg := newControlPlaneManagerConfig("1.36")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed)
+	})
+
 	t.Run("fail-open: no ConfigMap and no maxUsed baseline — allowed", func(t *testing.T) {
 		handler := withObjs(t)
 
