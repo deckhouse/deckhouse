@@ -79,7 +79,7 @@ properties:
               Чтобы использовать эту настройку, на узлах DVP должен быть установлен лейбл `topology.kubernetes.io/region`.
               [Подробнее о топологических лейблах](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-              > Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+              > Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             type: string
           sshPublicKey:
             description: |
@@ -92,7 +92,7 @@ properties:
               Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/zone`.
               [Подробнее о топологических лейблах.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-              > Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+              > Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             items:
               type: string
             type: array

@@ -174,7 +174,7 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Чтобы использовать эту настройку, на узлах DVP должен быть установлен лейбл `topology.kubernetes.io/region`."
 	// +deckhouse:ru:description:value="[Подробнее о топологических лейблах](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)"
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="> Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)."
+	// +deckhouse:ru:description:value="> Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)."
 	// +optional
 	Region string `json:"region,omitempty"`
 	// A set of zones in which nodes can be created.
@@ -188,7 +188,7 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/zone`."
 	// +deckhouse:ru:description:value="[Подробнее о топологических лейблах.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)"
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="> Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](https://deckhouse.ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)."
+	// +deckhouse:ru:description:value="> Как установить требуемый лейбл для узла DVP, можно прочитать в [документации по NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)."
 	// +kubebuilder:validation:UniqueItems=true
 	// +kubebuilder:validation:items:Type=string
 	// +optional
