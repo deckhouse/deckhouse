@@ -21,6 +21,13 @@ func crdMetadata(name string, labels map[string]string) *metav1.PartialObjectMet
 	}
 }
 
+func apiServiceMetadata(name string, labels map[string]string) *metav1.PartialObjectMetadata {
+	return &metav1.PartialObjectMetadata{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "apiregistration.k8s.io/v1", Kind: "APIService"},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels},
+	}
+}
+
 func newTestModuleIndex(objects ...runtime.Object) *ModuleIndex {
 	scheme := metadatafake.NewTestScheme()
 	_ = metav1.AddMetaToScheme(scheme)
@@ -81,8 +88,8 @@ func TestModuleIndex_CustomIsWhatThePlatformDoesNotInstall(t *testing.T) {
 	assert.False(t, platform.Custom)
 }
 
-// Built-in and aggregated APIs have no CRD at all: the index has to say it does
-// not know them rather than call them custom.
+// Built-in APIs have no CRD and no APIService of a module: the index has to say
+// it does not know them rather than call them custom or invent a module.
 func TestModuleIndex_KnowsNothingAboutBuiltInResources(t *testing.T) {
 	t.Parallel()
 
@@ -91,4 +98,38 @@ func TestModuleIndex_KnowsNothingAboutBuiltInResources(t *testing.T) {
 	_, known := index.Origin("", "secrets")
 
 	assert.False(t, known)
+}
+
+// An aggregated API has no CRD, so without the APIService its group would be
+// filed under a made-up module: authorization.deckhouse.io comes from user-authz,
+// and "authorization" is not a module.
+func TestModuleIndex_AggregatedAPIComesFromItsAPIService(t *testing.T) {
+	t.Parallel()
+
+	index := newTestModuleIndex(
+		apiServiceMetadata("v1alpha1.authorization.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "user-authz"}),
+		// The local APIServices of the built-in APIs carry no group and no module.
+		apiServiceMetadata("v1.", nil),
+	)
+
+	origin, known := index.Origin("authorization.deckhouse.io", "roleaccessreports")
+
+	assert.True(t, known)
+	assert.Equal(t, "user-authz", origin.Module)
+	assert.False(t, origin.Custom, "an aggregated API of a module is not a resource of the cluster owner")
+}
+
+// A CRD wins over the APIService of its group: the module that owns the CRD is
+// the one responsible for the resource.
+func TestModuleIndex_CRDWinsOverTheGroup(t *testing.T) {
+	t.Parallel()
+
+	index := newTestModuleIndex(
+		crdMetadata("projects.deckhouse.io", map[string]string{"heritage": "deckhouse", "module": "multitenancy-manager"}),
+		apiServiceMetadata("v1alpha1.deckhouse.io", map[string]string{"module": "deckhouse"}),
+	)
+
+	origin, _ := index.Origin("deckhouse.io", "projects")
+
+	assert.Equal(t, "multitenancy-manager", origin.Module)
 }

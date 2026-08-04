@@ -26,11 +26,18 @@ const (
 	deckhouseHeritage = "deckhouse"
 )
 
-var crdGVR = schema.GroupVersionResource{
-	Group:    "apiextensions.k8s.io",
-	Version:  "v1",
-	Resource: "customresourcedefinitions",
-}
+var (
+	crdGVR = schema.GroupVersionResource{
+		Group:    "apiextensions.k8s.io",
+		Version:  "v1",
+		Resource: "customresourcedefinitions",
+	}
+	apiServiceGVR = schema.GroupVersionResource{
+		Group:    "apiregistration.k8s.io",
+		Version:  "v1",
+		Resource: "apiservices",
+	}
+)
 
 // ResourceOrigin says where a resource came from.
 //
@@ -48,7 +55,12 @@ type ResourceOrigin struct {
 }
 
 // ModuleIndex maps a resource to the module that ships it, reading the labels
-// of the CustomResourceDefinitions.
+// of the CustomResourceDefinitions and of the APIServices.
+//
+// Two sources because there are two kinds of resource a module can bring: its
+// own CRDs, and an aggregated API served by its own apiserver. Guessing the
+// module from the API group covers neither honestly -- authorization.deckhouse.io
+// is served by user-authz, and "authorization" is not a module at all.
 //
 // Only metadata is fetched: CRD schemas are the bulk of those objects, and
 // nothing here reads them.
@@ -56,8 +68,12 @@ type ModuleIndex struct {
 	client          metadata.Interface
 	refreshInterval time.Duration
 
-	mu      sync.RWMutex
+	mu sync.RWMutex
+	// origins is keyed by CRD name: "<plural>.<group>".
 	origins map[string]ResourceOrigin
+	// groupModules is keyed by API group and covers the aggregated APIs, whose
+	// resources have no CRD of their own.
+	groupModules map[string]string
 }
 
 func NewModuleIndex(client metadata.Interface) *ModuleIndex {
@@ -65,6 +81,7 @@ func NewModuleIndex(client metadata.Interface) *ModuleIndex {
 		client:          client,
 		refreshInterval: defaultRefreshInterval,
 		origins:         make(map[string]ResourceOrigin),
+		groupModules:    make(map[string]string),
 	}
 
 	index.refresh()
@@ -73,7 +90,8 @@ func NewModuleIndex(client metadata.Interface) *ModuleIndex {
 }
 
 // Origin reports what is known about the resource. The second value is false
-// for anything without a CRD -- built-in Kubernetes APIs and aggregated ones.
+// for built-in Kubernetes APIs: nothing in the cluster claims them, and calling
+// them custom or filing them under a module would both be wrong.
 func (i *ModuleIndex) Origin(group, resource string) (ResourceOrigin, bool) {
 	// A subresource belongs to its parent: "pods/log" is served by whoever
 	// ships "pods".
@@ -89,9 +107,17 @@ func (i *ModuleIndex) Origin(group, resource string) (ResourceOrigin, bool) {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
-	origin, known := i.origins[name]
+	if origin, known := i.origins[name]; known {
+		return origin, true
+	}
 
-	return origin, known
+	// No CRD: an aggregated API is served by a module of its own, and the
+	// APIService says which one.
+	if module, known := i.groupModules[group]; known {
+		return ResourceOrigin{Module: module}, true
+	}
+
+	return ResourceOrigin{}, false
 }
 
 func (i *ModuleIndex) HasData() bool {
@@ -131,15 +157,15 @@ func (i *ModuleIndex) refresh() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	list, err := i.client.Resource(crdGVR).List(ctx, metav1.ListOptions{})
+	crds, err := i.client.Resource(crdGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.Warningf("ModuleIndex: listing CRDs failed: %v, keeping the previous index", err)
 
 		return
 	}
 
-	origins := make(map[string]ResourceOrigin, len(list.Items))
-	for _, item := range list.Items {
+	origins := make(map[string]ResourceOrigin, len(crds.Items))
+	for _, item := range crds.Items {
 		origins[item.GetName()] = ResourceOrigin{
 			Module: item.GetLabels()[moduleLabel],
 			Custom: item.GetLabels()[heritageLabel] != deckhouseHeritage,
@@ -151,4 +177,38 @@ func (i *ModuleIndex) refresh() {
 	i.mu.Unlock()
 
 	klog.V(4).Infof("ModuleIndex: refreshed with %d CRDs", len(origins))
+
+	i.refreshAPIServices(ctx)
+}
+
+// refreshAPIServices attributes the aggregated APIs. A failure here leaves the
+// CRDs attributed: aggregated groups are a handful, and losing their module
+// names is not a reason to lose the rest.
+func (i *ModuleIndex) refreshAPIServices(ctx context.Context) {
+	list, err := i.client.Resource(apiServiceGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Warningf("ModuleIndex: listing APIServices failed: %v, aggregated APIs stay unattributed: %v", err, err)
+
+		return
+	}
+
+	groupModules := make(map[string]string)
+	for _, item := range list.Items {
+		module := item.GetLabels()[moduleLabel]
+		if module == "" {
+			continue
+		}
+
+		// An APIService is named "<version>.<group>"; the local ones covering
+		// built-in APIs are named "v1." and carry no group.
+		if _, group, ok := strings.Cut(item.GetName(), "."); ok && group != "" {
+			groupModules[group] = module
+		}
+	}
+
+	i.mu.Lock()
+	i.groupModules = groupModules
+	i.mu.Unlock()
+
+	klog.V(4).Infof("ModuleIndex: refreshed with %d aggregated API groups", len(groupModules))
 }
