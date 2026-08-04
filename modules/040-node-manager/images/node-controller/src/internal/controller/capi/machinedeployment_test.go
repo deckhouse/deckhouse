@@ -233,6 +233,34 @@ func TestApplyMachineDeploymentSpecPatchInvalidYAML(t *testing.T) {
 	}
 }
 
+func TestDecodeRenderedTemplateObjectsMultiDoc(t *testing.T) {
+	const rendered = `
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: Metal3MachineTemplate
+metadata:
+  name: worker-template
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: Metal3DataTemplate
+metadata:
+  name: worker-template
+`
+
+	objects, err := decodeRenderedTemplateObjects([]byte(rendered))
+	if err != nil {
+		t.Fatalf("decodeRenderedTemplateObjects returned error: %v", err)
+	}
+	if len(objects) != 2 {
+		t.Fatalf("decoded %d objects, want 2", len(objects))
+	}
+	if got := objects[0].GetKind(); got != "Metal3MachineTemplate" {
+		t.Fatalf("first kind=%q, want Metal3MachineTemplate", got)
+	}
+	if got := objects[1].GetKind(); got != "Metal3DataTemplate" {
+		t.Fatalf("second kind=%q, want Metal3DataTemplate", got)
+	}
+}
+
 // desiredReplicas is pure: it only clamps what already exists into the NodeGroup's bounds.
 func TestDesiredReplicas(t *testing.T) {
 	tests := []struct {

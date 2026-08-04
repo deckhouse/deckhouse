@@ -173,6 +173,7 @@ rules:
   - deckhousemachinetemplates
   - dynamixmachinetemplates
   - huaweicloudmachinetemplates
+  - metal3datatemplates
   - metal3machinetemplates
   - openstackmachinetemplates
   - staticmachinetemplates
