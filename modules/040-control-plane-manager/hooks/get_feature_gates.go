@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -101,16 +102,23 @@ func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 		"target", k8sVersionStr,
 	)
 
+	// An empty target means the global target_kubernetes_version hook has not published yet, or
+	// failed. Fail rather than publish an empty allow-list: these values feed --feature-gates on
+	// apiserver/controller-manager/scheduler/kubelet via arguments.yaml and daemonset.yaml, so
+	// "no gates" would silently strip the operator's enabledFeatureGates from the control plane.
+	//
+	// effective_kubernetes_version.go already errors on the same input; it only happens to shield
+	// this hook today because it runs at a higher OnBeforeHelm Order (50 vs 5) and aborts the module
+	// run. Relying on hook ordering is not a contract — both consumers must agree on their own.
+	if k8sVersionStr == "" {
+		return fmt.Errorf("kubernetesVersion required (global.discovery.targetKubernetesVersion is empty)")
+	}
+
 	result := featureGatesResult{
 		APIServer:             []string{},
 		KubeControllerManager: []string{},
 		KubeScheduler:         []string{},
 		Kubelet:               []string{},
-	}
-
-	if k8sVersionStr == "" {
-		input.Values.Set("controlPlaneManager.internal.allowedFeatureGates", result)
-		return nil
 	}
 
 	currentVersion := KubernetesVersion(k8sVersionStr).Normalize()
