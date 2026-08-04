@@ -95,7 +95,7 @@ description: Архитектура и функции модуля control-plane
 
    * **kube-rbac-proxy** — контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам компонентов control plane кластера. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-1. **control-plane-proxy-etcd-arbiter** (DaemonSet) — опциональный компонент, который устанавливается в кластере при включенном модуле [`prometheus`](/modules/prometheus/), если кластер работает [в режиме HA с двумя master-узлами и arbiter-узлом](../admin/configuration/high-reliability-and-availability/enable.html#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0-ha-c-%D0%B4%D0%B2%D1%83%D0%BC%D1%8F-master-%D1%83%D0%B7%D0%BB%D0%B0%D0%BC%D0%B8-%D0%B8-arbiter-%D1%83%D0%B7%D0%BB%D0%BE%D0%BC). Control-plane-proxy-etcd-arbiter в этом случае запускается на arbiter-узле и пересылает авторизованные запросы на получение метрик к запущенному на нём экземпляре etcd.
+1. **control-plane-proxy-etcd-arbiter** (DaemonSet) — опциональный компонент, который устанавливается в кластере при включенном модуле [`prometheus`](/modules/prometheus/), если кластер работает [в режиме HA с двумя master-узлами и arbiter-узлом](../../admin/configuration/high-reliability-and-availability/enable.html#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0-ha-c-%D0%B4%D0%B2%D1%83%D0%BC%D1%8F-master-%D1%83%D0%B7%D0%BB%D0%B0%D0%BC%D0%B8-%D0%B8-arbiter-%D1%83%D0%B7%D0%BB%D0%BE%D0%BC). Control-plane-proxy-etcd-arbiter в этом случае запускается на arbiter-узле и пересылает авторизованные запросы на получение метрик к запущенному на нём экземпляре etcd.
 
    Включает в себя один контейнер:
 
