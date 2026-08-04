@@ -29,11 +29,28 @@
     {%- endif %}
     {{ content }}
   </div>
-
+site.d8Revision - {{ site.d8Revision }}
      <!--#include virtual="{%- if site.mode == 'module' %}/{{ page.lang }}{%- endif %}/includes/footer.html" -->
 {%- if page.sidebar == 'embedded-modules' or site.mode == 'module' %}
 <script type="text/javascript">
-  // Fix second level topnav menu for GS and guides sections.
+  // Fix second level topnav menu
+  {%- if site.d8Revision == 'CSE' %}
+  const moduleType = $('meta[name="page:module:type"]').attr('content');
+  if (moduleType) {
+    const selector = '{% if site.mode == "module" %}.header__content.container{% else %}.header.header__product-menu{% endif %} ul.nav li';
+    // $(selector).removeClass('active');
+    $(selector).each(function () {
+      $(this).removeClass('active');
+      const elementModuleType = $(this).attr('data-module-type');
+      console.log( "page ModuleType: ", moduleType,  "element ModuleType: ", elementModuleType );
+      if (elementModuleType === moduleType) {
+        console.log( "matched" );
+        $(this).addClass('active');
+      }
+    });
+  }
+  {%- else %}
+  site.d8Revision - {{ site.d8Revision }}
   let subUrls = ['/modules/'];
   subUrls.forEach(function (element) {
     if (window.location.pathname.toLowerCase().includes(element)) {
@@ -44,6 +61,7 @@
       });
     }
   });
+  {%- endif %}
 </script>
 {%- endif %}
 

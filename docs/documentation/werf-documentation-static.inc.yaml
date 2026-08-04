@@ -73,6 +73,7 @@ shell:
         cp -rf /srv/jekyll-data/site/* /srv/jekyll-data/documentation/
         {{ if eq .Edition "CSE" }}
         mv -f /srv/jekyll-data/documentation_override/pages/cse/* /srv/jekyll-data/documentation/pages
+        mv -f /srv/jekyll-data/documentation_override/_data/topnav-cse.yml /srv/jekyll-data/documentation/_data/topnav.yml
         {{ end }}
         cp -rf /srv/jekyll-data/documentation_override/* /srv/jekyll-data/documentation
 {{ end }}
@@ -180,13 +181,15 @@ git:
 {{ if eq .ModuleName "documentation" }}
 - add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/documentation
   to: /srv/jekyll-data/documentation_override
-{{ if eq .Edition "CE" }}
   excludePaths:
-    - pages/LICENSE_AGREEMENT_RU.md
-{{ end }}
-{{ if ne .Edition "CSE" }}
-  excludePaths:
+{{ if eq .Edition "CSE" }}
+    - _data/topnav.yml
+{{ else }}
     - pages/cse
+    - _data/topnav-cse.yml
+{{ end }}
+{{ if eq .Edition "CE" }}
+    - pages/LICENSE_AGREEMENT_RU.md
 {{ end }}
   stageDependencies:
     setup:
