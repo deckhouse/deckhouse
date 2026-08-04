@@ -227,6 +227,28 @@ func parseVersion(version string) (*semver.Version, error) {
 	return semver.NewVersion(version)
 }
 
+// kubernetesVersionBelowFloor reports whether target lands more than one minor below floor —
+// the single "how far down may we go" rule, shared by the ClusterConfiguration downgrade check
+// (minorSubCheck, where the floor is the previous/maxUsed version) and the ModuleConfig guard
+// (rejectKubernetesVersionBelowMaxUsed, where the floor is maxUsed).
+//
+// Neutral (bool) rather than a ValidatorResult on purpose: the two webhooks use opposite result
+// conventions — the ClusterConfiguration chain returns a non-nil allowResult for "allowed", while
+// validateCommon treats (nil, nil) as "allowed" — so each caller wraps this in its own.
+//
+// The minor comparison is written as an addition on target so the uint64 minor never underflows
+// on a 1.0-style version.
+func kubernetesVersionBelowFloor(target, floor *semver.Version) bool {
+	switch {
+	case target.Major() > floor.Major():
+		return false
+	case target.Major() == floor.Major() && target.Minor()+1 >= floor.Minor():
+		return false
+	default:
+		return true
+	}
+}
+
 // TODO(kubernetesVersion-deprecation): T+1 remove — drop CC kubernetesVersion validation path; MC webhook remains the only guard.
 // NOTE(kubernetesVersion-deprecation): keep — Secret maxUsed/default baseline keys survive CC field removal.
 //
@@ -300,25 +322,13 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 	// minorSubCheck validates that downgrade does not exceed 1 minor version.
 	// It allows upgrade without restrictions and only checks downgrade scenarios.
 	var minorSubCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
-		// Only check downgrade, allow upgrade without restrictions
-		if oldVersionSemver.LessThan(newVersionSemver) || oldVersionSemver.Equal(newVersionSemver) {
+		if !kubernetesVersionBelowFloor(newVersionSemver, oldVersionSemver) {
 			return allowResult(nil)
 		}
 
-		// Check if downgrading more than 1 minor version
-		if oldVersionSemver.Major() > newVersionSemver.Major() {
-			return rejectResult(
-				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. %s=%s newKubernetesVersion=%s", nameForOldVersion, oldVersionSemver, newVersionSemver),
-			)
-		}
-
-		if oldVersionSemver.Minor() > newVersionSemver.Minor()+1 {
-			return rejectResult(
-				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. %s=%s newKubernetesVersion=%s", nameForOldVersion, oldVersionSemver, newVersionSemver),
-			)
-		}
-
-		return allowResult(nil)
+		return rejectResult(
+			fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. %s=%s newKubernetesVersion=%s", nameForOldVersion, oldVersionSemver, newVersionSemver),
+		)
 	}
 
 	// automaticOnlyGreaterCheck is used when newVersion is "Automatic".

@@ -38,6 +38,10 @@ const (
 	kubeSystemNamespace            = "kube-system"
 	clusterConfigurationDataKey    = "cluster-configuration.yaml"
 	clusterKubernetesStatusDataKey = "status"
+	clusterKubernetesSpecDataKey   = "spec"
+	// maxK8sVersionLabelKey mirrors the label update-observer stamps on the ConfigMap; it survives
+	// a corrupted data.status and is one of the floor fallbacks below.
+	maxK8sVersionLabelKey = "max-k8s-version"
 
 	// automaticKubernetesVersion is the ClusterConfiguration sentinel and a deprecated MC alias.
 	automaticKubernetesVersion = "Automatic"
@@ -53,6 +57,15 @@ const (
 // encoding/json's case-insensitive fallback.
 type clusterKubernetesStatus struct {
 	AvailableVersions []string `json:"availableVersions"`
+	// CurrentVersion is what the control plane is actually running right now — a floor fallback
+	// when the Secret bookkeeping has not been written yet.
+	CurrentVersion string `json:"currentVersion"`
+}
+
+// clusterKubernetesSpec is the subset of data.spec needed as the last floor fallback: the version
+// this cluster was last told to run, written by the global target_kubernetes_version hook.
+type clusterKubernetesSpec struct {
+	DesiredVersion string `json:"desiredVersion"`
 }
 
 // validateControlPlaneManagerKubernetesVersion guards ModuleConfig control-plane-manager's
@@ -225,28 +238,27 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 func (v *moduleConfigValidator) rejectKubernetesVersionBelowMaxUsed(
 	ctx context.Context, effective string, fromFallback bool,
 ) (*kwhvalidating.ValidatorResult, error) {
-	baseline, ok := v.readKubernetesVersionBaseline(ctx)
-	if !ok || !baseline.MaxUsedSet || baseline.MaxUsed == "" {
+	floor, ok := v.readKubernetesVersionFloor(ctx)
+	if !ok {
 		return nil, nil
 	}
 
-	maxUsed, err := parseVersion(baseline.MaxUsed)
+	maxUsed, err := parseVersion(floor)
 	if err != nil {
-		log.Warn("skipping the kubernetesVersion maxUsed guard: cannot parse maxUsedControlPlaneKubernetesVersion",
-			slog.String("value", baseline.MaxUsed), log.Err(err))
+		log.Warn("skipping the kubernetesVersion maxUsed guard: cannot parse the version floor",
+			slog.String("value", floor), log.Err(err))
 		return nil, nil
 	}
 	target, err := parseVersion(effective)
 	if err != nil {
+		// A guard that switches itself off must say so — the other fail-open branch above logs,
+		// and silence here made an unparsable pin look like an accepted one.
+		log.Warn("skipping the kubernetesVersion maxUsed guard: cannot parse the target version",
+			slog.String("value", effective), log.Err(err))
 		return nil, nil
 	}
 
-	// Allowed floor is maxUsed minus one minor. Written as an addition on the target so the
-	// uint64 minor never underflows on a 1.0-style version.
-	switch {
-	case target.Major() > maxUsed.Major():
-		return nil, nil
-	case target.Major() == maxUsed.Major() && target.Minor()+1 >= maxUsed.Minor():
+	if !kubernetesVersionBelowFloor(target, maxUsed) {
 		return nil, nil
 	}
 
@@ -345,6 +357,52 @@ func (v *moduleConfigValidator) readAvailableKubernetesVersions(ctx context.Cont
 		return nil, false
 	}
 	return status.AvailableVersions, true
+}
+
+// readKubernetesVersionFloor resolves the version the cluster must not land more than one minor
+// below, trying the sources in descending authority. Every one of them describes a *fact* about
+// the cluster — what it ran, runs, or was told to run — never the operator's intent in the request
+// being validated, which is why the previous declared value is deliberately not in this list.
+//
+// The chain exists because the first source is written lazily and the next three all live inside
+// one ConfigMap: a single `kubectl delete cm d8-cluster-kubernetes` used to disarm the guard
+// completely while maxUsed was still absent from the Secret. It also realigns this guard with the
+// soft-guard in the global hook, which already falls back to the ConfigMap label.
+//
+// Returns ok=false only when nothing at all is known — a cluster still bootstrapping, where there
+// is no version to protect yet.
+func (v *moduleConfigValidator) readKubernetesVersionFloor(ctx context.Context) (string, bool) {
+	if baseline, ok := v.readKubernetesVersionBaseline(ctx); ok && baseline.MaxUsedSet && baseline.MaxUsed != "" {
+		return baseline.MaxUsed, true
+	}
+
+	cm := &v1.ConfigMap{}
+	if err := v.client.Get(ctx, client.ObjectKey{
+		Name:      clusterKubernetesConfigMapName,
+		Namespace: kubeSystemNamespace,
+	}, cm); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Warn("skipping the kubernetesVersion maxUsed guard: cannot read the d8-cluster-kubernetes ConfigMap", log.Err(err))
+		}
+		return "", false
+	}
+
+	status := new(clusterKubernetesStatus)
+	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesStatusDataKey]), status); err == nil && status.CurrentVersion != "" {
+		return status.CurrentVersion, true
+	}
+
+	// Survives a corrupted data.status, which is why it is checked before data.spec.
+	if label := cm.Labels[maxK8sVersionLabelKey]; label != "" {
+		return label, true
+	}
+
+	spec := new(clusterKubernetesSpec)
+	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err == nil && spec.DesiredVersion != "" {
+		return spec.DesiredVersion, true
+	}
+
+	return "", false
 }
 
 // readKubernetesVersionBaseline returns the version bookkeeping control-plane-manager keeps in the

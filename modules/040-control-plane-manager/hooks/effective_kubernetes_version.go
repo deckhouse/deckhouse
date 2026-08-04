@@ -181,9 +181,12 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	versions := kubernetesVersionsInSecret{}
 
+	// Trim before parsing. These are Secret values a human can edit, and a trailing newline used
+	// to fail right here — inside a FilterFunc, which takes the whole hook down rather than one
+	// check, while admission (parseVersion) trimmed the same byte and carried on.
 	rawMaxUsed, ok := secret.Data[maxUsedK8sVersionSecretKey]
 	if ok {
-		maxUsed, err := semver.NewVersion(string(rawMaxUsed))
+		maxUsed, err := semver.NewVersion(strings.TrimSpace(string(rawMaxUsed)))
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +195,7 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	rawDeckhouseDefault, ok := secret.Data[deckhouseDefaultK8sVersionSecretKey]
 	if ok {
-		deckhouseDefault, err := semver.NewVersion(string(rawDeckhouseDefault))
+		deckhouseDefault, err := semver.NewVersion(strings.TrimSpace(string(rawDeckhouseDefault)))
 		if err != nil {
 			return nil, err
 		}

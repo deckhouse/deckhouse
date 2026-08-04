@@ -36,6 +36,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -408,11 +409,15 @@ func isPinnedKubernetesVersion(version string) bool {
 //
 // NOTE(kubernetesVersion-deprecation): keep — floor survives CC field removal.
 func kubernetesVersionInMaxUsedWindow(target, maxUsed string) (bool, error) {
-	targetV, err := semver.NewVersion(target)
+	// Trim before parsing: maxUsed arrives from Secret data (and from a ConfigMap label), where a
+	// trailing newline is easy to introduce by hand. Admission's parseVersion has always trimmed;
+	// without it here the two disagreed on the same byte — the soft-guard silently switched itself
+	// off (the parse error is swallowed by the caller) while admission still rejected the pin.
+	targetV, err := semver.NewVersion(strings.TrimSpace(target))
 	if err != nil {
 		return false, err
 	}
-	maxUsedV, err := semver.NewVersion(maxUsed)
+	maxUsedV, err := semver.NewVersion(strings.TrimSpace(maxUsed))
 	if err != nil {
 		return false, err
 	}
