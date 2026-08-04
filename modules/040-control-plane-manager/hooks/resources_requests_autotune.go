@@ -673,10 +673,7 @@ func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric stri
 	var list customMetricValueList
 	if err := json.Unmarshal(body, &list); err != nil {
 		snippet := string(body)
-		if len(snippet) > 256 {
-			snippet = snippet[:256] + "…"
-		}
-		return 0, false, fmt.Errorf("decode metrics response for %s: %w; body=%s", podName, err, snippet)
+		return 0, false, fmt.Errorf("decode metrics response for %s: %w; body=%.256s", podName, err, body)
 	}
 	if len(list.Items) == 0 {
 		// Empty list is a real miss (PromQL returned no series). Surface it so
