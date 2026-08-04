@@ -11,12 +11,15 @@ spec:
     {{- end }}
     dockerCfg: {{ $.Values.global.modulesImages.registry.dockercfg }}
     {{- /*
-      From `address` and `path`, not from `base`. The two hold the same value on a cluster
-      whose pull path the registry module does not manage, but they answer different
-      questions: `base` is where image references point, and that may be the in-cluster
-      registry, reachable only through the node agent in the container runtime's path.
-      This repository is fetched by the Deckhouse controller itself, over HTTP, with the
-      credentials below — so it names the registry that client can reach.
+      `fetchBase`, not `base`. The two hold the same value on a cluster whose pull path the
+      registry module does not manage, but they answer different questions: `base` is where
+      image references point, resolved by the container runtime through the node agent it
+      was redirected to. This repository is fetched by the Deckhouse controller itself, over
+      HTTP, and it has to dial — so it names the agent on this node directly.
+
+      The certificate authority above is left as the cluster knows it. It is not the one that
+      verifies the agent: the agent's is generated on each node and never leaves it, so no
+      cluster object can carry it, and the controller reads it from the node instead.
     */}}
-    repo: {{ printf "%s%s/modules" $.Values.global.modulesImages.registry.address $.Values.global.modulesImages.registry.path }}
+    repo: {{ printf "%s/modules" $.Values.global.modulesImages.registry.fetchBase }}
     scheme: {{ $.Values.global.modulesImages.registry.scheme | upper }}

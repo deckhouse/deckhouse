@@ -99,12 +99,6 @@ type Decision struct {
 func Resolve(
 	namespace, requestPath string, spec *registryv1alpha1.RegistryNodeSpec, self string,
 ) (Decision, error) {
-	if namespace == "" {
-		// The runtime always names the original registry, because the agent is never
-		// the registry that was asked for. An empty value means something else is
-		// talking to the agent, and there is nothing to route.
-		return Decision{}, fmt.Errorf("no registry namespace in the request")
-	}
 	if equalHost(namespace, self) {
 		return Decision{}, fmt.Errorf("the request names the agent itself as its registry, which would loop")
 	}
@@ -117,7 +111,21 @@ func Resolve(
 		return Decision{}, err
 	}
 
-	if equalHost(namespace, constant.Host) {
+	// No namespace at all is a process on this node fetching through the agent, rather than
+	// the container runtime pulling.
+	//
+	// The runtime always names the original registry, because the agent is never the registry
+	// that was asked for — it is put in the runtime's path by a drop-in, so the registry it
+	// meant to reach has to travel alongside the request. A process has nothing to be
+	// redirected from: it dialled the agent deliberately, and what it means by that is the one
+	// image set the agent exists to serve.
+	//
+	// The Deckhouse controller does exactly this. It fetches the release channel and its
+	// module sources through the agent, which is what makes a change of registry reach it the
+	// same way it reaches the runtime — the alternative being a second copy of the registry
+	// address kept somewhere for it, and the reason that is not an alternative is that nothing
+	// would keep the copy current.
+	if namespace == "" || equalHost(namespace, constant.Host) {
 		return primaryDecision(spec, repository, remainder)
 	}
 
@@ -155,7 +163,16 @@ func primaryDecision(
 	// serves them under its own, so the prefix is swapped per target — which is the
 	// whole reason the upstream address can change without every image reference
 	// changing with it.
-	trimmed := strings.TrimPrefix(repository, strings.Trim(constant.Path, "/")+"/")
+	//
+	// The prefix is the whole repository as often as it is a parent of one, and both
+	// have to be swapped. Every image of an embedded module is `<base>@<digest>`, where
+	// the base ends at this prefix — so the repository is exactly `system/deckhouse`,
+	// with nothing under it. Trimming only `system/deckhouse/` left those untouched and
+	// then put the backend's prefix in front of them, and the request went out naming
+	// `system/deckhouse/system/deckhouse`, which no registry has ever heard of. It
+	// affected every image the platform runs, and nothing noticed for as long as no pod
+	// image named the in-cluster address at all.
+	trimmed := trimPrefixPath(repository, strings.Trim(constant.Path, "/"))
 
 	decision := Decision{Kind: KindPrimary}
 	for i := range spec.Backends {
@@ -210,6 +227,22 @@ func splitAPIPath(requestPath string) (string, string, error) {
 	}
 
 	return "", "", fmt.Errorf("%q names no repository operation", requestPath)
+}
+
+// trimPrefixPath removes a repository prefix, whether it is the whole repository or a
+// parent of it.
+//
+// Written out rather than being a `TrimPrefix`, because the two cases it has to tell apart
+// look alike: `system/deckhouse` is the prefix itself and becomes empty, while
+// `system/deckhouse-extra` merely starts with the same letters and must be left alone.
+func trimPrefixPath(repository, prefix string) string {
+	if repository == prefix {
+		return ""
+	}
+	if under, found := strings.CutPrefix(repository, prefix+"/"); found {
+		return under
+	}
+	return repository
 }
 
 // apiPath rebuilds a registry API path.

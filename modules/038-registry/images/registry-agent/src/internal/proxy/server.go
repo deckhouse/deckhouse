@@ -192,6 +192,35 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 			continue
 		}
 
+		// A target that refused credentials the agent supplied is a target that failed,
+		// and its refusal must not be handed to the client.
+		//
+		// Which of the two it is turns on whose credentials were at stake, not on the
+		// status code. Where the agent has none for a target it adds none, and the client's
+		// own may still work — that is an unconfigured registry, and its challenge has to
+		// reach the client for a private pull to be possible at all. Where the agent does
+		// have them, they are the only ones that can work: the client has none for the
+		// in-cluster address and was never meant to.
+		//
+		// Relaying that second kind is worse than useless. The challenge names the
+		// backend's own token endpoint, so a client acting on it leaves the agent entirely
+		// and dials a host it has no reason to trust. What containerd reported was a
+		// certificate signed by an unknown authority, for an address it should never have
+		// contacted, with nothing in it about the authorization that actually failed —
+		// while the next backend, which would have served the image, was never asked.
+		refusedOurs := !target.Auth.IsEmpty() &&
+			(response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden)
+		if refusedOurs {
+			lastStatus = response.StatusCode
+			s.markFailing(target.Name)
+			s.failover(target.Name, metrics.ReasonUnauthorized)
+			_ = response.Body.Close()
+			s.Log.Warn("a target refused the agent's credentials, trying the next one",
+				"target", target.Name, "host", target.Host, "status", response.Status,
+				"challenge", response.Header.Get("WWW-Authenticate"))
+			continue
+		}
+
 		// Only a server-side failure is worth another target. A 404 means the image is
 		// genuinely not there, and asking the upstream for it is exactly what the cache
 		// is supposed to do — but that is the cache's job, not the agent's: retrying a

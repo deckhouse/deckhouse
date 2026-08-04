@@ -28,6 +28,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 )
 
@@ -152,16 +153,30 @@ func discoveryDeckhouseRegistry(_ context.Context, input *go_hook.HookInput) err
 	// release check, the default module source — which has no node agent in its path and
 	// cannot reach an in-cluster address. Image references are pulled by the container
 	// runtime, which does.
-	imageBase := fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path)
+	upstreamBase := fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path)
+	imageBase, fetchBase := upstreamBase, upstreamBase
+
 	if published, err := publishedImageAddress(input); err != nil {
 		return err
 	} else if published != "" {
 		input.Logger.Info("rendering image references from the address the registry module published",
 			slog.String("address", published))
 		imageBase = published
+
+		// The Deckhouse controller fetches over HTTP from a process, and a process has to
+		// dial. It cannot use the address above: that one names a Service which exists only
+		// when there is a cache, and which is never dialled — a container runtime reaches it
+		// through a drop-in that redirects any registry to the node agent. What always
+		// answers on a node running the agent is the agent itself, on the loopback address.
+		//
+		// Conditional on the same published address, because it is the same fact: the module
+		// publishes only once every node's agent is applying the layout it was given, and
+		// until then there is no agent to fetch through either.
+		fetchBase = constant.ProxyHostWithPath
 	}
 
 	input.Values.Set("global.modulesImages.registry.base", imageBase)
+	input.Values.Set("global.modulesImages.registry.fetchBase", fetchBase)
 	input.Values.Set("global.modulesImages.registry.dockercfg", registryConfEncoded)
 	input.Values.Set("global.modulesImages.registry.scheme", registrySecretRaw.Scheme)
 	input.Values.Set("global.modulesImages.registry.CA", registrySecretRaw.CA)

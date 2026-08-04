@@ -118,14 +118,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	)
 
 	if registrySecret != nil {
-		rconf := &utils.RegistryConfig{
-			DockerConfig: registrySecret.DockerConfig,
-			Scheme:       registrySecret.Scheme,
-			CA:           registrySecret.CA,
-			UserAgent:    r.clusterUUID,
-		}
-
-		opts = utils.GenerateRegistryOptions(rconf, r.logger)
+		opts = utils.GenerateRegistryOptions(registrySecret.RegistryConfig(r.clusterUUID, r.logger), r.logger)
 
 		imagesRegistry = registrySecret.ImageRegistry
 	}

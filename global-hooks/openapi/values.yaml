@@ -236,6 +236,24 @@ properties:
               It is used in the helm templates to generate the address of the container image.
               Almost always, concatinateds with tag from modulesImages.tag
             x-examples: [ "registry.example.com/deckhouse" ]
+          fetchBase:
+            type: string
+            pattern: ^([\w.\-_]+((:\d+|)(/[a-z0-9._-]+/[a-z0-9._-]+))|)(/|)([a-z0-9.\-_]+(/[a-z0-9.\-_]+|))
+            description: |
+              The repository the Deckhouse controller fetches from over HTTP: the release
+              channel, and the module sources it owns.
+
+              Not the same thing as `base`, and the difference only shows on a cluster whose
+              pull path the registry module manages. `base` is what image references are
+              built from, and those are resolved by the container runtime, which is handed a
+              drop-in redirecting any registry to the node agent — so `base` can name a
+              service that nothing ever dials. A process has no such redirection and has to
+              dial, so this names the agent directly, on the loopback address every node
+              running it answers on.
+
+              Equal to `base` on every other cluster, which is every cluster that has not
+              had its pull path taken over.
+            x-examples: [ "registry.example.com/deckhouse", "127.0.0.1:5001/system/deckhouse" ]
           hash:
             type: string
             default: ""

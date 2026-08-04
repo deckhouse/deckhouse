@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
@@ -151,15 +152,15 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		})
 	})
 
-	// What the Deckhouse controller fetches over HTTP must name a registry its own client can
-	// reach, which is not necessarily the one image references point at.
+	// What the Deckhouse controller fetches over HTTP must name something its own client can
+	// dial, which is not the address image references point at.
 	//
-	// `global.modulesImages.registry.base` is the address container image references are
-	// rendered from, and the registry module may point it at the in-cluster registry — an
-	// address only the container runtime resolves, because a node agent stands in that path.
-	// Nothing stands in the path of the controller's HTTP client. Reading `base` here worked
-	// only for as long as the two were always the same value, and taking them apart is what
-	// lets the pull path move without the release check and the module source moving with it.
+	// `base` is where image references point, and those are resolved by the container runtime,
+	// which the registry module hands a drop-in redirecting any registry to its node agent —
+	// so `base` may name a service nothing ever dials. A process has no such redirection.
+	// Reading `base` here worked only for as long as the two were always the same value, and
+	// taking them apart is what lets the pull path move without the release check and the
+	// module source moving with it.
 	//
 	// The fixture gives them different values on purpose, so this is observable at all.
 	Context("What the controller fetches itself", func() {
@@ -170,23 +171,113 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			f.HelmRender()
 		})
 
-		It("names the registry that client can reach, not the one images render from", func() {
+		It("names what that client can dial, not the address images render from", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			reachable := "registry.deckhouse.io/deckhouse/fe"
+			dialable := "registry.deckhouse.io/deckhouse/fe"
 			renderedFrom := "registry.example.com"
 
 			secret := f.KubernetesResource("Secret", "d8-system", "deckhouse-registry")
 			Expect(secret.Exists()).To(BeTrue())
 			imagesRegistry, err := base64.StdEncoding.DecodeString(secret.Field("data.imagesRegistry").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(imagesRegistry)).To(Equal(reachable))
+			Expect(string(imagesRegistry)).To(Equal(dialable))
 			Expect(string(imagesRegistry)).ToNot(ContainSubstring(renderedFrom))
 
 			source := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(source.Exists()).To(BeTrue())
-			Expect(source.Field("spec.registry.repo").String()).To(Equal(reachable + "/modules"))
+			Expect(source.Field("spec.registry.repo").String()).To(Equal(dialable + "/modules"))
 			Expect(source.Field("spec.registry.repo").String()).ToNot(ContainSubstring(renderedFrom))
+		})
+	})
+
+	// The pull path having been taken over by the registry module.
+	//
+	// This is the case the whole separation exists for: a registry change made through that
+	// module reconfigures the node agents and writes no registry address anywhere, so a
+	// controller that read an address out of this secret would keep fetching from the registry
+	// the cluster was installed with — forever, and silently, because the old registry usually
+	// still answers.
+	Context("When the registry module manages the pull path", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues+clusterIsBootstrapped)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			// As the global hook sets them once the module has published its address.
+			f.ValuesSet("global.modulesImages.registry.base", constant.HostWithPath)
+			f.ValuesSet("global.modulesImages.registry.fetchBase", constant.ProxyHostWithPath)
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.HelmRender()
+		})
+
+		It("fetches through the node agent, while images render from the in-cluster address", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			secret := f.KubernetesResource("Secret", "d8-system", "deckhouse-registry")
+			imagesRegistry, err := base64.StdEncoding.DecodeString(secret.Field("data.imagesRegistry").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(imagesRegistry)).To(Equal(constant.ProxyHostWithPath))
+
+			source := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
+			Expect(source.Field("spec.registry.repo").String()).
+				To(Equal(constant.ProxyHostWithPath + "/modules"))
+
+			// And the images themselves keep naming the in-cluster address, which is the one
+			// thing that must not become the loopback one: it is written into every pod spec
+			// in the cluster, and a pod is not tied to the node whose agent answered for it.
+			deployment := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(deployment.Field("spec.template.spec.containers.0.image").String()).
+				ToNot(ContainSubstring(constant.ProxyHost))
+		})
+
+		// Without this the move is rendered and never applied. The annotation exists because
+		// changes to fields other than `.dockerconfigjson` are otherwise not noticed, and the
+		// address the controller fetches from is exactly such a field.
+		It("changes the checksum, so the move is actually applied", func() {
+			checksum := func() string {
+				return f.KubernetesResource("Secret", "d8-system", "deckhouse-registry").
+					Field("metadata.annotations.checksum").String()
+			}
+
+			moved := checksum()
+			Expect(moved).ToNot(BeEmpty())
+
+			// The same cluster before the module took the pull path over: only the address
+			// the controller fetches from differs between the two renders.
+			f.ValuesSet("global.modulesImages.registry.fetchBase", "registry.deckhouse.io/deckhouse/fe")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(moved).ToNot(Equal(checksum()))
+		})
+
+		It("mounts the authority the agent is verified with from the node", func() {
+			deployment := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+
+			var mounted string
+			for _, mount := range deployment.Field("spec.template.spec.containers.0.volumeMounts").Array() {
+				if mount.Get("name").String() == "registry-agent-pki" {
+					mounted = mount.Get("mountPath").String()
+					Expect(mount.Get("readOnly").Bool()).To(BeTrue())
+				}
+			}
+			// The same path inside the pod as on the node, so that one constant describes
+			// both sides. The controller opens it by that constant.
+			Expect(mounted).To(Equal(constant.AgentPKIPath),
+				"the controller reads the agent authority by an absolute path, so the mount "+
+					"has to put it exactly there")
+
+			var source string
+			for _, volume := range deployment.Field("spec.template.spec.volumes").Array() {
+				if volume.Get("name").String() == "registry-agent-pki" {
+					source = volume.Get("hostPath.path").String()
+					// Not `File` and not `Directory`: on a cluster where the module manages
+					// nothing this path does not exist, and a host path that names a missing
+					// file is created as a directory — which would then be in the way of the
+					// material the node generates later.
+					Expect(volume.Get("hostPath.type").String()).To(Equal("DirectoryOrCreate"))
+				}
+			}
+			Expect(source).To(Equal(constant.AgentPKIPath))
 		})
 	})
 

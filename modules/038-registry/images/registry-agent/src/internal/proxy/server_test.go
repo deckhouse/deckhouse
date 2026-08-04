@@ -686,3 +686,67 @@ func TestSplitAPIPathOnTheProxiedShape(t *testing.T) {
 	assert.Equal(t, "deckhouse/ee/one", repository)
 	assert.True(t, strings.HasPrefix(remainder, "/blobs/"))
 }
+
+// TestServeTriesTheNextRegistryWhenOursAreRefused is the other half of the challenge rule,
+// and the half that a cluster ran into.
+//
+// Where the agent supplies credentials, they are the only ones that can work: the client has
+// none for the in-cluster address and was never meant to. So a refusal there is a fact about
+// that backend, and the next one — which serves the same image set — has to be asked.
+//
+// What made this worth a test is how the failure looked without it. The cache refused a
+// repository, the agent handed the refusal to containerd, and containerd did what a client
+// does with a challenge: it went to the token endpoint the challenge named, which is the
+// storage's own address, and failed to verify a certificate from an authority it has no
+// reason to hold. Every image in the cluster stopped being pullable, the error named TLS and
+// an address nothing should have contacted, and the upstream that would have served it was
+// never asked.
+func TestServeTriesTheNextRegistryWhenOursAreRefused(t *testing.T) {
+	// A cache that refuses what the agent offers, and an upstream that accepts it.
+	cache := (&registryStub{
+		name: "cache", challenge: "bearer", username: "someone-else", password: "another-secret",
+	}).start(t)
+	upstream := (&registryStub{
+		name: "upstream", challenge: "bearer", username: "license-token", password: "license-key",
+		body: "from-the-upstream",
+	}).start(t)
+
+	credentials := &registryv1alpha1.Auth{Username: "license-token", Password: "license-key"}
+	spec := &registryv1alpha1.RegistryNodeSpec{
+		Cache: true,
+		Backends: []registryv1alpha1.Backend{
+			insecureBackend(registryv1alpha1.BackendStorage, cache, t, constant.Path, credentials),
+			insecureBackend(registryv1alpha1.BackendUpstream, upstream, t, "/deckhouse/ee", credentials),
+		},
+	}
+
+	response := pull(t, newServer(spec), constant.Host, "/v2/system/deckhouse/one/manifests/v1")
+
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+	assert.Equal(t, "from-the-upstream", bodyOf(t, response))
+	assert.Empty(t, response.Header.Get("WWW-Authenticate"),
+		"a challenge the client cannot answer must not reach it: acting on it takes the "+
+			"client away from the agent, to a host it has no reason to trust")
+}
+
+// TestServeReportsWhenEveryRegistryRefusesUs is what the client sees when there is no
+// backend left. A challenge would send it somewhere it cannot get to; the status has to say
+// that the registries were asked and refused.
+func TestServeReportsWhenEveryRegistryRefusesUs(t *testing.T) {
+	cache := (&registryStub{
+		name: "cache", challenge: "bearer", username: "someone-else", password: "another-secret",
+	}).start(t)
+
+	spec := &registryv1alpha1.RegistryNodeSpec{
+		Cache: true,
+		Backends: []registryv1alpha1.Backend{
+			insecureBackend(registryv1alpha1.BackendStorage, cache, t, constant.Path,
+				&registryv1alpha1.Auth{Username: "registry-ro", Password: "read-secret"}),
+		},
+	}
+
+	response := pull(t, newServer(spec), constant.Host, "/v2/system/deckhouse/one/manifests/v1")
+
+	assert.Equal(t, http.StatusBadGateway, response.StatusCode)
+	assert.Empty(t, response.Header.Get("WWW-Authenticate"))
+}

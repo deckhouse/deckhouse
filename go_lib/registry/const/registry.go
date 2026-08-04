@@ -62,12 +62,34 @@ const (
 	// under StorePath/local_data, which matters when adopting an existing store
 	// instead of refilling it.
 	StorePath = "/opt/deckhouse/registry"
+
+	// AgentPKIPath is where the node agent's certificate material lives on a node.
+	//
+	// A shared constant because it is a contract between three sides: the bashible step
+	// that generates the material, the agent that serves with it, and the Deckhouse pod,
+	// which mounts the authority from here to verify the agent it fetches through. The
+	// authority is generated on the node and never leaves it, so it cannot travel through
+	// the cluster the way a Secret would — every node has its own.
+	AgentPKIPath = "/etc/kubernetes/registry-agent/pki"
+
+	// AgentCAFile is the authority that signs what the agent serves.
+	AgentCAFile = AgentPKIPath + "/ca.crt"
 )
 
 var (
 	Host         = fmt.Sprintf("registry.d8-system.svc:%d", Port)
 	ProxyHost    = fmt.Sprintf("127.0.0.1:%d", Port)
 	HostWithPath = fmt.Sprintf("%s/%s", Host, strings.TrimLeft(Path, "/"))
+
+	// ProxyHostWithPath is what a client running on a node fetches through, as opposed to
+	// HostWithPath, which is what an image reference is built from.
+	//
+	// The two name the same agent and differ only in who is asking. A container runtime is
+	// handed a drop-in that redirects any registry to the agent, so its references can name
+	// a service that nothing dials. A process has no such redirection and has to dial, and
+	// the only address that always works is the loopback one: the agent is on every node,
+	// while the Service in front of the cache exists only when there is a cache.
+	ProxyHostWithPath = fmt.Sprintf("%s/%s", ProxyHost, strings.TrimLeft(Path, "/"))
 
 	// AgentDropInFile is the one file the node agent writes for the container runtime.
 	//
@@ -80,6 +102,16 @@ var (
 	SupportedCRI         = []CRIType{CRIContainerdV1, CRIContainerdV2}
 	ModesRequiringModule = []ModeType{ModeDirect, ModeLocal, ModeProxy}
 )
+
+// IsLocalAgent reports whether an image repository is served by the node agent on this
+// host rather than by a registry somewhere else.
+//
+// What makes the difference is how the connection is verified: the agent's authority is
+// generated on the node and read from its filesystem, while every other registry is
+// verified with what the cluster knows about it.
+func IsLocalAgent(repository string) bool {
+	return repository == ProxyHost || strings.HasPrefix(repository, ProxyHost+"/")
+}
 
 func NodeRegistryAddr(addr string) string {
 	return fmt.Sprintf("%s:%d/%s", addr, Port, strings.TrimLeft(Path, "/"))

@@ -86,6 +86,15 @@ installed with, which is also where they return if the module is set to `Unmanag
 disabled. Whether the step has happened is visible as the `registry-image-address` ConfigMap
 in `d8-system`.
 
+The Deckhouse controller fetches through the same agent, at `127.0.0.1:5001` — its own release
+channel and the module sources it owns. A different address for the same agent, because the
+controller is a process and has to dial: an image reference is resolved by the container
+runtime, which is redirected to the agent by a drop-in and can therefore name a service that
+nothing ever connects to. This is what makes changing the registry a single change. The
+configuration is edited in one place, the agents are reconfigured, and both what the nodes pull
+and what the controller fetches follow — with no registry address written anywhere for the
+controller to read, and so none to be left behind pointing at the previous registry.
+
 {% alert level="warning" %}
 Use a separate disk for the cache (`/opt/deckhouse/registry`) and for etcd data. Sharing one
 disk degrades etcd while the cache is being filled.

@@ -1037,13 +1037,8 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 
 	var opts []cr.Option
 	if r.registrySecret != nil {
-		rconf := &utils.RegistryConfig{
-			DockerConfig: r.registrySecret.DockerConfig,
-			Scheme:       r.registrySecret.Scheme,
-			CA:           r.registrySecret.CA,
-			UserAgent:    r.clusterUUID,
-		}
-		opts = utils.GenerateRegistryOptions(rconf, r.logger)
+		opts = utils.GenerateRegistryOptions(
+			r.registrySecret.RegistryConfig(r.clusterUUID, r.logger), r.logger)
 	}
 
 	regClient, err := r.dc.GetRegistryClient(repo, opts...)

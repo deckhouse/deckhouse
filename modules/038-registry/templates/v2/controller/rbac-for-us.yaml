@@ -152,9 +152,13 @@ rules:
   - apiGroups: ["deckhouse.io"]
     resources: ["registrystorages/status"]
     verbs: ["get", "update", "patch"]
-  # What the cluster is running, which is what decides whether an image in the store belongs
-  # to a release the cluster has moved past. Read-only: this is the one input that justifies a
-  # deletion, and nothing here has any business changing it.
+  # What the cluster is running, which is what the store is for at both ends: the fill copies
+  # the images these releases declare, and the collector keeps exactly those and removes what
+  # belongs to a release the cluster has moved past. One input, so the two cannot disagree
+  # about what the store should hold.
+  #
+  # Read-only. It justifies every deletion the collector makes, and nothing here has any
+  # business changing it.
   - apiGroups: ["deckhouse.io"]
     resources: ["deckhousereleases"]
     verbs: ["get", "list", "watch"]

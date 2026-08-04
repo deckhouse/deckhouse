@@ -88,6 +88,11 @@ const (
 const (
 	ReasonUnreachable = "unreachable"
 	ReasonServerError = "server_error"
+
+	// ReasonUnauthorized is a target that refused the agent's own credentials. Its own
+	// reason because it is the one that points at this module rather than at the network:
+	// nothing the client did can cause it, and nothing the client does can fix it.
+	ReasonUnauthorized = "unauthorized"
 )
 
 // Results of a token exchange.

@@ -34,6 +34,7 @@ import (
 
 	"github.com/deckhouse/registry-syncer/internal/distribution"
 	"github.com/deckhouse/registry-syncer/internal/fill"
+	"github.com/deckhouse/registry-syncer/internal/gc"
 	"github.com/deckhouse/registry-syncer/internal/metrics"
 	"github.com/deckhouse/registry-syncer/internal/report"
 )
@@ -258,13 +259,30 @@ func (l *Loop) once(ctx context.Context) error {
 func (l *Loop) applyFill(
 	ctx context.Context, spec *registryv1alpha1.RegistryStorageSpec, expected int32, state *report.State,
 ) {
-	copier, err := l.copier(spec)
+	// What the cluster runs, and what it ran before it.
+	//
+	// The same pair the collector keeps, so that the fill puts in what the collector would
+	// not throw away — and read here rather than passed in, because it changes underneath a
+	// long-lived loop every time the cluster is updated.
+	releases, err := gc.FromCluster(ctx, l.Client)
+	if err != nil {
+		// Said in the log as well as the status, because this is the reason a fill does
+		// nothing at all, and a status field is not where anybody looks first.
+		l.Log.Error("cannot tell what the cluster runs, so there is nothing to fill towards",
+			"error", err.Error())
+		state.Error = err.Error()
+		return
+	}
+
+	copier, err := l.copier(spec, releases)
 	if err != nil {
 		state.Error = err.Error()
 		return
 	}
 
-	l.Log.Info("filling the storage from the upstream", "upstream", spec.Upstream.Host, "expected", expected)
+	l.Log.Info("filling the storage from the upstream",
+		"upstream", spec.Upstream.Host, "deployed", releases.Deployed,
+		"previous", releases.Previous, "expected", expected)
 
 	result, err := copier.Run(ctx)
 	if err != nil {
@@ -308,6 +326,9 @@ func (l *Loop) applyReplicate(
 	copier := &fill.Copier{
 		Source:      source,
 		Destination: local,
+		// The leader is one of our own replicas, so asking it what it holds is both
+		// permitted and exactly what a follower wants.
+		Discover: fill.Catalogue{},
 		OnProgress: func(done, total int32) {
 			l.Log.Debug("replication progress", "done", done, "total", total)
 		},
@@ -441,7 +462,9 @@ func (l *Loop) resolveAuth(
 	return registryv1alpha1.ResolveAuths(auths, contents)
 }
 
-func (l *Loop) copier(spec *registryv1alpha1.RegistryStorageSpec) (*fill.Copier, error) {
+func (l *Loop) copier(
+	spec *registryv1alpha1.RegistryStorageSpec, releases gc.Releases,
+) (*fill.Copier, error) {
 	username, password := "", ""
 	if auth := spec.Upstream.Auth; !auth.IsEmpty() {
 		username, password = auth.Username, auth.Password
@@ -457,6 +480,13 @@ func (l *Loop) copier(spec *registryv1alpha1.RegistryStorageSpec) (*fill.Copier,
 		return nil, err
 	}
 
+	versions := make([]string, 0, 2)
+	for _, version := range []string{releases.Deployed, releases.Previous} {
+		if version != "" {
+			versions = append(versions, version)
+		}
+	}
+
 	return &fill.Copier{
 		Source: fill.Registry{
 			Address:    spec.Upstream.Host,
@@ -464,6 +494,11 @@ func (l *Loop) copier(spec *registryv1alpha1.RegistryStorageSpec) (*fill.Copier,
 			Options:    upstreamOptions,
 		},
 		Destination: local,
+		// Read out of the releases themselves rather than by listing the upstream. Listing
+		// somebody else's registry is a privilege of its own, which credentials scoped to
+		// pulling — all a license grants — are refused for; and "everything the upstream
+		// holds" is not a set a cache can be complete with respect to anyway.
+		Discover: fill.Release{Versions: versions},
 		OnProgress: func(done, total int32) {
 			l.Log.Debug("fill progress", "done", done, "total", total)
 		},

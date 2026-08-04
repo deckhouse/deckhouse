@@ -89,7 +89,7 @@ func TestCopierFillsAnEmptyStorage(t *testing.T) {
 	first := pushImage(t, source, "deckhouse/ee/registry-controller:v1")
 	second := pushImage(t, source, "deckhouse/ee/release-channel:stable")
 
-	copier := &Copier{Source: source, Destination: destination}
+	copier := &Copier{Source: source, Destination: destination, Discover: Catalogue{}}
 	report, err := copier.Run(context.Background())
 	require.NoError(t, err)
 
@@ -121,7 +121,7 @@ func TestCopierIsIncrementalAndStillCountsWhatIsHeld(t *testing.T) {
 	pushImage(t, source, "deckhouse/ee/one:v1")
 	pushImage(t, source, "deckhouse/ee/two:v1")
 
-	copier := &Copier{Source: source, Destination: destination}
+	copier := &Copier{Source: source, Destination: destination, Discover: Catalogue{}}
 
 	first, err := copier.Run(context.Background())
 	require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestCopierReplacesAChangedTag(t *testing.T) {
 	destination.Repository = "system/deckhouse"
 
 	pushImage(t, source, "deckhouse/ee/release-channel:stable")
-	copier := &Copier{Source: source, Destination: destination}
+	copier := &Copier{Source: source, Destination: destination, Discover: Catalogue{}}
 	_, err := copier.Run(context.Background())
 	require.NoError(t, err)
 
@@ -172,7 +172,7 @@ func TestCopierStaysWithinItsPrefix(t *testing.T) {
 	// A prefix that merely starts with the same characters is a different repository.
 	pushImage(t, source, "deckhouse/ee-staging/unwanted:v1")
 
-	report, err := (&Copier{Source: source, Destination: destination}).Run(context.Background())
+	report, err := (&Copier{Source: source, Destination: destination, Discover: Catalogue{}}).Run(context.Background())
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, report.Written)
 
@@ -194,7 +194,7 @@ func TestCopierReportsProgress(t *testing.T) {
 
 	var totals []int32
 	copier := &Copier{
-		Source: source, Destination: destination,
+		Source: source, Destination: destination, Discover: Catalogue{},
 		OnProgress: func(done, _ int32) { totals = append(totals, done) },
 	}
 
@@ -210,7 +210,7 @@ func TestCopierWithNothingToCopy(t *testing.T) {
 	source := startRegistry(t)
 	destination := startRegistry(t)
 
-	report, err := (&Copier{Source: source, Destination: destination}).Run(context.Background())
+	report, err := (&Copier{Source: source, Destination: destination, Discover: Catalogue{}}).Run(context.Background())
 	require.NoError(t, err)
 
 	assert.EqualValues(t, 0, report.Written)
@@ -231,7 +231,7 @@ func TestCopierHonoursCancellation(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	copier := &Copier{
-		Source: source, Destination: destination,
+		Source: source, Destination: destination, Discover: Catalogue{},
 		OnProgress: func(done, _ int32) {
 			if done == 1 {
 				cancel()

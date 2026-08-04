@@ -263,14 +263,6 @@ func TestResolveRejectsWhatItCannotRoute(t *testing.T) {
 		spec        *registryv1alpha1.RegistryNodeSpec
 	}{
 		{
-			name: "no namespace",
-			// The runtime always names the original registry, since the agent is never the
-			// registry that was asked for. Its absence means something else is talking.
-			namespace:   "",
-			requestPath: "/v2/one/manifests/v1",
-			spec:        layout(),
-		},
-		{
 			name:        "no layout",
 			namespace:   constant.Host,
 			requestPath: "/v2/one/manifests/v1",
@@ -331,4 +323,93 @@ func TestSplitAPIPath(t *testing.T) {
 
 	_, _, err = splitAPIPath("/v2/")
 	assert.Error(t, err, "the ping endpoint names no repository and is answered by the agent itself")
+}
+
+// TestResolveServesAProcessOnTheNode is what lets a change of registry reach the Deckhouse
+// controller.
+//
+// The controller fetches the release channel and its module sources over HTTP, from a process
+// rather than through the container runtime. Nothing redirects that process, so it dials the
+// agent itself — and having dialled it deliberately, it has no original registry to name and
+// no `ns` parameter to set. Refusing that request, which is what this did until the controller
+// started making it, left the controller reading a registry address copied into a secret at
+// install time, and no mechanism ever updated the copy.
+//
+// Routed to the primary image set, identically to the runtime naming the in-cluster address:
+// the same backends in the same order, so the cache is used when there is one and the upstream
+// stands behind it.
+func TestResolveServesAProcessOnTheNode(t *testing.T) {
+	viaRuntime, err := Resolve(constant.Host, "/v2/system/deckhouse/one/manifests/v1", layout(), self)
+	require.NoError(t, err)
+
+	viaProcess, err := Resolve("", "/v2/system/deckhouse/one/manifests/v1", layout(), self)
+	require.NoError(t, err)
+
+	assert.Equal(t, KindPrimary, viaProcess.Kind)
+	assert.Equal(t, viaRuntime, viaProcess,
+		"a process fetching through the agent must reach the same registries, in the same "+
+			"order, as a pull of the same image does")
+}
+
+// TestResolveStillRefusesToTalkToItself is the guard the case above must not cost.
+//
+// A client that does name a registry, and names the agent, is either misconfigured or looping;
+// answering it would make the agent forward to itself. That is a different thing from naming no
+// registry at all, and only the latter now means "the primary image set".
+func TestResolveStillRefusesToTalkToItself(t *testing.T) {
+	_, err := Resolve(self, "/v2/system/deckhouse/one/manifests/v1", layout(), self)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "loop")
+}
+
+// TestResolveMapsThePlatformsOwnImages is the shape every image of every embedded module
+// has, and the one that was never routed correctly.
+//
+// Those references are `<base>@<digest>`, where the base ends at the fixed prefix — so the
+// repository is exactly `system/deckhouse`, with nothing under it. Nothing in this file
+// exercised that until the platform's image references actually moved onto the in-cluster
+// address, and by then the requests were going out as `system/deckhouse/system/deckhouse`:
+// the prefix was not recognised as the whole repository, so it was never swapped, and each
+// backend's own prefix was put in front of it instead.
+//
+// Every backend, because getting this wrong on any one of them takes the cluster down with
+// it — the cache and the upstream serve the same image set under different prefixes, and
+// which one answers is not something a pull can depend on.
+func TestResolveMapsThePlatformsOwnImages(t *testing.T) {
+	decision, err := Resolve(
+		constant.Host, "/v2/system/deckhouse/manifests/sha256:abc", layout(), self)
+	require.NoError(t, err)
+	require.Equal(t, KindPrimary, decision.Kind)
+	require.Len(t, decision.Targets, 2)
+
+	assert.Equal(t, "/v2/system/deckhouse/manifests/sha256:abc", decision.Targets[0].Path,
+		"the cache serves the platform images at its own prefix, with nothing under it")
+	assert.Equal(t, "/v2/deckhouse/ee/manifests/sha256:abc", decision.Targets[1].Path,
+		"and the upstream serves the same image at its own prefix — which is where it lived "+
+			"before any of this, as `<upstream>/deckhouse/ee@<digest>`")
+}
+
+// TestTrimPrefixPathTellsThePrefixFromAName is the distinction the swap turns on.
+func TestTrimPrefixPathTellsThePrefixFromAName(t *testing.T) {
+	tests := []struct {
+		repository string
+		want       string
+	}{
+		// The prefix itself: the platform's own images.
+		{repository: "system/deckhouse", want: ""},
+		// A repository under it: anything with a name of its own.
+		{repository: "system/deckhouse/one", want: "one"},
+		{repository: "system/deckhouse/group/sub/one", want: "group/sub/one"},
+		// Merely starting with the same letters is not the same thing, and trimming here
+		// would leave a repository beginning with a dash.
+		{repository: "system/deckhouse-extra", want: "system/deckhouse-extra"},
+		// Not under the prefix at all.
+		{repository: "other/repo", want: "other/repo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.repository, func(t *testing.T) {
+			assert.Equal(t, tt.want, trimPrefixPath(tt.repository, "system/deckhouse"))
+		})
+	}
 }

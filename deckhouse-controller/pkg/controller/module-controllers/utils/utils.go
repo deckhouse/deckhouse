@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
 	"strconv"
 	"strings"
 
@@ -39,6 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -51,7 +54,65 @@ func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterU
 		UserAgent:    clusterUUID,
 	}
 
-	return GenerateRegistryOptions(rconf, logger)
+	return GenerateRegistryOptions(rconf.ForRepository(ms.Spec.Registry.Repo, logger), logger)
+}
+
+// agentCAFile is where the node agent's authority is read from. A variable rather than the
+// constant itself only so that a test can point it at a file it is allowed to create.
+var agentCAFile = registry_const.AgentCAFile
+
+// ForRepository adjusts a registry client configuration for the repository it will fetch
+// from, and does nothing at all unless that repository is the node agent on this host.
+//
+// The agent is what the registry module puts in front of every pull once it manages the pull
+// path, and a process — unlike a container runtime, which is handed a drop-in that redirects
+// it — has to dial the agent to fetch through it. Two things about the agent are not
+// properties of the registry the cluster was told about, and cannot be:
+//
+//   - It serves HTTPS, whatever the upstream behind it speaks. An upstream reached over plain
+//     HTTP is perfectly ordinary, and taking the configured scheme here would send a plaintext
+//     request to a TLS listener.
+//   - Its authority is generated on the node at bootstrap and never leaves it, so no cluster
+//     object can carry it — every node has a different one. That is deliberate: a node's
+//     ability to pull must not wait for cluster-wide certificate material to arrive. It is why
+//     this pod mounts the authority from the host instead.
+//
+// Credentials are left as they are, and are simply not used: the agent authenticates to the
+// registry behind it with credentials of its own, and a docker config naming other hosts has
+// nothing to say about the loopback address.
+func (rc *RegistryConfig) ForRepository(repository string, logger *log.Logger) *RegistryConfig {
+	if !registry_const.IsLocalAgent(repository) {
+		return rc
+	}
+
+	rc.Scheme = registry_const.Scheme
+
+	authority, err := os.ReadFile(agentCAFile)
+	if err != nil {
+		// Said out loud, because the failure it leads to says nothing about a file: the
+		// fetch fails to verify a certificate, and the reason is that the authority which
+		// signed it was never read.
+		logger.Error("cannot read the registry agent authority, so nothing fetched through "+
+			"the agent on this node can be verified",
+			slog.String("path", registry_const.AgentCAFile),
+			log.Err(err))
+		return rc
+	}
+	rc.CA = string(authority)
+
+	return rc
+}
+
+// RegistryConfig is what a client for the registry this secret describes is built from.
+func (s *DeckhouseRegistrySecret) RegistryConfig(userAgent string, logger *log.Logger) *RegistryConfig {
+	rc := &RegistryConfig{
+		DockerConfig: s.DockerConfig,
+		Scheme:       s.Scheme,
+		CA:           s.CA,
+		UserAgent:    userAgent,
+	}
+
+	return rc.ForRepository(s.ImageRegistry, logger)
 }
 
 type RegistryConfig struct {

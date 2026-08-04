@@ -173,7 +173,10 @@ func SetupHelmConfig(values string) *Config {
 func GetModulesImages() map[string]interface{} {
 	return map[string]interface{}{
 		"registry": map[string]interface{}{
-			"base":      "registry.example.com",
+			"base": "registry.example.com",
+			// Deliberately not equal to `base`: the two answer different questions, and a
+			// fixture where they coincide cannot tell a template reading the wrong one.
+			"fetchBase": "registry.deckhouse.io/deckhouse/fe",
 			"dockercfg": "Y2ZnCg==",
 			"address":   "registry.deckhouse.io",
 			"path":      "/deckhouse/fe",

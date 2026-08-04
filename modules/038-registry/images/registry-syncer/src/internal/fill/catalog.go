@@ -56,7 +56,6 @@ func CountCatalogue(ctx context.Context, registry Registry) (int32, error) {
 		return 0, fmt.Errorf("listing the repositories: %w", err)
 	}
 
-	scope := Copier{Source: registry}
 	var count int32
 
 	for catalogger.HasNext() {
@@ -66,7 +65,7 @@ func CountCatalogue(ctx context.Context, registry Registry) (int32, error) {
 		}
 
 		for _, repository := range page.Repos {
-			if !scope.inScope(repository) {
+			if !inScope(registry.Repository, repository) {
 				continue
 			}
 

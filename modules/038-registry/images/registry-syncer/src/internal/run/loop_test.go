@@ -17,7 +17,11 @@ limitations under the License.
 package run
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -29,12 +33,17 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -83,8 +92,72 @@ func pushImage(t *testing.T, address, reference string) {
 	require.NoError(t, remote.Write(tag, image))
 }
 
+// pushDigest puts an image in with no tag, the way every image of an embedded module lives
+// in the registry: the release names them by digest and nothing else does.
+func pushDigest(t *testing.T, address, repository string) string {
+	t.Helper()
+
+	image, err := random.Image(128, 1)
+	require.NoError(t, err)
+	digest, err := image.Digest()
+	require.NoError(t, err)
+
+	reference, err := name.NewDigest(
+		fmt.Sprintf("%s/%s@%s", address, repository, digest.String()), name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(reference, image))
+
+	return digest.String()
+}
+
+// pushInstaller puts in the image a release declares its own image set in — where the fill
+// now reads that set from, instead of listing the upstream.
+func pushInstaller(t *testing.T, address, reference string, digests []string) {
+	t.Helper()
+
+	byImage := make(map[string]string, len(digests))
+	for i, digest := range digests {
+		byImage[fmt.Sprintf("image%d", i)] = digest
+	}
+	encoded, err := json.Marshal(map[string]map[string]string{"registry": byImage})
+	require.NoError(t, err)
+
+	var archive bytes.Buffer
+	writer := tar.NewWriter(&archive)
+	require.NoError(t, writer.WriteHeader(&tar.Header{
+		Name: "deckhouse/candi/images_digests.json", Mode: 0o644, Size: int64(len(encoded)),
+	}))
+	_, err = writer.Write(encoded)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	layer, err := tarball.LayerFromReader(bytes.NewReader(archive.Bytes()))
+	require.NoError(t, err)
+	image, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+
+	tag, err := name.NewTag(address+"/"+reference, name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(tag, image))
+}
+
+// deployedRelease is what the cluster says it is running. The fill enumerates from it, so
+// without one there is nothing to fill towards — which is a refusal, not an empty set.
+func deployedRelease(version string) *unstructured.Unstructured {
+	release := &unstructured.Unstructured{Object: map[string]any{
+		"spec":   map[string]any{"version": version},
+		"status": map[string]any{"phase": "Deployed"},
+	}}
+	release.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "deckhouse.io", Version: "v1alpha1", Kind: "DeckhouseRelease",
+	})
+	release.SetName(version)
+	return release
+}
+
 func newLoop(
 	t *testing.T, isLeader bool, storage *registryv1alpha1.RegistryStorage,
+	extra ...client.Object,
 ) (*Loop, client.Client, *noopRestarter) {
 	t.Helper()
 
@@ -96,6 +169,9 @@ func newLoop(
 		WithStatusSubresource(&registryv1alpha1.RegistryStorage{})
 	if storage != nil {
 		builder = builder.WithObjects(storage)
+	}
+	if len(extra) > 0 {
+		builder = builder.WithObjects(extra...)
 	}
 	fakeClient := builder.Build()
 
@@ -152,8 +228,16 @@ func TestOnceFillsAndReportsFull(t *testing.T) {
 	upstream := startRegistry(t)
 	local := startRegistry(t)
 
-	pushImage(t, upstream, "deckhouse/ee/one:v1")
-	pushImage(t, upstream, "deckhouse/ee/two:v1")
+	// The image set the release declares, addressed by digest under the repository root,
+	// which is how the platform addresses its own images.
+	one := pushDigest(t, upstream, "deckhouse/ee")
+	two := pushDigest(t, upstream, "deckhouse/ee")
+	pushImage(t, upstream, "deckhouse/ee:v1.70.1")
+	pushInstaller(t, upstream, "deckhouse/ee/install:v1.70.1", []string{one, two})
+
+	// And something the release says nothing about, which must not be copied: the fill
+	// enumerates the release, not the registry.
+	pushImage(t, upstream, "deckhouse/ee/unrelated:v1")
 
 	loop, c, restarter := newLoop(t, true, storageWith(registryv1alpha1.RegistryStorageSpec{
 		Upstream: &registryv1alpha1.Upstream{
@@ -161,9 +245,10 @@ func TestOnceFillsAndReportsFull(t *testing.T) {
 				Scheme: registryv1alpha1.SchemeHTTP, Host: upstream, Path: "/deckhouse/ee",
 			},
 		},
-		Source:   &registryv1alpha1.StorageSource{ExpectedDigests: 2},
+		// Two declared digests, plus the release and its installer.
+		Source:   &registryv1alpha1.StorageSource{ExpectedDigests: 4},
 		NeedSync: true,
-	}))
+	}), deployedRelease("v1.70.1"))
 	loop.LocalAddress = local
 
 	require.NoError(t, loop.once(context.Background()))
@@ -171,7 +256,7 @@ func TestOnceFillsAndReportsFull(t *testing.T) {
 	replica := replicaOf(t, c, "master-0")
 	assert.Equal(t, registryv1alpha1.ReplicaRoleLeader, replica.Role)
 	assert.True(t, replica.Full)
-	assert.EqualValues(t, 2, replica.VerifiedDigests)
+	assert.EqualValues(t, 4, replica.VerifiedDigests)
 	assert.Empty(t, replica.Error)
 
 	// The configuration is applied on every pass, regardless of role or of what the
@@ -188,7 +273,10 @@ func TestOnceFillsAndReportsFull(t *testing.T) {
 func TestOnceReportsAPartialFill(t *testing.T) {
 	upstream := startRegistry(t)
 	local := startRegistry(t)
-	pushImage(t, upstream, "deckhouse/ee/one:v1")
+
+	one := pushDigest(t, upstream, "deckhouse/ee")
+	pushImage(t, upstream, "deckhouse/ee:v1.70.1")
+	pushInstaller(t, upstream, "deckhouse/ee/install:v1.70.1", []string{one})
 
 	loop, c, _ := newLoop(t, true, storageWith(registryv1alpha1.RegistryStorageSpec{
 		Upstream: &registryv1alpha1.Upstream{
@@ -198,14 +286,14 @@ func TestOnceReportsAPartialFill(t *testing.T) {
 		},
 		Source:   &registryv1alpha1.StorageSource{ExpectedDigests: 459},
 		NeedSync: true,
-	}))
+	}), deployedRelease("v1.70.1"))
 	loop.LocalAddress = local
 
 	require.NoError(t, loop.once(context.Background()))
 
 	replica := replicaOf(t, c, "master-0")
 	assert.False(t, replica.Full)
-	assert.EqualValues(t, 1, replica.VerifiedDigests)
+	assert.EqualValues(t, 3, replica.VerifiedDigests)
 }
 
 // TestOnceAirGapCountsWhatIsHeld covers content that arrived through the write

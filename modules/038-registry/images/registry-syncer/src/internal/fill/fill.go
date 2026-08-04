@@ -104,6 +104,10 @@ type Copier struct {
 	Source      Registry
 	Destination Registry
 
+	// Discover decides what the copy consists of. Required, and required to be chosen at
+	// the call site: see Discoverer.
+	Discover Discoverer
+
 	// OnProgress is called after each reference, so a long fill reports progress
 	// rather than going silent for however long it takes.
 	OnProgress func(done, total int32)
@@ -131,7 +135,10 @@ func (c *Copier) Run(ctx context.Context) (Report, error) {
 		return report, fmt.Errorf("building the destination pusher: %w", err)
 	}
 
-	references, err := c.discover(ctx, sourcePuller)
+	if c.Discover == nil {
+		return report, errors.New("no way to discover what to copy")
+	}
+	references, err := c.Discover.Discover(ctx, c.Source, sourcePuller)
 	if err != nil {
 		return report, fmt.Errorf("discovering what to copy: %w", err)
 	}
@@ -163,73 +170,23 @@ func (c *Copier) Run(ctx context.Context) (Report, error) {
 	return report, nil
 }
 
-// discover lists every tag of every repository in the source.
-func (c *Copier) discover(ctx context.Context, puller *remote.Puller) ([]name.Tag, error) {
-	sourceRegistry, err := c.registry(c.Source)
-	if err != nil {
-		return nil, err
-	}
-
-	catalogger, err := puller.Catalogger(ctx, sourceRegistry)
-	if err != nil {
-		return nil, fmt.Errorf("listing the source repositories: %w", err)
-	}
-
-	var references []name.Tag
-	for catalogger.HasNext() {
-		page, err := catalogger.Next(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("reading the next page of source repositories: %w", err)
-		}
-
-		for _, repository := range page.Repos {
-			if !c.inScope(repository) {
-				continue
-			}
-
-			repositoryName := sourceRegistry.Repo(repository)
-			lister, err := puller.Lister(ctx, repositoryName)
-			if err != nil {
-				return nil, fmt.Errorf("listing the tags of %s: %w", repositoryName, err)
-			}
-
-			for lister.HasNext() {
-				tags, err := lister.Next(ctx)
-				if err != nil {
-					return nil, fmt.Errorf("reading the next page of tags of %s: %w", repositoryName, err)
-				}
-				for _, tag := range tags.Tags {
-					references = append(references, repositoryName.Tag(tag))
-				}
-			}
-		}
-	}
-
-	return references, nil
-}
-
-// inScope keeps the copy to the configured repository prefix. Without it a shared
-// registry would have everything on it pulled into a cache sized for Deckhouse.
-func (c *Copier) inScope(repository string) bool {
-	if c.Source.Repository == "" {
-		return true
-	}
-	return repository == c.Source.Repository ||
-		len(repository) > len(c.Source.Repository) &&
-			repository[:len(c.Source.Repository)+1] == c.Source.Repository+"/"
-}
-
 func (c *Copier) copyOne(
-	ctx context.Context, sourcePuller, destinationPuller *remote.Puller, pusher *remote.Pusher, source name.Tag,
+	ctx context.Context, sourcePuller, destinationPuller *remote.Puller, pusher *remote.Pusher,
+	source name.Reference,
 ) (bool, error) {
 	destinationRegistry, err := c.registry(c.Destination)
 	if err != nil {
 		return false, err
 	}
 
-	destination := destinationRegistry.
-		Repo(c.rewriteRepository(source.RepositoryStr())).
-		Tag(source.TagStr())
+	// By whatever the source names it: a release declares its images by digest, while a
+	// replica's catalogue lists tags. Copying a digest under a tag would invent a tag the
+	// upstream never published, and the cluster refers to those images by digest anyway.
+	repository := destinationRegistry.Repo(c.rewriteRepository(source.Context().RepositoryStr()))
+	destination, err := sameKind(repository, source)
+	if err != nil {
+		return false, err
+	}
 
 	sourceDescriptor, err := sourcePuller.Get(ctx, source)
 	if err != nil {
@@ -275,21 +232,24 @@ func (c *Copier) rewriteRepository(repository string) string {
 }
 
 func (c *Copier) registry(registry Registry) (name.Registry, error) {
-	var options []name.Option
-	if registry.Insecure {
-		options = append(options, name.Insecure)
-	}
+	return parseRegistry(registry)
+}
 
-	parsed, err := name.NewRegistry(registry.Address, options...)
-	if err != nil {
-		return name.Registry{}, fmt.Errorf("parsing the registry address %q: %w", registry.Address, err)
+// sameKind names a reference in the destination the way the source names it.
+func sameKind(repository name.Repository, source name.Reference) (name.Reference, error) {
+	switch reference := source.(type) {
+	case name.Digest:
+		return repository.Digest(reference.DigestStr()), nil
+	case name.Tag:
+		return repository.Tag(reference.TagStr()), nil
+	default:
+		return nil, fmt.Errorf("%s is neither a tag nor a digest", source)
 	}
-	return parsed, nil
 }
 
 // manifestPresent reports whether the destination already holds this exact digest.
 func manifestPresent(
-	ctx context.Context, puller *remote.Puller, reference name.Tag, digest v1.Hash,
+	ctx context.Context, puller *remote.Puller, reference name.Reference, digest v1.Hash,
 ) (bool, error) {
 	descriptor, err := puller.Get(ctx, reference)
 	if err == nil {
