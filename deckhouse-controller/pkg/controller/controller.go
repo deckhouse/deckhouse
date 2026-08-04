@@ -66,7 +66,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
-	modulepackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package"
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
@@ -391,12 +390,7 @@ func NewDeckhouseController(
 	if app.ModulePackagesEnabled() {
 		logger.Info("Module package controllers are enabled")
 
-		err = modulepackage.RegisterController(runtimeManager, dc, logger.Named("module-package-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register module package controller: %w", err)
-		}
-
-		err = modulepackageversion.RegisterController(runtimeManager, dc, logger.Named("module-package-version-controller"))
+		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register module package version controller: %w", err)
 		}
