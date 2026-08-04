@@ -1137,3 +1137,36 @@ var _ = Describe("Module :: registry :: helm template :: the controller can reac
 		}
 	})
 })
+
+// The storage runs as root, and says so.
+//
+// Not a preference — a requirement of what it touches. The registry reads its certificate
+// material from a Secret mount, and a Secret volume's files are owned by root with mode 0400;
+// it writes its store to a hostPath owned by root on the node. The base image is distroless and
+// runs as 64535, so an unset security context is not "root by default", it is "whatever the
+// image says, decided in a file this one does not mention" — and the result is a pod that
+// crash-loops on `permission denied` opening a token bundle that is plainly there.
+var _ = Describe("Module :: registry :: helm template :: the storage runs as root explicitly", func() {
+	f := SetupHelmConfig(``)
+
+	BeforeEach(func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("registry", v2Enabled)
+		f.HelmRender()
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+	})
+
+	It("sets the user in the pod spec rather than inheriting it from the image", func() {
+		sts := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
+		Expect(sts.Exists()).To(BeTrue())
+
+		security := sts.Field("spec.template.spec.securityContext")
+		Expect(security.Exists()).To(BeTrue(),
+			"an unset security context takes the user from the distroless base image, which is not root")
+		Expect(security.Get("runAsUser").Int()).To(BeEquivalentTo(0),
+			"the registry reads root-owned 0400 files from a Secret mount and writes a root-owned hostPath")
+		Expect(security.Get("runAsNonRoot").Bool()).To(BeFalse())
+		Expect(security.Get("seccompProfile.type").String()).To(Equal("RuntimeDefault"))
+	})
+})

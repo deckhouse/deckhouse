@@ -89,6 +89,25 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $ "any-node" "with-uninitialized") | nindent 6 }}
+      # Root, explicitly, and the same choice the previous implementation made for the same
+      # component.
+      #
+      # Two things here need it. The registry reads its certificate material from a Secret
+      # mount, whose files are owned by root with mode 0400 — a Secret volume has no other
+      # owner to offer. And it writes the store to a hostPath on the node, which belongs to
+      # root there. Left unset, the user comes from the base image, which is distroless and
+      # runs as 64535: the registry then panics on "permission denied" opening its own token
+      # bundle, and the pod crash-loops on a message about a file that is plainly present.
+      #
+      # Stated rather than inherited on purpose. An unset security context does not mean root;
+      # it means whatever the base image happens to say, decided somewhere this file does not
+      # mention.
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        runAsNonRoot: false
+        seccompProfile:
+          type: RuntimeDefault
       automountServiceAccountToken: true
       serviceAccountName: registry-storage
       terminationGracePeriodSeconds: 30
