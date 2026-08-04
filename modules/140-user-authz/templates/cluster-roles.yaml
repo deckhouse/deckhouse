@@ -400,6 +400,16 @@
   - subjectaccessreports
   verbs:
   - create
+# The role catalogue: what the platform's own roles grant. Unlike the queries
+# above it says nothing about any subject -- it is the published role model,
+# assembled from ClusterRoles this access level can already read, so it is
+# granted here rather than through a checker role.
+- apiGroups:
+  - authorization.deckhouse.io
+  resources:
+  - roleaccessreports
+  verbs:
+  - create
 {{- end }}
 
 {{- define "user_authz_super_admin_rules" }}

@@ -598,6 +598,250 @@ type AccessSource struct {
 	ViaVerbWildcard bool `json:"viaVerbWildcard,omitempty" protobuf:"varint,9,opt,name=viaVerbWildcard"`
 }
 
+// +genclient
+// +genclient:nonNamespaced
+// +genclient:onlyVerbs=create
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// RoleAccessReport answers "what does this role grant", the catalogue side of
+// the question SubjectAccessReport answers for a subject. It exists for the
+// export a security officer keeps and a regulator reads: which resources are
+// covered by which role, in a form that can be diffed against the previous one.
+// This resource is ephemeral - it is not stored, only created.
+type RoleAccessReport struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Spec describes the roles to report on.
+	Spec RoleAccessReportSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+
+	// Status is filled in by the server with what those roles grant.
+	// +optional
+	Status RoleAccessReportStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+}
+
+// RoleAccessReportSpec is the specification for a role access report.
+type RoleAccessReportSpec struct {
+	// Model selects the role model to report on: "primary" for the scope-based
+	// roles, "legacy" for the access levels of ClusterAuthorizationRule.
+	// Defaults to primary.
+	// +optional
+	Model string `json:"model,omitempty" protobuf:"bytes,1,opt,name=model"`
+
+	// Roles narrows the report. An empty selection reports every role of the
+	// model.
+	// +optional
+	Roles RoleSelection `json:"roles,omitempty" protobuf:"bytes,2,opt,name=roles"`
+
+	// ExpandWildcards expands wildcard rules into concrete resources against
+	// the discovery snapshot. Defaults to true.
+	// +optional
+	ExpandWildcards *bool `json:"expandWildcards,omitempty" protobuf:"varint,3,opt,name=expandWildcards"`
+
+	// IncludeComposition reports which capability contributed each row, and the
+	// list of capabilities a role aggregates. Defaults to false: the plain
+	// matrix is what most of the export needs.
+	// +optional
+	IncludeComposition *bool `json:"includeComposition,omitempty" protobuf:"varint,4,opt,name=includeComposition"`
+
+	// IncludeInventory adds every resource of the cluster to the report, not
+	// only the ones some role grants. Defaults to false. It is what a coverage
+	// review needs: the resources no role covers are the answer, and they
+	// cannot be derived from the roles.
+	// +optional
+	IncludeInventory *bool `json:"includeInventory,omitempty" protobuf:"varint,5,opt,name=includeInventory"`
+}
+
+// RoleSelection narrows which roles a report covers. Names and Scopes are
+// combined with AND; an empty selection matches every role of the model.
+type RoleSelection struct {
+	// Names lists roles by name.
+	//
+	// The legacy model has no role names -- it is the fixed list of access
+	// levels -- so there a name is read as a level and joins AccessLevels
+	// instead of narrowing it. Naming "Editor" in either field reports the
+	// Editor level.
+	// +optional
+	// +listType=atomic
+	Names []string `json:"names,omitempty" protobuf:"bytes,1,rep,name=names"`
+
+	// Scopes lists the scopes to report on: namespace, project, subsystem,
+	// system. Primary model only.
+	// +optional
+	// +listType=atomic
+	Scopes []string `json:"scopes,omitempty" protobuf:"bytes,2,rep,name=scopes"`
+
+	// AccessLevels lists the access levels to report on. Legacy model only.
+	// +optional
+	// +listType=atomic
+	AccessLevels []string `json:"accessLevels,omitempty" protobuf:"bytes,3,rep,name=accessLevels"`
+
+	// ExcludeCustom leaves out the roles created in this cluster, reporting
+	// only the model the platform ships. A role named in Names is reported
+	// either way. Primary model only. Defaults to false.
+	// +optional
+	ExcludeCustom bool `json:"excludeCustom,omitempty" protobuf:"varint,4,opt,name=excludeCustom"`
+}
+
+// RoleAccessReportStatus contains what the selected roles grant.
+type RoleAccessReportStatus struct {
+	// Snapshot describes when and against what the report was built.
+	Snapshot ReportSnapshot `json:"snapshot" protobuf:"bytes,1,opt,name=snapshot"`
+
+	// Roles holds one entry per reported role, ordered by name.
+	// +optional
+	// +listType=atomic
+	Roles []RoleAccess `json:"roles,omitempty" protobuf:"bytes,2,rep,name=roles"`
+
+	// Notes carries non-fatal remarks about how the report was built.
+	// +optional
+	// +listType=atomic
+	Notes []string `json:"notes,omitempty" protobuf:"bytes,3,rep,name=notes"`
+
+	// Truncated is true when output limits were hit.
+	// +optional
+	Truncated bool `json:"truncated,omitempty" protobuf:"varint,4,opt,name=truncated"`
+
+	// Inventory lists every resource of the cluster, present when the request
+	// asked for it. Roles say what is covered; this says what there is to cover.
+	// +optional
+	// +listType=atomic
+	Inventory []InventoryResource `json:"inventory,omitempty" protobuf:"bytes,5,rep,name=inventory"`
+}
+
+// InventoryResource is one resource of the cluster as discovery describes it.
+type InventoryResource struct {
+	// Group is the API group; empty for the core group.
+	// +optional
+	Group string `json:"group,omitempty" protobuf:"bytes,1,opt,name=group"`
+
+	// Resource is the plural name, carrying the subresource when there is one:
+	// "pods", "pods/exec".
+	Resource string `json:"resource" protobuf:"bytes,2,opt,name=resource"`
+
+	// Kind is the object kind, as discovery reports it.
+	// +optional
+	Kind string `json:"kind,omitempty" protobuf:"bytes,3,opt,name=kind"`
+
+	// Namespaced is true when the resource lives inside a namespace.
+	// +optional
+	Namespaced bool `json:"namespaced,omitempty" protobuf:"varint,4,opt,name=namespaced"`
+
+	// Module is the Deckhouse module that installs the resource, read from the
+	// labels of its CustomResourceDefinition. The API group is not a substitute:
+	// operator-trivy ships aquasecurity.github.io.
+	// +optional
+	Module string `json:"module,omitempty" protobuf:"bytes,6,opt,name=module"`
+
+	// Custom is true for a CRD the platform does not install -- the resources of
+	// the cluster owner. Built-in and aggregated APIs are not custom.
+	// +optional
+	Custom bool `json:"custom,omitempty" protobuf:"varint,7,opt,name=custom"`
+
+	// ClusterConfig is true for a kind that holds the configuration of the
+	// cluster -- the objects a human writes. Read from the label the backup of
+	// the cluster configuration is built from.
+	// +optional
+	ClusterConfig bool `json:"clusterConfig,omitempty" protobuf:"varint,9,opt,name=clusterConfig"`
+
+	// Verbs are the ones the API server accepts for this resource. Coverage is
+	// measured against them rather than against a fixed list of eight:
+	// tokenreviews only ever accept create, and "1 of 8" would read as a gap in
+	// the role model where there is none.
+	// +optional
+	// +listType=atomic
+	Verbs []string `json:"verbs,omitempty" protobuf:"bytes,5,rep,name=verbs"`
+}
+
+// ReportSnapshot is what makes a report reproducible: the same cluster,
+// unchanged, must produce the same document, and a reader must be able to tell
+// what the document was built from.
+type ReportSnapshot struct {
+	// Time is when the report was built.
+	Time metav1.Time `json:"time" protobuf:"bytes,1,opt,name=time"`
+
+	// Model is the role model the report covers.
+	Model string `json:"model" protobuf:"bytes,2,opt,name=model"`
+
+	// ExpandedWildcards is true when wildcard rules were expanded.
+	// +optional
+	ExpandedWildcards bool `json:"expandedWildcards,omitempty" protobuf:"varint,3,opt,name=expandedWildcards"`
+
+	// DiscoveryResources is the number of resources in the discovery snapshot
+	// the wildcards were expanded against. Without it a wildcard row cannot be
+	// interpreted: "every resource" means one thing on a cluster with
+	// virtualization installed and another without it.
+	// +optional
+	DiscoveryResources int `json:"discoveryResources,omitempty" protobuf:"varint,4,opt,name=discoveryResources"`
+
+	// Digest is a hash over the canonical form of the reported roles. Two
+	// reports of an unchanged cluster carry the same digest, so a reader can
+	// tell "nothing changed" from "I did not look".
+	// +optional
+	Digest string `json:"digest,omitempty" protobuf:"bytes,5,opt,name=digest"`
+}
+
+// RoleAccess is what one role grants.
+type RoleAccess struct {
+	// Name is the ClusterRole name, or the access level in the legacy model.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+
+	// Role carries the display metadata of the role.
+	// +optional
+	Role RoleDescriptor `json:"role,omitempty" protobuf:"bytes,2,opt,name=role"`
+
+	// LegacyNames lists the names this role had in the previous model. There
+	// can be more than one: the rename folded the kubernetes-suffixed variants
+	// into a single role. The export carries them so a document can be compared
+	// against one issued before the rename.
+	// +optional
+	// +listType=atomic
+	LegacyNames []string `json:"legacyNames,omitempty" protobuf:"bytes,3,rep,name=legacyNames"`
+
+	// Namespaced is true when the role only ever applies inside a namespace.
+	// Its cluster-scoped rules, if any, are left out: they exist in RBAC but
+	// can never be exercised, and an export that lists them overstates access.
+	// +optional
+	Namespaced bool `json:"namespaced,omitempty" protobuf:"varint,4,opt,name=namespaced"`
+
+	// Composition lists the capabilities the role aggregates, and for the
+	// legacy model the roles an access level binds. Filled when
+	// spec.includeComposition is set.
+	// +optional
+	// +listType=atomic
+	Composition []RoleComponent `json:"composition,omitempty" protobuf:"bytes,5,rep,name=composition"`
+
+	// Resources lists the resource access the role grants.
+	// +optional
+	// +listType=atomic
+	Resources []ResourceAccess `json:"resources,omitempty" protobuf:"bytes,6,rep,name=resources"`
+
+	// NonResourceRules lists the non-resource URL access the role grants.
+	// +optional
+	// +listType=atomic
+	NonResourceRules []NonResourceAccess `json:"nonResourceRules,omitempty" protobuf:"bytes,7,rep,name=nonResourceRules"`
+
+	// Truncated is true when this role alone hit the output limits.
+	// +optional
+	Truncated bool `json:"truncated,omitempty" protobuf:"varint,8,opt,name=truncated"`
+
+	// Notes carries remarks about this role alone.
+	// +optional
+	// +listType=atomic
+	Notes []string `json:"notes,omitempty" protobuf:"bytes,9,rep,name=notes"`
+}
+
+// RoleComponent is one part a role is assembled from: a capability in the
+// primary model, a bound ClusterRole in the legacy one.
+type RoleComponent struct {
+	// Name is the ClusterRole name of the component.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+
+	// Role carries the display metadata of the component.
+	// +optional
+	Role RoleDescriptor `json:"role,omitempty" protobuf:"bytes,2,opt,name=role"`
+}
+
 // AccessCaveat describes restrictions applied on top of RBAC by admission
 // webhooks, which access reviews cannot see.
 type AccessCaveat struct {

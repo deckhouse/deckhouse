@@ -46,6 +46,8 @@ type Storages struct {
 	WhoCan WhoCanResolver
 	// SubjectAccess backs the SubjectAccessReport resource.
 	SubjectAccess SubjectAccessReporter
+	// RoleAccess backs the RoleAccessReport resource.
+	RoleAccess RoleAccessReporter
 }
 
 // GetStorage returns the storage map for the authorization API group.
@@ -62,6 +64,9 @@ func GetStorage(storages Storages) map[string]rest.Storage {
 	}
 	if storages.SubjectAccess != nil {
 		storage[subjectAccessResource] = NewSubjectAccessStorage(storages.SubjectAccess, storages.Authorizer)
+	}
+	if storages.RoleAccess != nil {
+		storage[roleAccessResource] = NewRoleAccessStorage(storages.RoleAccess)
 	}
 
 	return storage

@@ -21,11 +21,17 @@ rules:
   # Reviewing one's own permissions is available to everyone; the nonself
   # subresources are the elevated part, since a report about another subject
   # discloses its full permission map across namespaces.
+  #
+  # roleaccessreports is here although it discloses nothing elevated -- every
+  # row of it is readable in the ClusterRoles themselves. It belongs to the same
+  # question: this capability is held by the identity that reviews access, and
+  # the catalogue of what each role grants is the other half of that review.
   - apiGroups:
       - authorization.deckhouse.io
     resources:
       - bulksubjectaccessreviews
       - bulksubjectaccessreviews/nonself
+      - roleaccessreports
       - subjectaccessreports
       - subjectaccessreports/nonself
       - whocans

@@ -184,6 +184,11 @@ func (b *reportBuilder) recordAssignment(origin grantOrigin, namespace string) {
 // expansion to namespaced resources, since a RoleBinding cannot grant access to
 // cluster-scoped objects.
 func (b *reportBuilder) expand(scope *scopeAccumulator, origin grantOrigin, rules []rbacv1.PolicyRule, namespaced bool) {
+	// The provenance of a grant is the same for every row it produces, and a
+	// wildcard rule produces one row per resource of the cluster. Building it
+	// per row was the single largest allocation in the report.
+	sources := origin.sources(nil)
+
 	for _, rule := range rules {
 		verbs, viaVerbWildcard := expandVerbs(rule.Verbs)
 		if len(verbs) == 0 {
@@ -194,7 +199,7 @@ func (b *reportBuilder) expand(scope *scopeAccumulator, origin grantOrigin, rule
 		// grants them, matching upstream RBAC.
 		if !namespaced && len(rule.NonResourceURLs) > 0 {
 			for _, path := range rule.NonResourceURLs {
-				b.addNonResourceRow(scope, origin, path, verbs, viaVerbWildcard)
+				b.addNonResourceRow(scope, sources, path, verbs, viaVerbWildcard)
 			}
 		}
 
@@ -203,7 +208,7 @@ func (b *reportBuilder) expand(scope *scopeAccumulator, origin grantOrigin, rule
 		}
 
 		for _, target := range b.targetsOf(rule, namespaced) {
-			b.addResourceRow(scope, origin, target, rule.ResourceNames, verbs, viaVerbWildcard)
+			b.addResourceRow(scope, sources, target, rule.ResourceNames, verbs, viaVerbWildcard)
 		}
 	}
 }
@@ -276,7 +281,7 @@ func (b *reportBuilder) targetsOf(rule rbacv1.PolicyRule, namespaced bool) []res
 	return targets
 }
 
-func (b *reportBuilder) addResourceRow(scope *scopeAccumulator, origin grantOrigin, target resourceTarget, resourceNames, verbs []string, viaVerbWildcard bool) {
+func (b *reportBuilder) addResourceRow(scope *scopeAccumulator, sources []v1alpha1.AccessSource, target resourceTarget, resourceNames, verbs []string, viaVerbWildcard bool) {
 	key := resourceKey{
 		group:         target.group,
 		resource:      target.resource,
@@ -306,10 +311,10 @@ func (b *reportBuilder) addResourceRow(scope *scopeAccumulator, origin grantOrig
 		row.verbs[verb] = struct{}{}
 	}
 
-	b.addSources(row.sources, origin, verbs, viaVerbWildcard)
+	b.addSources(row.sources, sources, verbs, viaVerbWildcard)
 }
 
-func (b *reportBuilder) addNonResourceRow(scope *scopeAccumulator, origin grantOrigin, path string, verbs []string, viaVerbWildcard bool) {
+func (b *reportBuilder) addNonResourceRow(scope *scopeAccumulator, sources []v1alpha1.AccessSource, path string, verbs []string, viaVerbWildcard bool) {
 	row, ok := scope.nonResources[path]
 	if !ok {
 		if b.rowCount >= b.limits.MaxResourceRows {
@@ -330,11 +335,11 @@ func (b *reportBuilder) addNonResourceRow(scope *scopeAccumulator, origin grantO
 		row.verbs[verb] = struct{}{}
 	}
 
-	b.addSources(row.sources, origin, verbs, viaVerbWildcard)
+	b.addSources(row.sources, sources, verbs, viaVerbWildcard)
 }
 
-func (b *reportBuilder) addSources(sources map[sourceKey]*sourceAccumulator, origin grantOrigin, verbs []string, viaVerbWildcard bool) {
-	for _, source := range origin.sources(nil) {
+func (b *reportBuilder) addSources(byKey map[sourceKey]*sourceAccumulator, sources []v1alpha1.AccessSource, verbs []string, viaVerbWildcard bool) {
+	for _, source := range sources {
 		key := sourceKey{
 			bindingKind: source.BindingKind,
 			bindingName: source.BindingName,
@@ -344,14 +349,15 @@ func (b *reportBuilder) addSources(sources map[sourceKey]*sourceAccumulator, ori
 			matchName:   source.MatchedBy.Name,
 		}
 
-		accumulated, ok := sources[key]
+		accumulated, ok := byKey[key]
 		if !ok {
-			if len(sources) >= b.limits.MaxSourcesPerRow {
+			if len(byKey) >= b.limits.MaxSourcesPerRow {
 				b.truncated = true
+
 				return
 			}
 			accumulated = &sourceAccumulator{source: source, verbs: map[string]struct{}{}}
-			sources[key] = accumulated
+			byKey[key] = accumulated
 		}
 
 		accumulated.viaVerbWildcard = accumulated.viaVerbWildcard || viaVerbWildcard
@@ -482,11 +488,23 @@ func renderResources(scope *scopeAccumulator, keepBindingNamespace bool) []v1alp
 		})
 	}
 
+	// The rows come out of a map, and the sort is not stable, so the order has
+	// to be total or it is random. Group and resource do not make it total: a
+	// rule granting every moduleconfig and one granting a named moduleconfig
+	// are two rows with the same pair, and they would swap places between two
+	// reports of an unchanged cluster -- a diff of two exports would show a
+	// change that did not happen, and the digest, which exists to say the
+	// opposite, would differ too. resourceNames is the rest of the row's own
+	// identity: with it the order is the identity's order.
 	slices.SortFunc(rows, func(x, y v1alpha1.ResourceAccess) int {
 		if cmp := strings.Compare(x.Group, y.Group); cmp != 0 {
 			return cmp
 		}
-		return strings.Compare(x.Resource, y.Resource)
+		if cmp := strings.Compare(x.Resource, y.Resource); cmp != 0 {
+			return cmp
+		}
+
+		return slices.Compare(x.ResourceNames, y.ResourceNames)
 	})
 
 	return rows

@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
@@ -278,9 +279,25 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		}
 	}
 
+	// Attribute the cluster resources to the modules that ship them. Reads only
+	// CRD metadata; without it the coverage report loses its grouping but stays
+	// correct, so a failure here is not fatal.
+	var moduleIndex *resolver.ModuleIndex
+	if initRes.restConfig != nil {
+		metadataClient, err := metadata.NewForConfig(initRes.restConfig)
+		if err != nil {
+			klog.Warningf("Failed to create metadata client, the inventory will carry no module names: %v", err)
+		} else {
+			moduleIndex = resolver.NewModuleIndex(ctx, metadataClient)
+			go moduleIndex.StartRefreshLoop(ctx)
+			klog.Info("Module index initialized and refresh loop started")
+		}
+	}
+
 	// Create namespace resolver for AccessibleNamespace API
 	var nsResolver *resolver.NamespaceResolver
 	var subjectAccess *resolver.SubjectAccessResolver
+	var roleAccess *resolver.RoleAccessResolver
 	if initRes.informerFactory != nil {
 		rbacInformers := initRes.informerFactory.Rbac().V1()
 		nsResolver = resolver.NewNamespaceResolver(
@@ -304,6 +321,11 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 			resolver.NewGroupCatalog(initRes.dynamicClient),
 		)
 		klog.Info("Subject access resolver initialized for SubjectAccessReport API")
+
+		// moduleIndex may be nil: the inventory is then reported without module
+		// attribution rather than not at all.
+		roleAccess = resolver.NewRoleAccessResolver(rbacInformers.ClusterRoles().Lister(), scopeCache, moduleIndex)
+		klog.Info("Role access resolver initialized for RoleAccessReport API")
 	}
 
 	// Register API group
@@ -315,6 +337,9 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	// A typed nil in the interface would register a storage that panics on use.
 	if subjectAccess != nil {
 		storages.SubjectAccess = subjectAccess
+	}
+	if roleAccess != nil {
+		storages.RoleAccess = roleAccess
 	}
 
 	if err := registerAPIGroup(genericServer, storages); err != nil {

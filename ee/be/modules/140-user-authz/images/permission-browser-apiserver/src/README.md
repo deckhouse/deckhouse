@@ -14,6 +14,8 @@ This server provides:
 
 4. **SubjectAccessReport**: The forward counterpart of `WhoCan` - given a subject, everything it may do, assembled from its bindings instead of probed one review at a time.
 
+5. **RoleAccessReport**: The catalogue - given a role, everything it grants. What `SubjectAccessReport` answers about a person, this answers about the role model itself, for the export a security officer keeps and a regulator reads.
+
 ## API
 
 ### Resource: `AccessibleNamespace`
@@ -353,6 +355,162 @@ spec:
   subject:
     kind: User
     name: alice
+EOF
+```
+
+### Resource: `RoleAccessReport`
+
+- **Group**: `authorization.deckhouse.io`
+- **Version**: `v1alpha1`
+- **Kind**: `RoleAccessReport`
+- **Endpoint**: `POST /apis/authorization.deckhouse.io/v1alpha1/roleaccessreports`
+
+Answers "what does this role grant" - the catalogue side of the question
+`SubjectAccessReport` answers for a subject. It exists for the export a security
+officer keeps and a regulator reads: which resources are covered by which role,
+in a form that can be diffed against the export from last quarter.
+
+The resource is ephemeral - it is not stored, only created.
+
+#### Request/Response Schema
+
+```yaml
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: RoleAccessReport
+spec:
+  # primary: the scope-based roles. legacy: the access levels of
+  # ClusterAuthorizationRule. Defaults to primary.
+  model: primary
+  # Empty selection reports every role of the model.
+  roles:
+    names: []           # in the legacy model a name is read as an access level
+    scopes: []          # namespace | project | subsystem | system (primary)
+    accessLevels: []    # User | PrivilegedUser | ... (legacy)
+    excludeCustom: false  # leave out the roles created in this cluster (primary)
+  expandWildcards: true   # expand "*" against the discovery snapshot
+  includeComposition: false  # the detailed mode: which capability granted what
+  includeInventory: false    # every resource of the cluster, for coverage
+
+status:
+  snapshot:
+    time: "2026-08-04T12:00:00Z"
+    model: primary
+    expandedWildcards: true
+    discoveryResources: 412   # what the wildcards were expanded against
+    digest: "9f2c..."         # hash of the roles, excluding the timestamp
+  roles:
+    - name: d8:namespace:admin
+      role: {scope: namespace, level: admin, titles: {ru: "..."}}
+      legacyName: d8:use:role:admin
+      namespaced: true
+      composition:
+        - name: d8:namespace-capability:kubernetes:manage_workloads
+          role: {titles: {ru: "..."}}
+      resources:
+        - group: apps
+          resource: deployments
+          verbs: [get, list, watch, create, update, patch, delete]
+          viaWildcard: false
+          viaVerbWildcard: false
+          sources:
+            - roleKind: ClusterRole
+              roleName: d8:namespace-capability:kubernetes:manage_workloads
+              verbs: [get, list, watch]
+  inventory:                  # only when includeInventory is set
+    - group: apps
+      resource: deployments
+      kind: Deployment
+      namespaced: true
+      module: ""              # the module that ships the resource, when its CRD says so
+      custom: false           # a CRD the platform does not install
+      clusterConfig: false    # holds cluster configuration: read from the label the
+                              # cluster-configuration backup is built from
+      verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+  notes: []
+  truncated: false
+```
+
+#### How It Works
+
+1. **Rows come from the capabilities**, not from the role's own `rules`. The
+   aggregation controller fills a role by concatenating what its capabilities
+   grant, without recording which one granted what; expanding them one at a time
+   is the only way the detailed mode can name the capability behind a row.
+2. **Wildcards are expanded by the same code as `SubjectAccessReport`** and
+   marked the same way (`viaWildcard`, `viaVerbWildcard`). Two implementations
+   would drift, and an export that contradicts the access report is worse than
+   no export.
+3. **A namespace- or project-scoped role drops its cluster-scoped rows.** The
+   binding webhook refuses a `ClusterRoleBinding` carrying such a role, so those
+   rules exist in RBAC but can never be exercised; listing them would overstate
+   the access the document reports.
+4. **The legacy model resolves an access level the way the fan-out hook does**:
+   the level's own ClusterRole plus every ClusterRole annotated
+   `user-authz.deckhouse.io/access-level` for that level or a lower one.
+5. **Roles run from the narrowest access to the widest**: by scope (namespace,
+   project, subsystem, system) and by level inside it (viewer, user, manager,
+   admin, superadmin), with subsystems ordered by name. Alphabetical order would
+   open the document with the administrator, and the legacy model already reads
+   this way, since its levels include one another in that order.
+6. **`includeInventory` answers what the roles cannot.** A resource no role
+   grants leaves no trace in the roles, so a coverage review cannot be built
+   from them: the inventory lists every resource of the discovery snapshot with
+   the verbs the API server accepts for it. Coverage is measured against those
+   verbs and not against a fixed list of eight - `tokenreviews` only ever accept
+   `create`, and "1 of 8" would read as a gap in the model where there is none.
+7. **`excludeCustom` reports the model the platform ships.** Custom roles belong
+   to one cluster, and listing them beside the model reads as if the platform
+   shipped them - but they are real access, so leaving them out is the caller's
+   decision, the count of skipped ones goes into `notes`, and a role named in
+   `names` is reported either way.
+
+#### Caveats
+
+- **The digest excludes the timestamp** so two exports of an unchanged cluster
+  compare equal. It covers the reported roles and nothing else.
+- **`discoveryResources` is part of the answer**, not decoration: "every
+  resource" means one thing on a cluster with virtualization installed and
+  another without it, and a wildcard row cannot be read a year later without it.
+- **Subresources are only expanded when a rule names them.** A bare `*` grants
+  top-level resources; enumerating every subresource would bury the rows that
+  matter.
+- **An aggregating role that currently selects nothing says so in `notes`.** It
+  reports no rows either way, but "grants nothing" and "grants whatever gets
+  labelled for it, and nothing is yet" are different findings for a reviewer.
+
+#### Security
+
+The report describes roles, never subjects, and every row of it is already
+readable in the ClusterRoles themselves - so it is not an elevated capability
+and needs no self/non-self split. `d8:user-authz:role-catalogue-reader` exists
+for identities that should produce the export without being able to read the
+whole RBAC tree.
+
+#### Example Usage
+
+```bash
+# The plain matrix of the namespace-scoped roles.
+cat <<EOF | kubectl create -f - -o yaml
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: RoleAccessReport
+metadata:
+  name: namespace-roles
+spec:
+  roles:
+    scopes: [namespace]
+EOF
+
+# What the legacy Admin access level grants, with the roles it is assembled from.
+cat <<EOF | kubectl create -f - -o yaml
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: RoleAccessReport
+metadata:
+  name: legacy-admin
+spec:
+  model: legacy
+  roles:
+    accessLevels: [Admin]
+  includeComposition: true
 EOF
 ```
 
