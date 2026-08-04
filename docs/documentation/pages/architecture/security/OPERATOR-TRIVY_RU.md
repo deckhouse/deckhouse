@@ -6,25 +6,26 @@ search: operator-trivy, сканирование образов, сканиро�
 description: Архитектура модуля operator-trivy в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`operator-trivy`](/modules/operator-trivy/) обеспечивает сканирование пользовательских образов в рантайм на известные CVE (Common Vulnerabilities and Exposures), включая уязвимости Astra Linux, ALT Linux и РЕД ОС. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), обогащаемые базами Astra Linux, ALT Linux и РЕД ОС, а также БДУ ФСТЭК.
+Модуль [`operator-trivy`](/modules/operator-trivy/) обеспечивает сканирование пользовательских образов в рантайм на известные CVE (Common Vulnerabilities and Exposures), включая уязвимости Astra Linux, ALT Linux и РЕД ОС. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), обогащаемые базами Astra Linux, ALT Linux и РЕД ОС, а также [БДУ ФСТЭК (Банк данных угроз Федеральной службы по техническому и экспортному контролю)](https://bdu.fstec.ru/vul).
 
-Также модуль производит анализ соответствия кластера Kubernetes требованиям CIS (Center for Internet Security) Kubernetes Benchmark.
+Также модуль производит анализ соответствия кластера Kubernetes требованиям [CIS (Center for Internet Security) Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes).
 
 Дополнительно модуль `operator-trivy` обеспечивает возможность собирать поведенческие модели рабочей нагрузки при использовании опционального компонента node-agent.
 
-Модуль `operator-trivy` работает с кастомными ресурсами API-групп `spdx.softwarecomposition.kubescape.io` и `trivy.deckhouse.io`.
+Модуль `operator-trivy` работает с кастомными ресурсами API-групп `trivy.deckhouse.io` и `spdx.softwarecomposition.kubescape.io`.
 
 В API-группу `trivy.deckhouse.io` входят следующие ресурсы:
+
 - [ClusterComplianceReport](/modules/operator-trivy/cr.html#clustercompliancereport) — хранит сводный отчёт о соответствии кластера требованиям безопасности (например, CIS Kubernetes Benchmark);
 - ClusterConfigAuditReport — хранит результаты аудита конфигурации Kubernetes-объектов на уровне кластера;
 - ClusterInfraAssessmentReport — хранит результаты проверок безопасности инфраструктуры Kubernetes на уровне кластера;
-- ClusterRbacAssessmentReport — хранит результаты проверки RBAC-настроек на уровне кластера;
-- ClusterSbomReport — хранит сводный SBOM по программным компонентам на уровне кластера;
+- ClusterRbacAssessmentReport — хранит результаты проверки настроек управления доступом на основе ролей (RBAC) на уровне кластера;
+- ClusterSbomReport — хранит сводный SBOM (Software Bill of Materials) по программным компонентам на уровне кластера;
 - ClusterVulnerabilityReport — хранит агрегированные результаты сканирования уязвимостей на уровне кластера;
 - [ConfigAuditReport](/modules/operator-trivy/cr.html#configauditreport) — хранит результаты аудита конфигурации Kubernetes-объектов;
 - [ExposedSecretReport](/modules/operator-trivy/cr.html#exposedsecretreport) — хранит результаты поиска потенциальных секретов в образе контейнера;
 - InfraAssessmentReport — хранит результаты проверок безопасности инфраструктуры Kubernetes-объектов;
-- [NodeVulnerabilityReport](/modules/operator-trivy/cr.html#nodevulnerabilityreport) — хранит результаты сканирования уязвимостей в `rootfs` узла;
+- [NodeVulnerabilityReport](/modules/operator-trivy/cr.html#nodevulnerabilityreport) — хранит результаты сканирования уязвимостей в `rootfs` (корневой файловой системы) узла;
 - [RbacAssessmentReport](/modules/operator-trivy/cr.html#rbacassessmentreport) — хранит результаты проверки RBAC-настроек на предмет избыточных привилегий и других рисков;
 - [RegistryImageVulnerabilityReport](/modules/operator-trivy/cr.html#registryimagevulnerabilityreport) — хранит результаты CVE-сканирования конкретного тега образа из реестра;
 - [RegistryScanTarget](/modules/operator-trivy/cr.html#registryscantarget) — задаёт целевой реестр, репозитории и параметры периодического сканирования;
@@ -32,8 +33,9 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 - [VulnerabilityReport](/modules/operator-trivy/cr.html#vulnerabilityreport) — хранит результаты сканирования уязвимостей в образе контейнера.
 
 В API-группу `spdx.softwarecomposition.kubescape.io` входят следующие ресурсы:
+
 - ApplicationProfiles — хранит профиль поведения приложения в рантайме (системные вызовы, запускаемые процессы, доступ к файлам, HTTP-эндпоинты);
-- CollapseConfigurations — задаёт кластерные пороги агрегации динамических путей, эндпоинтов и сетевых адресов при формировании профилей;
+- CollapseConfigurations — задаёт параметры объединения динамических путей, эндпоинтов и сетевых адресов для уменьшения объёма рантайм-профилей;
 - ConfigurationScanSummaries — хранит сводку результатов проверок конфигурации для группы рабочих нагрузок в заданной области (например, неймспейсе);
 - ContainerProfiles — хранит профиль отдельного контейнера, включая рантайм-поведение и сетевые взаимодействия;
 - GeneratedNetworkPolicies — хранит сгенерированные на основе наблюдаемого трафика объекты NetworkPolicy;
@@ -92,7 +94,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
 1. **Trivy-server** (StatefulSet) — компонент реализует сервис сканирования безопасности, базируется на основе Open Source-проекта [Trivy](https://github.com/aquasecurity/trivy).
 
-   Trivy-server при старте и впоследствии регулярно обновляет базу данных уязвимостей из OCI-образа.
+   Trivy-server при старте и впоследствии регулярно обновляет базу данных уязвимостей из образа формата Open Container Initiative (OCI).
 
    Trivy-server обрабатывает запросы от других компонентов модуля (operator, registry-scanner, trivy-provider, задачи сканирования), выполняет запрошенное сканирование и возвращает результат.
 
@@ -117,18 +119,19 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
    Registry-scanner читает кастомные ресурсы [RegistryScanTarget](/modules/operator-trivy/cr.html#registryscantarget), запускает сканирование образов через компонент trivy-server и сохраняет результаты обработки в кастомном ресурсе [RegistryImageVulnerabilityReport](/modules/operator-trivy/cr.html#registryimagevulnerabilityreport).
 
-1. **Security-storage** (Deployment) — контроллер, состоящий из одного контейнера **apiserver**, является расширением API Kubernetes и выполняет обработку CRUD-операций, watch-запросов и list-запросов к кастомным ресурсам API-групп `spdx.softwarecomposition.kubescape.io` и `trivy.deckhouse.io`.
+1. **Security-storage** (Deployment) — контроллер, состоящий из одного контейнера **apiserver**, является расширением API Kubernetes и выполняет обработку операции создания, чтения, обновления и удаления (CRUD), watch-запросов и list-запросов к кастомным ресурсам API-групп `trivy.deckhouse.io` и `spdx.softwarecomposition.kubescape.io`.
 
    Также security-storage реализует бэкенд для хранения этих ресурсов:
    - метаданные сохраняются в базе данных SQLite;
    - тело объектов сохраняется в gob-формате в каталоге `/data`.
 
-1. **Node-agent** (DaemonSet) — опциональный компонент, состоящий из одного контейнера **node-agent**, запускается на всех узлах кластера в привилегированном режиме и через eBPF наблюдает за поведением контейнеров и формирует рантайм-профили.
+1. **Node-agent** (DaemonSet) — опциональный компонент с одним контейнером **node-agent**, который запускается на всех узлах кластера в привилегированном режиме, и используя eBPF-подпрограммы наблюдает за поведением контейнеров и формирует рантайм-профили.
 
    Node-agent сохраняет рантайм-профили в кастомных ресурсах ApplicationProfile и NetworkNeighborhood (в компоненте security-storage). Подробнее с работой node-agent можно ознакомиться [в разделе документации модуля](/modules/operator-trivy/stable/runtime_map.html).
 
    {% alert level="warning" %}
-   У компонента node-agent есть привилегированный доступ к ОС (Операционной системе) каждого узла. В Linux для этого требуются capabilities:
+   У компонента node-agent есть привилегированный доступ к операционной системе каждого узла. В Linux для этого требуются capabilities:
+
    - SYS_ADMIN
    - SYS_PTRACE
    - NET_ADMIN
@@ -136,7 +139,8 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
    - SYS_RESOURCE
    - IPC_LOCK
    - NET_RAW
-   Это необходимо для наблюдения за поведением контейнеров через eBPF.
+
+   Это необходимо для наблюдения за поведением контейнеров, используя eBPF-подпрограммы.
 
    Node-agent работает в профилирующем режиме, не выполняет активное обнаружение атак по правилам.
    {% endalert %}
@@ -147,10 +151,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
 1. **Scan-vulnerabilityreport-&lt;hash&gt;** (Job) — компонент обеспечивает запуск задач по сканированию безопасности Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob и Job с использованием компонента trivy-server. Задача создаётся и управляется компонентом operator.
 
-   Состоит из следующих контейнеров:
-
-   - **&lt;dynamic-name&gt;** — опциональный init-контейнер с динамическим именем, выполняющий авторизацию к хранилищу образов;
-   - **&lt;container-name&gt;** — набор контейнеров, каждый из которых отвечает за сканирование соответствующего контейнера рабочей нагрузки (workload). В качестве базового образа используется образ trivy, а в аргументах для него передаётся образ, заданный в спецификации целевого контейнера.
+   Состоит из набора контейнеров **&lt;container-name&gt;**, каждый из которых отвечает за сканирование соответствующего контейнера рабочей нагрузки (workload). В качестве базового образа для них используется образ trivy с добавленным trivy-wrapper, а в аргументах для него передаётся образ, заданный в спецификации целевого контейнера. Trivy-wrapper выполняет авторизацию у хранилищу образов командой `trivy registry login`, а после передаёт управление trivy.
 
 ## Взаимодействия модуля
 
@@ -158,17 +159,21 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
 1. **Kube-apiserver**:
 
-   - работа с кастомными ресурсами API-группы `trivy.deckhouse.io/*`;
+   - авторизация запросов к метрикам operator;
+   - работа с кастомными ресурсами API-группы `trivy.deckhouse.io`;
+   - работа с кастомными ресурсами RegistryScanTarget и RegistryImageVulnerabilityReport;
    - отслеживание ресурсов Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob и Job;
-   - создание, обновление и удаление ресурсов Secret, Job.
+   - создание, обновление и удаление ресурсов Secret, ConfigMap и Job.
 
-1. **Distribution** — загрузка OCI-образов с базой уязвимостей и базой БДУ.
+1. [**Registry**](/modules/registry/) — загрузка OCI-образов с базой уязвимостей и базой БДУ.
+
+1. **Хранилище образов** — сканирование образов
 
 С модулем взаимодействуют следующие внешние компоненты:
 
 1. **Kube-apiserver**:
 
-   - обработка ресурсов Kubernetes, указанных в кастомных ресурсах из API-групп `spdx.softwarecomposition.kubescape.io/*` и `trivy.deckhouse.io`;
+   - пересылка API-запросов по кастомным ресурсам из API-групп `trivy.deckhouse.io` и `spdx.softwarecomposition.kubescape.io`;
    - мутация кастомных ресурсов VulnerabilityReport.
 
 1. **Prometheus-main** — сбор метрик модуля.
