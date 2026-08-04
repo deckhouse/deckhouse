@@ -25,16 +25,16 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-// Synchronization / OnBeforeAll / Node+Pod events: repopulate values and
-// recheck capacityBlocked metrics against the current fit budget (no metrics API).
+// Synchronization / OnBeforeAll / Node events: repopulate values and recheck
+// capacityBlocked metrics against the current fit budget (no metrics API).
+// Other-pod requests are listed per master (fieldSelector spec.nodeName).
 // Cron/OnBeforeHelm in resources_requests_autotune.go still owns raise decisions.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        autotuneQueue,
-	OnBeforeAll:  &go_hook.OrderedConfig{Order: 25},
+	Queue:       autotuneQueue,
+	OnBeforeAll: &go_hook.OrderedConfig{Order: 25},
 	Kubernetes: []go_hook.KubernetesConfig{
 		autotuneNodesBinding(true, true),
 		autotuneStateBinding(true),
-		autotunePodsBinding(true),
 	},
 }, dependency.WithExternalDependencies(autotuneResourcesRequestsSync))
 

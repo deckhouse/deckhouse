@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 
@@ -69,7 +70,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		autotuneNodesBinding(false, false),
 		autotuneStateBinding(false),
-		autotunePodsBinding(false),
 	},
 }, dependency.WithExternalDependencies(autotuneResourcesRequests))
 
@@ -118,11 +118,11 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 		stateDirty = true
 	}
 
-	otherPods, err := sdkobjectpatch.UnmarshalToStruct[nodeOtherRequests](input.Snapshots, "AutotunePodRequests")
+	otherByNode, err := fetchOtherRequestsByMasterNodes(ctx, dc, nodes)
 	if err != nil {
-		return fmt.Errorf("unmarshal AutotunePodRequests snapshots: %w", err)
+		return fmt.Errorf("list non-control-plane pod requests on masters: %w", err)
 	}
-	fitCPU, fitMemMB, _ := minMasterFitBudget(nodes, aggregateOtherRequestsByNode(otherPods))
+	fitCPU, fitMemMB, _ := minMasterFitBudget(nodes, otherByNode)
 	combinedCPU := input.Values.Get(pathMilliCPUControlPlane).Int()
 	combinedMemMB := bytesToMB(input.Values.Get(pathMemoryControlPlane).Int())
 
@@ -192,7 +192,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 			}
 		}
 	} else {
-		// Node/pod resource changes (OnBeforeAll + kube events): refresh the
+		// Node resource changes (OnBeforeAll + node events): refresh the
 		// capacity-blocked alert against the current fit budget without calling
 		// the metrics API. Cron remains responsible for new raise decisions.
 		now := dc.GetClock().Now().UTC()
@@ -369,16 +369,62 @@ func autotuneStateBinding(onSync bool) go_hook.KubernetesConfig {
 	}
 }
 
-// autotunePodsBinding feeds non-control-plane pod requests into the fit-capacity gate.
-func autotunePodsBinding(onEvents bool) go_hook.KubernetesConfig {
-	return go_hook.KubernetesConfig{
-		Name:                         "AutotunePodRequests",
-		ApiVersion:                   "v1",
-		Kind:                         "Pod",
-		FilterFunc:                   applyAutotunePodRequestsFilter,
-		ExecuteHookOnEvents:          ptr.To(onEvents),
-		ExecuteHookOnSynchronization: ptr.To(false),
+// listPodsOnNode lists non-terminated pods scheduled on nodeName.
+// Overridable in unit tests (client-go fakes do not index spec.nodeName).
+var listPodsOnNode = listPodsOnNodeFromAPI
+
+func listPodsOnNodeFromAPI(ctx context.Context, dc dependency.Container, nodeName string) ([]v1.Pod, error) {
+	client, err := dc.GetK8sClient()
+	if err != nil {
+		return nil, fmt.Errorf("get k8s client: %w", err)
 	}
+	fieldSelector := fields.AndSelectors(
+		fields.OneTermEqualSelector("spec.nodeName", nodeName),
+		fields.OneTermNotEqualSelector("status.phase", string(v1.PodSucceeded)),
+		fields.OneTermNotEqualSelector("status.phase", string(v1.PodFailed)),
+	).String()
+	list, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{FieldSelector: fieldSelector})
+	if err != nil {
+		return nil, fmt.Errorf("list pods on node %s: %w", nodeName, err)
+	}
+	return list.Items, nil
+}
+
+// fetchOtherRequestsByMasterNodes lists pods once per master (fieldSelector
+// spec.nodeName) and sums requests of pods that are not autotuned control-plane
+// static pods — O(masters) API calls instead of a cluster-wide pod informer.
+func fetchOtherRequestsByMasterNodes(ctx context.Context, dc dependency.Container, nodes []Node) (map[string]nodeOtherRequests, error) {
+	out := make(map[string]nodeOtherRequests, len(nodes))
+	for i := range nodes {
+		name := nodes[i].Name
+		if name == "" {
+			continue
+		}
+		items, err := listPodsOnNode(ctx, dc, name)
+		if err != nil {
+			return nil, err
+		}
+		var milliCPU, memoryBytes int64
+		for j := range items {
+			pod := &items[j]
+			// Enforce selector constraints for fakes / partial API support.
+			if pod.Spec.NodeName != name {
+				continue
+			}
+			switch pod.Status.Phase {
+			case v1.PodSucceeded, v1.PodFailed:
+				continue
+			}
+			cpu, mem, ok := otherRequestsFromPod(pod)
+			if !ok {
+				continue
+			}
+			milliCPU += cpu
+			memoryBytes += mem
+		}
+		out[name] = nodeOtherRequests{NodeName: name, MilliCPU: milliCPU, MemoryBytes: memoryBytes}
+	}
+	return out, nil
 }
 
 func measurementHasAnyApplied(m *autotuneMeasurementState, resourceName resourceKind) bool {
