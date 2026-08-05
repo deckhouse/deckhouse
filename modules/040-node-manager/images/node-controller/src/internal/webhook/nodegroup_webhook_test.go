@@ -83,7 +83,7 @@ func clusterConfigSecret(clusterType, prefix, defaultCRI string, podSubnetPrefix
 		yaml += "clusterType: " + clusterType + "\n"
 	}
 	if prefix != "" {
-		yaml += "prefix: " + prefix + "\n"
+		yaml += "cloud:\n  provider: OpenStack\n  prefix: " + prefix + "\n"
 	}
 	if defaultCRI != "" {
 		yaml += "defaultCRI: " + defaultCRI + "\n"

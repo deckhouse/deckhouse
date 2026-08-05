@@ -47,7 +47,13 @@ var _ = Describe("CAPI MachineDeployment rendering", func() {
 		ic.SetAPIVersion("deckhouse.io/v1alpha1")
 		ic.SetKind("DVPInstanceClass")
 		ic.SetName(icName)
-		Expect(unstructured.SetNestedField(ic.Object, "test", "spec", "vmClassName")).To(Succeed())
+		Expect(unstructured.SetNestedMap(ic.Object, map[string]interface{}{
+			"cpu": map[string]interface{}{
+				"cores":        int64(4),
+				"coreFraction": "100%",
+			},
+			"memory": map[string]interface{}{"size": "8Gi"},
+		}, "spec", "virtualMachine")).To(Succeed())
 		return ic
 	}
 
@@ -107,6 +113,26 @@ var _ = Describe("CAPI MachineDeployment rendering", func() {
 			Namespace: common.MachineNamespace, Name: infraRef.Name,
 		}, mt)).To(Succeed())
 		Expect(mt.GetLabels()).To(HaveKeyWithValue("node-group", ng.Name))
+	})
+
+	It("publishes CPU and memory capacity for scale-from-zero", func() {
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, newInstanceClass()))).To(Succeed())
+
+		ng := newNodeGroup(testenv.UniqueName("cap-zero"))
+		ng.Spec.CloudInstances.MinPerZone = 0
+		Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, ng) })
+
+		Eventually(func(g Gomega) map[string]string {
+			mdList := &capiv1beta2.MachineDeploymentList{}
+			g.Expect(k8sClient.List(suiteCtx, mdList, client.InNamespace(common.MachineNamespace),
+				client.MatchingLabels{"node-group": ng.Name})).To(Succeed())
+			g.Expect(mdList.Items).To(HaveLen(1))
+			return mdList.Items[0].Annotations
+		}, 20*time.Second, 250*time.Millisecond).Should(SatisfyAll(
+			HaveKeyWithValue("capacity.cluster-autoscaler.kubernetes.io/cpu", "4"),
+			HaveKeyWithValue("capacity.cluster-autoscaler.kubernetes.io/memory", "8Gi"),
+		))
 	})
 
 	// Before the migration helm rendered the infrastructure template and pruned it when the

@@ -48,6 +48,7 @@ spec:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         k8s-app: kube-proxy
+        security.deckhouse.io/security-policy-exception: kube-proxy
     spec:
       imagePullSecrets:
       - name: deckhouse-registry

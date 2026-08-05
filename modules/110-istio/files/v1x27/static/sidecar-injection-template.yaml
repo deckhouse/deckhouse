@@ -165,7 +165,7 @@ spec:
         drop:
         - ALL
     {{- if not .Values.pilot.cni.enabled }}
-      readOnlyRootFilesystem: false
+      readOnlyRootFilesystem: true
       runAsGroup: 0
       runAsNonRoot: false
       runAsUser: 0

@@ -162,6 +162,13 @@ module JSONSchemaRenderer
         input ? input.dig(*keys) : nil
     end
 
+    def format_crd_short_names(input)
+        shortNames = get_hash_value(input, 'spec', 'names', 'shortNames')
+        return '' if shortNames.nil? || shortNames.empty?
+
+        '<p><font size="-1"><strong>Short names: ' + Array(shortNames).join(', ') + '</strong></font></p>'
+    end
+
     def get_search_keywords(primaryLanguage, fallbackLanguage = nil)
       return '' if !primaryLanguage
       if get_hash_value(primaryLanguage, "x-doc-search") then
@@ -251,9 +258,47 @@ module JSONSchemaRenderer
         merged
     end
 
-    def format_examples(name, attributes)
+    # Renders a single x-doc-examples array item.
+    # Supports the x-example / x-name / x-description format (with optional i18n overlay).
+    def format_x_doc_example_item(name, value, langExample = nil)
+        if value.is_a?(Hash) && value.has_key?('x-example') && !value['x-example'].nil?
+            content = value['x-example']
+            x_name = value['x-name']
+            x_description = value['x-description']
+            if langExample.is_a?(Hash)
+                x_name = langExample['x-name'] if langExample['x-name']
+                x_description = langExample['x-description'] if langExample['x-description']
+            end
+
+            parts = []
+            parts << %Q(<p class="resources__attrs"><i><strong>#{CGI.escapeHTML(x_name.to_s)}</strong></i></p>) if x_name && !x_name.to_s.empty?
+            if x_description && !x_description.to_s.empty?
+                parts << %Q(<div class="resources__prop_description">#{escape_chars(convert(x_description.to_s))}</div>)
+            end
+
+            yaml_markdown = if content.is_a?(String) && content =~ /\`\`\`|\n/
+                content
+            elsif content.is_a?(Hash)
+                %Q(```yaml\n#{content.to_yaml.sub(/^---(\n| ){1}/,'')}```)
+            else
+                %Q(```yaml\n#{(name ? {name => content} : content).to_yaml.sub(/^---(\n| ){1}/,'')}```)
+            end
+            parts << escape_chars(convert(yaml_markdown)).delete_prefix('<p>').sub(/<\/p>[\s]*$/,"")
+            return parts.join("\n")
+        end
+
+        yaml_markdown = if value.is_a?(String) && value =~ /\`\`\`|\n/
+            value
+        else
+            %Q(```yaml\n#{(name ? {name => value} : value).to_yaml.sub(/^---(\n| ){1}/,'')}```)
+        end
+        escape_chars(convert(yaml_markdown)).delete_prefix('<p>').sub(/<\/p>[\s]*$/,"")
+    end
+
+    def format_examples(name, attributes, primaryLanguage = nil)
         result = Array.new()
         exampleObject = nil
+        exampleKeyToUse = nil
 
         begin
           if attributes.has_key?('x-doc-examples')
@@ -295,6 +340,24 @@ module JSONSchemaRenderer
             end
 
             example =  %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{exampleTitle}:</span>)
+
+            # x-doc-examples: support x-example / x-name / x-description (+ i18n overlays)
+            if exampleKeyToUse == 'x-doc-examples' && exampleObjectIsArrayOfExamples
+                langExamples = nil
+                if primaryLanguage.is_a?(Hash) && primaryLanguage.has_key?('x-doc-examples')
+                    langExamples = primaryLanguage['x-doc-examples']
+                end
+
+                parts = []
+                exampleObject.each_with_index do |value, index|
+                    next if value.nil?
+                    langExample = (langExamples.is_a?(Array) && index < langExamples.length) ? langExamples[index] : nil
+                    parts << format_x_doc_example_item(name, value, langExample)
+                end
+                result.push(%Q(#{example}</p>#{parts.join("\n")}))
+                return result
+            end
+
             exampleContent = ""
                         if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
                             exampleContent = %Q(```yaml\n#{(if name then {name => exampleObject['oneOf']} else exampleObject['oneOf'] end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
@@ -308,7 +371,7 @@ module JSONSchemaRenderer
                             end
                         elsif exampleObjectIsArrayOfExamples and (exampleObject.length > 1)
                             exampleObject.each do | value |
-                                if value == nil then continue end
+                                next if value.nil?
                                 if exampleContent.length > 0 then exampleContent = exampleContent + "\n" end
                                 exampleContent = %Q(#{exampleContent}\n```yaml\n#{(if name then {name => value} else value end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                             end
@@ -451,7 +514,7 @@ module JSONSchemaRenderer
             end
         end
 
-        result.push(format_examples(name, attributes))
+        result.push(format_examples(name, attributes, primaryLanguage))
 
         result
     end
@@ -853,6 +916,7 @@ module JSONSchemaRenderer
                 resourceName = input["spec"]["names"]["kind"]
                 fullPath = [sprintf(%q(v1beta1-%s), input["spec"]["names"]["kind"])]
                 result.push(convert("## " + input["spec"]["names"]["kind"]))
+                result.push(format_crd_short_names(input))
                 result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                 if input["spec"].has_key?("version") then
                    result.push('<br/>Version: ' + input["spec"]["version"] + '</font></p>')
@@ -915,6 +979,7 @@ module JSONSchemaRenderer
                  result.push(%Q(<h2>#{input["spec"]["names"]["kind"]}</h2>))
 
                  if  input["spec"]["versions"].length > 1 then
+                     result.push(format_crd_short_names(input))
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
                      result.push('<div class="tabs-block">')
                      result.push('<ul class="tabs__container tabs__container--title">')
@@ -938,6 +1003,7 @@ module JSONSchemaRenderer
                     versionAPI = item['name']
 
                     if input["spec"]["versions"].length == 1 then
+                        result.push(format_crd_short_names(input))
                         result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                         result.push('<br/>Version: ' + item['name'] + '</font></p>')
                     else
@@ -996,8 +1062,16 @@ module JSONSchemaRenderer
                     if item["schema"]["openAPIV3Schema"].has_key?('x-doc-examples') or item["schema"]["openAPIV3Schema"].has_key?('x-doc-example') or
                        item["schema"]["openAPIV3Schema"].has_key?('example') or item["schema"]["openAPIV3Schema"].has_key?('x-examples')
                     then
+                        _langSchema = nil
+                        if input['i18n'][@lang] and
+                           get_hash_value(input['i18n'][@lang],"spec","versions") and
+                           input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
+                        then
+                            _langVersion = input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
+                            _langSchema = get_hash_value(_langVersion, 'schema', 'openAPIV3Schema')
+                        end
                         result.push('<div markdown="0">')
-                        result.push(format_examples(nil, item["schema"]["openAPIV3Schema"]))
+                        result.push(format_examples(nil, item["schema"]["openAPIV3Schema"], _langSchema))
                         result.push('</div>')
                     end
 
@@ -1110,7 +1184,7 @@ module JSONSchemaRenderer
            input.has_key?('example') or input.has_key?('x-examples')
         then
             result.push('<div markdown="0">')
-            result.push(format_examples(nil, input))
+            result.push(format_examples(nil, input, get_hash_value(input, 'i18n', @lang)))
             result.push('</div>')
         end
 

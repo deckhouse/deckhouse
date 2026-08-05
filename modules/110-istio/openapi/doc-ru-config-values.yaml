@@ -525,6 +525,15 @@ properties:
                       memory:
                         description: |
                           Настройка ограничений использования памяти (memory limits).
+  configAnalysis:
+    description: |
+      Периодический анализ конфигурации Istio (`istioctl analyze`) с экспортом результатов в Prometheus-метрики и алерты.
+    properties:
+      enabled:
+        description: |
+          Включить Deployment анализатора конфигурации Istio для каждой установленной ревизии control plane.
+
+          Установите `false`, чтобы отключить анализ и удалить связанные workloads.
   ambient:
     description: |
       Настройки, связанные с ambient mesh.

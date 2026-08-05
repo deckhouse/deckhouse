@@ -53,7 +53,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1 // indirect
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 // indirect
-	github.com/deckhouse/lib-dhctl v0.21.0 // indirect
+	github.com/deckhouse/lib-dhctl v0.22.0 // indirect
 	github.com/deckhouse/module-sdk v0.12.1 // indirect
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/docker/cli v29.4.0+incompatible // indirect
@@ -66,7 +66,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/flant/addon-operator v1.24.6 // indirect
+	github.com/flant/addon-operator v1.24.7 // indirect
 	github.com/flant/kube-client v1.9.1 // indirect
 	github.com/flant/shell-operator v1.20.2 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

@@ -49,10 +49,10 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )

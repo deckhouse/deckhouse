@@ -73,6 +73,7 @@ spec:
     metadata:
       labels:
         app: deckhouse
+        security.deckhouse.io/security-policy-exception: deckhouse
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
         checksum/registry-version: {{ .Values.global.modulesImages.registry.hash | default "" | quote }}
@@ -123,6 +124,18 @@ spec:
             runAsUser: 0
             runAsNonRoot: false
             readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - all
+              # chown/chmod the downloaded modules directory to the deckhouse user and
+              # traverse it on subsequent runs, when it is already owned by 64535 and 0700.
+              add:
+              - CHOWN
+              - FOWNER
+              - DAC_OVERRIDE
+            seccompProfile:
+              type: RuntimeDefault
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
@@ -132,10 +145,10 @@ spec:
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
-{{- if .Values.deckhouse.internal.chrootMode }}
             capabilities:
               drop:
               - all
+{{- if .Values.deckhouse.internal.chrootMode }}
               add:
               - SYS_ADMIN
   {{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
@@ -186,6 +199,10 @@ spec:
             - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
               value: "false"
             - name: USE_NELM
+              value: "true"
+            # Adopt fields owned by the legacy "deckhouse-controller" field manager
+            # (pre-nelm Helm 3 engine), so stale fields get removed on upgrade.
+            - name: NELM_FEAT_ADOPT_DECKHOUSE_CONTROLLER_FIELDS
               value: "true"
             - name: PACKAGE_NELM_TIMEOUT
               value: "30m"

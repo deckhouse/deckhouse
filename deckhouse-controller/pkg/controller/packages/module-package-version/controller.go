@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -57,24 +58,16 @@ const (
 	legacyPathSegment = "release"
 )
 
-// reconciler promotes draft ModulePackageVersion resources by loading package
-// metadata from the registry image and removing the draft label.
-type reconciler struct {
-	client   client.Client
-	logger   *log.Logger
-	registry *registry.Service
-	dc       dependency.Container
-}
-
 // RegisterController creates and registers the ModulePackageVersion controller.
 // It watches ModulePackageVersion resources and reconciles draft versions by
 // fetching metadata from the package registry and promoting them to non-draft status.
-func RegisterController(runtimeManager manager.Manager, dc dependency.Container, logger *log.Logger) error {
+func RegisterController(sync *sync.WaitGroup, runtimeManager manager.Manager, dc dependency.Container, logger *log.Logger) error {
 	r := &reconciler{
+		init:     sync,
 		client:   runtimeManager.GetClient(),
-		logger:   logger,
 		registry: registry.NewService(dc, logger),
 		dc:       dc,
+		logger:   logger.Named(controllerName),
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
@@ -84,10 +77,23 @@ func RegisterController(runtimeManager manager.Manager, dc dependency.Container,
 		Complete(r)
 }
 
+// reconciler promotes draft ModulePackageVersion resources by loading package
+// metadata from the registry image and removing the draft label.
+type reconciler struct {
+	init     *sync.WaitGroup
+	client   client.Client
+	registry *registry.Service
+	dc       dependency.Container
+	logger   *log.Logger
+}
+
 // Reconcile handles a single ModulePackageVersion event. Draft resources are
 // promoted by loading metadata; deleted resources have their finalizers removed
 // once no Module references remain (usedByCount == 0).
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// wait for init
+	r.init.Wait()
+
 	logger := r.logger.With(slog.String("name", req.Name))
 
 	logger.Debug("reconcile resource")

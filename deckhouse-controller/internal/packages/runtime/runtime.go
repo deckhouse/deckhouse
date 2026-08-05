@@ -42,6 +42,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
@@ -69,7 +70,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -100,6 +100,7 @@ type Runtime struct {
 	healthService    *health.Service    // Resources health monitor
 	appDeployer      deployerI          // Deploys and undeploys application package images
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
+	registry         *registry.Service  // Registry service for managing package digests
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
@@ -129,7 +130,7 @@ type Runtime struct {
 
 // deployerI abstracts package image deployment to and removal from the filesystem.
 type deployerI interface {
-	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error
+	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string, force bool) error
 	Undeploy(ctx context.Context, deployedName string, keep bool) error
 	Cleanup(ctx context.Context, preserve []deployer.PreservePackage) error
 }
@@ -140,9 +141,9 @@ type moduleManagerI interface {
 	IsModuleEnabled(name string) bool
 }
 
-// New creates and initializes a Runtime with all subsystems wired together.
+// Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -159,21 +160,21 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	r.status = status.NewService()
 	r.edition = edition
 
-	reg := registry.NewService(dc, logger)
+	r.registry = registry.NewService(dc, logger)
 	downloadedDir := app.DownloadedModulesDir()
 
 	appsDir := filepath.Join(downloadedDir, "apps")
 	modulesDir := filepath.Join(downloadedDir, "modules")
 
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.appDeployer = symlinkdeploy.NewDeployer(reg, appsDir, logger)
-	r.moduleDeployer = symlinkdeploy.NewDeployer(reg, modulesDir, logger)
+	r.appDeployer = symlinkdeploy.NewDeployer(r.registry, appsDir, logger)
+	r.moduleDeployer = symlinkdeploy.NewDeployer(r.registry, modulesDir, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.appDeployer = erofsdeploy.NewDeployer(reg, appsDir, logger)
-		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
+		r.appDeployer = erofsdeploy.NewDeployer(r.registry, appsDir, logger)
+		r.moduleDeployer = erofsdeploy.NewDeployer(r.registry, modulesDir, logger)
 	}
 
 	// Build object patcher with optimized rate limits for batch operations
@@ -844,9 +845,14 @@ func (r *Runtime) GetStatus(name string) status.Status {
 	return r.status.GetStatus(name)
 }
 
-// GetStatusQueue returns the status queue for external access
-func (r *Runtime) GetStatusQueue() workqueue.TypedRateLimitingInterface[string] {
-	return r.status.Queue()
+// GetAppStatusQueue returns the application status queue for external access
+func (r *Runtime) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.AppQueue()
+}
+
+// GetModuleStatusQueue returns the module status queue for external access
+func (r *Runtime) GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.ModuleQueue()
 }
 
 // PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.

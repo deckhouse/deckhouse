@@ -24,14 +24,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func NewErrClusterManagedByAnotherCommander(managedByCommanderUUID, requiredCommanderUUID uuid.UUID) error {
-	return fmt.Errorf("cluster is managed by another commander %s; unable to perform operations from your commander %s", managedByCommanderUUID.String(), requiredCommanderUUID.String())
+	return fmt.Errorf("%w: cluster is managed by another commander %s; unable to perform operations from your commander %s", actions.ErrManifestTaskPermanent, managedByCommanderUUID.String(), requiredCommanderUUID.String())
 }
 
 func doCheckShouldUpdateCommanderUUID(cm *v1.ConfigMap, requiredCommanderUUID uuid.UUID) (bool, error) {
