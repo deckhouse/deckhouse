@@ -19,9 +19,6 @@ kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
 clusterDomain: "internal.cluster.local"
-# [<en>] Default container runtime on cluster nodes (NodeGroups).
-# [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
-defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -58,8 +55,6 @@ spec:
         imagesRepo: registry.deckhouse.{% if page.lang == 'ru' %}ru{% else %}io{% endif %}/deckhouse/{% if include.revision == 'ee' %}ee{% else %}ce{% endif %}
 {%- if include.revision == 'ee' %}
         license: <YOUR_ACCESS_STRING_IS_HERE>
-{%- else %}
-        license: ""
 {%- endif %}
 ---
 # [<en>] Global Deckhouse settings.
@@ -86,6 +81,31 @@ spec:
       # [<en>] You might consider changing this.
       # [<ru>] Возможно, захотите изменить.
       publicDomainTemplate: "<PUBLIC_DOMAIN_TEMPLATE>"
+      # [<en>] The HTTPS implementation used by Deckhouse modules.
+      # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https
+      # [<ru>] Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+      # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https
+      https:
+        certManager:
+          # [<en>] Self-signed certificates: Let's Encrypt cannot validate a domain that is not published on the internet.
+          # [<ru>] Самоподписанные сертификаты: Let's Encrypt не сможет проверить домен, не опубликованный в интернете.
+          clusterIssuerName: selfsigned
+---
+# [<en>] cert-manager module settings.
+# [<en>] https://deckhouse.io/modules/cert-manager/configuration.html
+# [<ru>] Настройки модуля cert-manager.
+# [<ru>] https://deckhouse.ru/modules/cert-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  version: 1
+  enabled: true
+  settings:
+    # [<en>] Let's Encrypt ClusterIssuers are not created: the cluster domain is not published on the internet.
+    # [<ru>] ClusterIssuer'ы Let's Encrypt не создаются: домен кластера не опубликован в интернете.
+    disableLetsencrypt: true
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/modules/user-authn/configuration.html
@@ -98,19 +118,31 @@ metadata:
 spec:
   version: 2
   enabled: true
+---
+# [<en>] control-plane-manager module settings.
+# [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html
+# [<ru>] Настройки модуля control-plane-manager.
+# [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
   settings:
-    controlPlaneConfigurator:
-      dexCAMode: DoNotNeed
-    # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
-    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
+    apiserver:
+      # [<en>] Enabling access to the API server through Ingress.
+      # [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+      # [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] cni-cilium module settings.
 # [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
@@ -168,6 +200,22 @@ internalNetworkCIDRs:
   # [<en>] You might consider changing this. Ensure that there are no overlaps with other subnets.
   # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с другими подсетями.
   - <INTERNAL_NETWORK_CIDRS>
+---
+# [<en>] node-manager module settings.
+# [<en>] https://deckhouse.io/modules/node-manager/configuration.html
+# [<ru>] Настройки модуля node-manager.
+# [<ru>] https://deckhouse.ru/modules/node-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: node-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    # [<en>] Default container runtime on cluster nodes (NodeGroups).
+    # [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
+    defaultCRI: ContainerdV2
 ---
 # [<en>] Worker NodeGroup for static machines (see node-manager docs).
 # [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
@@ -287,11 +335,23 @@ spec:
       matchLabels:
         storage: "true"
 ---
+# [<en>] ingress-nginx module settings.
+# [<en>] https://deckhouse.io/modules/ingress-nginx/configuration.html
+# [<ru>] Настройки модуля ingress-nginx.
+# [<ru>] https://deckhouse.ru/modules/ingress-nginx/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ingress-nginx
+spec:
+  version: 1
+  enabled: true
+---
 # [<en>] Ingress NGINX Controller (HostPort on control-plane / master for this quick start).
 # [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
 # [<ru>] Ingress NGINX Controller (HostPort на control-plane для быстрого старта).
 # [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: nginx
@@ -323,7 +383,6 @@ kind: ModuleConfig
 metadata:
   name: snapshot-controller
 spec:
-  source: deckhouse
   version: 1
   enabled: true
 ---
@@ -336,15 +395,19 @@ kind: ModuleConfig
 metadata:
   name: console
 spec:
-  version: 1
+  version: 2
   enabled: true
 ---
+# [<en>] upmeter module settings (availability metrics, status page).
+# [<en>] https://deckhouse.io/modules/upmeter/configuration.html
+# [<ru>] Настройки модуля upmeter (метрики доступности, страница статуса).
+# [<ru>] https://deckhouse.ru/modules/upmeter/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: upmeter
 spec:
-  enabled: false
+  enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -393,6 +456,9 @@ spec:
       limits:
         cpu: 20
         memory: 20Gi
+    # [<en>] You might consider changing this. With `Isolated` (the template default) VM images cannot be downloaded over HTTP and VMs get no internet access.
+    # [<ru>] Возможно, захотите изменить. С `Isolated` (значение шаблона по умолчанию) образы ВМ не скачаются по HTTP, а у самих ВМ не будет доступа в интернет.
+    networkPolicy: NotRestricted
     administrators:
       - subject: User
         name: admin@deckhouse.io
@@ -437,21 +503,3 @@ spec:
   # [<ru>] Хеш пароля `<GENERATED_PASSWORD>`.
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   password: '<GENERATED_PASSWORD_HASH>'
----
-# [<en>] Grant admin role in the project namespace.
-# [<en>] https://deckhouse.io/modules/user-authz/cr.html
-# [<ru>] Выдача роли admin в неймспейсе проекта.
-# [<ru>] https://deckhouse.ru/modules/user-authz/cr.html
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  namespace: test-project
-  name: admin
-subjects:
-  - kind: User
-    name: admin@deckhouse.io
-    apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: d8:use:role:admin
-  apiGroup: rbac.authorization.k8s.io

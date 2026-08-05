@@ -59,9 +59,9 @@ Installing Deckhouse Virtualization Platform requires the following components t
     - Intel VT-x (VMX) or AMD-V (SVM) virtualization extensions.
   - **BIOS/UEFI**:
     - Hardware virtualization enabled in firmware settings.
-  - **Resources** for a one-master, one-worker cluster:
+  - **Resources** of the master node:
     - at least 6 vCPU (_8 vCPU recommended_);
-    - at least 8 GB RAM (_16 GB of RAM recommended_);
+    - at least 12 GB RAM (_16 GB of RAM recommended_);
     - at least 60 GB fast disk space with 400+ IOPS.
   - **Operating system**:
     - a [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html);
@@ -89,7 +89,7 @@ Installing Deckhouse Virtualization Platform requires the following components t
   <li><p><strong>Worker node</strong> — a worker node for user workloads and virtual machines.</p>
 
   {% offtopic title="Requirements..." %}
-  <p><strong>Worker node</strong> requirements are the same as for the <strong>master node</strong>, and also depend on the workloads you run on the nodes.</p>
+  <p><strong>Worker node</strong> requirements are the same as for the <strong>master node</strong>, and also depend on the workloads you run on the nodes. The worker node additionally runs virtual machines, so pick the upper bound of the recommended RAM.</p>
   {% endofftopic %}
   </li>
 
@@ -97,7 +97,10 @@ Installing Deckhouse Virtualization Platform requires the following components t
     {% offtopic title="Requirements..." %}
   - **System requirements**:
     - a [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html) with an NFS server package available;
-    - sufficient disk space for VM disks.
+    - at least 150 GB of disk space, including:
+      - about 50 GB for the DVCR image storage;
+      - about 90 GB for the PVCs of cluster system components;
+      - the rest for VM disks; size it according to the number and size of your VMs.
   - **Access and networking**:
     - NFS access (NFSv4.1 recommended) from master and worker nodes;
     - export the DVP directory with the `no_root_squash` option;
