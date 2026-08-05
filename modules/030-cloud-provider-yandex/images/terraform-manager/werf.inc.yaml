@@ -20,6 +20,10 @@ import:
   add: /terraform-provider-yandex
   to: /terraform-manager/terraform-provider-yandex
   before: setup
+- image: {{ $.ModuleName }}/validator
+  add: /dhctl-provider-yandex
+  to: /validator
+  before: setup
 shell:
   install:
   - set -e
