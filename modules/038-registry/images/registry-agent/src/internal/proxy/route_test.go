@@ -413,3 +413,62 @@ func TestTrimPrefixPathTellsThePrefixFromAName(t *testing.T) {
 		})
 	}
 }
+
+// TestResolveAuthenticatesAKnownRegistryAskedForByItsOwnAddress is the case a three-master
+// cluster failed on.
+//
+// The static pod manifests of the control plane name the upstream directly, on purpose: etcd
+// and kube-apiserver must not depend on the in-cluster registry being up. But the agent owns
+// the runtime's entire registry configuration — one `_default` drop-in covers every registry —
+// so the per-registry credentials the runtime used to hold are gone, and a static pod has no
+// imagePullSecrets either. Treated as an unconfigured registry, that pull went out anonymously
+// and was refused: the two masters that joined after the agent took over could not pull etcd at
+// all, while the first one, whose images arrived during bootstrap, was fine.
+//
+// Nothing is disclosed by fixing it. The credentials go to the registry they belong to, which
+// is already in the layout; what changes is only that they stop being dropped.
+func TestResolveAuthenticatesAKnownRegistryAskedForByItsOwnAddress(t *testing.T) {
+	// As the control plane names it: the upstream's own host and its own repository.
+	decision, err := Resolve(
+		"registry.deckhouse.io", "/v2/deckhouse/ee/etcd/manifests/sha256:abc", layout(), self)
+	require.NoError(t, err)
+
+	require.Equal(t, KindKnown, decision.Kind)
+	require.Len(t, decision.Targets, 1)
+
+	target := decision.Targets[0]
+	assert.Equal(t, "registry.deckhouse.io", target.Host)
+	assert.Equal(t, "/v2/deckhouse/ee/etcd/manifests/sha256:abc", target.Path,
+		"the client named this registry's own repository, so there is no prefix to swap")
+	require.NotNil(t, target.Auth, "without credentials the registry refuses the pull")
+	assert.Equal(t, "license-token", target.Auth.Username)
+}
+
+// TestResolveStillPassesThroughARegistryNobodyConfigured is the boundary of that: credentials
+// are supplied only for registries the cluster was given them for.
+//
+// Inventing any for a third-party registry would send this node's secrets somewhere the cluster
+// never vetted, so those pulls stay anonymous from the agent's side and carry the client's own
+// credentials instead.
+func TestResolveStillPassesThroughARegistryNobodyConfigured(t *testing.T) {
+	decision, err := Resolve(
+		"quay.io", "/v2/somebody/else/manifests/v1", layout(), self)
+	require.NoError(t, err)
+
+	require.Equal(t, KindPassThrough, decision.Kind)
+	require.Len(t, decision.Targets, 1)
+	assert.Nil(t, decision.Targets[0].Auth)
+	assert.Equal(t, "/v2/somebody/else/manifests/v1", decision.Targets[0].Path)
+}
+
+// TestResolvePrefersAnAdditionalRouteOverItsOwnAddress: a registry declared as a route is
+// matched by the route, which may rewrite the repository, rather than by the weaker rule that
+// only adds credentials.
+func TestResolvePrefersAnAdditionalRouteOverItsOwnAddress(t *testing.T) {
+	spec := layout()
+	route := spec.AdditionalRoutes[0]
+
+	decision, err := Resolve(route.Match, "/v2/one/manifests/v1", spec, self)
+	require.NoError(t, err)
+	assert.Equal(t, KindRoute, decision.Kind)
+}

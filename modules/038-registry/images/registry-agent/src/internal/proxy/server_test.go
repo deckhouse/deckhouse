@@ -421,29 +421,30 @@ func TestServeCachesTokens(t *testing.T) {
 // reached over HTTPS by design — the same assumption containerd makes about a registry
 // nothing is configured for — and a self-signed stub would fail the handshake before
 // any of this mattered.
+// Keyed on whether the cluster holds credentials for the target, which is the rule — not on
+// which routing decision produced it. Those two came apart the moment a registry the cluster
+// does have credentials for started arriving by its own address rather than through the
+// in-cluster one: the decision is a pass-through, and the credentials are still ours to send.
 func TestAttemptCredentialRelay(t *testing.T) {
 	tests := []struct {
 		name string
-		kind Kind
+		ours *registryv1alpha1.Auth
 		// relayed says whether the client's own Authorization must reach the target.
 		relayed bool
 	}{
 		{
-			name: "a configured target gets what the cluster holds for it",
-			kind: KindPrimary,
+			name: "a target the cluster holds credentials for gets ours",
+			ours: &registryv1alpha1.Auth{Username: "license-token", Password: "license-key"},
 			// The pod's credentials belong to whoever wrote the imagePullSecret; sending
 			// them to the Deckhouse upstream would hand them to a party they were never
-			// meant for.
+			// meant for. (Nothing is sent here either: the stub asks for no
+			// authentication, and offering credentials to a registry that did not ask
+			// would hand them to whatever is answering on that address.)
 			relayed: false,
 		},
 		{
-			name:    "a route gets what the cluster holds for it",
-			kind:    KindRoute,
-			relayed: false,
-		},
-		{
-			name: "an unconfigured registry gets the pod's own",
-			kind: KindPassThrough,
+			name: "a target it holds none for gets the pod's own",
+			ours: nil,
 			// The only way a private third-party image can be pulled once the agent owns
 			// the fallback. The credentials reach the agent at all because the kubelet
 			// leaves the server address unset, so containerd's per-host check is skipped.
@@ -467,7 +468,8 @@ func TestAttemptCredentialRelay(t *testing.T) {
 				Scheme: registryv1alpha1.SchemeHTTP,
 				Host:   target.host(t),
 				Path:   "/v2/one/manifests/v1",
-			}, tt.kind)
+				Auth:   tt.ours,
+			})
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = response.Body.Close() })
 

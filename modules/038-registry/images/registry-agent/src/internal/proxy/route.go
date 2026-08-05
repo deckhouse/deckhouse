@@ -51,6 +51,14 @@ const (
 	// agent sits on the path of every pull and blocking the unconfigured ones would
 	// break workloads that never asked to be involved.
 	KindPassThrough Kind = "PassThrough"
+
+	// KindKnown is a registry the cluster holds credentials for, asked for by its own
+	// address rather than through the in-cluster one.
+	//
+	// Its own kind because it is neither of the other two: the repository is already the
+	// one that registry serves, so nothing is rewritten, but the credentials are ours to
+	// supply and nobody else can.
+	KindKnown Kind = "Known"
 )
 
 // Target is one attempt at satisfying a request.
@@ -136,6 +144,42 @@ func Resolve(
 		}
 	}
 
+	// A registry the cluster was given credentials for, named by its own address.
+	//
+	// This is what a control-plane image reference looks like: the static pod manifests of
+	// etcd and kube-apiserver name the upstream directly, on purpose, so that the control
+	// plane does not depend on the in-cluster registry being up. Deckhouse's own components
+	// do the same wherever a reference was rendered before the pull path moved.
+	//
+	// Those pulls have to be authenticated by the agent, because nothing else can. The
+	// agent owns the runtime's whole registry configuration — every registry arrives here
+	// through one `_default` drop-in — so the per-registry credentials the runtime used to
+	// hold are gone, and a static pod has no imagePullSecrets to fall back on. Treated as
+	// unconfigured, such a pull is forwarded anonymously and the registry refuses it: what
+	// that looked like was a three-master cluster where the two masters that joined after
+	// the agent took over could not pull etcd at all, while the first one, whose images
+	// arrived during bootstrap, was fine.
+	//
+	// The credentials go to the very registry they belong to, so nothing is disclosed to
+	// anyone: this adds no address, it only stops dropping the credentials for one already
+	// in the layout.
+	if endpoint := knownEndpoint(spec, namespace); endpoint != nil {
+		return Decision{
+			Kind: KindKnown,
+			Targets: []Target{{
+				Name:   namespace,
+				Scheme: endpoint.Scheme,
+				Host:   namespace,
+				// Untouched: the client named this registry's own repository, so there is
+				// no prefix to swap. Rewriting here would ask it for a path nested under
+				// its own.
+				Path: requestPath,
+				CA:   endpoint.CA,
+				Auth: endpoint.Auth,
+			}},
+		}, nil
+	}
+
 	// Unconfigured, and therefore forwarded untouched. No credentials are added: the
 	// agent has none for it, and inventing any would send this node's secrets to a
 	// registry the cluster never vetted.
@@ -148,6 +192,44 @@ func Resolve(
 			Path:   requestPath,
 		}},
 	}, nil
+}
+
+// knownEndpoint finds a configured endpoint answering for this host.
+//
+// Every endpoint in the layout is considered — the backends, their mirrors, and the
+// additional routes with theirs — because the question is only "were we given credentials
+// for this registry", and it does not matter which entry they arrived in.
+func knownEndpoint(
+	spec *registryv1alpha1.RegistryNodeSpec, namespace string,
+) *registryv1alpha1.Endpoint {
+	match := func(endpoint *registryv1alpha1.Endpoint) *registryv1alpha1.Endpoint {
+		if endpoint.Auth.IsEmpty() || !equalHost(endpoint.Host, namespace) {
+			return nil
+		}
+		return endpoint
+	}
+
+	for i := range spec.Backends {
+		if found := match(&spec.Backends[i].Endpoint); found != nil {
+			return found
+		}
+		for j := range spec.Backends[i].Mirrors {
+			if found := match(&spec.Backends[i].Mirrors[j]); found != nil {
+				return found
+			}
+		}
+	}
+	for i := range spec.AdditionalRoutes {
+		if found := match(&spec.AdditionalRoutes[i].Endpoint); found != nil {
+			return found
+		}
+		for j := range spec.AdditionalRoutes[i].Mirrors {
+			if found := match(&spec.AdditionalRoutes[i].Mirrors[j]); found != nil {
+				return found
+			}
+		}
+	}
+	return nil
 }
 
 // primaryDecision maps a request for the in-cluster address onto the backends, in

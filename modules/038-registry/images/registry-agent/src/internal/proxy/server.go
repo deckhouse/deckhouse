@@ -176,7 +176,7 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 	for i := range decision.Targets {
 		target := &decision.Targets[i]
 
-		response, err := s.attempt(request.Context(), request, target, decision.Kind)
+		response, err := s.attempt(request.Context(), request, target)
 		if err != nil {
 			lastError = err
 			s.markFailing(target.Name)
@@ -280,7 +280,7 @@ func (s *Server) failover(target, reason string) {
 
 // attempt sends the request to one target.
 func (s *Server) attempt(
-	ctx context.Context, original *http.Request, target *Target, kind Kind,
+	ctx context.Context, original *http.Request, target *Target,
 ) (*http.Response, error) {
 	client, err := s.client(target.CA)
 	if err != nil {
@@ -307,16 +307,21 @@ func (s *Server) attempt(
 		}
 	}
 
-	if kind == KindPassThrough {
-		// A registry nobody configured, reached with the pod's own imagePullSecret.
+	if target.Auth.IsEmpty() {
+		// A target we hold no credentials for, reached with the client's own instead.
 		//
-		// The credentials arrive here because the runtime offers them to whatever host it
-		// contacts: the kubelet leaves the server address unset, so containerd's host
-		// check is skipped and the agent is offered them like any registry would be.
-		// Relaying them is the only way a private third-party image can be pulled at all,
-		// and the alternative — an unconfigured registry that stops working the moment
-		// the agent is on the node — would break workloads that never asked to be
-		// involved.
+		// Almost always a registry nobody configured. The credentials arrive here because
+		// the runtime offers them to whatever host it contacts: the kubelet leaves the
+		// server address unset, so containerd's host check is skipped and the agent is
+		// offered them like any registry would be. Relaying them is the only way a private
+		// third-party image can be pulled at all, and the alternative — an unconfigured
+		// registry that stops working the moment the agent is on the node — would break
+		// workloads that never asked to be involved.
+		//
+		// Keyed on whether WE have credentials rather than on the kind of decision,
+		// because that is the actual question. A registry the cluster was given
+		// credentials for gets ours whichever rule routed the request; one it was not
+		// gets the client's, if the client has any.
 		//
 		// The challenge travels back the same way, because response headers are relayed
 		// as they are: the client sees the target's own 401 and answers it.
@@ -324,10 +329,10 @@ func (s *Server) attempt(
 			request.Header.Add("Authorization", value)
 		}
 	} else if err := s.auth.authorize(ctx, client, request, target); err != nil {
-		// A configured target is reached with the credentials the cluster holds for it.
-		// The client's own are deliberately NOT passed on here: they belong to whoever
-		// wrote the imagePullSecret, and sending them to the Deckhouse upstream would
-		// hand them to a party they were never meant for.
+		// A target the cluster holds credentials for is reached with those. The client's
+		// own are deliberately NOT passed on here: they belong to whoever wrote the
+		// imagePullSecret, and sending them to the Deckhouse upstream would hand them to a
+		// party they were never meant for.
 		cancel()
 		return nil, err
 	}
