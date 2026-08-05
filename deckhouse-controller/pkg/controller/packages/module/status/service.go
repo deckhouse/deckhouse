@@ -16,12 +16,14 @@ package status
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -127,6 +129,30 @@ func (s *Service) computeAndApplyConditions(name string, module *v1alpha2.Module
 
 	if packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
 		module.Status.CurrentVersion.Version = packageStatus.Version
+
+		if packageStatus.Settings != nil {
+			if raw, err := json.Marshal(packageStatus.Settings); err == nil {
+				module.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: raw}
+			}
+		}
+	}
+
+	// Skip writing tracking if there's nothing to report — preserves the previous
+	// tracking field on the CR through trailing empty progress events from nelm.
+	if len(packageStatus.Tracking.Report.Operations) > 0 {
+		raw, _ := json.Marshal(packageStatus.Tracking)
+		module.Status.Tracking = runtime.RawExtension{Raw: raw}
+	}
+
+	// Summary is computed from the same pre-mapping state the mapper consumed,
+	// not from the merged conditions: summarize shares the mapper's phase and
+	// disabled-module helpers, so the two cannot drift, and reads the internal
+	// conditions directly instead of reverse-deriving reasons.
+	state, message, tip := summarize(mapperStatus)
+	module.Status.Summary = &v1alpha2.ModuleStatusSummary{
+		State:   state,
+		Message: message,
+		Tip:     tip,
 	}
 }
 
