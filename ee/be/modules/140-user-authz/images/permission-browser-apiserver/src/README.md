@@ -130,6 +130,8 @@ The server uses a **composite authorizer** with the following order:
 
 2. **RBAC layer**: Standard Kubernetes RBAC checks using in-memory informers.
 
+3. **Namespace-ACL reads**: `get`/`list`/`watch` of a cluster-scoped resource whose visibility the apiserver derives from the namespace ACL — currently `deckhouse.io/projects`, visible whenever any namespace of the project is — are reported as **allowed** even when the two layers above say otherwise. The cluster-wide RBAC grant for such a resource is deliberately withheld so that the apiserver's filter engages, and the API answers those reads with the accessible subset (a `get` of an invisible object answers `NotFound`) rather than a 403. Reporting them as denied would make the console hide a section the user can open. Mutating verbs and subresources keep the plain RBAC answer.
+
 ### Multi-tenancy Restrictions
 
 The multi-tenancy engine applies the same restrictions as the `user-authz-webhook`:

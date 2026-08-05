@@ -7,10 +7,14 @@ metadata:
   name: d8:user-authz:multitenancy-manager:user
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
+# Reading `projects` is granted by user-authz, not here: where the namespace ACL filters the
+# listing, a cluster-wide grant would let RBAC allow the request before the filter ever engages,
+# and every tenant would keep seeing every project. Only user-authz knows whether that mode is on
+# (modules/140-user-authz/templates/cluster-roles.yaml), so it also grants the plain cluster-wide
+# read for the clusters where it is not.
 - apiGroups:
   - deckhouse.io
   resources:
-  - projects
   - projecttemplates
   verbs:
   - get

@@ -28,6 +28,7 @@ import (
 	"permission-browser-apiserver/pkg/authorizer/composite"
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
 	"permission-browser-apiserver/pkg/authorizer/rbacadapter"
+	"permission-browser-apiserver/pkg/authorizer/scopefilter"
 	"permission-browser-apiserver/pkg/registry"
 	"permission-browser-apiserver/pkg/resolver"
 )
@@ -154,14 +155,16 @@ func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer
 		}
 	}
 
-	// Combine authorizers
+	// Combine authorizers. The outermost layer reports reads that the apiserver
+	// answers from the namespace ACL rather than from RBAC, which no amount of
+	// RBAC analysis below it can discover.
 	if mtEngine != nil {
 		// Requests granted by CAR-independent RBAC (RoleBindings, non-CAR
 		// ClusterRoleBindings) must not be denied by multi-tenancy filters.
 		mtEngine.SetIndependentRBACChecker(rbacAuth)
-		return composite.NewCompositeAuthorizer(mtEngine, rbacAuth), mtEngine, nil
+		return scopefilter.NewIdentityReadAuthorizer(composite.NewCompositeAuthorizer(mtEngine, rbacAuth)), mtEngine, nil
 	}
-	return rbacAuth, nil, nil
+	return scopefilter.NewIdentityReadAuthorizer(rbacAuth), nil, nil
 }
 
 // startInformers starts the informer factory and waits for cache sync.
