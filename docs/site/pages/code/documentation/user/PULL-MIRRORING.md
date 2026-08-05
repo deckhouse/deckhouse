@@ -55,7 +55,7 @@ To import a repository by URL as a pull mirror, follow these steps:
 
 1. Create the project.
 
-During the initial import, the repository is created and populated from the source. After that, the project is kept in sync with the source repository automatically, on the pull mirroring schedule (see the "Scheduling and error handling" section below).
+During the initial import, the repository is created and populated from the source. After that, the project is kept in sync with the source repository automatically, on the pull mirroring schedule (for more information, see the ["Scheduling and error handling"](#scheduling-and-error-handling) section below).
 
 To restrict mirroring to protected branches, enable "Mirror only protected branches" after the import on the project's "Settings" → "Repository" → "Mirroring repositories" page.
 

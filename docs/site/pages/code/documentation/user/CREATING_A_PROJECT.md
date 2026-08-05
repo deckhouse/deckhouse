@@ -29,6 +29,6 @@ permalink: en/code/documentation/user/project.html
 
 | Level         | Description                                                                 |
 |---------------|-----------------------------------------------------------------------------|
-| "Private"     | The project is visible only to its members or members of the parent group. |
-| "Internal"    | The project is visible to all registered users.                             |
-| "Public"      | The project is visible to everyone, including unregistered users.           |
+| "Private"     | The project is visible only to its members or members of the parent group |
+| "Internal"    | The project is visible to all registered users                             |
+| "Public"      | The project is visible to everyone, including unregistered users           |
