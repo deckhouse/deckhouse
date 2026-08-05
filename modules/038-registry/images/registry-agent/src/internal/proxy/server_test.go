@@ -61,12 +61,17 @@ type registryStub struct {
 	requests atomic.Value
 	headers  atomic.Value
 	tokens   atomic.Int32
+
+	// scopes records what each token was asked for, which is the difference between a
+	// token that authorizes the request and one that does not.
+	scopes atomic.Value
 }
 
 func (s *registryStub) start(t *testing.T) *registryStub {
 	t.Helper()
 
 	s.requests.Store([]string{})
+	s.scopes.Store([]string{})
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/v2/", func(writer http.ResponseWriter, request *http.Request) {
@@ -104,6 +109,7 @@ func (s *registryStub) start(t *testing.T) *registryStub {
 
 	mux.HandleFunc("/token", func(writer http.ResponseWriter, request *http.Request) {
 		s.tokens.Add(1)
+		s.scopes.Store(append(s.scopes.Load().([]string), request.URL.Query().Get("scope")))
 
 		username, password, ok := request.BasicAuth()
 		if !ok || username != s.username || password != s.password {
@@ -461,7 +467,7 @@ func TestAttemptCredentialRelay(t *testing.T) {
 				Scheme: registryv1alpha1.SchemeHTTP,
 				Host:   target.host(t),
 				Path:   "/v2/one/manifests/v1",
-			}, "one", tt.kind)
+			}, tt.kind)
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = response.Body.Close() })
 
@@ -749,4 +755,62 @@ func TestServeReportsWhenEveryRegistryRefusesUs(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadGateway, response.StatusCode)
 	assert.Empty(t, response.Header.Get("WWW-Authenticate"))
+}
+
+// TestServeAsksForATokenForTheRepositoryItIsGoingTo is the bug this scope exists to prevent.
+//
+// A backend serves the same images under its own prefix, so the path is rewritten for it — and
+// the token has to be asked for under that prefix too. Asked for the client's repository
+// instead, the token comes back issued for a repository the target has never heard of, and the
+// target answers `insufficient_scope`: with valid credentials, for an image that is right
+// there.
+//
+// It went unnoticed for as long as that 401 was handed back to the container runtime, which
+// then authenticated itself with the pod's pull secret and succeeded. The agent's own
+// credentials were never what made a pull work, and the first pull that had to rely on them
+// failed on every node in the cluster.
+func TestServeAsksForATokenForTheRepositoryItIsGoingTo(t *testing.T) {
+	upstream := (&registryStub{
+		name: "upstream", challenge: "bearer", username: "license-token", password: "license-key",
+		body: "from-the-upstream",
+	}).start(t)
+
+	spec := &registryv1alpha1.RegistryNodeSpec{
+		Backends: []registryv1alpha1.Backend{
+			insecureBackend(registryv1alpha1.BackendUpstream, upstream, t, "/deckhouse/ee",
+				&registryv1alpha1.Auth{Username: "license-token", Password: "license-key"}),
+		},
+	}
+
+	response := pull(t, newServer(spec), constant.Host, "/v2/system/deckhouse/one/manifests/v1")
+	require.Equal(t, http.StatusOK, response.StatusCode)
+	assert.Equal(t, "from-the-upstream", bodyOf(t, response))
+
+	scopes := upstream.scopes.Load().([]string)
+	require.NotEmpty(t, scopes, "no token was asked for at all")
+	assert.Equal(t, "repository:deckhouse/ee/one:pull", scopes[0],
+		"the token must name the repository the request is going to, not the one the client asked for")
+}
+
+// TestServeAsksForTheWholeRepositoryWhenThatIsTheImage covers the platform's own images, whose
+// repository IS the prefix: the scope has to be the prefix itself, with nothing under it.
+func TestServeAsksForTheWholeRepositoryWhenThatIsTheImage(t *testing.T) {
+	upstream := (&registryStub{
+		name: "upstream", challenge: "bearer", username: "license-token", password: "license-key",
+		body: "from-the-upstream",
+	}).start(t)
+
+	spec := &registryv1alpha1.RegistryNodeSpec{
+		Backends: []registryv1alpha1.Backend{
+			insecureBackend(registryv1alpha1.BackendUpstream, upstream, t, "/deckhouse/ee",
+				&registryv1alpha1.Auth{Username: "license-token", Password: "license-key"}),
+		},
+	}
+
+	response := pull(t, newServer(spec), constant.Host, "/v2/system/deckhouse/manifests/sha256:abc")
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	scopes := upstream.scopes.Load().([]string)
+	require.NotEmpty(t, scopes)
+	assert.Equal(t, "repository:deckhouse/ee:pull", scopes[0])
 }

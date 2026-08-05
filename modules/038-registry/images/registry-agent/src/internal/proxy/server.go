@@ -170,19 +170,13 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	repository, _, err := splitAPIPath(request.URL.Path)
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	var lastStatus int
 	var lastError error
 
 	for i := range decision.Targets {
 		target := &decision.Targets[i]
 
-		response, err := s.attempt(request.Context(), request, target, repository, decision.Kind)
+		response, err := s.attempt(request.Context(), request, target, decision.Kind)
 		if err != nil {
 			lastError = err
 			s.markFailing(target.Name)
@@ -286,7 +280,7 @@ func (s *Server) failover(target, reason string) {
 
 // attempt sends the request to one target.
 func (s *Server) attempt(
-	ctx context.Context, original *http.Request, target *Target, repository string, kind Kind,
+	ctx context.Context, original *http.Request, target *Target, kind Kind,
 ) (*http.Response, error) {
 	client, err := s.client(target.CA)
 	if err != nil {
@@ -329,7 +323,7 @@ func (s *Server) attempt(
 		for _, value := range original.Header.Values("Authorization") {
 			request.Header.Add("Authorization", value)
 		}
-	} else if err := s.auth.authorize(ctx, client, request, target, repository); err != nil {
+	} else if err := s.auth.authorize(ctx, client, request, target); err != nil {
 		// A configured target is reached with the credentials the cluster holds for it.
 		// The client's own are deliberately NOT passed on here: they belong to whoever
 		// wrote the imagePullSecret, and sending them to the Deckhouse upstream would

@@ -179,10 +179,12 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 
 			secret := f.KubernetesResource("Secret", "d8-system", "deckhouse-registry")
 			Expect(secret.Exists()).To(BeTrue())
-			imagesRegistry, err := base64.StdEncoding.DecodeString(secret.Field("data.imagesRegistry").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(imagesRegistry)).To(Equal(dialable))
-			Expect(string(imagesRegistry)).ToNot(ContainSubstring(renderedFrom))
+			for _, field := range []string{"data.imagesRegistry", "data.fetchRegistry"} {
+				value, err := base64.StdEncoding.DecodeString(secret.Field(field).String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(value)).To(Equal(dialable), field)
+				Expect(string(value)).ToNot(ContainSubstring(renderedFrom), field)
+			}
 
 			source := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(source.Exists()).To(BeTrue())
@@ -213,9 +215,23 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			secret := f.KubernetesResource("Secret", "d8-system", "deckhouse-registry")
+			fetchRegistry, err := base64.StdEncoding.DecodeString(secret.Field("data.fetchRegistry").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(fetchRegistry)).To(Equal(constant.ProxyHostWithPath))
+
+			// And the field that names the registry as seen from OUTSIDE the cluster keeps
+			// doing that, whatever the module does to the pull path.
+			//
+			// dhctl reads it from wherever it is run and refuses to touch a cluster unless
+			// the docker config carries credentials for the host it names. Pointed at the
+			// loopback address it made the cluster unmanageable: `dhctl destroy` stopped at
+			// "docker config doesn't contain 127.0.0.1:5001/system/deckhouse registry
+			// credentials" before doing anything at all, and there is no address inside the
+			// cluster that an out-of-cluster caller could use instead.
 			imagesRegistry, err := base64.StdEncoding.DecodeString(secret.Field("data.imagesRegistry").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(imagesRegistry)).To(Equal(constant.ProxyHostWithPath))
+			Expect(string(imagesRegistry)).To(Equal("registry.deckhouse.io/deckhouse/fe"))
+			Expect(string(imagesRegistry)).ToNot(ContainSubstring(constant.ProxyHost))
 
 			source := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(source.Field("spec.registry.repo").String()).

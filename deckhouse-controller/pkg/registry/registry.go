@@ -427,7 +427,7 @@ func getDeckhouseRegistry(ctx context.Context, logger *log.Logger) (string, stri
 
 	releaseChannel := string(discoverySecret.Data["releaseChannel"])
 
-	return drs.ImageRegistry, releaseChannel, drs.RegistryConfig(string(clusterUUID), logger), nil
+	return drs.Fetch(), releaseChannel, drs.RegistryConfig(string(clusterUUID), logger), nil
 }
 
 func getModuleRegistry(ctx context.Context, moduleSource string, logger *log.Logger) (string, *utils.RegistryConfig, error) {

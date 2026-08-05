@@ -120,7 +120,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	if registrySecret != nil {
 		opts = utils.GenerateRegistryOptions(registrySecret.RegistryConfig(r.clusterUUID, r.logger), r.logger)
 
-		imagesRegistry = registrySecret.ImageRegistry
+		imagesRegistry = registrySecret.Fetch()
 	}
 
 	// client watch only one channel

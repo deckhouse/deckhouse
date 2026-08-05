@@ -931,7 +931,19 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 	}
 
 	containerName := depl.Spec.Template.Spec.Containers[0].Name
-	image := r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
+
+	// The version changes; the registry does not.
+	//
+	// Composed from what the Deployment already runs rather than from an address in the
+	// registry secret, because the two are no longer the same thing. Image references are
+	// rendered from `global.modulesImages.registry.base`, which the registry module may point
+	// at the in-cluster registry, while the secret describes the registry as seen from outside
+	// the cluster. Recomposing from the secret would apply an address that whatever rendered
+	// this Deployment does not use, and the two would take turns overwriting each other.
+	image, err := imageAtVersion(depl.Spec.Template.Spec.Containers[0].Image, dr.Spec.Version)
+	if err != nil {
+		return fmt.Errorf("working out the image of %s: %w", dr.Spec.Version, err)
+	}
 
 	// Server-side apply a minimal configuration that owns only the release
 	// container image, so this field manager never fights over fields it does
@@ -1113,6 +1125,26 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*ut
 	}
 
 	return regSecret, nil
+}
+
+// imageAtVersion is the same image reference at another version.
+//
+// Splits on the last separator rather than parsing a reference, because that is all this needs
+// and a full parse would bring an opinion about what a valid registry looks like into a code
+// path that only has to preserve one.
+func imageAtVersion(current, version string) (string, error) {
+	repository := current
+	if at := strings.LastIndex(current, "@"); at >= 0 {
+		// Pinned by digest, which is how a pod spec rendered from the digest map names it.
+		repository = current[:at]
+	} else if colon := strings.LastIndex(current, ":"); colon > strings.LastIndex(current, "/") {
+		repository = current[:colon]
+	}
+
+	if repository == "" {
+		return "", fmt.Errorf("%q names no repository", current)
+	}
+	return repository + ":" + version, nil
 }
 
 func (r *deckhouseReleaseReconciler) isDeckhousePodReady(ctx context.Context) bool {

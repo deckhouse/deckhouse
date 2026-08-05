@@ -112,7 +112,15 @@ func (s *DeckhouseRegistrySecret) RegistryConfig(userAgent string, logger *log.L
 		UserAgent:    userAgent,
 	}
 
-	return rc.ForRepository(s.ImageRegistry, logger)
+	return rc.ForRepository(s.Fetch(), logger)
+}
+
+// Fetch is the repository this process pulls from.
+func (s *DeckhouseRegistrySecret) Fetch() string {
+	if s.FetchRegistry != "" {
+		return s.FetchRegistry
+	}
+	return s.ImageRegistry
 }
 
 type RegistryConfig struct {
@@ -152,6 +160,20 @@ type DeckhouseRegistrySecret struct {
 	Path                  string
 	Scheme                string
 	CA                    string
+
+	// FetchRegistry is where THIS process fetches from, which is not always the registry
+	// ImageRegistry names.
+	//
+	// Its own field because the two have different readers. ImageRegistry is the registry as
+	// seen from outside the cluster — dhctl reads it from wherever it is run and will not
+	// touch a cluster whose docker config has no credentials for the host it names — while
+	// this one is read only in the cluster, where the registry module may have put a node
+	// agent in front of every pull. Going through that agent is what makes a change of
+	// registry reach this process: nothing writes a registry address into the secret when the
+	// module moves the pull path.
+	//
+	// Empty on a cluster whose secret predates the field, and then ImageRegistry is used.
+	FetchRegistry string
 }
 
 var ErrDockerConfigFieldIsNotFound = errors.New("secret has no .dockerconfigjson field")
@@ -211,11 +233,16 @@ func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySec
 		err = errors.Join(err, ErrCAFieldIsNotFound)
 	}
 
+	// Optional, deliberately: every cluster installed before it existed has a secret without
+	// it, and making it required would refuse to read any of them.
+	fetchRegistry := data["fetchRegistry"]
+
 	return &DeckhouseRegistrySecret{
 		DockerConfig:          string(dockerConfig),
 		Address:               string(address),
 		ClusterIsBootstrapped: clusterIsBootstrapped,
 		ImageRegistry:         string(imagesRegistry),
+		FetchRegistry:         string(fetchRegistry),
 		Path:                  string(path),
 		Scheme:                string(scheme),
 		CA:                    string(ca),

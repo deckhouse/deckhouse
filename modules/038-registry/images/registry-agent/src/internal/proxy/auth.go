@@ -64,10 +64,24 @@ const tokenLeeway = 30 * time.Second
 // that did not ask for them would leak them to anything that can answer on that
 // address.
 func (a *authenticator) authorize(
-	ctx context.Context, client *http.Client, request *http.Request, target *Target, repository string,
+	ctx context.Context, client *http.Client, request *http.Request, target *Target,
 ) error {
 	if target.Auth.IsEmpty() {
 		return nil
+	}
+
+	// The scope names the repository this request is actually going to, which is not the one
+	// the client asked for: the whole point of a backend is that it serves the same images
+	// under its own prefix, and the path has already been rewritten for it.
+	//
+	// Taken from the client's repository, the token comes back issued for a repository the
+	// target has never heard of, and the target answers `insufficient_scope` — with valid
+	// credentials, against an image that is right there. Nothing noticed for as long as that
+	// 401 was handed to the container runtime, which then authenticated itself with the pod's
+	// pull secret and succeeded: the agent's own credentials were never what made a pull work.
+	repository, _, err := splitAPIPath(target.Path)
+	if err != nil {
+		return fmt.Errorf("working out what to ask a token for: %w", err)
 	}
 
 	scope := fmt.Sprintf("repository:%s:pull", repository)
