@@ -155,21 +155,20 @@ spec:
 		It("Discovery data values should be gathered from discovered data", func() {
 			Expect(b).To(ExecuteSuccessfully())
 
-			// Note: YandexCloudDiscoveryData struct has no json tags, so json.Marshal
-			// uses Go field names (e.g., DefaultLbTargetGroupNetworkID instead of
-			// defaultLbTargetGroupNetworkId).
+			// The keys are the YandexCloudDiscoveryData json tags, which is also what
+			// openapi/values.yaml declares for internal.providerDiscoveryData.
 
-			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.DefaultLbTargetGroupNetworkID").String()).To(Equal("test"))
-			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.InternalNetworkIDs").AsStringSlice()).To(Equal([]string{"test"}))
-			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.Region").String()).To(Equal("test"))
-			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.RouteTableID").String()).To(Equal("test"))
-			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.ShouldAssignPublicIPAddress").Bool()).To(BeFalse())
-			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.ZoneToSubnetIDMap").String()).To(MatchYAML(`
+			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.defaultLbTargetGroupNetworkId").String()).To(Equal("test"))
+			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.internalNetworkIDs").AsStringSlice()).To(Equal([]string{"test"}))
+			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.region").String()).To(Equal("test"))
+			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.routeTableID").String()).To(Equal("test"))
+			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.shouldAssignPublicIPAddress").Bool()).To(BeFalse())
+			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap").String()).To(MatchYAML(`
 ru-central1-a: test
 ru-central1-b: test
 ru-central1-c: test
 `))
-			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.Zones").AsStringSlice()).To(Equal([]string{"ru-central1-a", "ru-central1-b", "ru-central1-c"}))
+			Expect(b.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData.zones").AsStringSlice()).To(Equal([]string{"ru-central1-a", "ru-central1-b", "ru-central1-c"}))
 		})
 	})
 
@@ -202,6 +201,47 @@ ru-central1-c: test
 
 		It("Hook should succeed (no valid PCC)", func() {
 			Expect(d).To(ExecuteSuccessfully())
+		})
+	})
+
+	// ---- Migration artifacts: dropped once the new model stands on its own ----
+	//
+	// While d8-module-is-migrating exists, ShouldSkipNewModelValidation keeps new-model
+	// validation switched off, so a migrated cluster has to lose the artifacts.
+	migratedCluster := HookExecutionConfigInit(initValuesString, `{}`)
+	migratedCluster.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	migratedCluster.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
+	migratedCluster.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+	Context("No PCC and credentials exist — migration artifacts deleted", func() {
+		BeforeEach(func() {
+			migratedCluster.BindingContexts.Set(migratedCluster.KubeStateSet(credentialSecretState))
+			migratedCluster.RunHook()
+		})
+
+		It("Hook should succeed and delete the migration artifacts", func() {
+			Expect(migratedCluster).To(ExecuteSuccessfully())
+
+			Expect(migratedCluster.KubernetesResource("Secret", "d8-cloud-provider-yandex", "d8-migration-resources").Exists()).To(BeFalse())
+			Expect(migratedCluster.KubernetesResource("ConfigMap", "d8-cloud-provider-yandex", "d8-module-is-migrating").Exists()).To(BeFalse())
+		})
+	})
+
+	// A cluster without PCC and without credentials is not migrated yet: the artifacts stay,
+	// otherwise the hook would stop projecting the PCC while terraform still reads it.
+	notMigratedCluster := HookExecutionConfigInit(initValuesString, `{}`)
+	notMigratedCluster.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	notMigratedCluster.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
+	notMigratedCluster.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+	Context("No PCC and no credentials — migration artifacts kept", func() {
+		BeforeEach(func() {
+			notMigratedCluster.BindingContexts.Set(notMigratedCluster.KubeStateSet(migrationArtifactsState))
+			notMigratedCluster.RunHook()
+		})
+
+		It("Hook should succeed and keep the migration artifacts", func() {
+			Expect(notMigratedCluster).To(ExecuteSuccessfully())
+
+			Expect(notMigratedCluster.KubernetesResource("ConfigMap", "d8-cloud-provider-yandex", "d8-module-is-migrating").Exists()).To(BeTrue())
 		})
 	})
 
@@ -552,3 +592,38 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: yandex_cluster_co
 		})
 	})
 })
+
+const credentialSecretState = `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-yandex
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: serviceAccount
+  secret: '{"id": "test"}'
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-migration-resources
+  namespace: d8-cloud-provider-yandex
+data: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-module-is-migrating
+  namespace: d8-cloud-provider-yandex
+data: {}
+`
+
+const migrationArtifactsState = `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-module-is-migrating
+  namespace: d8-cloud-provider-yandex
+data: {}
+`

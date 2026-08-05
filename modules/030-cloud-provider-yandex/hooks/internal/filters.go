@@ -29,7 +29,6 @@ import (
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 type PCCSecretFilterResult struct {
@@ -49,10 +48,6 @@ type ModuleConfigFilterResult struct {
 }
 
 type NamedResourceFilterResult struct {
-	Name string `json:"name"`
-}
-
-type CredentialsSecretFilterResult struct {
 	Name string `json:"name"`
 }
 
@@ -121,13 +116,9 @@ func FilterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func FilterCredentialSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &corev1.Secret{}
-	if err := sdk.FromUnstructured(obj, secret); err != nil {
+	secret, managed, err := DecodeCredentialSecret(obj)
+	if err != nil || !managed {
 		return nil, err
-	}
-
-	if secret.Type != cpapi.CredentialsSecretType {
-		return nil, nil
 	}
 
 	return NamedResourceFilterResult{Name: secret.Name}, nil

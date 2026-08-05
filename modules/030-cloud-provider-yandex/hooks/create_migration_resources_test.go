@@ -112,6 +112,28 @@ spec:
 		})
 	})
 
+	// A legacy cluster with a PCC but no ModuleConfig at all is a normal migration state: the hook
+	// must project the PCC instead of indexing an empty ModuleConfig snapshot.
+	Context("State B: PCC present without ModuleConfig — migration resources still created", func() {
+		f := HookExecutionConfigInit(migrationValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			f.KubeStateSet(pccSecret + "\n---\n" + ns)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("should create the migration resources without panicking on the missing ModuleConfig", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "d8-migration-resources").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-cloud-provider-yandex", "d8-module-is-migrating").Exists()).To(BeTrue())
+		})
+	})
+
 	// ---- State B: PCC present — OnAfterHelm creates migration resources ----
 	Context("State B: PCC present — OnAfterHelm creates migration resources", func() {
 		f := HookExecutionConfigInit(migrationValues, `{}`)
