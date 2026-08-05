@@ -186,8 +186,8 @@ masterNodeGroup:
     # [<ru>] Используемый образ виртуальной машины.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    # [<en>] Use an image available in your project (check with `openstack image list`).
-    # [<ru>] Используйте образ, доступный в вашем проекте (проверьте командой `openstack image list`).
+    # [<en>] Use a cloud image available in your project (check with `openstack image list`). Do not use images provided by Selectel. Instead, use cloud images published by the Linux distribution maintainers.
+    # [<ru>] Используйте образ для облачной среды, доступный в вашем проекте (проверьте командой `openstack image list`). Не используйте образы, предоставленные Selectel. Вместо них используйте образы для облачных сред, опубликованные разработчиками дистрибутива.
     imageName: Ubuntu 24.04 LTS 64-bit
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
