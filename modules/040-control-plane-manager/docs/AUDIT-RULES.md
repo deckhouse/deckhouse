@@ -301,6 +301,7 @@ users:
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-data-discoverer
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter
+  - system:serviceaccount:d8-cloud-provider-yandex:validation-webhook
   - system:serviceaccount:d8-cloud-provider-zvirt:capz-controller-manager
   - system:serviceaccount:d8-cloud-provider-zvirt:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-zvirt:cloud-data-discoverer
@@ -778,6 +779,7 @@ rules:
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-data-discoverer
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter
+      - system:serviceaccount:d8-cloud-provider-yandex:validation-webhook
       - system:serviceaccount:d8-cloud-provider-zvirt:capz-controller-manager
       - system:serviceaccount:d8-cloud-provider-zvirt:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-zvirt:cloud-data-discoverer

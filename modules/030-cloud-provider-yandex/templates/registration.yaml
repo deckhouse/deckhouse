@@ -17,21 +17,34 @@ capiClusterName: {{ b64enc "yandex" | quote }}
 capiMachineTemplateKind: {{ b64enc "YandexMachineTemplate" | quote }}
 capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
 capiMachineTemplateAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
-sshPublicKey: {{ $context.Values.cloudProviderYandex.internal.providerClusterConfiguration.sshPublicKey | b64enc | quote }}
+{{- $sshPublicKey := dig "nodes" "parameters" "sshPublicKey" "" $context.Values.cloudProviderYandex }}
+{{- if $sshPublicKey }}
+sshPublicKey: {{ $sshPublicKey | b64enc | quote }}
+{{- end }}
 
 # Yandex
 {{- $yandexValues := dict }}
-{{- $_ := set $yandexValues "serviceAccountJSON" $context.Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.serviceAccountJSON }}
+{{- $serviceAccountJSON := include "yandex_credential_secret" (list $context "d8-credentials" "secret") }}
+{{- if $serviceAccountJSON }}
+{{- $_ := set $yandexValues "serviceAccountJSON" $serviceAccountJSON }}
+{{- end }}
+{{- if $sshPublicKey }}
+{{- $_ := set $yandexValues "sshKey" $sshPublicKey }}
+{{- end }}
 {{- $_ := set $yandexValues "region" $context.Values.cloudProviderYandex.internal.providerDiscoveryData.region }}
-{{- $_ := set $yandexValues "folderID" $context.Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID }}
-{{- $_ := set $yandexValues "sshKey" $context.Values.cloudProviderYandex.internal.providerClusterConfiguration.sshPublicKey }}
+{{- $_ := set $yandexValues "folderID" $context.Values.cloudProviderYandex.provider.parameters.folderID }}
 {{- $_ := set $yandexValues "shouldAssignPublicIPAddress" $context.Values.cloudProviderYandex.internal.providerDiscoveryData.shouldAssignPublicIPAddress }}
 {{- $_ := set $yandexValues "zoneToSubnetIdMap" $context.Values.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap }}
-{{- $_ := set $yandexValues "labels" ($context.Values.cloudProviderYandex.internal.providerClusterConfiguration.labels | default dict) }}
-{{- $_ := set $yandexValues "nodeNetworkCIDR" $context.Values.cloudProviderYandex.internal.providerClusterConfiguration.nodeNetworkCIDR }}
+{{- $_ := set $yandexValues "labels" ($context.Values.cloudProviderYandex.nodes.parameters.labels | default dict) }}
+{{- $_ := set $yandexValues "nodeNetworkCIDR" $context.Values.cloudProviderYandex.nodes.parameters.nodeNetworkCIDR }}
 
-{{- $_ := set $yandexValues "instanceClassDefaults" dict }}
-{{- $_ := set $yandexValues.instanceClassDefaults "imageID" $context.Values.cloudProviderYandex.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.imageID }}
+{{- /*
+  Fallback image for ephemeral nodes whose YandexInstanceClass carries no imageID: the field
+  was optional before the CRD required it. Written by hooks/instance_class_defaults.go from the
+  master YandexInstanceClass; empty in hybrid clusters and until the migration resources exist.
+  The key itself is always emitted — node-manager templates dereference it unconditionally.
+*/}}
+{{- $_ := set $yandexValues "instanceClassDefaults" (dict "imageID" (dig "instanceClassDefaults" "imageID" "" $context.Values.cloudProviderYandex.internal)) }}
 yandex: {{ $yandexValues | toJson | b64enc | quote }}
 {{- end }}
 ---

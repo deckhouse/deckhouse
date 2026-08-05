@@ -4,7 +4,7 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 
 {{- define "yandex_cdd_envs" -}}
 - name: YC_FOLDER_ID
-  value: {{ .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID }}
+  value: {{ .Values.cloudProviderYandex.provider.parameters.folderID | quote }}
 - name: YC_SA_KEY_JSON
   valueFrom:
     secretKeyRef:
