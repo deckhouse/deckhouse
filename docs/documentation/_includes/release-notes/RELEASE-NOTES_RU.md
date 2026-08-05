@@ -242,7 +242,7 @@
 - Модуль [`vertical-pod-autoscaler`](https://deckhouse.ru/modules/vertical-pod-autoscaler/v1.75/) обновлен с версии 1.4.1 до [1.5.1](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.5.1).
   Начиная с версии 1.5.0, режим обновления `updateMode: Auto` [объявлен устаревшим](https://github.com/kubernetes/autoscaler/pull/8426).
   Для пользовательских VPA рекомендуется заменить `updateMode: Auto` на [`updateMode: InPlaceOrRecreate`](https://deckhouse.ru/modules/vertical-pod-autoscaler/v1.75/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-updatemode).
-  Подробнее об этом режиме обновления можно почитать в [разделе документации про вертикальное масштабирование](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.75/architecture/vpa.html#режимы-работы-vpa).
+  Подробнее об этом режиме обновления можно почитать в [разделе документации про вертикальное масштабирование](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.75/architecture/kubernetes-and-scheduling/vpa.html#режимы-работы-vpa).
 
 - При выпуске новых сертификатов с использованием модуля [`cert-manager`](https://deckhouse.ru/modules/cert-manager/v1.75/) также происходит перевыпуск приватного ключа сертификата. Это необходимо для предотвращения потенциальных рисков безопасности.
 
