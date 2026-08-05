@@ -24,11 +24,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// Resource and kind names of ApplicationPackage.
 const (
 	ApplicationPackageResource = "applicationpackages"
 	ApplicationPackageKind     = "ApplicationPackage"
 )
 
+// Group-version identifiers of ApplicationPackage.
 var (
 	ApplicationPackageGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
@@ -66,20 +68,22 @@ type ApplicationPackage struct {
 	Status ApplicationPackageStatus `json:"status,omitempty"`
 }
 
+// ApplicationPackageStatus reports which applications use the package and where it is available.
 type ApplicationPackageStatus struct {
 	// Information about applications using this package.
 	// +optional
 	UsedBy []ApplicationPackageStatusInstance `json:"usedBy,omitempty"`
 
-	// Number of applications using this package.
+	// Number of applications using this package; kept equal to the length of usedBy.
 	// +optional
-	UsedByCount int `json:"usedByCount,omitempty"`
+	UsedByCount int32 `json:"usedByCount,omitempty"`
 
 	// List of repository names where this application package is available.
 	// +optional
 	AvailableRepositories []string `json:"availableRepositories,omitempty"`
 }
 
+// ApplicationPackageStatusInstance identifies one application using the package, and at which version.
 type ApplicationPackageStatusInstance struct {
 	// Namespace where the application is installed.
 	// +optional
@@ -169,7 +173,9 @@ func (a *ApplicationPackage) RemoveInstalledApp(namespace string, appName string
 // ApplicationPackageList is a list of ApplicationPackage resources
 type ApplicationPackageList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
+	// Standard list metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []ApplicationPackage `json:"items"`
 }

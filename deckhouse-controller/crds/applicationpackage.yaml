@@ -55,6 +55,8 @@ spec:
               usedBy:
                 description: Information about applications using this package.
                 items:
+                  description: ApplicationPackageStatusInstance identifies one application
+                    using the package, and at which version.
                   properties:
                     name:
                       description: Name of the application instance.
@@ -68,7 +70,9 @@ spec:
                   type: object
                 type: array
               usedByCount:
-                description: Number of applications using this package.
+                description: Number of applications using this package; kept equal
+                  to the length of usedBy.
+                format: int32
                 type: integer
             type: object
         type: object

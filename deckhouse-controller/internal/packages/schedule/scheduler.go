@@ -19,6 +19,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
@@ -64,7 +66,6 @@ type Scheduler struct {
 	eventCh chan Event
 
 	bundleChecker          bundle.BundleChecker
-	dependencyGetter       dependency.Getter
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
@@ -96,13 +97,6 @@ func WithDeckhouseVersionGetter(deckhouseVersionGetter version.Getter) Option {
 func WithBootstrapCondition(cond condition.Condition) Option {
 	return func(s *Scheduler) {
 		s.bootstrapCondition = cond
-	}
-}
-
-// WithDependencyGetter sets the provider for the current dependency version.
-func WithDependencyGetter(getter dependency.Getter) Option {
-	return func(s *Scheduler) {
-		s.dependencyGetter = getter
 	}
 }
 
@@ -189,7 +183,7 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 		rules = append(rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
+	if len(constraints.Dependencies) > 0 {
 		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
 		for depName, dep := range constraints.Dependencies {
 			deps[depName] = dependency.Dependency{
@@ -198,15 +192,15 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 			}
 		}
 
-		rules = append(rules, dependency.NewRule(s.dependencyGetter, deps))
+		rules = append(rules, dependency.NewRule(s.dependencyVersion, deps))
 	}
 
-	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
-		rules = append(rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	if len(constraints.AnyOf) > 0 {
+		rules = append(rules, dependency.NewAnyOfRule(s.dependencyVersion, toAnyOfGroups(constraints.AnyOf)))
 	}
 
-	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
-		rules = append(rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	if len(constraints.NoneOf) > 0 {
+		rules = append(rules, dependency.NewNoneOfRule(s.dependencyVersion, toNoneOfGroups(constraints.NoneOf)))
 	}
 
 	if d := rule.Resolve(rules...); d.Kind == rule.Forbid {
@@ -423,14 +417,31 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	return enabled, sorted
 }
 
+// dependencyVersion answers the dependency rules from the graph itself: the
+// installed version of a node that is both enabled and active, nil otherwise.
+// Returning nil for a node that is merely enabled is what orders same-tier
+// dependents behind their dependencies — see canSchedule.
+//
+// Must be called with s.mu held in some mode. Every rule chain is resolved from
+// compute() (write lock) or CheckConstraints (read lock), so it never locks
+// itself: doing so would deadlock on Go's non-reentrant RWMutex.
+func (s *Scheduler) dependencyVersion(name string) *semver.Version {
+	n, ok := s.nodes[name]
+	if !ok || !n.enabled() || n.state != nodeStateActive {
+		return nil
+	}
+
+	return n.version
+}
+
 // canSchedule returns true if a node is eligible to transition from idle to
 // scheduled. Two conditions must hold:
 //  1. The node must be enabled (its rule chain resolved to Enable).
 //  2. All nodes with a strictly lower Order must be active.
 //
 // Dependency-level ordering between same-tier nodes is encoded in the rule
-// chain (the dependency.Getter contract returns versions only for nodes that
-// have reached nodeStateActive).
+// chain (dependencyVersion reports a version only for nodes that have reached
+// nodeStateActive).
 func (s *Scheduler) canSchedule(n *node) bool {
 	if !n.enabled() {
 		return false

@@ -89,7 +89,7 @@ type reconciler struct {
 
 // Reconcile handles a single ModulePackageVersion event. Draft resources are
 // promoted by loading metadata; deleted resources have their finalizers removed
-// once no Module references remain (usedByCount == 0).
+// once no Module uses them any more.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// wait for init
 	r.init.Wait()
@@ -251,9 +251,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 	return nil
 }
 
-// handleDelete removes the finalizer from the ModulePackageVersion once it is
-// no longer referenced by any Module (usedByCount == 0). While references exist,
-// the reconcile is requeued every 15 seconds to wait for Modules to release the MPV.
+// handleDelete removes the finalizer from the ModulePackageVersion once no Module uses
+// it any more. While it is still used, the reconcile is requeued every 15 seconds to
+// wait for the Module to release it.
 func (r *reconciler) handleDelete(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) (ctrl.Result, error) {
 	logger := r.logger.With(
 		slog.String("name", mpv.Name),
@@ -261,7 +261,7 @@ func (r *reconciler) handleDelete(ctx context.Context, mpv *v1alpha1.ModulePacka
 		slog.String("version", mpv.Spec.PackageVersion),
 		slog.String("repository", mpv.Spec.PackageRepositoryName))
 
-	if mpv.Status.UsedByCount > 0 {
+	if mpv.Status.Used {
 		return ctrl.Result{RequeueAfter: defaultRequeue}, nil
 	}
 
@@ -340,6 +340,8 @@ func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.Module
 			Ru: pd.Descriptions.Ru,
 			En: pd.Descriptions.En,
 		},
+		Weight:         int32(pd.Weight),
+		Critical:       pd.Critical,
 		DisableOptions: disableOptionsToCR(pd.DisableOptions),
 		Licensing:      licensingToCR(pd.Licensing),
 		Requirements:   requirementsToCR(pd.Requirements),
@@ -367,6 +369,9 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 	}
 
 	mpv.Status.PackageMetadata.Licensing = legacyAccessibilityToCR(def.Accessibility)
+
+	mpv.Status.PackageMetadata.Weight = int32(def.Weight)
+	mpv.Status.PackageMetadata.Critical = def.Critical
 }
 
 // disableOptionsToCR projects parsed disable protection onto the CR shape,

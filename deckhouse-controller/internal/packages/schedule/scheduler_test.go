@@ -82,8 +82,7 @@ func mustVersion(s string) *semver.Version {
 type SchedulerSuite struct {
 	suite.Suite
 
-	versions map[string]*semver.Version
-	sched    *schedule.Scheduler
+	sched *schedule.Scheduler
 }
 
 // TestSchedulerSuite is the testing.T entry point that runs the suite.
@@ -91,17 +90,11 @@ func TestSchedulerSuite(t *testing.T) {
 	suite.Run(t, new(SchedulerSuite))
 }
 
-// SetupTest builds a fresh scheduler and version map for every test so cases
-// remain isolated. The dependency getter reads from s.versions, letting each
-// test simulate module presence/absence by direct map mutation.
+// SetupTest builds a fresh scheduler for every test so cases remain isolated.
+// Dependencies are resolved from the graph itself, so a test simulates module
+// presence with installPackage / uninstallPackage rather than a version map.
 func (s *SchedulerSuite) SetupTest() {
-	s.versions = make(map[string]*semver.Version)
-	s.sched = schedule.NewScheduler(
-		log.NewNop(),
-		schedule.WithDependencyGetter(func(name string) *semver.Version {
-			return s.versions[name]
-		}),
-	)
+	s.sched = schedule.NewScheduler(log.NewNop())
 }
 
 // TearDownTest closes the event channel so a leaked goroutine never wedges
@@ -125,6 +118,29 @@ func (s *SchedulerSuite) activateGlobal() {
 	s.sched.Resume()
 	s.sched.Complete(globalName)
 	s.drainEvents()
+}
+
+// installPackage registers a node and drives it to active, which is what the
+// scheduler's in-graph dependency resolution requires before the node counts as
+// installed for dependents. Order 0 keeps it in the global tier so it never
+// waits behind the package under test. Events are deliberately left buffered:
+// completing a dependency is what re-enables its dependents, and those events
+// are usually what the caller asserts on.
+func (s *SchedulerSuite) installPackage(name, version string) {
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        name,
+		version:     mustVersion(version),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+
+	s.sched.Complete(name)
+}
+
+// uninstallPackage drops a node from the graph — a package that disappears from
+// the cluster. Like installPackage it leaves events buffered, since the disable
+// cascade it triggers is what callers assert on.
+func (s *SchedulerSuite) uninstallPackage(name string) {
+	s.sched.RemoveNode(name)
 }
 
 // drainEvents non-blockingly empties the scheduler's event channel.
@@ -274,7 +290,7 @@ func (s *SchedulerSuite) TestMandatoryDependency() {
 	// stays out of the scheduled set.
 	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 
-	s.versions["parent"] = mustVersion("1.0.0")
+	s.installPackage("parent", "1.0.0")
 	s.sched.Schedule()
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
@@ -301,13 +317,102 @@ func (s *SchedulerSuite) TestConditionalDependencyAbsentIsOK() {
 	s.NotContains(eventNames(events, schedule.EventDisable), "consumer")
 }
 
+// TestSameTierDependencyWaitsForActive pins how the scheduler orders dependents
+// within one Order tier, where canSchedule's tier gate does not apply: a
+// dependency that is enabled but still being processed does not count as
+// installed, so its dependent fails the dependency gate and stays off until the
+// consumer calls Complete on the dependency.
+func (s *SchedulerSuite) TestSameTierDependencyWaitsForActive() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "provider",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Dependencies: map[string]schedule.Dependency{
+				"provider": {},
+			},
+		},
+	}))
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "provider")
+	s.NotContains(scheduled, "consumer",
+		"a scheduled-but-not-active dependency must not satisfy its dependent")
+
+	s.sched.Complete("provider")
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer",
+		"completing the dependency must release the dependent")
+}
+
+// TestDisabledDependencyDoesNotSatisfy covers a dependency that is present in
+// the graph but turned off: enablement, not mere presence, is what makes a node
+// count as an installed dependency.
+func (s *SchedulerSuite) TestDisabledDependencyDoesNotSatisfy() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "provider",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Dependencies: map[string]schedule.Dependency{
+				"provider": {},
+			},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer",
+		"a disabled dependency must not satisfy its dependent")
+}
+
+// TestDependencyConstraintCheckedAgainstGraphVersion proves the constraint is
+// evaluated against the dependency node's own version — the version the package
+// reported when it was registered — not against mere presence in the graph.
+func (s *SchedulerSuite) TestDependencyConstraintCheckedAgainstGraphVersion() {
+	s.activateGlobal()
+
+	s.installPackage("provider", "1.0.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Dependencies: map[string]schedule.Dependency{
+				"provider": {Constraint: mustConstraint(">=2.0.0")},
+			},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer",
+		"the graph version must be checked against the declared constraint")
+}
+
 // TestEnabledToDisabledFlipEmitsEventDisable verifies that compute() fires
 // EventDisable when a previously-enabled node loses eligibility (e.g. its
 // dependency is removed from the cluster).
 func (s *SchedulerSuite) TestEnabledToDisabledFlipEmitsEventDisable() {
 	s.activateGlobal()
 
-	s.versions["parent"] = mustVersion("1.0.0")
+	s.installPackage("parent", "1.0.0")
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "consumer",
 		version: mustVersion("1.0.0"),
@@ -322,7 +427,7 @@ func (s *SchedulerSuite) TestEnabledToDisabledFlipEmitsEventDisable() {
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 
 	// Parent disappears — consumer must flip enabled→disabled.
-	delete(s.versions, "parent")
+	s.uninstallPackage("parent")
 	s.sched.Schedule()
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
@@ -356,7 +461,7 @@ func (s *SchedulerSuite) TestStatusFlipResetsOnlyAffectedNode() {
 
 	// stable is now active. Flip flapper from disabled → enabled by installing
 	// its dep. compute() must reset flapper to idle but leave stable alone.
-	s.versions["absent"] = mustVersion("1.0.0")
+	s.installPackage("absent", "1.0.0")
 	s.sched.Schedule()
 
 	events := s.collectEvents()
@@ -418,22 +523,24 @@ func (s *SchedulerSuite) TestAddNodeRejectsCyclicAddition() {
 func (s *SchedulerSuite) TestCheckConstraintsRejectsDependencyCycle() {
 	s.activateGlobal()
 
-	// alpha depends on a future beta; no cycle yet (beta isn't in the graph).
+	// alpha depends on a future beta; no cycle yet (beta isn't in the graph). The
+	// edge is optional, and alpha is driven to active, so the proposed beta's dep
+	// on alpha is satisfied — CheckConstraints evaluates the gates before
+	// simulating the cycle, and a gate error is a plain error, not a *CycleError.
+	// Optional changes nothing about the edge: topological order comes from
+	// Dependencies regardless.
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "alpha",
 		version: mustVersion("1.0.0"),
 		constraints: schedule.Constraints{
 			Order: 1,
 			Dependencies: map[string]schedule.Dependency{
-				"beta": {},
+				"beta": {Optional: true},
 			},
 		},
 	}))
+	s.sched.Complete("alpha")
 	s.drainEvents()
-
-	// Populate versions so the dep checker chain passes (proposed beta's dep
-	// on alpha is satisfied); cycle simulation is what we want to evaluate.
-	s.versions["alpha"] = mustVersion("1.0.0")
 
 	// Proposed beta depends on alpha. Adding it would create alpha → beta → alpha.
 	err := s.sched.CheckConstraints("beta", schedule.Constraints{
@@ -482,7 +589,7 @@ func mustConstraint(s string) *semver.Constraints {
 func (s *SchedulerSuite) TestAnyOfSatisfiedMemberEnables() {
 	s.activateGlobal()
 
-	s.versions["gcp"] = mustVersion("1.5.0")
+	s.installPackage("gcp", "1.5.0")
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "consumer",
@@ -533,7 +640,7 @@ func (s *SchedulerSuite) TestAnyOfInstalledButConstraintFailsDisables() {
 	s.activateGlobal()
 
 	// gcp is installed but below the required floor; group is unmet.
-	s.versions["gcp"] = mustVersion("1.4.0")
+	s.installPackage("gcp", "1.4.0")
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "consumer",
@@ -559,7 +666,7 @@ func (s *SchedulerSuite) TestAnyOfInstalledButConstraintFailsDisables() {
 func (s *SchedulerSuite) TestAnyOfNilConstraintAcceptsAnyVersion() {
 	s.activateGlobal()
 
-	s.versions["gcp"] = mustVersion("0.0.1")
+	s.installPackage("gcp", "0.0.1")
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "consumer",
@@ -586,7 +693,7 @@ func (s *SchedulerSuite) TestAnyOfMultipleGroupsAllMustPass() {
 	s.activateGlobal()
 
 	// First group satisfied via gcp; second group has no installed members.
-	s.versions["gcp"] = mustVersion("1.5.0")
+	s.installPackage("gcp", "1.5.0")
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "consumer",
@@ -615,7 +722,7 @@ func (s *SchedulerSuite) TestAnyOfMultipleGroupsAllMustPass() {
 
 	// Installing a member of the second group satisfies all groups; consumer
 	// schedules on the next pass.
-	s.versions["minio"] = mustVersion("2.0.0")
+	s.installPackage("minio", "2.0.0")
 	s.sched.Schedule()
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
@@ -728,7 +835,7 @@ func (s *SchedulerSuite) TestAnyOfMemberInstallTriggersReschedule() {
 
 	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 
-	s.versions["gcp"] = mustVersion("1.5.0")
+	s.installPackage("gcp", "1.5.0")
 	s.sched.Schedule()
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
@@ -764,7 +871,7 @@ func (s *SchedulerSuite) TestNoneOfInstalledNilConstraintViolated() {
 	s.activateGlobal()
 
 	// Forbidden module is installed at any version — group violated from birth.
-	s.versions["haproxy-legacy"] = mustVersion("0.0.1")
+	s.installPackage("haproxy-legacy", "0.0.1")
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "consumer",
@@ -790,7 +897,7 @@ func (s *SchedulerSuite) TestNoneOfInstalledInForbiddenRangeViolated() {
 	s.activateGlobal()
 
 	// 1.9.0 matches "<2.0.0" — falls in the forbidden range.
-	s.versions["nginx-ingress-legacy"] = mustVersion("1.9.0")
+	s.installPackage("nginx-ingress-legacy", "1.9.0")
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "consumer",
@@ -817,7 +924,7 @@ func (s *SchedulerSuite) TestNoneOfInstalledOutsideForbiddenRangeEnables() {
 	s.activateGlobal()
 
 	// 2.0.0 is outside the "<2.0.0" forbidden range — group passes.
-	s.versions["nginx-ingress-legacy"] = mustVersion("2.0.0")
+	s.installPackage("nginx-ingress-legacy", "2.0.0")
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "consumer",
@@ -843,7 +950,7 @@ func (s *SchedulerSuite) TestNoneOfMultipleGroupsAllMustPass() {
 	s.activateGlobal()
 
 	// Second group violated via deprecated-storage.
-	s.versions["deprecated-storage"] = mustVersion("1.0.0")
+	s.installPackage("deprecated-storage", "1.0.0")
 
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "consumer",
@@ -870,7 +977,7 @@ func (s *SchedulerSuite) TestNoneOfMultipleGroupsAllMustPass() {
 	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 
 	// Removing the violator from the second group enables the consumer.
-	delete(s.versions, "deprecated-storage")
+	s.uninstallPackage("deprecated-storage")
 	s.sched.Schedule()
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
@@ -921,7 +1028,7 @@ func (s *SchedulerSuite) TestNoneOfDoesNotCreateDependencyEdge() {
 func (s *SchedulerSuite) TestCheckConstraintsNoneOfRejectsAtAdmission() {
 	s.activateGlobal()
 
-	s.versions["haproxy-legacy"] = mustVersion("1.0.0")
+	s.installPackage("haproxy-legacy", "1.0.0")
 
 	err := s.sched.CheckConstraints("proposed", schedule.Constraints{
 		Order: schedule.FunctionalOrder,
@@ -961,7 +1068,7 @@ func (s *SchedulerSuite) TestNoneOfMemberInstallTriggersDisable() {
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 
 	// Forbidden module appears; consumer must flip enabled→disabled.
-	s.versions["haproxy-legacy"] = mustVersion("1.0.0")
+	s.installPackage("haproxy-legacy", "1.0.0")
 	s.sched.Schedule()
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
@@ -1078,9 +1185,6 @@ func (s *SchedulerSuite) useDynamicScheduler() map[string]*bool {
 	s.sched.Stop()
 	s.sched = schedule.NewScheduler(
 		log.NewNop(),
-		schedule.WithDependencyGetter(func(name string) *semver.Version {
-			return s.versions[name]
-		}),
 		schedule.WithDynamicGetter(func(module string) *bool {
 			return enabledState[module]
 		}),
@@ -1142,9 +1246,6 @@ func (s *SchedulerSuite) TestDynamicRuleDisableOverridesBundle() {
 	s.sched.Stop()
 	s.sched = schedule.NewScheduler(
 		log.NewNop(),
-		schedule.WithDependencyGetter(func(name string) *semver.Version {
-			return s.versions[name]
-		}),
 		// Bundle enables every module it is asked about.
 		schedule.WithBundleChecker(func(edition.Licensing) bool { return true }),
 		schedule.WithDynamicGetter(func(module string) *bool {

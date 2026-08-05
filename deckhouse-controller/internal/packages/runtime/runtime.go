@@ -25,7 +25,6 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
-	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -33,9 +32,6 @@ import (
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,7 +63,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -121,8 +116,6 @@ type Runtime struct {
 	apps     map[string]*apps.Application
 	modules  map[string]*modules.Module
 
-	addonModuleManager moduleManagerI
-
 	metricStorage metricsstorage.Storage // Publishes the application maintenance gauge
 
 	logger *log.Logger
@@ -135,15 +128,9 @@ type deployerI interface {
 	Cleanup(ctx context.Context, preserve []deployer.PreservePackage) error
 }
 
-// moduleManagerI provides access to global values for version getters and bootstrap checks.
-type moduleManagerI interface {
-	GetGlobal() *addonmodules.GlobalModule
-	IsModuleEnabled(name string) bool
-}
-
 // Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, edition *edition.Edition, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -151,7 +138,6 @@ func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleMan
 	r.packages = lifecycle.NewStore()
 
 	// Initialize foundational services
-	r.addonModuleManager = moduleManager
 	r.grantResolver = grants.NewResolver(cli)
 	r.metricStorage = metricStorage
 	r.logger = logger.Named("package-runtime")
@@ -199,7 +185,11 @@ func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleMan
 	}
 
 	// Initialize scheduler with enabling/disabling callbacks
-	r.buildScheduler(cli)
+	r.buildScheduler()
+
+	if err := r.scheduler.AddNode(r.global); err != nil {
+		return nil, fmt.Errorf("add node: %w", err)
+	}
 
 	if err := r.loadEmbedded(context.Background()); err != nil {
 		return nil, fmt.Errorf("load embedded: %w", err)
@@ -497,9 +487,9 @@ func (r *Runtime) buildHealthService() error {
 //   - onDisable: Stops hooks and transitions package back to Loaded state
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
-func (r *Runtime) buildScheduler(cli kclient.Client) {
+func (r *Runtime) buildScheduler() {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
+		value, ok := r.global.GetValues()[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
@@ -517,7 +507,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 	}
 
 	kubernetesVersionGetter := func() (*semver.Version, error) {
-		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		discovery := r.global.GetValues().GetKeySection("discovery")
 		if len(discovery) == 0 {
 			return nil, fmt.Errorf("discovery section not found in global values")
 		}
@@ -537,7 +527,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 
 	// Bootstrap condition checks if cluster initialization is complete
 	bootstrapCondition := func() bool {
-		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
+		value, ok := r.global.GetValues()[bootstrappedGlobalValue]
 		if !ok {
 			return false
 		}
@@ -550,39 +540,11 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		return bootstrapped
 	}
 
-	// Dependency getter returns the version of enabled module
-	dependencyGetter := func(name string) *semver.Version {
-		if !r.addonModuleManager.IsModuleEnabled(name) {
-			return nil
-		}
-
-		module := new(v1alpha1.Module)
-		err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-			return cli.Get(context.Background(), kclient.ObjectKey{Name: name}, module)
-		})
-		if err != nil {
-			return nil
-		}
-
-		// set a default version for modules overridden by ModulePullOverride (MPOS)
-		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
-			return semver.MustParse("v2.0.0")
-		}
-
-		version, err := semver.NewVersion(module.GetVersion())
-		if err != nil {
-			return nil
-		}
-
-		return version
-	}
-
 	r.scheduler = schedule.NewScheduler(
 		r.logger,
 		schedule.WithDynamicGetter(r.global.IsEnabled),
 		schedule.WithBundleChecker(r.edition.IsEnabled),
 		schedule.WithBootstrapCondition(bootstrapCondition),
-		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
 		schedule.WithKubeVersionGetter(kubernetesVersionGetter))
 }

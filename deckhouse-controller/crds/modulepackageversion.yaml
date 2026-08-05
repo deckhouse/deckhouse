@@ -4,16 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: applicationpackageversions.deckhouse.io
+  name: modulepackageversions.deckhouse.io
 spec:
   group: deckhouse.io
   names:
-    kind: ApplicationPackageVersion
-    listKind: ApplicationPackageVersionList
-    plural: applicationpackageversions
+    kind: ModulePackageVersion
+    listKind: ModulePackageVersionList
+    plural: modulepackageversions
     shortNames:
-    - apv
-    singular: applicationpackageversion
+    - mpv
+    singular: modulepackageversion
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -32,14 +32,13 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].message
       name: Message
       type: string
-    - jsonPath: .status.usedByCount
-      name: UsedBy
-      type: integer
+    - jsonPath: .status.used
+      name: Used
+      type: boolean
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ApplicationPackageVersion represents a version of an application
-          package.
+        description: ModulePackageVersion represents a version of a module package.
         properties:
           apiVersion:
             description: |-
@@ -61,32 +60,26 @@ spec:
           metadata:
             type: object
           spec:
-            description: Defines the application package version parameters.
+            description: Defines the module package version parameters.
             properties:
               packageName:
-                description: Name of the application package.
+                description: Name of the module package.
                 minLength: 1
                 type: string
-                x-doc-examples:
-                - console
                 x-kubernetes-validations:
                 - message: packageName is immutable
                   rule: self == oldSelf
               packageRepositoryName:
-                description: Name of the package repository containing the package.
+                description: The name of the repository containing the package.
                 minLength: 1
                 type: string
-                x-doc-examples:
-                - deckhouse
                 x-kubernetes-validations:
                 - message: packageRepositoryName is immutable
                   rule: self == oldSelf
               packageVersion:
-                description: Version of the application package.
+                description: Version of the module package.
                 minLength: 1
                 type: string
-                x-doc-examples:
-                - v1.0.0
                 x-kubernetes-validations:
                 - message: packageVersion is immutable
                   rule: self == oldSelf
@@ -96,11 +89,11 @@ spec:
             - packageVersion
             type: object
           status:
-            description: Application package version status.
+            description: Status of a ModulePackageVersion.
             properties:
               conditions:
-                description: Conditions reflecting the latest observations of the
-                  package version state.
+                description: Conditions represent the latest available observations
+                  of the package version's state.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -180,6 +173,10 @@ spec:
                           type: string
                         type: array
                     type: object
+                  critical:
+                    description: Critical indicates whether the package is critical
+                      for the cluster.
+                    type: boolean
                   description:
                     description: Localized descriptions of the package.
                     properties:
@@ -444,6 +441,10 @@ spec:
                             type: string
                         type: object
                     type: object
+                  weight:
+                    description: The weight of the package.
+                    format: int32
+                    type: integer
                 type: object
               packageSchemas:
                 description: Schemas for validating settings and values passed to
@@ -468,38 +469,13 @@ spec:
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                 type: object
-              usedBy:
-                description: Information about applications that are using this package
-                  version.
-                items:
-                  description: ApplicationPackageVersionStatusInstance identifies
-                    one application using the package version.
-                  properties:
-                    name:
-                      description: Name of the application instance.
-                      type: string
-                    namespace:
-                      description: Namespace where the application is installed.
-                      type: string
-                  type: object
-                type: array
-              usedByCount:
-                description: Number of applications using this package version; kept
-                  equal to the length of usedBy.
-                format: int32
-                minimum: 0
-                type: integer
+              used:
+                description: |-
+                  Whether a module uses this version. A single flag suffices because the object name
+                  embeds the module name, so at most one module can ever use it. Blocks deletion.
+                type: boolean
             type: object
         type: object
-        x-doc-examples:
-        - apiVersion: deckhouse.io/v1alpha1
-          kind: ApplicationPackageVersion
-          metadata:
-            name: example
-          spec:
-            packageName: console
-            packageRepositoryName: deckhouse
-            packageVersion: v1.0.0
     served: true
     storage: true
     subresources:

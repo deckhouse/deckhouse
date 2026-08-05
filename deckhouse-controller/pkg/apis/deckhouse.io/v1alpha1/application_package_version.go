@@ -27,23 +27,28 @@ import (
 )
 
 const (
+	// Resource and kind names of ApplicationPackageVersion.
 	ApplicationPackageVersionResource = "applicationpackageversions"
 	ApplicationPackageVersionKind     = "ApplicationPackageVersion"
 
+	// Labels carrying the version's origin and lifecycle state.
 	ApplicationPackageVersionLabelDraft           = "packages.deckhouse.io/draft"
 	ApplicationPackageVersionLabelPackage         = "packages.deckhouse.io/package"
 	ApplicationPackageVersionLabelRepository      = "packages.deckhouse.io/repository"
 	ApplicationPackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
 
+	// Condition type and the reasons reported when metadata loading fails.
 	ApplicationPackageVersionConditionTypeMetadataLoaded         = "MetadataLoaded"
 	ApplicationPackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
 	ApplicationPackageVersionConditionReasonGetPackageRepoErr    = "GetPackageRepositoryError"
 	ApplicationPackageVersionConditionReasonGetRegistryClientErr = "GetRegistryClientError"
 	ApplicationPackageVersionConditionReasonGetImageErr          = "GetImageError"
 
+	// Finalizer blocking deletion while any application still uses the version.
 	ApplicationPackageVersionFinalizer = "applicationpackageversion.deckhouse.io/used-by-application"
 )
 
+// Group-version identifiers of ApplicationPackageVersion.
 var (
 	ApplicationPackageVersionGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
@@ -89,26 +94,30 @@ type ApplicationPackageVersion struct {
 	Status ApplicationPackageVersionStatus `json:"status,omitempty"`
 }
 
+// ApplicationPackageVersionSpec identifies the version. Every field is immutable because
+// the object name is derived from the three of them.
 type ApplicationPackageVersionSpec struct {
 	// Name of the application package.
-	// +optional
-	// +kubebuilder:validation:Immutable
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="packageName is immutable"
 	// +crd-enricher:deckhouse:documentation:examples=console
-	PackageName string `json:"packageName,omitempty"`
+	PackageName string `json:"packageName"`
 
 	// Name of the package repository containing the package.
-	// +optional
-	// +kubebuilder:validation:Immutable
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="packageRepositoryName is immutable"
 	// +crd-enricher:deckhouse:documentation:examples=deckhouse
-	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
+	PackageRepositoryName string `json:"packageRepositoryName"`
 
 	// Version of the application package.
-	// +optional
-	// +kubebuilder:validation:Immutable
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="packageVersion is immutable"
 	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
-	PackageVersion string `json:"packageVersion,omitempty"`
+	PackageVersion string `json:"packageVersion"`
 }
 
+// ApplicationPackageVersionStatus reports loaded package metadata, schemas and which
+// applications use the version.
 type ApplicationPackageVersionStatus struct {
 	// Metadata about the package such as description, requirements, etc.
 	// +optional
@@ -116,7 +125,7 @@ type ApplicationPackageVersionStatus struct {
 
 	// Schemas for validating settings and values passed to the package.
 	// +optional
-	PackageSchemas *ApplicationPackageVersionStatusSchemas `json:"packageSchemas,omitempty"`
+	PackageSchemas *PackageVersionStatusSchemas `json:"packageSchemas,omitempty"`
 
 	// Conditions reflecting the latest observations of the package version state.
 	// +optional
@@ -130,9 +139,10 @@ type ApplicationPackageVersionStatus struct {
 	// +optional
 	UsedBy []ApplicationPackageVersionStatusInstance `json:"usedBy,omitempty"`
 
-	// Number of applications using this package version.
+	// Number of applications using this package version; kept equal to the length of usedBy.
 	// +optional
-	UsedByCount int `json:"usedByCount,omitempty"`
+	// +kubebuilder:validation:Minimum=0
+	UsedByCount int32 `json:"usedByCount,omitempty"`
 }
 
 // PackageSchema is an OpenAPI v3 schema wrapper that preserves all custom x-*
@@ -146,7 +156,9 @@ type PackageSchema struct {
 	OpenAPIV3Schema *openapi.OpenAPIV3Schema `json:"openAPIV3Schema,omitempty"`
 }
 
-type ApplicationPackageVersionStatusSchemas struct {
+// PackageVersionStatusSchemas holds the settings and values schemas of a package version,
+// shared by applications and modules.
+type PackageVersionStatusSchemas struct {
 	// SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
 	// settings of the package. Stored as an opaque object because its contents
 	// form a recursive JSON schema that cannot be expressed structurally in a
@@ -170,6 +182,7 @@ type ApplicationPackageVersionStatusSchemas struct {
 	ValuesSchema *PackageSchema `json:"valuesSchema,omitempty"`
 }
 
+// ApplicationPackageVersionStatusInstance identifies one application using the package version.
 type ApplicationPackageVersionStatusInstance struct {
 	// Namespace where the application is installed.
 	// +optional
@@ -180,6 +193,7 @@ type ApplicationPackageVersionStatusInstance struct {
 	Name string `json:"name,omitempty"`
 }
 
+// ApplicationPackageVersionStatusMetadata is the package metadata loaded from the registry.
 type ApplicationPackageVersionStatusMetadata struct {
 	// Localized descriptions of the package.
 	// +optional
@@ -270,7 +284,9 @@ func (a *ApplicationPackageVersion) RemoveInstalledApp(namespace string, appName
 // ApplicationPackageVersionList is a list of ApplicationPackageVersion resources
 type ApplicationPackageVersionList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
+	// Standard list metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []ApplicationPackageVersion `json:"items"`
 }
@@ -353,6 +369,7 @@ type PackageModuleGroup struct {
 	Modules []PackageModuleDependency `json:"modules"`
 }
 
+// PackageDescription holds the localized descriptions of a package.
 type PackageDescription struct {
 	// Russian description of the package.
 	// +optional
@@ -363,6 +380,7 @@ type PackageDescription struct {
 	En string `json:"en,omitempty"`
 }
 
+// PackageLicensing holds per-edition licensing of a package.
 type PackageLicensing struct {
 	// Licensing information for different package editions.
 	// +optional
@@ -383,6 +401,7 @@ type PackageEditionLicense struct {
 	EnabledInBundles []string `json:"enabledInBundles,omitempty"`
 }
 
+// PackageChangelog lists what changed in a package version.
 type PackageChangelog struct {
 	// List of new features in this version.
 	// +optional
@@ -393,6 +412,7 @@ type PackageChangelog struct {
 	Fixes []string `json:"fixes,omitempty"`
 }
 
+// PackageVersionCompatibilityRules bounds which versions may upgrade or downgrade to this one.
 type PackageVersionCompatibilityRules struct {
 	// Compatibility rules for upgrading to this version.
 	// +optional
@@ -403,6 +423,7 @@ type PackageVersionCompatibilityRules struct {
 	Downgrade *PackageVersionCompatibilityRule `json:"downgrade,omitempty"`
 }
 
+// PackageVersionCompatibilityRule is one direction's version range and skip allowances.
 type PackageVersionCompatibilityRule struct {
 	// Starting version range for compatibility.
 	// +optional

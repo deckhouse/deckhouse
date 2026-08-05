@@ -364,7 +364,7 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 	}
 
 	if apv.Status.PackageSchemas == nil {
-		apv.Status.PackageSchemas = new(v1alpha1.ApplicationPackageVersionStatusSchemas)
+		apv.Status.PackageSchemas = new(v1alpha1.PackageVersionStatusSchemas)
 	}
 
 	schema := &v1alpha1.PackageSchema{
