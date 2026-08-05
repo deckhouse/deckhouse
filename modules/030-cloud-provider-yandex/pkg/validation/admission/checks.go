@@ -15,6 +15,7 @@
 package admission
 
 import (
+	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
 	admissionv1 "k8s.io/api/admission/v1"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -34,7 +35,10 @@ func ValidateCredentialSecret(state *ycval.State, operation admissionv1.Operatio
 
 	switch operation {
 	case admissionv1.Create, admissionv1.Update:
-		result.Merge(cpval.ValidateCredentialSecretContent(state, ycval.CredentialsValidator))
+		result.Merge(
+			cpval.ValidateCredentialSecretContent(state, cpapi.CredentialSecretName, ycval.CredentialsValidator),
+			cpval.ValidateCredentialSecretContent(state, ycmeta.ExporterCredentialSecretName, ycval.ExporterCredentialsValidator),
+		)
 	}
 
 	return result

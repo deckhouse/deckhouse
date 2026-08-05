@@ -34,7 +34,7 @@ func ValidateCredentialSecret(state *dvpval.State, operation admissionv1.Operati
 
 	switch operation {
 	case admissionv1.Create, admissionv1.Update:
-		result.Merge(cpval.ValidateCredentialSecretContent(state, dvpval.CredentialsValidator))
+		result.Merge(cpval.ValidateCredentialSecretContent(state, cpapi.CredentialSecretName, dvpval.CredentialsValidator))
 	}
 
 	return result

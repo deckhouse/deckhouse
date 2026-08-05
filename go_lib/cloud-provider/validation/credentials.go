@@ -47,19 +47,19 @@ func ValidateCredentialSecretPresence[
 	IC cpapi.InstanceClassObject,
 	S cpapi.ModuleSettingsObject,
 	PCC cpapi.ProviderClusterConfigObject,
-](state *cpvalapi.State[IC, S, PCC]) cpvalapi.Result {
+](state *cpvalapi.State[IC, S, PCC], name string) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
 
 	result := cpvalapi.Result{}
 
-	if !state.ExistsCredentialSecret(cpapi.CredentialSecretName) {
+	if !state.ExistsCredentialSecret(name) {
 		result.AddError(
-			fmt.Sprintf("Secret/%s", cpapi.CredentialSecretName),
+			fmt.Sprintf("Secret/%s", name),
 			CodeCredentialSecretRequired,
 			nil,
-			fmt.Sprintf(`credential Secret %q is required`, cpapi.CredentialSecretName),
+			fmt.Sprintf(`credential Secret %q is required`, name),
 		)
 
 		return result
@@ -73,18 +73,21 @@ func ValidateCredentialSecretContent[
 	IC cpapi.InstanceClassObject,
 	S cpapi.ModuleSettingsObject,
 	PCC cpapi.ProviderClusterConfigObject,
-](state *cpvalapi.State[IC, S, PCC], validator CredentialsValidator) cpvalapi.Result {
+](state *cpvalapi.State[IC, S, PCC], name string, validator CredentialsValidator) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
 
 	result := cpvalapi.Result{}
 
-	for _, secret := range state.ListCredentialSecrets() {
-		path := getNamedResourcePath("Secret", secret.Name)
-		data := secret.NormalizedData()
-		result.Merge(validator.Validate(path, data))
+	secret, ok := state.FindCredentialSecret(name)
+	if !ok {
+		return result
 	}
+
+	path := getNamedResourcePath("Secret", secret.Name)
+	data := secret.NormalizedData()
+	result.Merge(validator.Validate(path, data))
 
 	return result
 }

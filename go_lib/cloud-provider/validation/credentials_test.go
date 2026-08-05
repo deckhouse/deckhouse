@@ -57,7 +57,7 @@ func allSchemesValidator() CredentialsValidator {
 func TestValidateCredentialSecretContentNilState(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateCredentialSecretContent[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig](nil, &APITokenValidator{})
+	result := ValidateCredentialSecretContent[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig](nil, cpapi.CredentialSecretName, &APITokenValidator{})
 	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
 		t.Fatalf("ValidateCredentialSecretContent(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
@@ -77,6 +77,7 @@ func TestValidateCredentialSecretContentAllowsConfiguredAuthScheme(t *testing.T)
 
 	result := ValidateCredentialSecretContent(
 		credentialContentState([]cpapi.CredentialSecret{secret}),
+		cpapi.CredentialSecretName,
 		&APITokenValidator{},
 	)
 
@@ -97,6 +98,7 @@ func TestValidateCredentialSecretContentRejectsUnsupportedAuthScheme(t *testing.
 				Secret:     "token-123",
 			},
 		)}),
+		cpapi.CredentialSecretName,
 		&KubeconfigValidator{},
 	)
 
@@ -127,7 +129,7 @@ func TestValidateCredentialSecretContentIgnoresNonCredentialSecrets(t *testing.T
 		},
 	})
 
-	result := ValidateCredentialSecretContent(state, &APITokenValidator{})
+	result := ValidateCredentialSecretContent(state, cpapi.CredentialSecretName, &APITokenValidator{})
 	if result.HasErrors() {
 		t.Fatalf("ValidateCredentialSecretContent() = %q, want non-credential secrets ignored", result.Error())
 	}
@@ -163,6 +165,7 @@ users:
 				Secret:     kubeconfigB64,
 			},
 		)}),
+		cpapi.CredentialSecretName,
 		&KubeconfigValidator{},
 	)
 
@@ -183,6 +186,7 @@ func TestKubeconfigValidatorRejectsInvalidBase64(t *testing.T) {
 				Secret:     "not-base64",
 			},
 		)}),
+		cpapi.CredentialSecretName,
 		&KubeconfigValidator{},
 	)
 
@@ -204,6 +208,7 @@ func TestKubeconfigValidatorRejectsInvalidYAML(t *testing.T) {
 				Secret:     invalid,
 			},
 		)}),
+		cpapi.CredentialSecretName,
 		&KubeconfigValidator{},
 	)
 
@@ -221,6 +226,7 @@ func TestServiceAccountValidatorRequiresSecret(t *testing.T) {
 			testNamespace,
 			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeServiceAccount},
 		)}),
+		cpapi.CredentialSecretName,
 		&ServiceAccountValidator{},
 	)
 
@@ -241,6 +247,7 @@ func TestServiceAccountValidatorAcceptsSecret(t *testing.T) {
 				Secret:     `{"type":"service_account"}`,
 			},
 		)}),
+		cpapi.CredentialSecretName,
 		&ServiceAccountValidator{},
 	)
 
@@ -256,6 +263,7 @@ func TestValidateCredentialSecretContentRequiresAuthScheme(t *testing.T) {
 		credentialContentState([]cpapi.CredentialSecret{
 			managedCredentialSecret(cpapi.CredentialSecretName, testNamespace, cpapi.CredentialSecretStringData{}),
 		}),
+		cpapi.CredentialSecretName,
 		&APITokenValidator{},
 	)
 
@@ -282,7 +290,7 @@ func TestValidateCredentialSecretContentIgnoresOrdinaryModuleSecrets(t *testing.
 		},
 	})
 
-	if result := ValidateCredentialSecretContent(state, &KubeconfigValidator{}); result.HasErrors() {
+	if result := ValidateCredentialSecretContent(state, cpapi.CredentialSecretName, &KubeconfigValidator{}); result.HasErrors() {
 		t.Fatalf("ValidateCredentialSecretContent() unexpected errors: %s", result.Error())
 	}
 }
@@ -296,7 +304,7 @@ func TestValidateCredentialSecretContentIgnoresOtherNamespace(t *testing.T) {
 		cpapi.CredentialSecretStringData{AuthScheme: "invalid"},
 	)})
 
-	if result := ValidateCredentialSecretContent(state, &APITokenValidator{}); result.HasErrors() {
+	if result := ValidateCredentialSecretContent(state, cpapi.CredentialSecretName, &APITokenValidator{}); result.HasErrors() {
 		t.Fatalf("ValidateCredentialSecretContent() = %q, want other namespace secret ignored", result.Error())
 	}
 }
@@ -356,6 +364,7 @@ func TestAccessKeyPairValidatorRequiresIdentity(t *testing.T) {
 			testNamespace,
 			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeAccessKeyPair},
 		)}),
+		cpapi.CredentialSecretName,
 		&AccessKeyPairValidator{},
 	)
 
@@ -376,6 +385,7 @@ func TestAccessKeyPairValidatorRequiresSecret(t *testing.T) {
 				Identity:   "access-key-id",
 			},
 		)}),
+		cpapi.CredentialSecretName,
 		&AccessKeyPairValidator{},
 	)
 
@@ -396,6 +406,7 @@ func TestUserPasswordValidatorRequiresSecret(t *testing.T) {
 				Identity:   "user",
 			},
 		)}),
+		cpapi.CredentialSecretName,
 		&UserPasswordValidator{},
 	)
 
@@ -413,6 +424,7 @@ func TestAPITokenValidatorRequiresSecret(t *testing.T) {
 			testNamespace,
 			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeAPIToken},
 		)}),
+		cpapi.CredentialSecretName,
 		&APITokenValidator{},
 	)
 
@@ -430,6 +442,7 @@ func TestClientSecretValidatorRequiresIdentity(t *testing.T) {
 			testNamespace,
 			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeClientSecret},
 		)}),
+		cpapi.CredentialSecretName,
 		&ClientSecretValidator{},
 	)
 
@@ -450,6 +463,7 @@ func TestClientSecretValidatorRequiresSecret(t *testing.T) {
 				Identity:   "client-id",
 			},
 		)}),
+		cpapi.CredentialSecretName,
 		&ClientSecretValidator{},
 	)
 
@@ -467,6 +481,7 @@ func TestAppSecretValidatorRequiresSecret(t *testing.T) {
 			testNamespace,
 			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeAppSecret},
 		)}),
+		cpapi.CredentialSecretName,
 		&AppSecretValidator{},
 	)
 
@@ -484,6 +499,7 @@ func TestKubeconfigValidatorRequiresSecret(t *testing.T) {
 			testNamespace,
 			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeKubeconfig},
 		)}),
+		cpapi.CredentialSecretName,
 		&KubeconfigValidator{},
 	)
 
@@ -518,6 +534,7 @@ func TestCombinedCredentialValidatorDispatchesAllAuthSchemes(t *testing.T) {
 					testNamespace,
 					cpapi.CredentialSecretStringData{AuthScheme: scheme},
 				)}),
+				cpapi.CredentialSecretName,
 				validator,
 			)
 			if !result.HasErrors() {
@@ -545,6 +562,7 @@ func TestCombinedCredentialValidatorRejectsUnknownAuthScheme(t *testing.T) {
 				Secret:     validTestKubeconfigB64(),
 			},
 		)}),
+		cpapi.CredentialSecretName,
 		validator,
 	)
 
@@ -556,7 +574,7 @@ func TestCombinedCredentialValidatorRejectsUnknownAuthScheme(t *testing.T) {
 func TestValidateCredentialSecretPresenceNilState(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateCredentialSecretPresence[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig](nil)
+	result := ValidateCredentialSecretPresence[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig](nil, cpapi.CredentialSecretName)
 	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
 		t.Fatalf("ValidateCredentialSecretPresence(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
@@ -565,7 +583,7 @@ func TestValidateCredentialSecretPresenceNilState(t *testing.T) {
 func TestValidateCredentialSecretPresenceRequiresPrimarySecret(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateCredentialSecretPresence(credentialContentState(nil))
+	result := ValidateCredentialSecretPresence(credentialContentState(nil), cpapi.CredentialSecretName)
 	if !hasViolationCode(result, CodeCredentialSecretRequired) {
 		t.Fatalf("ValidateCredentialSecretPresence() = %q, want %s", result.Error(), CodeCredentialSecretRequired)
 	}
@@ -581,7 +599,7 @@ func TestValidateCredentialSecretPresenceRejectsWrongType(t *testing.T) {
 			ObjectMeta: cpapi.ObjectMeta{Name: cpapi.CredentialSecretName, Namespace: testNamespace},
 			Type:       "kubernetes.io/tls",
 		},
-	}))
+	}), cpapi.CredentialSecretName)
 	if !hasViolationCode(result, CodeCredentialSecretRequired) {
 		t.Fatalf("ValidateCredentialSecretPresence() = %q, want %s", result.Error(), CodeCredentialSecretRequired)
 	}
@@ -595,7 +613,7 @@ func TestValidateCredentialSecretPresenceAllowsManagedSecret(t *testing.T) {
 			AuthScheme: cpapi.AuthSchemeKubeconfig,
 			Secret:     validTestKubeconfigB64(),
 		}),
-	}))
+	}), cpapi.CredentialSecretName)
 	if result.HasErrors() {
 		t.Fatalf("ValidateCredentialSecretPresence() unexpected errors: %s", result.Error())
 	}

@@ -21,6 +21,7 @@ import (
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
 
 	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/pcc/v1"
 	ycval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/validation"
@@ -28,6 +29,7 @@ import (
 
 // Validation violation codes for legacy ProviderClusterConfiguration checks.
 const (
+	CodePCCInvalidServiceAccountSecret                 = "pcc_invalid_service_account_secret"
 	CodePCCMasterReplicasGreaterExternalIPAddresses    = "pcc_master_node_group_replicas_greater_length_of_extrenal_ip_addresses"
 	CodePCCNodeGroupReplicasGreaterExternalIPAddresses = "pcc_node_group_replicas_greater_length_of_extrenal_ip_addresses"
 	CodePCCNATInstanceSubnetRequired                   = "pcc_internal_subnet_cidr_or_internal_subnet_id_empty"
@@ -44,6 +46,7 @@ func ValidatePreflight(state *ycval.State, operation string) cpvalapi.Result {
 	// Validate legacy ProviderClusterConfiguration.
 	if state.HasProviderClusterConfig() {
 		result.Merge(
+			validateServiceAccount(state.ProviderClusterConfig),
 			validateMasterNodeGroupReplicasAndIPAddresses(state.ProviderClusterConfig),
 			validateNodeGroupsReplicasAndIPAddresses(state.ProviderClusterConfig),
 			validateWithNATInstanceLayout(state.ProviderClusterConfig, operation),
@@ -57,14 +60,30 @@ func ValidatePreflight(state *ycval.State, operation string) cpvalapi.Result {
 	// Validate new resources: ModuleConfig, NodeGroup, InstanceClasses, CredentialSecrets.
 	result.Merge(
 		cpval.ValidateModuleConfig(state),
-		cpval.ValidateCredentialSecretPresence(state),
-		cpval.ValidateCredentialSecretContent(state, ycval.CredentialsValidator),
+		cpval.ValidateCredentialSecretPresence(state, cpapi.CredentialSecretName),
+		cpval.ValidateCredentialSecretContent(state, cpapi.CredentialSecretName, ycval.CredentialsValidator),
+		cpval.ValidateCredentialSecretContent(state, ycmeta.ExporterCredentialSecretName, ycval.ExporterCredentialsValidator),
 		cpval.ValidateMasterNodeGroupPresence(state),
 		cpval.ValidateNodeGroupsClassReference(state, true),
 		cpval.ValidateInstanceClassesEtcdDisk(state),
 		ycval.ValidateNodeGroupExternalIPAddresses(state),
 		ycval.ValidateWithNATInstanceLayout(state),
 	)
+
+	return result
+}
+
+func validateServiceAccount(pcc *ycpccv1.YandexProviderClusterConfiguration) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	if err := ycval.ValidateServiceAccountFunc(pcc.Provider.ServiceAccountJSON); err != nil {
+		result.AddError(
+			"ProviderClusterConfiguration.provider.serviceAccountJSON",
+			CodePCCInvalidServiceAccountSecret,
+			"masked",
+			fmt.Sprintf("invalid service account: %v", err),
+		)
+	}
 
 	return result
 }
