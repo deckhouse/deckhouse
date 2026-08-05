@@ -171,7 +171,10 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.rules = append(n.rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
+	// The dependency gates read the graph itself through s.dependencyVersion, so
+	// they are always built — a package's declared dependencies are never
+	// silently unchecked.
+	if len(constraints.Dependencies) > 0 {
 		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
 		for name, dep := range constraints.Dependencies {
 			deps[name] = dependency.Dependency{
@@ -180,15 +183,15 @@ func (s *Scheduler) addNode(pkg Package) {
 			}
 		}
 
-		n.rules = append(n.rules, dependency.NewRule(s.dependencyGetter, deps))
+		n.rules = append(n.rules, dependency.NewRule(s.dependencyVersion, deps))
 	}
 
-	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
-		n.rules = append(n.rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	if len(constraints.AnyOf) > 0 {
+		n.rules = append(n.rules, dependency.NewAnyOfRule(s.dependencyVersion, toAnyOfGroups(constraints.AnyOf)))
 	}
 
-	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
-		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	if len(constraints.NoneOf) > 0 {
+		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyVersion, toNoneOfGroups(constraints.NoneOf)))
 	}
 
 	// Modules (floor = Static(Disable)) trigger a full-graph reschedule when they

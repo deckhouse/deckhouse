@@ -125,6 +125,11 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 				return fmt.Errorf("load embedded conf: %w", err)
 			}
 
+			// skip node-manager for now
+			if conf.Definition.Name == "node-manager" {
+				return nil
+			}
+
 			conf.Patcher = r.objectPatcher
 			conf.ScheduleManager = r.scheduleManager
 			conf.KubeEventsManager = r.kubeEventsManager
@@ -149,6 +154,10 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 			r.status.SetConditionTrue(module.GetName(), status.ConditionReadyOnFilesystem)
 			r.status.SetConditionTrue(module.GetName(), status.ConditionLoaded)
 			r.status.UpdateVersion(module.GetName(), module.GetVersion().String())
+
+			if err := r.scheduler.AddNode(module); err != nil {
+				return fmt.Errorf("add node: %w", err)
+			}
 
 			return nil
 		})
