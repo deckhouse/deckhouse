@@ -49,23 +49,14 @@ spec:
 
 ## Update modes
 
-DKP supports three update modes that determine how new versions are applied:
+DKP supports three update modes that [determine](/modules/deckhouse/configuration.html#parameters-update-mode) how new versions are applied:
 
-- **Automatic mode (without update windows)**: The cluster updates as soon as a new version
-  appears on the [selected release channel](../../../architecture/updating.html#release-channels).
-- **Automatic mode (with update windows)**: The cluster updates during the next available window
-  after a new version appears on the release channel.
-- **Manual mode**: updates must be manually approved before they are applied.
+- **Automatic mode (`AutoPatch`)** — (default mode) the cluster updates as soon as a new patch version
+  appears on the [selected release channel](../../../architecture/updating.html#release-channels); updates are applied only within the current minor version.
+- **Automatic mode (`Auto`)** — both patch and minor versions are applied automatically.
+- **Manual mode (`Manual`)** — both patch and minor versions are applied only after manual approval.
 
-[Update windows](#update-windows) — allowed updates are applied taking [`update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows) into account, if windows are configured. If no windows are set, the update is applied as soon as the version appears on the release channel.
-
-For automatic mode, two [configuration options](/modules/deckhouse/configuration.html#parameters-update-mode) are available:
-
-- `AutoPatch` (default) — only patch versions within the current minor version are applied automatically.
-  Moving to a new minor version requires [manual approval](#manual-update-approval).
-- `Auto` — both patch and minor versions are applied automatically.
-
-In manual mode (`Manual`) — both patch and minor versions are applied only after manual approval.
+For automatic modes, [update windows](#update-windows) settings are available — allowed updates are applied taking [`update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows) into account, if windows are configured. If no windows are set, the update is applied as soon as the version appears on the release channel.
 
 {% alert level="info" %}
 The [`update`](/modules/deckhouse/configuration.html#parameters-update) settings of the `deckhouse` module (mode and windows) apply by default to both built-in and external modules.
