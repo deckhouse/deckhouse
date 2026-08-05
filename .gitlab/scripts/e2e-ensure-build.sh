@@ -1,19 +1,38 @@
 #!/usr/bin/env bash
-# Find edition build job on an existing pipeline for the current branch/tag,
-# play/retry it if not successful, wait until success.
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Find edition build job on an existing pipeline for the current commit SHA,
+# play it if not successful, wait until success.
 # Writes e2e-build.env with BRANCH (image tag for e2e-framework).
 #
 # Tag naming: .gitlab/build.yml
 # Play job:   https://docs.gitlab.com/api/jobs/#run-a-job
-# Retry job:  https://docs.gitlab.com/api/jobs/#retry-a-job
+# Pipelines:  https://docs.gitlab.com/api/pipelines/ (filter by sha)
 set -euo pipefail
 
 DOTENV_FILE="${DOTENV_FILE:-e2e-build.env}"
 SLEEP_SECONDS="${E2E_BUILD_POLL_SLEEP:-30}"
 MAX_ATTEMPTS="${E2E_BUILD_POLL_ATTEMPTS:-480}"
+# Wait for CI to create a pipeline on this commit (e2e right after push).
+PIPELINE_WAIT_ATTEMPTS="${E2E_PIPELINE_WAIT_ATTEMPTS:-10}"
+PIPELINE_WAIT_SLEEP="${E2E_PIPELINE_WAIT_SLEEP:-10}"
 
 E2E_EDITION="${E2E_EDITION:?E2E_EDITION is required}"
 EDITION_LOWER="$(echo "${E2E_EDITION}" | tr '[:upper:]' '[:lower:]')"
+CI_COMMIT_SHA="${CI_COMMIT_SHA:?CI_COMMIT_SHA is required}"
 
 api() {
   local method="$1"
@@ -111,9 +130,9 @@ build_job_name_for() {
   echo "${base}:${suffix}"
 }
 
-list_pipelines_for_ref() {
-  local ref="$1"
-  api GET "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/pipelines?ref=${ref}&per_page=50"
+list_pipelines_for_sha() {
+  local sha="$1"
+  api GET "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/pipelines?sha=${sha}&per_page=50"
 }
 
 list_pipeline_jobs() {
@@ -121,12 +140,16 @@ list_pipeline_jobs() {
   api GET "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/pipelines/${pipeline_id}/jobs?per_page=100"
 }
 
-# Prefer newest pipeline that contains the target build job.
+# Prefer newest pipeline for this commit SHA that contains the target build job.
 find_build_job() {
   local want_name="$1"
-  local ref="$2"
+  local sha="$2"
   local pipelines pipeline_id jobs matched
-  pipelines="$(list_pipelines_for_ref "${ref}")"
+  pipelines="$(list_pipelines_for_sha "${sha}")"
+
+  if [[ "$(echo "${pipelines}" | jq 'length')" -eq 0 ]]; then
+    return 1
+  fi
 
   while IFS= read -r pipeline_id; do
     [[ -z "${pipeline_id}" ]] && continue
@@ -142,14 +165,30 @@ find_build_job() {
   return 1
 }
 
+# GitLab may not have created the branch/MR/tag pipeline yet right after push.
+wait_for_build_job() {
+  local want_name="$1"
+  local sha="$2"
+  local attempt job
+
+  for attempt in $(seq 1 "${PIPELINE_WAIT_ATTEMPTS}"); do
+    if job="$(find_build_job "${want_name}" "${sha}")"; then
+      echo "${job}"
+      return 0
+    fi
+    echo "Attempt ${attempt}/${PIPELINE_WAIT_ATTEMPTS}: job '${want_name}' not found for sha ${sha}; waiting ${PIPELINE_WAIT_SLEEP}s"
+    if [[ "${attempt}" -eq "${PIPELINE_WAIT_ATTEMPTS}" ]]; then
+      break
+    fi
+    sleep "${PIPELINE_WAIT_SLEEP}"
+  done
+
+  return 1
+}
+
 play_job() {
   local job_id="$1"
   api POST "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/jobs/${job_id}/play" >/dev/null
-}
-
-retry_job() {
-  local job_id="$1"
-  api POST "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/jobs/${job_id}/retry"
 }
 
 get_job() {
@@ -194,7 +233,7 @@ EOF
 }
 
 main() {
-  local ref suffix tag_base image_tag job_name job job_id status new_job
+  local ref suffix tag_base image_tag job_name job job_id status
 
   ref="$(resolve_ref)"
   suffix="$(resolve_build_job_suffix)"
@@ -204,11 +243,12 @@ main() {
 
   echo "E2E_EDITION=${E2E_EDITION}"
   echo "REF=${ref}"
+  echo "CI_COMMIT_SHA=${CI_COMMIT_SHA}"
   echo "TARGET_BUILD_JOB=${job_name}"
   echo "IMAGE_TAG(BRANCH)=${image_tag}"
 
-  if ! job="$(find_build_job "${job_name}" "${ref}")"; then
-    echo "Build job '${job_name}' not found in pipelines for ref '${ref}'" >&2
+  if ! job="$(wait_for_build_job "${job_name}" "${CI_COMMIT_SHA}")"; then
+    echo "Build job '${job_name}' not found in pipelines for sha '${CI_COMMIT_SHA}' (ref '${ref}') after ${PIPELINE_WAIT_ATTEMPTS} attempts" >&2
     exit 1
   fi
 
@@ -226,11 +266,8 @@ main() {
       wait_for_job_success "${job_id}"
       ;;
     failed|canceled|cancelled|skipped)
-      echo "Retrying build job ${job_id}"
-      new_job="$(retry_job "${job_id}")"
-      job_id="$(echo "${new_job}" | jq -r '.id')"
-      echo "Retry created job id=${job_id}"
-      wait_for_job_success "${job_id}"
+      echo "Build job ${job_id} status=${status}; fail e2e (no retry)" >&2
+      exit 1
       ;;
     running|pending|waiting_for_resource|preparing|scheduled)
       echo "Waiting for build job ${job_id}"

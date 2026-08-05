@@ -83,7 +83,7 @@ e2e-ensure-build:
   timeout: 4h
   interruptible: false
   needs: []
-  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/bash:${CI_IMAGES_TAG}
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/curl:${CI_IMAGES_TAG}
   variables:
     DOTENV_FILE: e2e-build.env
     GIT_STRATEGY: fetch
