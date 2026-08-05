@@ -25,6 +25,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -77,7 +78,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: possiblePublishAPISecretNames,
 			},
-			FilterFunc: applyPublishAPISecretCertFilter,
+			// Run only in BeforeHelm: keeping or deleting secrets depends on the CPM
+			// export in the secret_cpm snapshot, which may be empty on Synchronization
+			// and event runs of this binding.
+			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			FilterFunc:                   applyPublishAPISecretCertFilter,
 		},
 		{
 			Name:       "secret_cpm",
@@ -91,7 +97,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-publish-api-config"},
 			},
-			FilterFunc: applyPublishAPICertFilterCPM,
+			// No Synchronization run for the same reason; events stay on so the
+			// mirrored CA value refreshes when the CPM export changes.
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   applyPublishAPICertFilterCPM,
 		},
 	},
 }, discoverPublishAPICA)
