@@ -162,6 +162,13 @@ module JSONSchemaRenderer
         input ? input.dig(*keys) : nil
     end
 
+    def format_crd_short_names(input)
+        shortNames = get_hash_value(input, 'spec', 'names', 'shortNames')
+        return '' if shortNames.nil? || shortNames.empty?
+
+        '<p><font size="-1"><strong>Short names: ' + Array(shortNames).join(', ') + '</strong></font></p>'
+    end
+
     def get_search_keywords(primaryLanguage, fallbackLanguage = nil)
       return '' if !primaryLanguage
       if get_hash_value(primaryLanguage, "x-doc-search") then
@@ -853,6 +860,7 @@ module JSONSchemaRenderer
                 resourceName = input["spec"]["names"]["kind"]
                 fullPath = [sprintf(%q(v1beta1-%s), input["spec"]["names"]["kind"])]
                 result.push(convert("## " + input["spec"]["names"]["kind"]))
+                result.push(format_crd_short_names(input))
                 result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                 if input["spec"].has_key?("version") then
                    result.push('<br/>Version: ' + input["spec"]["version"] + '</font></p>')
@@ -915,6 +923,7 @@ module JSONSchemaRenderer
                  result.push(%Q(<h2>#{input["spec"]["names"]["kind"]}</h2>))
 
                  if  input["spec"]["versions"].length > 1 then
+                     result.push(format_crd_short_names(input))
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
                      result.push('<div class="tabs-block">')
                      result.push('<ul class="tabs__container tabs__container--title">')
@@ -938,6 +947,7 @@ module JSONSchemaRenderer
                     versionAPI = item['name']
 
                     if input["spec"]["versions"].length == 1 then
+                        result.push(format_crd_short_names(input))
                         result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                         result.push('<br/>Version: ' + item['name'] + '</font></p>')
                     else
