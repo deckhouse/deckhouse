@@ -1215,13 +1215,24 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 # Cluster domain.
 clusterDomain: "cluster.local"
-# The default container runtime type used on cluster nodes (in NodeGroups).
-defaultCRI: "ContainerdV2"
 # Proxy server settings.
 proxy:
   httpProxy: http://proxy.local:3128
   httpsProxy: https://proxy.local:3128
   noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+---
+# node-manager module settings.
+# https://deckhouse.io/modules/node-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: node-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    # The default container runtime type used on cluster nodes (in NodeGroups).
+    defaultCRI: "ContainerdV2"
 ---
 # deckhouse module settings.
 # https://deckhouse.io/modules/deckhouse/configuration.html
