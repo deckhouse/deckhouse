@@ -19,7 +19,6 @@ package capi
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
 	"sort"
 	"strings"
@@ -42,10 +41,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	sigsyaml "sigs.k8s.io/yaml"
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
@@ -421,41 +420,12 @@ func (r *MachineDeploymentReconciler) readClusterUUID(ctx context.Context) (stri
 	return cm.Data["cluster-uuid"], nil
 }
 
-type mdClusterConfiguration struct {
-	Cloud struct {
-		Prefix string `json:"prefix"`
-	} `json:"cloud"`
-}
-
-// readInstancePrefix returns cloud.prefix from the cluster configuration. It fails closed on
-// every read problem — a missing Secret or key must NOT degrade into an empty prefix, because
-// the prefix is part of every MachineDeployment name: an empty one makes the desired-name set
-// miss all real "<prefix>-<ng>-<hash>" MachineDeployments, and the prune that follows would
-// delete every one of them (and their MachineClasses), destroying the NodeGroup's nodes.
-// An empty prefix is only legitimate when the configuration parsed and simply has none.
+// readInstancePrefix resolves the cluster prefix via the shared resolver: the
+// global ModuleConfig (spec.settings.prefix) takes precedence, falling back to
+// the deprecated ClusterConfiguration.cloud.prefix. Kept in one place so the
+// webhook, CAPI and the migration controller never diverge.
 func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (string, error) {
-	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
-		Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace,
-	}, secret); err != nil {
-		return "", fmt.Errorf("get cluster-configuration secret: %w", err)
-	}
-
-	raw, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		return "", fmt.Errorf("cluster-configuration secret has no cluster-configuration.yaml key")
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(string(raw))
-	if err != nil {
-		decoded = raw
-	}
-
-	cfg := &mdClusterConfiguration{}
-	if err := sigsyaml.Unmarshal(decoded, cfg); err != nil {
-		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
-	}
-	return cfg.Cloud.Prefix, nil
+	return clusterprefix.Resolve(ctx, r.Client)
 }
 
 func getMinMax(ng *deckhousev1.NodeGroup) (int32, int32) {

@@ -47,6 +47,7 @@ spec:
         checksum/instance-config: {{ $instance | toYaml | sha256sum }}
       labels:
         app: keepalived-{{ $instance_name }}
+        security.deckhouse.io/security-policy-exception: keepalived
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

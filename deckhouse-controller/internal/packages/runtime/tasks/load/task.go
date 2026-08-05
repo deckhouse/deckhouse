@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 

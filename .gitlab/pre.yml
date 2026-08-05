@@ -1,0 +1,44 @@
+check_branch_name:
+  stage: .pre
+  extends:
+    - .rules:on_tag
+  needs: []
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - |
+      TAG_NAME="${CI_COMMIT_TAG}"
+      MAJOR="$(echo "${TAG_NAME}" | cut -d'.' -f1 | tr -d 'v')"
+      MINOR="$(echo "${TAG_NAME}" | cut -d'.' -f2)"
+      RELEASE_BRANCH_NAME="release-${MAJOR}.${MINOR}"
+      echo "TAG_NAME=${TAG_NAME}"
+      echo "RELEASE_BRANCH_NAME=${RELEASE_BRANCH_NAME}"
+      echo "CI_COMMIT_SHA=${CI_COMMIT_SHA}"
+      git fetch --no-tags origin "${RELEASE_BRANCH_NAME}" 2>/dev/null || true
+      echo "Remote branches containing commit:"
+      git branch -r --contains "${CI_COMMIT_SHA}"
+      # Fail if the tag commit is not on the matching release-X.Y branch.
+      git branch -r --contains "${CI_COMMIT_SHA}" | grep -E "(^|[[:space:]])origin/${RELEASE_BRANCH_NAME}$"
+
+check_changelog:
+  stage: .pre
+  extends:
+    - .rules:on_tag
+  needs: []
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/bash:${CI_IMAGES_TAG}
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - |
+      FILE="./CHANGELOG/CHANGELOG-${CI_COMMIT_TAG}.yml"
+      if [[ ! -f "${FILE}" ]]; then
+        echo "Expected changelog file ${FILE} not found. Create it before pushing the release tag."
+        exit 1
+      fi
+      echo "Changelog file ${FILE} found."
+
+.needs_tag_prechecks:
+  needs:
+    - check_branch_name
+    - check_changelog

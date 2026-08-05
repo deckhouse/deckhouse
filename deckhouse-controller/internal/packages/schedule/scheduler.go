@@ -43,6 +43,14 @@ const (
 	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
 	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
 	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
+
+	// Subjects and messages spell out for the user what the reason above encodes
+	// for a condition. CheckConstraints surfaces only the decision message, so
+	// whatever is missing there is lost on the admission path.
+	subjectKubernetes = "Kubernetes"
+	subjectDeckhouse  = "Deckhouse"
+
+	messageRequirementsBootstrap = "cluster bootstrap is not finished yet"
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -170,15 +178,15 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 	var rules []rule.Rule
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		rules = append(rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
+		rules = append(rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, subjectKubernetes, reasonRequirementsKubernetes))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		rules = append(rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
+		rules = append(rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, subjectDeckhouse, reasonRequirementsDeckhouse))
 	}
 
 	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		rules = append(rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap))
+		rules = append(rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {

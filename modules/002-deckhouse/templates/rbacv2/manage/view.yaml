@@ -20,6 +20,7 @@ rules:
   - modulepulloverrides
   - modulereleases
   - modules
+  - modulesettingsdefinitions
   - modulesources
   - moduleupdatepolicies
   - packagerepositories

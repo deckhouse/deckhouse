@@ -1,0 +1,71 @@
+{{- if (.Values.global.enabledModules | has "admission-policy-engine") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-kube-proxy")) | nindent 2 }}
+spec:
+  securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          kube-proxy must run privileged to write host network sysctls under /proc/sys
+          (conntrack timeouts, route_localnet) and to manage iptables/nftables rules
+          for ClusterIP/NodePort services.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          kube-proxy and iptables-wrapper-init must run as root to manage iptables/nftables
+          rules for ClusterIP/NodePort services on the host network namespace.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for iptables operations and host network namespace access.
+    capabilities:
+      allowedValues:
+        add:
+          - NET_ADMIN
+          - NET_RAW
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_ADMIN/NET_RAW are required by iptables-wrapper-init to set up the iptables
+          wrapper used by kube-proxy (mode=iptables).
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          kube-proxy must join the host network namespace to install and maintain
+          service proxy rules for node traffic.
+    hostPorts:
+      - port: 4210
+        protocol: TCP
+        metadata:
+          description: HTTPS metrics endpoint exposed through kube-rbac-proxy.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          hostPath volumes are required to share the host xtables lock and to read
+          kernel modules used by conntrack/iptables.
+    hostPath:
+      allowedValues:
+        - path: /run/xtables.lock
+          readOnly: false
+          metadata:
+            description: Host xtables lock used to serialize iptables updates.
+        - path: /lib/modules
+          readOnly: true
+          metadata:
+            description: Host kernel modules used for iptables/conntrack operations.
+{{- end }}

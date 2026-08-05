@@ -25,7 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 )
 
 var (

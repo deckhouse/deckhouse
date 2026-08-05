@@ -42,10 +42,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 

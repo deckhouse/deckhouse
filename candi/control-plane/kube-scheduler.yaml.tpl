@@ -11,14 +11,14 @@
   {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
 {{- end }}
+{{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceTaints=true" -}}
+{{- end }}
 {{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAPartitionableDevices=true" -}}
 {{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
-{{- end }}
-{{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
-  {{- $baseFeatureGates = append $baseFeatureGates "AnonymousAuthConfigurableEndpoints=true" -}}
 {{- end }}
 {{- $schedulerFeatureGates := $baseFeatureGates -}}
 {{- if hasKey . "allowedFeatureGates" -}}

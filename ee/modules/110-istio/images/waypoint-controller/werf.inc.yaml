@@ -12,7 +12,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 git:
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
     to: /src

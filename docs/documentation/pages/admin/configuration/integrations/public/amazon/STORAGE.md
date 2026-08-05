@@ -137,6 +137,12 @@ kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uu
 To get the `prefix`, use the following command:
 
 ```shell
-kubectl -n kube-system get secret d8-cluster-configuration -o json | \
+d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+```
+
+If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of ClusterConfiguration (the prefix has moved to the ModuleConfig `global`):
+
+```shell
+d8 k -n kube-system get secret d8-cluster-configuration -o json | \
   jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
 ```
