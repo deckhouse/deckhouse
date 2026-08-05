@@ -23,6 +23,7 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -33,10 +34,12 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module/status"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -68,6 +71,9 @@ func RegisterController(
 		logger:  logger.Named(controllerName),
 	}
 
+	r.status = status.NewService(r.client, r.manager.GetStatus, r.logger)
+	r.status.Start(context.Background(), r.manager.GetModuleStatusQueue())
+
 	if err := ctrl.NewControllerManagedBy(runtime).
 		Named(controllerName).
 		For(&v1alpha2.Module{}).
@@ -88,6 +94,7 @@ type reconciler struct {
 	init    *sync.WaitGroup
 	client  client.Client
 	manager packageManager
+	status  *status.Service
 	logger  *log.Logger
 }
 
@@ -96,6 +103,8 @@ type packageManager interface {
 	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
 	UpdateModule(repo registry.Remote, module packageruntime.Module, force bool)
 	RemoveModule(name string)
+	GetStatus(name string) packagestatus.Status
+	GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string]
 }
 
 // Reconcile dispatches the module to the delete or the create/update handler.
