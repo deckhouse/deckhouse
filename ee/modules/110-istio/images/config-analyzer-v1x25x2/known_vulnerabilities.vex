@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-e270c5151609ebc66df9e4051c0dcf4b3f85b87ced1468e2d4241a0d6ed88b55",
+  "@id": "merged-vex-cf1ef4435e187633710e8124251aa489b055dd1c84d1201e6e326c77e0cac6b5",
   "author": "Deckhouse <contact@deckhouse.io>",
   "version": 1,
   "statements": [
@@ -16,8 +16,8 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 concerns golang.org/x/crypto/openpgp, which is unmaintained and unsafe by design. This component does not import or execute the openpgp package; golang.org/x/crypto is pulled in transitively for other subpackages. Exploitation of openpgp via this binary is not available.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
+      "timestamp": "2026-08-05T09:40:47.000000000Z"
     }
   ],
-  "timestamp": "2026-07-24T12:00:00Z"
+  "timestamp": "2026-08-05T09:40:47Z"
 }

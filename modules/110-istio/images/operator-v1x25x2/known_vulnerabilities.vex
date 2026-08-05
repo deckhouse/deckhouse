@@ -46,34 +46,6 @@
       "impact_statement": "oras-go tarball hardlink path issues (CVE-2026-50163). The operator does not extract untrusted OCI artifacts with oras file store in the vulnerable way; oras-go is transitive and the vulnerable path is unused.",
       "timestamp": "2026-07-24T12:00:00.000000000Z"
     },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-48978"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/oras.land/oras-go/v2@v2.6.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "oras-go realm/TLS downgrade information disclosure (CVE-2026-48978). The operator does not authenticate to untrusted registries via the vulnerable oras realm handling path.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "GHSA-vh4v-2xq2-g5cg"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/oras.land/oras-go/v2@v2.6.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "ORAS Go credential forwarding across registry redirects (GHSA-vh4v-2xq2-g5cg). Fixed in oras-go v2.6.1 for related issues; residual advisory does not apply to operator execute paths that do not follow untrusted registry redirects with credentials.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    }
   ],
   "timestamp": "2026-07-24T12:00:00Z"
 }
