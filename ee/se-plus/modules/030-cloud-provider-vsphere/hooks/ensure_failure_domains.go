@@ -25,10 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-
 	v1 "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/hooks/internal/v1"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 // CAPV VSphereFailureDomain and VSphereDeploymentZone are created once per zone with
