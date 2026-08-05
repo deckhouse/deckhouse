@@ -19,7 +19,6 @@ import (
 	"github.com/yandex-cloud/go-sdk/iamkey"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
@@ -75,12 +74,8 @@ var (
 		_, err := iamkey.ReadFromJSONBytes([]byte(data))
 		return err
 	}
-	CredentialsValidator = &cpval.CombinedCredentialValidator{
-		ValidatorMap: map[cpapi.AuthScheme]cpval.CredentialsValidator{
-			cpapi.AuthSchemeServiceAccount: &cpval.ServiceAccountValidator{
-				ValidateContentFunc: ValidateServiceAccountFunc,
-			},
-			cpapi.AuthSchemeAPIToken: &cpval.APITokenValidator{},
-		},
+	CredentialsValidator = &cpval.ServiceAccountValidator{
+		ValidateContentFunc: ValidateServiceAccountFunc,
 	}
+	ExporterCredentialsValidator = &cpval.APITokenValidator{}
 )
