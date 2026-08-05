@@ -99,6 +99,6 @@ roleRef:
   kind: ClusterRole
   name: cluster-admin
 subjects:
-- kind: User
+- kind: ServiceAccount
   name: deckhouse
-  apiGroup: rbac.authorization.k8s.io
+  namespace: d8-system

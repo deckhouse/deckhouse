@@ -177,16 +177,6 @@ func getFileSpec(kind File, opt *options) (*fileSpec, error) {
 			CAKey:               opt.CertProvider.CAKey(),
 			EncryptionAlgorithm: opt.EncryptionAlgorithm,
 		}, nil
-	case Deckhouse:
-		return &fileSpec{
-			ClusterName:         opt.ClusterName,
-			APIServer:           opt.ControlPlaneEndpoint,
-			ClientName:          "deckhouse",
-			ClientCertNotAfter:  opt.CertProvider.NotAfter(),
-			CACert:              opt.CertProvider.CACert(),
-			CAKey:               opt.CertProvider.CAKey(),
-			EncryptionAlgorithm: opt.EncryptionAlgorithm,
-		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported kind %s", kind)
 	}

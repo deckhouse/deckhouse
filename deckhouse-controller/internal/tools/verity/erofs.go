@@ -26,6 +26,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 const (
@@ -120,8 +122,13 @@ func CreateImageByTar(ctx context.Context, rc io.ReadCloser, imagePath string) e
 	return nil
 }
 
-// IsSupported scans /proc/filesystems for erofs type, it returns whether erofs is supported
+// IsSupported scans /proc/filesystems for erofs type, it returns whether erofs is supported.
+// /proc/filesystems describes the node kernel, not what this pod may do with it, so the gate lets a pod without device-mapper access opt out.
 func IsSupported() bool {
+	if app.VerityDisabled() {
+		return false
+	}
+
 	content, err := os.ReadFile("/proc/filesystems")
 	if err != nil {
 		return false
