@@ -16,8 +16,22 @@ limitations under the License.
 
 package nodebootstrap
 
+import "time"
+
 const (
 	controllerName = "node-bootstrap"
+
+	// ownerWaitInterval is how long to wait before looking again for the owner
+	// the MachineSet is about to set, or the node-group label CAPI is about to
+	// copy. Both arrive within seconds; the requeue is only a backstop for the
+	// event that carries them going missing.
+	ownerWaitInterval = 10 * time.Second
+
+	// bootstrapRefreshInterval is how often the userdata of a machine that has
+	// not registered a node yet is rendered again. The bootstrap token baked
+	// into it lives four hours and is rotated about hourly, so a machine whose
+	// VM is created late must not keep the copy it was first given.
+	bootstrapRefreshInterval = 10 * time.Minute
 
 	// kubeSystemNS holds the per-group bootstrap-token secrets.
 	kubeSystemNS = "kube-system"
@@ -50,7 +64,11 @@ const (
 	nodeBootstrapConfigKind = "NodeBootstrapConfig"
 
 	// conditionDataSecretAvailable reports whether the bootstrap userdata is
-	// rendered and ready for the infrastructure provider to consume.
+	// rendered and ready for the infrastructure provider to consume, and why not
+	// when it is not.
 	conditionDataSecretAvailable = "DataSecretAvailable"
 	reasonRendered               = "Rendered"
+	reasonWaitingForOwner        = "WaitingForOwnerMachine"
+	reasonNodeGroupUnusable      = "NodeGroupUnusable"
+	reasonRenderFailed           = "RenderFailed"
 )

@@ -17,6 +17,7 @@ package immutable
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -35,50 +36,86 @@ const (
 	cniExtension        = "kubernetes-cni"
 	kubeletExtension    = "kubelet"
 
+	// platformExtensionRequestedBy records who asked for a system extension. It
+	// names the module that wants it, not the process that wrote the file, which
+	// is why it stays "node-manager" when node-controller re-renders this node —
+	// see internal/controller/nodeconfig/constants.go.
+	platformExtensionRequestedBy = "node-manager"
+
 	// registryPackagesDigestsKey is the images_digests.json module the sysext
 	// images are built in.
 	registryPackagesDigestsKey = "registrypackages"
 
 	// commonDigestsKey and pauseImageName locate the sandbox image. The
-	// registry.k8s.io default of the NodeConfig CRD is unreachable from a node
+	// registry.k8s.io default of the nodeConfig CRD is unreachable from a node
 	// that only talks to the Deckhouse registry.
 	commonDigestsKey = "common"
 	pauseImageName   = "pause"
 
-	// defaultOSImage mirrors the pinned image node-controller renders for
-	// day-2 nodes (internal/controller/nodeconfig/constants.go).
-	defaultOSImage = "registry.deckhouse.io/deckhouse/olcedar:v0.1"
+	// osImageNameAndTag is the olcedar image the node boots from, pinned to a
+	// known-good build (a tag, not an @digest) the way node-controller pins it
+	// for day-2 nodes (internal/controller/nodeconfig/constants.go).
+	//
+	// Only the name and the tag are constant: the repository in front of them
+	// comes from the configured registry, the same source spec.registry is built
+	// from. A private or air-gapped registry is the normal shape here, and a node
+	// that cannot pull its own OS image has no cluster yet in which to be fixed.
+	osImageNameAndTag = "olcedar:v0.1"
 
-	// Defaults mirroring the NodeConfig CRD field defaults. They are applied
+	// Defaults mirroring the nodeConfig CRD field defaults. They are applied
 	// here because the bootstrap payload is marshalled to a file instead of
 	// being created through the API server, where CRD defaulting runs.
-	defaultMaxPods                = 110
 	defaultContainerLogMaxSize    = "50Mi"
 	defaultContainerLogMaxFiles   = 4
 	defaultMaxConcurrentDownloads = 3
+
+	// maxPods is a function of how many addresses a node's slice of the pod
+	// subnet holds, and these four values are the ones bashible computes in
+	// candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl. A first
+	// master that used the flat CRD default would advertise 120 while every
+	// bashible node in a /22 cluster advertises 500, and the scheduler believes
+	// both.
+	maxPodsPodSubnetPrefix24 = 120
+	maxPodsPodSubnetPrefix23 = 250
+	maxPodsPodSubnetPrefix22 = 500
+	maxPodsPodSubnetPrefix21 = 1000
+
+	// maxPodsCeiling is what the nodeConfig schema accepts (spec.Kubelet.maxPods,
+	// maximum: 500). The bound comes from the agent's schema, not from bashible,
+	// and node-controller clamps the same ladder to it — so a day-2 render of a
+	// node booted from this payload writes the number that is already there
+	// instead of a spec diff on a freshly bootstrapped control-plane node.
+	maxPodsCeiling = 500
+
+	// defaultPodSubnetNodeCIDRPrefix is what bashible falls back to when the
+	// cluster configuration names no prefix.
+	defaultPodSubnetNodeCIDRPrefix = 24
+
+	// APIServerPort is where a control-plane node's own kube-apiserver listens.
+	APIServerPort = 6443
 
 	nodeGroupLabel = "node.deckhouse.io/group"
 	nodeTypeLabel  = "node.deckhouse.io/type"
 	cgroupLabel    = "node.deckhouse.io/cgroup"
 )
 
-// NodeConfigInput is everything BuildNodeConfig needs.
-type NodeConfigInput struct {
+// nodeConfigInput is everything buildNodeConfig needs.
+type nodeConfigInput struct {
 	// NodeName is the name the first master registers under.
 	NodeName string
 	// MetaConfig is the parsed cluster configuration.
 	MetaConfig *config.MetaConfig
 }
 
-// BuildNodeConfig renders the NodeConfig the first control-plane node boots
+// buildNodeConfig renders the nodeConfig the first control-plane node boots
 // with. It differs from a worker's config in a few places that only hold for
 // the zeroth master; each of them is commented at its field.
-func BuildNodeConfig(ctx context.Context, in NodeConfigInput) (*NodeConfig, error) {
+func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, error) {
 	if in.NodeName == "" {
-		return nil, fmt.Errorf("build node config: node name is empty")
+		return nil, errors.New("build node config: node name is empty")
 	}
 	if in.MetaConfig == nil {
-		return nil, fmt.Errorf("build node config: meta config is nil")
+		return nil, errors.New("build node config: meta config is nil")
 	}
 
 	kubernetesVersion, err := kubernetesVersion(in.MetaConfig)
@@ -98,21 +135,29 @@ func BuildNodeConfig(ctx context.Context, in NodeConfigInput) (*NodeConfig, erro
 		return nil, err
 	}
 
-	sandboxImage, err := sandboxImage(in.MetaConfig, images)
+	pauseImage, err := sandboxImage(registry, images)
 	if err != nil {
 		return nil, err
 	}
 
-	systemDisk := MasterSystemDisk()
+	podsPerNode, err := maxPods(in.MetaConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	serverTLSBootstrap := false
 
-	spec := NodeSpec{
-		NodeName:   in.NodeName,
-		OSImage:    defaultOSImage,
-		Storage:    systemDisk,
+	spec := nodeSpec{
+		NodeName: in.NodeName,
+		OSImage:  registry.Address + registry.Path + "/" + osImageNameAndTag,
+		// The installer states nothing about the disk: it renders this document
+		// before the machine exists, and the only facts it would have are the
+		// sizes it asked for. A size threshold matches whatever falls under it,
+		// the cloud-init image included, so the machine is left to pick the disk
+		// that already carries its layout.
+		Storage:    disk{},
 		Extensions: extensions,
-		Kernel: Kernel{
+		Kernel: kernel{
 			Sysctl: map[string]string{
 				"net.ipv4.ip_forward": "1",
 				"vm.max_map_count":    "262144",
@@ -121,16 +166,16 @@ func BuildNodeConfig(ctx context.Context, in NodeConfigInput) (*NodeConfig, erro
 				"kernel.panic_on_oops": "1",
 			},
 		},
-		Network: Network{
+		Network: network{
 			Hostname:   in.NodeName,
-			Interfaces: []NetworkInterface{{Name: "eth0", DHCP: true}},
+			Interfaces: []networkInterface{{Name: "eth0", DHCP: true}},
 		},
-		Kubelet: Kubelet{
+		Kubelet: kubelet{
 			// kubelet's feature gates depend on it; without it a DRA workload runs
 			// everywhere in the cluster except on this node.
 			KubernetesVersion:    kubernetesVersion,
 			ClusterDomain:        in.MetaConfig.ClusterDomain,
-			MaxPods:              defaultMaxPods,
+			MaxPods:              podsPerNode,
 			ContainerLogMaxSize:  defaultContainerLogMaxSize,
 			ContainerLogMaxFiles: defaultContainerLogMaxFiles,
 			// The node is CAPI-backed, so the cloud-controller-manager has to
@@ -141,7 +186,7 @@ func BuildNodeConfig(ctx context.Context, in NodeConfigInput) (*NodeConfig, erro
 			// means the node never joins. The control-plane role label and its
 			// taint are added by the node itself once its apiserver answers.
 			NodeLabels: map[string]string{
-				nodeGroupLabel: MasterNodeGroupName,
+				nodeGroupLabel: masterNodeGroupName,
 				nodeTypeLabel:  "CloudPermanent",
 				cgroupLabel:    "cgroup2fs",
 			},
@@ -149,17 +194,17 @@ func BuildNodeConfig(ctx context.Context, in NodeConfigInput) (*NodeConfig, erro
 			// and kubelet blocks on it. bashible turns it off on the first
 			// master for the same reason.
 			ServerTLSBootstrap:  &serverTLSBootstrap,
-			ResourceReservation: &ResourceReservation{Mode: "Auto"},
+			ResourceReservation: &resourceReservation{Mode: "Auto"},
 		},
-		ContainerRuntime: ContainerRuntime{
-			SandboxImage:           sandboxImage,
+		ContainerRuntime: containerRuntime{
+			SandboxImage:           pauseImage,
 			MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
 		},
 		// The zeroth master is its own apiserver and its address is unknown
 		// while the payload is being built, so the endpoint stays a
 		// placeholder; the node expands it from its own address on load.
-		APIServerEndpoints: []string{"https://$MY_IP:6443"},
-		UpdatePolicy:       UpdatePolicy{Mode: "Automatic"},
+		APIServerEndpoints: []string{fmt.Sprintf("https://$MY_IP:%d", APIServerPort)},
+		UpdatePolicy:       updatePolicy{Mode: "Automatic"},
 		Registry:           registry,
 	}
 
@@ -168,39 +213,70 @@ func BuildNodeConfig(ctx context.Context, in NodeConfigInput) (*NodeConfig, erro
 	}
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(
-		"Built NodeConfig for %s: Kubernetes %s, %d system extensions", in.NodeName, kubernetesVersion, len(extensions),
+		"Built nodeConfig for %s: Kubernetes %s, %d system extensions", in.NodeName, kubernetesVersion, len(extensions),
 	))
 
-	return &NodeConfig{
-		APIVersion: PayloadAPIVersion,
-		Kind:       NodeConfigKind,
-		Metadata: ObjectMeta{
+	return &nodeConfig{
+		APIVersion: payloadAPIVersion,
+		Kind:       nodeConfigKind,
+		Metadata: objectMeta{
 			Name:   in.NodeName,
-			Labels: map[string]string{nodeGroupLabel: MasterNodeGroupName},
+			Labels: map[string]string{nodeGroupLabel: masterNodeGroupName},
 		},
 		Spec: spec,
 	}, nil
 }
 
-// MasterSystemDisk says which disk the OS is installed on: it does not.
-//
-// The document is rendered before the machine exists, so the only disk facts
-// available here are the sizes that were asked for — and a size threshold
-// matches whatever falls under it, the cloud-init image included. The machine
-// can answer this and the installer cannot, so the field is left empty and the
-// node picks the disk already carrying its layout.
-func MasterSystemDisk() Disk {
-	return Disk{}
-}
-
 // SysextDigests resolves the digests of the three system extensions an
 // immutable node runs from the digests baked into the installer image.
-func SysextDigests(metaConfig *config.MetaConfig) (map[string]string, error) {
+//
+// Pure; the context is here for the package's uniform exported signature.
+func SysextDigests(_ context.Context, metaConfig *config.MetaConfig) (map[string]string, error) {
 	version, err := kubernetesVersion(metaConfig)
 	if err != nil {
 		return nil, err
 	}
 	return sysextDigests(metaConfig.Images.ConvertToMap(), version)
+}
+
+// maxPods mirrors the number bashible gives kubelet
+// (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl): a node's pod
+// CIDR is one /podSubnetNodeCIDRPrefix slice of the pod subnet, so a wider slice
+// holds more pods. The whole cluster has to agree on it — the number is what the
+// scheduler believes a node's capacity to be, and a master that disagrees with
+// the fleet skews placement for everyone.
+//
+// An unreadable or unparseable prefix is not an error here: bashible defaults it
+// the same way, and clusterParams already refuses an empty one before any of
+// this is rendered.
+//
+// The result is capped at what the nodeConfig schema accepts, which node-controller
+// caps it at too. On a /21 cluster that leaves this node at 500 where a bashible
+// node runs 1000 — a bound the agent imposes, and one only its owners can lift.
+func maxPods(metaConfig *config.MetaConfig) (int, error) {
+	clusterConfig, err := metaConfig.ClusterConfigMap()
+	if err != nil {
+		return 0, fmt.Errorf("read the cluster configuration: %w", err)
+	}
+
+	prefix := defaultPodSubnetNodeCIDRPrefix
+	if raw, ok := clusterConfig["podSubnetNodeCIDRPrefix"].(string); ok {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			prefix = parsed
+		}
+	}
+
+	bracket := maxPodsPodSubnetPrefix21
+	switch {
+	case prefix >= 24:
+		bracket = maxPodsPodSubnetPrefix24
+	case prefix == 23:
+		bracket = maxPodsPodSubnetPrefix23
+	case prefix == 22:
+		bracket = maxPodsPodSubnetPrefix22
+	}
+
+	return min(bracket, maxPodsCeiling), nil
 }
 
 // kubernetesVersion is the cluster's Kubernetes minor version with "Automatic"
@@ -213,12 +289,12 @@ func kubernetesVersion(metaConfig *config.MetaConfig) (string, error) {
 
 	version, _ := clusterConfig["kubernetesVersion"].(string)
 	if version == "" {
-		return "", fmt.Errorf("kubernetesVersion is empty in the cluster configuration")
+		return "", errors.New("kubernetesVersion is empty in the cluster configuration")
 	}
 	return version, nil
 }
 
-func sysextExtensions(images map[string]any, kubernetesVersion string) ([]Extension, error) {
+func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extension, error) {
 	digests, err := sysextDigests(images, kubernetesVersion)
 	if err != nil {
 		return nil, err
@@ -230,12 +306,12 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]Extens
 	}
 	sort.Strings(names)
 
-	extensions := make([]Extension, 0, len(names))
+	extensions := make([]extension, 0, len(names))
 	for _, name := range names {
-		extensions = append(extensions, Extension{
+		extensions = append(extensions, extension{
 			Name:        name,
 			Digest:      digests[name],
-			RequestedBy: "dhctl",
+			RequestedBy: platformExtensionRequestedBy,
 		})
 	}
 	return extensions, nil
@@ -252,10 +328,19 @@ func sysextDigests(images map[string]any, kubernetesVersion string) (map[string]
 
 	minor := strings.ReplaceAll(kubernetesVersion, ".", "")
 
+	containerd, err := soleDigest(packages, "containerdSysext")
+	if err != nil {
+		return nil, err
+	}
+	cni, err := soleDigest(packages, "kubernetesCniSysext")
+	if err != nil {
+		return nil, err
+	}
+
 	digests := map[string]string{
-		containerdExtension: newestDigest(packages, "containerdSysext"),
-		cniExtension:        newestDigest(packages, "kubernetesCniSysext"),
-		kubeletExtension:    newestDigest(packages, "kubeletSysext"+minor),
+		containerdExtension: containerd,
+		cniExtension:        cni,
+		kubeletExtension:    newestPatchDigest(packages, "kubeletSysext"+minor),
 	}
 
 	for _, name := range []string{containerdExtension, cniExtension, kubeletExtension} {
@@ -270,32 +355,82 @@ func sysextDigests(images map[string]any, kubernetesVersion string) (map[string]
 	return digests, nil
 }
 
-// newestDigest returns the digest of the newest image with the given prefix.
-// The version suffix is compared numerically: once a component reaches two
-// digits a string compare picks the wrong image ("kubeletSysext1356" sorts
-// after "kubeletSysext13510", i.e. patch 6 over patch 10).
-func newestDigest(packages map[string]string, prefix string) string {
-	best, bestVersion := "", -1
+// soleDigest returns the digest of the one image with the given prefix.
+//
+// It does not pick a newest, because from these names no newest can be told:
+// the version reaches the digest map with its separators already stripped by
+// the camelcase function, so "kubernetesCniSysext1610" is 1.6.10, 1.61.0 and
+// 16.1.0 at once and no comparison on it is right for all three. The installer
+// image builds exactly one containerd and one CNI system extension, so the
+// answer here is the single match; a second one means that stopped being true,
+// and saying so is better than picking one of them by a rule that cannot be
+// correct.
+func soleDigest(packages map[string]string, prefix string) (string, error) {
+	found := make([]string, 0, 1)
+	for name := range packages {
+		suffix, ok := strings.CutPrefix(name, prefix)
+		if !ok {
+			continue
+		}
+		// Everything after the prefix is the version, so a non-numeric tail is
+		// another image whose name merely starts the same way.
+		if _, err := strconv.Atoi(suffix); err != nil {
+			continue
+		}
+		found = append(found, name)
+	}
+
+	switch len(found) {
+	case 0:
+		return "", nil
+	case 1:
+		return packages[found[0]], nil
+	default:
+		sort.Strings(found)
+		return "", fmt.Errorf(
+			"the installer image carries %d %q system extensions (%s): their names do not say which one is newer. "+
+				"That is a defect in the installer image, which is built to ship exactly one of each; "+
+				"nothing in the cluster configuration causes it and nothing in it can work around it",
+			len(found), prefix, strings.Join(found, ", "),
+		)
+	}
+}
+
+// newestPatchDigest returns the digest of the newest image with the given
+// prefix, which already pins everything but the patch number — so the suffix is
+// one component and comparing it numerically is exact. A string compare would
+// not be: "kubeletSysext1356" sorts after "kubeletSysext13510", i.e. patch 6
+// over patch 10.
+func newestPatchDigest(packages map[string]string, prefix string) string {
+	best, bestPatch := "", -1
 	for name, digest := range packages {
 		suffix, ok := strings.CutPrefix(name, prefix)
 		if !ok {
 			continue
 		}
-		version, err := strconv.Atoi(suffix)
+		patch, err := strconv.Atoi(suffix)
 		if err != nil {
 			continue
 		}
-		if version > bestVersion {
-			best, bestVersion = digest, version
+		if patch > bestPatch {
+			best, bestPatch = digest, patch
 		}
 	}
 	return best
 }
 
 // sandboxImage pins the pause image to the cluster's own registry: the
-// registry.k8s.io default of the NodeConfig CRD is unreachable from a node that
+// registry.k8s.io default of the nodeConfig CRD is unreachable from a node that
 // only talks to the Deckhouse registry.
-func sandboxImage(metaConfig *config.MetaConfig, images map[string]any) (string, error) {
+//
+// It is handed the registry the document already carries rather than reading
+// imagesRepo again, so the reference and spec.registry cannot disagree. The raw
+// value is the wrong input: the InitConfiguration pattern admits a trailing
+// slash, and "registry.example.com/deckhouse/ce/@sha256:…" is not a reference
+// containerd can pull — the first master would come up unable to create a single
+// pod sandbox. node-controller builds the day-2 reference from the normalized
+// pair too.
+func sandboxImage(registry *registrySpec, images map[string]any) (string, error) {
 	common, err := digestGroup(images, commonDigestsKey)
 	if err != nil {
 		return "", err
@@ -306,11 +441,6 @@ func sandboxImage(metaConfig *config.MetaConfig, images map[string]any) (string,
 		return "", fmt.Errorf("the installer image carries no %q.%q digest", commonDigestsKey, pauseImageName)
 	}
 
-	imagesRepo := metaConfig.Registry.Settings.RemoteData.ImagesRepo
-	if imagesRepo == "" {
-		return "", fmt.Errorf("registry imagesRepo is empty")
-	}
-
 	// Every Deckhouse image lives in ONE repository and is addressed by digest
 	// alone — the group a digest is filed under ("common", "controlPlaneManager")
 	// is a key in the digest map, not a path segment. Appending it yields a
@@ -318,13 +448,13 @@ func sandboxImage(metaConfig *config.MetaConfig, images map[string]any) (string,
 	// far away from here: as a pod sandbox that cannot be created. The control
 	// plane templates build their references the same way (address + path +
 	// "@" + digest, see candi/control-plane/kube-apiserver.yaml.tpl:222).
-	return fmt.Sprintf("%s@%s", imagesRepo, digest), nil
+	return registry.Address + registry.Path + "@" + digest, nil
 }
 
 // nodeRegistry gives the node direct registry access: it pulls the
 // control-plane images and the system extensions itself, with no in-cluster
 // registry-packages-proxy to go through during bootstrap.
-func nodeRegistry(metaConfig *config.MetaConfig) (*Registry, error) {
+func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
 	settings := metaConfig.Registry.Settings
 	if settings.Mode != constant.ModeUnmanaged {
 		return nil, fmt.Errorf("registry mode %q is not supported for an immutable master, use %q", settings.Mode, constant.ModeUnmanaged)
@@ -332,10 +462,10 @@ func nodeRegistry(metaConfig *config.MetaConfig) (*Registry, error) {
 
 	address, path := settings.RemoteData.AddressAndPath()
 	if address == "" {
-		return nil, fmt.Errorf("registry address is empty")
+		return nil, errors.New("registry address is empty")
 	}
 
-	return &Registry{
+	return &registrySpec{
 		Address: address,
 		Path:    path,
 		Scheme:  string(settings.RemoteData.Scheme),

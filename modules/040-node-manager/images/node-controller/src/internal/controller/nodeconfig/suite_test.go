@@ -45,6 +45,11 @@ var (
 	suiteCancel context.CancelFunc
 )
 
+// apiReader reads straight from the API server, the way the running controller's
+// uncached reader does. Specs that build a reconciler of their own use it so
+// that reconciler reads what the cluster actually holds.
+var apiReader client.Reader
+
 // TestNodeConfigControllerEnvtest runs the envtest-backed integration suite: the
 // real controller runs inside a manager against a real kube-apiserver, so what
 // is asserted is the NodeConfig objects the cluster ends up with for the nodes
@@ -88,6 +93,7 @@ var _ = BeforeSuite(func() {
 	By("starting the manager with the node-config and node-operation controllers")
 	mgr, err := testenv.NewManager(cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
+	apiReader = mgr.GetAPIReader()
 
 	go func() {
 		defer GinkgoRecover()

@@ -29,6 +29,7 @@ package nodeoperation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -45,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
@@ -57,23 +59,16 @@ func init() {
 type Reconciler struct {
 	register.Base
 
-	// APIReader reads past the manager's cache. Deciding whether to create a
+	// apiReader reads past the manager's cache. Deciding whether to create a
 	// child operation from a cached list creates a second one whenever the
 	// cache has not caught up with the first.
-	APIReader client.Reader
+	apiReader client.Reader
 }
 
 // Setup wires the uncached reader.
 func (r *Reconciler) Setup(mgr ctrl.Manager) error {
-	r.APIReader = mgr.GetAPIReader()
+	r.apiReader = mgr.GetAPIReader()
 	return nil
-}
-
-func (r *Reconciler) reader() client.Reader {
-	if r.APIReader != nil {
-		return r.APIReader
-	}
-	return r.Client
 }
 
 // SetupWatches follows what an operation waits on: the node it is draining, and
@@ -82,7 +77,7 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// A child finishing is what lets its parent hand the node over.
 	w.Watches(&v1alpha1.NodeOperation{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
 		for _, owner := range obj.GetOwnerReferences() {
-			if owner.Kind == "NodeOperation" {
+			if owner.Kind == nodeOperationKind {
 				return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: owner.Name}}}
 			}
 		}
@@ -92,6 +87,7 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 		ops := &v1alpha1.NodeOperationList{}
 		if err := r.Client.List(ctx, ops); err != nil {
+			log.FromContext(ctx).Error(err, "list the operations of a node that changed", "node", obj.GetName())
 			return nil
 		}
 		var requests []reconcile.Request
@@ -137,23 +133,58 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	if err := r.ownedByNode(ctx, op, node); err != nil {
+	if err := r.adopt(ctx, op, node); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	if op.Status.Phase == "" {
+		// Recorded before anything touches the node, so releasing it later gives
+		// back the state the operator left it in rather than always making it
+		// schedulable.
+		if err := r.rememberCordon(ctx, op, node); err != nil {
+			return ctrl.Result{}, err
+		}
 		if err := r.setPhase(ctx, op, v1alpha1.NodeOperationPending, "Queued",
 			"The operation is queued", logger); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
+	// Every stretch of the operation is bounded, not only the one the node owns.
+	// A Drain whose eviction never finishes would otherwise hold its parent
+	// Pending forever, and with it the node out of the scheduler and the group's
+	// rollout waiting on a node that is never going to report.
+	if deadline := hardDeadline(op); time.Now().After(deadline) {
+		reason, message := timedOut(op, deadline)
+		if err := r.fail(ctx, op, reason, message, logger); err != nil {
+			return ctrl.Result{}, err
+		}
+		// Announced only once the phase is actually written: an event for a
+		// transition a conflict rolled back would be a lie, and the retry would
+		// emit it again.
+		r.Recorder.Event(op, corev1.EventTypeWarning, reason, message)
+		return ctrl.Result{}, nil
+	}
+
 	// A Drain is the eviction itself: it asks the draining controller to empty
 	// the node and is done once the workload is gone. The node stays
 	// unschedulable until someone says otherwise.
 	if op.Spec.Type == v1alpha1.NodeOperationDrain {
-		if !drained(node) {
-			return ctrl.Result{}, r.startDrain(ctx, node, logger)
+		// The request is re-issued whenever the node carries no drain of this
+		// operation's, not only the first time: an eviction whose markers are
+		// removed by anything else would otherwise be waited on forever. Asking
+		// again does not buy more time — the deadline was pinned the first time.
+		if !drainRequested(op) || idle(op, node) {
+			if err := r.startDrain(ctx, op, node, logger); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: waitPollInterval}, r.recordDrainRequested(ctx, op, node)
+		}
+		// The Node event carrying the marker is the normal wake-up; one dropped
+		// event must not strand the operation until the manager's next full
+		// resync, hence the requeue.
+		if !drained(op, node) {
+			return ctrl.Result{RequeueAfter: waitPollInterval}, nil
 		}
 		return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationCompleted, "Drained",
 			"The workload has left the node, which stays unschedulable", logger)
@@ -165,8 +196,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// it is carried out by the one piece of code that knows how.
 	if !skipDrain(op) {
 		done, err := r.ensureDrained(ctx, op, logger)
-		if err != nil || !done {
+		if err != nil {
 			return ctrl.Result{}, err
+		}
+		if !done {
+			return ctrl.Result{RequeueAfter: waitPollInterval}, nil
 		}
 	}
 
@@ -177,38 +211,85 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			"The node may carry the operation out", logger)
 	}
 
-	// The node has had it for a while and said nothing. Something is wrong with
-	// the node, and leaving the operation open would keep it out of the
-	// scheduler forever, with no sign that nothing is coming.
-	waited := r.since(op)
-	if waited >= operationTimeout {
-		return ctrl.Result{}, r.fail(ctx, op, "NodeTimedOut",
-			fmt.Sprintf("the node did not report back within %s", operationTimeout), logger)
-	}
 	// Requeue when the deadline is actually due, not a whole period later:
 	// requeuing a full operationTimeout here would only time the node out after
 	// roughly two periods.
-	return ctrl.Result{RequeueAfter: operationTimeout - waited}, nil
+	return ctrl.Result{RequeueAfter: time.Until(hardDeadline(op))}, nil
 }
 
-// since is how long the operation has been waiting for the node.
-func (r *Reconciler) since(op *v1alpha1.NodeOperation) time.Duration {
-	if op.Status.StartedAt == nil {
-		return 0
+// hardDeadline is the moment this operation runs out of time.
+//
+// It is read off the operation alone and never recomputed from the cluster,
+// because everything it bounds pinned its own copy when it started: the
+// draining controller fixes the group's drain timeout into a context when the
+// drain begins, and the node was handed the work at a moment already recorded.
+// Deriving the bound again from live state lets a later edit to the NodeGroup —
+// or its deletion, or the loss of the node's group label — cut short a drain
+// that is still legitimately running, and abandoning a running drain is what
+// leaves its result on a node no operation is waiting for.
+func hardDeadline(op *v1alpha1.NodeOperation) time.Time {
+	switch {
+	case op.Status.StartedAt != nil:
+		// The node has the work and owes an answer.
+		return op.Status.StartedAt.Time.Add(operationTimeout)
+	case op.Status.DrainDeadline != nil:
+		// Waiting for an eviction that was given until then, plus the margin
+		// every stretch gets for the plumbing around it.
+		return op.Status.DrainDeadline.Time.Add(operationTimeout)
+	default:
+		return op.CreationTimestamp.Time.Add(operationTimeout)
 	}
-	return time.Since(op.Status.StartedAt.Time)
+}
+
+// drainTimeout is the bound the draining controller will use for this node's
+// group, resolved the way it resolves it. Read once, when the eviction is asked
+// for, and pinned from there on.
+func (r *Reconciler) drainTimeout(ctx context.Context, node *corev1.Node) time.Duration {
+	ngName := node.Labels[nodecommon.NodeGroupLabel]
+	if ngName == "" {
+		return defaultDrainTimeout
+	}
+	ng, err := nodecommon.GetNodeGroup(ctx, r.Client, ngName)
+	if err != nil {
+		log.FromContext(ctx).V(1).Info("could not read the group's drain timeout, using the default",
+			"nodeGroup", ngName, "default", defaultDrainTimeout, "error", err.Error())
+		return defaultDrainTimeout
+	}
+	return drainTimeoutOf(ng)
+}
+
+// drainTimeoutOf clamps as well as reads. The CRD holds
+// nodeDrainTimeoutSecond to a sane range, but an object stored before it did
+// still has to produce a usable bound: a value at the far end of the integer
+// range overflows the multiplication into a negative duration, which would put
+// the deadline before the drain began.
+func drainTimeoutOf(ng *v1.NodeGroup) time.Duration {
+	if ng.Spec.NodeDrainTimeoutSecond == nil {
+		return defaultDrainTimeout
+	}
+	seconds := int64(*ng.Spec.NodeDrainTimeoutSecond)
+	if seconds <= 0 {
+		return defaultDrainTimeout
+	}
+	if seconds > int64(maxDrainTimeout/time.Second) {
+		return maxDrainTimeout
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+// timedOut names what the operation was still waiting for when the deadline
+// passed, so the record says which node is holding the group up.
+func timedOut(op *v1alpha1.NodeOperation, deadline time.Time) (string, string) {
+	when := deadline.UTC().Format(time.RFC3339)
+	if op.Status.StartedAt != nil {
+		return "NodeTimedOut", fmt.Sprintf("node %s did not report back by %s", op.Spec.NodeName, when)
+	}
+	return "PreparationTimedOut", fmt.Sprintf("node %s was not prepared by %s: its workload has not finished leaving", op.Spec.NodeName, when)
 }
 
 func terminal(op *v1alpha1.NodeOperation) bool {
 	return op.Status.Phase == v1alpha1.NodeOperationCompleted || op.Status.Phase == v1alpha1.NodeOperationFailed
 }
-
-// retention is how long a finished operation is kept. It is the record of what
-// was done to a node, which is worth having while someone is still looking into
-// what happened, and worth nothing a day later — a cluster that reboots nodes
-// or rolls configs out produces one of these per node per change, so without a
-// limit the list only grows.
-const retention = 24 * time.Hour
 
 // collect deletes a finished operation once it is older than the retention, and
 // otherwise asks to be called again when it is. The parent takes its child
@@ -244,7 +325,7 @@ func (r *Reconciler) collect(ctx context.Context, op *v1alpha1.NodeOperation, lo
 // stampFinished records when a finished operation finished, for the operations
 // whose last phase was written by the node rather than by this controller.
 func (r *Reconciler) stampFinished(ctx context.Context, op *v1alpha1.NodeOperation) error {
-	patch := client.MergeFrom(op.DeepCopy())
+	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	now := metav1.Now()
 	op.Status.FinishedAt = &now
 	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
@@ -253,23 +334,91 @@ func (r *Reconciler) stampFinished(ctx context.Context, op *v1alpha1.NodeOperati
 	return nil
 }
 
-// ownedByNode makes the node the owner of an operation created for it, so that
-// a node leaving the cluster takes the operations addressed to it along.
-// Operations this controller creates already carry an owner; the ones an
-// operator writes by hand do not.
-func (r *Reconciler) ownedByNode(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node) error {
-	if len(op.OwnerReferences) > 0 {
+// rememberCordon records whether the node was out of the scheduler for a reason
+// of its own when the operation reached it. Without it, releasing the node
+// hard-codes it back to schedulable and quietly undoes a cordon an operator put
+// there by hand.
+//
+// When another operation already holds the node, the answer is the one that
+// operation recorded, not what the node says now: by then the node may be
+// carrying that operation's own cordon, and reading it live would hand it on as
+// the operator's — after which every operation in turn re-cordons a node nobody
+// asked to keep out of the scheduler. Copying the holder's answer instead makes
+// them all agree with whoever looked first.
+func (r *Reconciler) rememberCordon(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node) error {
+	if op.Status.NodeWasUnschedulable != nil {
+		return nil
+	}
+	recorded, err := r.cordonRecordedByHolder(ctx, op)
+	if err != nil {
+		return err
+	}
+	wasUnschedulable := node.Spec.Unschedulable
+	if recorded != nil {
+		wasUnschedulable = *recorded
+	}
+
+	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	op.Status.NodeWasUnschedulable = ptr.To(wasUnschedulable)
+	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
+		return fmt.Errorf("record how %s found the node: %w", op.Name, err)
+	}
+	return nil
+}
+
+// cordonRecordedByHolder returns what an operation that already holds this node
+// recorded about it, if there is one that has got that far. An operation that is
+// open but has not recorded yet has not cordoned anything either — it records
+// before it asks for its eviction — so in that case the node still tells the
+// truth and nil is the right answer.
+//
+// The read goes straight to the API server for the same reason drainOf's does: a
+// cached list that has not caught up reads as "nobody else is here".
+func (r *Reconciler) cordonRecordedByHolder(ctx context.Context, op *v1alpha1.NodeOperation) (*bool, error) {
+	others := &v1alpha1.NodeOperationList{}
+	if err := r.apiReader.List(ctx, others, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
+		return nil, fmt.Errorf("list the operations of %s: %w", op.Spec.NodeName, err)
+	}
+	for i := range others.Items {
+		other := &others.Items[i]
+		if other.UID == op.UID || terminal(other) {
+			continue
+		}
+		if other.Status.NodeWasUnschedulable != nil {
+			return other.Status.NodeWasUnschedulable, nil
+		}
+	}
+	return nil, nil
+}
+
+// adopt gives an operation the two pieces of metadata every operation needs: the
+// node as its owner, so a node leaving the cluster takes the operations
+// addressed to it along, and the node label, which is how one operation finds
+// the others on the same node.
+//
+// Operations this controller creates arrive with both. An operator's arrives
+// with neither, and an unlabelled operation is invisible to every sibling — so
+// the next operation would read that one's cordon as the operator's and leave
+// the node out of the scheduler for good.
+func (r *Reconciler) adopt(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node) error {
+	if len(op.OwnerReferences) > 0 && op.Labels[operationNodeLabel] == op.Spec.NodeName {
 		return nil
 	}
 	patch := client.MergeFrom(op.DeepCopy())
-	op.OwnerReferences = []metav1.OwnerReference{{
-		APIVersion: "v1",
-		Kind:       "Node",
-		Name:       node.Name,
-		UID:        node.UID,
-	}}
+	if op.Labels == nil {
+		op.Labels = map[string]string{}
+	}
+	op.Labels[operationNodeLabel] = op.Spec.NodeName
+	if len(op.OwnerReferences) == 0 {
+		op.OwnerReferences = []metav1.OwnerReference{{
+			APIVersion: "v1",
+			Kind:       "Node",
+			Name:       node.Name,
+			UID:        node.UID,
+		}}
+	}
 	if err := r.Client.Patch(ctx, op, patch); err != nil {
-		return fmt.Errorf("set the owner of %s: %w", op.Name, err)
+		return fmt.Errorf("adopt %s onto %s: %w", op.Name, node.Name, err)
 	}
 	return nil
 }
@@ -293,7 +442,7 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 				Labels:       map[string]string{operationNodeLabel: op.Spec.NodeName},
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion: v1alpha1.GroupVersion.String(),
-					Kind:       "NodeOperation",
+					Kind:       nodeOperationKind,
 					Name:       op.Name,
 					UID:        op.UID,
 					Controller: ptr.To(true),
@@ -318,6 +467,10 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 		return false, r.fail(ctx, op, "DrainFailed",
 			fmt.Sprintf("the workload could not be evicted, see NodeOperation %s", child.Name), logger)
 	default:
+		// The parent waits exactly as long as the eviction it is waiting for.
+		if child.Status.DrainDeadline != nil && !child.Status.DrainDeadline.Equal(op.Status.DrainDeadline) {
+			return false, r.adoptDrainDeadline(ctx, op, child.Status.DrainDeadline)
+		}
 		return false, nil
 	}
 }
@@ -330,7 +483,7 @@ func (r *Reconciler) ensureDrained(ctx context.Context, op *v1alpha1.NodeOperati
 // which is how a single operation ended up with two evictions of the same node.
 func (r *Reconciler) drainOf(ctx context.Context, op *v1alpha1.NodeOperation) (*v1alpha1.NodeOperation, error) {
 	children := &v1alpha1.NodeOperationList{}
-	if err := r.reader().List(ctx, children, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
+	if err := r.apiReader.List(ctx, children, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
 		return nil, fmt.Errorf("list the drains of %s: %w", op.Name, err)
 	}
 	for i := range children.Items {
@@ -343,25 +496,106 @@ func (r *Reconciler) drainOf(ctx context.Context, op *v1alpha1.NodeOperation) (*
 }
 
 // startDrain hands the node to the draining controller, which evicts the pods
-// and reports back through the drained annotation.
-func (r *Reconciler) startDrain(ctx context.Context, node *corev1.Node, logger logr.Logger) error {
-	if node.Annotations[nodecommon.DrainingAnnotation] == drainingSource {
-		return nil
-	}
+// and reports back through the drained annotation. The request carries this
+// operation's marker, so the answer comes back carrying it too.
+func (r *Reconciler) startDrain(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node, logger logr.Logger) error {
 	patch := client.MergeFrom(node.DeepCopy())
 	if node.Annotations == nil {
 		node.Annotations = map[string]string{}
 	}
-	node.Annotations[nodecommon.DrainingAnnotation] = drainingSource
+	node.Annotations[nodecommon.DrainingAnnotation] = drainMarker(op)
 	if err := r.Client.Patch(ctx, node, patch); err != nil {
 		return fmt.Errorf("start drain of %s: %w", node.Name, err)
 	}
-	logger.Info("draining the node for the operation", "node", node.Name)
+	logger.Info("draining the node for the operation", "node", node.Name, "operation", op.Name)
 	return nil
 }
 
-// releaseNode gives a node back to the scheduler once the operation that took
-// it away is over, however it ended.
+func drainRequested(op *v1alpha1.NodeOperation) bool {
+	return meta.IsStatusConditionTrue(op.Status.Conditions, conditionDrainRequested)
+}
+
+// drainMarker is the value this operation writes into the node's drain
+// annotations, and the only value it will read back or erase.
+//
+// The draining controller echoes whatever it found in the request into the
+// answer, so an identity put into the request comes back in the answer for
+// nothing. That identity is what lets two operations share a node: each sees its
+// own eviction and no one else's, and none of them can clear a marker another is
+// still waiting on — nor the mutable path's, which writes into the same slot.
+//
+// An eviction carries the identity of the interruption that asked for it rather
+// than its own: the child does the draining, but it is the parent that releases
+// the node at the end, and the two have to agree on which marker is theirs.
+func drainMarker(op *v1alpha1.NodeOperation) string {
+	return drainingSource + "/" + string(lineageUID(op))
+}
+
+func lineageUID(op *v1alpha1.NodeOperation) types.UID {
+	for _, owner := range op.OwnerReferences {
+		if owner.Kind == nodeOperationKind {
+			return owner.UID
+		}
+	}
+	return op.UID
+}
+
+// idle reports that the node carries no drain of this operation's — neither a
+// request waiting to be picked up nor an answer. Something removed them, so the
+// eviction is not going to arrive unless it is asked for again.
+func idle(op *v1alpha1.NodeOperation, node *corev1.Node) bool {
+	marker := drainMarker(op)
+	return node.Annotations[nodecommon.DrainingAnnotation] != marker &&
+		node.Annotations[nodecommon.DrainedAnnotation] != marker
+}
+
+// recordDrainRequested remembers that the eviction has been asked for, and — the
+// first time only — until when it may run.
+//
+// The deadline is written once and never moved. An operation may have to ask
+// again if its markers are removed, but asking again is not a reason to grant it
+// another full drain: a deadline that is renewed on every re-issue is no
+// deadline, and the wait for an eviction becomes unbounded exactly as it was
+// before it had one.
+func (r *Reconciler) recordDrainRequested(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node) error {
+	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
+		Type:               conditionDrainRequested,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Draining",
+		Message:            fmt.Sprintf("the draining controller was asked to empty %s", op.Spec.NodeName),
+		ObservedGeneration: op.Generation,
+	})
+	if op.Status.DrainDeadline == nil {
+		op.Status.DrainDeadline = ptr.To(metav1.NewTime(time.Now().Add(r.drainTimeout(ctx, node))))
+	}
+	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
+		return fmt.Errorf("record that %s asked for its eviction: %w", op.Name, err)
+	}
+	return nil
+}
+
+// adoptDrainDeadline gives a parent the deadline its child eviction is running
+// to. Without it the parent is bounded from its own creation while the child is
+// bounded by the group's drain timeout, so the parent fails out from under a
+// drain that is still running — and the drain then finishes onto a node whose
+// operation has already released it.
+func (r *Reconciler) adoptDrainDeadline(ctx context.Context, op *v1alpha1.NodeOperation, deadline *metav1.Time) error {
+	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	op.Status.DrainDeadline = deadline.DeepCopy()
+	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
+		return fmt.Errorf("take over the eviction deadline of %s: %w", op.Name, err)
+	}
+	return nil
+}
+
+// releaseNode puts a node back the way the operation found it once the
+// operation that took it away is over, however it ended.
+//
+// It runs on every reconcile of a terminal operation until the record is
+// collected a day later, so it must be exact about what belongs to it: only the
+// markers carrying this operation's own identity, and only a cordon no other
+// operation is still relying on.
 func (r *Reconciler) releaseNode(ctx context.Context, op *v1alpha1.NodeOperation, logger logr.Logger) error {
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: op.Spec.NodeName}, node); err != nil {
@@ -370,20 +604,79 @@ func (r *Reconciler) releaseNode(ctx context.Context, op *v1alpha1.NodeOperation
 		}
 		return err
 	}
-	if node.Annotations[nodecommon.DrainingAnnotation] != drainingSource &&
-		node.Annotations[nodecommon.DrainedAnnotation] != drainingSource {
+	marker := drainMarker(op)
+	ours := node.Annotations[nodecommon.DrainingAnnotation] == marker ||
+		node.Annotations[nodecommon.DrainedAnnotation] == marker
+	if !ours {
 		return nil
 	}
 
-	patch := client.MergeFrom(node.DeepCopy())
-	delete(node.Annotations, nodecommon.DrainingAnnotation)
-	delete(node.Annotations, nodecommon.DrainedAnnotation)
-	node.Spec.Unschedulable = false
-	if err := r.Client.Patch(ctx, node, patch); err != nil {
+	// An operation from before this was recorded falls back to the old
+	// behaviour: leaving such a node cordoned forever is worse than the cordon
+	// this restores, and finished operations are collected within a day.
+	restored := op.Status.NodeWasUnschedulable != nil && *op.Status.NodeWasUnschedulable
+	if !restored {
+		// Lowering it is only ours to do while nobody else needs it raised. A
+		// Drain is asked for precisely to keep the node out of the scheduler,
+		// and an interruption part-way through its own eviction needs the same;
+		// letting this operation's release undo either would put pods back onto
+		// a node that is being emptied.
+		held, err := r.heldUnschedulableByAnother(ctx, op)
+		if err != nil {
+			return err
+		}
+		if held {
+			restored = node.Spec.Unschedulable
+		}
+	}
+
+	// Spelled out rather than computed from a mutated copy. ObjectMeta.Annotations
+	// carries omitempty, so removing the last key makes the map vanish from the
+	// marshalled object and the computed merge patch says "annotations: null" —
+	// which deletes every annotation on the node, bashible's drain request
+	// included.
+	annotations := map[string]any{}
+	for _, key := range []string{nodecommon.DrainingAnnotation, nodecommon.DrainedAnnotation} {
+		if node.Annotations[key] == marker {
+			annotations[key] = nil
+		}
+	}
+	body, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{"annotations": annotations},
+		"spec":     map[string]any{"unschedulable": restored},
+	})
+	if err != nil {
+		return fmt.Errorf("build the release patch for %s: %w", node.Name, err)
+	}
+	if err := r.Client.Patch(ctx, node, client.RawPatch(types.MergePatchType, body)); err != nil {
 		return fmt.Errorf("release %s after its operation: %w", node.Name, err)
 	}
-	logger.Info("node returned to the scheduler after its operation", "node", node.Name, "operation", op.Name)
+	logger.Info("node released after its operation",
+		"node", node.Name, "operation", op.Name, "unschedulable", restored)
 	return nil
+}
+
+// heldUnschedulableByAnother reports whether an operation of some other lineage
+// is still counting on this node staying out of the scheduler — a Drain, whose
+// whole purpose that is, or an interruption that has asked for its eviction and
+// not finished. An operation's own child eviction shares its lineage and is not
+// another operation.
+func (r *Reconciler) heldUnschedulableByAnother(ctx context.Context, op *v1alpha1.NodeOperation) (bool, error) {
+	others := &v1alpha1.NodeOperationList{}
+	if err := r.apiReader.List(ctx, others, client.MatchingLabels{operationNodeLabel: op.Spec.NodeName}); err != nil {
+		return false, fmt.Errorf("list the operations of %s: %w", op.Spec.NodeName, err)
+	}
+	lineage := lineageUID(op)
+	for i := range others.Items {
+		other := &others.Items[i]
+		if lineageUID(other) == lineage || terminal(other) {
+			continue
+		}
+		if other.Spec.Type == v1alpha1.NodeOperationDrain || drainRequested(other) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, phase v1alpha1.NodeOperationPhase, reason, message string, logger logr.Logger) error {
@@ -396,7 +689,11 @@ func (r *Reconciler) setPhase(ctx context.Context, op *v1alpha1.NodeOperation, p
 	if terminal(op) {
 		return nil
 	}
-	patch := client.MergeFrom(op.DeepCopy())
+	// Under an optimistic lock, because the guard above is only as fresh as the
+	// cache: a node reporting Completed just as the deadline fires would
+	// otherwise be overwritten with Failed, and the group would be told to
+	// disrupt a node that has already applied its config.
+	patch := client.MergeFromWithOptions(op.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	op.Status.Phase = phase
 	op.Status.ObservedGeneration = op.Generation
 	if phase == v1alpha1.NodeOperationInProgress && op.Status.StartedAt == nil {
@@ -429,8 +726,8 @@ func skipDrain(op *v1alpha1.NodeOperation) bool {
 	return op.Spec.Drain != nil && op.Spec.Drain.Skip
 }
 
-func drained(node *corev1.Node) bool {
-	return node.Annotations[nodecommon.DrainedAnnotation] == drainingSource
+func drained(op *v1alpha1.NodeOperation, node *corev1.Node) bool {
+	return node.Annotations[nodecommon.DrainedAnnotation] == drainMarker(op)
 }
 
 // ownedBy reports whether the child was created for this exact operation, not

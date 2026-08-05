@@ -115,7 +115,7 @@ spec:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := IsImmutableMaster(tt.resources)
+			got, err := IsImmutableMaster(t.Context(), tt.resources)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "master NodeGroup")
