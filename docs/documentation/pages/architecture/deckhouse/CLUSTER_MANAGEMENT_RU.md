@@ -8,7 +8,7 @@ description: Архитектура модулей commander и commander-agent 
 
 Для реализации механизма управления кластерами Deckhouse Kubernetes Platform (DKP) используются модули [`commander`](/modules/commander/) и [`commander-agent`](/modules/commander-agent/).
 
-Кластер DKP, в котором установлен модуль `commander`, является управляющим кластером. Кластер DKP с установленным модулем `commander-agent` является управляемым.
+Кластер DKP, в котором установлен модуль `commander`, является *управляющим* кластером. Кластер DKP с установленным модулем `commander-agent` является *управляемым*.
 
 ## Модуль commander
 
@@ -40,87 +40,100 @@ description: Архитектура модулей commander и commander-agent 
 
 ### Компоненты модуля commander
 
-Модуль состоит из следующих компонентов:
+Модуль включает в себя базовые, служебные и опциональные компоненты.
 
 #### Базовые компоненты
+
+В базовые компоненты модуля `commander` входят:
 
 1. **Frontend** (Deployment) — компонент предоставляет веб-интерфейс для управления кластерами.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **frontend** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **frontend** — основной контейнер.
 
 1. **Backend** (Deployment) — основной компонент, реализующий следующие API-интерфейсы:
 
-    * UI API — управление настройками кластеров, шаблонов и рабочих пространств;
-    * внешний API для интеграций и автоматизации — операции с кластерами, задачами, шаблонами, проектами, ролями и др.;
-    * API для работы с cluster-manager — обмен состояниями задач кластера и обработка фаз развёртывания и настройки управляемых кластеров;
-    * API для работы с commander-agent — авторизация и приём агентских метрик, а также получение целевой конфигурации управляемого кластера.
+   * UI API — управление настройками кластеров, шаблонов и рабочих пространств;
+   * внешний API для интеграций и автоматизации — операции с кластерами, задачами, шаблонами, проектами, ролями и др.;
+   * API для работы с cluster-manager — обмен состояниями задач кластера и обработка фаз развёртывания и настройки управляемых кластеров;
+   * API для работы с `commander-agent` — авторизация и приём агентских метрик, а также получение целевой конфигурации управляемого кластера.
 
    Backend обеспечивает следующие возможности:
 
-    * управление жизненным циклом кластеров — создание, изменение или удаление кластера (через cluster-manager), перезапуск задач с ошибками и связанные проверки;
-    * управление кластерным RBAC и ограничение прав на API-операции;
-    * управление шаблонами, хранение целевых и текущих настроек кластеров;
-    * управление реестрами образов;
-    * управление проектами и шаблонами проекта;
-    * управление настройками биллинга (если компонент включён).
+   * управление жизненным циклом кластеров — создание, изменение или удаление кластера (через cluster-manager), перезапуск задач с ошибками и связанные проверки;
+   * управление кластерным RBAC и ограничение прав на API-операции;
+   * управление шаблонами, хранение целевых и текущих настроек кластеров;
+   * управление хранилищами образов;
+   * управление проектами и шаблонами проекта;
+   * управление настройками биллинга (если компонент включён).
 
    Компонент хранит целевое состояние системы в экземпляре PostgreSQL, а также использует экземпляр Redis для публикации задач в управляемых кластерах и для получения результатов их обработки.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **backend** — основной контейнер;
-    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **backend** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
 1. **Cable** (Deployment) — компонент обеспечивает работу WebSocket для обновления UI в реальном времени.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **cable** — основной контейнер;
-    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **cable** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
   
 1. **Sidekiq** (Deployment) — компонент, реализованный на базе библиотеки [Sidekiq](https://github.com/sidekiq/sidekiq) и обеспечивающий работу с очередями в Ruby on Rails.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **sidekiq** — основной контейнер;
-    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **sidekiq** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
 1. **Cluster-manager** (Deployment) — компонент, реализующий выполнение задач по развёртыванию и управлению конфигурацией управляемых кластеров DKP, запрошенных компонентом backend.
 
    При создании нового кластера cluster-manager создаёт следующие ресурсы в неймспейсе `d8-commander` в управляющем кластере:
 
-    * Deployment и Secret с именем `dhctl-<registryHash>-<version>` — запуск [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) в режиме gRPC-сервера. Cluster-manager использует RPC-вызовы для установки и настройки кластера DKP;
-    * Deployment (`ampg-connector-<uuid>`), Service (`ampg-connector-<uuid>`, `ampg-console-backend-<uuid>`, `ampg-api-server-<uuid>`, `ampg-deckhouse-tools-<uuid>`, `ampg-aggregating-proxy-<uuid>`, `ampg-upmeter-<uuid>`, `ampg-label-proxy-<uuid>`), Secret (`ampg-console-backend-<uuid>`) и Ingress (`ampg-agent-api-connector-<uuid>`, `ampg-console-backend-<uuid>`) — обработка подключений от `commander-agent` и реализация обратного канала взаимодействия с control plane соответствующего кластера;
-    * DexClient (`cluster-<uuid>`) — настройка сервиса аутентификации для управляемого кластера с использованием возможностей модуля [`user-authn`](/modules/user-authn/).
+   * Deployment и Secret с именем `dhctl-<REGISTRY_HASH>-<VERSION>` — запуск [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) в режиме gRPC-сервера. Cluster-manager использует RPC-вызовы для установки и настройки кластера DKP;
+   * для обработки подключений от `commander-agent` и реализации обратного канала взаимодействия с control plane соответствующего кластера:
+     * Deployment (`ampg-connector-<UUID>`);
+     * Service:
+       * `ampg-connector-<UUID>`;
+       * `ampg-console-backend-<UUID>`;
+       * `ampg-api-server-<UUID>`;
+       * `ampg-deckhouse-tools-<UUID>`;
+       * `ampg-aggregating-proxy-<UUID>`;
+       * `ampg-upmeter-<UUID>`;
+       * `ampg-label-proxy-<UUID>`;
+     * Secret (`ampg-console-backend-<UUID>`);
+     * Ingress (`ampg-agent-api-connector-<UUID>`, `ampg-console-backend-<UUID>`);
+   * DexClient (`cluster-<UUID>`) — настройка сервиса аутентификации для управляемого кластера с использованием возможностей модуля [`user-authn`](/modules/user-authn/).
 
    Во время бутстрапа кластера cluster-manager также выполняет следующие действия в управляемом кластере:
 
    * устанавливает модуль [`commander-agent`](/modules/commander-agent/);
    * отключает модуль [`terraform-manager`](/modules/terraform-manager/);
-   * выполняет настройку аутентификации на основе контроллера Dex модуля [`user-authn`](/modules/user-authn/). В качестве Dex-провайдера cluster-manager устанавливает DexClient `cluster-<uuid>` управляющего кластера;
+   * выполняет настройку аутентификации на основе контроллера Dex модуля [`user-authn`](/modules/user-authn/). В качестве Dex-провайдера cluster-manager устанавливает DexClient `cluster-<UUID>` управляющего кластера;
    * настраивает подключение управляемого кластера к хранилищу образов;
    * если биллинг включён, создаёт кастомный ресурс [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) для отправки метрик в компонент billing-prometheus управляющего кластера.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **cluster-manager** — основной контейнер;
-    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **cluster-manager** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
-1. **Dhctl-&lt;registryHash&gt;-&lt;version&gt;** (Deployment) — компонент, состоящий из одного контейнера **dhctl**, запускает утилиту [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) в режиме gRPC-сервера. Cluster-manager выполняет RPC-вызовы к серверу `dhctl` для установки или настройки управляемого кластера DKP.
+1. **Dhctl-&lt;REGISTRY_HASH&gt;-&lt;VERSION&gt;** (Deployment) — компонент, состоящий из одного контейнера **dhctl**, запускает утилиту [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) в режиме gRPC-сервера. Cluster-manager выполняет RPC-вызовы к серверу `dhctl` для установки или настройки управляемого кластера DKP.
 
-1. **Ampg-connector-&lt;uuid&gt;** (Deployment) — компонент, состоящий из одного контейнера **main**, создаёт туннель и позволяет проксировать запросы к control plane управляемого кластера DKP через входящее подключение от `commander-agent`.
+1. **Ampg-connector-&lt;UUID&gt;** (Deployment) — компонент, состоящий из одного контейнера **main**. Создаёт туннель и позволяет проксировать запросы к control plane управляемого кластера DKP через входящее подключение от `commander-agent`.
 
    Компонент создаётся cluster-manager для каждого управляемого кластера DKP.
 
@@ -128,17 +141,17 @@ description: Архитектура модулей commander и commander-agent 
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **backend** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **backend** — основной контейнер.
 
 1. **Cluster-task-checker** (Deployment) — компонент периодически выполняет поиск запущенных задач, которые давно не сообщали о своём статусе, и переводит их в статус `lost` или `lost_in_critical`.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **backend** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **backend** — основной контейнер.
 
 1. **Redis** (Deployment) — компонент состоит из одного контейнера **redis** и реализует отдельный экземпляр базы данных [Redis](https://github.com/redis/redis), отвечающий за хранение данных об очередях задач и состояниях сессий commander.
 
@@ -146,9 +159,9 @@ description: Архитектура модулей commander и commander-agent 
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **nginx** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **nginx** — основной контейнер.
 
 1. **Console-backend** (Deployment) — API-бэкенд администрирования управляемого кластера DKP, обслуживающий запросы от компонента cluster-manager.
 
@@ -156,47 +169,51 @@ description: Архитектура модулей commander и commander-agent 
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **backend** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **backend** — основной контейнер.
 
-#### Регламентные задачи
+#### Служебные компоненты
+
+В служебные компоненты модуля `commander` входят:
 
 1. **Cluster-task-cleaner** (CronJob) — компонент запускается один раз в сутки и выполняет удаление завершённых задач, созданных более 30 дней назад.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **cluster-task-cleaner** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **cluster-task-cleaner** — основной контейнер.
 
 1. **Agent-tokens-rotation** (CronJob) — регулярно выполняет обновление токенов для `commander-agent`.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **agent-tokens-rotation** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **agent-tokens-rotation** — основной контейнер.
 
 1. **Encryption-migrator** (CronJob) — компонент запускается один раз в сутки и выполняет миграцию зашифрованных данных с SHA-1 на SHA-256. За один проход могут быть обработаны не все данные. Кроме того, после восстановления из резервной копии или из-за отложенных миграций могут появиться записи SHA-1.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **encryption-migrator** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **encryption-migrator** — основной контейнер.
 
 1. **Audits-cleaner** (CronJob) — компонент запускается один раз в сутки и удаляет старые аудит-логи.
 
-   Контроллер Deckhouse модуля [`deckhouse`](/modules/deckhouse/) создаёт audits-cleaner, если параметр модуля [`.settings.featureFlags.auditsRetentionDays`](/modules/commander/alpha/admin_guide.html#срок-хранения-записей-аудита--auditsretentiondays) задан и определяет срок хранения аудит-логов.
+   Deckhouse-контроллер модуля [`deckhouse`](/modules/deckhouse/) создаёт audits-cleaner, если параметр модуля [`settings.featureFlags.auditsRetentionDays`](/modules/commander/admin_guide.html#срок-хранения-записей-аудита--auditsretentiondays) задан и определяет срок хранения аудит-логов.
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **audits-cleaner** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **audits-cleaner** — основной контейнер.
 
 #### Опциональные компоненты
+
+В опциональные компоненты модуля `commander` входят:
 
 1. **Billing-prometheus** (StatefulSet) — компонент запускает [Deckhouse Prom++](/products/prompp/) в режиме приёма метрик по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/).
 
@@ -204,15 +221,15 @@ description: Архитектура модулей commander и commander-agent 
 
    Состоит из следующих контейнеров:
 
-    * **prometheus** — основной контейнер;
-    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
+   * **prometheus** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
-1. **Billing-reports** (StatefulSet) — компонент, запускающий веб-сервер [nginx](https://github.com/nginx/nginx) в качестве хранилища отчётов биллинга. Отчёты загружаются в nginx по протоколу WebDAV (Web-based Distributed Authoring and Versioning).
+1. **Billing-reports** (StatefulSet) — компонент, запускающий веб-сервер [nginx](https://github.com/nginx/nginx) в качестве хранилища отчётов биллинга. Отчёты загружаются в nginx по протоколу Web-based Distributed Authoring and Versioning (WebDAV).
 
    Состоит из следующих контейнеров:
 
-    * **nginx** — основной контейнер;
-    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
+   * **nginx** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
 1. **Billing-schedules-reporter** (Deployment) — компонент реализует планировщик запуска и контроля задач для генерации требуемых отчётов биллинга.
 
@@ -220,20 +237,20 @@ description: Архитектура модулей commander и commander-agent 
 
    Состоит из следующих контейнеров:
 
-    * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
-    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
-    * **backend** — основной контейнер.
+   * **wait-postgres** — init-контейнер, проверяющий доступность экземпляра PostgreSQL;
+   * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
+   * **backend** — основной контейнер.
 
 1. **Billing-aggregating-proxy** (Deployment) — компонент выполняет агрегацию PromQL-запросов, проксирует их в billing-prometheus и возвращает результаты запросов.
 
    Состоит из следующих контейнеров:
 
-    * **billing-aggregating-proxy** — сайдкар-контейнер, реализованный на базе [Grafana Mimir](https://github.com/grafana/mimir), обеспечивает оптимизацию запросов и кеширование данных. При отсутствии данных в кеше Grafana Mimir пересылает запрос на компонент billing-prometheus через сайдкар-контейнер promxy;
-    * **promxy** — сайдкар-контейнер, реализованный на базе [Promxy](https://github.com/jacksontj/promxy), проксирует запросы к компоненту billing-prometheus и предоставляет единый эндпоинт для доступа к данным нескольких экземпляров [Deckhouse Prom++](/products/prompp/);
-    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
+   * **billing-aggregating-proxy** — сайдкар-контейнер, реализованный на базе [Grafana Mimir](https://github.com/grafana/mimir), который обеспечивает оптимизацию запросов и кеширование данных. При отсутствии данных в кеше Grafana Mimir пересылает запрос на компонент billing-prometheus через сайдкар-контейнер promxy;
+   * **promxy** — сайдкар-контейнер, реализованный на базе [Promxy](https://github.com/jacksontj/promxy), который проксирует запросы к компоненту billing-prometheus и предоставляет единый эндпоинт для доступа к данным нескольких экземпляров [Deckhouse Prom++](/products/prompp/);
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
 {% alert level="info" %}
-Компоненты billing-prometheus, billing-reports, billing-schedules-reporter и billing-aggregating-proxy создаются контроллером Deckhouse модуля [`deckhouse`](/modules/deckhouse/) в случае, если в параметре модуля [`.settings.featureFlags.billingEnabled`](/modules/commander/alpha/admin_guide.html#биллинг-и-управление-расходами--billingenabled) задано значение `true`.
+Компоненты billing-prometheus, billing-reports, billing-schedules-reporter и billing-aggregating-proxy создаются Deckhouse-контроллером модуля [`deckhouse`](/modules/deckhouse/) в случае, если в параметре модуля [`settings.featureFlags.billingEnabled`](/modules/commander/admin_guide.html#биллинг-и-управление-расходами--billingenabled) задано значение `true`.
 {% endalert %}
 
 ### Взаимодействия модуля
@@ -242,9 +259,9 @@ description: Архитектура модулей commander и commander-agent 
 
 1. **Kube-apiserver**:
 
-    * работа с ресурсами Deployment, Service, Secret и Ingress в неймспейсе `d8-commander`;
+   * работа с ресурсами Deployment, Service, Secret и Ingress в неймспейсе `d8-commander`;
 
-    * авторизация запросов.
+   * авторизация запросов.
 
 1. **Хранилище образов** — получение доступных релизов DKP по каналам обновлений.
 

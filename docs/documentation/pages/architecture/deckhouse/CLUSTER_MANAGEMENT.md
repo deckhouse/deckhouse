@@ -7,8 +7,8 @@ description: Architecture of the commander and commander-agent modules in Deckho
 
 The [`commander`](/modules/commander/) and [`commander-agent`](/modules/commander-agent/) modules are used to implement cluster management in Deckhouse Kubernetes Platform (DKP).
 
-A DKP cluster with the `commander` module installed is a management cluster.
-A DKP cluster with the `commander-agent` module installed is a managed cluster.
+A DKP cluster with the `commander` module installed is a *managing* cluster.
+A DKP cluster with the `commander-agent` module installed is a *managed* cluster.
 
 ## Сommander module
 
@@ -22,7 +22,7 @@ For `commander` in production environments, using a dedicated PostgreSQL instanc
 When `commander` is installed, a PostgreSQL data encryption key is generated. This key is stored in the `d8-commander` namespace in the `commander-envs` Secret.
 {% endalert %}
 
-For details about features, configuration, and usage examples, see [the module documentation section](/modules/commander/).
+For details about features, configuration, and usage examples, see the [module documentation section](/modules/commander/).
 
 ### Сommander module architecture
 
@@ -42,87 +42,100 @@ diagram:
 
 ### Сommander module components
 
-The module consists of the following components:
+The module consists of core, service, and optional components.
 
 #### Core components
+
+Core components of the `commander` module include:
 
 1. **Frontend** (Deployment): Provides a web interface for cluster management.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **frontend**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **frontend**: The main container.
 
 1. **Backend** (Deployment): The main component that implements the following APIs:
 
-    * UI API: Manages cluster, template, and workspace settings.
-    * External API for integrations and automation: Operates on clusters, tasks, templates, projects, roles, and more.
-    * API for cluster-manager: Exchanges cluster task states and processes deployment and configuration phases of managed clusters.
-    * API for commander-agent: Authorizes and receives agent metrics, and provides target configuration for a managed cluster.
+   * UI API: Manages cluster, template, and workspace settings.
+   * External API for integrations and automation: Operates on clusters, tasks, templates, projects, roles, and more.
+   * API for cluster-manager: Exchanges cluster task states and processes deployment and configuration phases of managed clusters.
+   * API for `commander-agent`: Authorizes and receives agent metrics, and provides target configuration for a managed cluster.
 
    Backend provides the following capabilities:
 
-    * Cluster lifecycle management: Creates, modifies, or deletes a cluster (through cluster-manager), restarts failed tasks, and runs related checks.
-    * Cluster RBAC management and API operation access restrictions.
-    * Template management and storage of target and current cluster settings.
-    * Container registry management.
-    * Project and project template management.
-    * Billing settings management (if this component is enabled).
+   * Cluster lifecycle management: Creates, modifies, or deletes a cluster (through cluster-manager), restarts failed tasks, and runs related checks.
+   * Cluster RBAC management and API operation access restrictions.
+   * Template management and storage of target and current cluster settings.
+   * Container registry management.
+   * Project and project template management.
+   * Billing settings management (if this component is enabled).
 
    The component stores the target system state in a PostgreSQL instance. It also uses a Redis instance to publish tasks to managed clusters and receive task processing results.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **backend**: The main container.
-    * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **backend**: The main container.
+   * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
 1. **Cable** (Deployment): Provides WebSocket support for real-time UI updates.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **cable**: The main container.
-    * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **cable**: The main container.
+   * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
 1. **Sidekiq** (Deployment): A component based on the [Sidekiq](https://github.com/sidekiq/sidekiq) library that provides queue processing in Ruby on Rails.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **sidekiq**: The main container.
-    * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **sidekiq**: The main container.
+   * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
 1. **Cluster-manager** (Deployment): Executes tasks requested by backend to deploy managed DKP clusters and manage their configuration.
 
-   When a new cluster is created, cluster-manager creates the following resources in the `d8-commander` namespace of the management cluster:
+   When a new cluster is created, cluster-manager creates the following resources in the `d8-commander` namespace of the managing cluster:
 
-    * Deployment and Secret named `dhctl-<registryHash>-<version>`: Runs [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) in gRPC server mode. Cluster-manager uses RPC calls to install and configure a DKP cluster.
-    * Deployment (`ampg-connector-<uuid>`), Service (`ampg-connector-<uuid>`, `ampg-console-backend-<uuid>`, `ampg-api-server-<uuid>`, `ampg-deckhouse-tools-<uuid>`, `ampg-aggregating-proxy-<uuid>`, `ampg-upmeter-<uuid>`, `ampg-label-proxy-<uuid>`), Secret (`ampg-console-backend-<uuid>`), and Ingress (`ampg-agent-api-connector-<uuid>`, `ampg-console-backend-<uuid>`): Process incoming `commander-agent` connections and implement a reverse interaction channel with the control plane of the corresponding cluster.
-    * DexClient (`cluster-<uuid>`): Configures the authentication service for a managed cluster using the capabilities of the [`user-authn`](/modules/user-authn/) module.
+   * Deployment and Secret named `dhctl-<REGISTRY_HASH>-<VERSION>`: Runs [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) in gRPC server mode. Cluster-manager uses RPC calls to install and configure a DKP cluster.
+   * To process incoming `commander-agent` connections and implement a reverse interaction channel with the control plane of the corresponding cluster:
+     * Deployment (`ampg-connector-<UUID>`)
+     * Service:
+       * `ampg-connector-<UUID>`
+       * `ampg-console-backend-<UUID>`
+       * `ampg-api-server-<UUID>`
+       * `ampg-deckhouse-tools-<UUID>`
+       * `ampg-aggregating-proxy-<UUID>`
+       * `ampg-upmeter-<UUID>`
+       * `ampg-label-proxy-<UUID>`
+     * Secret (`ampg-console-backend-<UUID>`)
+     * Ingress (`ampg-agent-api-connector-<UUID>`, `ampg-console-backend-<UUID>`)
+   * DexClient (`cluster-<UUID>`): Configures the authentication service for a managed cluster using the capabilities of the [`user-authn`](/modules/user-authn/) module.
 
    During cluster bootstrap, cluster-manager also performs the following actions in the managed cluster:
 
    * Installs the [`commander-agent`](/modules/commander-agent/) module.
    * Disables the [`terraform-manager`](/modules/terraform-manager/) module.
-   * Configures authentication based on the Dex controller of the [`user-authn`](/modules/user-authn/) module. As a Dex provider, cluster-manager sets `cluster-<uuid>` DexClient from the management cluster.
+   * Configures authentication based on the Dex controller of the [`user-authn`](/modules/user-authn/) module. As a Dex provider, cluster-manager sets `cluster-<UUID>` DexClient from the managing cluster.
    * Configures the managed cluster connection to a container registry.
-   * If billing is enabled, creates a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource to send metrics to the `billing-prometheus` component in the management cluster.
+   * If billing is enabled, creates a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource to send metrics to the billing-prometheus component in the managing cluster.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **cluster-manager**: The main container.
-    * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **cluster-manager**: The main container.
+   * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
-1. **Dhctl-&lt;registryHash&gt;-&lt;version&gt;** (Deployment): A component with a single **dhctl** container. It runs the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) utility in gRPC server mode. Cluster-manager uses RPC calls to the `dhctl` server to install or configure a managed DKP cluster.
+1. **Dhctl-&lt;REGISTRY_HASH&gt;-&lt;VERSION&gt;** (Deployment): A component with a single **dhctl** container. It runs the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) utility in gRPC server mode. Cluster-manager uses RPC calls to the `dhctl` server to install or configure a managed DKP cluster.
 
-1. **Ampg-connector-&lt;uuid&gt;** (Deployment): A component with a single **main** container that establishes a tunnel and proxies requests to the control plane of a managed DKP cluster through the incoming `commander-agent` connection.
+1. **Ampg-connector-&lt;UUID&gt;** (Deployment): A component with a single **main** container that establishes a tunnel and proxies requests to the control plane of a managed DKP cluster through the incoming `commander-agent` connection.
 
    The component is created by cluster-manager for each managed DKP cluster.
 
@@ -130,17 +143,17 @@ The module consists of the following components:
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **backend**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **backend**: The main container.
 
 1. **Cluster-task-checker** (Deployment): Periodically searches for running tasks that have not reported their status for a long time and moves them to `lost` or `lost_in_critical`.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **backend**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **backend**: The main container.
 
 1. **Redis** (Deployment): A component with a single **redis** container that provides a dedicated [Redis](https://github.com/redis/redis) database instance for storing task queue data and commander session states.
 
@@ -148,9 +161,9 @@ The module consists of the following components:
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **nginx**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **nginx**: The main container.
 
 1. **Console-backend** (Deployment): An administration API backend for the managed DKP cluster that serves requests from the cluster-manager component.
 
@@ -158,47 +171,51 @@ The module consists of the following components:
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **backend**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **backend**: The main container.
 
-#### Scheduled tasks
+#### Service components
+
+Service components of the `commander` module include:
 
 1. **Cluster-task-cleaner** (CronJob): Runs once a day and removes completed tasks created more than 30 days ago.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **cluster-task-cleaner**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **cluster-task-cleaner**: The main container.
 
 1. **Agent-tokens-rotation** (CronJob): Regularly rotates `commander-agent` tokens.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **agent-tokens-rotation**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **agent-tokens-rotation**: The main container.
 
 1. **Encryption-migrator** (CronJob): Runs once a day and migrates encrypted data from SHA-1 to SHA-256. Not all data may be processed in a single run. In addition, after restoring from backup or due to delayed migrations, SHA-1 records may appear.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **encryption-migrator**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **encryption-migrator**: The main container.
 
 1. **Audits-cleaner** (CronJob): Runs once a day and deletes old audit logs.
 
-   The Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module creates `audits-cleaner` if the [`.settings.featureFlags.auditsRetentionDays`](/modules/commander/alpha/admin_guide.html#audit-log-retention--auditsretentiondays) module parameter is set and defines the audit log retention period.
+   The Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module creates audits-cleaner if the [`settings.featureFlags.auditsRetentionDays`](/modules/commander/admin_guide.html#audit-log-retention--auditsretentiondays) module parameter is set and defines the audit log retention period.
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **audits-cleaner**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **audits-cleaner**: The main container.
 
 #### Optional components
+
+Optional components of the `commander` module include:
 
 1. **Billing-prometheus** (StatefulSet): Runs [Deckhouse Prom++](/products/prompp/) in metrics ingestion mode over the [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) protocol.
 
@@ -206,15 +223,15 @@ The module consists of the following components:
 
    Contains the following containers:
 
-    * **prometheus**: The main container.
-    * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
+   * **prometheus**: The main container.
+   * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
-1. **Billing-reports** (StatefulSet): A component that runs the [nginx](https://github.com/nginx/nginx) web server as billing report storage. Reports are uploaded to nginx over WebDAV (Web-based Distributed Authoring and Versioning).
+1. **Billing-reports** (StatefulSet): A component that runs the [nginx](https://github.com/nginx/nginx) web server as billing report storage. Reports are uploaded to nginx over Web-based Distributed Authoring and Versioning (WebDAV).
 
    Contains the following containers:
 
-    * **nginx**: The main container.
-    * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
+   * **nginx**: The main container.
+   * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
 1. **Billing-schedules-reporter** (Deployment): Implements a scheduler that starts and controls tasks for generating required billing reports.
 
@@ -222,20 +239,20 @@ The module consists of the following components:
 
    Contains the following containers:
 
-    * **wait-postgres**: An init container that checks PostgreSQL instance availability.
-    * **wait-migrations**: An init container that waits for all database migrations to complete.
-    * **backend**: The main container.
+   * **wait-postgres**: An init container that checks PostgreSQL instance availability.
+   * **wait-migrations**: An init container that waits for all database migrations to complete.
+   * **backend**: The main container.
 
 1. **Billing-aggregating-proxy** (Deployment): Aggregates PromQL queries, proxies them to billing-prometheus, and returns query results.
 
    Contains the following containers:
 
-    * **billing-aggregating-proxy**: A sidecar container based on [Grafana Mimir](https://github.com/grafana/mimir). It provides query optimization and data caching. If data is missing in the cache, Grafana Mimir forwards the request to `billing-prometheus` via the `promxy` sidecar container.
-    * **promxy**: A sidecar container based on [Promxy](https://github.com/jacksontj/promxy). It proxies requests to `billing-prometheus` and provides a single endpoint for accessing data from multiple [Deckhouse Prom++](/products/prompp/) instances.
-    * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
+   * **billing-aggregating-proxy**: A sidecar container based on [Grafana Mimir](https://github.com/grafana/mimir). It provides query optimization and data caching. If data is missing in the cache, Grafana Mimir forwards the request to billing-prometheus via the promxy sidecar container.
+   * **promxy**: A sidecar container based on [Promxy](https://github.com/jacksontj/promxy). It proxies requests to billing-prometheus and provides a single endpoint for accessing data from multiple [Deckhouse Prom++](/products/prompp/) instances.
+   * **kube-rbac-proxy**: A sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to the main container.
 
 {% alert level="info" %}
-The billing-prometheus, billing-reports, billing-schedules-reporter, and billing-aggregating-proxy components are created by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module if [`.settings.featureFlags.billingEnabled`](/modules/commander/alpha/admin_guide.html#billing-and-cost-management--billingenabled) is set to `true`.
+The billing-prometheus, billing-reports, billing-schedules-reporter, and billing-aggregating-proxy components are created by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module if [`settings.featureFlags.billingEnabled`](/modules/commander/admin_guide.html#billing-and-cost-management--billingenabled) is set to `true`.
 {% endalert %}
 
 ### Module interactions
@@ -244,10 +261,10 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-    * Works with Deployment, Service, Secret, and Ingress resources in the `d8-commander` namespace.
-    * Authorizes requests.
+   * Works with Deployment, Service, Secret, and Ingress resources in the `d8-commander` namespace.
+   * Authorizes requests.
 
-1. **Container registry**: Retrieves available DKP releases by update channels.
+1. **Container registry**: Retrieves available DKP releases by release channels.
 
 1. **PostgreSQL instance**: Stores cluster states and metadata, tasks, tokens, projects, billing parameters, and reports.
 
@@ -261,9 +278,9 @@ The following external components interact with the module:
 
 ## Сommander-agent module
 
-The [`commander-agent`](/modules/commander-agent/) module establishes a service connection to a management DKP cluster.
+The [`commander-agent`](/modules/commander-agent/) module establishes a service connection to a managing DKP cluster.
 
-For details about module settings, see [the module documentation section](/modules/commander-agent/).
+For details about module settings, see the [module documentation section](/modules/commander-agent/).
 
 ### Сommander-agent module architecture
 
@@ -285,10 +302,10 @@ Agent performs the following actions:
   * `PVC`: Total size of attached disks in GiB.
   * `Nodes`: Total number of nodes.
 * Collects cluster availability information.
-* Establishes a secure connection to the management DKP cluster.
-* Sends metrics and cluster availability information to the management DKP cluster.
-* Configures user authentication via the Dex provider of the management cluster.
-* If billing is enabled in the management cluster, creates a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource to send metrics to the billing service of the management DKP cluster.
+* Establishes a secure connection to the managing DKP cluster.
+* Sends metrics and cluster availability information to the managing DKP cluster.
+* Configures user authentication via the Dex provider of the managing cluster.
+* If billing is enabled in the managing cluster, creates a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource to send metrics to the billing service of the managing DKP cluster.
 
 ### Module interactions
 
@@ -300,10 +317,10 @@ The module interacts with the following components:
 
 1. [**Upmeter**](/modules/upmeter/): Retrieves availability information of the managed cluster.
 
-1. **Dex**: Synchronizes access tokens for Kubernetes API requests from the management cluster to the managed cluster.
+1. **Dex**: Synchronizes access tokens for Kubernetes API requests from the managing cluster to the managed cluster.
 
-1. **Management cluster**:
+1. **Managing cluster**:
 
-    * Organizes a proxy connection to the management cluster.
+    * Organizes a proxy connection to the managing cluster.
     * Receives target cluster configuration.
     * Sends metrics to the billing service.
