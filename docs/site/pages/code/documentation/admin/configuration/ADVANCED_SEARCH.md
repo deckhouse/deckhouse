@@ -84,10 +84,17 @@ The **Reindex** operation removes existing documents.
 Search results may be incomplete until background indexing catches up.
 {% endalert %}
 
-The same operations are available through the `recreate_indices` endpoint — see the ["OpenSearch API"](opensearch-api.html) reference.
-
 The `commits` index is reindexed together with the `code` index: there is no separate operation for commits.
 For the same reason, commits have no dedicated `schema_class` value.
+
+#### Admin API
+
+The same operations are available through the administrative REST API:
+
+- `POST /api/v4/admin/opensearch/recreate_indices` — recreate indices;
+- `GET /api/v4/admin/opensearch/indexing_queue_stats` — indexing queue stats.
+
+For permissions, allowed `schema_class` values, response codes, and request examples, see the ["OpenSearch API"](opensearch-api.html) reference.
 
 ### Monitoring
 
