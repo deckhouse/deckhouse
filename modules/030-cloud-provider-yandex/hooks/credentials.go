@@ -26,7 +26,6 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	ycmeta "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/meta"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal"
 )
@@ -47,13 +46,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{ycmeta.Namespace},
+					MatchNames: []string{internal.Namespace},
 				},
 			},
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{
 					cpapi.CredentialSecretName,
-					ycmeta.ExporterCredentialSecretName,
+					internal.ExporterCredentialSecretName,
 				},
 			},
 			FilterFunc: filterCredentialSecrets,

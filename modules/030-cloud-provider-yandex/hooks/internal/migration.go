@@ -32,13 +32,12 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	yciccv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/instanceclass/v1"
-	ycpccv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/pcc/v1"
-	ycsettingsv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/settings/v1"
-	ycsettingsv2 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/settings/v2"
-	ycmeta "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/meta"
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	yciccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/instanceclass/v1"
+	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
+	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
+	ycsettingsv2 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v2"
 )
 
 func IsMigrationResourcesApplied(input *go_hook.HookInput, pcc ycpccv1.YandexProviderClusterConfiguration) bool {
@@ -137,7 +136,7 @@ func CreateMigrationResourcesSecret(
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      YandexMigrationResourcesName,
-			Namespace: ycmeta.Namespace,
+			Namespace: Namespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
@@ -157,10 +156,10 @@ func CreateMigrationConfigMap(input *go_hook.HookInput) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      YandexMigrationConfigMapName,
-			Namespace: ycmeta.Namespace,
+			Namespace: Namespace,
 			Labels: map[string]string{
 				"heritage": "deckhouse",
-				"module":   ycmeta.ModuleName,
+				"module":   ModuleName,
 			},
 		},
 	}
@@ -168,8 +167,8 @@ func CreateMigrationConfigMap(input *go_hook.HookInput) {
 }
 
 func DeleteMigrationArtifacts(input *go_hook.HookInput) {
-	input.PatchCollector.Delete("v1", "Secret", ycmeta.Namespace, YandexMigrationResourcesName)
-	input.PatchCollector.Delete("v1", "ConfigMap", ycmeta.Namespace, YandexMigrationConfigMapName)
+	input.PatchCollector.Delete("v1", "Secret", Namespace, YandexMigrationResourcesName)
+	input.PatchCollector.Delete("v1", "ConfigMap", Namespace, YandexMigrationConfigMapName)
 }
 
 func buildMigrationResources(pcc ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings) ([]any, error) {
@@ -198,7 +197,7 @@ func buildMigrationResources(pcc ycpccv1.YandexProviderClusterConfiguration, mc 
 			Kind:       "ModuleConfig",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ycmeta.ModuleName,
+			Name: ModuleName,
 		},
 		Spec: deckhousev1alpha1.ModuleConfigSpec{
 			Enabled:  ptr.To(true),
@@ -272,7 +271,7 @@ func BuildCredentialsSecrets(pcc ycpccv1.YandexProviderClusterConfiguration) []c
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cpapi.CredentialSecretName,
-				Namespace: ycmeta.Namespace,
+				Namespace: Namespace,
 			},
 			Type: cpapi.CredentialsSecretType,
 			StringData: map[string]string{
@@ -289,8 +288,8 @@ func BuildCredentialsSecrets(pcc ycpccv1.YandexProviderClusterConfiguration) []c
 				Kind:       "Secret",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      ycmeta.ExporterCredentialSecretName,
-				Namespace: ycmeta.Namespace,
+				Name:      ExporterCredentialSecretName,
+				Namespace: Namespace,
 			},
 			Type: cpapi.CredentialsSecretType,
 			StringData: map[string]string{

@@ -17,6 +17,10 @@ limitations under the License.
 package internal
 
 const (
+	ModuleName                   = "cloud-provider-yandex"
+	Namespace                    = "d8-cloud-provider-yandex"
+	ExporterCredentialSecretName = "d8-credentials-exporter"
+
 	PCCSecretName                    = "d8-provider-cluster-configuration"
 	PCCDiscoveryDataFilename         = "cloud-provider-discovery-data.json"
 	PCCClusterConfigFilename         = "cloud-provider-cluster-configuration.yaml"

@@ -25,9 +25,9 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/utils/ptr"
 
-	ycpccv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/pcc/v1"
-	ycsettingsv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/settings/v1"
-	ycmeta "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/meta"
+	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
+	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
+
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal"
 )
@@ -59,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: deckhousev1alpha1.SchemeGroupVersion.String(),
 			Kind:       deckhousev1alpha1.ModuleConfigKind,
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{ycmeta.ModuleName},
+				MatchNames: []string{internal.ModuleName},
 			},
 			ExecuteHookOnEvents:          ptr.To(false),
 			ExecuteHookOnSynchronization: ptr.To(false),
