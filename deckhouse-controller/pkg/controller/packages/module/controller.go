@@ -160,13 +160,13 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 	}
 
 	pkg := new(v1alpha1.ModulePackage)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Spec.PackageName}, pkg); err != nil {
-		logger.Debug("module package not found", slog.String("package", module.Spec.PackageName), log.Err(err))
+	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Name}, pkg); err != nil {
+		logger.Debug("module package not found", slog.String("package", module.Name), log.Err(err))
 
-		return fmt.Errorf("get module package '%s': %w", module.Spec.PackageName, err)
+		return fmt.Errorf("get module package '%s': %w", module.Name, err)
 	}
 
-	versionName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Spec.PackageName, module.Spec.PackageVersion)
+	versionName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
 
 	mpv := new(v1alpha1.ModulePackageVersion)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: versionName}, mpv); err != nil {
@@ -198,7 +198,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 	r.manager.UpdateModule(registry.BuildRemote(repo), packageruntime.Module{
 		Name: module.Name,
 		Definition: modules.Definition{
-			Name:    module.Spec.PackageName,
+			Name:    module.Name,
 			Version: module.Spec.PackageVersion,
 		},
 		Settings:        module.Spec.Settings.GetMap(),

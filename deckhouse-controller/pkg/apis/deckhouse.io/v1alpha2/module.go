@@ -78,9 +78,6 @@ type Module struct {
 }
 
 type ModuleSpec struct {
-	// Name of the module package to install.
-	PackageName string `json:"packageName"`
-
 	// Name of the repository where the package is located.
 	// If not specified, the default repository is used.
 	// +optional
