@@ -2,14 +2,14 @@
 # Start: GitLab UI "New pipeline" (web) or Pipelines API (api).
 #
 # Instruction: 1.md
-# Framework templates: deckhouse/ssdlc-tools/e2e-framework
+# Framework template: .gitlab/ci-templates/e2e-framework.yml
 # Providers without CSE: e2e-framework/src/providers.py + CI templates
 #   (Static has no CI template — excluded; StaticCSE/DVPCSE/Custom excluded)
 
 include:
-  - project: 'deckhouse/ssdlc-tools/e2e-framework'
-    file: '/ci-templates/e2e-framework.gitlab-ci.yml'
-    ref: 'main'
+  - local: .gitlab/ci-templates/e2e-framework.yml
+    inputs:
+      runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
 
 variables:
   # Same JWT role as other GitLab jobs in this repo (.gitlab/*.yml → VAULT_AUTH_ROLE).
