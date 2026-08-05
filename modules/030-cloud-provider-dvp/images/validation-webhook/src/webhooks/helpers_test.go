@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,13 +31,13 @@ import (
 func TestShouldSkipState(t *testing.T) {
 	t.Parallel()
 
-	if !shouldSkipState(&cpvalapi.State{
+	if !shouldSkipState(&dvpval.State{
 		MigrationStatus: cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true},
 	}) {
 		t.Fatal("shouldSkipState(pending migration) = false, want true")
 	}
 
-	if shouldSkipState(&cpvalapi.State{}) {
+	if shouldSkipState(&dvpval.State{}) {
 		t.Fatal("shouldSkipState(empty) = true, want false")
 	}
 

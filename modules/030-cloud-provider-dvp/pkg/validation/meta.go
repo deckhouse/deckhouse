@@ -12,28 +12,62 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package meta contains DVP validation constants.
+// Package validation contains DVP validation types and constants.
 package validation
 
 import (
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
+
+	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
+	dvppccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/pcc/v1"
+	dvpsettings "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/settings"
 )
 
-const (
-	// PCCKubeconfigPath is the dot path to kubeconfig in legacy ProviderClusterConfiguration.
-	PCCKubeconfigPath = "provider.kubeconfigDataBase64"
-)
+// State is the DVP validation state: the generic validation state instantiated
+// with the DVP InstanceClass, ModuleConfig settings and providerClusterConfiguration types.
+type State = cpvalapi.State[
+	*dvpicv1alpha1.DVPInstanceClass,
+	*dvpsettings.ModuleConfigSettings,
+	*dvppccv1.DVPProviderClusterConfiguration,
+]
+
+// ProtocolStateBuilderFactory produces DVP validation state builders for dhctl provider input.
+type ProtocolStateBuilderFactory = cpvalprotocol.StateBuilderFactory[
+	*dvpicv1alpha1.DVPInstanceClass,
+	*dvpsettings.ModuleConfigSettings,
+	*dvppccv1.DVPProviderClusterConfiguration,
+]
+
+// NewProtocolStateBuilderFactory creates a dhctl protocol state builder factory for the DVP provider.
+func NewProtocolStateBuilderFactory(config cpvalprotocol.StateBuilderConfig) *ProtocolStateBuilderFactory {
+	return cpvalprotocol.NewStateBuilderFactory[
+		*dvpicv1alpha1.DVPInstanceClass,
+		*dvpsettings.ModuleConfigSettings,
+		*dvppccv1.DVPProviderClusterConfiguration,
+	](config)
+}
+
+// AdmissionStateBuilderFactory produces DVP validation state builders for admission requests.
+type AdmissionStateBuilderFactory = cpvaladmission.StateBuilderFactory[
+	*dvpicv1alpha1.DVPInstanceClass,
+	*dvpsettings.ModuleConfigSettings,
+	*dvppccv1.DVPProviderClusterConfiguration,
+]
+
+// NewAdmissionStateBuilderFactory creates an in-cluster admission state builder factory for the DVP provider.
+func NewAdmissionStateBuilderFactory(client client.Client, config cpvaladmission.StateBuilderConfig) *AdmissionStateBuilderFactory {
+	return cpvaladmission.NewStateBuilderFactory[
+		*dvpicv1alpha1.DVPInstanceClass,
+		*dvpsettings.ModuleConfigSettings,
+		*dvppccv1.DVPProviderClusterConfiguration,
+	](client, config)
+}
 
 var (
-	CredentialsValidator            = &cpval.KubeconfigValidator{}
-	PCCCredentialsValidationAdapter = &cpval.PCCCredentialsValidationAdapter{
-		Validator: CredentialsValidator,
-		Schemes: []cpval.PCCSchemeConfig{
-			{
-				AuthScheme: cpapi.AuthSchemeKubeconfig,
-				SecretPath: PCCKubeconfigPath,
-			},
-		},
-	}
+	CredentialsValidator = &cpval.KubeconfigValidator{}
 )

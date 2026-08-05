@@ -16,7 +16,6 @@ package validation
 
 import (
 	"fmt"
-	"strings"
 )
 
 func getNamedResourcePath(kind, name string) string {
@@ -25,28 +24,4 @@ func getNamedResourcePath(kind, name string) string {
 	}
 
 	return fmt.Sprintf("%s/%s", kind, name)
-}
-
-func lookupMapStringPath(data map[string]any, path string) (string, bool) {
-	if data == nil || path == "" {
-		return "", false
-	}
-
-	current := any(data)
-	for _, part := range strings.Split(path, ".") {
-		object, ok := current.(map[string]any)
-		if !ok {
-			return "", false
-		}
-
-		value, ok := object[part]
-		if !ok {
-			return "", false
-		}
-
-		current = value
-	}
-
-	value, ok := current.(string)
-	return value, ok
 }

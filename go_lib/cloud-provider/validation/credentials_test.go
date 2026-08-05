@@ -22,10 +22,11 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+	testprovider "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 )
 
 func validTestKubeconfigB64() string {
-	return "YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgotIG5hbWU6IHRlc3QKICBjbHVzdGVyOgogICAgc2VydmVyOiBodHRwczovLzEyNy4wLjAuMTo2NDQzCiAgICBpbnNlY3VyZS1za2lwLXRscy12ZXJpZnk6IHRydWUKY29udGV4dHM6Ci0gbmFtZTogdGVzdAogIGNvbnRleHQ6CiAgICBjbHVzdGVyOiB0ZXN0CiAgICB1c2VyOiB0ZXN0CmN1cnJlbnQtY29udGV4dDogdGVzdAp1c2VyczoKLSBuYW1lOiB0ZXN0CiAgdXNlcjoKICAgIHRva2VuOiB0ZXN0LXRva2Vu"
+	return "YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgotIG5hbWU6IHRlc3QKICBjbHVzdGVyOgogICAgc2VydmVyOiBodHRwczovLzEyNy4wLjAuMTo2NDQzCiAgICBpbnNlY3VyZS1za2lwLXRscy12ZXJpZnk6IHRydWUKY29udGV4dHM6Ci0gbmFtZTogdGVzdAogIGNvbnRleHQ6CiAgICBjbHVzdGVyOiB0ZXN0CiAgICB1c2VyOiB0ZXN0CmN1cnJlbnQtY29udGV4dDogdGVzdAp1c2VyczoKLSBuYW1lOiB0ZXN0CiAgdXNlcjoKICAgIHRva2VuOiB0ZXN0LXRva2Vu" // gitleaks:allow
 }
 
 func managedCredentialSecret(name, namespace string, data cpapi.CredentialSecretStringData) cpapi.CredentialSecret {
@@ -56,7 +57,7 @@ func allSchemesValidator() CredentialsValidator {
 func TestValidateCredentialSecretContentNilState(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateCredentialSecretContent(nil, &APITokenValidator{})
+	result := ValidateCredentialSecretContent[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig](nil, &APITokenValidator{})
 	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
 		t.Fatalf("ValidateCredentialSecretContent(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
@@ -555,7 +556,7 @@ func TestCombinedCredentialValidatorRejectsUnknownAuthScheme(t *testing.T) {
 func TestValidateCredentialSecretPresenceNilState(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateCredentialSecretPresence(nil)
+	result := ValidateCredentialSecretPresence[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig](nil)
 	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
 		t.Fatalf("ValidateCredentialSecretPresence(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}

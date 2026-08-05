@@ -15,32 +15,60 @@
 package preflight
 
 import (
+	"fmt"
+
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 
-	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvppccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/pcc/v1"
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+)
+
+const (
+	CodePCCInvalidKubeconfigSecret = "pcc_invalid_kubeconfig_secret"
 )
 
 // ValidatePreflight checks resources required before cluster bootstrap or converge.
-func ValidatePreflight(state *cpvalapi.State) cpvalapi.Result {
+func ValidatePreflight(state *dvpval.State) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
 
 	result := cpvalapi.Result{}
-	result.Merge(cpval.ValidateProviderClusterConfig(state, dvpmeta.PCCCredentialsValidationAdapter))
+	if state.HasProviderClusterConfig() {
+		result.Merge(
+			validateKubeconfig(state.ProviderClusterConfig),
+		)
+	}
 
 	if cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
 		return result
 	}
 
-	result.Merge(cpval.ValidateModuleConfig(state))
-	result.Merge(cpval.ValidateCredentialSecretPresence(state))
-	result.Merge(cpval.ValidateCredentialSecretContent(state, dvpmeta.CredentialsValidator))
-	result.Merge(cpval.ValidateMasterNodeGroupPresence(state))
-	result.Merge(cpval.ValidateNodeGroupsClassReference(state, true))
-	result.Merge(cpval.ValidateInstanceClassesEtcdDisk(state))
+	result.Merge(
+		cpval.ValidateModuleConfig(state),
+		cpval.ValidateCredentialSecretPresence(state),
+		cpval.ValidateCredentialSecretContent(state, dvpval.CredentialsValidator),
+		cpval.ValidateMasterNodeGroupPresence(state),
+		cpval.ValidateNodeGroupsClassReference(state, true),
+		cpval.ValidateInstanceClassesEtcdDisk(state),
+	)
+
+	return result
+}
+
+func validateKubeconfig(pcc *dvppccv1.DVPProviderClusterConfiguration) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	if err := cpval.ValidateKubeconfigBase64(pcc.Provider.KubeconfigDataBase64); err != nil {
+		result.AddError(
+			"ProviderClusterConfiguration.provider.kubeconfigDataBase64",
+			CodePCCInvalidKubeconfigSecret,
+			"masked",
+			fmt.Sprintf("invalid kubeconfig: %v", err),
+		)
+	}
 
 	return result
 }

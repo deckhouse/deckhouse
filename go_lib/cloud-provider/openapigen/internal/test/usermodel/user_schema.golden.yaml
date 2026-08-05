@@ -19,6 +19,8 @@ properties:
         type: string
       lat:
         description: The geoposition latitude
+        maximum: 90
+        minimum: 6
         type: integer
       lon:
         description: The geoposition longitude
@@ -73,6 +75,9 @@ properties:
     format: int64
     title: User ID
     type: string
+    x-kubernetes-validations:
+    - message: must contain digits only
+      rule: self.matches('^[0-9]+$')
   name:
     type: string
   owner:

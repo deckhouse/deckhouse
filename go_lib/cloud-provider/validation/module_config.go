@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 )
 
@@ -28,7 +29,11 @@ const (
 
 // ValidateModuleConfig checks ModuleConfig (or legacy ProviderClusterConfiguration) presence and
 // module-specific invariants (before bootstrap or converge).
-func ValidateModuleConfig(state *cpvalapi.State) cpvalapi.Result {
+func ValidateModuleConfig[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *cpvalapi.State[IC, S, PCC]) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
@@ -36,7 +41,7 @@ func ValidateModuleConfig(state *cpvalapi.State) cpvalapi.Result {
 	result := cpvalapi.Result{}
 
 	if state.ModuleConfig == nil {
-		if len(state.LegacyProviderClusterConfig) == 0 {
+		if !state.HasProviderClusterConfig() {
 			result.AddError("ModuleConfig", CodeModuleConfigRequired, nil, "ModuleConfig is required")
 		}
 

@@ -22,17 +22,17 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
+	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
 )
 
 func TestDVPInstanceClassValidatorWithFakeClientValidateUpdate(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewDVPInstanceClassValidator(builder, &unstructured.Unstructured{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewDVPInstanceClassValidator(factory, &unstructured.Unstructured{})
 
 	updated := dvpInstanceClassObject("master-dvp")
-	updated.Object["spec"] = map[string]any{"etcdDisk": map[string]any{"size": int64(10)}}
+	updated.Object["spec"] = map[string]any{"etcdDisk": map[string]any{"size": "10Gi"}}
 	_, err := validator.ValidateUpdate(context.Background(), nil, updated)
 	if err != nil {
 		t.Fatalf("ValidateUpdate() error = %v, want allow", err)
@@ -42,8 +42,8 @@ func TestDVPInstanceClassValidatorWithFakeClientValidateUpdate(t *testing.T) {
 func TestDVPInstanceClassValidatorRejectsMasterEtcdDiskRemoval(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewDVPInstanceClassValidator(builder, &unstructured.Unstructured{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewDVPInstanceClassValidator(factory, &unstructured.Unstructured{})
 
 	updated := dvpInstanceClassObject("master-dvp")
 	updated.Object["spec"] = map[string]any{}
@@ -54,7 +54,7 @@ func TestDVPInstanceClassValidatorRejectsMasterEtcdDiskRemoval(t *testing.T) {
 	}
 }
 
-func TestDVPInstanceClassValidatorRejectsWorkerEtcdDiskWithReadableValue(t *testing.T) {
+func TestDVPInstanceClassValidatorRejectsWorkerEtcdDisk(t *testing.T) {
 	t.Parallel()
 
 	workerNodeGroup := dvpNodeGroupObject("worker", cpapi.NodeTypeCloudPermanent)
@@ -62,14 +62,14 @@ func TestDVPInstanceClassValidatorRejectsWorkerEtcdDiskWithReadableValue(t *test
 		"nodeType": string(cpapi.NodeTypeCloudPermanent),
 		"cloudInstances": map[string]any{
 			"classReference": map[string]any{
-				"kind": dvpmeta.InstanceClassKind,
+				"kind": dvpicv1alpha1.GroupVersionKind.Kind,
 				"name": "worker-dvp",
 			},
 		},
 	}
 
-	builder := newWebhookAdmissionStateBuilder(t, append(validDVPClusterObjects(), workerNodeGroup)...)
-	validator := NewDVPInstanceClassValidator(builder, &unstructured.Unstructured{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, append(validDVPClusterObjects(), workerNodeGroup)...)
+	validator := NewDVPInstanceClassValidator(factory, &unstructured.Unstructured{})
 
 	updated := dvpInstanceClassObject("worker-dvp")
 	updated.Object["spec"] = map[string]any{
@@ -83,19 +83,16 @@ func TestDVPInstanceClassValidatorRejectsWorkerEtcdDiskWithReadableValue(t *test
 	if err == nil || !strings.Contains(err.Error(), "attached to NodeGroup master") {
 		t.Fatalf("ValidateUpdate() error = %v, want worker etcdDisk denial", err)
 	}
-	if strings.Contains(err.Error(), "json.RawMessage") {
-		t.Fatalf("ValidateUpdate() error = %q, want readable etcdDisk value", err.Error())
-	}
-	if !strings.Contains(err.Error(), `Invalid value:`) {
-		t.Fatalf("ValidateUpdate() error = %q, want etcdDisk value", err.Error())
+	if !strings.Contains(err.Error(), `worker-dvp.spec.etcdDisk: Invalid value: {"size":"5Gi","storageClass":"replicated"}`) {
+		t.Fatalf("ValidateUpdate() error = %q, want etcdDisk field path with the etcdDisk value", err.Error())
 	}
 }
 
 func TestDVPInstanceClassValidatorWithFakeClientAllowsValidCluster(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewDVPInstanceClassValidator(builder, &unstructured.Unstructured{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewDVPInstanceClassValidator(factory, &unstructured.Unstructured{})
 
 	created := dvpInstanceClassObject("worker-dvp")
 	_, err := validator.ValidateCreate(context.Background(), created)
@@ -107,8 +104,8 @@ func TestDVPInstanceClassValidatorWithFakeClientAllowsValidCluster(t *testing.T)
 func TestDVPInstanceClassValidatorWithFakeClientRejectsDeleteInUse(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
-	validator := NewDVPInstanceClassValidator(builder, &unstructured.Unstructured{})
+	factory := newWebhookAdmissionStateBuilderFactory(t, validDVPClusterObjects()...)
+	validator := NewDVPInstanceClassValidator(factory, &unstructured.Unstructured{})
 
 	_, err := validator.ValidateDelete(context.Background(), dvpInstanceClassObject("master-dvp"))
 	if err == nil || !strings.Contains(err.Error(), "InstanceClass is used by NodeGroup") {

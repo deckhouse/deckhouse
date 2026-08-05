@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package decode
+package validation
 
 import (
 	"encoding/json"
@@ -23,7 +23,7 @@ import (
 
 // DecodeCredentialSecret decodes a credential Secret from a Kubernetes object map.
 func DecodeCredentialSecret(rawSecret map[string]any) (cpapi.CredentialSecret, error) {
-	secret, err := DecodeJSONValue[cpapi.CredentialSecret](rawSecret)
+	secret, err := decodeJSONValue[cpapi.CredentialSecret](rawSecret)
 	if err != nil {
 		return cpapi.CredentialSecret{}, fmt.Errorf("decode credential secret: %w", err)
 	}
@@ -53,7 +53,7 @@ func DecodeCredentialSecrets(rawSecrets map[string]map[string]any) ([]cpapi.Cred
 
 // DecodeNodeGroup decodes NodeGroup resource from CloudProviderVars.
 func DecodeNodeGroup(rawNodeGroup map[string]any) (*cpapi.NodeGroup, error) {
-	nodeGroup, err := DecodeJSONValue[cpapi.NodeGroup](rawNodeGroup)
+	nodeGroup, err := decodeJSONValue[cpapi.NodeGroup](rawNodeGroup)
 	if err != nil {
 		return nil, fmt.Errorf("decode node group: %w", err)
 	}
@@ -81,69 +81,72 @@ func DecodeNodeGroups(rawNodeGroups map[string]map[string]any) ([]cpapi.NodeGrou
 	return nodeGroups, nil
 }
 
-// DecodeInstanceClass decodes InstanceClass resource from CloudProviderVars.
-func DecodeInstanceClass(rawInstanceClass map[string]any) (*cpapi.InstanceClass, error) {
-	instanceClass, err := DecodeJSONValue[cpapi.InstanceClass](rawInstanceClass)
+// DecodeInstanceClass decodes a provider InstanceClass resource from a Kubernetes object map.
+func DecodeInstanceClass[IC cpapi.InstanceClassObject](rawInstanceClass map[string]any) (IC, error) {
+	instanceClass, err := decodeJSONValue[IC](rawInstanceClass)
 	if err != nil {
-		return nil, fmt.Errorf("decode instance class: %w", err)
+		var absent IC
+		return absent, fmt.Errorf("decode instance class: %w", err)
 	}
-
-	return &instanceClass, nil
+	return instanceClass, nil
 }
 
-// DecodeInstanceClasses decodes InstanceClass resources from CloudProviderVars.
-func DecodeInstanceClasses(rawInstanceClasses map[string]map[string]any) ([]cpapi.InstanceClass, error) {
+// DecodeInstanceClasses decodes provider InstanceClass resources from CloudProviderVars.
+func DecodeInstanceClasses[IC cpapi.InstanceClassObject](rawInstanceClasses map[string]map[string]any) ([]IC, error) {
 	if len(rawInstanceClasses) == 0 {
-		return []cpapi.InstanceClass{}, nil
+		return []IC{}, nil
 	}
-
-	instanceClasses := make([]cpapi.InstanceClass, 0, len(rawInstanceClasses))
-
+	instanceClasses := make([]IC, 0, len(rawInstanceClasses))
 	for name, rawInstanceClass := range rawInstanceClasses {
-		instanceClass, err := DecodeInstanceClass(rawInstanceClass)
+		instanceClass, err := DecodeInstanceClass[IC](rawInstanceClass)
 		if err != nil {
 			return instanceClasses, fmt.Errorf("decode instance class %q: %w", name, err)
 		}
-
-		instanceClasses = append(instanceClasses, *instanceClass)
+		instanceClasses = append(instanceClasses, instanceClass)
 	}
-
 	return instanceClasses, nil
 }
 
-// DecodeModuleConfig decodes a ModuleConfig resource object from admission or cluster state.
-func DecodeModuleConfig(rawModuleConfig map[string]any) (*cpapi.ModuleConfig, error) {
-	return DecodeModuleConfigForModule("", rawModuleConfig)
+// DecodeProviderClusterConfig decodes the legacy providerClusterConfiguration section.
+// An empty payload decodes to the absent (nil) provider value without an error.
+func DecodeProviderClusterConfig[PCC cpapi.ProviderClusterConfigObject](rawProviderClusterConfig map[string]any) (PCC, error) {
+	var absent PCC
+	if len(rawProviderClusterConfig) == 0 {
+		return absent, nil
+	}
+	providerClusterConfig, err := decodeJSONValue[PCC](rawProviderClusterConfig)
+	if err != nil {
+		return absent, fmt.Errorf("decode ProviderClusterConfiguration: %w", err)
+	}
+	return providerClusterConfig, nil
 }
 
-// DecodeModuleConfigForModule decodes ModuleConfig from a full CR object or a dhctl settings map.
-func DecodeModuleConfigForModule(moduleName string, rawModuleConfig map[string]any) (*cpapi.ModuleConfig, error) {
+// DecodeModuleConfig decodes ModuleConfig from a full CR object or a dhctl settings map.
+func DecodeModuleConfig[S cpapi.ModuleSettingsObject](
+	moduleName string,
+	rawModuleConfig map[string]any,
+) (*cpapi.ModuleConfig[S], error) {
 	if len(rawModuleConfig) == 0 {
 		return nil, nil
 	}
-
 	if _, hasSpec := rawModuleConfig["spec"]; hasSpec {
-		moduleConfig, err := DecodeJSONValue[cpapi.ModuleConfig](rawModuleConfig)
+		moduleConfig, err := decodeJSONValue[cpapi.ModuleConfig[S]](rawModuleConfig)
 		if err != nil {
 			return nil, fmt.Errorf("decode ModuleConfig: %w", err)
 		}
-
 		if moduleConfig.Name == "" && moduleName != "" {
 			moduleConfig.Name = moduleName
 		}
-
 		return &moduleConfig, nil
 	}
-
-	settings, err := DecodeJSONValue[cpapi.ModuleConfigSpecSettings](rawModuleConfig)
+	settings, err := decodeJSONValue[S](rawModuleConfig)
 	if err != nil {
 		return nil, fmt.Errorf("decode module settings: %w", err)
 	}
-
 	enabled := true
-	return &cpapi.ModuleConfig{
+	return &cpapi.ModuleConfig[S]{
 		ObjectMeta: cpapi.ObjectMeta{Name: moduleName},
-		Spec: cpapi.ModuleConfigSpec{
+		Spec: cpapi.ModuleConfigSpec[S]{
 			Enabled:  &enabled,
 			Version:  2,
 			Settings: settings,
@@ -151,8 +154,8 @@ func DecodeModuleConfigForModule(moduleName string, rawModuleConfig map[string]a
 	}, nil
 }
 
-// DecodeJSONValue round-trips an arbitrary value through JSON into type T.
-func DecodeJSONValue[T any](value any) (T, error) {
+// decodeJSONValue round-trips an arbitrary value through JSON into type T.
+func decodeJSONValue[T any](value any) (T, error) {
 	var out T
 	raw, err := json.Marshal(value)
 	if err != nil {

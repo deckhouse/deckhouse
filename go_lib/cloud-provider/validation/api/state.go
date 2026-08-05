@@ -15,39 +15,68 @@
 package api
 
 import (
+	"reflect"
+
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 // State holds decoded provider resources used by validation rules.
-type State struct {
-	// InstanceClassKind is the provider InstanceClass resource kind.
-	InstanceClassKind string
+//
+// IC, S and PCC are the provider InstanceClass, ModuleConfig settings and
+// providerClusterConfiguration types; they are instantiated with pointer types.
+type State[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+] struct {
 	// NamespaceName is the module namespace used for credential Secrets and migration markers.
 	NamespaceName string
 	// ModuleName is the cloud-provider ModuleConfig name.
 	ModuleName string
 	// ModuleConfig is the decoded cloud-provider ModuleConfig resource.
-	ModuleConfig *cpapi.ModuleConfig
+	ModuleConfig *cpapi.ModuleConfig[S]
 	// CredentialSecrets holds managed credential Secrets from the module namespace.
 	CredentialSecrets []cpapi.CredentialSecret
 	// NodeGroups holds CloudPermanent NodeGroups used for cross-resource validation.
 	NodeGroups []cpapi.NodeGroup
 	// InstanceClasses holds provider InstanceClass resources of InstanceClassKind.
-	InstanceClasses []cpapi.InstanceClass
-	// LegacyProviderClusterConfig holds the legacy providerClusterConfiguration section.
-	LegacyProviderClusterConfig map[string]any
+	InstanceClasses []IC
+	// ProviderClusterConfig holds the legacy providerClusterConfiguration resource.
+	ProviderClusterConfig PCC
 	// MigrationStatus controls whether new-model validation should run.
 	MigrationStatus cpapi.MigrationStatus
 }
 
-func (s State) ListCredentialSecrets() []cpapi.CredentialSecret {
+// IsResourceAbsent reports whether a provider resource value is unset:
+// an invalid value, a nil pointer or reference type, or a zero struct.
+func IsResourceAbsent(value any) bool {
+	reflected := reflect.ValueOf(value)
+	if !reflected.IsValid() {
+		return true
+	}
+
+	switch reflected.Kind() {
+	case reflect.Pointer, reflect.Interface, reflect.Map, reflect.Slice, reflect.Func, reflect.Chan:
+		return reflected.IsNil()
+	default:
+		return reflected.IsZero()
+	}
+}
+
+// HasProviderClusterConfig reports whether the legacy providerClusterConfiguration is present.
+func (s State[IC, S, PCC]) HasProviderClusterConfig() bool {
+	return !IsResourceAbsent(s.ProviderClusterConfig)
+}
+
+// ListCredentialSecrets returns managed credential Secrets that belong to the module namespace.
+//
+// A Secret with an empty Namespace is treated as belonging to the module: on the dhctl protocol
+// path secrets are keyed as <namespace>/<name> and metadata.namespace may be left unset, so the
+// key carries the namespace instead of the object. This is a deliberate allowance, not a gap.
+func (s State[IC, S, PCC]) ListCredentialSecrets() []cpapi.CredentialSecret {
 	secrets := make([]cpapi.CredentialSecret, 0, len(s.CredentialSecrets))
 	for _, secret := range s.CredentialSecrets {
-		if secret.Namespace != "" && secret.Namespace != s.NamespaceName {
-			continue
-		}
-
-		if !secret.IsManaged() {
+		if !s.isModuleCredentialSecret(secret) {
 			continue
 		}
 
@@ -57,55 +86,89 @@ func (s State) ListCredentialSecrets() []cpapi.CredentialSecret {
 	return secrets
 }
 
-func (s State) ExistsCredentialSecret(name string) bool {
+// FindCredentialSecret returns the managed credential Secret with the given name.
+// It applies the same namespace rules as ListCredentialSecrets.
+func (s State[IC, S, PCC]) FindCredentialSecret(name string) (cpapi.CredentialSecret, bool) {
 	for _, secret := range s.CredentialSecrets {
 		if secret.Name != name {
 			continue
 		}
 
-		if secret.Namespace != "" && secret.Namespace != s.NamespaceName {
+		if !s.isModuleCredentialSecret(secret) {
 			continue
 		}
 
-		if !secret.IsManaged() {
-			continue
-		}
-
-		return true
+		return secret, true
 	}
 
-	return false
+	return cpapi.CredentialSecret{}, false
 }
 
-func (s State) ExistsNodeGroup(name string) bool {
+// ExistsCredentialSecret reports whether a managed credential Secret with the given name exists.
+func (s State[IC, S, PCC]) ExistsCredentialSecret(name string) bool {
+	_, ok := s.FindCredentialSecret(name)
+	return ok
+}
+
+// isModuleCredentialSecret reports whether the Secret is managed and lives in the module namespace.
+// See ListCredentialSecrets for why an empty namespace is accepted.
+func (s State[IC, S, PCC]) isModuleCredentialSecret(secret cpapi.CredentialSecret) bool {
+	if secret.Namespace != "" && secret.Namespace != s.NamespaceName {
+		return false
+	}
+
+	return secret.IsManaged()
+}
+
+// FindNodeGroup returns the CloudPermanent NodeGroup with the given name.
+func (s State[IC, S, PCC]) FindNodeGroup(name string) (cpapi.NodeGroup, bool) {
 	for _, nodeGroup := range s.NodeGroups {
 		if nodeGroup.Name == name {
-			return true
+			return nodeGroup, true
 		}
 	}
 
-	return false
+	return cpapi.NodeGroup{}, false
 }
 
-func (s State) ExistsInstanceClass(name string) bool {
+// ExistsNodeGroup reports whether a CloudPermanent NodeGroup with the given name exists.
+func (s State[IC, S, PCC]) ExistsNodeGroup(name string) bool {
+	_, ok := s.FindNodeGroup(name)
+	return ok
+}
+
+// FindInstanceClass returns the provider InstanceClass with the given name.
+func (s State[IC, S, PCC]) FindInstanceClass(name string) (IC, bool) {
 	for _, class := range s.InstanceClasses {
-		if class.Name == name {
-			return true
+		if class.GetName() == name {
+			return class, true
 		}
 	}
 
-	return false
+	var absent IC
+	return absent, false
 }
 
-func (s State) ListInstanceClassConsumers() map[string][]string {
+// ExistsInstanceClass reports whether a provider InstanceClass with the given name exists.
+func (s State[IC, S, PCC]) ExistsInstanceClass(name string) bool {
+	_, ok := s.FindInstanceClass(name)
+	return ok
+}
+
+// ListInstanceClassConsumers maps an InstanceClass name to the names of NodeGroups referencing it.
+func (s State[IC, S, PCC]) ListInstanceClassConsumers() map[string][]string {
 	result := make(map[string][]string, len(s.NodeGroups))
 	for _, nodeGroup := range s.NodeGroups {
+		if nodeGroup.Spec.NodeType != cpapi.NodeTypeCloudPermanent {
+			continue
+		}
+
 		if nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
 			continue
 		}
 
 		classRef := nodeGroup.Spec.CloudInstances.ClassReference
-		if classRef.Kind != s.InstanceClassKind || classRef.Name == "" {
+		if classRef.Name == "" {
 			continue
 		}
 

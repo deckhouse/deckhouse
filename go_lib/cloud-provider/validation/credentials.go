@@ -17,9 +17,10 @@ package validation
 import (
 	"encoding/base64"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/maps"
 	"k8s.io/client-go/tools/clientcmd"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -42,7 +43,11 @@ const (
 )
 
 // ValidateCredentialSecretPresence checks that primary credential Secret exists (before bootstrap or converge).
-func ValidateCredentialSecretPresence(state *cpvalapi.State) cpvalapi.Result {
+func ValidateCredentialSecretPresence[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *cpvalapi.State[IC, S, PCC]) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
@@ -64,7 +69,11 @@ func ValidateCredentialSecretPresence(state *cpvalapi.State) cpvalapi.Result {
 }
 
 // ValidateCredentialSecretContent checks secret type and compliance of the structure with the given credential validator.
-func ValidateCredentialSecretContent(state *cpvalapi.State, validator CredentialsValidator) cpvalapi.Result {
+func ValidateCredentialSecretContent[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *cpvalapi.State[IC, S, PCC], validator CredentialsValidator) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
@@ -184,55 +193,36 @@ func (v *KubeconfigValidator) Validate(path string, data map[string]string) cpva
 		return result
 	}
 
-	kubeconfigB64 := strings.TrimSpace(data["secret"])
-	_ = validateKubeconfigBase64(path, kubeconfigB64, &result)
+	kubeconfigB64 := strings.TrimSpace(data[cpapi.CredentialSecretSecretKey])
+	if err := ValidateKubeconfigBase64(kubeconfigB64); err != nil {
+		result.AddError(
+			fmt.Sprintf("%s.data.%s", path, cpapi.CredentialSecretSecretKey),
+			CodeInvalidKubeconfigSecret,
+			"masked",
+			fmt.Sprintf("invalid kubeconfig: %v", err),
+		)
+	}
 
 	return result
 }
 
-func validateKubeconfigBase64(path string, kubeconfigB64 string, result *cpvalapi.Result) bool {
+// ValidateKubeconfigBase64 decodes and validates a base64-encoded kubeconfig.
+func ValidateKubeconfigBase64(kubeconfigB64 string) error {
 	kubeconfigBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(kubeconfigB64))
 	if err != nil {
-		addKubeconfigValidateErrorToResult(
-			path,
-			kubeconfigB64,
-			fmt.Errorf("decode kubeconfig: %w", err),
-			result,
-		)
-		return false
+		return fmt.Errorf("decode kubeconfig: %w", err)
 	}
 
 	cfg, err := clientcmd.Load(kubeconfigBytes)
 	if err != nil {
-		addKubeconfigValidateErrorToResult(
-			path,
-			kubeconfigB64,
-			fmt.Errorf("parse kubeconfig: %w", err),
-			result,
-		)
-		return false
+		return fmt.Errorf("parse kubeconfig: %w", err)
 	}
 
 	if err := clientcmd.Validate(*cfg); err != nil {
-		addKubeconfigValidateErrorToResult(
-			path,
-			kubeconfigB64,
-			fmt.Errorf("validate kubeconfig: %w", err),
-			result,
-		)
-		return false
+		return fmt.Errorf("validate kubeconfig: %w", err)
 	}
 
-	return true
-}
-
-func addKubeconfigValidateErrorToResult(path string, value string, err error, result *cpvalapi.Result) {
-	result.AddError(
-		path+".data.secret",
-		CodeInvalidKubeconfigSecret,
-		value,
-		fmt.Sprintf("invalid kubeconfig: %v", err),
-	)
+	return nil
 }
 
 // ServiceAccountValidator validates credentials with ServiceAccount auth scheme.
@@ -262,12 +252,12 @@ func (v *ServiceAccountValidator) Validate(path string, data map[string]string) 
 		return result
 	}
 
-	serviceAccount := strings.TrimSpace(data["secret"])
+	serviceAccount := strings.TrimSpace(data[cpapi.CredentialSecretSecretKey])
 	if err := v.ValidateContentFunc(serviceAccount); err != nil {
 		result.AddError(
-			path+".data.secret",
+			fmt.Sprintf("%s.data.%s", path, cpapi.CredentialSecretSecretKey),
 			CodeInvalidServiceAccountSecret,
-			serviceAccount,
+			"masked",
 			fmt.Sprintf("invalid service account: %v", err),
 		)
 	}
@@ -308,7 +298,8 @@ func (v *CombinedCredentialValidator) Validate(path string, data map[string]stri
 
 	validator, ok := v.ValidatorMap[authScheme]
 	if !ok {
-		expectedAuthSchemes := maps.Keys(v.ValidatorMap)
+		// Sorted: the list of allowed values must not change between runs.
+		expectedAuthSchemes := slices.Sorted(maps.Keys(v.ValidatorMap))
 		result.AddError(
 			path+".data.authScheme",
 			CodeUnsupportedAuthScheme,

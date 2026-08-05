@@ -4,14 +4,13 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package webhooks
 
 import (
@@ -23,14 +22,15 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
+	cpadmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
+	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	dvpadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/admission"
 )
 
 type DVPInstanceClassValidator struct {
-	builder *cpvaladmission.StateBuilder
+	factory *dvpval.AdmissionStateBuilderFactory
 	object  runtime.Object
 }
 
@@ -41,9 +41,9 @@ var (
 	instanceClassLog = logf.Log.WithName("instance-class")
 )
 
-func NewDVPInstanceClassValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *DVPInstanceClassValidator {
+func NewDVPInstanceClassValidator(factory *dvpval.AdmissionStateBuilderFactory, object runtime.Object) *DVPInstanceClassValidator {
 	return &DVPInstanceClassValidator{
-		builder: builder,
+		factory: factory,
 		object:  object,
 	}
 }
@@ -73,15 +73,25 @@ func (v *DVPInstanceClassValidator) validate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	name := objectName(obj)
+	namespace := objectNamespace(obj)
+
 	instanceClassLog.Info(
 		"validating resource",
 		"operation", operation,
-		"resource", dvpmeta.InstanceClassKind,
+		"resource", dvpicv1alpha1.GroupVersionKind.Kind,
 		"name", name,
-		"namespace", objectNamespace(obj),
+		"namespace", namespace,
 	)
 
-	state, deletedClass, err := v.builder.BuildForInstanceClass(ctx, operation, obj)
+	// The consumers are needed on every operation, Delete included: that is exactly what
+	// ValidateInstanceClassDeletion reports on. Only the reviewed class itself is left out of
+	// the state on Delete — it is going away.
+	builder := v.factory.CreateBuilder().AddAssociatedNodeGroups(ctx, name)
+	if operation != admissionv1.Delete {
+		builder = builder.SetInstanceClass(ctx, obj)
+	}
+
+	state, err := builder.Build(ctx)
 	if err != nil {
 		instanceClassLog.Error(err, "failed to build validation state", "name", name)
 		return nil, internalBuildError(err)
@@ -90,6 +100,17 @@ func (v *DVPInstanceClassValidator) validate(
 	if shouldSkipState(state) {
 		instanceClassLog.V(1).Info("skipping validation during migration")
 		return nil, nil
+	}
+
+	// On Delete the reviewed class is passed to the deletion rule instead of the state: it is
+	// going away, so it must not look like an existing class to the other rules.
+	var deletedClass *dvpicv1alpha1.DVPInstanceClass
+	if operation == admissionv1.Delete {
+		deletedClass, err = cpadmission.DecodeInstanceClassObject[*dvpicv1alpha1.DVPInstanceClass](obj)
+		if err != nil {
+			instanceClassLog.Error(err, "failed to decode instance class", "name", name)
+			return nil, internalBuildError(err)
+		}
 	}
 
 	result := dvpadmission.ValidateInstanceClass(state, operation, deletedClass)
@@ -108,9 +129,9 @@ func (v *DVPInstanceClassValidator) validate(
 	instanceClassLog.Info(
 		"validation allowed",
 		"operation", operation,
-		"resource", dvpmeta.InstanceClassKind,
+		"resource", dvpicv1alpha1.GroupVersionKind.Kind,
 		"name", name,
-		"namespace", objectNamespace(obj),
+		"namespace", namespace,
 	)
 
 	return warnings, nil

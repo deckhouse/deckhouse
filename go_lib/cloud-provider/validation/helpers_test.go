@@ -19,11 +19,24 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 )
 
 const (
 	testNamespace = "d8-cloud-provider-test"
 )
+
+type testState = cpvalapi.State[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig]
+
+func testInstanceClass(kind, name string, withEtcdDisk bool) *testprovider.InstanceClass {
+	class := &testprovider.InstanceClass{}
+	class.Kind = kind
+	class.Name = name
+	if withEtcdDisk {
+		class.Spec.EtcdDisk = &testprovider.EtcdDisk{Size: "10Gi"}
+	}
+	return class
+}
 
 // hasViolationCode checks that result contains a violation with the given code.
 func hasViolationCode(result cpvalapi.Result, code string) bool {
@@ -44,7 +57,7 @@ func hasViolationCode(result cpvalapi.Result, code string) bool {
 
 // credentialContentState builds a validation State with managed credential secrets.
 // nil secrets produces an empty slice.
-func credentialContentState(secrets []cpapi.CredentialSecret) *cpvalapi.State {
+func credentialContentState(secrets []cpapi.CredentialSecret) *testState {
 	managed := make([]cpapi.CredentialSecret, 0, len(secrets))
 
 	for _, s := range secrets {
@@ -53,19 +66,16 @@ func credentialContentState(secrets []cpapi.CredentialSecret) *cpvalapi.State {
 		}
 	}
 
-	return &cpvalapi.State{
-		NamespaceName:      testNamespace,
-		CredentialSecrets:  managed,
-		MigrationStatus:    cpvalapi.MigrationStatusFromState(nil),
+	return &testState{
+		NamespaceName:     testNamespace,
+		CredentialSecrets: managed,
 	}
 }
 
 // instanceClassState builds a validation State with InstanceClasses and NodeGroups.
-func instanceClassState(kind string, nodeGroups []cpapi.NodeGroup, classes []cpapi.InstanceClass) *cpvalapi.State {
-	state := &cpvalapi.State{
-		InstanceClassKind: kind,
+func instanceClassState(kind string, nodeGroups []cpapi.NodeGroup, classes []*testprovider.InstanceClass) *testState {
+	state := &testState{
 		CredentialSecrets: nil,
-		MigrationStatus:   cpvalapi.MigrationStatusFromState(nil),
 	}
 
 	if nodeGroups != nil {
@@ -96,42 +106,6 @@ func TestGetNamedResourcePath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getNamedResourcePath(tt.kind, tt.obj); got != tt.want {
 				t.Errorf("getNamedResourcePath(%q, %q) = %q, want %q", tt.kind, tt.obj, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestLookupMapStringPathEdgeCases(t *testing.T) {
-	t.Parallel()
-
-	data := map[string]any{
-		"provider": map[string]any{
-			"kubeconfigDataBase64": "value",
-			"nestedInt":            42,
-		},
-	}
-
-	tests := []struct {
-		name string
-		data map[string]any
-		path string
-		want string
-		ok   bool
-	}{
-		{"nil data", nil, "provider.key", "", false},
-		{"empty path", data, "", "", false},
-		{"non-map intermediate", data, "provider.kubeconfigDataBase64.nested", "", false},
-		{"non-string leaf", data, "provider.nestedInt", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, ok := lookupMapStringPath(tt.data, tt.path)
-			if ok != tt.ok {
-				t.Errorf("lookupMapStringPath() ok = %v, want %v", ok, tt.ok)
-			}
-			if got != tt.want {
-				t.Errorf("lookupMapStringPath() = %q, want %q", got, tt.want)
 			}
 		})
 	}

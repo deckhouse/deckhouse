@@ -47,6 +47,8 @@ type NodeGroupSpec struct {
 type CloudInstances struct {
 	ClassReference *ClassReference `json:"classReference,omitempty"`
 	MaxPerZone     int             `json:"maxPerZone,omitempty"`
+	MinPerZone     int             `json:"minPerZone,omitempty"`
+	Zones          []string        `json:"zones,omitempty"`
 }
 
 // ClassReference points a NodeGroup to an InstanceClass resource.

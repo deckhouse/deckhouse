@@ -18,12 +18,24 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 )
+
+// testState instantiates the generic State with provider stubs.
+type testState = State[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig]
+
+// testInstanceClass builds a stub InstanceClass with the given name.
+func testInstanceClass(name string) *testprovider.InstanceClass {
+	class := &testprovider.InstanceClass{}
+	class.Name = name
+
+	return class
+}
 
 func TestStateListCredentialSecrets(t *testing.T) {
 	t.Parallel()
 
-	state := &State{
+	state := &testState{
 		CredentialSecrets: []cpapi.CredentialSecret{
 			{
 				ObjectMeta: cpapi.ObjectMeta{Name: "d8-credentials"},
@@ -52,7 +64,7 @@ func TestStateListCredentialSecrets(t *testing.T) {
 func TestStateExistsNodeGroup(t *testing.T) {
 	t.Parallel()
 
-	state := &State{
+	state := &testState{
 		NodeGroups: []cpapi.NodeGroup{
 			{ObjectMeta: cpapi.ObjectMeta{Name: "master"}},
 			{ObjectMeta: cpapi.ObjectMeta{Name: "worker"}},
@@ -70,11 +82,8 @@ func TestStateExistsNodeGroup(t *testing.T) {
 func TestStateExistsInstanceClass(t *testing.T) {
 	t.Parallel()
 
-	state := &State{
-		InstanceClasses: []cpapi.InstanceClass{
-			{ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"}},
-			{ObjectMeta: cpapi.ObjectMeta{Name: "worker-dvp"}},
-		},
+	state := &testState{
+		InstanceClasses: []*testprovider.InstanceClass{testInstanceClass("master-dvp"), testInstanceClass("worker-dvp")},
 	}
 
 	if !state.ExistsInstanceClass("master-dvp") {
@@ -88,8 +97,7 @@ func TestStateExistsInstanceClass(t *testing.T) {
 func TestStateListInstanceClassConsumers(t *testing.T) {
 	t.Parallel()
 
-	state := &State{
-		InstanceClassKind: "DVPInstanceClass",
+	state := &testState{
 		NodeGroups: []cpapi.NodeGroup{
 			{
 				ObjectMeta: cpapi.ObjectMeta{Name: "master"},
@@ -128,8 +136,23 @@ func TestStateListInstanceClassConsumers(t *testing.T) {
 				},
 			},
 			{
+				// No cloudInstances: a NodeGroup without a class reference has no consumers.
+				ObjectMeta: cpapi.ObjectMeta{Name: "no-class-reference"},
+				Spec:       cpapi.NodeGroupSpec{},
+			},
+			{
+				// Static NodeGroups are not consumers even with a class reference:
+				// ListInstanceClassConsumers keeps only CloudPermanent NodeGroups.
 				ObjectMeta: cpapi.ObjectMeta{Name: "static"},
-				Spec:       cpapi.NodeGroupSpec{}, // not CloudPermanent
+				Spec: cpapi.NodeGroupSpec{
+					NodeType: cpapi.NodeType("Static"),
+					CloudInstances: &cpapi.CloudInstances{
+						ClassReference: &cpapi.ClassReference{
+							Kind: "DVPInstanceClass",
+							Name: "static-dvp",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -145,12 +168,15 @@ func TestStateListInstanceClassConsumers(t *testing.T) {
 	if _, ok := consumers["nonexistent"]; ok {
 		t.Fatal("consumers should not have entry for nonexistent class")
 	}
+	if _, ok := consumers["static-dvp"]; ok {
+		t.Fatal("consumers should not have entry for a class referenced only by a Static NodeGroup")
+	}
 }
 
 func TestStateExistsCredentialSecretNotFound(t *testing.T) {
 	t.Parallel()
 
-	state := &State{
+	state := &testState{
 		CredentialSecrets: []cpapi.CredentialSecret{
 			{
 				ObjectMeta: cpapi.ObjectMeta{Name: "other-secret"},
@@ -167,7 +193,7 @@ func TestStateExistsCredentialSecretNotFound(t *testing.T) {
 func TestStateExistsCredentialSecretFindsByNamespaceAndName(t *testing.T) {
 	t.Parallel()
 
-	state := &State{
+	state := &testState{
 		NamespaceName: "d8-cloud-provider-test",
 		CredentialSecrets: []cpapi.CredentialSecret{
 			{
@@ -185,7 +211,7 @@ func TestStateExistsCredentialSecretFindsByNamespaceAndName(t *testing.T) {
 func TestStateExistsCredentialSecretSkipsWrongNamespace(t *testing.T) {
 	t.Parallel()
 
-	state := &State{
+	state := &testState{
 		NamespaceName: "d8-cloud-provider-test",
 		CredentialSecrets: []cpapi.CredentialSecret{
 			{
@@ -203,7 +229,7 @@ func TestStateExistsCredentialSecretSkipsWrongNamespace(t *testing.T) {
 func TestStateExistsCredentialSecretSkipsNonManaged(t *testing.T) {
 	t.Parallel()
 
-	state := &State{
+	state := &testState{
 		CredentialSecrets: []cpapi.CredentialSecret{
 			{
 				ObjectMeta: cpapi.ObjectMeta{Name: "d8-credentials"},
@@ -214,5 +240,66 @@ func TestStateExistsCredentialSecretSkipsNonManaged(t *testing.T) {
 
 	if state.ExistsCredentialSecret("d8-credentials") {
 		t.Fatal("ExistsCredentialSecret should skip non-managed secrets")
+	}
+}
+
+func TestStateFindInstanceClass(t *testing.T) {
+	t.Parallel()
+
+	state := &testState{
+		InstanceClasses: []*testprovider.InstanceClass{testInstanceClass("master-dvp")},
+	}
+
+	class, ok := state.FindInstanceClass("master-dvp")
+	if !ok {
+		t.Fatal("FindInstanceClass(master-dvp) = false, want true")
+	}
+	if class.GetName() != "master-dvp" {
+		t.Fatalf("FindInstanceClass().GetName() = %q, want master-dvp", class.GetName())
+	}
+
+	missing, ok := state.FindInstanceClass("missing")
+	if ok {
+		t.Fatal("FindInstanceClass(missing) = true, want false")
+	}
+	if missing != nil {
+		t.Fatalf("FindInstanceClass(missing) = %#v, want nil", missing)
+	}
+}
+
+func TestStateHasProviderClusterConfig(t *testing.T) {
+	t.Parallel()
+
+	empty := &testState{}
+	if empty.HasProviderClusterConfig() {
+		t.Fatal("HasProviderClusterConfig() on nil PCC = true, want false")
+	}
+
+	withPCC := &testState{
+		ProviderClusterConfig: &testprovider.ProviderClusterConfig{
+			MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
+		},
+	}
+	if !withPCC.HasProviderClusterConfig() {
+		t.Fatal("HasProviderClusterConfig() with PCC = false, want true")
+	}
+}
+
+func TestIsResourceAbsent(t *testing.T) {
+	t.Parallel()
+
+	var nilClass *testprovider.InstanceClass
+
+	if !IsResourceAbsent(nilClass) {
+		t.Fatal("IsResourceAbsent(nil pointer) = false, want true")
+	}
+	if !IsResourceAbsent(nil) {
+		t.Fatal("IsResourceAbsent(nil) = false, want true")
+	}
+	if IsResourceAbsent(testInstanceClass("master-dvp")) {
+		t.Fatal("IsResourceAbsent(non-nil pointer) = true, want false")
+	}
+	if IsResourceAbsent(cpapi.NodeGroup{ObjectMeta: cpapi.ObjectMeta{Name: "master"}}) {
+		t.Fatal("IsResourceAbsent(non-zero struct) = true, want false")
 	}
 }

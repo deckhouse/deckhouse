@@ -9,6 +9,7 @@ require (
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
+	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0-00010101000000-000000000000 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/getkin/kin-openapi v0.135.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect

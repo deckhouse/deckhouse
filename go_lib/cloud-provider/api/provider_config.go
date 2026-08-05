@@ -14,21 +14,10 @@
 
 package api
 
-// GroupVersionKind identifies a Kubernetes resource.
-type GroupVersionKind struct {
-	Group   string
-	Version string
-	Kind    string
-}
-
-// TypeMeta holds API version and kind fields used by typed validation models.
-type TypeMeta struct {
-	APIVersion string `json:"apiVersion,omitempty"`
-	Kind       string `json:"kind,omitempty"`
-}
-
-// ObjectMeta holds resource identity fields used by typed validation models.
-type ObjectMeta struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+// ProviderClusterConfigObject is a typed providerClusterConfiguration usable by common rules.
+type ProviderClusterConfigObject interface {
+	// HasMasterNodeGroup reports whether the masterNodeGroup section is set.
+	HasMasterNodeGroup() bool
+	// NodeGroupNames returns names of the additional node groups.
+	NodeGroupNames() []string
 }

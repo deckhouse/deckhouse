@@ -79,7 +79,9 @@ type deckhouseXDocDefaultType struct {
 }
 
 type deckhouseXDocExamplesType struct {
-	Value  string `marker:"value,optional"`
+	// Value is any: x-doc-examples must accept numeric and object examples,
+	// not only strings, matching deckhouseXDocDefaultType.
+	Value  any `marker:"value,optional"`
 	values []any
 }
 
@@ -201,25 +203,22 @@ func (m deckhouseDisableAdditionalPropertiesType) ApplyToSchema(schema *openapi3
 }
 
 func (m deckhouseXDocSearchType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XDocSearchExtensionKey] = m.Value
+	setExtension(schema, XDocSearchExtensionKey, m.Value)
 	return nil
 }
 
 func (m deckhouseXDocSkipType) ApplyToSchema(schema *openapi3.Schema) error {
-	if schema.Extensions == nil {
-		schema.Extensions = make(map[string]any)
-	}
-	schema.Extensions[XDocSkipExtensionKey] = true
+	setExtension(schema, XDocSkipExtensionKey, true)
 	return nil
 }
 
 func (m deckhouseXDocExampleType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XDocExampleExtensionKey] = m.Value
+	setExtension(schema, XDocExampleExtensionKey, m.Value)
 	return nil
 }
 
 func (m deckhouseXDocDefaultType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XDocDefaultExtensionKey] = m.Value
+	setExtension(schema, XDocDefaultExtensionKey, m.Value)
 	return nil
 }
 
@@ -239,17 +238,17 @@ func (m deckhouseXDocExamplesType) MergeFrom(occurrences []any) (SchemaMarker, e
 }
 
 func (m deckhouseXDocExamplesType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XDocExamplesExtensionKey] = m.values
+	setExtension(schema, XDocExamplesExtensionKey, m.values)
 	return nil
 }
 
 func (m deckhouseXRulesType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XRulesExtensionKey] = m.Value
+	setExtension(schema, XRulesExtensionKey, m.Value)
 	return nil
 }
 
 func (m deckhouseXConfigVersionType) ApplyToSchema(schema *openapi3.Schema) error {
-	schema.Extensions[XConfigVersionExtensionKey] = m.Value
+	setExtension(schema, XConfigVersionExtensionKey, m.Value)
 	return nil
 }
 
@@ -267,4 +266,14 @@ func (m deckhouseValidationAdditionalPropertiesItemsPatternType) ApplyToSchema(s
 
 	schema.AdditionalProperties.Schema.Value.Items.Value.Pattern = m.Value
 	return nil
+}
+
+// setExtension writes a schema extension, initializing the map when needed, so that
+// the order in which markers are applied to a schema cannot cause a nil map panic.
+func setExtension(schema *openapi3.Schema, key string, value any) {
+	if schema.Extensions == nil {
+		schema.Extensions = make(map[string]any)
+	}
+
+	schema.Extensions[key] = value
 }

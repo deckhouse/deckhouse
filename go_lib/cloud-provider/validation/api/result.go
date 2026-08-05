@@ -18,9 +18,9 @@ package api
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
-
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -105,14 +105,25 @@ func (r *Result) Merge(results ...Result) {
 	}
 }
 
-// Errors returns blocking violations.
+// Errors returns blocking violations ordered by code and path.
 func (r Result) Errors() []Violation {
-	return maps.Values(r.errors)
+	return sortedViolations(r.errors)
 }
 
-// Warnings returns non-blocking violations.
+// Warnings returns non-blocking violations ordered by code and path.
 func (r Result) Warnings() []Violation {
-	return maps.Values(r.warnings)
+	return sortedViolations(r.warnings)
+}
+
+// sortedViolations returns violations in a stable order: admission denial texts and dhctl
+// output must not change between runs when a result holds more than one violation.
+func sortedViolations(violations map[string]Violation) []Violation {
+	result := make([]Violation, 0, len(violations))
+	for _, key := range slices.Sorted(maps.Keys(violations)) {
+		result = append(result, violations[key])
+	}
+
+	return result
 }
 
 // HasErrors reports whether the result contains blocking violations.

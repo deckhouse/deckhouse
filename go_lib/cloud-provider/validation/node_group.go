@@ -31,7 +31,11 @@ const (
 )
 
 // ValidateMasterNodeGroupPresence checks that master NodeGroup exists (before bootstrap or converge).
-func ValidateMasterNodeGroupPresence(state *cpvalapi.State) cpvalapi.Result {
+func ValidateMasterNodeGroupPresence[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *cpvalapi.State[IC, S, PCC]) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
@@ -53,12 +57,19 @@ func ValidateMasterNodeGroupPresence(state *cpvalapi.State) cpvalapi.Result {
 //
 // Non-CloudPermanent NodeGroups are skipped.
 // Set verifyExistence=false during admission (InstanceClass may not exist yet).
-func ValidateNodeGroupsClassReference(state *cpvalapi.State, verifyExistence bool) cpvalapi.Result {
+func ValidateNodeGroupsClassReference[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *cpvalapi.State[IC, S, PCC], verifyExistence bool) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
 
 	result := cpvalapi.Result{}
+
+	var absentClass IC
+	expectedKind := absentClass.GroupVersionKind().Kind
 
 	for _, nodeGroup := range state.NodeGroups {
 		if nodeGroup.Spec.NodeType != cpapi.NodeTypeCloudPermanent {
@@ -70,12 +81,13 @@ func ValidateNodeGroupsClassReference(state *cpvalapi.State, verifyExistence boo
 		}
 
 		classRef := nodeGroup.Spec.CloudInstances.ClassReference
-		if classRef.Kind != state.InstanceClassKind {
+
+		if expectedKind != "" && classRef.Kind != expectedKind {
 			result.AddError(
 				fmt.Sprintf("NodeGroup/%s.spec.cloudInstances.classReference.kind", nodeGroup.Name),
 				CodeNodeGroupInvalidInstanceClassKind,
 				classRef.Kind,
-				fmt.Sprintf(`NodeGroup "%s" must have reference with kind %s`, nodeGroup.Name, state.InstanceClassKind),
+				fmt.Sprintf("NodeGroup %q references %q, expected %q", nodeGroup.Name, classRef.Kind, expectedKind),
 			)
 		}
 
@@ -95,7 +107,7 @@ func ValidateNodeGroupsClassReference(state *cpvalapi.State, verifyExistence boo
 				fmt.Sprintf("NodeGroup/%s.spec.cloudInstances.classReference.name", nodeGroup.Name),
 				CodeInstanceClassNotFound,
 				classRef.Name,
-				fmt.Sprintf("%s %q was not found", state.InstanceClassKind, classRef.Name),
+				fmt.Sprintf("InstanceClass %q was not found", classRef.Name),
 			)
 		}
 	}
