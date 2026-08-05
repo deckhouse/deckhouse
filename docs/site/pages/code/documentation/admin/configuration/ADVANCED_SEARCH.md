@@ -56,14 +56,19 @@ Search results may be incomplete until indexing completes.
 
 #### OpenSearch index status
 
-The page displays a table with four indices:
+The page displays a table of indices:
 
-| Index | Search scope |
-|-------|--------------|
-| Code | Code (`blobs`) |
-| Commit | Commits |
-| Wiki | Wiki pages |
-| Note | Comments |
+| Index suffix | Search scope |
+|--------------|--------------|
+| `code` | Code (`blobs`) |
+| `commits` | Commits |
+| `wiki` | Wiki pages |
+| `notes` | Comments |
+| `milestones` | Milestones |
+| `merge-requests` | Merge requests |
+| `work-items` | Work items |
+
+An OpenSearch index name consists of the shared instance prefix and the suffix from the table, for example `deckhouse-development-code`.
 
 For each index, the table shows the OpenSearch index name, presence, document count, and index health.
 
