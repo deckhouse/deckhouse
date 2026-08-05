@@ -16,21 +16,20 @@ variable "clusterConfiguration" {
   type = any
 }
 
+# Absent in ModuleConfig-only clusters; the migration module resolves the source
+# of truth and validates the result.
 variable "providerClusterConfiguration" {
-  type = any
-  validation {
-    condition = cidrsubnet(var.providerClusterConfiguration.nodeNetworkCIDR, 0, 0) == var.providerClusterConfiguration.nodeNetworkCIDR
-    error_message = "Invalid nodeNetworkCIDR in YandexClusterConfiguration."
-  }
+  type    = any
+  default = null
 }
 
 variable "nodeIndex" {
-  type = number
+  type    = number
   default = 0
 }
 
 variable "cloudConfig" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -38,25 +37,72 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "nodeGroups" {
+  type    = any
+  default = {}
+}
+
+variable "instanceClasses" {
+  type    = any
+  default = {}
+}
+
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
+}
+
+module "migration" {
+  source                       = "../../../terraform-modules/migration"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  nodeGroups                   = var.nodeGroups
+  instanceClasses              = var.instanceClasses
+  secrets                      = var.secrets
+  settings                     = var.settings
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
-  existing_network_id = lookup(var.providerClusterConfiguration, "existingNetworkID", "")
-  node_network_cidr = var.providerClusterConfiguration.nodeNetworkCIDR
-  existing_zone_to_subnet_id_map = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", {})
-  nat_instance_internal_subnet_id = lookup(var.providerClusterConfiguration.withNATInstance, "internalSubnetID", null)
-  nat_instance_internal_subnet_cidr = lookup(var.providerClusterConfiguration.withNATInstance, "internalSubnetCIDR", null)
-  nat_instance_external_subnet_id = lookup(var.providerClusterConfiguration.withNATInstance, "externalSubnetID", null)
-  nat_instance_external_address = lookup(var.providerClusterConfiguration.withNATInstance, "natInstanceExternalAddress", null)
-  nat_instance_internal_address = lookup(var.providerClusterConfiguration.withNATInstance, "natInstanceInternalAddress", null)
-  nat_instance_cores = lookup(var.providerClusterConfiguration.withNATInstance.natInstanceResources, "cores", 2)
-  nat_instance_memory = floor(lookup(var.providerClusterConfiguration.withNATInstance.natInstanceResources, "memory", 2048) / 1024)
-  nat_instance_platform = lookup(var.providerClusterConfiguration.withNATInstance.natInstanceResources, "platform", "standard-v2")
-  exporter_api_key = lookup(var.providerClusterConfiguration.withNATInstance, "exporterAPIKey", "")
 
-  dhcp_options = lookup(var.providerClusterConfiguration, "dhcpOptions", null)
-  dhcp_domain_name = local.dhcp_options != null ? lookup(local.dhcp_options, "domainName", null) : null
-  dhcp_domain_name_servers = local.dhcp_options != null ? lookup(local.dhcp_options, "domainNameServers", null) : null
+  # The migration module resolves which source of truth wins; everything below
+  # reads the resolved ModuleConfig. tolist/tomap also absorb explicit nulls,
+  # which try() alone does not.
+  _node_params = try(module.migration.settings.spec.settings.nodes.parameters, {})
 
-  labels = lookup(var.providerClusterConfiguration, "labels", {})
-  layout = var.providerClusterConfiguration.layout
+  layout                         = try(local._node_params.layout, "")
+  zones                          = try(tolist(local._node_params.zones), [])
+  node_network_cidr              = try(local._node_params.nodeNetworkCIDR, "")
+  existing_network_id            = try(local._node_params.existingNetworkID, "")
+  existing_zone_to_subnet_id_map = try(tomap(local._node_params.existingZoneToSubnetIDMap), {})
+  labels                         = try(tomap(local._node_params.labels), {})
+  ssh_public_key                 = try(local._node_params.sshPublicKey, "")
+
+  folder_id = try(module.migration.settings.spec.settings.provider.parameters.folderID, "")
+
+  # vpc-components branches on null, so an unset option must not arrive as "".
+  _dhcp                    = try(local._node_params.dhcpOptions, {})
+  dhcp_domain_name         = try(local._dhcp.domainName, "") != "" ? local._dhcp.domainName : null
+  dhcp_domain_name_servers = length(try(tolist(local._dhcp.domainNameServers), [])) > 0 ? local._dhcp.domainNameServers : null
+
+  _nat                              = try(local._node_params.withNATInstance, {})
+  nat_instance_internal_subnet_id   = try(local._nat.internalSubnetID, "") != "" ? local._nat.internalSubnetID : null
+  nat_instance_internal_subnet_cidr = try(local._nat.internalSubnetCIDR, "") != "" ? local._nat.internalSubnetCIDR : null
+  nat_instance_external_subnet_id   = try(local._nat.externalSubnetID, "") != "" ? local._nat.externalSubnetID : null
+  nat_instance_external_address     = try(local._nat.natInstanceExternalAddress, "") != "" ? local._nat.natInstanceExternalAddress : null
+  nat_instance_internal_address     = try(local._nat.natInstanceInternalAddress, "") != "" ? local._nat.natInstanceInternalAddress : null
+  nat_instance_cores                = try(local._nat.natInstanceResources.cores, 0) > 0 ? local._nat.natInstanceResources.cores : 2
+  nat_instance_memory               = floor((try(local._nat.natInstanceResources.memory, 0) > 0 ? local._nat.natInstanceResources.memory : 2048) / 1024)
+  nat_instance_platform             = try(local._nat.natInstanceResources.platform, "") != "" ? local._nat.natInstanceResources.platform : "standard-v2"
+
+  # The exporter API key is a credential, so it lives in the
+  # d8-credentials-exporter Secret rather than in the ModuleConfig. The Secret
+  # selection itself is shared with the provider configuration in
+  # terraform-modules/providers.tf, which is symlinked into this root module, so
+  # both read the same resolved credentials.
+  exporter_api_key = lookup(local.credentials, "d8-credentials-exporter", "")
 }

@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,22 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-variable "clusterConfiguration" {
-  type = any
-}
-
 variable "providerClusterConfiguration" {
-  type = any
+  type    = any
+  default = null
 }
 
-variable "nodeIndex" {
-  type = number
+variable "nodeGroups" {
+  type    = any
+  default = {}
 }
 
-variable "cloudConfig" {
-  type = string
+variable "instanceClasses" {
+  type    = any
+  default = {}
 }
 
-variable "clusterUUID" {
-  type = string
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
 }
