@@ -37,6 +37,7 @@ shell:
 ---
 image: {{ .ModuleName }}/nginx-static-artifact
 fromImage: common/nginx-static
+final: false
 git:
 - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/conf/
   to: /opt/nginx-static/conf
