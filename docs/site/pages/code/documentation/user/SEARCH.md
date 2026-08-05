@@ -78,8 +78,8 @@ Users see only objects they have permission to read.
 Search for issues, merge requests, and other entities runs through the database.
 
 {% alert level="info" %}
-The tables above describe search scopes in the web interface.
-The set of scopes available through the REST API differs — see the ["Search API"](#search-api) section.
+The tables above describe search scopes in the web interface. The set of scopes in the REST API differs: there, search for code, commits, comments, and wiki is only available at the project level.
+For details, see ["API search scopes"](#api-search-scopes).
 {% endalert %}
 
 ## Using search
@@ -220,6 +220,8 @@ A search scope is defined via the required parameter `scope`. Supported values d
 | `blobs` | ❌ | ❌ | ✅ | OpenSearch (`advanced`) |
 
 The response header `X-Search-Type` returns the resolved search type.
+
+The set of API scopes differs from the [search scopes in the web interface](#search-scopes): the `blobs`, `commits`, `notes`, and `wiki_blobs` values are only supported by the project endpoint, while in the interface these scopes are also searchable globally and per group.
 
 ### Request parameters
 
