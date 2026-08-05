@@ -538,7 +538,7 @@ config_path = "/etc/containerd/registry.d"
 ```
 
 {% alert level="warning" %}
-For more configuration examples for additional registry, see the ["FAQ"](/modules/node-manager/faq.html#how-to-deploy-custom-containerd-configuration) section of the `node-manager` module documentation.
+For more configuration examples for additional registry, for example, adding a custom containerd file, see the ["FAQ"](/modules/node-manager/faq.html#how-to-deploy-custom-containerd-configuration) section of the `node-manager` module documentation.
 {% endalert %}
 
 ### Old Method
