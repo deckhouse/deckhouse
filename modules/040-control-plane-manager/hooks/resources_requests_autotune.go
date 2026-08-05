@@ -44,9 +44,6 @@ import (
 const (
 	autotuneScheduleName = "autotune"
 	autotuneQueue        = "/modules/control-plane-manager/autotune"
-	// DEBUG cron (restore before production): */5 * * * *  ← prod "0 3 * * *"
-	// lookbackWindow is baked into PodMetric PromQL in
-	// templates/podmetrics-autotune.yaml and must stay in sync (DEBUG 7m ← prod 7d).
 )
 
 // Schedule + OnBeforeHelm entrypoint: metrics → decide → commit.
@@ -57,7 +54,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        autotuneQueue,
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Schedule: []go_hook.ScheduleConfig{
-		{Name: autotuneScheduleName, Crontab: "*/5 * * * *"}, // DEBUG: prod "0 3 * * *"
+		{Name: autotuneScheduleName, Crontab: "0 3 * * *"},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		autotuneNodesBinding(false, false),
@@ -648,11 +645,8 @@ func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric stri
 
 const (
 	// Anti-flap cooldowns — Go constants, not config-values.
-	// DEBUG timings (restore before production — see PR/commit notes):
-	//   raiseCooldown:  5 * time.Minute   ← prod 24 * time.Hour
-	//   lowerCooldown:  15 * time.Minute  ← prod 72 * time.Hour
-	raiseCooldown = 5 * time.Minute
-	lowerCooldown = 15 * time.Minute
+	raiseCooldown = 24 * time.Hour
+	lowerCooldown = 72 * time.Hour
 )
 
 type decideAction string

@@ -93,11 +93,11 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		},
 		Entry("first commit (no applied)", int64(500), int64(0), time.Duration(0), true, decideRaise),
 		Entry("inside deadband", int64(110), int64(100), 48*time.Hour, false, decideSkip),
-		Entry("raise above threshold after cooldown", int64(130), int64(100), 6*time.Minute, false, decideRaise),
-		Entry("raise blocked by cooldown", int64(130), int64(100), 2*time.Minute, false, decideSkip),
-		Entry("lower below threshold after cooldown", int64(60), int64(100), 16*time.Minute, false, decideLower),
-		Entry("lower blocked by cooldown", int64(60), int64(100), 5*time.Minute, false, decideSkip),
-		Entry("lower inside deadband (−20%)", int64(80), int64(100), 16*time.Minute, false, decideSkip),
+		Entry("raise above threshold after cooldown", int64(130), int64(100), 25*time.Hour, false, decideRaise),
+		Entry("raise blocked by cooldown", int64(130), int64(100), 2*time.Hour, false, decideSkip),
+		Entry("lower below threshold after cooldown", int64(60), int64(100), 73*time.Hour, false, decideLower),
+		Entry("lower blocked by cooldown", int64(60), int64(100), 24*time.Hour, false, decideSkip),
+		Entry("lower inside deadband (−20%)", int64(80), int64(100), 73*time.Hour, false, decideSkip),
 	)
 })
 
@@ -133,16 +133,16 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			st := autotuneState{
 				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
-						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
-						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
-						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
-						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
+						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
 					},
 				},
 			}
 			usage[componentKubeApiserver] = map[resourceKind]float64{resourceCPU: 0.25}
 			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
@@ -161,10 +161,10 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			st := autotuneState{
 				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
-						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
-						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
-						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
-						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
+						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
 					},
 				},
 			}
@@ -172,7 +172,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 				usage[c] = map[resourceKind]float64{resourceCPU: 0.5}
 			}
 			f.KubeStateSet(tiny + autotuneStateYAML(st))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
@@ -198,10 +198,10 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			st := autotuneState{
 				resourceCPU: &autotuneMeasurementState{
 					Components: map[string]autotuneComponentState{
-						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
-						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
-						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
-						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-20 * time.Minute).Format(time.RFC3339)},
+						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
 					},
 				},
 			}
@@ -234,7 +234,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 				}}, nil
 			}
 			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
@@ -273,7 +273,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 				},
 			}
 			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
@@ -354,7 +354,7 @@ etcd:
 				},
 			}
 			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
@@ -381,7 +381,7 @@ etcd:
 				resourceMemory: 256000000,
 			}
 			f.KubeStateSet(masterNodeYAML())
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
@@ -402,7 +402,7 @@ etcd:
 				resourceMemory: 256000000,
 			}
 			f.KubeStateSet(masterNodeYAML())
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
@@ -421,7 +421,7 @@ etcd:
 				resourceMemory: 256000000,
 			}
 			f.KubeStateSet(masterNodeYAML())
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
@@ -447,7 +447,7 @@ kubeApiserver:
 				},
 			}
 			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
@@ -461,7 +461,7 @@ kubeApiserver:
 	Context("Managed cloud (no master nodes)", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(``)
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
