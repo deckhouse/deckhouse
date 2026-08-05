@@ -69,6 +69,9 @@ type RBACEvaluator struct {
 	// reaches it -- and a Deckhouse cluster carries hundreds of
 	// ClusterRoleBindings before the first user is created.
 	bindingsBySubject *subjectIndex
+	// Serializes the listing that feeds the index, so a burst of requests on a
+	// cold process does not turn into a burst of full listings.
+	indexing sync.Mutex
 
 	synced []kcache.InformerSynced
 }
@@ -103,15 +106,18 @@ func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInform
 	// change when a module is deployed, not when a request arrives. Tracking
 	// deltas would buy nothing here and would have to get subject removal on
 	// update exactly right.
+	//
+	// While the informer is still filling, events are the initial listing --
+	// one per binding -- and rebuilding on each of them would make the sync
+	// itself quadratic. Those are skipped; the first read after the sync builds
+	// the index once (see indexedBindings).
+	synced := clusterRoleBindings.Informer().HasSynced
 	rebuild := func() {
-		bindings, err := evaluator.clusterRoleBindingLister.List(labels.Everything())
-		if err != nil {
-			logger.Printf("independent RBAC check: failed to index ClusterRoleBindings: %v", err)
-
+		if !synced() {
 			return
 		}
 
-		evaluator.bindingsBySubject.rebuild(bindings)
+		evaluator.reindex()
 	}
 
 	if _, err := clusterRoleBindings.Informer().AddEventHandler(kcache.ResourceEventHandlerFuncs{
@@ -134,6 +140,7 @@ func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInform
 // form the request carries, so a lookup never formats a string.
 type subjectIndex struct {
 	mu      sync.RWMutex
+	built   bool
 	byUser  map[string][]*rbacv1.ClusterRoleBinding
 	byGroup map[string][]*rbacv1.ClusterRoleBinding
 }
@@ -177,7 +184,18 @@ func (i *subjectIndex) rebuild(bindings []*rbacv1.ClusterRoleBinding) {
 	i.mu.Lock()
 	i.byUser = byUser
 	i.byGroup = byGroup
+	i.built = true
 	i.mu.Unlock()
+}
+
+// built reports whether the index holds a listing rather than its zero value.
+// An empty cluster and an unbuilt index look the same from bindingsFor, and
+// the difference decides whether a subject is denied.
+func (i *subjectIndex) isBuilt() bool {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	return i.built
 }
 
 // bindingsFor returns the bindings naming the user or any of the groups. The
@@ -245,7 +263,47 @@ func (e *RBACEvaluator) AllowsIndependently(spec *WebhookResourceSpec) bool {
 	return false
 }
 
+// reindex rebuilds the subject index from the current listing.
+func (e *RBACEvaluator) reindex() {
+	e.indexing.Lock()
+	defer e.indexing.Unlock()
+
+	e.buildIndex()
+}
+
+// reindexOnce builds the index if nothing has built it yet.
+//
+// The event handler ignores the initial listing, so on a fresh process the
+// first request is what puts the index together. Doing it here rather than in
+// Synced keeps the two independent: an index that failed to build must not
+// hold back readiness of a webhook whose other paths work.
+func (e *RBACEvaluator) reindexOnce() {
+	e.indexing.Lock()
+	defer e.indexing.Unlock()
+
+	if e.bindingsBySubject.isBuilt() {
+		return
+	}
+
+	e.buildIndex()
+}
+
+func (e *RBACEvaluator) buildIndex() {
+	bindings, err := e.clusterRoleBindingLister.List(labels.Everything())
+	if err != nil {
+		// The index keeps its previous contents; a stale answer is closer to
+		// the truth than an empty one.
+		e.logger.Printf("independent RBAC check: failed to index ClusterRoleBindings: %v", err)
+
+		return
+	}
+
+	e.bindingsBySubject.rebuild(bindings)
+}
+
 func (e *RBACEvaluator) clusterRoleBindingsAllow(spec *WebhookResourceSpec) bool {
+	e.reindexOnce()
+
 	for _, binding := range e.bindingsBySubject.bindingsFor(spec.User, spec.Group) {
 		role, err := e.clusterRoleLister.Get(binding.RoleRef.Name)
 		if err != nil {

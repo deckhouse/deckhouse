@@ -81,6 +81,35 @@ func TestSubjectIndexFollowsTheCluster(t *testing.T) {
 	waitFor(t, func() bool { return !evaluator.AllowsIndependently(spec) }, "the removed binding must stop counting")
 }
 
+// A binding that existed before the process started must count on the very
+// first request, without polling. The index is not filled by the initial
+// listing -- that would make the sync quadratic -- so the read path has to
+// notice that nothing has filled it yet. Getting this wrong denies every
+// cluster-wide grant for as long as no binding happens to change, which on a
+// settled cluster is forever.
+func TestSubjectIndexIsBuiltBeforeTheFirstAnswer(t *testing.T) {
+	role := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: "pod-reader"},
+		Rules:      []rbacv1.PolicyRule{{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"list"}}},
+	}
+	binding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "deployer-pods"},
+		RoleRef:    rbacv1.RoleRef{Kind: "ClusterRole", Name: "pod-reader"},
+		Subjects:   []rbacv1.Subject{{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: "tenant"}},
+	}
+
+	evaluator := newTestRBACEvaluator(t, role, binding)
+
+	spec := &WebhookResourceSpec{
+		User:               "system:serviceaccount:tenant:deployer",
+		ResourceAttributes: WebhookResourceAttributes{Verb: "list", Resource: "pods"},
+	}
+
+	if !evaluator.AllowsIndependently(spec) {
+		t.Fatal("a binding that predates the process must be seen by the first request")
+	}
+}
+
 // waitFor polls until the informer event reaches the index. The delay is the
 // watch round-trip of the fake client, not a cost of the check itself.
 func waitFor(t *testing.T, condition func() bool, message string) {
