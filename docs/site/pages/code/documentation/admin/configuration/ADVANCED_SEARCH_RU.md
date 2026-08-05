@@ -83,17 +83,10 @@ relatedLinks:
 Результаты поиска могут быть неполными до завершения фоновой индексации.
 {% endalert %}
 
+Те же операции доступны через эндпоинт `recreate_indices` — см. [«API OpenSearch»](opensearch-api.html).
+
 Индекс `commits` переиндексируется вместе с индексом `code`: отдельной операции для коммитов нет.
-По этой же причине у коммитов нет отдельного значения `schema_class` в [API OpenSearch](opensearch-api.html).
-
-### Admin API
-
-Те же операции доступны через административный REST API:
-
-- `POST /api/v4/admin/opensearch/recreate_indices` — пересоздание индексов;
-- `GET /api/v4/admin/opensearch/indexing_queue_stats` — статистика очереди индексации.
-
-Права доступа, допустимые значения `schema_class`, коды ответов и примеры запросов описаны в разделе [«API OpenSearch»](opensearch-api.html).
+По этой же причине у коммитов нет отдельного значения `schema_class`.
 
 ### Мониторинг
 
