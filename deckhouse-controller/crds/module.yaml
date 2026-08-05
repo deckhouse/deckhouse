@@ -255,6 +255,25 @@ spec:
           spec:
             description: Spec defines the behavior of a Module.
             properties:
+              enabled:
+                description: Enables or disables the module. Unset leaves the decision
+                  to the platform.
+                type: boolean
+              maintenance:
+                description: |-
+                  Defines the module maintenance mode.
+
+                  - `NoResourceReconciliation`: A mode for developing or tweaking the module.
+
+                    In this mode:
+
+                    - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
+                    - Resource monitoring is disabled, which prevents deleted resources from being restored.
+                    - All the module's resources are labeled with `maintenance: NoResourceReconciliation`.
+                    - The `ModuleIsInMaintenanceMode` alert is triggered.
+                enum:
+                - NoResourceReconciliation
+                type: string
               packageName:
                 description: Name of the module package to install.
                 type: string
@@ -273,6 +292,10 @@ spec:
                 description: Configuration settings for the module.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              settingsVersion:
+                description: Version of the settings schema. Distinct from packageVersion,
+                  which selects the module package.
+                type: number
             required:
             - packageName
             - packageVersion
