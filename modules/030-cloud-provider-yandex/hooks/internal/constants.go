@@ -24,4 +24,14 @@ const (
 	YandexMigrationResourcesName     = "d8-migration-resources"
 	YandexMigrationResourcesFilename = "resources.yaml"
 	YandexMigrationConfigMapName     = "d8-module-is-migrating"
+
+	// Defaults applied when a YandexClusterConfiguration leaves a field unset. They
+	// are the defaults the pre-migration terraform code used, not the
+	// YandexInstanceClass CRD defaults: leaving the fields empty would let the
+	// apiserver default platformID to standard-v3 and diskType to network-hdd, which
+	// replaces the boot and etcd disks of every cluster that never set them.
+	defaultPlatformID     = "standard-v2"
+	defaultDiskType       = "network-ssd"
+	defaultDiskSizeGB     = 50
+	defaultEtcdDiskSizeGB = 10
 )

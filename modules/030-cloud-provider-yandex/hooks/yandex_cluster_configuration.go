@@ -88,7 +88,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "yandex_instance_classes",
-			ApiVersion: ycicv1.SchemeGroupVersion.String(),
+			ApiVersion: ycicv1.GroupVersionKind.GroupVersion().String(),
 			Kind:       ycicv1.YandexInstanceClassKind,
 			FilterFunc: internal.FilterNamedResource,
 		},
@@ -115,7 +115,11 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 
 	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
 	if len(pccSnaps) == 0 {
-		if !hasCredentialSecrets(input) {
+		// The legacy PCC is gone. Once credentials live in the cluster, the new model is the only
+		// source of truth and the migration artifacts have to go: while d8-module-is-migrating
+		// exists, ShouldSkipNewModelValidation keeps new-model validation switched off.
+		// Without credentials the cluster is not migrated yet, so the artifacts stay.
+		if hasCredentialSecrets(input) {
 			internal.DeleteMigrationArtifacts(input)
 		}
 
@@ -148,22 +152,26 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 	}
 
 	// State B: migration in progress — populate values from PCC so templates render
+	var mc ycsettingsv1.ModuleConfigSettings
 	mcSnaps := input.Snapshots.Get("module_config")
 
-	var mcResult internal.ModuleConfigFilterResult
-	if err := mcSnaps[0].UnmarshalTo(&mcResult); err != nil {
-		return fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
-	}
+	if len(mcSnaps) != 0 {
+		var mcResult internal.ModuleConfigFilterResult
+		if err := mcSnaps[0].UnmarshalTo(&mcResult); err != nil {
+			return fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
+		}
 
-	var mc ycsettingsv1.ModuleConfigSettings
-	if mcResult.Enabled && mcResult.Version == 1 || len(mcResult.SettingsV1) > 0 {
-		if err := convertStructsUsingJSON(mcResult.SettingsV1, &mc); err != nil {
-			return fmt.Errorf("parse PCC: %w", err)
+		// The v1 settings payload is what matters here: an operator may keep version 1 settings
+		// while the module is disabled, and they still have to be projected.
+		if len(mcResult.SettingsV1) > 0 {
+			if err := convertStructsUsingJSON(mcResult.SettingsV1, &mc); err != nil {
+				return fmt.Errorf("parse ModuleConfig v1: %w", err)
+			}
 		}
 	}
 
 	if err := setPCCAndMCtoRootValues(input, pcc, mc); err != nil {
-		return fmt.Errorf("map PCC to root values: %w", err)
+		return fmt.Errorf("map PCC and MC v1 to root values: %w", err)
 	}
 
 	if err := validateProviderClusterConfig(pcc); err != nil {
@@ -218,6 +226,10 @@ func setPCCAndMCtoRootValues(input *go_hook.HookInput, pcc ycpccv1.YandexProvide
 		return err
 	}
 
+	// Backward compatibility: storage_classes.go and the CCM template still read the
+	// ModuleConfig v1 paths, so the v1 settings are mirrored as they are.
+	input.Values.Set("cloudProviderYandex.storageClass", mcSettings.StorageClass)
+
 	return nil
 }
 
@@ -244,6 +256,7 @@ func setStorageParametersValuesIfAbsent(input *go_hook.HookInput, mcSettings ycs
 
 	storageSection.Parameters = mcSettings.Storage.Parameters
 	input.Values.Set("cloudProviderYandex.storage", storageSection)
+
 	return nil
 }
 
@@ -280,7 +293,7 @@ func setCredentialSecretsValuesIfAbsent(input *go_hook.HookInput, pcc ycpccv1.Ya
 	if !ok && pcc.WithNATInstance != nil && pcc.WithNATInstance.ExporterAPIKey != nil && *pcc.WithNATInstance.ExporterAPIKey != "" {
 		existingSecrets[ycmeta.ExporterCredentialSecretName] = map[string]any{
 			"authScheme": cpapi.AuthSchemeAPIToken,
-			"secret":     pcc.WithNATInstance.ExporterAPIKey,
+			"secret":     *pcc.WithNATInstance.ExporterAPIKey,
 		}
 	}
 

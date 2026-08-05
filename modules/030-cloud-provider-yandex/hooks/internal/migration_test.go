@@ -17,11 +17,13 @@ limitations under the License.
 package internal
 
 import (
+	"bytes"
 	"encoding/json"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
 
 	yciccv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/instanceclass/v1"
 	ycpccv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/pcc/v1"
@@ -67,7 +69,11 @@ var _ = Describe("mapPCCInstanceClassToYandexInstanceClassSpec", func() {
 		Expect(spec.AdditionalSubnets).To(Equal([]string{"subnet-extra-1", "subnet-extra-2"}))
 	})
 
-	It("nil optional fields", func() {
+	// Leaving platformID, diskType and diskSizeGB empty would let the apiserver
+	// apply the YandexInstanceClass CRD defaults (standard-v3 / network-hdd),
+	// which differ from what terraform used before the migration and would
+	// replace the boot and etcd disks of existing clusters.
+	It("nil optional fields fall back to the pre-migration terraform defaults", func() {
 		ic := ycpccv1.YandexInstanceClass{
 			Cores:   2,
 			Memory:  4096,
@@ -80,9 +86,9 @@ var _ = Describe("mapPCCInstanceClassToYandexInstanceClassSpec", func() {
 		Expect(spec.Memory).To(Equal(4096))
 		Expect(spec.ImageID).To(Equal("fd-image"))
 		Expect(spec.CoreFraction).To(Equal(0))
-		Expect(spec.PlatformID).To(Equal(""))
-		Expect(spec.DiskSizeGB).To(Equal(0))
-		Expect(spec.DiskType).To(Equal(""))
+		Expect(spec.PlatformID).To(Equal("standard-v2"))
+		Expect(spec.DiskSizeGB).To(Equal(50))
+		Expect(spec.DiskType).To(Equal("network-ssd"))
 		Expect(spec.NetworkType).To(Equal(""))
 		Expect(spec.AdditionalLabels).To(BeNil())
 		Expect(spec.MainSubnet).To(Equal(""))
@@ -149,20 +155,24 @@ var _ = Describe("resolveZones", func() {
 		Expect(result).To(Equal([]interface{}{"ru-central1-a", "ru-central1-b"}))
 	})
 
-	It("empty strings filtered from cluster zones with ng zones having only empty strings", func() {
+	// A node group that declares zones keeps them even when every entry is blank: the
+	// cluster-wide zones must not narrow it. Pre-migration terraform behaved the same way —
+	// candi/terraform-modules/master-node/main.tf intersects with the node group zones whenever
+	// they are set, so an all-blank list ends up selecting every subnet, not the cluster zones.
+	It("does not fall back to cluster zones when the node group declares blank zones", func() {
 		result := resolveZones(
 			[]string{""},
 			[]string{"ru-central1-a", ""},
 		)
-		Expect(result).To(Equal([]interface{}{"ru-central1-a"}))
+		Expect(result).To(BeNil())
 	})
 
-	It("ng zones with only empty strings falls back to cluster", func() {
+	It("omits zones when both the node group and the cluster declare only blank zones", func() {
 		result := resolveZones(
 			[]string{"", ""},
-			[]string{"ru-central1-a"},
+			[]string{""},
 		)
-		Expect(result).To(Equal([]interface{}{"ru-central1-a"}))
+		Expect(result).To(BeNil())
 	})
 })
 
@@ -190,7 +200,7 @@ var _ = Describe("BuildNodeGroupAndInstanceClassResources", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// InstanceClass CRD metadata
-		Expect(icResource.APIVersion).To(Equal(yciccv1.SchemeGroupVersion.String()))
+		Expect(icResource.APIVersion).To(Equal(yciccv1.GroupVersionKind.GroupVersion().String()))
 		Expect(icResource.Kind).To(Equal(yciccv1.YandexInstanceClassKind))
 		Expect(icResource.Name).To(Equal(cpapi.BuildInstanceClassName("master")))
 		Expect(icResource.Spec.Cores).To(Equal(4))
@@ -271,8 +281,8 @@ var _ = Describe("BuildNodeGroupAndInstanceClassResources", func() {
 var _ = Describe("BuildModuleConfigSettingsV2", func() {
 	It("builds with provider, nodes, storage, ccm settings", func() {
 		pcc := ycpccv1.YandexProviderClusterConfiguration{
-			Layout:         "Standard",
-			SSHPublicKey:   "ssh-rsa AAAAB3...",
+			Layout:          "Standard",
+			SSHPublicKey:    "ssh-rsa AAAAB3...",
 			NodeNetworkCIDR: "10.0.0.0/16",
 			Labels: map[string]string{
 				"environment": "production",
@@ -310,8 +320,8 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 
 	It("nil optional fields stay empty", func() {
 		pcc := ycpccv1.YandexProviderClusterConfiguration{
-			Layout:       "WithoutNAT",
-			SSHPublicKey: "ssh-rsa KEY",
+			Layout:          "WithoutNAT",
+			SSHPublicKey:    "ssh-rsa KEY",
 			NodeNetworkCIDR: "10.0.0.0/16",
 			Provider: ycpccv1.YandexProvider{
 				CloudID:  "cloud-1",
@@ -322,14 +332,184 @@ var _ = Describe("BuildModuleConfigSettingsV2", func() {
 
 		result := BuildModuleConfigSettingsV2(pcc, mc)
 
+		// Optional sections are value types: an absent PCC section stays a zero value.
+		// It still serializes as an empty object, which matches the terraform projection —
+		// candi/terraform-modules/migration/locals.tf always emits withNATInstance and
+		// dhcpOptions with zero values instead of omitting them. Scalars keep omitempty,
+		// so nothing carries a bogus value, and natInstanceResources defaults (2/2048/
+		// standard-v2) come from the CRD schema on both paths.
 		Expect(result.Nodes.Parameters.WithNATInstance).To(Equal(ycsettingsv2.NATInstanceParameters{}))
 		Expect(result.Nodes.Parameters.DHCPOptions).To(Equal(ycsettingsv2.DHCPOptions{}))
-		Expect(result.Nodes.Parameters.ExistingNetworkID).To(Equal(""))
+		Expect(result.Nodes.Parameters.ExistingNetworkID).To(BeEmpty())
 		Expect(result.Nodes.Parameters.ExistingZoneToSubnetIDMap).To(BeNil())
 		Expect(result.Nodes.Parameters.Labels).To(BeNil())
 		Expect(result.Nodes.Parameters.Zones).To(BeNil())
 		Expect(result.Storage.Parameters.ExcludedStorageClasses).To(BeNil())
 		Expect(result.CCM.Parameters.AdditionalExternalNetworkIDs).To(BeNil())
+		Expect(result.Nodes.Parameters.ExternalIPAddresses).To(BeEmpty())
+		Expect(result.Nodes.Parameters.ExternalSubnetIDs).To(BeEmpty())
+
+		raw, err := json.Marshal(result)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(raw)).NotTo(ContainSubstring("existingNetworkID"))
+		Expect(string(raw)).NotTo(ContainSubstring("internalSubnetCIDR"))
+		Expect(string(raw)).NotTo(ContainSubstring("domainName"))
+		Expect(string(raw)).To(ContainSubstring(`"withNATInstance":{"natInstanceResources":{}}`))
+		Expect(string(raw)).To(ContainSubstring(`"dhcpOptions":{}`))
+	})
+
+	// YandexInstanceClass has no externalIPAddresses counterpart, so the
+	// per-node-group lists have to survive in nodes.parameters or the reserved
+	// addresses of existing clusters are lost on migration.
+	It("moves per-node-group external addressing into nodes.parameters", func() {
+		pcc := ycpccv1.YandexProviderClusterConfiguration{
+			Layout:          "Standard",
+			SSHPublicKey:    "ssh-rsa KEY",
+			NodeNetworkCIDR: "10.0.0.0/16",
+			Provider: ycpccv1.YandexProvider{
+				CloudID:  "cloud-1",
+				FolderID: "folder-1",
+			},
+			MasterNodeGroup: ycpccv1.YandexMasterNodeGroup{
+				Replicas: 3,
+				InstanceClass: ycpccv1.YandexMasterInstanceClass{
+					YandexInstanceClass: ycpccv1.YandexInstanceClass{
+						Cores:               4,
+						Memory:              8192,
+						ImageID:             "fd-image",
+						ExternalIPAddresses: []string{"203.0.113.1", "203.0.113.2", "Auto"},
+						ExternalSubnetIDs:   []string{"subnet-ext-a", "subnet-ext-b", "subnet-ext-d"},
+					},
+				},
+			},
+			NodeGroups: []ycpccv1.YandexStaticNodeGroup{
+				{
+					Name:     "worker",
+					Replicas: 1,
+					InstanceClass: ycpccv1.YandexStaticInstanceClass{
+						YandexInstanceClass: ycpccv1.YandexInstanceClass{
+							Cores:               2,
+							Memory:              2048,
+							ImageID:             "fd-image",
+							ExternalIPAddresses: []string{"Auto"},
+						},
+					},
+				},
+				{
+					Name:     "system",
+					Replicas: 1,
+					InstanceClass: ycpccv1.YandexStaticInstanceClass{
+						YandexInstanceClass: ycpccv1.YandexInstanceClass{
+							Cores:   2,
+							Memory:  2048,
+							ImageID: "fd-image",
+						},
+					},
+				},
+			},
+		}
+
+		result := BuildModuleConfigSettingsV2(pcc, ycsettingsv1.ModuleConfigSettings{})
+
+		Expect(result.Nodes.Parameters.ExternalIPAddresses).To(Equal(map[string][]string{
+			"master": {"203.0.113.1", "203.0.113.2", "Auto"},
+			"worker": {"Auto"},
+		}))
+		Expect(result.Nodes.Parameters.ExternalSubnetIDs).To(Equal(map[string][]string{
+			"master": {"subnet-ext-a", "subnet-ext-b", "subnet-ext-d"},
+		}))
+	})
+
+	It("skips the master external addressing when there is no master node group", func() {
+		pcc := ycpccv1.YandexProviderClusterConfiguration{
+			Layout:          "Standard",
+			SSHPublicKey:    "ssh-rsa KEY",
+			NodeNetworkCIDR: "10.0.0.0/16",
+			Provider: ycpccv1.YandexProvider{
+				CloudID:  "cloud-1",
+				FolderID: "folder-1",
+			},
+			MasterNodeGroup: ycpccv1.YandexMasterNodeGroup{
+				Replicas: 0,
+				InstanceClass: ycpccv1.YandexMasterInstanceClass{
+					YandexInstanceClass: ycpccv1.YandexInstanceClass{
+						ExternalIPAddresses: []string{"203.0.113.1"},
+					},
+				},
+			},
+		}
+
+		result := BuildModuleConfigSettingsV2(pcc, ycsettingsv1.ModuleConfigSettings{})
+
+		Expect(result.Nodes.Parameters.ExternalIPAddresses).To(BeEmpty())
+	})
+})
+
+// The YandexClusterConfiguration schema spells the field etcdDiskSizeGb with a
+// lowercase "b" while the YandexInstanceClass CRD uses etcdDiskSizeGB. Decoding
+// the PCC with the CRD spelling silently dropped the user's etcd disk size.
+var _ = Describe("etcd disk size migration", func() {
+	buildMasterInstanceClass := func(pccYAML string) yciccv1.YandexInstanceClass {
+		var pcc ycpccv1.YandexProviderClusterConfiguration
+		Expect(yaml.Unmarshal([]byte(pccYAML), &pcc)).To(Succeed())
+
+		resources, err := buildMigrationResources(pcc, ycsettingsv1.ModuleConfigSettings{})
+		Expect(err).ToNot(HaveOccurred())
+
+		for _, resource := range resources {
+			ic, ok := resource.(yciccv1.YandexInstanceClass)
+			if ok && ic.Name == cpapi.BuildInstanceClassName("master") {
+				return ic
+			}
+		}
+
+		Fail("master YandexInstanceClass was not built")
+		return yciccv1.YandexInstanceClass{}
+	}
+
+	It("reads etcdDiskSizeGb from the YandexClusterConfiguration", func() {
+		ic := buildMasterInstanceClass(`
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: Standard
+sshPublicKey: ssh-rsa AAAA
+nodeNetworkCIDR: 10.0.0.0/16
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: fd-image
+    etcdDiskSizeGb: 20
+provider:
+  cloudID: cloud-1
+  folderID: folder-1
+  serviceAccountJSON: '{"id":"sa"}'
+`)
+
+		Expect(ic.Spec.EtcdDiskSizeGB).To(Equal(ptr.To(20)))
+	})
+
+	It("defaults the etcd disk size when the YandexClusterConfiguration omits it", func() {
+		ic := buildMasterInstanceClass(`
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: Standard
+sshPublicKey: ssh-rsa AAAA
+nodeNetworkCIDR: 10.0.0.0/16
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: fd-image
+provider:
+  cloudID: cloud-1
+  folderID: folder-1
+  serviceAccountJSON: '{"id":"sa"}'
+`)
+
+		Expect(ic.Spec.EtcdDiskSizeGB).To(Equal(ptr.To(10)))
 	})
 })
 
@@ -462,8 +642,8 @@ var _ = Describe("IsMigrationResourcesApplied", func() {
 		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: []byte(`{}`)}
 		input := &go_hook.HookInput{
 			Snapshots: snap(mockSnapshots{
-				"module_config":       {mockSnapshot{mustMarshal(mc)}},
-				"credential_secrets":  {},
+				"module_config":      {mockSnapshot{mustMarshal(mc)}},
+				"credential_secrets": {},
 			}),
 		}
 		Expect(IsMigrationResourcesApplied(input, ycpccv1.YandexProviderClusterConfiguration{})).To(BeFalse())
@@ -581,3 +761,239 @@ func snapshotsFrom[T any](items []T) []pkg.Snapshot {
 	}
 	return snaps
 }
+
+// --------------------------------------------------------------------------
+// d8-migration-resources golden
+// --------------------------------------------------------------------------
+
+// The secret payload is what terraform and the in-cluster consumers read after the migration, so
+// every projected field is pinned at once. A silent change here recreates master boot and etcd
+// disks, which is exactly what the golden is meant to catch.
+// wantMigrationResourcesPayload is the expected d8-migration-resources payload, inlined so that
+// a review diff shows exactly which projected field moved.
+const wantMigrationResourcesPayload = `apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-yandex
+stringData:
+  authScheme: serviceAccount
+  secret: '{"id":"sa-golden"}'
+type: cloud-provider.deckhouse.io/credentials
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials-exporter
+  namespace: d8-cloud-provider-yandex
+stringData:
+  authScheme: apiToken
+  secret: exporter-golden
+type: cloud-provider.deckhouse.io/credentials
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  enabled: true
+  settings:
+    ccm:
+      parameters:
+        additionalExternalNetworkIDs:
+        - enp-additional
+    nodes:
+      parameters:
+        dhcpOptions:
+          domainName: golden.local
+          domainNameServers:
+          - 10.60.0.2
+        externalIPAddresses:
+          master:
+          - 1.2.3.4
+          - 5.6.7.8
+          - 9.10.11.12
+          worker:
+          - 13.14.15.16
+          - 17.18.19.20
+        externalSubnetIDs:
+          master:
+          - enp-master
+        labels:
+          env: golden
+        layout: WithNATInstance
+        nodeNetworkCIDR: 10.60.0.0/16
+        sshPublicKey: ssh-rsa GOLDEN
+        withNATInstance:
+          internalSubnetCIDR: 10.60.1.0/24
+          natInstanceResources: {}
+        zones:
+        - ru-central1-a
+        - ru-central1-b
+    provider:
+      parameters:
+        cloudID: cloud-golden
+        folderID: folder-golden
+    storage:
+      parameters:
+        excludedStorageClasses:
+        - network-hdd
+  version: 2
+status: {}
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: master-fc613b4dfd67
+    maxPerZone: 3
+    minPerZone: 3
+    zones:
+    - ru-central1-a
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+  nodeType: CloudPermanent
+---
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: master-fc613b4dfd67
+spec:
+  additionalLabels:
+    role: master
+  additionalSubnets:
+  - enp-master
+  coreFraction: 50
+  cores: 8
+  diskSizeGB: 60
+  diskType: network-ssd
+  etcdDiskSizeGB: 20
+  imageID: fd8master
+  memory: 16384
+  networkType: SOFTWARE_ACCELERATED
+  platformID: standard-v3
+status: {}
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: worker-87eba76e7f31
+    maxPerZone: 2
+    minPerZone: 2
+    zones:
+    - ru-central1-b
+  nodeTemplate:
+    labels:
+      node-role/worker: ""
+  nodeType: CloudPermanent
+---
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: worker-87eba76e7f31
+spec:
+  cores: 4
+  diskSizeGB: 50
+  diskType: network-ssd
+  imageID: fd8worker
+  memory: 8192
+  platformID: standard-v2
+status: {}
+`
+
+var _ = Describe("migration resources golden", func() {
+	It("projects the whole PCC into the migration secret payload", func() {
+		pcc := ycpccv1.YandexProviderClusterConfiguration{
+			APIVersion:      "deckhouse.io/v1",
+			Kind:            "YandexClusterConfiguration",
+			Layout:          "WithNATInstance",
+			SSHPublicKey:    "ssh-rsa GOLDEN",
+			NodeNetworkCIDR: "10.60.0.0/16",
+			Zones:           []string{"ru-central1-a", "ru-central1-b"},
+			Labels:          map[string]string{"env": "golden"},
+			MasterNodeGroup: ycpccv1.YandexMasterNodeGroup{
+				Replicas: 3,
+				Zones:    []string{"ru-central1-a"},
+				InstanceClass: ycpccv1.YandexMasterInstanceClass{
+					YandexInstanceClass: ycpccv1.YandexInstanceClass{
+						Cores:               8,
+						Memory:              16384,
+						ImageID:             "fd8master",
+						CoreFraction:        ptr.To(50),
+						DiskSizeGB:          ptr.To(60),
+						DiskType:            ptr.To("network-ssd"),
+						Platform:            ptr.To("standard-v3"),
+						ExternalIPAddresses: []string{"1.2.3.4", "5.6.7.8", "9.10.11.12"},
+						ExternalSubnetIDs:   []string{"enp-master"},
+						AdditionalLabels:    map[string]string{"role": "master"},
+						NetworkType:         ptr.To("SOFTWARE_ACCELERATED"),
+					},
+					EtcdDiskSizeGB: ptr.To(20),
+				},
+			},
+			NodeGroups: []ycpccv1.YandexStaticNodeGroup{
+				{
+					Name:     "worker",
+					Replicas: 2,
+					Zones:    []string{"ru-central1-b"},
+					NodeTemplate: map[string]any{
+						"labels": map[string]any{"node-role/worker": ""},
+					},
+					InstanceClass: ycpccv1.YandexStaticInstanceClass{
+						YandexInstanceClass: ycpccv1.YandexInstanceClass{
+							Cores:               4,
+							Memory:              8192,
+							ImageID:             "fd8worker",
+							ExternalIPAddresses: []string{"13.14.15.16", "17.18.19.20"},
+						},
+					},
+				},
+			},
+			Provider: ycpccv1.YandexProvider{
+				CloudID:            "cloud-golden",
+				FolderID:           "folder-golden",
+				ServiceAccountJSON: `{"id":"sa-golden"}`,
+			},
+			WithNATInstance: &ycpccv1.YandexWithNATInstance{
+				InternalSubnetCIDR: ptr.To("10.60.1.0/24"),
+				ExporterAPIKey:     ptr.To("exporter-golden"),
+			},
+			DHCPOptions: &ycpccv1.YandexDHCPOptions{
+				DomainName:        ptr.To("golden.local"),
+				DomainNameServers: []string{"10.60.0.2"},
+			},
+		}
+		mc := ycsettingsv1.ModuleConfigSettings{
+			AdditionalExternalNetworkIDs: []string{"enp-additional"},
+			StorageClass: ycsettingsv1.StorageClassSettings{
+				Exclude: []string{"network-hdd"},
+			},
+		}
+
+		resources, err := buildMigrationResources(pcc, mc)
+		Expect(err).NotTo(HaveOccurred())
+
+		var payload bytes.Buffer
+		for i, resource := range resources {
+			if i > 0 {
+				payload.WriteString("---\n")
+			}
+			data, err := yaml.Marshal(resource)
+			Expect(err).NotTo(HaveOccurred())
+			payload.Write(data)
+		}
+
+		Expect(payload.String()).To(Equal(wantMigrationResourcesPayload))
+	})
+})

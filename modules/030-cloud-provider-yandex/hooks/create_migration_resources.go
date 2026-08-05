@@ -71,7 +71,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleMigrationResources(_ context.Context, input *go_hook.HookInput) error {
 	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
 	if len(pccSnaps) == 0 {
-		// State A: no PCC - nothing to create; deletion is handled by dvp_cluster_configuration.go.
+		// State A: no PCC - nothing to create; deletion is handled by yandex_cluster_configuration.go.
 		return nil
 	}
 
@@ -96,17 +96,21 @@ func handleMigrationResources(_ context.Context, input *go_hook.HookInput) error
 		return fmt.Errorf("validate provider cluster config: %w", err)
 	}
 
+	var mc ycsettingsv1.ModuleConfigSettings
 	mcSnaps := input.Snapshots.Get("module_config")
 
-	var mcResult internal.ModuleConfigFilterResult
-	if err := mcSnaps[0].UnmarshalTo(&mcResult); err != nil {
-		return fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
-	}
+	if len(mcSnaps) != 0 {
+		var mcResult internal.ModuleConfigFilterResult
+		if err := mcSnaps[0].UnmarshalTo(&mcResult); err != nil {
+			return fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
+		}
 
-	var mc ycsettingsv1.ModuleConfigSettings
-	if mcResult.Enabled && mcResult.Version == 1 || len(mcResult.SettingsV1) > 0 {
-		if err := convertStructsUsingJSON(mcResult.SettingsV1, &mc); err != nil {
-			return fmt.Errorf("parse PCC: %w", err)
+		// The v1 settings payload is what matters here: an operator may keep version 1 settings
+		// while the module is disabled, and they still have to be projected.
+		if len(mcResult.SettingsV1) > 0 {
+			if err := convertStructsUsingJSON(mcResult.SettingsV1, &mc); err != nil {
+				return fmt.Errorf("parse ModuleConfig v1: %w", err)
+			}
 		}
 	}
 
