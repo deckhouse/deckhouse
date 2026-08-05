@@ -26,11 +26,11 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
-	ycicv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/instanceclass/v1"
-	ycpccv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/pcc/v1"
-	ycsettingsv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/settings/v1"
-	ycsettingsv2 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/settings/v2"
-	ycmeta "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/meta"
+	ycicv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/instanceclass/v1"
+	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
+	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
+	ycsettingsv2 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v2"
+
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	clouddatav1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -59,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: deckhousev1alpha1.SchemeGroupVersion.String(),
 			Kind:       "ModuleConfig",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{ycmeta.ModuleName},
+				MatchNames: []string{internal.ModuleName},
 			},
 			FilterFunc: internal.FilterModuleConfig,
 		},
@@ -69,13 +69,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{ycmeta.Namespace},
+					MatchNames: []string{internal.Namespace},
 				},
 			},
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{
 					cpapi.CredentialSecretName,
-					ycmeta.ExporterCredentialSecretName,
+					internal.ExporterCredentialSecretName,
 				},
 			},
 			FilterFunc: internal.FilterCredentialSecret,
@@ -98,7 +98,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{ycmeta.Namespace},
+					MatchNames: []string{internal.Namespace},
 				},
 			},
 			NameSelector: &types.NameSelector{
@@ -289,9 +289,9 @@ func setCredentialSecretsValuesIfAbsent(input *go_hook.HookInput, pcc ycpccv1.Ya
 		}
 	}
 
-	_, ok = existingSecrets[ycmeta.ExporterCredentialSecretName]
+	_, ok = existingSecrets[internal.ExporterCredentialSecretName]
 	if !ok && pcc.WithNATInstance != nil && pcc.WithNATInstance.ExporterAPIKey != nil && *pcc.WithNATInstance.ExporterAPIKey != "" {
-		existingSecrets[ycmeta.ExporterCredentialSecretName] = map[string]any{
+		existingSecrets[internal.ExporterCredentialSecretName] = map[string]any{
 			"authScheme": cpapi.AuthSchemeAPIToken,
 			"secret":     *pcc.WithNATInstance.ExporterAPIKey,
 		}

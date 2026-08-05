@@ -912,8 +912,6 @@ labels: {}
 		})
 	})
 
-
-
 	Context("Credential Secret lookup", func() {
 		Context("when the Secret carries no secret field", func() {
 			BeforeEach(func() {
