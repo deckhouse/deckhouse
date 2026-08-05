@@ -1,0 +1,667 @@
+spec:
+  inputs:
+    runner_tag:
+      type: string
+      default: werf-2-stable
+      description: GitLab runner tag for e2e-framework jobs
+---
+# Local copy of deckhouse/ssdlc-tools/e2e-framework ci-templates/e2e-framework.gitlab-ci.yml
+# Global variables moved to job level (.e2e-framework-vars). Runner tag via inputs.runner_tag.
+
+.e2e-framework-vars:
+  variables:
+    IMAGE_NAME: "${CI_REGISTRY}/deckhouse/ssdlc-tools/e2e-framework"
+    IMAGE_TAG: "main"
+
+    VAULT_ADDR: "https://seguro.flant.com"
+    VAULT_ROLE: "dh-ssdlc-e2e-framework"
+
+    KUBERNETES_VERSION: "Automatic"
+    PYTHONUNBUFFERED: "1"
+    MASTER_COUNT: "1"
+    CRI: "Containerd"
+    REGISTRY_PATH: "sys/deckhouse-oss"
+    BRANCH: "main"
+
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_NEW_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_NEW_COMMANDER_TOKEN"
+    SSH_PRIVATE_KEY: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa#id_rsa_b64"
+
+    DECKHOUSE_PROD_READ_REGISTRY_HOST: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host#DECKHOUSE_READ_RU_REGISTRY_HOST"
+    DECKHOUSE_PROD_READ_REGISTRY_USER: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token#login"
+    DECKHOUSE_PROD_READ_REGISTRY_PASSWORD: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token#password"
+
+    DECKHOUSE_DEV_REGISTRY_HOST: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host#DECKHOUSE_DEV_REGISTRY_HOST"
+    DECKHOUSE_DEV_REGISTRY_USER: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken#login"
+    DECKHOUSE_DEV_REGISTRY_PASSWORD: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken#password"
+
+    FLANT_REGISTRY_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret#FLANT_REGISTRY_HOST"
+    FLANT_REGISTRY_USER: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret#FLANT_REGISTRY_USER"
+    FLANT_REGISTRY_PASSWORD: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret#FLANT_REGISTRY_PASSWORD"
+
+    DECKHOUSE_STAGE_REGISTRY_HOST: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host#DECKHOUSE_REGISTRY_STAGE_HOST"
+    DECKHOUSE_STAGE_REGISTRY_USER: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken#login"
+    DECKHOUSE_STAGE_REGISTRY_PASSWORD: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken#password"
+
+    DECKHOUSE_E2E_REGISTRY_HOST: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host#DECKHOUSE_E2E_REGISTRY_HOST"
+    DECKHOUSE_E2E_REGISTRY_USER: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry-e2e/mirror#login"
+    DECKHOUSE_E2E_REGISTRY_PASSWORD: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry-e2e/mirror#password"
+
+    DECKHOUSE_DEV_CSE_REGISTRY_HOST: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host#DECKHOUSE_DEV_CSE_REGISTRY_HOST"
+    DECKHOUSE_DEV_CSE_REGISTRY_USER: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry-cse/writetoken#login"
+    DECKHOUSE_DEV_CSE_REGISTRY_PASSWORD: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry-cse/writetoken#password"
+
+    DECKHOUSE_READ_CSE_REGISTRY_HOST: "vault:projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host#DECKHOUSE_READ_CSE_REGISTRY_HOST"
+    DECKHOUSE_READ_CSE_REGISTRY_USER: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token#login"
+    DECKHOUSE_READ_CSE_REGISTRY_PASSWORD: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token#password"
+
+    # e2e-log-agent
+    E2E_LOG_AGENT_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent#e2e_log_agent_token"
+    E2E_LOG_AGENT_PULL_ARTIFACT: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent#pull_artifact_token"
+
+    # cloud vars
+    # Vsphere
+    LAYOUT_VSPHERE_USERNAME: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new#e2e-username"
+    LAYOUT_VSPHERE_PASSWORD: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new#e2e-password"
+    LAYOUT_VSPHERE_BASE_DOMAIN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new#base-domain"
+
+    # Yandex
+    LAYOUT_YANDEX_CLOUD_ID: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex#cloud_id"
+    LAYOUT_YANDEX_FOLDER_ID: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex#folder_id"
+    LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex#authorized_key_json_b64"
+
+    # Zvirt
+    LAYOUT_ZVIRT_USERNAME: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max#login"
+    LAYOUT_ZVIRT_PASSWORD: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max#password"
+    LAYOUT_ZVIRT_BASE_DOMAIN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max#base-domain"
+
+    # DVP
+    LAYOUT_DVP_KUBECONFIGDATABASE64: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP#LAYOUT_DVP_KUBECONFIGDATABASE64"
+
+    # OpenStack
+    LAYOUT_OS_PASSWORD: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password#password"
+
+    # GCP
+    LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP#credentials_json_b64"
+
+    # Azure
+    LAYOUT_AZURE_SUBSCRIPTION_ID: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure#subscriptionId"
+    LAYOUT_AZURE_CLIENT_ID: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure#clientId"
+    LAYOUT_AZURE_CLIENT_SECRET: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure#clientSecret"
+    LAYOUT_AZURE_TENANT_ID: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure#tenantId"
+
+    # AWS
+    LAYOUT_AWS_ACCESS_KEY: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS#access_key"
+    LAYOUT_AWS_SECRET_ACCESS_KEY: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS#secret_key"
+
+    # HUAWEI
+    LAYOUT_HUAWEI_KEY_ID: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/cloud-ru#keyId"
+    LAYOUT_HUAWEI_KEY_SECRET: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/cloud-ru#keySecret"
+
+    # VCD
+    LAYOUT_VCD_USERNAME: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD#login"
+    LAYOUT_VCD_PASSWORD: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD#password"
+    LAYOUT_VCD_ORG: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD#org"
+    LAYOUT_VCD_SERVER: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD#server"
+    AWS_ACCESS_KEY_ID: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket#AWS_ACCESS_KEY_ID"
+    AWS_SECRET_ACCESS_KEY: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket#AWS_SECRET_ACCESS_KEY"
+
+.import_secrets:
+  extends:
+    - .e2e-framework-vars
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  before_script:
+    - D8_BIN=/usr/local/bin/d8
+    - export VAULT_TOKEN=$(${D8_BIN} stronghold write -field=token auth/fox/login role=$VAULT_ROLE jwt=$VAULT_ID_TOKEN)
+    - |
+      while IFS='=' read -r name value; do
+        # Проверяем, начинается ли значение с 'vault:'
+        if [[ $value == vault:* ]]; then
+          # Удаляем префикс 'vault:'
+          stripped_value=${value#vault:}
+          secret_path="${stripped_value%%#*}"
+          secret_value=$(${D8_BIN} stronghold read -field=data -format=json "${secret_path}" | jq --arg v "${stripped_value#*#}"  '.[$v]' -r )
+          export "$name=${secret_value}"
+        fi
+      done < <(env)
+
+.e2e-prestart:
+  extends:
+    - .e2e-framework-vars
+  image: ${IMAGE_NAME}:${IMAGE_TAG}
+  stage: e2e-prestart
+  script:
+    - export PREFIX=$(echo "a${CI_JOB_ID}-${CI_PROJECT_NAME}" | tr '[:upper:]' '[:lower:]' | head -c 28 | sed 's/-*$//')
+    - echo PREFIX = $PREFIX
+    - echo "PREFIX=$PREFIX" > ${DOTENV_FILE}
+  tags:
+    - $[[ inputs.runner_tag ]]
+  artifacts:
+    reports:
+      dotenv: ${DOTENV_FILE}
+    expire_in: 3 days
+
+.e2e-create-cluster:
+  timeout: 3h
+  extends: .import_secrets
+  image: ${IMAGE_NAME}:${IMAGE_TAG}
+  tags:
+    - $[[ inputs.runner_tag ]]
+  script:
+    - python3 /e2e-framework/main.py create_cluster
+  when: on_success
+
+.e2e-create-modules:
+  extends: .import_secrets
+  image: ${IMAGE_NAME}:${IMAGE_TAG}
+  tags:
+    - $[[ inputs.runner_tag ]]
+  script:
+    - python3 /e2e-framework/main.py create_modules
+  when: on_success
+
+.e2e-run-tests:
+  extends: .import_secrets
+  image: ${IMAGE_NAME}:${IMAGE_TAG}
+  tags:
+    - $[[ inputs.runner_tag ]]
+  script:
+    - python3 /e2e-framework/main.py run_tests
+  when: on_success
+
+.e2e-update-deckhouse:
+  timeout: 3h
+  extends: .import_secrets
+  image: ${IMAGE_NAME}:${IMAGE_TAG}
+  tags:
+    - $[[ inputs.runner_tag ]]
+  script:
+    - python3 /e2e-framework/main.py update_deckhouse
+  when: on_success
+
+.e2e-delete-cluster:
+  extends: .import_secrets
+  image: ${IMAGE_NAME}:${IMAGE_TAG}
+  tags:
+    - $[[ inputs.runner_tag ]]
+  script:
+    - python3 /e2e-framework/main.py delete_cluster
+  when: manual
+
+
+# clouds
+.e2e-yandex-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "Yandex"
+    TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
+
+.e2e-yandex-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "Yandex"
+    TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
+
+.e2e-yandex-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "Yandex"
+    TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
+
+.e2e-yandex-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "Yandex"
+    TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
+
+.e2e-yandex-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "Yandex"
+    TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
+
+# AWS
+.e2e-aws-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "AWS"
+    TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-aws-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "AWS"
+    TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-aws-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "AWS"
+    TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-aws-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "AWS"
+    TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-aws-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "AWS"
+    TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+# Azure
+.e2e-azure-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "Azure"
+    TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-azure-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "Azure"
+    TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-azure-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "Azure"
+    TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-azure-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "Azure"
+    TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-azure-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "Azure"
+    TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+# GCP
+.e2e-gcp-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "GCP"
+    TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-gcp-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "GCP"
+    TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-gcp-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "GCP"
+    TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-gcp-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "GCP"
+    TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+.e2e-gcp-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "GCP"
+    TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
+    COMMANDER_HOST: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_HOST"
+    COMMANDER_TOKEN: "vault:projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables#E2E_COMMANDER_TOKEN"
+
+# OpenStack
+.e2e-openstack-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "OpenStack"
+    TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
+
+.e2e-openstack-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "OpenStack"
+    TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
+
+.e2e-openstack-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "OpenStack"
+    TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
+
+.e2e-openstack-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "OpenStack"
+    TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
+
+.e2e-openstack-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "OpenStack"
+    TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
+
+# vSphere
+.e2e-vsphere-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "Vsphere"
+    TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
+    SSH_BASTION_HOST: "31.128.54.168"
+    SSH_BASTION_USER: "ubuntu"
+    SSH_BASTION_PORT: "53359"
+
+.e2e-vsphere-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "Vsphere"
+    TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
+
+.e2e-vsphere-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "Vsphere"
+    TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
+
+.e2e-vsphere-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "Vsphere"
+    TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
+
+.e2e-vsphere-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "Vsphere"
+    TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
+
+# DVP
+.e2e-dvp-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "DVP"
+    TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
+    SSH_BASTION_HOST: "185.11.73.171"
+    SSH_BASTION_USER: "e2e-user"
+
+.e2e-dvp-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "DVP"
+    TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
+
+.e2e-dvp-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "DVP"
+    TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
+
+.e2e-dvp-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "DVP"
+    TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
+
+.e2e-dvp-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "DVP"
+    TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
+
+# Zvirt
+.e2e-zvirt-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "Zvirt"
+    TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
+    SSH_BASTION_HOST: "185.120.186.151"
+    SSH_BASTION_USER: "ubuntu"
+
+.e2e-zvirt-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "Zvirt"
+    TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
+
+.e2e-zvirt-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "Zvirt"
+    TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
+
+.e2e-zvirt-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "Zvirt"
+    TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
+
+.e2e-zvirt-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "Zvirt"
+    TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
+
+# VCD
+.e2e-vcd-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "VCD"
+    TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
+    SSH_BASTION_HOST: "80.249.129.56"
+    SSH_BASTION_USER: "ubuntu"
+
+.e2e-vcd-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "VCD"
+    TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
+
+.e2e-vcd-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "VCD"
+    TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
+
+.e2e-vcd-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "VCD"
+    TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
+
+.e2e-vcd-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "VCD"
+    TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
+
+# Huawei
+.e2e-huawei-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "Huawei"
+    TEMPLATE_ID: "defba1f2-e2a4-4ae0-a071-0e4fb8b0a2ad"
+
+.e2e-huawei-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "Huawei"
+    TEMPLATE_ID: "defba1f2-e2a4-4ae0-a071-0e4fb8b0a2ad"
+
+.e2e-huawei-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "Huawei"
+    TEMPLATE_ID: "defba1f2-e2a4-4ae0-a071-0e4fb8b0a2ad"
+
+.e2e-huawei-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "Huawei"
+    TEMPLATE_ID: "defba1f2-e2a4-4ae0-a071-0e4fb8b0a2ad"
+
+.e2e-huawei-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "Huawei"
+    TEMPLATE_ID: "defba1f2-e2a4-4ae0-a071-0e4fb8b0a2ad"
+
+# Custom
+.e2e-custom-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "Custom"
+    TEMPLATE_ID: "b285d3b3-d5b0-4a49-9e1c-6cc4400b8a95"
+
+.e2e-custom-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "Custom"
+    TEMPLATE_ID: "b285d3b3-d5b0-4a49-9e1c-6cc4400b8a95"
+
+.e2e-custom-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "Custom"
+    TEMPLATE_ID: "b285d3b3-d5b0-4a49-9e1c-6cc4400b8a95"
+
+.e2e-custom-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "Custom"
+    TEMPLATE_ID: "b285d3b3-d5b0-4a49-9e1c-6cc4400b8a95"
+
+.e2e-custom-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "Custom"
+    TEMPLATE_ID: "b285d3b3-d5b0-4a49-9e1c-6cc4400b8a95"
+
+# Static CSE
+.e2e-static-cse-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "StaticCSE"
+    TEMPLATE_ID: "008e334a-157d-4bd9-9036-9efea34bbc72"
+
+.e2e-static-cse-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "StaticCSE"
+    TEMPLATE_ID: "008e334a-157d-4bd9-9036-9efea34bbc72"
+
+.e2e-static-cse-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "StaticCSE"
+    TEMPLATE_ID: "008e334a-157d-4bd9-9036-9efea34bbc72"
+
+.e2e-static-cse-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "StaticCSE"
+    TEMPLATE_ID: "008e334a-157d-4bd9-9036-9efea34bbc72"
+
+.e2e-static-cse-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "StaticCSE"
+    TEMPLATE_ID: "008e334a-157d-4bd9-9036-9efea34bbc72"
+
+# DVP CSE
+.e2e-dvp-cse-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "DVPCSE"
+    TEMPLATE_ID: "87cfeac3-0d17-429f-bee7-a35799270365"
+    SSH_BASTION_HOST: "185.11.73.171"
+    SSH_BASTION_USER: "e2e-user"
+
+.e2e-dvp-cse-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "DVPCSE"
+    TEMPLATE_ID: "87cfeac3-0d17-429f-bee7-a35799270365"
+
+.e2e-dvp-cse-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "DVPCSE"
+    TEMPLATE_ID: "87cfeac3-0d17-429f-bee7-a35799270365"
+
+.e2e-dvp-cse-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "DVPCSE"
+    TEMPLATE_ID: "87cfeac3-0d17-429f-bee7-a35799270365"
+
+.e2e-dvp-cse-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "DVPCSE"
+    TEMPLATE_ID: "87cfeac3-0d17-429f-bee7-a35799270365"
+
+# StaticPrivate
+.e2e-static-private-create-cluster:
+  extends: .e2e-create-cluster
+  variables:
+    PROVIDER: "StaticPrivate"
+    TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
+
+.e2e-static-private-create-modules:
+  extends: .e2e-create-modules
+  variables:
+    PROVIDER: "StaticPrivate"
+    TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
+
+.e2e-static-private-run-tests:
+  extends: .e2e-run-tests
+  variables:
+    PROVIDER: "StaticPrivate"
+    TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
+
+.e2e-static-private-update-deckhouse:
+  extends: .e2e-update-deckhouse
+  variables:
+    PROVIDER: "StaticPrivate"
+    TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
+
+.e2e-static-private-delete-cluster:
+  extends: .e2e-delete-cluster
+  variables:
+    PROVIDER: "StaticPrivate"
+    TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"

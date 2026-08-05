@@ -13,7 +13,7 @@ stages:
   - .post
 
 include:
-  - .gitlab/**.yml
+  - .gitlab/*.yml
 
 variables:
   CI_IMAGES_TAG: "8998a9af"
