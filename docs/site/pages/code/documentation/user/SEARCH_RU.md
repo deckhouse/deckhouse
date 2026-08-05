@@ -189,8 +189,6 @@ Owner группы может перейти в «Настройки» → «П�
 
 Search REST API позволяет выполнять поиск по инстансу Deckhouse Code, отдельной группе или проекту.
 
-Источник истины: код FE-расширения (frontend extension) поиска Deckhouse Code (а не upstream GitLab `doc/api/search.md`, где часть семантики фильтров и значений `scope` отличается).
-
 ### Эндпоинты
 
 Для поиска доступны следующие эндпоинты:
@@ -315,12 +313,3 @@ curl --request GET \
   --header "PRIVATE-TOKEN: <your_access_token>" \
   --url "https://gitlab.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy&num_context_lines=5&language=Ruby"
 ```
-
-### Отличия от upstream GitLab
-
-По сравнению с upstream GitLab `doc/api/search.md` FE-реализация Deckhouse Code отличается:
-
-- параметр `fields` поддерживается только для областей поиска `work_items` и `issues` (не для `merge_requests`);
-- параметр `exclude_forks` поддерживается только для областей поиска `work_items` и `issues`;
-- добавлены FE-фильтры: `language`, `label_name`, фильтры по ветке и автору MR, а также исключающие `not_*`-фильтры;
-- заголовок ответа `X-Search-Aggregations` возвращается при наличии агрегатов OpenSearch.

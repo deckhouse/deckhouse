@@ -189,8 +189,6 @@ Group wiki reindexing is available: index status and the **Reindex wiki** button
 
 Search REST API lets you conduct a search across a Deckhouse Code instance, a specific group, or a project.
 
-Source of truth: the Deckhouse Code frontend extension (FE) search code (not upstream GitLab `doc/api/search.md`, which has different behavior for some filters/scopes).
-
 ### Endpoints
 
 The following endpoints are available for searching:
@@ -315,12 +313,3 @@ curl --request GET \
   --header "PRIVATE-TOKEN: <your_access_token>" \
   --url "https://gitlab.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy&num_context_lines=5&language=Ruby"
 ```
-
-### Notes on divergence from upstream GitLab docs
-
-The FE implementation of Deckhouse Code is different from the upstream GitLab `doc/api/search.md`. The differences are as follows:
-
-- The `fields` parameter is supported only for `work_items` and `issues` search scopes (not `merge_requests`).
-- The `exclude_forks` parameter is supported only for `work_items` and `issues` search scopes.
-- Additional FE filters are implemented: `language`, `label_name`, MR branch and author filters, and `not_*` filters.
-- The `X-Search-Aggregations` response header is returned when OpenSearch aggregations exist.
