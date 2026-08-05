@@ -21,9 +21,9 @@ import (
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
-	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
 
 	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/pcc/v1"
+	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
 	ycval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/validation"
 )
 
