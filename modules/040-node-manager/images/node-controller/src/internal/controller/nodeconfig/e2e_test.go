@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"sort"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
@@ -47,16 +49,26 @@ var clusterDNSAddress string
 // apiServerEndpoints are the addresses envtest publishes for its apiserver.
 var apiServerEndpoints []string
 
+// apiServerPodIP is the address of the extra kube-apiserver pod one spec adds;
+// it is outside the addresses envtest publishes for its own apiserver.
+const apiServerPodIP = "10.99.0.7"
+
+// terminatingPodFinalizer holds a deleted pod in Terminating, since nothing
+// finishes a deletion here — there is no kubelet.
+const terminatingPodFinalizer = "nodeconfig.test.deckhouse.io/keep-terminating"
+
 const (
 	testKubernetesVersion = "1.35"
 	testContainerdDigest  = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
-	testPauseDigest       = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
-	testRegistryAddress   = "registry.example.com"
-	testRegistryPath      = "/deckhouse/ce"
-	testRegistryAuth      = "dXNlcjpwYXNzd29yZA=="
-	testCNIDigest         = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
-	testKubeletDigest     = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
-	testClusterCA         = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
+	// testContainerdRebuiltDigest is what a later release ships instead.
+	testContainerdRebuiltDigest = "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+	testPauseDigest             = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+	testRegistryAddress         = "registry.example.com"
+	testRegistryPath            = "/deckhouse/ce"
+	testRegistryAuth            = "dXNlcjpwYXNzd29yZA=="
+	testCNIDigest               = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+	testKubeletDigest           = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+	testClusterCA               = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 
 // User story: As a cluster operator, I want the nodes of an immutable NodeGroup
@@ -93,7 +105,12 @@ var _ = Describe("NodeConfig controller", func() {
 			nc := getNodeConfig(ctx, g, nodeName)
 
 			g.Expect(nc.Spec.NodeName).To(Equal(nodeName))
-			g.Expect(nc.Spec.OSImage).NotTo(BeEmpty())
+
+			// The OS image is named in the cluster's own registry, the way the
+			// installer names it in the first master's payload. The public one is
+			// unreachable from an air-gapped cluster, and a value that disagrees
+			// with the installer's rewrites that master's spec for nothing.
+			g.Expect(nc.Spec.OSImage).To(Equal(testRegistryAddress + testRegistryPath + "/" + osImageNameAndTag))
 
 			// Kubelet settings come straight from the NodeGroup.
 			g.Expect(nc.Spec.Kubelet.MaxPods).To(Equal(150))
@@ -103,6 +120,11 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Spec.Kubelet.ClusterDomain).To(Equal("cluster.local"))
 			g.Expect(nc.Spec.Kubelet.NodeLabels).To(HaveKeyWithValue(nodecommon.NodeGroupLabel, internalv1alpha1.NodeLabelValue(ngName)))
 			g.Expect(nc.Spec.Kubelet.NodeLabels).To(HaveKeyWithValue("role", internalv1alpha1.NodeLabelValue("worker")))
+
+			// The cluster reads a node's cgroup layout off this label alone;
+			// without it node-manager counts the node as unable to run containerd
+			// v2 and alerts on it, for every immutable node there is.
+			g.Expect(nc.Spec.Kubelet.NodeLabels).To(HaveKeyWithValue(cgroupLabel, internalv1alpha1.NodeLabelValue(cgroupV2Value)))
 
 			// kubelet loads the CA from a file on tmpfs, so the node rewrites
 			// it from here on every boot. A config without it leaves a rebooted
@@ -174,6 +196,49 @@ var _ = Describe("NodeConfig controller", func() {
 
 		Eventually(func(g Gomega) {
 			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Kubelet.MaxPods).To(Equal(200))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want to be told when a setting I wrote
+	// is not the setting my nodes get, so that a group running something I did
+	// not configure is visible instead of silent.
+	It("says on the NodeGroup which settings it had to clamp", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-clamped")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			// The documentation suggests 1000 maxPods for a /21 pod subnet, while
+			// the agent's schema stops at 500; RollingUpdate has no counterpart on
+			// a node that is replaced rather than updated in place.
+			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](1000)}
+			ng.Spec.Disruptions = &deckhousev1.DisruptionsSpec{ApprovalMode: deckhousev1.DisruptionApprovalModeRollingUpdate}
+		})
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.Kubelet.MaxPods).To(Equal(maxPodsCeiling))
+			g.Expect(nc.Spec.UpdatePolicy.Mode).To(Equal(string(deckhousev1.DisruptionApprovalModeAutomatic)))
+
+			messages := clampWarnings(ctx, g, ngName)
+			g.Expect(messages).To(ContainElement(ContainSubstring("maxPods")))
+			g.Expect(messages).To(ContainElement(ContainSubstring("approvalMode")))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want my immutable nodes to advertise
+	// the same pod capacity as the bashible nodes beside them, so that the
+	// scheduler is not told two different things about one cluster.
+	It("takes the pod ceiling from the pod subnet, as bashible does", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-maxpods")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		// The suite's cluster gives each node a /23 of the pod subnet, which is
+		// 250 pods for a bashible node — so it is 250 here too, not the flat 120
+		// of a NodeConfig with nothing configured.
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Kubelet.MaxPods).To(Equal(maxPodsPerNodeCIDR23))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -252,6 +317,220 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// One NodeGroup edit drifts every node of the group at once, and they are
+	// rendered one after another inside a single pass. The group is listed once
+	// for that pass, so the only thing keeping the nodes after the first from
+	// passing the same gate is the pass counting what it has already handed out.
+	It("holds the group to one node when a single pass drifts them all", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-onepass")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](110)}
+		})
+
+		nodes := make([]string, 0, 3)
+		for range 3 {
+			name := testenv.UniqueName("node")
+			createNode(ctx, name, ngName)
+			nodes = append(nodes, name)
+		}
+
+		Eventually(func(g Gomega) {
+			for _, name := range nodes {
+				g.Expect(getNodeConfig(ctx, g, name).Spec.Kubelet.MaxPods).To(Equal(110))
+			}
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		for _, name := range nodes {
+			reportApplied(ctx, name)
+		}
+
+		By("raising maxPods on the NodeGroup, which drifts all three at once")
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		patch := client.MergeFrom(ng.DeepCopy())
+		ng.Spec.Kubelet.MaxPods = ptr.To[int32](200)
+		Expect(k8sClient.Patch(ctx, ng, patch)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, nodes...)).To(BeNumerically(">=", 1))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		Consistently(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, nodes...)).To(Equal(1))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the node that took it reporting back")
+		for _, name := range nodes {
+			if getNodeConfig(ctx, Default, name).Spec.Kubelet.MaxPods == 200 {
+				reportApplied(ctx, name)
+			}
+		}
+
+		Eventually(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, nodes...)).To(Equal(2))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator whose immutable nodes have gone quiet, I
+	// want a NodeGroup edit to reach none of them rather than all of them, so
+	// that a fleet whose agents are down does not take a change together and then
+	// interrupt itself together when they come back.
+	It("gives no node a slot while more of the group is silent than it may update", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-silent")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](110)}
+		})
+
+		nodes := make([]string, 0, 3)
+		for range 3 {
+			name := testenv.UniqueName("node")
+			createNode(ctx, name, ngName)
+			nodes = append(nodes, name)
+		}
+
+		// Configured on arrival and then silent: no agent ever reports the spec
+		// applied, which is what an absent, outdated or broken agent looks like
+		// from here.
+		Eventually(func(g Gomega) {
+			for _, name := range nodes {
+				g.Expect(getNodeConfig(ctx, g, name).Spec.Kubelet.MaxPods).To(Equal(110))
+			}
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("raising maxPods on the NodeGroup")
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		patch := client.MergeFrom(ng.DeepCopy())
+		ng.Spec.Kubelet.MaxPods = ptr.To[int32](200)
+		Expect(k8sClient.Patch(ctx, ng, patch)).To(Succeed())
+
+		// Three nodes mid-update and one update allowed: the change waits for the
+		// group to come back rather than being handed to all three at once.
+		Consistently(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, nodes...)).To(Equal(0))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the agents reporting the config they were given")
+		for _, name := range nodes {
+			reportApplied(ctx, name)
+		}
+
+		Eventually(func(g Gomega) {
+			g.Expect(updatedNodes(ctx, g, nodes...)).To(Equal(1))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator with a large immutable fleet, I want the
+	// controller to do nothing when a node merely reports it is still alive, so
+	// that a thousand kubelets refreshing their status do not keep one worker
+	// re-reading the whole cluster to render a spec that never changes.
+	//
+	// A heartbeat that reached the reconciler would not be visible in the object
+	// it renders — the render is deterministic — so the difference is made
+	// visible here: a cluster input nothing watches is changed first, and a pass
+	// that ran would pick it up. It must take a change to something the render
+	// reads off the Node to bring that pass along.
+	It("does not re-render a node that only reported it is alive", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-heartbeat")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		var generation int64
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(digestOf(nc, containerdExtension)).To(Equal(testContainerdDigest))
+			generation = nc.Generation
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// Settled first: publishing a config is itself an event that brings an
+		// all-nodes pass along, and this spec is about what happens when nothing
+		// is happening.
+		Consistently(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Generation).To(Equal(generation))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the release publishing a new containerd, which nothing watches")
+		setContainerdDigest(ctx, testContainerdRebuiltDigest)
+
+		By("the node reporting it is still alive")
+		heartbeat(ctx, nodeName)
+
+		Consistently(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Generation).To(Equal(generation))
+			g.Expect(digestOf(nc, containerdExtension)).To(Equal(testContainerdDigest))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		// And a change to something the render does read off the Node brings the
+		// pass along, so nothing is lost — only deferred to an event that means
+		// something.
+		By("labelling the node, which an extension request could select on")
+		Eventually(func(g Gomega) {
+			node := &corev1.Node{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			patch := client.MergeFrom(node.DeepCopy())
+			node.Labels["storage.deckhouse.io/drbd"] = "true"
+			g.Expect(k8sClient.Patch(ctx, node, patch)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(digestOf(getNodeConfig(ctx, g, nodeName), containerdExtension)).To(Equal(testContainerdRebuiltDigest))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// The gate decides from a list of the group's NodeConfigs and then writes, so
+	// the list has to be the one the API server holds. Judged against a cache
+	// that has not caught up — which is what the cache is, right after the
+	// previous node of the group was handed its config — every node of the group
+	// sees a group where nothing is updating and takes the change at once.
+	It("judges the rollout by the group the API server holds, not by a stale cache", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-gate")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](110)}
+		})
+		first := testenv.UniqueName("node")
+		second := testenv.UniqueName("node")
+		createNode(ctx, first, ngName)
+		createNode(ctx, second, ngName)
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, first).Spec.Kubelet.MaxPods).To(Equal(110))
+			g.Expect(getNodeConfig(ctx, g, second).Spec.Kubelet.MaxPods).To(Equal(110))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		reportApplied(ctx, first)
+		reportApplied(ctx, second)
+
+		// The group as a lagging cache still holds it: every node applied, nothing
+		// updating.
+		stale := staleGroupSnapshot(ctx, ngName)
+
+		By("handing the first node a new spec")
+		nc := getNodeConfig(ctx, Default, first)
+		patch := client.MergeFrom(nc.DeepCopy())
+		nc.Spec.Kubelet.MaxPods = 199
+		Expect(k8sClient.Patch(ctx, nc, patch)).To(Succeed())
+
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		gate := &Reconciler{}
+		gate.Client = stale
+		gate.sources = &sourceReader{Client: stale, Reader: apiReader}
+
+		// One node of the group is mid-update, and maxConcurrent defaults to one:
+		// the second node has to wait, however applied the cache believes the
+		// group to be. Each check reads the budget afresh, the way a new pass
+		// does — a budget is per pass, not per controller.
+		Eventually(func(g Gomega) {
+			g.Expect(rolloutSlotFor(ctx, g, gate, ng, second)).To(BeFalse())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the first node reporting the spec it was given")
+		reportApplied(ctx, first)
+
+		Eventually(func(g Gomega) {
+			g.Expect(rolloutSlotFor(ctx, g, gate, ng, second)).To(BeTrue())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As a cluster operator, I want a node that has to restart
 	// kubelet to apply its config to be drained first and to see that happening,
 	// so that the workload leaves before the interruption and I can tell what is
@@ -301,7 +580,7 @@ var _ = Describe("NodeConfig controller", func() {
 		node := &corev1.Node{}
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, "node-operation"))
+			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, HavePrefix("node-operation/")))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		Consistently(func(g Gomega) {
@@ -311,7 +590,11 @@ var _ = Describe("NodeConfig controller", func() {
 		By("the drain finishing")
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			node.Annotations[nodecommon.DrainedAnnotation] = "node-operation"
+			// The answer echoes the request, the way the draining controller
+			// does: the annotation names which operation asked, so a finished
+			// one cannot erase a live sibling's request.
+			node.Annotations[nodecommon.DrainedAnnotation] = node.Annotations[nodecommon.DrainingAnnotation]
+			delete(node.Annotations, nodecommon.DrainingAnnotation)
 			node.Spec.Unschedulable = true
 			g.Expect(k8sClient.Update(ctx, node)).To(Succeed())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -359,6 +642,186 @@ var _ = Describe("NodeConfig controller", func() {
 			}
 			g.Expect(drains).To(Equal(1))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want one interruption per change to a
+	// node, so that a node is not drained twice — once for a revision it has
+	// already been moved off and can never report done, and once for the one it
+	// is actually running.
+	It("does not ask to interrupt a node for a revision it has already left", func(ctx context.Context) {
+		// Manual first, so the node can be left asking for an interruption that
+		// nothing has answered — the state the same pass then publishes a new
+		// revision over.
+		ngName := testenv.UniqueName("workers-revision")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](110)}
+			ng.Spec.Disruptions = &deckhousev1.DisruptionsSpec{ApprovalMode: deckhousev1.DisruptionApprovalModeManual}
+		})
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		var generation int64
+		Eventually(func(g Gomega) {
+			generation = getNodeConfig(ctx, g, nodeName).Generation
+			g.Expect(generation).NotTo(BeZero())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the agent asking to be interrupted for the config it has")
+		requestDisruption(ctx, nodeName, generation)
+
+		By("the operator raising maxPods and handing disruptions back to the cluster")
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		patch := client.MergeFrom(ng.DeepCopy())
+		ng.Spec.Kubelet.MaxPods = ptr.To[int32](200)
+		ng.Spec.Disruptions.ApprovalMode = deckhousev1.DisruptionApprovalModeAutomatic
+		Expect(k8sClient.Patch(ctx, ng, patch)).To(Succeed())
+
+		var current int64
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.Kubelet.MaxPods).To(Equal(200))
+			current = nc.Generation
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		// The node has not looked at the new revision yet — its status still
+		// points at the one it was moved off. An interruption for that one drains
+		// the node for a config nobody is going to report done, and holds it
+		// cordoned until the operation times out.
+		Consistently(func(g Gomega) {
+			g.Expect(approvals(ctx, g, nodeName)).To(BeEmpty())
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the agent asking again, for the revision it now has")
+		requestDisruption(ctx, nodeName, current)
+
+		Eventually(func(g Gomega) {
+			ops := approvals(ctx, g, nodeName)
+			g.Expect(ops).To(HaveLen(1))
+			g.Expect(ops[0].Spec.ConfigGeneration).To(HaveValue(Equal(current)))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want a node that changed address to be
+	// registered under the address it actually has, so that a re-IPed node does
+	// not stay pinned for the rest of its life to one nothing routes to.
+	//
+	// The pinned address is only ever written by the installer, so the render
+	// keeps it — but only while the node still reports it. Judging that by the
+	// Node the reconcile started with cannot work: the manager's cache strips
+	// Node.status.addresses, so every node in the cluster looks like a node that
+	// reports no address, and every pin is kept forever. It has to be read from
+	// the API server, which is what this spec runs through.
+	It("releases a pinned node address once the node reports another", func(ctx context.Context) {
+		ngName := testenv.UniqueName("master-reip")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("master")
+
+		// A control-plane node publishes its own bootstrap config, so the
+		// controller renders over that object rather than creating one.
+		node := &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nodeName,
+				Labels: map[string]string{
+					nodecommon.NodeGroupLabel: ngName,
+					controlPlaneRoleLabel:     "",
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, node)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, node) })
+		reportNodeAddress(ctx, nodeName, "10.0.0.10")
+
+		bootstrapped := &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+			Spec: internalv1alpha1.NodeSpec{
+				NodeName: nodeName,
+				Kubelet:  internalv1alpha1.Kubelet{NodeIP: "10.0.0.10"},
+			},
+		}
+		Expect(k8sClient.Create(ctx, bootstrapped)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, bootstrapped) })
+
+		// While the node still reports that address, the installer's choice
+		// stands: nothing in the cluster can reproduce it.
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.APIServerEndpoints).NotTo(BeEmpty())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		Consistently(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Kubelet.NodeIP).To(Equal("10.0.0.10"))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the node coming back on a different address")
+		reportNodeAddress(ctx, nodeName, "10.0.0.77")
+
+		// The address itself brings no pass along: the manager's cache strips
+		// Node.status.addresses, so an address change is not visible as an event
+		// to anything — it is read from the API server when a render happens. The
+		// pass that reads it is the next all-nodes one, which in a live cluster is
+		// the node's own agent republishing its status a few minutes later.
+		reportApplied(ctx, nodeName)
+
+		// Released, so kubelet picks the address the node actually has instead
+		// of being handed one it lost.
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Kubelet.NodeIP).To(BeEmpty())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want a control-plane restart to leave
+	// the nodes of my immutable groups alone, so that upgrading or rebooting a
+	// master does not walk a configuration change through the whole fleet.
+	It("keeps the API server endpoints steady while an apiserver pod is not ready", func(ctx context.Context) {
+		pod := createAPIServerPod(ctx, apiServerPodIP)
+		endpoint := fmt.Sprintf("https://%s:%d", apiServerPodIP, apiserverPort)
+
+		ngName := testenv.UniqueName("workers-endpoints")
+		createImmutableNodeGroup(ctx, ngName, nil)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		// The pod is not ready and has never been: its address is published all
+		// the same, because the alternative is a node spec that changes shape
+		// every time an apiserver is restarted.
+		var generation int64
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.APIServerEndpoints).To(ContainElement(endpoint))
+			generation = nc.Generation
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the apiserver pod becoming ready")
+		Eventually(func(g Gomega) {
+			fresh := &corev1.Pod{}
+			g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), fresh)).To(Succeed())
+			fresh.Status.Conditions = []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}
+			g.Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		// Pods are not watched here, so the endpoints are recomputed on the next
+		// pass whatever triggers it; the group is touched to bring that pass
+		// forward rather than waiting for an agent heartbeat.
+		touchNodeGroup(ctx, ngName)
+
+		// Readiness is not part of the node's desired state, so the pass changed
+		// nothing about the node: no new generation, and so no rollout slot and
+		// no candidate interruption.
+		Consistently(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.APIServerEndpoints).To(ContainElement(endpoint))
+			g.Expect(nc.Generation).To(Equal(generation))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		// A master that is really going away is a different matter: an evicted or
+		// deleted mirror pod keeps its address to the end, so an address that
+		// only left when the object finally disappeared is one the nodes would go
+		// on being told to talk to.
+		By("the apiserver pod being asked to go")
+		Expect(k8sClient.Delete(ctx, pod, client.GracePeriodSeconds(0))).To(Succeed())
+		touchNodeGroup(ctx, ngName)
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.APIServerEndpoints).NotTo(ContainElement(endpoint))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// User story: As an operator, I want finished operations to disappear on
@@ -485,13 +948,17 @@ var _ = Describe("NodeConfig controller", func() {
 		node := &corev1.Node{}
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, "node-operation"))
+			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, HavePrefix("node-operation/")))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the drain finishing")
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			node.Annotations[nodecommon.DrainedAnnotation] = "node-operation"
+			// The answer echoes the request, the way the draining controller
+			// does: the annotation names which operation asked, so a finished
+			// one cannot erase a live sibling's request.
+			node.Annotations[nodecommon.DrainedAnnotation] = node.Annotations[nodecommon.DrainingAnnotation]
+			delete(node.Annotations, nodecommon.DrainingAnnotation)
 			node.Spec.Unschedulable = true
 			g.Expect(k8sClient.Update(ctx, node)).To(Succeed())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -750,6 +1217,184 @@ func reportHeld(ctx context.Context, name string, heldGeneration int64) {
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
 
+// approvals returns every disruption approval that exists for a node, oldest
+// first, so a spec can tell "asked once" from "asked again".
+func approvals(ctx context.Context, g Gomega, nodeName string) []v1alpha1.NodeOperation {
+	ops := &v1alpha1.NodeOperationList{}
+	g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
+	var found []v1alpha1.NodeOperation
+	for i := range ops.Items {
+		if ops.Items[i].Spec.Type == v1alpha1.NodeOperationApproveDisruption && ops.Items[i].Spec.NodeName == nodeName {
+			found = append(found, ops.Items[i])
+		}
+	}
+	sort.Slice(found, func(i, j int) bool {
+		return found[i].CreationTimestamp.Before(&found[j].CreationTimestamp)
+	})
+	return found
+}
+
+// clampWarnings returns the messages of the warnings the controller published on
+// a NodeGroup about settings it could not carry over as written.
+func clampWarnings(ctx context.Context, g Gomega, ngName string) []string {
+	events := &corev1.EventList{}
+	g.Expect(k8sClient.List(ctx, events)).To(Succeed())
+	var messages []string
+	for i := range events.Items {
+		event := &events.Items[i]
+		if event.Reason == "SettingClamped" && event.InvolvedObject.Name == ngName {
+			messages = append(messages, event.Message)
+		}
+	}
+	return messages
+}
+
+// touchNodeGroup annotates the group so the controller re-renders its nodes,
+// standing in for whichever event would have brought the next pass along.
+func touchNodeGroup(ctx context.Context, ngName string) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		ng := &deckhousev1.NodeGroup{}
+		g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		patch := client.MergeFrom(ng.DeepCopy())
+		if ng.Annotations == nil {
+			ng.Annotations = map[string]string{}
+		}
+		ng.Annotations["nodeconfig.test.deckhouse.io/touched"] = time.Now().Format(time.RFC3339Nano)
+		g.Expect(k8sClient.Patch(ctx, ng, patch)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+// heartbeat is a kubelet saying nothing except that it is still there.
+func heartbeat(ctx context.Context, nodeName string) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		node := &corev1.Node{}
+		g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+		node.Status.Conditions = []corev1.NodeCondition{{
+			Type:              corev1.NodeReady,
+			Status:            corev1.ConditionTrue,
+			Reason:            "KubeletReady",
+			LastHeartbeatTime: metav1.Now(),
+		}}
+		g.Expect(k8sClient.Status().Update(ctx, node)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+// setContainerdDigest republishes the release's containerd sysext, the way a
+// Deckhouse update does. Nothing watches the ConfigMap it lives in, so only a
+// render pass picks it up — which is what makes it a probe for whether one ran.
+func setContainerdDigest(ctx context.Context, digest string) {
+	GinkgoHelper()
+
+	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testPauseDigest)
+	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q},"common":{"pause":%q}}`,
+		digest, testCNIDigest, testKubeletDigest, testPauseDigest)
+
+	writeDigests := func(ctx context.Context, data string) {
+		cm := &corev1.ConfigMap{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: imagesDigestsConfigMapName}, cm)).To(Succeed())
+		patch := client.MergeFrom(cm.DeepCopy())
+		cm.Data[imagesDigestsKey] = data
+		Expect(k8sClient.Patch(ctx, cm, patch)).To(Succeed())
+	}
+	writeDigests(ctx, updated)
+	DeferCleanup(func(ctx context.Context) { writeDigests(ctx, original) })
+}
+
+// digestOf returns the digest a config carries for one extension.
+func digestOf(nc *internalv1alpha1.NodeConfig, name string) string {
+	for _, ext := range nc.Spec.Extensions {
+		if ext.Name == name {
+			return ext.Digest
+		}
+	}
+	return ""
+}
+
+// reportNodeAddress is kubelet publishing the address the node is reachable at.
+func reportNodeAddress(ctx context.Context, nodeName, address string) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		node := &corev1.Node{}
+		g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+		node.Status.Addresses = []corev1.NodeAddress{
+			{Type: corev1.NodeHostName, Address: nodeName},
+			{Type: corev1.NodeInternalIP, Address: address},
+		}
+		g.Expect(k8sClient.Status().Update(ctx, node)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+// rolloutSlotFor asks the gate whether a node may be handed a new spec, reading
+// the group afresh the way the first node of a pass does.
+func rolloutSlotFor(ctx context.Context, g Gomega, r *Reconciler, ng *deckhousev1.NodeGroup, nodeName string) bool {
+	budget, err := r.rolloutBudget(ctx, ng, newPass())
+	g.Expect(err).NotTo(HaveOccurred())
+	return budget.hasSlot(nodeName)
+}
+
+// staleGroupSnapshot is the group's NodeConfigs as a cache that stopped
+// receiving updates would hold them: whatever the API server had at this moment,
+// frozen.
+func staleGroupSnapshot(ctx context.Context, ngName string) client.Client {
+	GinkgoHelper()
+
+	list := &internalv1alpha1.NodeConfigList{}
+	Expect(k8sClient.List(ctx, list, client.MatchingLabels{nodeGroupNameLabel: ngName})).To(Succeed())
+	objects := make([]client.Object, 0, len(list.Items))
+	for i := range list.Items {
+		objects = append(objects, &list.Items[i])
+	}
+	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+}
+
+// createAPIServerPod adds a kube-apiserver pod that has never become ready, the
+// shape a master presents while it is restarting. The finalizer makes it stay
+// once it is deleted, the way a real mirror pod lingers in Terminating — with
+// its address still on it.
+func createAPIServerPod(ctx context.Context, podIP string) *corev1.Pod {
+	GinkgoHelper()
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  kubeSystemNS,
+			Name:       testenv.UniqueName("kube-apiserver"),
+			Labels:     map[string]string{"component": "kube-apiserver", "tier": "control-plane"},
+			Finalizers: []string{terminatingPodFinalizer},
+		},
+		Spec: corev1.PodSpec{
+			HostNetwork: true,
+			Containers:  []corev1.Container{{Name: "kube-apiserver", Image: "kube-apiserver:test"}},
+		},
+	}
+	Expect(k8sClient.Create(ctx, pod)).To(Succeed())
+	DeferCleanup(func(ctx context.Context) {
+		// The pod has to be gone, not Terminating, before the next spec runs:
+		// nothing runs kubelet here to finish the deletion, and a pod left behind
+		// goes on publishing its address into every config rendered after it.
+		fresh := &corev1.Pod{}
+		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), fresh); err == nil {
+			testenv.RemoveFinalizers(ctx, k8sClient, fresh)
+			Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, fresh, client.GracePeriodSeconds(0)))).To(Succeed())
+		}
+		Eventually(func(g Gomega) {
+			err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), &corev1.Pod{})
+			g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	fresh := &corev1.Pod{}
+	Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), fresh)).To(Succeed())
+	fresh.Status.PodIP = podIP
+	Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
+	return pod
+}
+
 // findDrainOf returns the eviction a given operation spawned, located the way
 // the controller locates it: by ownership, not by a name anyone could take.
 func findDrainOf(ctx context.Context, g Gomega, parent string) *v1alpha1.NodeOperation {
@@ -797,33 +1442,6 @@ func requestDisruption(ctx context.Context, name string, generation int64) {
 			Message:            "applying this config restarts kubelet",
 			ObservedGeneration: generation,
 		})
-		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
-	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-}
-
-// clearDisruption is what the agent does once it has applied the config.
-func clearDisruption(ctx context.Context, name string) {
-	GinkgoHelper()
-
-	Eventually(func(g Gomega) {
-		nc := getNodeConfig(ctx, g, name)
-		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-			Type:               disruptionRequiredCondition,
-			Status:             metav1.ConditionFalse,
-			Reason:             "Applied",
-			Message:            "config applied",
-			ObservedGeneration: nc.Generation,
-		})
-		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-			Type:               configurationAppliedCondition,
-			Status:             metav1.ConditionTrue,
-			Reason:             "ReconcileSucceeded",
-			Message:            "the node is running the published configuration",
-			ObservedGeneration: nc.Generation,
-		})
-		nc.Status.ObservedGeneration = nc.Generation
-		nc.Status.AppliedGeneration = nc.Generation
-		nc.Status.Phase = phaseReady
 		g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
@@ -998,7 +1616,8 @@ func ensureClusterInputs(ctx context.Context) {
 	ensureObject(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: clusterConfigSecretName},
 		Data: map[string][]byte{
-			clusterConfigKey: []byte("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nclusterDomain: cluster.local\nkubernetesVersion: \"" + testKubernetesVersion + ".6\"\n"),
+			clusterConfigKey: []byte("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nclusterDomain: cluster.local\n" +
+				"podSubnetNodeCIDRPrefix: \"23\"\nkubernetesVersion: \"" + testKubernetesVersion + ".6\"\n"),
 		},
 	})
 }
@@ -1012,11 +1631,7 @@ func ensureNamespace(ctx context.Context, name string) {
 func ensureObject(ctx context.Context, obj client.Object) {
 	GinkgoHelper()
 	err := k8sClient.Create(ctx, obj)
-	if err != nil && !apierrorsIsAlreadyExists(err) {
+	if err != nil && !apierrors.IsAlreadyExists(err) {
 		Expect(err).NotTo(HaveOccurred())
 	}
-}
-
-func apierrorsIsAlreadyExists(err error) bool {
-	return apierrors.IsAlreadyExists(err)
 }

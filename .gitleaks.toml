@@ -2,10 +2,27 @@
 useDefault = false
 path = "gitleaks.base.toml"
 
-[allowlist]
+[[allowlists]]
 regexes = [
-  'kubernetesCni162',
-  # base64 of "user:password": the placeholder registry credential the
-  # node-controller tests and the dhctl cloud-init golden are built from.
+  'kubernetesCni162'
+]
+
+# base64 of "user:password": the placeholder registry credential these three
+# fixtures are built from, two of them in the {"auths":{...,"auth":...}} shape a
+# docker config uses, which is what a scanner is right to notice.
+#
+# Listed file by file rather than allowlisted globally: a global entry also waves
+# through a real credential that happens to be "user:password" anywhere in the
+# tree. go_lib/registry/helpers/docker_cfg_test.go holds the same placeholder and
+# is deliberately absent — it predates this change and is not in its diff, so an
+# entry for it would be this change quietly adopting somebody else's finding.
+[[allowlists]]
+condition = "AND"
+regexes = [
   'dXNlcjpwYXNzd29yZA=='
+]
+paths = [
+  '''dhctl/pkg/immutable/testdata/master-cloud-init\.yaml$''',
+  '''modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/e2e_test\.go$''',
+  '''modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/e2e_test\.go$'''
 ]

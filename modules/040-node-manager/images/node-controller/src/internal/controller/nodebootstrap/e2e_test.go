@@ -84,6 +84,13 @@ var _ = Describe("NodeBootstrap controller", func() {
 			// The token kubelet presents on first contact is the group's.
 			g.Expect(value).To(ContainSubstring("bootstrapToken:"))
 
+			// Only the desired state travels. The status belongs to the node,
+			// which has said nothing yet — and omitempty does not drop a struct,
+			// so marshalling the API type verbatim would put a
+			// "status: {lastReconcileTime: null}" on every machine that boots.
+			g.Expect(value).NotTo(ContainSubstring("status:"))
+			g.Expect(value).NotTo(ContainSubstring("lastReconcileTime"))
+
 			// The Secret is owned by the config, so it is collected with it.
 			g.Expect(secret.OwnerReferences).To(HaveLen(1))
 			g.Expect(secret.OwnerReferences[0].Kind).To(Equal(nodeBootstrapConfigKind))
@@ -104,9 +111,45 @@ var _ = Describe("NodeBootstrap controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// Bootstrap is consumed once: rotating the group token must not churn a live
-	// machine's userdata, or the machine could be handed data it never booted with.
-	It("does not re-render an existing secret", func(ctx context.Context) {
+	// The provider builds the VM from the userdata, so once it reports the
+	// infrastructure provisioned nothing will read the Secret again — and
+	// re-rendering it would keep a full pass over the uncached cluster inputs
+	// running every refresh interval for the life of the Machine.
+	It("stops re-rendering once the infrastructure is provisioned", func(ctx context.Context) {
+		ngName := testenv.UniqueName("imm")
+		createImmutableNodeGroup(ctx, ngName)
+		ensureBootstrapToken(ctx, ngName)
+
+		machine := createMachine(ctx, testenv.UniqueName("m"), ngName)
+		config := createBootstrapConfig(ctx, machine)
+
+		secretName := machine.Name + dataSecretSuffix
+		Eventually(func(g Gomega) {
+			g.Expect(getSecret(ctx, g, secretName).Data[secretValueKey]).NotTo(BeEmpty())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		setInfrastructureProvisioned(ctx, machine.Name)
+		rotateBootstrapToken(ctx, ngName)
+		nudgeConfig(ctx, config.Name)
+
+		var frozen string
+		Eventually(func(g Gomega) {
+			frozen = string(getSecret(ctx, g, secretName).Data[secretValueKey])
+			g.Expect(frozen).NotTo(BeEmpty())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		rotateBootstrapToken(ctx, ngName)
+		nudgeConfig(ctx, config.Name)
+
+		Consistently(func(g Gomega) {
+			g.Expect(string(getSecret(ctx, g, secretName).Data[secretValueKey])).To(Equal(frozen))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// Bootstrap is consumed once, but only once the node is there: the token
+	// baked into the userdata expires in four hours, so a machine whose VM is
+	// created late must not keep the copy it was first given.
+	It("re-renders while the machine has no node, and freezes once it has one", func(ctx context.Context) {
 		ngName := testenv.UniqueName("imm")
 		createImmutableNodeGroup(ctx, ngName)
 		ensureBootstrapToken(ctx, ngName)
@@ -121,13 +164,30 @@ var _ = Describe("NodeBootstrap controller", func() {
 			g.Expect(original).NotTo(BeEmpty())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		By("nudging the controller to reconcile the config again")
-		fresh := getConfig(ctx, Default, config.Name)
-		fresh.Annotations = map[string]string{"test.deckhouse.io/nudge": "1"}
-		Expect(k8sClient.Update(ctx, fresh)).To(Succeed())
+		By("the group's token rotating before the machine ever reaches the API")
+		rotateBootstrapToken(ctx, ngName)
+		nudgeConfig(ctx, config.Name)
+
+		Eventually(func(g Gomega) {
+			g.Expect(string(getSecret(ctx, g, secretName).Data[secretValueKey])).NotTo(Equal(original))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the node registering, which is what makes the userdata history")
+		setNodeRef(ctx, machine.Name)
+		rotateBootstrapToken(ctx, ngName)
+		nudgeConfig(ctx, config.Name)
+
+		var frozen string
+		Eventually(func(g Gomega) {
+			frozen = string(getSecret(ctx, g, secretName).Data[secretValueKey])
+			g.Expect(frozen).NotTo(BeEmpty())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		rotateBootstrapToken(ctx, ngName)
+		nudgeConfig(ctx, config.Name)
 
 		Consistently(func(g Gomega) {
-			g.Expect(string(getSecret(ctx, g, secretName).Data[secretValueKey])).To(Equal(original))
+			g.Expect(string(getSecret(ctx, g, secretName).Data[secretValueKey])).To(Equal(frozen))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -338,6 +398,61 @@ func ensureBootstrapToken(ctx context.Context, ngName string) {
 			"expiration":   []byte(time.Now().Add(24 * time.Hour).Format(time.RFC3339)),
 		},
 	})
+}
+
+// rotateBootstrapToken replaces the secret part of the group's token, the way
+// order_bootstrap_token does once the current one is close to expiring.
+func rotateBootstrapToken(ctx context.Context, ngName string) {
+	GinkgoHelper()
+
+	secrets := &corev1.SecretList{}
+	Expect(k8sClient.List(ctx, secrets,
+		client.InNamespace(kubeSystemNS),
+		client.MatchingLabels{bootstrapTokenNGLabel: ngName},
+	)).To(Succeed())
+	Expect(secrets.Items).To(HaveLen(1))
+
+	secret := &secrets.Items[0]
+	patch := client.MergeFrom(secret.DeepCopy())
+	secret.Data["token-secret"] = []byte(testenv.UniqueName("tok"))
+	Expect(k8sClient.Patch(ctx, secret, patch)).To(Succeed())
+}
+
+// setNodeRef plays the part of the CAPI Machine controller noticing that the
+// machine's kubelet has registered a Node.
+func setNodeRef(ctx context.Context, machineName string) {
+	GinkgoHelper()
+
+	machine := &capiv1beta2.Machine{}
+	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: machineName}, machine)).To(Succeed())
+	machine.Status.NodeRef = capiv1beta2.MachineNodeReference{Name: machineName}
+	Expect(k8sClient.Status().Update(ctx, machine)).To(Succeed())
+}
+
+// setInfrastructureProvisioned plays the part of the infrastructure provider
+// reporting that it has built the machine's VM — from the userdata, which it
+// therefore will not read again.
+func setInfrastructureProvisioned(ctx context.Context, machineName string) {
+	GinkgoHelper()
+
+	machine := &capiv1beta2.Machine{}
+	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: machineName}, machine)).To(Succeed())
+	machine.Status.Initialization.InfrastructureProvisioned = ptr.To(true)
+	Expect(k8sClient.Status().Update(ctx, machine)).To(Succeed())
+}
+
+func nudgeConfig(ctx context.Context, name string) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		config := getConfig(ctx, g, name)
+		patch := client.MergeFrom(config.DeepCopy())
+		if config.Annotations == nil {
+			config.Annotations = map[string]string{}
+		}
+		config.Annotations["test.deckhouse.io/nudge"] = testenv.UniqueName("n")
+		g.Expect(k8sClient.Patch(ctx, config, patch)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
 
 // ensureClusterInputs creates the cluster state the bootstrap userdata is

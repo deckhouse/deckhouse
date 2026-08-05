@@ -49,7 +49,7 @@ const (
 func RealCacheCRDPaths() []string {
 	return slices.Concat(
 		ControllerCRDPaths(MachineCRDFile, MachineDeploymentCRDFile, ClusterCRDFile, MachineHealthCheckCRDFile),
-		NodeManagerCRDPaths(MCMCRDFile),
+		NodeManagerCRDPaths(MCMCRDFile, NodeBootstrapConfigCRDFile),
 		[]string{
 			testdataPath("deckhousecontrolplane-crd.yaml"),
 			testdataPath("moduleconfig-crd.yaml"),

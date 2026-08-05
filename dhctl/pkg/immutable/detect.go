@@ -15,6 +15,7 @@
 package immutable
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -25,8 +26,8 @@ import (
 )
 
 const (
-	// MasterNodeGroupName is the NodeGroup the first control-plane node belongs to.
-	MasterNodeGroupName = "master"
+	// masterNodeGroupName is the NodeGroup the first control-plane node belongs to.
+	masterNodeGroupName = "master"
 
 	// nodeGroupKind and systemTypeImmutable mirror the node-manager API.
 	// node-controller is a separate Go module, so the two constants are
@@ -50,7 +51,9 @@ var masterNodeGroupHints = []*regexp.Regexp{
 // not parse is skipped rather than rejected — the resources section may hold
 // anything. The one exception is the master NodeGroup itself: dhctl has to read
 // it as plain YAML this early, so a templated one is an error the user must see.
-func IsImmutableMaster(resourcesYAML string) (bool, error) {
+//
+// Pure; the context is here for the package's uniform exported signature.
+func IsImmutableMaster(_ context.Context, resourcesYAML string) (bool, error) {
 	for _, doc := range input.YAMLSplitRegexp.Split(strings.TrimSpace(resourcesYAML), -1) {
 		if strings.TrimSpace(doc) == "" {
 			continue
@@ -73,7 +76,7 @@ func IsImmutableMaster(resourcesYAML string) (bool, error) {
 			return false, fmt.Errorf("parse master NodeGroup from the resources section (templating it is not supported: dhctl reads it before rendering): %w", err)
 		}
 
-		if parsed.Kind != nodeGroupKind || parsed.Metadata.Name != MasterNodeGroupName {
+		if parsed.Kind != nodeGroupKind || parsed.Metadata.Name != masterNodeGroupName {
 			continue
 		}
 

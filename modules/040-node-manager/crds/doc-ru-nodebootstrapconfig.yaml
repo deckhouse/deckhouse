@@ -4,13 +4,13 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Заявка на первичную загрузку для конкретной машины, которую MachineSet Cluster API клонирует из NodeBootstrapConfigTemplate.
+            Заявка на первичную загрузку одной машины. MachineSet Cluster API создаёт такую заявку для каждой машины, клонируя её из NodeBootstrapConfigTemplate.
 
-            node-controller рендерит для машины конфигурацию узла (NodeConfig) в Secret и сообщает о нём через `status`, ожидаемый контроллером Machine.
+            node-controller рендерит для этой машины конфигурацию узла (NodeConfig) в Secret и сообщает о нём через `status`, которого ждёт контроллер Machine.
           properties:
             spec:
               description: |
-                В версии `v1alpha1` пустое: данные первичной загрузки рендерит контроллер из состояния кластера, в объекте они не хранятся.
+                В версии `v1alpha1` пустой: данные первичной загрузки контроллер рендерит из состояния кластера и в объекте не хранит.
             status:
               description: |
                 Состояние заявки.

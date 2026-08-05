@@ -39,8 +39,6 @@ type NodeExtensionRequestValidator struct {
 	decoder admission.Decoder
 }
 
-var _ admission.Handler = (*NodeExtensionRequestValidator)(nil)
-
 // Handle validates a NodeExtensionRequest on CREATE and UPDATE.
 func (w *NodeExtensionRequestValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	nerWebhookLog.Info("validating nodeextensionrequest", "name", req.Name, "operation", req.Operation)
@@ -54,7 +52,8 @@ func (w *NodeExtensionRequestValidator) Handle(ctx context.Context, req admissio
 	digest := ner.Spec.Sysext.Digest
 
 	if deckhousev1alpha1.IsReservedSysextName(name) {
-		return admission.Denied(fmt.Sprintf("sysext name %q is reserved for a platform extension", name))
+		return admission.Denied(fmt.Sprintf(
+			"it is forbidden to set .spec.sysext.name to %q: the name is reserved for a platform extension", name))
 	}
 
 	list := &deckhousev1alpha1.NodeExtensionRequestList{}
@@ -68,10 +67,12 @@ func (w *NodeExtensionRequestValidator) Handle(ctx context.Context, req admissio
 			continue
 		}
 		if other.Spec.Sysext.Name == name {
-			return admission.Denied(fmt.Sprintf("sysext name %q is already used by NodeExtensionRequest %q", name, other.Name))
+			return admission.Denied(fmt.Sprintf(
+				"it is forbidden to set .spec.sysext.name to %q: it is already used by NodeExtensionRequest %q", name, other.Name))
 		}
 		if other.Spec.Sysext.Digest == digest {
-			return admission.Denied(fmt.Sprintf("sysext digest %q is already used by NodeExtensionRequest %q", digest, other.Name))
+			return admission.Denied(fmt.Sprintf(
+				"it is forbidden to set .spec.sysext.digest to %q: it is already used by NodeExtensionRequest %q", digest, other.Name))
 		}
 	}
 

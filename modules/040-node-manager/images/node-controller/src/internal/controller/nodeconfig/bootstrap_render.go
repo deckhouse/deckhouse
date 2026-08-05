@@ -18,6 +18,7 @@ package nodeconfig
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +38,10 @@ import (
 // adds it.
 func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Reader, ng *v1.NodeGroup, machineName string) (internalv1alpha1.NodeSpec, error) {
 	derived := &derived_status.Service{Client: cl, Reader: reader}
-	version := resolveKubernetesVersion(ctx, derived, ng)
+	version, err := resolveKubernetesVersion(ctx, derived, ng)
+	if err != nil {
+		return internalv1alpha1.NodeSpec{}, err
+	}
 
 	sources := &sourceReader{Client: cl, Reader: reader}
 	in, err := sources.readClusterInputs(ctx, version)
@@ -47,20 +51,36 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 
 	// A node that has not joined yet: the zero CreationTimestamp makes the
 	// registration taints render, and the machine name is what kubelet will
-	// register the node under.
-	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineName}}
+	// register the node under. It carries the labels kubelet is about to register
+	// it with, because a NodeExtensionRequest can select by node label — a
+	// machine built from a bare name matched none of them, so the node booted
+	// without an extension it was selected for and picked it up on its first
+	// day-2 render instead: a spec change, and possibly an interruption, minutes
+	// after joining.
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name:   machineName,
+		Labels: registrationLabels(ng),
+	}}
 	return renderSpec(ng, node, in), nil
 }
 
 // resolveKubernetesVersion is the version a group's kubelet must match. It is
 // derived from the cluster configuration rather than read from the group's
 // status, which is only filled once the group has bashible-managed nodes.
-func resolveKubernetesVersion(ctx context.Context, derived *derived_status.Service, ng *v1.NodeGroup) string {
+//
+// A failure to derive it is fatal to the render rather than a fall back on the
+// status: the version picks the kubelet system extension, so falling back would
+// hand the group a different kubelet — and an immutable group has no
+// bashible-managed nodes, so its status version is usually empty anyway.
+func resolveKubernetesVersion(ctx context.Context, derived *derived_status.Service, ng *v1.NodeGroup) (string, error) {
 	// The derived status reports the version even when a later cloud check fails,
-	// so the check outcome is ignored here.
-	computed, _, _ := derived.ComputeWithCloudChecks(ctx, ng)
-	if computed.KubernetesVersion != "" {
-		return computed.KubernetesVersion
+	// so the check outcome is ignored here — the error is not.
+	computed, _, err := derived.ComputeWithCloudChecks(ctx, ng)
+	if err != nil {
+		return "", fmt.Errorf("derive the Kubernetes version of %s: %w", ng.Name, err)
 	}
-	return ng.Status.KubernetesVersion
+	if computed.KubernetesVersion != "" {
+		return computed.KubernetesVersion, nil
+	}
+	return ng.Status.KubernetesVersion, nil
 }

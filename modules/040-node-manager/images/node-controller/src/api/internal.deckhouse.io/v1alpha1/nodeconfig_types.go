@@ -20,16 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// MaxKubeletPods is a sanity limit for NodeConfig. Kubernetes defaults to 110;
-// 500 leaves room for intentionally dense nodes while rejecting values that
-// cannot be backed by the finite user-namespace ID ranges on the host.
-const MaxKubeletPods = 500
-
-// MaxContainerLogFiles is a sanity limit for spec.kubelet.containerLogMaxFiles.
-// The value is rendered into an int32 KubeletConfiguration field, so an
-// unbounded one wraps negative rather than being refused.
-const MaxContainerLogFiles = 1000
-
 // NodeConfig is the top-level object stored at /config/nodeconfig.yaml and, in
 // the cluster, a CRD (internal.deckhouse.io/v1alpha1). It describes the desired
 // state of a Deckhouse olcedar node. The on-node loader (nodelet) parses the
@@ -91,14 +81,14 @@ type NodeConfigStatus struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=name
-	Extensions []ExtensionStatus `json:"extensions"`
+	Extensions []ExtensionStatus `json:"extensions,omitempty"`
 	// Units is the outcome of each managed systemd unit (containerd, kubelet and
 	// every unit an extension ships), one entry per unit. Republished on every
 	// pass like Extensions, and empty when the pass checked nothing.
 	// +optional
 	// +listType=map
 	// +listMapKey=name
-	Units []UnitStatus `json:"units"`
+	Units []UnitStatus `json:"units,omitempty"`
 	// LastReconcileTime is when the node last finished a reconcile pass. Nothing
 	// else in the status ages: conditions carry a lastTransitionTime that moves
 	// only on a transition, so an agent that died at 02:00 goes on publishing the
@@ -484,11 +474,16 @@ type Kubelet struct {
 	// +kubebuilder:default="50Mi"
 	// +kubebuilder:validation:XValidation:rule="isQuantity(self) && sign(quantity(self)) > 0",message="containerLogMaxSize must be a positive Kubernetes quantity"
 	ContainerLogMaxSize string `json:"containerLogMaxSize,omitempty"`
+	// Maintainers: the maximum below is 1000 because that is what the on-node
+	// loader enforces for this field, and the two are kept in step by hand since
+	// a marker cannot read a constant. This note is separated from the comment
+	// below by a blank line on purpose — controller-gen takes the whole comment
+	// group touching the field as its documentation, so anything written there
+	// ships to users in the CRD.
+
 	// ContainerLogMaxFiles is the number of rotated log files to retain.
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// Keep the maximum in sync with MaxContainerLogFiles: a marker cannot read
-	// the constant, and the file loader enforces the same bound.
 	// +kubebuilder:validation:Maximum=1000
 	// +kubebuilder:default=4
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`

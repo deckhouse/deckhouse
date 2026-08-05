@@ -38,11 +38,13 @@ spec:
           metadata:
             type: object
           spec:
+            description: The template itself.
             type: object
             required:
             - template
             properties:
               template:
+                description: The body copied into every cloned NodeBootstrapConfig.
                 type: object
                 required:
                 - spec
@@ -54,10 +56,12 @@ spec:
                     type: object
                     properties:
                       labels:
+                        description: Labels added to the clone.
                         type: object
                         additionalProperties:
                           type: string
                       annotations:
+                        description: Annotations added to the clone.
                         type: object
                         additionalProperties:
                           type: string

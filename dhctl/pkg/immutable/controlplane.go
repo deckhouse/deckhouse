@@ -16,6 +16,7 @@ package immutable
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -27,8 +28,8 @@ import (
 // component images are built in.
 const controlPlaneDigestsKey = "controlPlaneManager"
 
-// ControlPlaneInput is everything BuildControlPlaneConfig needs.
-type ControlPlaneInput struct {
+// controlPlaneInput is everything buildControlPlaneConfig needs.
+type controlPlaneInput struct {
 	// NodeName is the name the first master registers under. It is also the
 	// name the handoff endpoint's certificate is issued for.
 	NodeName string
@@ -38,25 +39,25 @@ type ControlPlaneInput struct {
 	StateCache state.Cache
 }
 
-func (in ControlPlaneInput) validate() error {
+func (in controlPlaneInput) validate() error {
 	switch {
 	case in.NodeName == "":
-		return fmt.Errorf("node name is empty")
+		return errors.New("node name is empty")
 	case in.MetaConfig == nil:
-		return fmt.Errorf("meta config is nil")
+		return errors.New("meta config is nil")
 	case in.StateCache == nil:
-		return fmt.Errorf("state cache is nil")
+		return errors.New("state cache is nil")
 	}
 	return nil
 }
 
-// BuildControlPlaneConfig collects the inputs the first master brings its own
+// buildControlPlaneConfig collects the inputs the first master brings its own
 // control plane up from.
 //
 // Nothing here is an artifact: the node generates the cluster PKI and renders
 // the static pod manifests itself. The only key in the result belongs to the
 // handoff endpoint dhctl collects the admin kubeconfig through.
-func BuildControlPlaneConfig(ctx context.Context, in ControlPlaneInput) (*ControlPlaneConfig, error) {
+func buildControlPlaneConfig(ctx context.Context, in controlPlaneInput) (*controlPlaneConfig, error) {
 	if err := in.validate(); err != nil {
 		return nil, fmt.Errorf("build control-plane config: %w", err)
 	}
@@ -66,28 +67,25 @@ func BuildControlPlaneConfig(ctx context.Context, in ControlPlaneInput) (*Contro
 		return nil, err
 	}
 
-	images, err := ResolveControlPlaneImages(in.MetaConfig)
+	images, err := ResolveControlPlaneImages(ctx, in.MetaConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	// The sizes are still validated — a master without a separate etcd disk is a
-	// configuration error worth catching in the installer — but no selector for
-	// the control-plane disk travels any more: nothing on the node reads one.
 	handoff, err := HandoffMaterialFor(ctx, in.StateCache, in.NodeName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ControlPlaneConfig{
-		APIVersion: PayloadAPIVersion,
-		Kind:       ControlPlaneConfigKind,
-		Metadata:   ObjectMeta{Name: in.NodeName},
-		Spec: ControlPlaneSpec{
+	return &controlPlaneConfig{
+		APIVersion: payloadAPIVersion,
+		Kind:       controlPlaneConfigKind,
+		Metadata:   objectMeta{Name: in.NodeName},
+		Spec: controlPlaneSpec{
 			Bootstrap: true,
 			Cluster:   cluster,
 			Images:    images,
-			Handoff:   handoff.Payload(),
+			Handoff:   handoffPayload(*handoff),
 		},
 	}, nil
 }
@@ -96,21 +94,21 @@ func BuildControlPlaneConfig(ctx context.Context, in ControlPlaneInput) (*Contro
 // certificate SAN or a component flag, so an empty one is not passed through:
 // it renders as an empty flag and the component dies on its own command line
 // with a message that says nothing about where it came from.
-func clusterParams(metaConfig *config.MetaConfig) (ClusterParams, error) {
+func clusterParams(metaConfig *config.MetaConfig) (clusterParamsSpec, error) {
 	// ClusterConfigMap resolves an "Automatic" kubernetesVersion to the version
 	// this installer defaults to. The node has no such default and would render
 	// "Automatic" straight into the feature gates of every component.
 	clusterConfig, err := metaConfig.ClusterConfigMap()
 	if err != nil {
-		return ClusterParams{}, fmt.Errorf("read the cluster configuration: %w", err)
+		return clusterParamsSpec{}, fmt.Errorf("read the cluster configuration: %w", err)
 	}
 
 	encryption, err := encryptionAlgorithm(metaConfig)
 	if err != nil {
-		return ClusterParams{}, err
+		return clusterParamsSpec{}, err
 	}
 
-	params := ClusterParams{
+	params := clusterParamsSpec{
 		ClusterType:         metaConfig.ClusterType,
 		EncryptionAlgorithm: encryption,
 		CertSANs:            certSANs(metaConfig),
@@ -129,13 +127,13 @@ func clusterParams(metaConfig *config.MetaConfig) (ClusterParams, error) {
 	for _, field := range required {
 		value, _ := clusterConfig[field.key].(string)
 		if value == "" {
-			return ClusterParams{}, fmt.Errorf("%s is empty in the cluster configuration", field.key)
+			return clusterParamsSpec{}, fmt.Errorf("%s is empty in the cluster configuration", field.key)
 		}
 		*field.target = value
 	}
 
 	if params.ClusterType == "" {
-		return ClusterParams{}, fmt.Errorf("clusterType is empty in the cluster configuration")
+		return clusterParamsSpec{}, errors.New("clusterType is empty in the cluster configuration")
 	}
 
 	return params, nil
@@ -147,17 +145,19 @@ func clusterParams(metaConfig *config.MetaConfig) (ClusterParams, error) {
 // The node cannot work them out on its own: it has no digest map and no way to
 // tell which release built the installer. It assembles the reference itself,
 // the way candi/control-plane/*.yaml.tpl does — the registry address and path
-// from NodeConfig.spec.registry, then "@" and the digest — so only the digest
+// from nodeConfig.spec.registry, then "@" and the digest — so only the digest
 // travels here.
-func ResolveControlPlaneImages(metaConfig *config.MetaConfig) (ControlPlaneImages, error) {
+//
+// Pure; the context is here for the package's uniform exported signature.
+func ResolveControlPlaneImages(_ context.Context, metaConfig *config.MetaConfig) (controlPlaneImages, error) {
 	version, err := kubernetesVersion(metaConfig)
 	if err != nil {
-		return ControlPlaneImages{}, err
+		return controlPlaneImages{}, err
 	}
 
 	digests, err := digestGroup(metaConfig.Images.ConvertToMap(), controlPlaneDigestsKey)
 	if err != nil {
-		return ControlPlaneImages{}, err
+		return controlPlaneImages{}, err
 	}
 
 	// The image names in images_digests.json are produced by the sprig
@@ -165,7 +165,7 @@ func ResolveControlPlaneImages(metaConfig *config.MetaConfig) (ControlPlaneImage
 	// version: kube-apiserver 1.34 becomes kubeApiserver134.
 	minor := strings.ReplaceAll(version, ".", "")
 
-	var images ControlPlaneImages
+	var images controlPlaneImages
 	for _, image := range []struct {
 		name   string
 		target *string
@@ -177,7 +177,7 @@ func ResolveControlPlaneImages(metaConfig *config.MetaConfig) (ControlPlaneImage
 	} {
 		digest := digests[image.name]
 		if digest == "" {
-			return ControlPlaneImages{}, fmt.Errorf(
+			return controlPlaneImages{}, fmt.Errorf(
 				"the installer image carries no %q.%q image digest: it does not ship a control plane for Kubernetes %s",
 				controlPlaneDigestsKey, image.name, version,
 			)

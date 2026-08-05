@@ -61,3 +61,40 @@ func TestSpecConversion_PreservesSeccompDefault_FromV1(t *testing.T) {
 		t.Fatalf("seccompDefault was not converted from v1")
 	}
 }
+
+// A write issued at v1alpha1 round-trips through the hub, so a systemType the
+// conversion drops is stored as Mutable — which flips an immutable group's
+// MachineDeployments back to the bashible bootstrap and re-creates every machine
+// in the group.
+func TestSpecConversion_PreservesSystemType_RoundTrip(t *testing.T) {
+	tests := []struct {
+		name string
+		in   SystemType
+	}{
+		{name: "immutable survives the round-trip", in: SystemTypeImmutable},
+		{name: "mutable survives the round-trip", in: SystemTypeMutable},
+		{name: "unset stays unset", in: ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			src := &NodeGroupSpec{NodeType: NodeTypeCloud, SystemType: tc.in}
+
+			hub := &v1.NodeGroupSpec{}
+			if err := ConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec(src, hub, nil); err != nil {
+				t.Fatalf("conversion to v1 failed: %v", err)
+			}
+			if hub.SystemType != v1.SystemType(tc.in) {
+				t.Fatalf("systemType in v1 = %q, want %q", hub.SystemType, tc.in)
+			}
+
+			back := &NodeGroupSpec{}
+			if err := ConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(hub, back, nil); err != nil {
+				t.Fatalf("conversion from v1 failed: %v", err)
+			}
+			if back.SystemType != tc.in {
+				t.Fatalf("systemType after the round-trip = %q, want %q", back.SystemType, tc.in)
+			}
+		})
+	}
+}

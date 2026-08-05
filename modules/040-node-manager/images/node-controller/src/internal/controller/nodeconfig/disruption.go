@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -51,8 +50,19 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 		return err
 	}
 	if existing != nil {
-		// The operation is already on its way; the nodeoperation controller
-		// drains the node and hands it over.
+		// An operation that is still on its way needs nothing: the nodeoperation
+		// controller drains the node and hands it over. One that is already
+		// finished, though, means the node is asking again for a revision the
+		// cluster believes it has been interrupted for — it will be refused for as
+		// long as it keeps asking, so say so rather than leaving the node holding
+		// the group's rollout slot with nothing anywhere explaining why.
+		if existing.Status.Phase == v1alpha1.NodeOperationCompleted {
+			logger.V(1).Info("node is asking again for a disruption already carried out",
+				"node", node.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation, "operation", existing.Name)
+			r.Recorder.Event(ng, corev1.EventTypeWarning, "DisruptionAlreadyDone",
+				fmt.Sprintf("Node %s is still asking to be interrupted for config generation %d, which NodeOperation %s already completed",
+					node.Name, nc.Generation, existing.Name))
+		}
 		return nil
 	}
 
@@ -76,7 +86,7 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 // yields a second request for permission for the same revision.
 func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.NodeConfig) (*v1alpha1.NodeOperation, error) {
 	ops := &v1alpha1.NodeOperationList{}
-	if err := r.sources.reader().List(ctx, ops, client.MatchingLabels{operationNodeLabel: nc.Name}); err != nil {
+	if err := r.sources.Reader.List(ctx, ops, client.MatchingLabels{operationNodeLabel: nc.Name}); err != nil {
 		return nil, fmt.Errorf("list NodeOperations of %s: %w", nc.Name, err)
 	}
 	for i := range ops.Items {
@@ -129,10 +139,9 @@ func (r *Reconciler) createApproval(ctx context.Context, ng *v1.NodeGroup, node 
 			Drain:            &v1alpha1.NodeOperationDrainSpec{Skip: !needDrain(ng)},
 		},
 	}
+	// No IsAlreadyExists branch: the name is generated, and the API server
+	// retries the generation itself until it lands on a free one.
 	if err := r.Client.Create(ctx, op); err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			return nil
-		}
 		return fmt.Errorf("ask for a disruption of %s: %w", nc.Name, err)
 	}
 	logger.Info("asked to interrupt the node for its new config",
@@ -158,8 +167,12 @@ func approvalMode(ng *v1.NodeGroup) v1.DisruptionApprovalMode {
 
 // needDrain mirrors the update-approval rule: a group that would lose its only
 // node to the drain is interrupted without one.
+//
+// Exactly one, not "one or fewer": status.nodes is written by another controller
+// and is 0 until it has run, so reading the uncounted group as a group of one
+// interrupted every node of a fifty-node group with its workload still on it.
 func needDrain(ng *v1.NodeGroup) bool {
-	if ng.Status.Nodes <= 1 {
+	if ng.Status.Nodes == 1 {
 		return false
 	}
 	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.Automatic != nil &&

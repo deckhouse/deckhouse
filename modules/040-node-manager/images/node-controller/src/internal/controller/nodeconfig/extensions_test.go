@@ -195,6 +195,32 @@ func TestNodeExtensions(t *testing.T) {
 			}},
 		},
 		{
+			// The loser of the module contest keeps nothing: its sysext would be
+			// merged onto a node running module parameters it did not ask for, and
+			// its own status says which request took the module.
+			name: "a request that lost a kernel module contributes nothing",
+			ners: []deckhousev1alpha1.NodeExtensionRequest{
+				nerCreated("apple", newer, deckhousev1alpha1.NodeExtensionRequestSpec{
+					Sysext:        deckhousev1alpha1.Sysext{Name: "beta", Digest: otherDigest},
+					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=enabled"}}},
+				}),
+				nerCreated("zebra", older, deckhousev1alpha1.NodeExtensionRequestSpec{
+					Sysext:        deckhousev1alpha1.Sysext{Name: "alpha", Digest: drbdDigest},
+					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}},
+				}),
+			},
+			node:   nodeWith(nil),
+			ngName: "worker",
+			wantExtensions: []internalv1alpha1.Extension{{
+				Name:        "alpha",
+				Digest:      drbdDigest,
+				RequestedBy: "zebra",
+			}},
+			wantModules: []internalv1alpha1.KernelModule{
+				{Name: "drbd", Params: []string{"usermode_helper=disabled"}},
+			},
+		},
+		{
 			name: "kernel modules collected and deduplicated by name",
 			ners: []deckhousev1alpha1.NodeExtensionRequest{
 				ner("sds-drbd", deckhousev1alpha1.NodeExtensionRequestSpec{
@@ -225,6 +251,43 @@ func TestNodeExtensions(t *testing.T) {
 				t.Fatalf("modules = %#v, want %#v", modules, tt.wantModules)
 			}
 		})
+	}
+}
+
+// spec.extensions is an array, so the order the requests are walked in is the
+// order the node is given them in. Taking that from the caller made the rendered
+// spec depend on which reader listed the requests: a listing that came back
+// another way round was a spec diff on every node of every immutable group — a
+// generation bump each and a rollout slot each, for no change at all.
+func TestNodeExtensionsOrderDoesNotFollowTheListing(t *testing.T) {
+	older := metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	newer := metav1.NewTime(time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC))
+
+	first := nerCreated("zebra", older, deckhousev1alpha1.NodeExtensionRequestSpec{
+		Sysext:        deckhousev1alpha1.Sysext{Name: "alpha", Digest: drbdDigest},
+		KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd"}},
+	})
+	second := nerCreated("apple", newer, deckhousev1alpha1.NodeExtensionRequestSpec{
+		Sysext:        deckhousev1alpha1.Sysext{Name: "beta", Digest: otherDigest},
+		KernelModules: []deckhousev1alpha1.KernelModule{{Name: "nvidia"}},
+	})
+
+	// The same two requests, listed both ways round.
+	oneWay, oneWayModules := nodeExtensions([]deckhousev1alpha1.NodeExtensionRequest{first, second}, nodeWith(nil), "worker")
+	otherWay, otherWayModules := nodeExtensions([]deckhousev1alpha1.NodeExtensionRequest{second, first}, nodeWith(nil), "worker")
+
+	if !reflect.DeepEqual(oneWay, otherWay) {
+		t.Fatalf("extensions depend on the listing order: %#v vs %#v", oneWay, otherWay)
+	}
+	if !reflect.DeepEqual(oneWayModules, otherWayModules) {
+		t.Fatalf("kernel modules depend on the listing order: %#v vs %#v", oneWayModules, otherWayModules)
+	}
+
+	// And it is the order every decision about them is made in: oldest first,
+	// whatever the listing said.
+	got := []string{oneWay[0].RequestedBy, oneWay[1].RequestedBy}
+	if !reflect.DeepEqual(got, []string{"zebra", "apple"}) {
+		t.Fatalf("extensions = %v, want the oldest request first", got)
 	}
 }
 
@@ -290,6 +353,40 @@ func TestResolveNERConflicts(t *testing.T) {
 			ners: []deckhousev1alpha1.NodeExtensionRequest{
 				ner("no-digest", deckhousev1alpha1.NodeExtensionRequestSpec{Sysext: deckhousev1alpha1.Sysext{Name: "drbd"}}),
 				ner("no-name", deckhousev1alpha1.NodeExtensionRequestSpec{Sysext: deckhousev1alpha1.Sysext{Digest: drbdDigest}}),
+			},
+			want: map[string]nerConflict{},
+		},
+		{
+			// Two requests loading one module with different parameters: the node
+			// can only have one of them. Deciding by the order an API listing came
+			// back in made the parameters a node ran depend on the alphabet, and
+			// left the request that lost saying it had resolved.
+			name: "kernel module with different parameters: the older request wins",
+			ners: []deckhousev1alpha1.NodeExtensionRequest{
+				nerCreated("apple", newer, deckhousev1alpha1.NodeExtensionRequestSpec{
+					Sysext:        deckhousev1alpha1.Sysext{Name: "beta", Digest: otherDigest},
+					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=enabled"}}},
+				}),
+				nerCreated("zebra", older, deckhousev1alpha1.NodeExtensionRequestSpec{
+					Sysext:        deckhousev1alpha1.Sysext{Name: "alpha", Digest: drbdDigest},
+					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}},
+				}),
+			},
+			want: map[string]nerConflict{
+				"apple": {reason: reasonModuleConflict, winner: "zebra", field: "drbd"},
+			},
+		},
+		{
+			name: "the same module with the same parameters is what both asked for",
+			ners: []deckhousev1alpha1.NodeExtensionRequest{
+				nerCreated("new", newer, deckhousev1alpha1.NodeExtensionRequestSpec{
+					Sysext:        deckhousev1alpha1.Sysext{Name: "beta", Digest: otherDigest},
+					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}},
+				}),
+				nerCreated("old", older, deckhousev1alpha1.NodeExtensionRequestSpec{
+					Sysext:        deckhousev1alpha1.Sysext{Name: "alpha", Digest: drbdDigest},
+					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}},
+				}),
 			},
 			want: map[string]nerConflict{},
 		},

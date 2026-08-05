@@ -62,13 +62,21 @@ const (
 
 // NodeOperationSpec is immutable: an operation describes one intent, and a
 // different intent is a different operation.
+//
+// Nothing generates a CRD from this file: modules/040-node-manager/crds/
+// nodeoperation.yaml is written by hand and is the authority on validation.
+// Kubebuilder markers here would be inert, and inert markers drift — the two had
+// already disagreed about nodeName's length and pattern, configGeneration's
+// minimum and drain.skip's default. What the API server enforces is: type is one
+// of Reboot, Drain or ApproveDisruption; nodeName is a DNS name of 1..253
+// characters; configGeneration is at least 1 and only allowed on
+// ApproveDisruption; drain says nothing on a Drain; and the spec cannot be
+// changed after creation.
 type NodeOperationSpec struct {
 	// Type is the operation to perform.
-	// +kubebuilder:validation:Enum=Reboot;Drain;ApproveDisruption
 	Type NodeOperationType `json:"type"`
 
 	// NodeName is the node the operation applies to.
-	// +kubebuilder:validation:MinLength=1
 	NodeName string `json:"nodeName"`
 
 	// ConfigGeneration is the NodeConfig revision an ApproveDisruption covers.
@@ -111,7 +119,6 @@ const (
 type NodeOperationStatus struct {
 	// Phase is the current phase of the operation.
 	// +optional
-	// +kubebuilder:validation:Enum=Pending;InProgress;Completed;Failed
 	Phase NodeOperationPhase `json:"phase,omitempty"`
 
 	// ObservedGeneration is the generation of the spec this status reflects.
@@ -130,6 +137,23 @@ type NodeOperationStatus struct {
 	// collected once it is old enough, which is measured from here.
 	// +optional
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
+
+	// NodeWasUnschedulable is whether the node was already out of the scheduler
+	// when the operation reached it. Releasing the node restores this rather
+	// than making it schedulable, so an operation does not quietly undo a cordon
+	// an operator put there by hand.
+	// +optional
+	NodeWasUnschedulable *bool `json:"nodeWasUnschedulable,omitempty"`
+
+	// DrainDeadline is when the eviction this operation asked for runs out of
+	// the time it was given. It is pinned when the eviction is requested, from
+	// the group's drain timeout as it stood at that moment, because that is the
+	// bound the draining controller pinned into its own context. Re-deriving it
+	// later would let a change to the group cut short a drain that is still
+	// running, and abandoning a running drain leaves its result on a node no
+	// operation is waiting for.
+	// +optional
+	DrainDeadline *metav1.Time `json:"drainDeadline,omitempty"`
 
 	// Conditions carry the details of the operation's progress.
 	// +optional

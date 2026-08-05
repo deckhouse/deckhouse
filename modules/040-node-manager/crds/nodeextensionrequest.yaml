@@ -144,6 +144,9 @@ spec:
                   type: array
                   description: |
                     The latest details of the request's progress.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
                   items:
                     type: object
                     required:

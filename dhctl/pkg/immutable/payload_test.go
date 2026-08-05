@@ -40,22 +40,22 @@ var updateGolden = flag.Bool("update-golden", false, "rewrite the golden payload
 // actually boots the node — which is what makes the absence of any cluster key
 // and of any rendered manifest visible here.
 func TestBuildCloudConfigGolden(t *testing.T) {
-	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig := testMetaConfig(t)
 
-	nodeConfig, err := BuildNodeConfig(context.Background(), NodeConfigInput{
+	nodeConfig, err := buildNodeConfig(context.Background(), nodeConfigInput{
 		NodeName:   "zykov-master-0",
 		MetaConfig: metaConfig,
 	})
 	require.NoError(t, err)
 
-	controlPlaneConfig, err := BuildControlPlaneConfig(context.Background(), ControlPlaneInput{
+	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), controlPlaneInput{
 		NodeName:   "zykov-master-0",
 		MetaConfig: metaConfig,
 		StateCache: cache.NewTestCache(),
 	})
 	require.NoError(t, err)
 
-	controlPlaneConfig.Spec.Handoff = Handoff{
+	controlPlaneConfig.Spec.Handoff = handoff{
 		Token:      "<handoff token>",
 		ServerCert: "<handoff server certificate>",
 		ServerKey:  "<handoff server key>",
@@ -64,7 +64,7 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 		ClientCSR: "<installer certificate request>",
 	}
 
-	cloudConfig, err := BuildCloudConfig(nodeConfig, controlPlaneConfig)
+	cloudConfig, err := buildCloudConfig(nodeConfig, controlPlaneConfig)
 	require.NoError(t, err)
 
 	goldenPath := filepath.Join("testdata", "master-cloud-init.yaml")
@@ -91,9 +91,9 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 // on the unredacted payload: the handoff serving key is the one key in it, and
 // it is in the handoff section.
 func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
-	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig := testMetaConfig(t)
 
-	controlPlaneConfig, err := BuildControlPlaneConfig(context.Background(), ControlPlaneInput{
+	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), controlPlaneInput{
 		NodeName:   "zykov-master-0",
 		MetaConfig: metaConfig,
 		StateCache: cache.NewTestCache(),
@@ -115,17 +115,17 @@ func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
 // provider's terraform imposes: it concatenates this document with a block of
 // its own, so a top-level key both emit breaks the whole user-data.
 func TestBuildCloudConfigHasNoConflictingKeys(t *testing.T) {
-	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig := testMetaConfig(t)
 
-	nodeConfig, err := BuildNodeConfig(context.Background(), NodeConfigInput{
+	nodeConfig, err := buildNodeConfig(context.Background(), nodeConfigInput{
 		NodeName:   "zykov-master-0",
 		MetaConfig: metaConfig,
 	})
 	require.NoError(t, err)
 
-	cloudConfig, err := BuildCloudConfig(nodeConfig, &ControlPlaneConfig{
-		APIVersion: PayloadAPIVersion,
-		Kind:       ControlPlaneConfigKind,
+	cloudConfig, err := buildCloudConfig(nodeConfig, &controlPlaneConfig{
+		APIVersion: payloadAPIVersion,
+		Kind:       controlPlaneConfigKind,
 	})
 	require.NoError(t, err)
 
