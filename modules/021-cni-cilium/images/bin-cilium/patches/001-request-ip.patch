@@ -1,60 +1,138 @@
+diff --git a/daemon/cmd/ipam.go b/daemon/cmd/ipam.go
+index 48a4d48c00..23642426d6 100644
+--- a/daemon/cmd/ipam.go
++++ b/daemon/cmd/ipam.go
+@@ -585,7 +585,7 @@ func (d *Daemon) startIPAM() {
+ 	bootstrapStats.ipam.Start()
+ 	log.Info("Initializing node addressing")
+ 	// Set up ipam conf after init() because we might be running d.conf.KVStoreIPv4Registration
+-	d.ipam.ConfigureAllocator()
++	d.ipam.ConfigureAllocator(d.k8sWatcher)
+ 	bootstrapStats.ipam.End(true)
+ }
+ 
+diff --git a/pkg/ipam/allocator_test.go b/pkg/ipam/allocator_test.go
+index dac21a23b3..f4f96afcf3 100644
+--- a/pkg/ipam/allocator_test.go
++++ b/pkg/ipam/allocator_test.go
+@@ -60,7 +60,7 @@ func TestAllocatedIPDump(t *testing.T) {
+ 	fakeAddressing := fakeTypes.NewNodeAddressing()
+ 	localNodeStore := node.NewTestLocalNodeStore(node.LocalNode{})
+ 	ipam := NewIPAM(fakeAddressing, testConfiguration, &ownerMock{}, localNodeStore, &ownerMock{}, &resourceMock{}, &mtuMock, nil, nil, nil)
+-	ipam.ConfigureAllocator()
++	ipam.ConfigureAllocator(nil)
+ 
+ 	allocv4, allocv6, status := ipam.Dump()
+ 	require.NotEqual(t, "", status)
+@@ -81,7 +81,7 @@ func TestExpirationTimer(t *testing.T) {
+ 	fakeAddressing := fakeTypes.NewNodeAddressing()
+ 	localNodeStore := node.NewTestLocalNodeStore(node.LocalNode{})
+ 	ipam := NewIPAM(fakeAddressing, testConfiguration, &ownerMock{}, localNodeStore, &ownerMock{}, &resourceMock{}, &mtuMock, nil, nil, nil)
+-	ipam.ConfigureAllocator()
++	ipam.ConfigureAllocator(nil)
+ 
+ 	err := ipam.AllocateIP(ip, "foo", PoolDefault())
+ 	require.NoError(t, err)
+@@ -149,7 +149,7 @@ func TestAllocateNextWithExpiration(t *testing.T) {
+ 	localNodeStore := node.NewTestLocalNodeStore(node.LocalNode{})
+ 	fakeMetadata := fakeMetadataFunc(func(owner string, family Family) (pool string, err error) { return "some-pool", nil })
+ 	ipam := NewIPAM(fakeAddressing, testConfiguration, &ownerMock{}, localNodeStore, &ownerMock{}, &resourceMock{}, &mtuMock, nil, fakeMetadata, nil)
+-	ipam.ConfigureAllocator()
++	ipam.ConfigureAllocator(nil)
+ 
+ 	// Allocate IPs and test expiration timer. 'pool' is empty in order to test
+ 	// that the allocated pool is passed to StartExpirationTimer
+diff --git a/pkg/ipam/crd_test.go b/pkg/ipam/crd_test.go
+index 2178a0b62d..1982b6070e 100644
+--- a/pkg/ipam/crd_test.go
++++ b/pkg/ipam/crd_test.go
+@@ -101,7 +101,7 @@ func TestMarkForReleaseNoAllocate(t *testing.T) {
+ 	})
+ 	localNodeStore := node.NewTestLocalNodeStore(node.LocalNode{})
+ 	ipam := NewIPAM(fakeAddressing, conf, &ownerMock{}, localNodeStore, &ownerMock{}, &resourceMock{}, &mtuMock, nil, nil, nil)
+-	ipam.ConfigureAllocator()
++	ipam.ConfigureAllocator(nil)
+ 	sharedNodeStore.updateLocalNodeResource(cn)
+ 
+ 	// Allocate the first 3 IPs
 diff --git a/pkg/ipam/hostscope.go b/pkg/ipam/hostscope.go
-index 6d58007461..d5446b8df7 100644
+index cf8db5e2af..c587c85dbb 100644
 --- a/pkg/ipam/hostscope.go
 +++ b/pkg/ipam/hostscope.go
-@@ -5,8 +5,10 @@ package ipam
-
+@@ -4,23 +4,30 @@
+ package ipam
+ 
  import (
++	"errors"
  	"fmt"
-+	"github.com/cilium/cilium/pkg/k8s/watchers"
  	"math/big"
  	"net"
 +	"strings"
-
+ 
  	"github.com/cilium/cilium/pkg/ip"
  	"github.com/cilium/cilium/pkg/ipam/service/ipallocator"
-@@ -15,12 +17,16 @@ import (
++	"github.com/cilium/cilium/pkg/k8s/client"
+ )
+ 
  type hostScopeAllocator struct {
  	allocCIDR *net.IPNet
  	allocator *ipallocator.Range
-+
-+	// for k8s lister
-+	k8swatcher *watchers.K8sWatcher
++	podStore  PodStore
++	clientset client.Clientset
  }
-
+ 
 -func newHostScopeAllocator(n *net.IPNet) Allocator {
-+func newHostScopeAllocator(n *net.IPNet, k8sEventReg K8sEventRegister) Allocator {
++func newHostScopeAllocator(n *net.IPNet, podStore PodStore, clientset client.Clientset) Allocator {
  	return &hostScopeAllocator{
--		allocCIDR: n,
--		allocator: ipallocator.NewCIDRRange(n),
-+		allocCIDR:  n,
-+		allocator:  ipallocator.NewCIDRRange(n),
-+		k8swatcher: k8sEventReg.(*watchers.K8sWatcher),
+ 		allocCIDR: n,
+ 		allocator: ipallocator.NewCIDRRange(n),
++		podStore:  podStore,
++		clientset: clientset,
  	}
  }
-
-@@ -52,12 +58,35 @@ func (h *hostScopeAllocator) Release(ip net.IP, pool Pool) error {
+ 
+@@ -46,12 +53,55 @@ func (h *hostScopeAllocator) Release(ip net.IP, pool Pool) error {
  }
-
+ 
  func (h *hostScopeAllocator) AllocateNext(owner string, pool Pool) (*AllocationResult, error) {
 -	ip, err := h.allocator.AllocateNext()
 +	var result AllocationResult
 +	var err error
-+	if h.k8swatcher != nil {
++	if h.podStore != nil {
 +		names := strings.Split(owner, "/")
-+		pod, err := h.k8swatcher.GetCachedPod(names[0], names[1])
++		if len(names) != 2 {
++			return nil, fmt.Errorf("invalid owner format %q, expected namespace/name", owner)
++		}
++		pod, err := h.podStore.GetCachedPod(names[0], names[1])
 +		if err != nil {
-+			return nil, fmt.Errorf("get pod %s info failed %v. ", owner, err)
++			return nil, fmt.Errorf("get pod %s info failed: %w", owner, err)
 +		}
 +		if pod.Annotations != nil {
 +			if pod.Annotations[customPodIpAddr] != "" {
 +				result.IP = net.ParseIP(pod.Annotations[customPodIpAddr])
 +				if result.IP == nil {
-+					return nil, fmt.Errorf("customer invalid ip: %s. ", pod.Annotations[customPodIpAddr])
++					return nil, fmt.Errorf("customer invalid ip: %s", pod.Annotations[customPodIpAddr])
 +				}
 +				err = h.allocator.Allocate(result.IP)
 +				if err != nil {
 +					return nil, fmt.Errorf("customer ip is not avaliable %s: %w", result.IP.String(), err)
++				}
++				return &result, nil
++			}
++
++			if mainNetworkName, ok := mainNetworkFromAnnotation(pod.Annotations[podNetworksSpecAnnotation]); ok {
++				ip, err := h.allocateFromIPAddress(pod, mainNetworkName, owner)
++				if err != nil {
++					return nil, err
++				}
++				result.IP = ip
++				if err := h.allocator.Allocate(result.IP); err != nil {
++					// IP may come from an external Deckhouse pool outside the local CIDR,
++					// or already be reserved locally (e.g. restore / retry).
++					var notInRange *ipallocator.ErrNotInRange
++					if !errors.As(err, &notInRange) && !errors.Is(err, ipallocator.ErrAllocated) {
++						return nil, fmt.Errorf("failed to reserve IPAddress %s in local allocator: %w", result.IP.String(), err)
++					}
 +				}
 +				return &result, nil
 +			}
@@ -65,52 +143,390 @@ index 6d58007461..d5446b8df7 100644
  	if err != nil {
  		return nil, err
  	}
-
+ 
 -	return &AllocationResult{IP: ip}, nil
 +	return &result, nil
  }
-
+ 
  func (h *hostScopeAllocator) AllocateNextWithoutSyncUpstream(owner string, pool Pool) (*AllocationResult, error) {
+diff --git a/pkg/ipam/hostscope_ipaddress.go b/pkg/ipam/hostscope_ipaddress.go
+new file mode 100644
+index 0000000000..1ec897883b
+--- /dev/null
++++ b/pkg/ipam/hostscope_ipaddress.go
+@@ -0,0 +1,271 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package ipam
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"net"
++	"time"
++
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/client-go/dynamic"
++
++	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
++)
++
++const (
++	podNetworksSpecAnnotation = "network.deckhouse.io/networks-spec"
++
++	networkTypeMain           = "Main"
++	defaultMainClusterNetwork = "main"
++	clusterNetworkKind        = "ClusterNetwork"
++	ipAddressKind             = "IPAddress"
++	ipAddressTypeAuto         = "Auto"
++	ipAddressPhaseBound        = "Bound"
++	ipAddressPhaseAttached    = "Attached"
++	ipAddressPhaseAllocated   = "Allocated"
++	conditionTypeAttached     = "Attached"
++	conditionReasonAttached   = "IPAddressAttached"
++	ipAddressWaitTimeout      = 30 * time.Second
++	ipAddressPollInterval     = time.Second
++)
++
++var ipAddressGVR = schema.GroupVersionResource{
++	Group:    "network.deckhouse.io",
++	Version:  "v1alpha1",
++	Resource: "ipaddresses",
++}
++
++type networkSpecEntry struct {
++	Type string `json:"type"`
++	Name string `json:"name,omitempty"`
++}
++
++// mainNetworkFromAnnotation returns the ClusterNetwork name for a Main entry in networks-spec.
++func mainNetworkFromAnnotation(raw string) (string, bool) {
++	if raw == "" {
++		return "", false
++	}
++	var entries []networkSpecEntry
++	if err := json.Unmarshal([]byte(raw), &entries); err != nil {
++		return "", false
++	}
++	for _, e := range entries {
++		if e.Type != networkTypeMain {
++			continue
++		}
++		if e.Name != "" {
++			return e.Name, true
++		}
++		return defaultMainClusterNetwork, true
++	}
++	return "", false
++}
++
++func ipAddressName(namespace, podName string) string {
++	return fmt.Sprintf("ip-%s--%s", namespace, podName)
++}
++
++func (h *hostScopeAllocator) allocateFromIPAddress(pod *slim_corev1.Pod, clusterNetworkName, owner string) (net.IP, error) {
++	if h.clientset == nil || !h.clientset.IsEnabled() {
++		return nil, fmt.Errorf("kubernetes clientset is required to allocate IPAddress for pod %s", owner)
++	}
++
++	dyn, err := dynamic.NewForConfig(h.clientset.RestConfig())
++	if err != nil {
++		return nil, fmt.Errorf("create dynamic client: %w", err)
++	}
++
++	ctx, cancel := context.WithTimeout(context.Background(), ipAddressWaitTimeout)
++	defer cancel()
++
++	ipObj, err := h.getOrCreateIPAddress(ctx, dyn, pod, clusterNetworkName)
++	if err != nil {
++		return nil, err
++	}
++
++	ipObj, err = waitIPAddressReady(ctx, dyn, pod.Namespace, ipObj.GetName())
++	if err != nil {
++		return nil, err
++	}
++
++	address, _, _ := unstructured.NestedString(ipObj.Object, "status", "address")
++	parsed := net.ParseIP(address)
++	if parsed == nil {
++		return nil, fmt.Errorf("IPAddress %s/%s has invalid status.address %q", pod.Namespace, ipObj.GetName(), address)
++	}
++
++	if err := markIPAddressAttached(ctx, dyn, pod.Namespace, ipObj.GetName(), owner); err != nil {
++		return nil, fmt.Errorf("failed to mark IPAddress %s/%s as Attached: %w", pod.Namespace, ipObj.GetName(), err)
++	}
++
++	return parsed, nil
++}
++
++func (h *hostScopeAllocator) getOrCreateIPAddress(ctx context.Context, dyn dynamic.Interface, pod *slim_corev1.Pod, clusterNetworkName string) (*unstructured.Unstructured, error) {
++	name := ipAddressName(pod.Namespace, pod.Name)
++	client := dyn.Resource(ipAddressGVR).Namespace(pod.Namespace)
++
++	existing, err := client.Get(ctx, name, metav1.GetOptions{})
++	if err == nil {
++		return existing, nil
++	}
++	if !apierrors.IsNotFound(err) {
++		return nil, fmt.Errorf("get IPAddress %s/%s: %w", pod.Namespace, name, err)
++	}
++
++	obj := &unstructured.Unstructured{
++		Object: map[string]interface{}{
++			"apiVersion": "network.deckhouse.io/v1alpha1",
++			"kind":       ipAddressKind,
++			"metadata": map[string]interface{}{
++				"name":      name,
++				"namespace": pod.Namespace,
++				"ownerReferences": []interface{}{
++					map[string]interface{}{
++						"apiVersion":         "v1",
++						"kind":               "Pod",
++						"name":               pod.Name,
++						"uid":                string(pod.UID),
++						"controller":         true,
++						"blockOwnerDeletion": true,
++					},
++				},
++			},
++			"spec": map[string]interface{}{
++				"networkRef": map[string]interface{}{
++					"kind": clusterNetworkKind,
++					"name": clusterNetworkName,
++				},
++				"type": ipAddressTypeAuto,
++			},
++		},
++	}
++
++	created, err := client.Create(ctx, obj, metav1.CreateOptions{})
++	if err != nil {
++		if apierrors.IsAlreadyExists(err) {
++			return client.Get(ctx, name, metav1.GetOptions{})
++		}
++		return nil, fmt.Errorf("create IPAddress %s/%s: %w", pod.Namespace, name, err)
++	}
++	return created, nil
++}
++
++// waitIPAddressReady waits until status.address is set and phase is Bound (or Attached).
++// Allocated with an address is accepted only when the wait context is about to expire,
++// because the controller briefly stays in Allocated before flipping to Bound via ownerRef.
++func waitIPAddressReady(ctx context.Context, dyn dynamic.Interface, namespace, name string) (*unstructured.Unstructured, error) {
++	client := dyn.Resource(ipAddressGVR).Namespace(namespace)
++	ticker := time.NewTicker(ipAddressPollInterval)
++	defer ticker.Stop()
++
++	var last *unstructured.Unstructured
++	var lastPhase, lastAddress string
++
++	for {
++		obj, err := client.Get(ctx, name, metav1.GetOptions{})
++		if err != nil {
++			if !apierrors.IsNotFound(err) {
++				return nil, fmt.Errorf("get IPAddress %s/%s while waiting: %w", namespace, name, err)
++			}
++		} else {
++			last = obj
++			lastAddress, _, _ = unstructured.NestedString(obj.Object, "status", "address")
++			lastPhase, _, _ = unstructured.NestedString(obj.Object, "status", "phase")
++			if lastAddress != "" && (lastPhase == ipAddressPhaseBound || lastPhase == ipAddressPhaseAttached) {
++				return obj, nil
++			}
++		}
++
++		select {
++		case <-ctx.Done():
++			if last != nil && lastAddress != "" &&
++				(lastPhase == ipAddressPhaseBound || lastPhase == ipAddressPhaseAttached || lastPhase == ipAddressPhaseAllocated) {
++				return last, nil
++			}
++			return nil, fmt.Errorf("timeout waiting for IPAddress %s/%s Bound with address (phase=%q address=%q): %w",
++				namespace, name, lastPhase, lastAddress, ctx.Err())
++		case <-ticker.C:
++		}
++	}
++}
++
++func markIPAddressAttached(ctx context.Context, dyn dynamic.Interface, namespace, name, podRef string) error {
++	client := dyn.Resource(ipAddressGVR).Namespace(namespace)
++	obj, err := client.Get(ctx, name, metav1.GetOptions{})
++	if err != nil {
++		return err
++	}
++
++	status, ok, err := unstructured.NestedMap(obj.Object, "status")
++	if err != nil {
++		return err
++	}
++	if !ok || status == nil {
++		status = map[string]interface{}{}
++	}
++
++	status["phase"] = ipAddressPhaseAttached
++
++	usedByPods, _, _ := unstructured.NestedStringSlice(obj.Object, "status", "usedByPods")
++	usedByPods = appendUniqueString(usedByPods, podRef)
++	status["usedByPods"] = toInterfaceSlice(usedByPods)
++
++	conditions, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
++	conditions = upsertAttachedCondition(conditions, podRef)
++	status["conditions"] = conditions
++
++	if err := unstructured.SetNestedMap(obj.Object, status, "status"); err != nil {
++		return err
++	}
++
++	_, err = client.UpdateStatus(ctx, obj, metav1.UpdateOptions{})
++	return err
++}
++
++func upsertAttachedCondition(conditions []interface{}, podRef string) []interface{} {
++	now := metav1.Now().UTC().Format(time.RFC3339)
++	attached := map[string]interface{}{
++		"type":               conditionTypeAttached,
++		"status":             string(metav1.ConditionTrue),
++		"reason":             conditionReasonAttached,
++		"message":            fmt.Sprintf("Attached by agent to %s", podRef),
++		"lastTransitionTime": now,
++	}
++
++	for i, c := range conditions {
++		m, ok := c.(map[string]interface{})
++		if !ok {
++			continue
++		}
++		if m["type"] == conditionTypeAttached {
++			conditions[i] = attached
++			return conditions
++		}
++	}
++	return append(conditions, attached)
++}
++
++func appendUniqueString(ss []string, s string) []string {
++	for _, x := range ss {
++		if x == s {
++			return ss
++		}
++	}
++	return append(ss, s)
++}
++
++func toInterfaceSlice(ss []string) []interface{} {
++	out := make([]interface{}, len(ss))
++	for i, s := range ss {
++		out[i] = s
++	}
++	return out
++}
 diff --git a/pkg/ipam/ipam.go b/pkg/ipam/ipam.go
-index d8f88e6468..d3e514ced6 100644
+index d8f88e6468..425ca06a8f 100644
 --- a/pkg/ipam/ipam.go
 +++ b/pkg/ipam/ipam.go
 @@ -13,6 +13,7 @@ import (
  	"github.com/cilium/cilium/pkg/datapath/types"
  	ipamOption "github.com/cilium/cilium/pkg/ipam/option"
  	"github.com/cilium/cilium/pkg/k8s/client"
-+	"github.com/cilium/cilium/pkg/k8s/watchers"
++	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
  	"github.com/cilium/cilium/pkg/logging"
  	"github.com/cilium/cilium/pkg/logging/logfields"
  	"github.com/cilium/cilium/pkg/node"
-@@ -101,7 +102,7 @@ func NewIPAM(
+@@ -67,6 +68,11 @@ type Metadata interface {
+ 	GetIPPoolForPod(owner string, family Family) (pool string, err error)
+ }
+ 
++// PodStore provides read access to cached Pods for IPAM decisions.
++type PodStore interface {
++	GetCachedPod(namespace, name string) (*slim_corev1.Pod, error)
++}
++
+ // NewIPAM returns a new IP address manager
+ func NewIPAM(
+ 	nodeAddressing types.NodeAddressing,
+@@ -101,7 +107,7 @@ func NewIPAM(
  // ConfigureAllocator initializes the IPAM allocator according to the configuration.
  // As a precondition, the NodeAddressing must be fully initialized - therefore the method
  // must be called after Daemon.WaitForNodeInformation.
 -func (ipam *IPAM) ConfigureAllocator() {
-+func (ipam *IPAM) ConfigureAllocator(k8swatcher *watchers.K8sWatcher) {
++func (ipam *IPAM) ConfigureAllocator(podStore PodStore) {
  	switch ipam.config.IPAMMode() {
  	case ipamOption.IPAMKubernetes, ipamOption.IPAMClusterPool:
  		log.WithFields(logrus.Fields{
-@@ -110,11 +111,11 @@ func (ipam *IPAM) ConfigureAllocator() {
+@@ -110,11 +116,11 @@ func (ipam *IPAM) ConfigureAllocator() {
  		}).Infof("Initializing %s IPAM", ipam.config.IPAMMode())
-
+ 
  		if ipam.config.IPv6Enabled() {
 -			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet)
-+			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet, k8swatcher)
++			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet, podStore, ipam.clientset)
  		}
-
+ 
  		if ipam.config.IPv4Enabled() {
 -			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet)
-+			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet, k8swatcher)
++			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet, podStore, ipam.clientset)
  		}
  	case ipamOption.IPAMMultiPool:
  		log.Info("Initializing MultiPool IPAM")
+diff --git a/pkg/ipam/ipam_test.go b/pkg/ipam/ipam_test.go
+index 3ebd79ea86..0650f803c1 100644
+--- a/pkg/ipam/ipam_test.go
++++ b/pkg/ipam/ipam_test.go
+@@ -52,7 +52,7 @@ func newFakePoolAllocator(poolMap map[string]string) *fakePoolAllocator {
+ 		if err != nil {
+ 			panic(fmt.Sprintf("failed to parse test cidr %s for pool %s", cidr, name))
+ 		}
+-		pools[Pool(name)] = newHostScopeAllocator(ipnet)
++		pools[Pool(name)] = newHostScopeAllocator(ipnet, nil, nil)
+ 	}
+ 	return &fakePoolAllocator{pools: pools}
+ }
+@@ -123,7 +123,7 @@ func TestLock(t *testing.T) {
+ 	fakeAddressing := fakeTypes.NewNodeAddressing()
+ 	localNodeStore := node.NewTestLocalNodeStore(node.LocalNode{})
+ 	ipam := NewIPAM(fakeAddressing, testConfiguration, &ownerMock{}, localNodeStore, &ownerMock{}, &resourceMock{}, &mtuMock, nil, nil, nil)
+-	ipam.ConfigureAllocator()
++	ipam.ConfigureAllocator(nil)
+ 
+ 	// Since the IPs we have allocated to the endpoints might or might not
+ 	// be in the allocrange specified in cilium, we need to specify them
+@@ -147,7 +147,7 @@ func TestExcludeIP(t *testing.T) {
+ 	fakeAddressing := fakeTypes.NewNodeAddressing()
+ 	localNodeStore := node.NewTestLocalNodeStore(node.LocalNode{})
+ 	ipam := NewIPAM(fakeAddressing, testConfiguration, &ownerMock{}, localNodeStore, &ownerMock{}, &resourceMock{}, &mtuMock, nil, nil, nil)
+-	ipam.ConfigureAllocator()
++	ipam.ConfigureAllocator(nil)
+ 
+ 	ipv4 := fakeIPv4AllocCIDRIP(fakeAddressing)
+ 	ipv4 = ipv4.Next()
+@@ -195,7 +195,7 @@ func TestIPAMMetadata(t *testing.T) {
+ 	})
+ 
+ 	ipam := NewIPAM(fakeAddressing, testConfiguration, &ownerMock{}, localNodeStore, &ownerMock{}, &resourceMock{}, &mtuMock, nil, fakeMetadata, nil)
+-	ipam.ConfigureAllocator()
++	ipam.ConfigureAllocator(nil)
+ 	ipam.IPv4Allocator = newFakePoolAllocator(map[string]string{
+ 		"default": "10.10.0.0/16",
+ 		"test":    "192.168.178.0/24",
+@@ -254,7 +254,7 @@ func TestLegacyAllocatorIPAMMetadata(t *testing.T) {
+ 	localNodeStore := node.NewTestLocalNodeStore(node.LocalNode{})
+ 	fakeMetadata := fakeMetadataFunc(func(owner string, family Family) (pool string, err error) { return "some-pool", nil })
+ 	ipam := NewIPAM(fakeAddressing, testConfiguration, &ownerMock{}, localNodeStore, &ownerMock{}, &resourceMock{}, &mtuMock, nil, fakeMetadata, nil)
+-	ipam.ConfigureAllocator()
++	ipam.ConfigureAllocator(nil)
+ 
+ 	// AllocateIP requires explicit pool
+ 	ipv4 := fakeIPv4AllocCIDRIP(fakeAddressing)
 diff --git a/pkg/ipam/service/ipallocator/allocator.go b/pkg/ipam/service/ipallocator/allocator.go
-index 5e81cf4ee3..782e1e476d 100644
+index 063e9b5875..d62ec0841b 100644
 --- a/pkg/ipam/service/ipallocator/allocator.go
 +++ b/pkg/ipam/service/ipallocator/allocator.go
-@@ -114,18 +114,11 @@ func (r *Range) CIDR() net.IPNet {
+@@ -107,18 +107,11 @@ func (r *Range) CIDR() net.IPNet {
  // or has already been reserved.  ErrFull will be returned if there
  // are no addresses left.
  func (r *Range) Allocate(ip net.IP) error {
@@ -130,7 +546,7 @@ index 5e81cf4ee3..782e1e476d 100644
 -	}
  	return nil
  }
-
+ 
 diff --git a/pkg/ipam/types.go b/pkg/ipam/types.go
 index 6abe6fee6e..af9c2ced99 100644
 --- a/pkg/ipam/types.go
@@ -138,7 +554,7 @@ index 6abe6fee6e..af9c2ced99 100644
 @@ -17,6 +17,10 @@ import (
  	"github.com/cilium/cilium/pkg/option"
  )
-
+ 
 +const (
 +	customPodIpAddr = "cni.cilium.io/ipAddress"
 +)
@@ -146,16 +562,3 @@ index 6abe6fee6e..af9c2ced99 100644
  // AllocationResult is the result of an allocation
  type AllocationResult struct {
  	// IP is the allocated IP
-diff --git a/daemon/cmd/ipam.go b/daemon/cmd/ipam.go
-index acb9a61c64..9cfe792e30 100644
---- a/daemon/cmd/ipam.go
-+++ b/daemon/cmd/ipam.go
-@@ -585,7 +585,7 @@ func (d *Daemon) startIPAM() {
- 	bootstrapStats.ipam.Start()
- 	log.Info("Initializing node addressing")
- 	// Set up ipam conf after init() because we might be running d.conf.KVStoreIPv4Registration
--	d.ipam.ConfigureAllocator()
-+	d.ipam.ConfigureAllocator(d.k8sWatcher)
- 	bootstrapStats.ipam.End(true)
- }
-
