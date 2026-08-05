@@ -14,18 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubeconfig
+package virtualcontrolplaneconfiguration
 
-type File string
+import (
+	"time"
 
-const (
-	SuperAdmin        File = "super-admin.conf"
-	Admin             File = "admin.conf"
-	Scheduler         File = "scheduler.conf"
-	ControllerManager File = "controller-manager.conf"
-	Kubelet           File = "kubelet.conf"
-	BashibleApiserver File = "bashible-apiserver.conf"
-
-	CiliumOperator     File = "cilium-operator.conf"
-	KonnectivityServer File = "konnectivity-server.conf"
+	corev1 "k8s.io/api/core/v1"
 )
+
+const tokenExpiresAtKey = "control-plane.deckhouse.io/token-expires-at"
+
+func tokenNeedsRenewal(secret *corev1.Secret, renewBefore time.Duration) bool {
+	if secret == nil || len(secret.Data["token"]) == 0 {
+		return true
+	}
+
+	expiresAt, err := time.Parse(time.RFC3339, secret.Annotations[tokenExpiresAtKey])
+	if err != nil {
+		return true
+	}
+
+	return time.Until(expiresAt) < renewBefore
+}

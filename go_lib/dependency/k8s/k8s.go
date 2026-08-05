@@ -18,7 +18,6 @@ package k8s
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/flant/kube-client/fake"
 	"k8s.io/client-go/dynamic"
@@ -60,10 +59,6 @@ func NewClient(options ...Option) (Client, error) {
 
 	for _, opt := range options {
 		opt(opts)
-	}
-
-	if opts.kubeconfigPath == "" {
-		opts.kubeconfigPath = os.Getenv("KUBECONFIG")
 	}
 
 	var config *rest.Config

@@ -17,6 +17,7 @@ limitations under the License.
 package virtualcontrolplaneconfiguration
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -29,12 +30,15 @@ import (
 	"control-plane-manager/internal/constants"
 
 	appsv1 "k8s.io/api/apps/v1"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -46,6 +50,11 @@ const (
 	deckhouseDeploymentName     = "deckhouse"
 	deckhouseContainerName      = "deckhouse"
 	deckhouseRegistrySecretName = "deckhouse-registry"
+
+	deckhouseServiceAccountName = "deckhouse"
+
+	deckhouseTokenTTL         = 365 * 24 * time.Hour
+	deckhouseTokenRenewBefore = deckhouseTokenTTL / 2
 
 	deckhouseClusterConfigurationSecretName = "d8-cluster-configuration"
 	deckhouseClusterUUIDConfigMapName       = "d8-cluster-uuid"
@@ -69,8 +78,9 @@ func (r *reconciler) reconcileDeckhouse(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	albVIP string,
+	tenantCA []byte,
 ) (reconcile.Result, error) {
-	_, tc, err := r.tenantClients(ctx, vcp)
+	tcs, tc, err := r.tenantClients(ctx, vcp)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("build tenant clients: %w", err)
 	}
@@ -106,12 +116,17 @@ func (r *reconciler) reconcileDeckhouse(
 		return reconcile.Result{}, fmt.Errorf("reconcile parent registry secret: %w", err)
 	}
 
-	// 7. Parent: the deckhouse Deployment itself.
+	// 7. Tenant ServiceAccount and its token, mounted by the Deployment below.
+	if err := r.reconcileDeckhouseServiceAccountToken(ctx, vcp, tc, tcs, tenantCA); err != nil {
+		return reconcile.Result{}, fmt.Errorf("reconcile deckhouse ServiceAccount token: %w", err)
+	}
+
+	// 8. Parent: the deckhouse Deployment itself.
 	if err := r.reconcileDeckhouseDeployment(ctx, vcp, albVIP); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile deckhouse Deployment: %w", err)
 	}
 
-	// 8. Tenant: ModuleConfigs; requeue until the pod installs the CRD.
+	// 9. Tenant: ModuleConfigs; requeue until the pod installs the CRD.
 	if res, err := reconcileTenantModuleConfigs(ctx, tc); err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -395,6 +410,122 @@ func (r *reconciler) reconcileParentRegistrySecret(ctx context.Context, vcp *con
 	return r.patchSecret(ctx, base, current)
 }
 
+// reconcileDeckhouseServiceAccountToken keeps a mountable copy of a tenant
+// ServiceAccount token in the parent namespace. Deckhouse authenticates to the
+// tenant as system:serviceaccount:d8-system:deckhouse because the admission
+// policies it installs itself (002-deckhouse/templates/validation.yaml) exempt
+// only that identity from touching system namespaces and heritage-labelled
+// objects; a client certificate is denied no matter what RBAC says.
+func (r *reconciler) reconcileDeckhouseServiceAccountToken(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	tc client.Client,
+	tcs kubernetes.Interface,
+	tenantCA []byte,
+) error {
+	if err := reconcileTenantDeckhouseServiceAccount(ctx, tc); err != nil {
+		return fmt.Errorf("reconcile tenant ServiceAccount: %w", err)
+	}
+
+	name := constants.VirtualResourceName(constants.VirtualDeckhouseTokenSecretName, vcp.Name)
+	current, err := r.getSecret(ctx, vcp.Namespace, name)
+	switch {
+	case apierrors.IsNotFound(err):
+		current = nil
+	case err != nil:
+		return fmt.Errorf("get token Secret: %w", err)
+	case isDeckhouseTokenInSync(current, tenantCA):
+		return nil
+	}
+
+	token, expiresAt, err := requestTenantDeckhouseToken(ctx, tcs)
+	if err != nil {
+		return err
+	}
+
+	target := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: vcp.Namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
+			},
+			Annotations: map[string]string{
+				tokenExpiresAtKey: expiresAt.UTC().Format(time.RFC3339),
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"token":     []byte(token),
+			"ca.crt":    tenantCA,
+			"namespace": []byte(deckhouseSystemNamespace),
+		},
+	}
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return err
+	}
+
+	if current == nil {
+		return r.createSecret(ctx, target)
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+	current.Labels = target.Labels
+	current.Annotations = mergeMetadata(current.Annotations, target.Annotations)
+	syncOwnerReferences(current, target)
+
+	return r.patchSecret(ctx, base, current)
+}
+
+func isDeckhouseTokenInSync(secret *corev1.Secret, tenantCA []byte) bool {
+	return !tokenNeedsRenewal(secret, deckhouseTokenRenewBefore) &&
+		bytes.Equal(secret.Data["ca.crt"], tenantCA)
+}
+
+func requestTenantDeckhouseToken(ctx context.Context, tcs kubernetes.Interface) (string, time.Time, error) {
+	seconds := int64(deckhouseTokenTTL.Seconds())
+	request := &authenticationv1.TokenRequest{
+		Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &seconds},
+	}
+
+	response, err := tcs.CoreV1().
+		ServiceAccounts(deckhouseSystemNamespace).
+		CreateToken(ctx, deckhouseServiceAccountName, request, metav1.CreateOptions{})
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("request token: %w", err)
+	}
+
+	return response.Status.Token, response.Status.ExpirationTimestamp.Time, nil
+}
+
+func reconcileTenantDeckhouseServiceAccount(ctx context.Context, tc client.Client) error {
+	target := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deckhouseServiceAccountName,
+			Namespace: deckhouseSystemNamespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey:     constants.HeritageLabelValue,
+				"app.kubernetes.io/managed-by": "Helm",
+			},
+			Annotations: map[string]string{
+				"helm.sh/resource-policy":        "keep",
+				"meta.helm.sh/release-name":      "deckhouse",
+				"meta.helm.sh/release-namespace": deckhouseSystemNamespace,
+			},
+		},
+		AutomountServiceAccountToken: ptr.To(false),
+	}
+
+	err := tc.Get(ctx, client.ObjectKeyFromObject(target), &corev1.ServiceAccount{})
+	if apierrors.IsNotFound(err) {
+		return tc.Create(ctx, target)
+	}
+
+	return err
+}
+
 func (r *reconciler) reconcileDeckhouseDeployment(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
@@ -444,6 +575,7 @@ func buildTargetDeckhouseDeployment(
 		"${NAMESPACE}", vcp.Namespace,
 		"${IMAGE_DECKHOUSE}", image,
 		"${VCP_API_VIP}", albVIP,
+		"${TOKEN_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualDeckhouseTokenSecretName, vcp.Name),
 	).Replace(deckhouseDeploymentYAML)
 
 	deployment := &appsv1.Deployment{}
@@ -452,7 +584,6 @@ func buildTargetDeckhouseDeployment(
 	}
 
 	registrySecret := constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name)
-	clientsKubeconfigSecret := constants.VirtualResourceName(constants.VirtualClientsKubeconfigSecretName, vcp.Name)
 
 	deployment.Name = constants.VirtualResourceName(deckhouseDeploymentName, vcp.Name)
 	if deployment.Labels == nil {
@@ -476,13 +607,6 @@ func buildTargetDeckhouseDeployment(
 	for i := range deployment.Spec.Template.Spec.ImagePullSecrets {
 		if deployment.Spec.Template.Spec.ImagePullSecrets[i].Name == deckhouseRegistrySecretName {
 			deployment.Spec.Template.Spec.ImagePullSecrets[i].Name = registrySecret
-		}
-	}
-
-	for i := range deployment.Spec.Template.Spec.Volumes {
-		vol := &deployment.Spec.Template.Spec.Volumes[i]
-		if vol.Secret != nil && vol.Secret.SecretName == constants.VirtualClientsKubeconfigSecretName {
-			vol.Secret.SecretName = clientsKubeconfigSecret
 		}
 	}
 
