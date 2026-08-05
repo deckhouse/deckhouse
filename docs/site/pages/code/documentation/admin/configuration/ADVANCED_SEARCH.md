@@ -20,7 +20,7 @@ Manage indexing, monitoring, and troubleshooting.
 
 ### Instance-level management
 
-Go to **Admin** → **Settings** → **Search**.
+Go to "Admin" → "Settings" → "Search".
 
 This section is available after OpenSearch is connected.
 
