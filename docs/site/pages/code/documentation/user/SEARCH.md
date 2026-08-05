@@ -254,7 +254,6 @@ If a parameter is submitted with invalid `scope` values, API returns the `400` r
 | `not_source_branch` | string | `merge_requests` | Exclusion filter |
 | `not_target_branch` | string | `merge_requests` | Exclusion filter |
 | `num_context_lines` | integer | `blobs` | Supported range `0..20` |
-| `regex` | boolean | `blobs` | Query length `3..512` and at least one alphanumeric literal; otherwise API returns `400` |
 | `source_branch` | string | `merge_requests` | Exact branch filter |
 | `target_branch` | string | `merge_requests` | Exact branch filter |
 
@@ -309,35 +308,12 @@ curl --request GET \
   --url "https://gitlab.example.com/api/v4/groups/my-group/-/search?scope=merge_requests&search=release&source_branch=release%2F1.2&not_author_username=bot"
 ```
 
-#### Project search: code blobs with regex and context lines
+#### Project search: code blobs with context lines
 
 ```bash
 curl --request GET \
   --header "PRIVATE-TOKEN: <your_access_token>" \
-  --url "https://gitlab.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy.*job&regex=true&num_context_lines=5&language=Ruby"
-```
-
-### Error cases (400 Bad Request)
-
-#### Wrong scope for parameter
-
-Error message example when `regex=true` is incorrectly used together with `scope=work_items`:
-
-```json
-{
-  "message": "regex is supported only for blobs"
-}
-```
-
-#### Invalid regex query constraints
-
-Regex mode requires a query length of `3..512` and at least one alphanumeric literal.
-The following is an error message example when the requirements are not met:
-
-```json
-{
-  "message": "regex search requires 3-512 chars and at least one alphanumeric literal"
-}
+  --url "https://gitlab.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy&num_context_lines=5&language=Ruby"
 ```
 
 ### Notes on divergence from upstream GitLab docs

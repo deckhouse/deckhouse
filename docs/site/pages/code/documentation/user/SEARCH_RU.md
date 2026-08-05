@@ -254,7 +254,6 @@ Search REST API позволяет выполнять поиск по инста
 | `not_source_branch` | string | `merge_requests` | Исключающий фильтр |
 | `not_target_branch` | string | `merge_requests` | Исключающий фильтр |
 | `num_context_lines` | integer | `blobs` | Поддерживается диапазон `0..20` |
-| `regex` | boolean | `blobs` | Длина запроса `3..512` и хотя бы один буквенно-цифровой литерал в запросе, иначе API возвращает `400` |
 | `source_branch` | string | `merge_requests` | Точный фильтр по исходной ветке |
 | `target_branch` | string | `merge_requests` | Точный фильтр по целевой ветке |
 
@@ -309,37 +308,12 @@ curl --request GET \
   --url "https://gitlab.example.com/api/v4/groups/my-group/-/search?scope=merge_requests&search=release&source_branch=release%2F1.2&not_author_username=bot"
 ```
 
-#### Поиск по проекту: blobs с regex и контекстными строками
+#### Поиск по проекту: blobs с контекстными строками
 
 ```bash
 curl --request GET \
   --header "PRIVATE-TOKEN: <your_access_token>" \
-  --url "https://gitlab.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy.*job&regex=true&num_context_lines=5&language=Ruby"
-```
-
-### Ошибки (400 Bad Request)
-
-Тексты полей `message` в примерах ниже возвращаются API на английском языке.
-
-#### Неверная область поиска для параметра
-
-Пример текста ошибки при некорректном использовании `regex=true` с `scope=work_items`:
-
-```json
-{
-  "message": "regex is supported only for blobs"
-}
-```
-
-#### Нарушение ограничений regex-запроса
-
-Regex-режим требует длины запроса `3..512` и хотя бы одного буквенно-цифрового литерала.
-Пример текста ошибки при несоблюдении требований:
-
-```json
-{
-  "message": "regex search requires 3-512 chars and at least one alphanumeric literal"
-}
+  --url "https://gitlab.example.com/api/v4/projects/my-group%2Fmy-project/-/search?scope=blobs&search=deploy&num_context_lines=5&language=Ruby"
 ```
 
 ### Отличия от upstream GitLab
