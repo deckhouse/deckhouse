@@ -44,14 +44,13 @@ const (
 )
 
 // SystemType selects how the node is managed: a classic mutable node
-// configured by bashible, or an immutable olcedar node reconciled from a
-// NodeConfig object. An empty value means Mutable.
+// configured by bashible, or an immutable node reconciled from a NodeConfig
+// object. An empty value means Mutable.
+//
+// The hooks only copy the value through to values; the named constants live in
+// the node-controller's own API package, which is where anything compares
+// against them.
 type SystemType string
-
-const (
-	SystemTypeMutable   SystemType = "Mutable"
-	SystemTypeImmutable SystemType = "Immutable"
-)
 
 type NodeGroupEngine string
 

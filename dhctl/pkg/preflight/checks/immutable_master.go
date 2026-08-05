@@ -16,6 +16,7 @@ package checks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -38,6 +39,8 @@ const (
 	ImmutableMasterReplicasCheckName     preflight.CheckName = "immutable-master-replicas"
 	ImmutablePostBootstrapHookCheckName  preflight.CheckName = "immutable-post-bootstrap-script"
 	ImmutableSignatureModeCheckName      preflight.CheckName = "immutable-signature-mode"
+	ImmutableKubeconfigOutCheckName      preflight.CheckName = "immutable-kubeconfig-out"
+	ImmutableKubeconfigKeptCheckName     preflight.CheckName = "immutable-kubeconfig-kept"
 )
 
 func noRetry() preflight.RetryPolicy {
@@ -53,11 +56,11 @@ func ImmutableSysextDigests(metaConfig *config.MetaConfig) preflight.Check {
 		Description: "installer image carries the containerd, CNI and kubelet system extensions",
 		Phase:       preflight.PhasePreInfra,
 		Retry:       noRetry(),
-		Run: func(_ context.Context) error {
+		Run: func(ctx context.Context) error {
 			if metaConfig == nil {
-				return fmt.Errorf("meta config is nil")
+				return errors.New("meta config is nil")
 			}
-			_, err := immutable.SysextDigests(metaConfig)
+			_, err := immutable.SysextDigests(ctx, metaConfig)
 			return err
 		},
 	}
@@ -73,11 +76,11 @@ func ImmutableControlPlaneImages(metaConfig *config.MetaConfig) preflight.Check 
 		Description: "installer image carries the control plane of the requested Kubernetes version",
 		Phase:       preflight.PhasePreInfra,
 		Retry:       noRetry(),
-		Run: func(_ context.Context) error {
+		Run: func(ctx context.Context) error {
 			if metaConfig == nil {
-				return fmt.Errorf("meta config is nil")
+				return errors.New("meta config is nil")
 			}
-			_, err := immutable.ResolveControlPlaneImages(metaConfig)
+			_, err := immutable.ResolveControlPlaneImages(ctx, metaConfig)
 			return err
 		},
 	}
@@ -93,9 +96,6 @@ func ImmutableRegistryMode(metaConfig *config.MetaConfig) preflight.Check {
 		Phase:       preflight.PhasePreInfra,
 		Retry:       noRetry(),
 		Run: func(_ context.Context) error {
-			if metaConfig == nil {
-				return fmt.Errorf("meta config is nil")
-			}
 			mode := metaConfig.Registry.Settings.Mode
 			if mode != constant.ModeUnmanaged {
 				return fmt.Errorf(
@@ -118,11 +118,8 @@ func ImmutableMasterReplicas(metaConfig *config.MetaConfig) preflight.Check {
 		Phase:       preflight.PhasePreInfra,
 		Retry:       noRetry(),
 		Run: func(_ context.Context) error {
-			if metaConfig == nil {
-				return fmt.Errorf("meta config is nil")
-			}
 			if replicas := metaConfig.MasterNodeGroupSpec.Replicas; replicas > 1 {
-				return fmt.Errorf("masterNodeGroup.replicas is %d: an immutable master group supports a single replica for now", replicas)
+				return fmt.Errorf("masterNodeGroup.replicas is %d: an immutable master group supports a single replica", replicas)
 			}
 			return nil
 		},
@@ -142,10 +139,6 @@ func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.G
 		Phase:       preflight.PhasePreInfra,
 		Retry:       noRetry(),
 		Run: func(ctx context.Context) error {
-			if metaConfig == nil {
-				return fmt.Errorf("meta config is nil")
-			}
-
 			extractor := controlplane.NewSettingsExtractor(
 				metaConfig,
 				config.NewSchemaStore(globalOpts),
@@ -162,10 +155,54 @@ func ImmutableSignatureMode(metaConfig *config.MetaConfig, globalOpts *options.G
 			}
 
 			return fmt.Errorf(
-				"control-plane-manager runs with apiserver.signature %q, which an immutable master does not support yet: "+
+				"control-plane-manager runs with apiserver.signature %q, which an immutable master does not support: "+
 					"the signing keys and the encryption provider config are uploaded to the node over SSH, and an immutable node runs no sshd",
 				mode,
 			)
+		},
+	}
+}
+
+// ImmutableKubeconfigKept rejects a --kubeconfig-out that dhctl would delete on
+// its way out. The flag's help points at the temporary directory, which is
+// exactly the directory the tmp cleaner empties at shutdown, and on an immutable
+// cluster that file is the only way in.
+func ImmutableKubeconfigKept(bootstrapOpts *options.BootstrapOptions, globalOpts *options.GlobalOptions) preflight.Check {
+	return preflight.Check{
+		Name:        ImmutableKubeconfigKeptCheckName,
+		Description: "the admin kubeconfig is written somewhere dhctl will not delete",
+		Phase:       preflight.PhasePreInfra,
+		Retry:       noRetry(),
+		Run: func(ctx context.Context) error {
+			return immutable.CheckKubeconfigOutSurvivesCleanup(ctx, bootstrapOpts.KubeconfigOut, globalOpts.TmpDir)
+		},
+	}
+}
+
+// ImmutableKubeconfigOutOptions carries the one thing this check cannot read
+// off the bootstrap options: whether dhctl is being driven by dhctl-server.
+// Nothing in options.Options records that — it is a field on the bootstrapper —
+// so it has to be handed in.
+type ImmutableKubeconfigOutOptions struct {
+	CommanderMode bool
+}
+
+// ImmutableKubeconfigOut rejects a Commander-mode bootstrap that names no path
+// for the admin kubeconfig. dhctl-server writes no default one — TmpDir is
+// shared by every cluster the process ever bootstraps — and the bootstrap
+// response carries no kubeconfig, so the credentials the node hands over once
+// would have nowhere to go, on a cluster that answers no SSH.
+func ImmutableKubeconfigOut(bootstrapOpts *options.BootstrapOptions, opts ImmutableKubeconfigOutOptions) preflight.Check {
+	return preflight.Check{
+		Name:        ImmutableKubeconfigOutCheckName,
+		Description: "the admin kubeconfig has somewhere to be written",
+		Phase:       preflight.PhasePreInfra,
+		Retry:       noRetry(),
+		Run: func(_ context.Context) error {
+			if !opts.CommanderMode || bootstrapOpts.KubeconfigOut != "" {
+				return nil
+			}
+			return immutable.ErrKubeconfigOutRequired
 		},
 	}
 }
@@ -179,7 +216,7 @@ func ImmutablePostBootstrapScript(bootstrapOpts *options.BootstrapOptions) prefl
 		Phase:       preflight.PhasePreInfra,
 		Retry:       noRetry(),
 		Run: func(_ context.Context) error {
-			if bootstrapOpts == nil || bootstrapOpts.PostBootstrapScriptPath == "" {
+			if bootstrapOpts.PostBootstrapScriptPath == "" {
 				return nil
 			}
 			return fmt.Errorf(

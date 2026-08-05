@@ -390,7 +390,7 @@ rules:
 # extensions onto matching nodes. node-controller reads them to render the
 # per-node extension set, enforces sysext name/digest uniqueness in an admission
 # webhook, and reports the matched groups and any conflict back through their
-# status.
+# status. The request itself belongs to the operator, so it is read-only here.
 - apiGroups:
   - deckhouse.io
   resources:
@@ -399,16 +399,12 @@ rules:
   - get
   - list
   - watch
-  - update
-  - patch
 - apiGroups:
   - deckhouse.io
   resources:
   - nodeextensionrequests/status
   verbs:
   - get
-  - list
-  - watch
   - update
   - patch
 - apiGroups:
@@ -424,14 +420,15 @@ rules:
   - update
   - delete
 # NodeBootstrapConfigs and their templates - the CAPI bootstrap provider for
-# immutable NodeGroups. The MachineSet clones a config per Machine; the
-# node-bootstrap controller renders that machine's userdata into a Secret (create
-# is covered by the namespaced d8-cloud-instance-manager secret Role below) and
-# writes the v1beta2 bootstrap contract into status.
+# immutable NodeGroups. The per-group template is node-controller's own: it
+# applies it (SSA) and deletes it with the NodeGroup. The per-machine configs are
+# not - the MachineSet clones and deletes them, and the node-bootstrap controller
+# only reads one and writes the v1beta2 bootstrap contract into its status (the
+# rendered Secret is covered by the namespaced d8-cloud-instance-manager secret
+# Role below).
 - apiGroups:
   - bootstrap.deckhouse.io
   resources:
-  - nodebootstrapconfigs
   - nodebootstrapconfigtemplates
   verbs:
   - get
@@ -441,6 +438,14 @@ rules:
   - patch
   - update
   - delete
+- apiGroups:
+  - bootstrap.deckhouse.io
+  resources:
+  - nodebootstrapconfigs
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - bootstrap.deckhouse.io
   resources:
@@ -604,9 +609,12 @@ subjects:
 # node.
 #
 # The grants are cluster-wide because both resources are cluster-scoped: RBAC
-# cannot narrow them to "this node's own object". A node can therefore read the
-# configs of its neighbours, which is the same trade kubelet self-registration
-# makes; restricting it needs an admission policy rather than RBAC.
+# cannot narrow them to "this node's own object". Reads are therefore
+# cluster-wide, which is the same trade kubelet self-registration makes. Writes
+# are not: the ValidatingAdmissionPolicies in validation.yaml refuse a create or
+# an update from a system:nodes caller whose identity does not match the object's
+# node (NodeConfig by name, NodeOperation by .spec.nodeName), so a node can only
+# ever write its own.
 #
 # There is deliberately NO rule for nodeconfigs/sensitive, and that is what keeps
 # the one field this trade could not cover out of reach: status.maintenanceToken
@@ -633,7 +641,9 @@ rules:
   - list
   - watch
   # A node whose object is missing on first contact registers one from the
-  # config it was provisioned with: its status has nowhere else to go.
+  # config it was provisioned with: its status has nowhere else to go. The
+  # admission policy holds it to its own name, so it cannot pre-create a
+  # master's object with a configuration of its choosing.
   - create
 - apiGroups:
   - internal.deckhouse.io
@@ -644,6 +654,8 @@ rules:
   # neighbour's maintenance token straight out of
   # GET /nodeconfigs/<other>/status and walk around the mask above. The agent
   # never reads status back — it watches the resource and only ever writes here.
+  # A write reaches admission, where the policy pins it to the node's own object;
+  # a read would not.
   verbs:
   - patch
   - update
@@ -663,8 +675,10 @@ rules:
   - deckhouse.io
   resources:
   - nodeoperations/status
+  # No "get", for the same reason as nodeconfigs/status above, minus the
+  # sensitive field: the node reads the operation itself, which carries its
+  # status, and only ever writes here.
   verbs:
-  - get
   - patch
   - update
 ---

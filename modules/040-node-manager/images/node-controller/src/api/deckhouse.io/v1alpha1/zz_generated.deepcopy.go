@@ -847,6 +847,15 @@ func (in *NodeOperationStatus) DeepCopyInto(out *NodeOperationStatus) {
 		in, out := &in.FinishedAt, &out.FinishedAt
 		*out = (*in).DeepCopy()
 	}
+	if in.NodeWasUnschedulable != nil {
+		in, out := &in.NodeWasUnschedulable, &out.NodeWasUnschedulable
+		*out = new(bool)
+		**out = **in
+	}
+	if in.DrainDeadline != nil {
+		in, out := &in.DrainDeadline, &out.DrainDeadline
+		*out = (*in).DeepCopy()
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))

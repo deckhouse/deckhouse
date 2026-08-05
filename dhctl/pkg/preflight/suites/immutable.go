@@ -25,6 +25,7 @@ type ImmutableDeps struct {
 	MetaConfig    *config.MetaConfig
 	BootstrapOpts *options.BootstrapOptions
 	GlobalOpts    *options.GlobalOptions
+	CommanderMode bool
 }
 
 // NewImmutableSuite gathers the checks that only apply when the master
@@ -38,5 +39,9 @@ func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 		checks.ImmutableMasterReplicas(deps.MetaConfig),
 		checks.ImmutableSignatureMode(deps.MetaConfig, deps.GlobalOpts),
 		checks.ImmutablePostBootstrapScript(deps.BootstrapOpts),
+		checks.ImmutableKubeconfigOut(deps.BootstrapOpts, checks.ImmutableKubeconfigOutOptions{
+			CommanderMode: deps.CommanderMode,
+		}),
+		checks.ImmutableKubeconfigKept(deps.BootstrapOpts, deps.GlobalOpts),
 	)
 }

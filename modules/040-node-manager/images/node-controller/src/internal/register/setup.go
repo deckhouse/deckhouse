@@ -27,9 +27,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
-func setupController(ctx context.Context, mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
-	if maxConcurrentReconciles < 1 {
-		maxConcurrentReconciles = 1
+// setupController wires one controller into the manager and returns the number
+// of workers it was actually built with — which is not always the number asked
+// for, since a reconciler may cap itself (NeedsMaxConcurrentReconciles).
+func setupController(ctx context.Context, mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) (int, error) {
+	requested := max(maxConcurrentReconciles, 1)
+	maxConcurrentReconciles = effectiveMaxConcurrentReconciles(r, requested)
+	if maxConcurrentReconciles != requested {
+		ctrl.Log.WithName("setup").Info("controller caps its own concurrency",
+			"controller", name, "requested", requested, "maxConcurrentReconciles", maxConcurrentReconciles)
 	}
 
 	if v, ok := r.(NeedsClient); ok {
@@ -41,12 +47,12 @@ func setupController(ctx context.Context, mgr ctrl.Manager, c client.Client, nam
 
 	if v, ok := r.(NeedsSetup); ok {
 		if err := v.Setup(ctx, mgr); err != nil {
-			return fmt.Errorf("setup %s: %w", name, err)
+			return 0, fmt.Errorf("setup %s: %w", name, err)
 		}
 	} else if _, hasMethod := reflect.TypeOf(r).MethodByName("Setup"); hasMethod {
 		// NeedsSetup is optional, so a Setup whose signature drifted is not a compile error — it
 		// is silently never called, and the reconciler runs with its fields left nil.
-		return fmt.Errorf("controller %s has a Setup method that does not implement NeedsSetup: want Setup(context.Context, ctrl.Manager) error", name)
+		return 0, fmt.Errorf("controller %s has a Setup method that does not implement NeedsSetup: want Setup(context.Context, ctrl.Manager) error", name)
 	}
 
 	b := ctrl.NewControllerManagedBy(mgr).
@@ -64,8 +70,28 @@ func setupController(ctx context.Context, mgr ctrl.Manager, c client.Client, nam
 	r.SetupWatches(w)
 
 	if err := b.Complete(r); err != nil {
-		return fmt.Errorf("build controller %s: %w", name, err)
+		return 0, fmt.Errorf("build controller %s: %w", name, err)
 	}
 
-	return nil
+	return maxConcurrentReconciles, nil
+}
+
+// effectiveMaxConcurrentReconciles is how many workers a controller is actually
+// run with: what was asked for, lowered to the reconciler's own cap when it has
+// one. A reconciler that is only correct below some number of workers holds that
+// number itself (NeedsMaxConcurrentReconciles) rather than depending on a
+// deployment argument that can be edited, mistyped or dropped elsewhere.
+func effectiveMaxConcurrentReconciles(r Reconciler, requested int) int {
+	if requested < 1 {
+		requested = 1
+	}
+	v, ok := r.(NeedsMaxConcurrentReconciles)
+	if !ok {
+		return requested
+	}
+	capped := v.MaxConcurrentReconciles()
+	if capped < 1 || capped >= requested {
+		return requested
+	}
+	return capped
 }

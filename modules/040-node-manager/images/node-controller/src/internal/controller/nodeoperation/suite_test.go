@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package nodebootstrap
+package nodeoperation
 
 import (
 	"context"
@@ -28,11 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
-	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
-	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
-	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -46,18 +43,18 @@ var (
 	suiteCancel context.CancelFunc
 )
 
-// TestNodeBootstrapControllerEnvtest runs the envtest-backed integration suite:
-// the real bootstrap controller runs inside a manager against a real
-// kube-apiserver, so what is asserted is the Secret and status a Machine's
-// NodeBootstrapConfig ends up with. Skipped when envtest assets are missing so
-// the unit tests stay runnable without `make envtest`.
-func TestNodeBootstrapControllerEnvtest(t *testing.T) {
+// TestNodeOperationControllerEnvtest runs the envtest-backed integration suite:
+// the real operation controller runs inside a manager against a real
+// kube-apiserver, so what is asserted is the phase an operation ends up in and
+// the state its node is left in. Skipped when envtest assets are missing so the
+// unit tests stay runnable without `make envtest`.
+func TestNodeOperationControllerEnvtest(t *testing.T) {
 	if !testenv.AssetsAvailable() {
 		t.Skip("envtest assets not found; run `make envtest` (or set KUBEBUILDER_ASSETS) to run the integration suite")
 	}
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "NodeBootstrap Controller Envtest Suite")
+	RunSpecs(t, "NodeOperation Controller Envtest Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -66,32 +63,23 @@ var _ = BeforeSuite(func() {
 
 	scheme = k8sruntime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
-	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
-	// NodeExtensionRequest: the rendered spec merges the operator's extra system
-	// extensions, and listing them fails the whole render when the type is not in
-	// the scheme, or its CRD not installed below — which is what a missing entry
-	// here looks like from the suite.
 	Expect(deckhousev1alpha1.AddToScheme(scheme)).To(Succeed())
-	Expect(internalv1alpha1.AddToScheme(scheme)).To(Succeed())
-	Expect(bootstrapv1alpha1.AddToScheme(scheme)).To(Succeed())
-	Expect(capiv1beta2.AddToScheme(scheme)).To(Succeed())
+	// NodeGroup: the wait for an eviction is bounded by the group's own
+	// nodeDrainTimeoutSecond, so the controller reads the node's group.
+	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
 
-	By("bootstrapping envtest with the NodeGroup, NodeConfig, NodeBootstrapConfig and Machine CRDs")
+	By("bootstrapping envtest with the NodeOperation and NodeGroup CRDs")
 	var err error
 	testEnv, cfg, k8sClient, err = testenv.Start(
 		scheme,
 		testenv.CRDPaths(
+			testenv.WithNodeOperationCRDFile(),
 			testenv.WithNodeGroupCRDFile(),
-			testenv.WithNodeConfigCRDFile(),
-			testenv.WithNodeExtensionRequestCRDFile(),
-			testenv.WithNodeBootstrapConfigCRDFile(),
-			testenv.WithNodeBootstrapConfigTemplateCRDFile(),
-			testenv.WithMachineCRDFile(),
 		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	By("starting the manager with the node-bootstrap controller")
+	By("starting the manager with the node-operation controller")
 	mgr, err := testenv.NewManager(cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 

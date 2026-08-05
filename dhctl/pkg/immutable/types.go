@@ -26,71 +26,68 @@
 // cluster CA keys in a Secret, in the infrastructure state and in the
 // installer's cache. dhctl collects the admin kubeconfig afterwards from the
 // one-shot handoff endpoint the node opens for it — see handoff.go.
+//
+// A few exported helpers here are pure and take a context they never use. The
+// rule is that every exported function takes one first, and the alternative —
+// unexporting them — is not available while pkg/operations/bootstrap and
+// pkg/preflight/checks call them. They are marked at their doc comment.
 package immutable
 
-// PayloadAPIVersion and the kinds below are the contract with the on-node
+// payloadAPIVersion and the kinds below are the contract with the on-node
 // agent. It parses both documents with UnmarshalStrict, so every field name
 // here must match the agent's types byte for byte — see
 // modules/040-node-manager/images/node-controller/src/api/internal.deckhouse.io/v1alpha1.
 const (
-	PayloadAPIVersion = "internal.deckhouse.io/v1alpha1"
+	payloadAPIVersion = "internal.deckhouse.io/v1alpha1"
 
-	NodeConfigKind         = "NodeConfig"
-	ControlPlaneConfigKind = "ControlPlaneConfig"
+	nodeConfigKind         = "NodeConfig"
+	controlPlaneConfigKind = "ControlPlaneConfig"
 )
 
-// ObjectMeta is the metadata dhctl emits for the payload documents. Only the
-// fields the agent reads are rendered: a full metav1.ObjectMeta would add a
+// objectMeta is the metadata dhctl emits for the payload documents. Only the
+// fields the agent reads are rendered: a full metav1.objectMeta would add a
 // "creationTimestamp: null" line for nothing.
-type ObjectMeta struct {
+type objectMeta struct {
 	Name   string            `json:"name"`
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-// NodeConfig is the document written to /config/nodeconfig.yaml.
-type NodeConfig struct {
+// nodeConfig is the document written to /config/nodeconfig.yaml.
+type nodeConfig struct {
 	APIVersion string     `json:"apiVersion"`
 	Kind       string     `json:"kind"`
-	Metadata   ObjectMeta `json:"metadata"`
-	Spec       NodeSpec   `json:"spec"`
+	Metadata   objectMeta `json:"metadata"`
+	Spec       nodeSpec   `json:"spec"`
 }
 
-// NodeSpec carries only the fields the first master needs. The agent's own type
-// has more; anything omitted here simply keeps its default on the node.
-type NodeSpec struct {
+// nodeSpec carries only the fields dhctl emits. The contract lives in the
+// agent's own type, which has more; anything absent here keeps its default on
+// the node.
+type nodeSpec struct {
 	NodeName           string           `json:"nodeName"`
 	OSImage            string           `json:"osImage"`
-	Storage            Disk             `json:"storage,omitempty"`
-	Extensions         []Extension      `json:"extensions,omitempty"`
-	Kernel             Kernel           `json:"kernel,omitempty"`
-	Network            Network          `json:"network,omitempty"`
-	Kubelet            Kubelet          `json:"kubelet,omitempty"`
-	ContainerRuntime   ContainerRuntime `json:"containerRuntime,omitempty"`
+	Storage            disk             `json:"storage,omitempty"`
+	Extensions         []extension      `json:"extensions,omitempty"`
+	Kernel             kernel           `json:"kernel,omitempty"`
+	Network            network          `json:"network,omitempty"`
+	Kubelet            kubelet          `json:"kubelet,omitempty"`
+	ContainerRuntime   containerRuntime `json:"containerRuntime,omitempty"`
 	APIServerEndpoints []string         `json:"apiServerEndpoints,omitempty"`
-	UpdatePolicy       UpdatePolicy     `json:"updatePolicy,omitempty"`
-	Registry           *Registry        `json:"registry,omitempty"`
+	UpdatePolicy       updatePolicy     `json:"updatePolicy,omitempty"`
+	Registry           *registrySpec    `json:"registry,omitempty"`
 }
 
-// Disk picks one whole block device, either by path or by attributes. The same
-// shape names the system disk in NodeConfig and the control-plane state disk in
-// ControlPlaneConfig.
-type Disk struct {
-	Device       string        `json:"device,omitempty"`
-	DiskSelector *DiskSelector `json:"diskSelector,omitempty"`
-	Wipe         bool          `json:"wipe,omitempty"`
-}
+// disk picks one whole block device. dhctl names none: it renders the document
+// before the machine exists, so the only disk facts it would have are the sizes
+// that were asked for, and a size matches whatever falls under it — the
+// cloud-init image included. The empty object it emits leaves the choice to the
+// node, which can see the disks.
+type disk struct{}
 
-// DiskSelector matches a disk by attributes. Only Size is used here: dhctl
-// builds the payload before the VM exists, so no serial or device path is known
-// yet.
-type DiskSelector struct {
-	Size string `json:"size,omitempty"`
-}
-
-// Registry is the node's own path to the registry: it pulls the control-plane
+// registrySpec is the node's own path to the registry: it pulls the control-plane
 // images and the system extensions directly, without the in-cluster
 // registry-packages-proxy that does not exist yet during bootstrap.
-type Registry struct {
+type registrySpec struct {
 	Address string `json:"address"`
 	Path    string `json:"path"`
 	Scheme  string `json:"scheme,omitempty"`
@@ -98,41 +95,34 @@ type Registry struct {
 	Auth    string `json:"auth,omitempty"`
 }
 
-// Extension is a signed verity sysext merged onto the read-only root.
-type Extension struct {
+// extension is a signed verity sysext merged onto the read-only root.
+type extension struct {
 	Name        string `json:"name"`
 	Digest      string `json:"digest"`
 	RequestedBy string `json:"requestedBy,omitempty"`
 }
 
-// Kernel holds sysctl settings applied before kubelet starts.
-type Kernel struct {
+// kernel holds sysctl settings applied before kubelet starts.
+type kernel struct {
 	Sysctl map[string]string `json:"sysctl,omitempty"`
 }
 
-// Network holds the hostname and the interfaces the node brings up.
-type Network struct {
+// network holds the hostname and the interfaces the node brings up.
+type network struct {
 	Hostname   string             `json:"hostname,omitempty"`
-	DNS        *DNS               `json:"dns,omitempty"`
-	Interfaces []NetworkInterface `json:"interfaces,omitempty"`
+	Interfaces []networkInterface `json:"interfaces,omitempty"`
 }
 
-// DNS is the resolver configuration.
-type DNS struct {
-	Servers []string `json:"servers,omitempty"`
-	Search  []string `json:"search,omitempty"`
-}
-
-// NetworkInterface describes a single NIC.
-type NetworkInterface struct {
+// networkInterface describes a single NIC.
+type networkInterface struct {
 	Name      string   `json:"name"`
 	DHCP      bool     `json:"dhcp"`
 	Addresses []string `json:"addresses,omitempty"`
 	Gateway   string   `json:"gateway,omitempty"`
 }
 
-// Kubelet configures the node's kubelet.
-type Kubelet struct {
+// kubelet configures the node's kubelet.
+type kubelet struct {
 	ClusterDomain string   `json:"clusterDomain,omitempty"`
 	ClusterDNS    []string `json:"clusterDNS,omitempty"`
 	MaxPods       int      `json:"maxPods,omitempty"`
@@ -140,78 +130,61 @@ type Kubelet struct {
 	KubernetesVersion     string            `json:"kubernetesVersion,omitempty"`
 	ContainerLogMaxSize   string            `json:"containerLogMaxSize,omitempty"`
 	ContainerLogMaxFiles  int               `json:"containerLogMaxFiles,omitempty"`
-	RegisterWithTaints    []Taint           `json:"registerWithTaints,omitempty"`
 	ExternalCloudProvider bool              `json:"externalCloudProvider,omitempty"`
 	NodeLabels            map[string]string `json:"nodeLabels,omitempty"`
 	// ServerTLSBootstrap is a pointer so that the explicit "false" the first
 	// master needs survives marshalling: nobody can approve its serving CSR
 	// until Deckhouse is installed.
 	ServerTLSBootstrap  *bool                `json:"serverTLSBootstrap,omitempty"`
-	NodeIP              string               `json:"nodeIP,omitempty"`
-	ResourceReservation *ResourceReservation `json:"resourceReservation,omitempty"`
+	ResourceReservation *resourceReservation `json:"resourceReservation,omitempty"`
 }
 
-// ResourceReservation controls how much of the node is kept for the system.
-type ResourceReservation struct {
+// resourceReservation controls how much of the node is kept for the system.
+type resourceReservation struct {
 	Mode string `json:"mode"`
 }
 
-// Taint is a Kubernetes taint applied while kubelet registers the node.
-type Taint struct {
-	Key    string `json:"key"`
-	Value  string `json:"value,omitempty"`
-	Effect string `json:"effect"`
-}
-
-// ContainerRuntime configures containerd.
-type ContainerRuntime struct {
+// containerRuntime configures containerd.
+type containerRuntime struct {
 	SandboxImage           string `json:"sandboxImage,omitempty"`
 	MaxConcurrentDownloads int    `json:"maxConcurrentDownloads,omitempty"`
 }
 
-// UpdatePolicy controls how and when the node updates itself.
-type UpdatePolicy struct {
-	Mode   string       `json:"mode,omitempty"`
-	Window UpdateWindow `json:"window,omitempty"`
+// updatePolicy controls how and when the node updates itself.
+type updatePolicy struct {
+	Mode string `json:"mode,omitempty"`
 }
 
-// UpdateWindow is the maintenance window updates are allowed in.
-type UpdateWindow struct {
-	From string   `json:"from,omitempty"`
-	To   string   `json:"to,omitempty"`
-	Days []string `json:"days,omitempty"`
-}
-
-// ControlPlaneConfig is the document written to /config/controlplane.yaml. The
+// controlPlaneConfig is the document written to /config/controlplane.yaml. The
 // node generates the cluster PKI, renders the manifests and brings its own
 // apiserver up from the inputs carried here.
-type ControlPlaneConfig struct {
+type controlPlaneConfig struct {
 	APIVersion string           `json:"apiVersion"`
 	Kind       string           `json:"kind"`
-	Metadata   ObjectMeta       `json:"metadata"`
-	Spec       ControlPlaneSpec `json:"spec"`
+	Metadata   objectMeta       `json:"metadata"`
+	Spec       controlPlaneSpec `json:"spec"`
 }
 
-// ControlPlaneSpec is the desired state of the node's control plane.
-type ControlPlaneSpec struct {
+// controlPlaneSpec is the desired state of the node's control plane.
+type controlPlaneSpec struct {
 	// Bootstrap marks the very first control-plane node: the one that has to
 	// create the initial cluster objects nobody else can create yet.
 	Bootstrap bool `json:"bootstrap"`
 	// Cluster are the cluster-wide inputs behind the certificate SANs and the
 	// command line of every control-plane component.
-	Cluster ClusterParams `json:"cluster"`
+	Cluster clusterParamsSpec `json:"cluster"`
 	// Images are the digests of the four static-pod images. They come from the
 	// digest map of the release the installer was built from, which the node
 	// cannot reach.
-	Images ControlPlaneImages `json:"images"`
-	// Handoff is the one-shot channel dhctl collects the admin kubeconfig
+	Images controlPlaneImages `json:"images"`
+	// handoff is the one-shot channel dhctl collects the admin kubeconfig
 	// through once the node has a control plane.
-	Handoff Handoff `json:"handoff"`
+	Handoff handoff `json:"handoff"`
 }
 
-// ClusterParams are the cluster-wide settings the node needs to issue its own
+// clusterParamsSpec are the cluster-wide settings the node needs to issue its own
 // certificates and render the control-plane manifests.
-type ClusterParams struct {
+type clusterParamsSpec struct {
 	ClusterDomain     string `json:"clusterDomain"`
 	ServiceSubnetCIDR string `json:"serviceSubnetCIDR"`
 	PodSubnetCIDR     string `json:"podSubnetCIDR"`
@@ -233,23 +206,23 @@ type ClusterParams struct {
 	CertSANs []string `json:"certSANs,omitempty"`
 }
 
-// ControlPlaneImages are the digests of the four static-pod images. The node
-// prepends the registry address and path from NodeConfig.spec.registry to build
+// controlPlaneImages are the digests of the four static-pod images. The node
+// prepends the registry address and path from nodeConfig.spec.registry to build
 // the reference, which is why only the digest travels here.
-type ControlPlaneImages struct {
+type controlPlaneImages struct {
 	Etcd                  string `json:"etcd"`
 	KubeAPIServer         string `json:"kubeApiserver"`
 	KubeControllerManager string `json:"kubeControllerManager"`
 	KubeScheduler         string `json:"kubeScheduler"`
 }
 
-// Handoff is the TLS material and the bearer token of the one-shot endpoint the
+// handoff is the TLS material and the bearer token of the one-shot endpoint the
 // node serves the admin kubeconfig on.
 //
 // The key here belongs to that endpoint alone and is worth nothing once the
 // bootstrap is over: it protects one read of one file, and the endpoint closes
 // after it. No cluster key ever travels in this document.
-type Handoff struct {
+type handoff struct {
 	Token      string `json:"token"`
 	ServerCert string `json:"serverCert"`
 	ServerKey  string `json:"serverKey"`

@@ -33,9 +33,9 @@ const (
 	NodeTypeStatic         NodeType = "Static"
 )
 
-// SystemType selects how the node is managed: the classic mutable node configured
-// by bashible, or an olcedar node — a type 1 hypervisor reconciled by the
-// on-node agent (nodelet) from a NodeConfig object.
+// SystemType selects how the node is managed: the classic mutable node
+// configured by bashible, or an immutable node the on-node agent (nodelet)
+// reconciles from a NodeConfig object.
 // +kubebuilder:validation:Enum=Mutable;Immutable
 type SystemType string
 
@@ -80,9 +80,9 @@ type NodeGroupSpec struct {
 	// +kubebuilder:validation:Required
 	NodeType NodeType `json:"nodeType"`
 
-	// SystemType selects how the node is managed. An Immutable node runs
-	// olcedar, a type 1 hypervisor, and is reconciled from a NodeConfig object
-	// instead of by bashible; the field cannot be changed after creation.
+	// SystemType selects how the node is managed. An Immutable node is
+	// reconciled from a NodeConfig object by the agent on the node instead of by
+	// bashible. Once the field names a value it cannot be changed.
 	// +optional
 	SystemType SystemType `json:"systemType,omitempty"`
 

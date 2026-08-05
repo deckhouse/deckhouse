@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -48,7 +49,7 @@ func handoffTestServer(t *testing.T, material *HandoffMaterial, handler http.Han
 // by the node's NAME while dhctl dials an address nobody knew when the
 // certificate was issued.
 func TestFetchKubeconfig(t *testing.T) {
-	material, err := NewHandoffMaterial(handoffTestNodeName)
+	material, err := generateHandoffMaterial(handoffTestNodeName)
 	require.NoError(t, err)
 
 	var presented string
@@ -72,7 +73,7 @@ func TestFetchKubeconfig(t *testing.T) {
 // for a name and not for an address: anything else answering on that address
 // must not be able to hand dhctl a kubeconfig.
 func TestFetchKubeconfigVerifiesTheNodeName(t *testing.T) {
-	material, err := NewHandoffMaterial(handoffTestNodeName)
+	material, err := generateHandoffMaterial(handoffTestNodeName)
 	require.NoError(t, err)
 
 	address := handoffTestServer(t, material, func(w http.ResponseWriter, _ *http.Request) {
@@ -86,7 +87,7 @@ func TestFetchKubeconfigVerifiesTheNodeName(t *testing.T) {
 	})
 	require.Error(t, err)
 
-	other, err := NewHandoffMaterial(handoffTestNodeName)
+	other, err := generateHandoffMaterial(handoffTestNodeName)
 	require.NoError(t, err)
 	other.Token = material.Token
 
@@ -112,7 +113,7 @@ func TestFetchKubeconfigHopelessAnswers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			material, err := NewHandoffMaterial(handoffTestNodeName)
+			material, err := generateHandoffMaterial(handoffTestNodeName)
 			require.NoError(t, err)
 
 			address := handoffTestServer(t, material, func(w http.ResponseWriter, _ *http.Request) {
@@ -145,6 +146,36 @@ func TestHandoffMaterialIsReusedAcrossAttempts(t *testing.T) {
 	require.Equal(t, first, second)
 }
 
+// TestHandoffPayloadSurvivesTheConfirmedHandover is the same guard one step
+// later. The confirmation drops the installer's client key from the cache, and
+// a run that fails after it — installing Deckhouse takes minutes — is rerun by
+// the operator. What the payload renders to then has to be byte for byte what
+// the master booted with: the document travels in the cloudConfig tfvar and ends
+// up in the node's user_data, so one different byte is a node dhctl can no
+// longer authenticate to.
+func TestHandoffPayloadSurvivesTheConfirmedHandover(t *testing.T) {
+	stateCache := cache.NewTestCache()
+
+	first, err := HandoffMaterialFor(t.Context(), stateCache, handoffTestNodeName)
+	require.NoError(t, err)
+	before, err := yaml.Marshal(handoffPayload(*first))
+	require.NoError(t, err)
+
+	require.NoError(t, ForgetHandoffClientKey(t.Context(), stateCache))
+
+	second, err := HandoffMaterialFor(t.Context(), stateCache, handoffTestNodeName)
+	require.NoError(t, err)
+	after, err := yaml.Marshal(handoffPayload(*second))
+	require.NoError(t, err)
+
+	require.Equal(t, string(before), string(after))
+
+	// And the one part that is not in the payload is gone: it is the private key
+	// behind a cluster-admin certificate, and the cache outlives the bootstrap.
+	require.NotEmpty(t, first.ClientKeyPEM)
+	require.Empty(t, second.ClientKeyPEM)
+}
+
 // TestRetargetKubeconfig covers what the node cannot get right: it writes the
 // kubeconfig for its own use, pointing at a loopback proxy that means nothing
 // off the node.
@@ -168,7 +199,7 @@ users:
     token: secret
 `
 
-	out, err := RetargetKubeconfig([]byte(collected), "https://192.168.1.10:6443")
+	out, err := RetargetKubeconfig(t.Context(), []byte(collected), "https://192.168.1.10:6443")
 	require.NoError(t, err)
 	require.Contains(t, string(out), "server: https://192.168.1.10:6443")
 	require.NotContains(t, string(out), "6445")

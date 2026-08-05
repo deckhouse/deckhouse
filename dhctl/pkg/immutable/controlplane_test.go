@@ -28,7 +28,7 @@ import (
 // setting the node cannot interpret: "Automatic" is an installer default, and
 // the node would render it straight into the feature gates of every component.
 func TestClusterParamsResolvesAutomaticKubernetesVersion(t *testing.T) {
-	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig := testMetaConfig(t)
 	metaConfig.ClusterConfig["kubernetesVersion"] = json.RawMessage(`"Automatic"`)
 
 	params, err := clusterParams(metaConfig)
@@ -40,11 +40,11 @@ func TestClusterParamsResolvesAutomaticKubernetesVersion(t *testing.T) {
 // them renders as an empty flag when it is missing, and the component then dies
 // on its own command line with nothing pointing back at the configuration.
 func TestClusterParams(t *testing.T) {
-	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig := testMetaConfig(t)
 
 	params, err := clusterParams(metaConfig)
 	require.NoError(t, err)
-	require.Equal(t, ClusterParams{
+	require.Equal(t, clusterParamsSpec{
 		ClusterDomain:           "cluster.local",
 		ServiceSubnetCIDR:       "10.223.0.0/16",
 		PodSubnetCIDR:           "10.222.0.0/16",
@@ -55,7 +55,7 @@ func TestClusterParams(t *testing.T) {
 
 	for _, key := range []string{"clusterDomain", "serviceSubnetCIDR", "podSubnetCIDR", "podSubnetNodeCIDRPrefix"} {
 		t.Run("missing "+key, func(t *testing.T) {
-			metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+			metaConfig := testMetaConfig(t)
 			delete(metaConfig.ClusterConfig, key)
 
 			_, err := clusterParams(metaConfig)
@@ -66,13 +66,13 @@ func TestClusterParams(t *testing.T) {
 
 // TestResolveControlPlaneImages pins what travels to the node: bare digests.
 // The node prepends the registry address and path itself, from the registry it
-// was given in NodeConfig.
+// was given in nodeConfig.
 func TestResolveControlPlaneImages(t *testing.T) {
-	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig := testMetaConfig(t)
 
-	images, err := ResolveControlPlaneImages(metaConfig)
+	images, err := ResolveControlPlaneImages(t.Context(), metaConfig)
 	require.NoError(t, err)
-	require.Equal(t, ControlPlaneImages{
+	require.Equal(t, controlPlaneImages{
 		Etcd:                  testEtcdDigest,
 		KubeAPIServer:         testAPIServerDigest,
 		KubeControllerManager: testControllerManagerDigest,
@@ -84,10 +84,10 @@ func TestResolveControlPlaneImages(t *testing.T) {
 // guards: an installer that does not ship a control plane for the requested
 // minor hands the node an empty image and the static pod never starts.
 func TestResolveControlPlaneImagesMissingVersion(t *testing.T) {
-	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig := testMetaConfig(t)
 	metaConfig.ClusterConfig["kubernetesVersion"] = json.RawMessage(`"1.30"`)
 
-	_, err := ResolveControlPlaneImages(metaConfig)
+	_, err := ResolveControlPlaneImages(t.Context(), metaConfig)
 	require.ErrorContains(t, err, `no "controlPlaneManager"."kubeApiserver130" image digest`)
 	require.ErrorContains(t, err, "Kubernetes 1.30")
 }
@@ -123,7 +123,7 @@ func TestCertSANs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+			metaConfig := testMetaConfig(t)
 			if tt.settings != nil {
 				metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, &config.ModuleConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "control-plane-manager"},

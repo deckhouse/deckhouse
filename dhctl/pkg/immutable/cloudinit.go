@@ -15,9 +15,15 @@
 package immutable
 
 import (
+	"context"
+	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 const (
@@ -33,7 +39,53 @@ const (
 	controlPlaneConfigPath = "/config/controlplane.yaml"
 )
 
-// BuildCloudConfig wraps both payload documents into the single #cloud-config
+// MasterPayloadInput is everything BuildMasterPayload needs.
+type MasterPayloadInput struct {
+	// NodeName is the name the first master registers under. It is also the name
+	// the handoff endpoint's certificate is issued for.
+	NodeName string
+	// MetaConfig is the parsed cluster configuration.
+	MetaConfig *config.MetaConfig
+	// StateCache carries the handoff material between bootstrap attempts.
+	StateCache state.Cache
+}
+
+// BuildMasterPayload renders the cloud-init the first master boots with. The
+// node has no sshd and no bashible, so everything dhctl would otherwise upload
+// afterwards has to be in here.
+//
+// The result is base64-encoded because that is what the "cloudConfig" tfvar
+// carries: every provider's terraform base64decodes it before writing the
+// cloud-init secret, and the only other producer of that variable (the cloud
+// config secret read in kubernetes/actions/entity) encodes it too. The document
+// underneath stays plain — it is pinned by a golden file.
+func BuildMasterPayload(ctx context.Context, in MasterPayloadInput) (string, error) {
+	nodeConfig, err := buildNodeConfig(ctx, nodeConfigInput{
+		NodeName:   in.NodeName,
+		MetaConfig: in.MetaConfig,
+	})
+	if err != nil {
+		return "", fmt.Errorf("build node config: %w", err)
+	}
+
+	controlPlaneConfig, err := buildControlPlaneConfig(ctx, controlPlaneInput{
+		NodeName:   in.NodeName,
+		MetaConfig: in.MetaConfig,
+		StateCache: in.StateCache,
+	})
+	if err != nil {
+		return "", fmt.Errorf("build control-plane config: %w", err)
+	}
+
+	document, err := buildCloudConfig(nodeConfig, controlPlaneConfig)
+	if err != nil {
+		return "", fmt.Errorf("build cloud config: %w", err)
+	}
+
+	return base64.StdEncoding.EncodeToString([]byte(document)), nil
+}
+
+// buildCloudConfig wraps both payload documents into the single #cloud-config
 // document the VM boots with.
 //
 // The generator on the node accepts plain content only — the "encoding" and
@@ -41,21 +93,21 @@ const (
 // concatenates this document with a block of its own, so no top-level key it
 // also emits (hostname, users, ssh_authorized_keys) may appear here: a
 // duplicate key breaks the parsing of the whole user-data.
-func BuildCloudConfig(nodeConfig *NodeConfig, controlPlaneConfig *ControlPlaneConfig) (string, error) {
+func buildCloudConfig(nodeConfig *nodeConfig, controlPlaneConfig *controlPlaneConfig) (string, error) {
 	if nodeConfig == nil {
-		return "", fmt.Errorf("build cloud config: node config is nil")
+		return "", errors.New("build cloud config: node config is nil")
 	}
 	if controlPlaneConfig == nil {
-		return "", fmt.Errorf("build cloud config: control-plane config is nil")
+		return "", errors.New("build cloud config: control-plane config is nil")
 	}
 
 	nodeConfigYAML, err := yaml.Marshal(nodeConfig)
 	if err != nil {
-		return "", fmt.Errorf("marshal NodeConfig: %w", err)
+		return "", fmt.Errorf("marshal nodeConfig: %w", err)
 	}
 	controlPlaneYAML, err := yaml.Marshal(controlPlaneConfig)
 	if err != nil {
-		return "", fmt.Errorf("marshal ControlPlaneConfig: %w", err)
+		return "", fmt.Errorf("marshal controlPlaneConfig: %w", err)
 	}
 
 	cloudConfig := map[string]any{

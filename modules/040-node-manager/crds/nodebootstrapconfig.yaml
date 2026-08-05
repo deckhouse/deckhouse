@@ -55,6 +55,7 @@ spec:
               live cluster state, not carried in the object.
             type: object
           status:
+            description: State of the bootstrap request.
             type: object
             properties:
               dataSecretName:
@@ -70,6 +71,7 @@ spec:
                     description: True once the bootstrap Secret has been rendered.
                     type: boolean
               conditions:
+                description: Why the bootstrap data is or is not available yet.
                 type: array
                 items:
                   type: object

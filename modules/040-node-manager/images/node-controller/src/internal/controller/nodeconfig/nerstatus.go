@@ -23,7 +23,6 @@ import (
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,9 +48,7 @@ const phaseDegraded = "Degraded"
 func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logger) {
 	ners := &deckhousev1alpha1.NodeExtensionRequestList{}
 	if err := r.Client.List(ctx, ners); err != nil {
-		if !apierrors.IsNotFound(err) {
-			logger.Error(err, "cannot list NodeExtensionRequests for status")
-		}
+		logger.Error(err, "cannot list NodeExtensionRequests for status")
 		return
 	}
 	if len(ners.Items) == 0 {
@@ -59,7 +56,11 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 	}
 
 	conflicts := resolveNERConflicts(ners.Items)
-	groups := r.immutableNodeGroupNames(ctx, logger)
+	groups, err := r.immutableNodeGroupNames(ctx)
+	if err != nil {
+		logger.Error(err, "cannot report NodeExtensionRequest statuses")
+		return
+	}
 
 	for i := range ners.Items {
 		if err := r.updateNERStatus(ctx, &ners.Items[i], conflicts, groups); err != nil {
@@ -69,13 +70,13 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 }
 
 // immutableNodeGroupNames lists the names of the immutable NodeGroups a request
-// can select. A listing failure yields no names — the status simply reports no
-// matched groups rather than blocking.
-func (r *Reconciler) immutableNodeGroupNames(ctx context.Context, logger logr.Logger) []string {
+// can select. A listing failure is reported rather than answered with no names:
+// "no groups matched" is a fact about the cluster, and publishing it from a read
+// that did not happen tells every operator their request selects nothing.
+func (r *Reconciler) immutableNodeGroupNames(ctx context.Context) ([]string, error) {
 	ngs := &v1.NodeGroupList{}
 	if err := r.Client.List(ctx, ngs); err != nil {
-		logger.Error(err, "cannot list NodeGroups for NodeExtensionRequest status")
-		return nil
+		return nil, fmt.Errorf("list NodeGroups: %w", err)
 	}
 	var names []string
 	for i := range ngs.Items {
@@ -83,7 +84,7 @@ func (r *Reconciler) immutableNodeGroupNames(ctx context.Context, logger logr.Lo
 			names = append(names, ngs.Items[i].Name)
 		}
 	}
-	return names
+	return names, nil
 }
 
 // updateNERStatus computes and patches one request's status, skipping the write
@@ -178,6 +179,8 @@ func conflictMessage(conflict nerConflict) string {
 		return "sysext name is reserved for a platform extension"
 	case reasonConflict:
 		return fmt.Sprintf("sysext %s already claimed by NodeExtensionRequest %q", conflict.field, conflict.winner)
+	case reasonModuleConflict:
+		return fmt.Sprintf("kernel module %q is already loaded with different parameters by NodeExtensionRequest %q", conflict.field, conflict.winner)
 	default:
 		return conflict.reason
 	}
