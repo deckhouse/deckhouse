@@ -86,7 +86,8 @@ data:
 
 	DescribeTable("publishAPI discovery cert",
 		func(in inputPublishAPICACert, out string) {
-			f.BindingContexts.Set(f.KubeStateSet(in.manifests))
+			f.KubeStateSet(in.manifests)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", in.publishAPIMode)
 			f.ValuesSet("global.modules.https.mode", in.httpsMode)
 
@@ -204,7 +205,8 @@ data:
 		BeforeEach(func() {
 			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "SelfSigned")
 			f.ValuesSet("global.modules.https.mode", "CertManager")
-			f.BindingContexts.Set(f.KubeStateSet(selfSignedCertSecret + certManagerCertSecret + customCertSecret))
+			f.KubeStateSet(selfSignedCertSecret + certManagerCertSecret + customCertSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -212,6 +214,24 @@ data:
 			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Global mode with kubeconfigGeneratorMasterCA set and all secrets in cluster", func() {
+		BeforeEach(func() {
+			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			f.ValuesSet("global.modules.https.mode", "CertManager")
+			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.global.kubeconfigGeneratorMasterCA", "")
+			f.KubeStateSet(selfSignedCertSecret + certManagerCertSecret + customCertSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should keep every secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeTrue())
 		})
 	})
 })

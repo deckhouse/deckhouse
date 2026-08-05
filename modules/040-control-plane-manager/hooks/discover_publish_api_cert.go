@@ -25,6 +25,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -67,7 +68,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: possiblePublishAPISecretNames,
 			},
-			FilterFunc: applyPublishAPICertFilter,
+			// Run only in BeforeHelm: publish_api_from_cm (Order 5) writes the real
+			// publishAPI mode there. On other runs the mode may still be the schema
+			// default, and getCert would delete the active mode's secret.
+			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			FilterFunc:                   applyPublishAPICertFilter,
 		},
 	},
 }, discoverPublishAPICA)
