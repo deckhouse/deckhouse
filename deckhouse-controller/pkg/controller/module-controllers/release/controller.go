@@ -280,6 +280,15 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.deleteRelease(ctx, release)
 	}
 
+	// Materialize the release in the package system as a draft version (best
+	// effort): promotion is owned by the module-package-version controller, and
+	// a failed attempt retries on the next reconcile of this release.
+	if app.ModulePackagesEnabled() {
+		if err := r.ensureModulePackageVersion(ctx, release); err != nil {
+			r.log.Warn("failed to ensure module package version", slog.String("release", release.GetName()), log.Err(err))
+		}
+	}
+
 	// handle create/update events
 	res, err := r.handleRelease(ctx, release)
 	if err != nil {
@@ -1949,4 +1958,79 @@ func (r *reconciler) isModuleReady(ctx context.Context, moduleName string) bool 
 	}
 
 	return module.Status.Phase == v1alpha1.ModulePhaseReady
+}
+
+// ensureModulePackageVersion materializes the release in the package system as
+// a draft ModulePackageVersion if one does not exist yet. The version carries
+// the legacy label: release images live under the "<module>/release" registry
+// path and describe themselves with module.yaml, which is what the promotion
+// pipeline in the module-package-version controller expects from legacy
+// packages. spec.packageRepositoryName is the release's ModuleSource name — the
+// draft stays unpromoted until a PackageRepository with that name exists.
+func (r *reconciler) ensureModulePackageVersion(ctx context.Context, release *v1alpha1.ModuleRelease) error {
+	logger := r.log.With(slog.String("release", release.GetName()))
+
+	// A release without a source cannot name its repository; there is nothing
+	// to retry until the release gets one.
+	source := release.GetModuleSource()
+	if source == "" {
+		logger.Warn("module release has no module source, skip the package version")
+		return nil
+	}
+
+	// Normalize the version the way the repository scan does ("v" + canonical
+	// semver). Spec.Version is not schema-validated as semver, so a broken
+	// value must not panic the reconciler (the release's GetVersion would).
+	parsed, err := semver.NewVersion(release.Spec.Version)
+	if err != nil {
+		logger.Warn("module release version is not semver, skip the package version",
+			slog.String("version", release.Spec.Version), log.Err(err))
+		return nil
+	}
+	version := "v" + parsed.String()
+
+	name := v1alpha1.MakeModulePackageVersionName(source, release.GetModuleName(), version)
+
+	mpv := new(v1alpha1.ModulePackageVersion)
+	err = r.client.Get(ctx, client.ObjectKey{Name: name}, mpv)
+	if err == nil {
+		return nil
+	}
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get module package version '%s': %w", name, err)
+	}
+
+	mpv = &v1alpha1.ModulePackageVersion{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.ModulePackageVersionGVK.GroupVersion().String(),
+			Kind:       v1alpha1.ModulePackageVersionKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				v1alpha1.ModulePackageVersionLabelRepository: source,
+				v1alpha1.ModulePackageVersionLabelPackage:    release.GetModuleName(),
+				v1alpha1.ModulePackageVersionLabelDraft:      "true",
+				v1alpha1.ModulePackageVersionLabelLegacy:     "true",
+			},
+		},
+		Spec: v1alpha1.ModulePackageVersionSpec{
+			PackageName:           release.GetModuleName(),
+			PackageVersion:        version,
+			PackageRepositoryName: source,
+		},
+	}
+
+	if err = r.client.Create(ctx, mpv); err != nil {
+		// Another reconcile won the race; the version exists — done.
+		if apierrors.IsAlreadyExists(err) {
+			return nil
+		}
+		return fmt.Errorf("create module package version '%s': %w", name, err)
+	}
+
+	logger.Info("created draft module package version", slog.String("mpv", name))
+
+	return nil
 }

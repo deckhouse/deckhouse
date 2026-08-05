@@ -136,9 +136,8 @@ type Config struct {
 	GlobalValuesGetter GlobalValuesGetter
 }
 
-// GlobalValuesGetter returns the platform global values. With withPrefix=false the
-// bare global tree is returned; withPrefix=true wraps it under a "global" key.
-type GlobalValuesGetter func(withPrefix bool) addonutils.Values
+// GlobalValuesGetter returns the platform global values.
+type GlobalValuesGetter func() addonutils.Values
 
 // NewAppByConfig creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -262,7 +261,7 @@ func (a *Application) GetRuntimeValues() string {
 	// global.<path> as .Platform.<path>.
 	var global addonutils.Values
 	if a.globalValuesGetter != nil {
-		global = a.globalValuesGetter(false)
+		global = a.globalValuesGetter()
 	}
 	marshalledPlatform, _ := json.Marshal(global)
 
