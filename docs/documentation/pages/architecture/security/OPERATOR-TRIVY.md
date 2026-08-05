@@ -145,11 +145,11 @@ The module consists of the following components:
 
    The Deckhouse controller deploys this component if the [`.settings.nodeAgent.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-nodeagent-enabled) parameter of the ModuleConfig custom resource is set to `true` (default is `false`).
 
-1. **Scan-noderootfs-&lt;hash&gt;** (Job): A component that includes a single **node-rootfs-scanner** container and implements a task to scan the node root filesystem (scan-noderootfs). The task is created and managed by the operator component.
+1. **Scan-noderootfs-&lt;HASH&gt;** (Job): A component that includes a single **node-rootfs-scanner** container and implements a task to scan the node root filesystem (scan-noderootfs). The task is created and managed by the operator component.
 
-1. **Scan-vulnerabilityreport-&lt;hash&gt;** (Job): A component that launches tasks for security scanning of Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob, and Job resources by using the trivy-server component. The task is created and managed by the `operator` component.
+1. **Scan-vulnerabilityreport-&lt;HASH&gt;** (Job): A component that launches tasks for security scanning of Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob, and Job resources by using the trivy-server component. The task is created and managed by the `operator` component.
 
-   Consists of a set of **&lt;container-name&gt;** containers, each responsible for scanning the corresponding workload container. Their base image is Trivy with an added trivy-wrapper. The target container image from the workload specification is passed in arguments. Trivy-wrapper authenticates to the registry storage by using the `trivy registry login` command and then hands control over to Trivy.
+   Consists of a set of **&lt;CONTAINER_NAME&gt;** containers, each responsible for scanning the corresponding workload container. Their base image is Trivy with an added trivy-wrapper. The target container image from the workload specification is passed in arguments. Trivy-wrapper authenticates to the registry storage by using the `trivy registry login` command and then hands control over to Trivy.
 
 ## Module interactions
 

@@ -147,11 +147,11 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
    Deckhouse-контроллер разворачивает этот компонент, если параметр [`.settings.nodeAgent.enabled`](/modules/operator-trivy/stable/configuration.html#parameters-nodeagent-enabled) кастомного ресурса ModuleConfig принимает значение `true` (по умолчанию — `false`).
 
-1. **Scan-noderootfs-&lt;hash&gt;** (Job) — компонент, состоящий из одного контейнера **node-rootfs-scanner**, реализует задачу по сканированию корневой файловой системы (scan-noderootfs) узла кластера. Задача создаётся и управляется компонентом operator.
+1. **Scan-noderootfs-&lt;HASH&gt;** (Job) — компонент, состоящий из одного контейнера **node-rootfs-scanner**, реализует задачу по сканированию корневой файловой системы (scan-noderootfs) узла кластера. Задача создаётся и управляется компонентом operator.
 
-1. **Scan-vulnerabilityreport-&lt;hash&gt;** (Job) — компонент обеспечивает запуск задач по сканированию безопасности Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob и Job с использованием компонента trivy-server. Задача создаётся и управляется компонентом operator.
+1. **Scan-vulnerabilityreport-&lt;HASH&gt;** (Job) — компонент обеспечивает запуск задач по сканированию безопасности Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob и Job с использованием компонента trivy-server. Задача создаётся и управляется компонентом operator.
 
-   Состоит из набора контейнеров **&lt;container-name&gt;**, каждый из которых отвечает за сканирование соответствующего контейнера рабочей нагрузки (workload). В качестве базового образа для них используется образ trivy с добавленным trivy-wrapper, а в аргументах для него передаётся образ, заданный в спецификации целевого контейнера. Trivy-wrapper выполняет авторизацию у хранилищу образов командой `trivy registry login`, а после передаёт управление trivy.
+   Состоит из набора контейнеров **&lt;CONTAINER_NAME&gt;**, каждый из которых отвечает за сканирование соответствующего контейнера рабочей нагрузки (workload). В качестве базового образа для них используется образ trivy с добавленным trivy-wrapper, а в аргументах для него передаётся образ, заданный в спецификации целевого контейнера. Trivy-wrapper выполняет авторизацию у хранилищу образов командой `trivy registry login`, а после передаёт управление trivy.
 
 ## Взаимодействия модуля
 
