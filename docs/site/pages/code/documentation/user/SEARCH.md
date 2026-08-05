@@ -205,9 +205,9 @@ A search scope is defined via the required parameter `scope`. Supported values d
 
 | `Scope` value | Instance | Group | Project | Backend when OpenSearch is enabled |
 |---|---|---|---|---|
-| `projects` | ✅ | ✅ | ❌ | CE/PostgreSQL |
-| `users` | ✅ | ✅ | ✅ | CE/PostgreSQL |
-| `snippet_titles` | ✅ | ❌ | ❌ | CE/PostgreSQL |
+| `projects` | ✅ | ✅ | ❌ | PostgreSQL |
+| `users` | ✅ | ✅ | ✅ | PostgreSQL |
+| `snippet_titles` | ✅ | ❌ | ❌ | PostgreSQL |
 | `issues` | ✅ | ✅ | ✅ | OpenSearch (`advanced`) |
 | `work_items` | ✅ | ✅ | ✅ | OpenSearch (`advanced`) |
 | `merge_requests` | ✅ | ✅ | ✅ | OpenSearch (`advanced`) |
@@ -236,7 +236,7 @@ The set of API scopes differs from the [search scopes in the web interface](#sea
 | `state` | string | No | All | Object state: `all`, `opened`, `closed`, `merged` |
 | `type` | array[string] | No | All | Work item type filter (effective for `work_items`) |
 
-#### OpenSearch and FE filter parameters
+#### Additional parameters
 
 Support for additional parameters depends on the selected search scope.
 If a parameter is submitted with invalid `scope` values, API returns the `400` response with the message `<param_name> is supported only for <scope list>`.
@@ -298,7 +298,7 @@ curl --request GET \
   --url "https://gitlab.example.com/api/v4/search?scope=issues&search=deploy&fields=title&label_name=team%3Aplatform&exclude_forks=true"
 ```
 
-#### Group search: merge requests with FE MR filters
+#### Group search: merge requests with filters
 
 ```bash
 curl --request GET \
