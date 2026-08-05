@@ -1,6 +1,6 @@
 ---
-title: "Расширенный поиск (OpenSearch)"
-menuTitle: Расширенный поиск
+title: "Расширенный поиск (администрирование)"
+menuTitle: Расширенный поиск (администрирование)
 searchable: true
 description: Настройка и эксплуатация расширенного поиска на базе OpenSearch в Deckhouse Code
 permalink: ru/code/documentation/admin/configuration/advanced-search.html

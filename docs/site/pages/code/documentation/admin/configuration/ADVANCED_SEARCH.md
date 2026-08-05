@@ -1,6 +1,6 @@
 ---
-title: "Advanced search (OpenSearch)"
-menuTitle: Advanced search
+title: "Advanced search (administration)"
+menuTitle: Advanced search (administration)
 searchable: true
 description: Configure and operate advanced search powered by OpenSearch in Deckhouse Code
 permalink: en/code/documentation/admin/configuration/advanced-search.html

@@ -7,7 +7,7 @@ permalink: en/code/documentation/user/search.html
 lang: en
 weight: 45
 relatedLinks:
-  - title: "Advanced search (OpenSearch) — administrator guide"
+  - title: "Advanced search (administration)"
     url: ../admin/configuration/advanced-search.html
   - title: "Search API"
     url: search-api.html
@@ -180,29 +180,6 @@ Changing the regex triggers a full project reindex.
 - **Reindex wiki** — full reindex of the wiki (if a wiki repository exists).
 
 The **Index up to date** badge shows whether indexing is complete for the current repository state.
-
-#### API
-
-A maintainer can update the regex through the Projects API (`PUT /api/v4/projects/:id`):
-
-```shell
-curl --request PUT \
-  --header "PRIVATE-TOKEN: <token>" \
-  --header "Content-Type: application/json" \
-  --data '{"fe_project_setting_attributes":{"opensearch_indexed_branches_regex":"(feature|hotfix)/.*"}}' \
-  "https://code.example.com/api/v4/projects/<project_id>"
-```
-
-The current value is returned in `fe_project_setting_attributes.opensearch_indexed_branches_regex` on `GET /projects/:id`.
-
-Requirements:
-
-- advanced search is enabled on the instance (`advanced_search_enabled`);
-- **Allow per-project branch regex** mode is enabled;
-- regex uses RE2 syntax, maximum 255 characters;
-- an empty string clears the regex.
-
-A successful update enqueues a full code reindex for the project.
 
 ### Group settings
 

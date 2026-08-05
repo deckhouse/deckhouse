@@ -28,8 +28,8 @@ entries:
           ru: Режим обслуживания
         url: /code/documentation/admin/configuration/maintenance-mode.html
       - title:
-          en: Advanced search
-          ru: Расширенный поиск
+          en: Advanced search (administration)
+          ru: Расширенный поиск (администрирование)
         url: /code/documentation/admin/configuration/advanced-search.html
       - title:
           en: OpenSearch API
