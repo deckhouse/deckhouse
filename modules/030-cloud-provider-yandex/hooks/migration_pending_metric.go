@@ -17,14 +17,13 @@ limitations under the License.
 package hooks
 
 import (
-	ycmeta "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/meta"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cloud_provider_migration_pending_metric"
 	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal"
 )
 
 var _ = cloud_provider_migration_pending_metric.RegisterHook(
 	internal.YandexMigrationConfigMapName,
-	ycmeta.Namespace,
+	internal.Namespace,
 	"d8_cloud_provider_yandexcloud_migration_pending",
 	"D8CloudProviderYandexCloudMigration",
 )

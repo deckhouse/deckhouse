@@ -27,9 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	ycicv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/instanceclass/v1"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal"
+	ycicv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/instanceclass/v1"
 )
 
 type instanceClassDefaultsFilterResult struct {

@@ -25,12 +25,11 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
-	yciccv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/instanceclass/v1"
-	ycpccv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/pcc/v1"
-	ycsettingsv1 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/settings/v1"
-	ycsettingsv2 "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/api/settings/v2"
-	ycmeta "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/meta"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	yciccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/instanceclass/v1"
+	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
+	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
+	ycsettingsv2 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v2"
 	"github.com/deckhouse/module-sdk/pkg"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
@@ -524,7 +523,7 @@ var _ = Describe("BuildCredentialsSecrets", func() {
 		secrets := BuildCredentialsSecrets(pcc)
 		Expect(secrets).To(HaveLen(1))
 		Expect(secrets[0].Name).To(Equal(cpapi.CredentialSecretName))
-		Expect(secrets[0].Namespace).To(Equal(ycmeta.Namespace))
+		Expect(secrets[0].Namespace).To(Equal(Namespace))
 		Expect(string(secrets[0].Type)).To(Equal(cpapi.CredentialsSecretType))
 		Expect(secrets[0].StringData[cpapi.CredentialSecretAuthSchemeKey]).To(Equal(string(cpapi.AuthSchemeServiceAccount)))
 		Expect(secrets[0].StringData[cpapi.CredentialSecretSecretKey]).To(Equal(`{"id":"my-sa"}`))
@@ -539,7 +538,7 @@ var _ = Describe("BuildCredentialsSecrets", func() {
 
 		secrets := BuildCredentialsSecrets(pcc)
 		Expect(secrets).To(HaveLen(1))
-		Expect(secrets[0].Name).To(Equal(ycmeta.ExporterCredentialSecretName))
+		Expect(secrets[0].Name).To(Equal(ExporterCredentialSecretName))
 		Expect(string(secrets[0].Type)).To(Equal(cpapi.CredentialsSecretType))
 		Expect(secrets[0].StringData[cpapi.CredentialSecretAuthSchemeKey]).To(Equal(string(cpapi.AuthSchemeAPIToken)))
 		Expect(secrets[0].StringData[cpapi.CredentialSecretSecretKey]).To(Equal("exporter-key-123"))
@@ -558,7 +557,7 @@ var _ = Describe("BuildCredentialsSecrets", func() {
 		secrets := BuildCredentialsSecrets(pcc)
 		Expect(secrets).To(HaveLen(2))
 		Expect(secrets[0].Name).To(Equal(cpapi.CredentialSecretName))
-		Expect(secrets[1].Name).To(Equal(ycmeta.ExporterCredentialSecretName))
+		Expect(secrets[1].Name).To(Equal(ExporterCredentialSecretName))
 	})
 
 	It("returns empty when no credentials are present", func() {
