@@ -129,10 +129,10 @@ openstack --os-region-name <REGION> availability zone list --compute
 
 CloudPermanent node groups are defined in the [`nodeGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups) section of the OpenStackClusterConfiguration resource. To limit availability zones, use the `nodeGroups[].zones` parameter.
 
-CloudEphemeral nodes are created with a separate [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with `nodeType: CloudEphemeral`. Availability zones for them are set in the `spec.cloudInstances.zones` parameter. If the [`zones`](cluster_configuration.html#openstackclusterconfiguration-zones) parameter is specified in OpenStackClusterConfiguration, the required zones must also be added to it.
+CloudEphemeral nodes are created with a separate [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with `nodeType: CloudEphemeral`. Availability zones for them are set in the [`spec.cloudInstances.zones`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) parameter. If the [`zones`](cluster_configuration.html#openstackclusterconfiguration-zones) parameter is specified in OpenStackClusterConfiguration, the required zones must also be added to it.
 
 {% alert level="info" %}
-If the admission webhook returns the `unknown zone` error when creating a NodeGroup, make sure that the specified zone belongs to the `provider.region` region and, when using the `zones` parameter, is included in the `OpenStackClusterConfiguration` zones list.
+If the admission webhook returns the `unknown zone` error when creating a NodeGroup, make sure that the specified zone belongs to the `provider.region` region and, when using the `zones` parameter, is included in the OpenStackClusterConfiguration zones list.
 {% endalert %}
 
 Nodes from another region can be added to the cluster only manually as Static nodes. The `cloud-provider-openstack` module does not create such nodes.
