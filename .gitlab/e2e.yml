@@ -16,7 +16,7 @@ variables:
   VAULT_ROLE: "deckhouse"
 
   E2E_RUN:
-    value: "false"
+    value: "true"
     options:
       - "false"
       - "true"
