@@ -84,7 +84,8 @@ The **Reindex** operation removes existing documents.
 Search results may be incomplete until background indexing catches up.
 {% endalert %}
 
-The **Reindex all indices** operation automatically enqueues background reindexing for Code, Wiki, and Note indices.
+The `commits` index is reindexed together with the `code` index: there is no separate operation for commits.
+For the same reason, commits have no dedicated `schema_class` value in the [OpenSearch API](opensearch-api.html).
 
 ### Admin API
 
