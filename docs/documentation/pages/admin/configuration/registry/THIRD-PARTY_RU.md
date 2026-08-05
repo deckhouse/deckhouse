@@ -9,10 +9,16 @@ lang: ru
 Информация на этой странице относится только к Managed Kubernetes-кластерам. В таких кластерах управление хранилищем образов через модуль `registry` недоступно.
 
 Для кластеров, полностью управляемых Deckhouse Kubernetes Platform (DKP), настройка хранилища образов выполняется через секцию [registry](/modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`. Пример настройки приведен в разделе [«Управление хранилищем образов в кластерах, полностью управляемых DKP»](managing-interaction.html).
+
+Информация на этой странице актуальна для кластеров, в которых в качестве основного container runtime используется containerd v1 или containerd v2. Но актуальным для DKP считается containerd v2. Если вам нужно мигрировать на containerd v2, воспользуйтесь разделом [«Миграция container runtime на containerd v2»](../platform-scaling/node/migrating.html) для проверки возможности и выполнения миграции.
 {% endalert %}
 
 {% alert level="warning" %}
 Использование хранилищ образов контейнеров, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
+{% endalert %}
+
+{% alert level="info" %}
+Способы добавления конфигурации для хранилища образов описаны в разделе [«Добавление конфигурации для дополнительного registry»](../platform-scaling/node/node-customization.html#добавление-конфигурации-для-дополнительного-registry).
 {% endalert %}
 
 Для переключения кластера на использование стороннего хранилища образов контейнеров выполните следующие действия:
