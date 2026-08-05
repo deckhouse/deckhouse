@@ -14,18 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubeclient
+package domain
 
-import (
-	corev1 "k8s.io/api/core/v1"
-)
+import "testing"
 
-func internalIP(node *corev1.Node) string {
-	for _, addr := range node.Status.Addresses {
-		if addr.Type == corev1.NodeInternalIP {
-			return addr.Address
+func TestQuorumSizeIsMajority(t *testing.T) {
+	tests := map[int]int{0: 1, 1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 4, 7: 4, 1000: 501}
+
+	for n, want := range tests {
+		if got := QuorumSize(n); got != want {
+			t.Errorf("QuorumSize(%d) = %d, want %d", n, got, want)
 		}
 	}
-
-	return ""
 }

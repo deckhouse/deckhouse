@@ -52,44 +52,6 @@ func objects(nodes ...*corev1.Node) []runtime.Object {
 	return out
 }
 
-func TestListNodeGroupSelectsOwnGroupOnly(t *testing.T) {
-	client := fake.NewSimpleClientset(objects(
-		node("worker-1", "worker", internal("10.0.0.1")),
-		node("worker-2", "worker", internal("10.0.0.2")),
-		node("master-1", "master", internal("10.0.0.3")),
-	)...)
-
-	peers, err := NewNodes(client).ListNodeGroup(t.Context(), "worker")
-	if err != nil {
-		t.Fatalf("list node group: %v", err)
-	}
-
-	if len(peers) != 2 {
-		t.Fatalf("expected 2 nodes of the worker group, got %v", peers)
-	}
-
-	for _, peer := range peers {
-		if peer.Name == "master-1" {
-			t.Errorf("node of another node group leaked into the result: %v", peers)
-		}
-	}
-}
-
-func TestListNodeGroupReportsMissingInternalIP(t *testing.T) {
-	client := fake.NewSimpleClientset(objects(
-		node("worker-1", "worker", corev1.NodeAddress{Type: corev1.NodeHostName, Address: "worker-1"}),
-	)...)
-
-	peers, err := NewNodes(client).ListNodeGroup(t.Context(), "worker")
-	if err != nil {
-		t.Fatalf("list node group: %v", err)
-	}
-
-	if len(peers) != 1 || peers[0].IP != "" {
-		t.Errorf("expected a single node with an empty IP, got %v", peers)
-	}
-}
-
 func TestResolveIdentityRequiresInternalIP(t *testing.T) {
 	client := fake.NewSimpleClientset(objects(
 		node("worker-1", "worker", corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: "1.2.3.4"}),

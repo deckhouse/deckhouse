@@ -41,6 +41,12 @@ rules:
       - get
       - update
       - patch
+  - apiGroups:
+      - node-manager.deckhouse.io
+    resources:
+      - fencingslaprofiles
+    verbs:
+      - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -16,10 +16,10 @@ limitations under the License.
 
 // Package v1alpha1 holds the fencing-agent API types.
 //
-// FencingFailedNodeState is a cluster CRD (hand-written manifest under crds/).
-// FencingAgentNodeView, FencingAgentPeer and FencingAgentEvent are served
-// read-only by the agent over its unix socket and must not be installed as
-// cluster CRDs.
+// FencingFailedNodeState and FencingSLAProfile are cluster CRDs (hand-written
+// manifests under crds/). FencingAgentNodeView, FencingAgentPeer and
+// FencingAgentEvent are served read-only by the agent over its unix socket and
+// must not be installed as cluster CRDs.
 // +kubebuilder:object:generate=true
 // +groupName=node-manager.deckhouse.io
 package v1alpha1

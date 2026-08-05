@@ -28,22 +28,39 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/fencingstate"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/agent"
 	"fencing-agent/internal/config"
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/usecase/profile"
 )
 
-const resolveIdentityTimeout = 30 * time.Second
+// resolveIdentityTimeout and profileLoadTimeout bound the worst-case startup
+// blocking (30s + 15s = 45s) before the health server starts, since it starts
+// only after both identity resolution and profile load finish. That total
+// must stay under the liveness kill window (~55s: initialDelay 15s + period
+// 20s x failureThreshold 3) or the kubelet kills the pod before it ever
+// answers a liveness probe.
+const (
+	resolveIdentityTimeout = 30 * time.Second
+	profileLoadTimeout     = 15 * time.Second
+)
 
 func main() {
 	cfg := &config.Config{}
-	cfg.MustLoad()
+	err := cfg.Load()
 
+	// The logger exists before the first error is reported: a configuration
+	// failure must produce a clean log line and exit, not a panic dump.
 	logger := newLogger(cfg.LogLevel)
 
-	if err := run(cfg, logger); err != nil {
+	if err == nil {
+		err = run(cfg, logger)
+	}
+
+	if err != nil {
 		logger.Error("fencing-agent failed", "error", err)
 		os.Exit(1)
 	}
@@ -80,7 +97,17 @@ func run(cfg *config.Config, logger *log.Logger) error {
 
 	cfg.NodeUID = identity.UID
 
-	return agent.New(cfg, deps, identity, logger).Run(ctx)
+	profileCtx, cancelProfile := context.WithTimeout(ctx, profileLoadTimeout)
+	defer cancelProfile()
+
+	// Exiting on any profile failure is deliberate (fail closed): the pod
+	// restart loop is the retry mechanism, CrashLoopBackOff is the visibility.
+	sla, err := profile.Load(profileCtx, fencingstate.NewProfiles(deps.FencingClient), v1alpha1.ProfileName(cfg.ProfileRefName), logger)
+	if err != nil {
+		return fmt.Errorf("load SLA profile: %w", err)
+	}
+
+	return agent.New(cfg, deps, identity, sla, logger).Run(ctx)
 }
 
 // resolveIdentity retries: a cloud controller may populate the InternalIP a few

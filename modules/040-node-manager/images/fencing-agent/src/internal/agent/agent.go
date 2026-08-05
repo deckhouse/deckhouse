@@ -31,20 +31,23 @@ import (
 	"fencing-agent/internal/controllers/health"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/usecase/join"
+	"fencing-agent/internal/usecase/membership"
 )
 
 type Agent struct {
 	cfg      *config.Config
 	deps     Deps
 	identity domain.NodeIdentity
+	sla      domain.SLA
 	logger   *log.Logger
 }
 
-func New(cfg *config.Config, deps Deps, identity domain.NodeIdentity, logger *log.Logger) *Agent {
+func New(cfg *config.Config, deps Deps, identity domain.NodeIdentity, sla domain.SLA, logger *log.Logger) *Agent {
 	return &Agent{
 		cfg:      cfg,
 		deps:     deps,
 		identity: identity,
+		sla:      sla,
 		logger:   logger,
 	}
 }
@@ -60,6 +63,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		"node_ip", a.identity.IP,
 		"node_group", a.cfg.NodeGroup,
 		"profile", a.cfg.ProfileRefName,
+		"probe_interval", a.sla.Memberlist.ProbeInterval.String(),
 		"memberlist_port", a.cfg.MemberlistPort,
 		"watchdog_device", a.cfg.WatchdogDevice,
 		"api_socket_path", a.cfg.APISocketPath,
@@ -70,6 +74,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		NodeGroup:     a.cfg.NodeGroup,
 		AdvertiseAddr: a.identity.IP,
 		Port:          a.cfg.MemberlistPort,
+		Tuning:        a.sla.Memberlist,
 	}, a.logger)
 	if err != nil {
 		return fmt.Errorf("create gossip network: %w", err)
@@ -81,14 +86,24 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 	}()
 
-	joiner := join.New(kubeclient.NewNodes(a.deps.K8sClient), cluster, join.Params{
+	// Expected membership: every Node labeled into the NodeGroup, served from
+	// the informer cache. The join seed list and the quorum size come from the
+	// same view, so they can never diverge.
+	members := membership.New(a.logger)
+
+	watcher, err := kubeclient.NewNodeWatcher(a.deps.K8sClient, a.cfg.NodeGroup, members, a.logger)
+	if err != nil {
+		return fmt.Errorf("create node watcher: %w", err)
+	}
+
+	joiner := join.New(members, cluster, join.Params{
 		NodeName:         a.identity.Name,
 		NodeIP:           a.identity.IP,
 		NodeGroup:        a.cfg.NodeGroup,
 		MemberlistPort:   a.cfg.MemberlistPort,
-		APITimeout:       a.cfg.KubernetesAPITimeout,
-		RetryInterval:    a.cfg.RejoinInterval,
-		MaxRetryInterval: a.cfg.RejoinMaxInterval,
+		APITimeout:       a.sla.Fallback.APITimeout,
+		RetryInterval:    a.sla.Rejoin.Interval,
+		MaxRetryInterval: a.sla.Rejoin.MaxInterval,
 	}, a.logger)
 
 	g, gctx := errgroup.WithContext(ctx)
@@ -98,6 +113,26 @@ func (a *Agent) Run(ctx context.Context) error {
 	})
 
 	g.Go(func() error {
+		watcher.Run(gctx)
+
+		return nil
+	})
+
+	g.Go(func() error {
+		// WaitForCacheSync blocks while the API is unreachable: the pod simply
+		// stays NotReady until it recovers. It returns false only on shutdown,
+		// never as a verdict on the cluster state (the profile, in contrast,
+		// fails closed).
+		a.logger.Info("waiting for node cache sync")
+
+		if !watcher.WaitForSync(gctx) {
+			a.logger.Info("node cache sync aborted by shutdown")
+
+			return nil
+		}
+
+		members.MarkSynced()
+
 		joiner.Bootstrap(gctx)
 
 		if gctx.Err() != nil {

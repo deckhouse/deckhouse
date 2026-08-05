@@ -449,6 +449,7 @@ func (k Kubelet) IsEmpty() bool {
 type Fencing struct {
 	// Set custom settings for fencing controller
 	Mode     string           `json:"mode,omitempty"`
+	Profile  string           `json:"profile,omitempty"`
 	Watchdog *FencingWatchdog `json:"watchdog,omitempty"`
 }
 

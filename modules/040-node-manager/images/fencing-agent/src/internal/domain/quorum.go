@@ -14,18 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubeclient
+package domain
 
-import (
-	corev1 "k8s.io/api/core/v1"
-)
-
-func internalIP(node *corev1.Node) string {
-	for _, addr := range node.Status.Addresses {
-		if addr.Type == corev1.NodeInternalIP {
-			return addr.Address
-		}
-	}
-
-	return ""
+func QuorumSize(n int) int {
+	return n/2 + 1
 }
