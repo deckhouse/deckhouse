@@ -11,15 +11,17 @@ spec:
     {{- end }}
     dockerCfg: {{ $.Values.global.modulesImages.registry.dockercfg }}
     {{- /*
-      `fetchBase`, not `base`. The two hold the same value on a cluster whose pull path the
-      registry module does not manage, but they answer different questions: `base` is where
-      image references point, resolved by the container runtime through the node agent it
-      was redirected to. This repository is fetched by the Deckhouse controller itself, over
-      HTTP, and it has to dial — so it names the agent on this node directly.
+      The same address image references are built from, and for the same reason: this
+      repository is not only fetched, it is also what the images of every module under it are
+      rendered from. Naming the node agent's loopback address here put that address into pod
+      specs, and a pod image reference must not be node-local — those pods kept running only
+      on content their nodes already held, while the agent answered 502 to every fresh pull,
+      a request naming the agent as its own registry being a loop.
 
-      The certificate authority above is left as the cluster knows it. It is not the one that
-      verifies the agent: the agent's is generated on each node and never leaves it, so no
-      cluster object can carry it, and the controller reads it from the node instead.
+      The Deckhouse controller, which is the one party that has to dial this, translates it
+      to the loopback address itself. The certificate authority above is left as the cluster
+      knows it: the agent's is generated on each node and never leaves it, so no cluster
+      object can carry it, and the controller reads it from the node instead.
     */}}
-    repo: {{ printf "%s/modules" $.Values.global.modulesImages.registry.fetchBase }}
+    repo: {{ printf "%s/modules" $.Values.global.modulesImages.registry.base }}
     scheme: {{ $.Values.global.modulesImages.registry.scheme | upper }}

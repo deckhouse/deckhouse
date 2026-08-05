@@ -103,6 +103,15 @@ var (
 	ModesRequiringModule = []ModeType{ModeDirect, ModeLocal, ModeProxy}
 )
 
+// IsInCluster reports whether a repository names the in-cluster registry.
+//
+// This is the address everything records — pod image references, a ModuleSource, a status —
+// and the one nothing dials: a container runtime is redirected to the node agent by a drop-in,
+// while a process has to translate it to the loopback address first.
+func IsInCluster(repository string) bool {
+	return repository == Host || strings.HasPrefix(repository, Host+"/")
+}
+
 // IsLocalAgent reports whether an image repository is served by the node agent on this
 // host rather than by a registry somewhere else.
 //

@@ -179,17 +179,26 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 
 			secret := f.KubernetesResource("Secret", "d8-system", "deckhouse-registry")
 			Expect(secret.Exists()).To(BeTrue())
-			for _, field := range []string{"data.imagesRegistry", "data.fetchRegistry"} {
-				value, err := base64.StdEncoding.DecodeString(secret.Field(field).String())
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(string(value)).To(Equal(dialable), field)
-				Expect(string(value)).ToNot(ContainSubstring(renderedFrom), field)
-			}
 
+			// What an out-of-cluster caller reads is composed from `address` and `path`, never
+			// from `base` — the fixture gives them different values so that a template reading
+			// the wrong one shows up here.
+			outside, err := base64.StdEncoding.DecodeString(secret.Field("data.imagesRegistry").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(outside)).To(Equal(dialable))
+			Expect(string(outside)).ToNot(ContainSubstring(renderedFrom))
+
+			// And what the controller in the cluster reads follows `base`, because that is
+			// the address the registry module can move.
+			inside, err := base64.StdEncoding.DecodeString(secret.Field("data.fetchRegistry").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(inside)).To(Equal(renderedFrom))
+
+			// The module source follows `base`, because the images of every module under it
+			// are rendered from this repository as well as fetched from it.
 			source := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(source.Exists()).To(BeTrue())
-			Expect(source.Field("spec.registry.repo").String()).To(Equal(dialable + "/modules"))
-			Expect(source.Field("spec.registry.repo").String()).ToNot(ContainSubstring(renderedFrom))
+			Expect(source.Field("spec.registry.repo").String()).To(Equal(renderedFrom + "/modules"))
 		})
 	})
 
@@ -204,9 +213,8 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues+clusterIsBootstrapped)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			// As the global hook sets them once the module has published its address.
+			// As the global hook sets it once the module has published its address.
 			f.ValuesSet("global.modulesImages.registry.base", constant.HostWithPath)
-			f.ValuesSet("global.modulesImages.registry.fetchBase", constant.ProxyHostWithPath)
 			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
 			f.HelmRender()
 		})
@@ -217,7 +225,12 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			secret := f.KubernetesResource("Secret", "d8-system", "deckhouse-registry")
 			fetchRegistry, err := base64.StdEncoding.DecodeString(secret.Field("data.fetchRegistry").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(fetchRegistry)).To(Equal(constant.ProxyHostWithPath))
+			Expect(string(fetchRegistry)).To(Equal(constant.HostWithPath))
+
+			// The in-cluster address, not the loopback one the controller will dial. Nothing
+			// that is recorded may name the loopback: it is node-local, and the translation
+			// belongs to the one party that has to connect. See `utils.Dial`.
+			Expect(string(fetchRegistry)).ToNot(ContainSubstring(constant.ProxyHost))
 
 			// And the field that names the registry as seen from OUTSIDE the cluster keeps
 			// doing that, whatever the module does to the pull path.
@@ -233,9 +246,15 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(string(imagesRegistry)).To(Equal("registry.deckhouse.io/deckhouse/fe"))
 			Expect(string(imagesRegistry)).ToNot(ContainSubstring(constant.ProxyHost))
 
+			// The module source names the in-cluster address as well, and that matters more
+			// here than anywhere else: this repository is not only fetched, it is what the
+			// images of every module under it are rendered from. Naming the loopback address
+			// put it into pod specs, where those pods ran only on content their nodes already
+			// held — the agent answers 502 to a request naming itself as its own registry.
 			source := f.KubernetesGlobalResource("ModuleSource", "deckhouse")
 			Expect(source.Field("spec.registry.repo").String()).
-				To(Equal(constant.ProxyHostWithPath + "/modules"))
+				To(Equal(constant.HostWithPath + "/modules"))
+			Expect(source.Field("spec.registry.repo").String()).ToNot(ContainSubstring(constant.ProxyHost))
 
 			// And the images themselves keep naming the in-cluster address, which is the one
 			// thing that must not become the loopback one: it is written into every pod spec
@@ -258,8 +277,8 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(moved).ToNot(BeEmpty())
 
 			// The same cluster before the module took the pull path over: only the address
-			// the controller fetches from differs between the two renders.
-			f.ValuesSet("global.modulesImages.registry.fetchBase", "registry.deckhouse.io/deckhouse/fe")
+			// images render from differs between the two renders.
+			f.ValuesSet("global.modulesImages.registry.base", "registry.deckhouse.io/deckhouse/fe")
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

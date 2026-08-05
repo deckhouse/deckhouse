@@ -451,7 +451,7 @@ func getModuleRegistry(ctx context.Context, moduleSource string, logger *log.Log
 		UserAgent:    clusterUUID,
 	}
 
-	return ms.Spec.Registry.Repo, rconf.ForRepository(ms.Spec.Registry.Repo, logger), nil
+	return utils.Dial(ms.Spec.Registry.Repo), rconf.ForRepository(ms.Spec.Registry.Repo, logger), nil
 }
 
 func getClusterUUID(ctx context.Context, client client.Client) (string, error) {

@@ -28,7 +28,6 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 )
 
@@ -145,38 +144,24 @@ func discoveryDeckhouseRegistry(_ context.Context, input *go_hook.HookInput) err
 	// In values we store base64-encoded docker config because in this form it is applied in other places.
 	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)
 
-	// `base` is the address container image references are rendered from, and it is the
-	// only one of these values that the registry module can move.
+	// `base` is the address container image references are rendered from, and it is the only
+	// one of these values that the registry module can move.
 	//
-	// The others describe the registry the cluster was installed with, and they keep
-	// describing it: they are read by the Deckhouse controller's own HTTP client — the
-	// release check, the default module source — which has no node agent in its path and
-	// cannot reach an in-cluster address. Image references are pulled by the container
-	// runtime, which does.
-	upstreamBase := fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path)
-	imageBase, fetchBase := upstreamBase, upstreamBase
-
+	// The others describe the registry the cluster was installed with, and they keep doing
+	// that: `address`, `path` and the docker config are what an out-of-cluster caller reads —
+	// dhctl among them, which refuses to touch a cluster whose docker config has no
+	// credentials for the host they name. Whether anything in the cluster fetches through the
+	// node agent instead is decided from `base`, by the party that has to dial it.
+	imageBase := fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path)
 	if published, err := publishedImageAddress(input); err != nil {
 		return err
 	} else if published != "" {
 		input.Logger.Info("rendering image references from the address the registry module published",
 			slog.String("address", published))
 		imageBase = published
-
-		// The Deckhouse controller fetches over HTTP from a process, and a process has to
-		// dial. It cannot use the address above: that one names a Service which exists only
-		// when there is a cache, and which is never dialled — a container runtime reaches it
-		// through a drop-in that redirects any registry to the node agent. What always
-		// answers on a node running the agent is the agent itself, on the loopback address.
-		//
-		// Conditional on the same published address, because it is the same fact: the module
-		// publishes only once every node's agent is applying the layout it was given, and
-		// until then there is no agent to fetch through either.
-		fetchBase = constant.ProxyHostWithPath
 	}
 
 	input.Values.Set("global.modulesImages.registry.base", imageBase)
-	input.Values.Set("global.modulesImages.registry.fetchBase", fetchBase)
 	input.Values.Set("global.modulesImages.registry.dockercfg", registryConfEncoded)
 	input.Values.Set("global.modulesImages.registry.scheme", registrySecretRaw.Scheme)
 	input.Values.Set("global.modulesImages.registry.CA", registrySecretRaw.CA)

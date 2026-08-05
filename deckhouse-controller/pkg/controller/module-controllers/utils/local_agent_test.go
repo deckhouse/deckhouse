@@ -113,3 +113,67 @@ func TestRegistryConfigFromSecretFollowsTheAddressItWillDial(t *testing.T) {
 	secret.ImageRegistry = registry_const.ProxyHostWithPath
 	assert.Equal(t, "AGENT-CA", secret.RegistryConfig("uuid", log.NewNop()).CA)
 }
+
+// TestDialTranslatesOnlyTheInClusterAddress is the rule that keeps the loopback address out of
+// everything the cluster records.
+//
+// A recorded address has more than one reader: it ends up in pod image references, in a
+// ModuleSource, in a status. The loopback one belongs in none of those — it is node-local, and a
+// cluster-wide object naming it is wrong even where it appears to work. What made that concrete
+// was a ModuleSource whose repository named it: the pods under it kept running on content their
+// nodes already held, while the agent answered 502 to every fresh pull, since a request naming
+// the agent as its own registry is a loop and is refused. A node that joined later, or one that
+// had collected its images, would not have started them at all.
+func TestDialTranslatesOnlyTheInClusterAddress(t *testing.T) {
+	tests := []struct {
+		name       string
+		repository string
+		want       string
+	}{{
+		name:       "the in-cluster registry, which is what everything records",
+		repository: registry_const.HostWithPath,
+		want:       registry_const.ProxyHostWithPath,
+	}, {
+		name:       "the in-cluster registry with a module under it",
+		repository: registry_const.HostWithPath + "/modules/upmeter",
+		want:       registry_const.ProxyHostWithPath + "/modules/upmeter",
+	}, {
+		name:       "the bare in-cluster host",
+		repository: registry_const.Host,
+		want:       registry_const.ProxyHost,
+	}, {
+		// Already dialable, and translating twice must not mangle it.
+		name:       "the loopback address itself",
+		repository: registry_const.ProxyHostWithPath,
+		want:       registry_const.ProxyHostWithPath,
+	}, {
+		name:       "somebody else's registry",
+		repository: "registry.deckhouse.io/deckhouse/ee",
+		want:       "registry.deckhouse.io/deckhouse/ee",
+	}, {
+		// Merely starting with the same letters is a different host.
+		name:       "a host whose name begins like the in-cluster one",
+		repository: registry_const.Host + "-staging/deckhouse",
+		want:       registry_const.Host + "-staging/deckhouse",
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, Dial(tt.repository))
+		})
+	}
+}
+
+// TestForRepositoryAcceptsEitherSpellingOfTheAgent: the configuration is adjusted by what the
+// repository names, and the same agent is named two ways — as recorded and as dialled.
+func TestForRepositoryAcceptsEitherSpellingOfTheAgent(t *testing.T) {
+	withAgentCA(t, "AGENT-CA")
+
+	for _, repository := range []string{registry_const.HostWithPath, registry_const.ProxyHostWithPath} {
+		config := &RegistryConfig{Scheme: "http", CA: "UPSTREAM-CA"}
+		got := config.ForRepository(repository, log.NewNop())
+
+		assert.Equal(t, "AGENT-CA", got.CA, repository)
+		assert.Equal(t, registry_const.Scheme, got.Scheme, repository)
+	}
+}

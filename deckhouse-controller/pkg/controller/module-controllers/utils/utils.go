@@ -61,8 +61,29 @@ func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterU
 // constant itself only so that a test can point it at a file it is allowed to create.
 var agentCAFile = registry_const.AgentCAFile
 
+// Dial is the address to actually connect to in order to reach a repository.
+//
+// Everything the cluster records names the in-cluster registry, because a recorded address is
+// read by more than one party: it ends up in pod image references, in a ModuleSource, in a
+// status. The loopback address belongs in none of those — it is node-local, and a cluster-wide
+// object naming it is wrong even where it happens to work. What made that concrete was a
+// ModuleSource whose repository named the loopback: the pods kept running on content their
+// nodes already held, while the agent answered 502 to every fresh pull, since a request naming
+// the agent as its own registry is a loop and is refused.
+//
+// So the translation happens here, at the one place that has to dial, and nowhere else.
+func Dial(repository string) string {
+	if host, rest, found := strings.Cut(repository, "/"); found && host == registry_const.Host {
+		return registry_const.ProxyHost + "/" + rest
+	}
+	if repository == registry_const.Host {
+		return registry_const.ProxyHost
+	}
+	return repository
+}
+
 // ForRepository adjusts a registry client configuration for the repository it will fetch
-// from, and does nothing at all unless that repository is the node agent on this host.
+// from, and does nothing at all unless that repository is served by the node agent.
 //
 // The agent is what the registry module puts in front of every pull once it manages the pull
 // path, and a process — unlike a container runtime, which is handed a drop-in that redirects
@@ -81,7 +102,8 @@ var agentCAFile = registry_const.AgentCAFile
 // registry behind it with credentials of its own, and a docker config naming other hosts has
 // nothing to say about the loopback address.
 func (rc *RegistryConfig) ForRepository(repository string, logger *log.Logger) *RegistryConfig {
-	if !registry_const.IsLocalAgent(repository) {
+	// Either spelling of the same agent: as recorded, or as dialled.
+	if !registry_const.IsInCluster(repository) && !registry_const.IsLocalAgent(repository) {
 		return rc
 	}
 
@@ -115,12 +137,12 @@ func (s *DeckhouseRegistrySecret) RegistryConfig(userAgent string, logger *log.L
 	return rc.ForRepository(s.Fetch(), logger)
 }
 
-// Fetch is the repository this process pulls from.
+// Fetch is the repository this process pulls from, ready to be dialled.
 func (s *DeckhouseRegistrySecret) Fetch() string {
 	if s.FetchRegistry != "" {
-		return s.FetchRegistry
+		return Dial(s.FetchRegistry)
 	}
-	return s.ImageRegistry
+	return Dial(s.ImageRegistry)
 }
 
 type RegistryConfig struct {
