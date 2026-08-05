@@ -24,6 +24,65 @@ properties:
             type: string
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
 
+      # Written by hooks/generate_validation_webhook_certs.go.
+      validationWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
+      # Provider credentials collected from the Secrets of type
+      # cloud-provider.deckhouse.io/credentials in the module namespace, keyed by
+      # Secret name. Written by hooks/credentials.go and, while migrating from a
+      # YandexClusterConfiguration, by hooks/yandex_cluster_configuration.go.
+      #
+      # authScheme is deliberately not an enum: the hooks copy whatever the Secret
+      # carries, and an unexpected scheme must be reported by the module's
+      # validation rather than break values rendering.
+      credentialSecrets:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [authScheme, secret]
+          properties:
+            authScheme:
+              type: string
+            identity:
+              type: string
+            secret:
+              type: string
+      # Fallbacks that node-manager applies to ephemeral nodes whose own
+      # YandexInstanceClass leaves a field unset. Written by
+      # hooks/instance_class_defaults.go, which reads the YandexInstanceClass generated for
+      # the master NodeGroup and falls back to masterNodeGroup.instanceClass of the legacy
+      # YandexClusterConfiguration while one is still around.
+      #
+      # Only imageID needs a fallback: it was optional before the CRD required it, so
+      # classes created back then carry no image. Empty once neither source exists — the
+      # templates must keep emitting the key regardless, because the node-manager
+      # machine-class templates dereference it unconditionally.
+      instanceClassDefaults:
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          imageID:
+            type: string
+            x-examples: [ "fd85m9q2qspfnsv055rh" ]
       cniSecretData:
         type: string
         x-examples:
@@ -34,6 +93,10 @@ properties:
           type: string
         x-examples:
           - [{"name": "test", "type": "test"}]
+      # Legacy: no hook writes this value and no template reads it any more —
+      # hooks/yandex_cluster_configuration.go fills the provider/nodes/storage/ccm sections
+      # instead. The schema stays only because it is the source of the
+      # YandexClusterConfiguration documentation.
       providerClusterConfiguration:
         type: object
         description: |

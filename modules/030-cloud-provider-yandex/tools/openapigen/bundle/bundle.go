@@ -21,9 +21,9 @@ import (
 
 	"openapigen"
 
-	v1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/instanceclass/v1"
-	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/instanceclass/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/settings/v2"
+	yciccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/instanceclass/v1"
+	ycicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/instanceclass/v1alpha1"
+	ycsettingsv2 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/settings/v2"
 )
 
 // GenerateBundle generates all OpenAPI specs for the cloud-provider-yandex module.
@@ -42,14 +42,14 @@ func GenerateBundle(moduleRoot string) error {
 			name: "config-values",
 			path: filepath.Join(moduleRoot, "openapi", "config-values.yaml"),
 			gen: func() ([]byte, error) {
-				return openapigen.GenerateDeckhouseOpenAPISchema(v2.ModuleConfigSettings{})
+				return openapigen.GenerateDeckhouseOpenAPISchema(ycsettingsv2.ModuleConfigSettings{})
 			},
 		},
 		{
 			name: "doc-ru-config-values",
 			path: filepath.Join(moduleRoot, "openapi", "doc-ru-config-values.yaml"),
 			gen: func() ([]byte, error) {
-				return openapigen.GenerateDeckhouseDescriptionRu(v2.ModuleConfigSettings{})
+				return openapigen.GenerateDeckhouseDescriptionRu(ycsettingsv2.ModuleConfigSettings{})
 			},
 		},
 		{
@@ -57,8 +57,8 @@ func GenerateBundle(moduleRoot string) error {
 			path: filepath.Join(moduleRoot, "crds", "instance_class.yaml"),
 			gen: func() ([]byte, error) {
 				return openapigen.GenerateCRD([]openapigen.VersionSpec{
-					{Root: &v1.YandexInstanceClass{}},
-					{Root: &v1alpha1.YandexInstanceClass{}},
+					{Root: &yciccv1.YandexInstanceClass{}},
+					{Root: &ycicv1alpha1.YandexInstanceClass{}},
 				})
 			},
 		},
@@ -67,8 +67,8 @@ func GenerateBundle(moduleRoot string) error {
 			path: filepath.Join(moduleRoot, "crds", "doc-ru-instance_class.yaml"),
 			gen: func() ([]byte, error) {
 				return openapigen.GenerateCRDDescriptionRu([]openapigen.VersionSpec{
-					{Root: &v1.YandexInstanceClass{}},
-					{Root: &v1alpha1.YandexInstanceClass{}},
+					{Root: &yciccv1.YandexInstanceClass{}},
+					{Root: &ycicv1alpha1.YandexInstanceClass{}},
 				})
 			},
 		},
