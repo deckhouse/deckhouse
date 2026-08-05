@@ -53,12 +53,12 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
-// +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
-// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status
-// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].message"
+// +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
+// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status,priority=1
+// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 // +crd-enricher:crd:preserveUnknownFields=false
 
@@ -120,29 +120,59 @@ type ModuleSpec struct {
 }
 
 type ModuleStatus struct {
+	// Summary aggregates the high-level user-facing state, message and
+	// resolution hint for the module. The controller always populates it
+	// on reconcile — every module maps to exactly one lifecycle state — so
+	// it is the single source of truth for the UI; clients should not re-derive
+	// these values from the conditions. The pointer leaves it absent only
+	// before the first status computation.
+	// +optional
+	Summary *ModuleStatusSummary `json:"summary,omitempty"`
+
 	// Information about the currently installed version.
 	// +optional
 	CurrentVersion *ModuleStatusVersion `json:"currentVersion,omitempty"`
 
-	// Conditions represent the latest available observations of the module's state.
+	// Nelm tracking.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	Tracking runtime.RawExtension `json:"tracking"`
+
+	// LastAppliedConfiguration is the effective settings (user configuration merged
+	// with config-schema defaults) that drove the most recent successful apply.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	LastAppliedConfiguration runtime.RawExtension `json:"lastAppliedConfiguration"`
+
+	// Conditions reflecting the latest observations of the application state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-
-	// InternalConditions represent internal conditions of the module.
-	// +optional
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	InternalConditions []metav1.Condition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-
-	// ResourceConditions represent conditions related to module resources.
-	// +optional
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	ResourceConditions []metav1.Condition `json:"resourceConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
+// ModuleStatusSummary aggregates the high-level lifecycle state, message
+// and resolution hint for the module. It is consumed by the UI as a single
+// source of truth so that the frontend does not have to re-implement the state
+// machine on top of conditions.
+type ModuleStatusSummary struct {
+	// State is the high-level lifecycle state observed for the module.
+	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended]
+	State string `json:"state,omitempty"`
+
+	// Message is a human-readable description of the current state.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Tip is a human-readable instruction on how to resolve the current
+	// state. Empty when no action is required.
+	// +optional
+	Tip string `json:"tip,omitempty"`
+}
 type ModuleStatusVersion struct {
 	// Semantic version of the installed module.
 	// +optional
