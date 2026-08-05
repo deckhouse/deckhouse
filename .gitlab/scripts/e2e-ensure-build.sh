@@ -26,13 +26,13 @@ set -euo pipefail
 DOTENV_FILE="${DOTENV_FILE:-e2e-build.env}"
 SLEEP_SECONDS="${E2E_BUILD_POLL_SLEEP:-30}"
 MAX_ATTEMPTS="${E2E_BUILD_POLL_ATTEMPTS:-480}"
-# Wait for CI to create a pipeline on this commit (e2e right after push).
 PIPELINE_WAIT_ATTEMPTS="${E2E_PIPELINE_WAIT_ATTEMPTS:-10}"
 PIPELINE_WAIT_SLEEP="${E2E_PIPELINE_WAIT_SLEEP:-10}"
 
 E2E_EDITION="${E2E_EDITION:?E2E_EDITION is required}"
 EDITION_LOWER="$(echo "${E2E_EDITION}" | tr '[:upper:]' '[:lower:]')"
 CI_COMMIT_SHA="${CI_COMMIT_SHA:?CI_COMMIT_SHA is required}"
+FOX_TOKEN="${FOX_TOKEN:?FOX_TOKEN is required}"
 
 api() {
   local method="$1"
@@ -40,7 +40,7 @@ api() {
   shift 2
   curl -sS --fail-with-body \
     --request "${method}" \
-    --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+    --header "PRIVATE-TOKEN: ${FOX_TOKEN}" \
     "$@" \
     "${url}"
 }
