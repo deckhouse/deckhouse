@@ -13,21 +13,21 @@
 # Based on https://github.com/istio/istio/blob/1.25.2/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.25.2/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
   to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
   add: /src/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
   add: /src/proxy/bin/envoy
   to: /usr/local/bin/envoy
   owner: 1337
@@ -45,22 +45,22 @@ import:
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- from: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- image: common/iptables-wrapper
+- from: common/iptables-wrapper
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-- image: registrypackages/d8-curl-artifact-8-9-1
+- from: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
@@ -68,7 +68,7 @@ import:
 imageSpec:
   config:
     user: "1337:1337"
-    env: 
+    env:
       ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
       ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     workingDir: "/"
@@ -80,7 +80,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
 from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
   before: install
@@ -119,10 +119,10 @@ shell:
   - chown 1337:1337 /src/istio/out/pilot-agent
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
-fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
+from: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/proxy
   to: /src/proxy
   before: install
@@ -163,7 +163,7 @@ shell:
   - rm -rf /tmp/bazel-cache
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: common/relocate-artifact
+from: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
@@ -200,11 +200,11 @@ final: false
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
   add: /usr/local/go
   to: /usr/local/go
   before: install
-- image: common/alt-p11-artifact
+- from: common/alt-p11-artifact
   add: /root/.ssh
   to: /root/.ssh
   before: install
@@ -266,7 +266,7 @@ imageSpec:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 secrets:
 - id: SOURCE_REPO

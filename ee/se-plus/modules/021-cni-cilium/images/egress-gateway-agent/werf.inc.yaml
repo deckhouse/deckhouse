@@ -1,7 +1,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  - from: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /egress-gateway-agent
     to: /egress-gateway-agent
     before: setup
@@ -10,7 +10,7 @@ imageSpec:
     entrypoint: ["/egress-gateway-agent"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
@@ -27,7 +27,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

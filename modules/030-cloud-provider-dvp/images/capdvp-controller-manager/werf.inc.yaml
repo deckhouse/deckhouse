@@ -1,8 +1,8 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /capdvp-controller-manager
     to: /capdvp-controller-manager
     before: setup
@@ -12,7 +12,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
   - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
     to:  /src
@@ -40,7 +40,7 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install

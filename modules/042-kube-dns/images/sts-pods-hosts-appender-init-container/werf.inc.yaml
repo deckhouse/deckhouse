@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/042-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -18,7 +18,7 @@ final: false
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-  - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  - from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -36,9 +36,9 @@ shell:
       {{- include "image-build.build" $buildContext | indent 6 }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+  - from: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/render-etc-hosts-with-cluster-domain-aliases
     to: /render-etc-hosts-with-cluster-domain-aliases
     before: setup

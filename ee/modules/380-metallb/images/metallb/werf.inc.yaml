@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/380-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -23,7 +23,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -47,9 +47,9 @@ shell:
   - chmod 0755 /speaker
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-controller
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /controller
   to: /controller
   before: setup
@@ -58,9 +58,9 @@ imageSpec:
     entrypoint: ["/controller"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-speaker
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /speaker
   to: /speaker
   before: setup

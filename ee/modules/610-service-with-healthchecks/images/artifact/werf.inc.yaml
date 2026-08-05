@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/service-with-healthchecks-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
@@ -23,7 +23,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-  - image: {{ .ModuleName }}/service-with-healthchecks-src-artifact
+  - from: {{ .ModuleName }}/service-with-healthchecks-src-artifact
     add: /src
     to: /src
     before: install

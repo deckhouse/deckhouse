@@ -2,21 +2,21 @@
 {{- if ne $.Env "CSE" }}
 
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 fromCacheVersion: "2025.04.29.4"
 imageSpec:
   config:
     env: { "WORKDIR": "/" }
     entrypoint: ["/machine-controller-manager"]
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/machine-controller-manager
   to: /machine-controller-manager
   before: setup
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2025.04.29.1"
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 secrets:
 - id: SOURCE_REPO
@@ -30,7 +30,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

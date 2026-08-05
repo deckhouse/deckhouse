@@ -16,7 +16,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  - from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -39,7 +39,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /cni-migration-init-checker
     to: /cni-migration-init-checker
     before: setup

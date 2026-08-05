@@ -1,8 +1,8 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/nginx-static
+from: common/nginx-static
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/registry-proxy-reloader
   to: /registry-proxy-reloader
   before: install
@@ -15,7 +15,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  - from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -32,7 +32,7 @@ shell:
     - chmod 0700 registry-proxy-reloader
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/reloader

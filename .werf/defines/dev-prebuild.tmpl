@@ -25,7 +25,7 @@
 {{- define "dev_prebuild_images_imports" }}
 {{- $context := . -}}
 
-- image: deckhouse-controller-artifact
+- from: deckhouse-controller-artifact
   add: /out
   to: /usr/bin
   after: install
@@ -48,7 +48,7 @@
   add: /usr/sbin/veritysetup
   to: /usr/sbin/veritysetup
   after: setup
-- image: version-map-artifact
+- from: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   after: setup
@@ -87,13 +87,13 @@ imageSpec:
 # render deckhouse controller image
 {{- define "dev_image" }}
 image: dev
-fromImage: dev-prebuild
+from: dev-prebuild
 import:
-- image: images-digests
+- from: images-digests
   add: /images_digests.json
   to: /deckhouse/modules/images_digests.json
   after: setup
-- image: images-digests
+- from: images-digests
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup

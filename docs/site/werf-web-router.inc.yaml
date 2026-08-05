@@ -30,11 +30,11 @@ import:
     add: /usr/bin/jq
     to: /usr/bin/jq
     before: setup
-  - image: web-router-artifact
+  - from: web-router-artifact
     add: /go/src/app/server
     to: /app/server
     before: setup
-  - image: web-frontend-artifact
+  - from: web-frontend-artifact
     add: /app/_site
     to: /app/root
     before: setup

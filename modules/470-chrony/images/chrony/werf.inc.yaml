@@ -1,7 +1,7 @@
 {{- $version := "4.6.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/470-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -27,7 +27,7 @@ image: {{ .ModuleName }}/build-chrony-static-artifact
 from: {{ index $.Images "builder/distroless" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/chrony
   to: /src
   before: install
@@ -48,7 +48,7 @@ image: {{ .ModuleName }}/build-entrypoint-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint
   to: /src
   before: install
@@ -65,16 +65,16 @@ shell:
   - chmod +x /entrypoint
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/build-chrony-static-artifact
+- from: {{ .ModuleName }}/build-chrony-static-artifact
   add: /opt/chrony-static
   before: setup
 - from: {{ index $.Images "tools/tini" }}
   add: /usr/bin/tini
   to: /tini
   before: setup
-- image: {{ .ModuleName }}/build-entrypoint-artifact
+- from: {{ .ModuleName }}/build-entrypoint-artifact
   add: /entrypoint
   to: /entrypoint
   before: setup
