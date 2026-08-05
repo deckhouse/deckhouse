@@ -1,13 +1,13 @@
 # Pipeline creation rules.
 # Pipeline runs for: tags, main, merge requests, release-x.xx, schedule,
-# and manual/API e2e (web|api with E2E_RUN=true).
+# and manual/API e2e (web|api).
 workflow:
   # Cancel previous pipeline jobs for the same ref when a new commit arrives
   # (MR pushes, main pushes). Jobs with interruptible: false are kept.
   auto_cancel:
     on_new_commit: interruptible
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/
     - if: $CI_COMMIT_TAG
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -17,15 +17,15 @@ workflow:
 
 # Reusable job-level rules (use via: extends: .rules:...)
 
-# Skip regular CI jobs when the pipeline is an e2e run (web/api + E2E_RUN=true).
+# Skip regular CI jobs when the pipeline is an e2e run (web/api).
 .rules:skip_e2e_run: &skip_e2e_run
-  if: $E2E_RUN == "true"
+  if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/
   when: never
 
-# E2E jobs: only for manual (web) or API pipelines with E2E_RUN=true.
+# E2E jobs: only for manual (web) or API pipelines.
 .rules:on_e2e:
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/
 
 # --- single-context -----------------------------------------------------------
 
