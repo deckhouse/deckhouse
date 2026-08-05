@@ -20,6 +20,8 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 const (
@@ -29,7 +31,9 @@ const (
 )
 
 var (
-	SchemeGroupVersion = schema.GroupVersion{Group: YandexInstanceClassGroupName, Version: YandexInstanceClassVersion}
+	_ cpapi.InstanceClassObject = (*YandexInstanceClass)(nil)
+
+	GroupVersionKind = schema.GroupVersionKind{Group: YandexInstanceClassGroupName, Version: YandexInstanceClassVersion, Kind: YandexInstanceClassKind}
 )
 
 // +kubebuilder:object:root=true
@@ -157,8 +161,15 @@ type InstanceClassSpec struct {
 
 	// Subnet IDs that VirtualMachines' secondary NICs will connect to.
 	//
-	// Each subnet listed here translates into one additional network interface.
+	// For `CloudEphemeral` nodes, every subnet in the list is attached as a separate network interface.
+	//
+	// For `CloudPermanent` nodes, a single subnet is selected from the list by the node index,
+	// so the list must contain at least as many subnets as there are nodes in the group.
 	// +deckhouse:ru:description:value="Список дополнительных подсетей, которые будут подключены к виртуальной машине."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Для узлов типа `CloudEphemeral` каждая подсеть из списка подключается как отдельный сетевой интерфейс."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Для узлов типа `CloudPermanent` из списка выбирается одна подсеть по индексу узла, поэтому список должен содержать не меньше подсетей, чем узлов в группе."
 	// +deckhouse:XDocExamples:value="[b0csh41c1or82vuch89v, e2lgddi5svochh5fbq96]"
 	// +optional
 	AdditionalSubnets []string `json:"additionalSubnets,omitempty"`
@@ -175,4 +186,22 @@ type InstanceClassSpec struct {
 	// +kubebuilder:validation:Enum=STANDARD;SOFTWARE_ACCELERATED
 	// +optional
 	NetworkType string `json:"networkType,omitempty"`
+}
+
+// GroupVersionKind returns the GroupVersionKind for the resource.
+func (c *YandexInstanceClass) GroupVersionKind() cpapi.GroupVersionKind {
+	return cpapi.GroupVersionKind{Group: YandexInstanceClassGroupName, Version: YandexInstanceClassVersion, Kind: YandexInstanceClassKind}
+}
+
+// GetEtcdDisk returns the etcd disk value for error reporting, or nil when the class
+// defines no dedicated etcd disk. The v1alpha1 spec has no etcd disk field at all —
+// it appeared in v1 — so this is always nil rather than an unfinished stub.
+func (c *YandexInstanceClass) GetEtcdDisk() any {
+	return nil
+}
+
+// GetNodeGroupConsumers returns names of NodeGroups that use the class.
+// The v1alpha1 resource carries no status subresource, so there is nothing to report.
+func (c *YandexInstanceClass) GetNodeGroupConsumers() []string {
+	return nil
 }

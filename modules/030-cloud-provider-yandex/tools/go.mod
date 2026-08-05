@@ -9,6 +9,7 @@ require (
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
+	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0-00010101000000-000000000000 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/getkin/kin-openapi v0.135.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
@@ -49,6 +50,8 @@ require (
 
 replace (
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider => ../../../go_lib/cloud-provider
+	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ../../../go_lib/dhctl-provider-protocol
 	github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg => ../pkg
+	github.com/deckhouse/deckhouse/pkg/log => ../../../pkg/log
 	openapigen => ../../../go_lib/cloud-provider/openapigen
 )

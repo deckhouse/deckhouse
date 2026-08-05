@@ -64,7 +64,10 @@ spec:
                 description: |-
                   Subnet IDs that VirtualMachines' secondary NICs will connect to.
 
-                  Each subnet listed here translates into one additional network interface.
+                  For `CloudEphemeral` nodes, every subnet in the list is attached as a separate network interface.
+
+                  For `CloudPermanent` nodes, a single subnet is selected from the list by the node index,
+                  so the list must contain at least as many subnets as there are nodes in the group.
                 items:
                   type: string
                 type: array
@@ -243,7 +246,10 @@ spec:
                 description: |-
                   Subnet IDs that VirtualMachines' secondary NICs will connect to.
 
-                  Each subnet listed here translates into one additional network interface.
+                  For `CloudEphemeral` nodes, every subnet in the list is attached as a separate network interface.
+
+                  For `CloudPermanent` nodes, a single subnet is selected from the list by the node index,
+                  so the list must contain at least as many subnets as there are nodes in the group.
                 items:
                   type: string
                 type: array

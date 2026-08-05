@@ -14,6 +14,16 @@
 
 package v1
 
+import (
+	"reflect"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+)
+
+var (
+	_ cpapi.ProviderClusterConfigObject = (*YandexProviderClusterConfiguration)(nil)
+)
+
 // YandexProviderClusterConfiguration describes the configuration of a cloud cluster in Yandex Cloud.
 type YandexProviderClusterConfiguration struct {
 	APIVersion   string `json:"apiVersion" yaml:"apiVersion"`
@@ -72,7 +82,7 @@ type YandexInstanceClass struct {
 // YandexMasterInstanceClass extends the base YandexInstanceClass with master-specific fields.
 type YandexMasterInstanceClass struct {
 	YandexInstanceClass
-	EtcdDiskSizeGB *int `json:"etcdDiskSizeGB,omitempty" yaml:"etcdDiskSizeGB,omitempty"`
+	EtcdDiskSizeGB *int `json:"etcdDiskSizeGb,omitempty" yaml:"etcdDiskSizeGb,omitempty"`
 }
 
 // YandexStaticInstanceClass extends the base YandexInstanceClass with node group-specific fields.
@@ -109,4 +119,23 @@ type YandexNATInstanceResources struct {
 type YandexDHCPOptions struct {
 	DomainName        *string  `json:"domainName,omitempty" yaml:"domainName,omitempty"`
 	DomainNameServers []string `json:"domainNameServers,omitempty" yaml:"domainNameServers,omitempty"`
+}
+
+// HasMasterNodeGroup reports whether the masterNodeGroup section is set.
+func (c *YandexProviderClusterConfiguration) HasMasterNodeGroup() bool {
+	return c != nil && !reflect.DeepEqual(c.MasterNodeGroup, YandexMasterNodeGroup{})
+}
+
+// NodeGroupNames returns names of the additional node groups.
+func (c *YandexProviderClusterConfiguration) NodeGroupNames() []string {
+	if c == nil || len(c.NodeGroups) == 0 {
+		return nil
+	}
+
+	names := make([]string, 0, len(c.NodeGroups))
+	for _, nodeGroup := range c.NodeGroups {
+		names = append(names, nodeGroup.Name)
+	}
+
+	return names
 }

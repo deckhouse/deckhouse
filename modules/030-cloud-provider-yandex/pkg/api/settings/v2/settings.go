@@ -15,6 +15,16 @@
 // Package settings contains the ModuleConfig root type for the cloud-provider-yandex module.
 package v2
 
+import (
+	"reflect"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+)
+
+var (
+	_ cpapi.ModuleSettingsObject = (*ModuleConfigSettings)(nil)
+)
+
 // Describes the configuration of the cloud-provider-yandex module.
 //
 // Run the following command to change the configuration in a running cluster:
@@ -39,7 +49,7 @@ type ModuleConfigSettings struct {
 	// +optional
 	Storage Storage `json:"storage,omitempty"`
 	// +optional
-	CCM CCM `json:"ccm"`
+	CCM CCM `json:"ccm,omitempty"`
 }
 
 // +deckhouse:DisableAdditionalProperties=true
@@ -253,4 +263,24 @@ type CCMParameters struct {
 	// +deckhouse:ru:description:value="Дополнительные ID внешних сетей, которые будут распознаваться CCM как внешние сети."
 	// +optional
 	AdditionalExternalNetworkIDs []string `json:"additionalExternalNetworkIDs,omitempty"`
+}
+
+// HasProviderSection reports whether the provider settings section is set.
+func (s *ModuleConfigSettings) HasProviderSection() bool {
+	return s != nil && !reflect.DeepEqual(s.Provider, Provider{})
+}
+
+// HasNodesSection reports whether the nodes settings section is set.
+func (s *ModuleConfigSettings) HasNodesSection() bool {
+	return s != nil && !reflect.DeepEqual(s.Nodes, Nodes{})
+}
+
+// HasStorageSection reports whether the storage settings section is set.
+func (s *ModuleConfigSettings) HasStorageSection() bool {
+	return s != nil && !reflect.DeepEqual(s.Storage, Storage{})
+}
+
+// HasCCMSection reports whether the ccm settings section is set.
+func (s *ModuleConfigSettings) HasCCMSection() bool {
+	return s != nil && !reflect.DeepEqual(s.CCM, CCM{})
 }
