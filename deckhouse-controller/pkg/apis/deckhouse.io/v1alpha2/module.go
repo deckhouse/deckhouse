@@ -67,6 +67,7 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
+// +crd-enricher:crd:preserveUnknownFields=false
 
 // Module represents a module instance managed via the package system.
 type Module struct {
