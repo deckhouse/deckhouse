@@ -49,14 +49,14 @@ spec:
 
 ## Update modes
 
-DKP supports three update modes that [determine](/modules/deckhouse/configuration.html#parameters-update-mode) how new versions are applied:
+DKP supports two update modes that [determine](/modules/deckhouse/configuration.html#parameters-update-mode) how new versions are applied:
 
-- **Automatic mode (`AutoPatch`)** — (default mode) the cluster updates as soon as a new patch version
-  appears on the [selected release channel](../../../architecture/updating.html#release-channels); updates are applied only within the current minor version.
-- **Automatic mode (`Auto`)** — both patch and minor versions are applied automatically.
+- **Automatic mode** — the cluster updates as soon as a new version appears on the [selected release channel](../../../architecture/updating.html#release-channels). Two configuration options are available:
+  - `AutoPatch` — only patch version updates within the current minor version are applied;
+  - `Auto` — both patch and minor versions are applied automatically.
 - **Manual mode (`Manual`)** — both patch and minor versions are applied only after manual approval.
 
-For automatic modes, [update windows](#update-windows) settings are available — allowed updates are applied taking [`update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows) into account, if windows are configured. If no windows are set, the update is applied as soon as the version appears on the release channel.
+For automatic mode, [update windows](#update-windows) settings are available — allowed updates are applied taking [`update.windows`](/modules/deckhouse/configuration.html#parameters-update-windows) into account, if windows are configured. If no windows are set, the update is applied as soon as the version appears on the release channel.
 
 {% alert level="info" %}
 The [`update`](/modules/deckhouse/configuration.html#parameters-update) settings of the `deckhouse` module (mode and windows) apply by default to both built-in and external modules.
