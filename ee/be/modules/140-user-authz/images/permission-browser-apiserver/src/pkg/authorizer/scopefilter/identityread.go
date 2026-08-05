@@ -35,6 +35,11 @@ var namespaceIdentityResources = map[schema.GroupResource]struct{}{
 	{Group: "deckhouse.io", Resource: "projects"}: {},
 }
 
+// ResourceRegistry reports whether the cluster serves a resource at all.
+type ResourceRegistry interface {
+	HasResource(group, resource string) bool
+}
+
 // IdentityReadAuthorizer reports reads of a namespace-ACL-filtered resource as
 // allowed even when the wrapped authorizer does not, because that is what the
 // API does. Withholding the cluster-wide RBAC grant is what lets the filter
@@ -44,16 +49,23 @@ var namespaceIdentityResources = map[schema.GroupResource]struct{}{
 //
 // The allow is deliberately unconditional on how much the user may see: an
 // empty list is a successful read, and reporting it as denied would be the same
-// existence oracle the filtering is there to close.
+// existence oracle the filtering is there to close. It is not unconditional on
+// the resource existing: an identity resource lives in a CRD that a cluster
+// without multitenancy-manager does not have, and there the apiserver keeps the
+// plain denial too, because its own bypass is gated on the filter being
+// registered for the resource.
 type IdentityReadAuthorizer struct {
-	inner authorizer.Authorizer
+	inner    authorizer.Authorizer
+	registry ResourceRegistry
 }
 
 var _ authorizer.Authorizer = (*IdentityReadAuthorizer)(nil)
 
-// NewIdentityReadAuthorizer wraps inner. A nil inner is not supported.
-func NewIdentityReadAuthorizer(inner authorizer.Authorizer) *IdentityReadAuthorizer {
-	return &IdentityReadAuthorizer{inner: inner}
+// NewIdentityReadAuthorizer wraps inner. A nil inner is not supported. A nil
+// registry disables the override entirely: without knowing which resources the
+// cluster serves there is no ground to answer anything but plain RBAC.
+func NewIdentityReadAuthorizer(inner authorizer.Authorizer, registry ResourceRegistry) *IdentityReadAuthorizer {
+	return &IdentityReadAuthorizer{inner: inner, registry: registry}
 }
 
 // Authorize implements authorizer.Authorizer.
@@ -64,6 +76,9 @@ func (a *IdentityReadAuthorizer) Authorize(ctx context.Context, attrs authorizer
 	}
 
 	if !isNamespaceIdentityRead(attrs) {
+		return decision, reason, nil
+	}
+	if a.registry == nil || !a.registry.HasResource(attrs.GetAPIGroup(), attrs.GetResource()) {
 		return decision, reason, nil
 	}
 

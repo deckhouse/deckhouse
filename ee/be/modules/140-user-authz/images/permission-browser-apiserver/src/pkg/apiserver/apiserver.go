@@ -126,9 +126,16 @@ func initInformers() (*initResult, error) {
 }
 
 // initAuthorizers creates the composite authorizer from RBAC and multi-tenancy engines.
-func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer, *multitenancy.Engine, error) {
+func initAuthorizers(init *initResult, configPath string, scopeCache *resolver.ResourceScopeCache) (authorizer.Authorizer, *multitenancy.Engine, error) {
 	if init.informerFactory == nil {
 		return nil, nil, fmt.Errorf("informer factory is not available, cannot initialize authorizers")
+	}
+
+	// Left nil when discovery is unavailable, which turns the identity-read
+	// reporting off rather than letting it guess.
+	var registry scopefilter.ResourceRegistry
+	if scopeCache != nil {
+		registry = scopeCache
 	}
 
 	// Create RBAC authorizer
@@ -162,9 +169,9 @@ func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer
 		// Requests granted by CAR-independent RBAC (RoleBindings, non-CAR
 		// ClusterRoleBindings) must not be denied by multi-tenancy filters.
 		mtEngine.SetIndependentRBACChecker(rbacAuth)
-		return scopefilter.NewIdentityReadAuthorizer(composite.NewCompositeAuthorizer(mtEngine, rbacAuth)), mtEngine, nil
+		return scopefilter.NewIdentityReadAuthorizer(composite.NewCompositeAuthorizer(mtEngine, rbacAuth), registry), mtEngine, nil
 	}
-	return scopefilter.NewIdentityReadAuthorizer(rbacAuth), nil, nil
+	return scopefilter.NewIdentityReadAuthorizer(rbacAuth, registry), nil, nil
 }
 
 // startInformers starts the informer factory and waits for cache sync.
@@ -224,22 +231,8 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		return nil, err
 	}
 
-	// Initialize authorizers
-	compositeAuth, mtEngine, err := initAuthorizers(initRes, c.ExtraConfig.ConfigPath)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("failed to initialize authorizers: %w", err)
-	}
-
-	// Start informers
-	startInformers(ctx, initRes.informerFactory)
-
-	// Start multi-tenancy config renewal
-	if mtEngine != nil {
-		go mtEngine.StartRenewConfigLoop(ctx.Done())
-	}
-
-	// Create resource scope cache for background discovery refresh
+	// Create resource scope cache for background discovery refresh. The
+	// authorizers below consult it, so it has to exist before them.
 	var scopeCache *resolver.ResourceScopeCache
 	if initRes.clientset != nil {
 		scopeCache = resolver.NewResourceScopeCache(initRes.clientset.Discovery())
@@ -255,6 +248,21 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		})); err != nil {
 			klog.Warningf("Failed to add resource-scope-cache readyz check: %v", err)
 		}
+	}
+
+	// Initialize authorizers
+	compositeAuth, mtEngine, err := initAuthorizers(initRes, c.ExtraConfig.ConfigPath, scopeCache)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("failed to initialize authorizers: %w", err)
+	}
+
+	// Start informers
+	startInformers(ctx, initRes.informerFactory)
+
+	// Start multi-tenancy config renewal
+	if mtEngine != nil {
+		go mtEngine.StartRenewConfigLoop(ctx.Done())
 	}
 
 	// Create namespace resolver for AccessibleNamespace API

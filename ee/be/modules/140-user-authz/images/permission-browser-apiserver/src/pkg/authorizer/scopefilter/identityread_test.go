@@ -25,6 +25,20 @@ func (s *stubAuthorizer) Authorize(_ context.Context, _ authorizer.Attributes) (
 	return s.decision, s.reason, s.err
 }
 
+// servedResources answers for a cluster that has the resources listed, keyed
+// the way discovery reports them.
+type servedResources map[string]struct{}
+
+func (s servedResources) HasResource(group, resource string) bool {
+	_, ok := s[group+"/"+resource]
+	return ok
+}
+
+// projectCRDInstalled stands for a cluster running multitenancy-manager.
+func projectCRDInstalled() servedResources {
+	return servedResources{"deckhouse.io/projects": {}}
+}
+
 func projectAttributes(verb string) authorizer.AttributesRecord {
 	return authorizer.AttributesRecord{
 		ResourceRequest: true,
@@ -42,7 +56,7 @@ func projectAttributes(verb string) authorizer.AttributesRecord {
 func TestIdentityReadAuthorizerReportsFilteredReads(t *testing.T) {
 	for _, verb := range []string{"get", "list", "watch"} {
 		t.Run(verb, func(t *testing.T) {
-			auth := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionNoOpinion})
+			auth := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionNoOpinion}, projectCRDInstalled())
 
 			decision, reason, err := auth.Authorize(context.Background(), projectAttributes(verb))
 
@@ -57,7 +71,7 @@ func TestIdentityReadAuthorizerReportsFilteredReads(t *testing.T) {
 // apiserver hands any denied read of an identity resource to the storage
 // filter, whether the denial was an explicit Deny or the absence of a grant.
 func TestIdentityReadAuthorizerOverridesDeny(t *testing.T) {
-	auth := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionDeny, reason: "no access"})
+	auth := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionDeny, reason: "no access"}, projectCRDInstalled())
 
 	decision, reason, err := auth.Authorize(context.Background(), projectAttributes("list"))
 
@@ -119,7 +133,7 @@ func TestIdentityReadAuthorizerLeavesOtherRequestsAlone(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			auth := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionNoOpinion, reason: "nothing to say"})
+			auth := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionNoOpinion, reason: "nothing to say"}, projectCRDInstalled())
 
 			decision, reason, err := auth.Authorize(context.Background(), tt.attrs)
 
@@ -130,17 +144,45 @@ func TestIdentityReadAuthorizerLeavesOtherRequestsAlone(t *testing.T) {
 	}
 }
 
+// TestIdentityReadAuthorizerNeedsTheResourceToExist covers a cluster with
+// user-authz and the permission browser but no multitenancy-manager: nothing
+// serves Projects, the apiserver keeps the plain denial because its bypass is
+// gated on the filter being registered, and reporting an allow would put a
+// section in the console that the API answers with NotFound.
+func TestIdentityReadAuthorizerNeedsTheResourceToExist(t *testing.T) {
+	tests := []struct {
+		name     string
+		registry ResourceRegistry
+	}{
+		{name: "the Project CRD is absent", registry: servedResources{}},
+		{name: "a neighbouring CRD is not a Project", registry: servedResources{"deckhouse.io/projecttemplates": {}}},
+		{name: "discovery is unavailable", registry: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			auth := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionNoOpinion, reason: "no grant"}, tt.registry)
+
+			decision, reason, err := auth.Authorize(context.Background(), projectAttributes("list"))
+
+			require.NoError(t, err)
+			assert.Equal(t, authorizer.DecisionNoOpinion, decision)
+			assert.Equal(t, "no grant", reason)
+		})
+	}
+}
+
 // TestIdentityReadAuthorizerPassesThroughAllowAndError makes sure the wrapper
 // never invents a decision of its own: an RBAC allow keeps its reason, and a
 // broken authorizer stays broken rather than turning into an allow.
 func TestIdentityReadAuthorizerPassesThroughAllowAndError(t *testing.T) {
-	allowed := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionAllow, reason: "RBAC allowed"})
+	allowed := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionAllow, reason: "RBAC allowed"}, projectCRDInstalled())
 	decision, reason, err := allowed.Authorize(context.Background(), projectAttributes("list"))
 	require.NoError(t, err)
 	assert.Equal(t, authorizer.DecisionAllow, decision)
 	assert.Equal(t, "RBAC allowed", reason)
 
-	failing := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionNoOpinion, err: errors.New("informer not synced")})
+	failing := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionNoOpinion, err: errors.New("informer not synced")}, projectCRDInstalled())
 	_, _, err = failing.Authorize(context.Background(), projectAttributes("list"))
 	assert.Error(t, err)
 }
