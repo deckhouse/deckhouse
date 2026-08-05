@@ -489,6 +489,51 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 				To(ContainSubstring("/opt/deckhouse/registry/local_data"))
 		})
 
+		// One replica per master, asserted on the number rather than on the anti-affinity
+		// that spreads them.
+		//
+		// The two are not the same claim, and taking the second for the first is what hid a
+		// three-master cluster running a single replica: no redundancy, no replication, and a
+		// StatefulSet reporting 1/1 ready, so every check comparing ready against desired
+		// passed. The count came from `d8SpecificNodeCountByRole.master`, which is keyed by
+		// `node-role.deckhouse.io/<role>` labels that master nodes do not carry — the key was
+		// simply absent and the default applied. These test values used to set that key, which
+		// is precisely why no test noticed.
+		renderWithMasters := func(masters int) {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			// Dropped, because it is the value a real cluster does not have.
+			f.ValuesSet("global.discovery.d8SpecificNodeCountByRole", map[string]interface{}{"system": 1})
+			if masters > 0 {
+				f.ValuesSet("global.discovery.clusterMasterCount", masters)
+			}
+			f.ValuesSetFromYaml("registry", v2Enabled)
+			f.HelmRender()
+		}
+
+		storageReplicas := func() string {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			set := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
+			Expect(set.Exists()).To(BeTrue())
+			return set.Field("spec.replicas").String()
+		}
+
+		It("runs a replica on each of three masters", func() {
+			renderWithMasters(3)
+			Expect(storageReplicas()).To(Equal("3"))
+		})
+
+		It("runs one on a single-master cluster", func() {
+			renderWithMasters(1)
+			Expect(storageReplicas()).To(Equal("1"))
+		})
+
+		It("falls back to one before the master count is known", func() {
+			// A render that happens: the discovery hook has not run yet.
+			renderWithMasters(0)
+			Expect(storageReplicas()).To(Equal("1"))
+		})
+
 		It("publishes the endpoint the whole cluster pulls from", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

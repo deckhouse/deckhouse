@@ -39,6 +39,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	moduletools "github.com/deckhouse/deckhouse/go_lib/module"
@@ -69,6 +70,17 @@ func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, m
 		registryOptions:      registryOptions,
 		logger:               logger,
 	}
+}
+
+// repository is the address to dial for a module under this source, which is not always the
+// address the source records.
+//
+// Once the registry module manages the pull path, a ModuleSource names the in-cluster registry —
+// deliberately, because that address is also read by whatever renders an image reference out of
+// it. Nothing dials that name: this pod is on the host network, and the Service behind it exists
+// only on a cluster running the cache. So the translation happens here, where the dialling does.
+func (md *ModuleDownloader) repository(parts ...string) string {
+	return path.Join(append([]string{utils.Dial(md.ms.Spec.Registry.Repo)}, parts...)...)
 }
 
 type ModuleDownloadResult struct {
@@ -207,7 +219,7 @@ func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion st
 }
 
 func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image, error) {
-	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+	regCli, err := md.dc.GetRegistryClient(md.repository(moduleName), md.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module error: %v", err)
 	}
@@ -336,7 +348,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 	defer span.End()
 
 	md.logger.Info("fetching module release metadata",
-		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
+		slog.String("path", md.repository(moduleName, "release")),
 		slog.String("release_channel", releaseChannel),
 	)
 
@@ -345,7 +357,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 	)
 
 	// fill releaseImageInfo.Image
-	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	regCli, err := md.dc.GetRegistryClient(md.repository(moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch release image error: %w", err)
 	}
@@ -366,7 +378,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 	defer span.End()
 
 	md.logger.Info("fetching module release metadata",
-		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
+		slog.String("path", md.repository(moduleName, "release")),
 		slog.String("module_version", moduleVersion),
 	)
 
@@ -375,7 +387,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 	)
 
 	// fill releaseImageInfo.Image
-	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	regCli, err := md.dc.GetRegistryClient(md.repository(moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch release image error: %w", err)
 	}

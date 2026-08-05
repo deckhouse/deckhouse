@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	registryhelpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
@@ -366,21 +367,29 @@ func BuildRemote[T *v1alpha1.ModuleSource | *v1alpha1.PackageRepository](reg T) 
 }
 
 func (s *Service) buildRegistryClient(remote Remote, segment string) (cr.Client, error) {
-	opts := []cr.Option{
-		cr.WithDockerCfgAuth(remote.DockerConfig),
-		cr.WithUserPasswordAuth(remote.Login, remote.Password),
-		cr.WithUserAgent(s.clusterUUID),
-		cr.WithCA(remote.CA),
-		cr.WithInsecureSchema(strings.ToLower(remote.Scheme) == "http"),
-	}
+	// A remote records the registry as the cluster knows it, which since the registry module
+	// took over the pull path is not always the registry this process can reach. Both halves of
+	// that — the address to dial and the configuration to dial it with — belong to whoever is
+	// dialling, so both are resolved here rather than baked into the recorded remote.
+	repository := utils.Dial(filepath.Join(remote.Repository, segment))
+
+	config := (&utils.RegistryConfig{
+		DockerConfig: remote.DockerConfig,
+		Login:        remote.Login,
+		Password:     remote.Password,
+		CA:           remote.CA,
+		Scheme:       remote.Scheme,
+		UserAgent:    s.clusterUUID,
+	}).ForRepository(repository, s.logger)
 
 	s.logger.Debug("build registry client",
-		slog.Bool("with_docker_config", remote.DockerConfig != "" && remote.Login == "" && remote.Password == ""),
-		slog.Bool("with_credentials", remote.Login != "" && remote.Password != ""),
-		slog.Bool("without_auth", remote.DockerConfig == "" && remote.Login == "" && remote.Password == ""),
+		slog.String("repository", repository),
+		slog.Bool("with_docker_config", config.DockerConfig != "" && config.Login == "" && config.Password == ""),
+		slog.Bool("with_credentials", config.Login != "" && config.Password != ""),
+		slog.Bool("without_auth", config.DockerConfig == "" && config.Login == "" && config.Password == ""),
 		slog.String("cluster_uuid", s.clusterUUID))
 
-	cli, err := s.dc.GetRegistryClient(filepath.Join(remote.Repository, segment), opts...)
+	cli, err := s.dc.GetRegistryClient(repository, utils.GenerateRegistryOptions(config, s.logger)...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
 	}

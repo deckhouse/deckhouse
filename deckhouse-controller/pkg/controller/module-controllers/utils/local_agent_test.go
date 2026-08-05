@@ -17,6 +17,7 @@
 package utils
 
 import (
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -70,10 +72,86 @@ func TestForRepositoryTrustsTheNodeWhenFetchingThroughIt(t *testing.T) {
 	assert.Equal(t, "AGENT-CA", got.CA,
 		"the authority is generated on the node, so it cannot be the one the cluster knows")
 
-	// Left alone rather than cleared: the agent authenticates to the registry behind it with
-	// credentials of its own, and a docker config naming other hosts says nothing about the
-	// loopback address. Clearing it would be one more thing to get wrong for no gain.
+	// Cleared, not left to go unused. A docker config is looked up by the host being dialled,
+	// and one with no entry for it makes building the client fail before any request is made —
+	// which is exactly what happened to the deckhouse ModuleSource on a cluster where the
+	// module had taken over the pull path.
+	assert.Empty(t, got.DockerConfig,
+		"nothing authenticates to the agent, and a config naming other hosts only fails the lookup")
+}
+
+// TestForRepositoryClearsEveryFormOfCredential covers the other way credentials arrive.
+//
+// A ModuleSource may carry a login and password instead of a docker config, and the client
+// prefers those when they are set. Clearing one and not the other would send a cluster's
+// registry password to the loopback address and, worse, would go on working — the agent
+// ignores what it is sent — until the day it did not.
+func TestForRepositoryClearsEveryFormOfCredential(t *testing.T) {
+	withAgentCA(t, "AGENT-CA")
+
+	config := &RegistryConfig{
+		Scheme:       "https",
+		DockerConfig: "CFG",
+		Login:        "someone",
+		Password:     "secret",
+	}
+	got := config.ForRepository(registry_const.HostWithPath+"/modules", log.NewNop())
+
+	assert.Empty(t, got.DockerConfig)
+	assert.Empty(t, got.Login)
+	assert.Empty(t, got.Password)
+}
+
+// TestForRepositoryKeepsCredentialsForEveryOtherRegistry is the counterweight to the two above:
+// clearing must be decided by the address, and an ordinary registry needs its credentials.
+func TestForRepositoryKeepsCredentialsForEveryOtherRegistry(t *testing.T) {
+	withAgentCA(t, "AGENT-CA")
+
+	config := &RegistryConfig{DockerConfig: "CFG", Login: "someone", Password: "secret"}
+	got := config.ForRepository("registry.example.com/deckhouse/ee", log.NewNop())
+
 	assert.Equal(t, "CFG", got.DockerConfig)
+	assert.Equal(t, "someone", got.Login)
+	assert.Equal(t, "secret", got.Password)
+}
+
+// TestAClientForTheAgentCanActuallyBeBuilt is the test the unit assertions above stand in for,
+// and the one that would have caught this.
+//
+// The configuration a cluster carries describes a registry somewhere else, and reasoning about it
+// as a bag of credentials the client may ignore is what went wrong: a docker config is looked up
+// by the host being dialled, and no entry for that host means the client refuses to be built at
+// all. On a cluster where the module had taken over the pull path, that took the whole thing
+// down — the deckhouse ModuleSource sat on `"127.0.0.1:5001/system/deckhouse/modules"
+// credentials not found in the dockerCfg` and no module could be fetched again — while every
+// address, scheme and authority involved was correct.
+//
+// So this goes through the real client constructor, which is where the refusal lives.
+func TestAClientForTheAgentCanActuallyBeBuilt(t *testing.T) {
+	withAgentCA(t, "AGENT-CA")
+
+	// A cluster's own registry secret: credentials for the registry it was told about, and
+	// nothing whatsoever about the node it now fetches through.
+	upstream := base64.StdEncoding.EncodeToString(
+		[]byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`))
+
+	for _, repository := range []string{
+		registry_const.ProxyHostWithPath,
+		registry_const.ProxyHostWithPath + "/modules/upmeter",
+	} {
+		config := (&RegistryConfig{DockerConfig: upstream, Scheme: "http", CA: "UPSTREAM-CA"}).
+			ForRepository(repository, log.NewNop())
+
+		_, err := cr.NewClient(repository, GenerateRegistryOptions(config, log.NewNop())...)
+		require.NoError(t, err, repository)
+	}
+
+	// And the case that must keep working: a registry the docker config does name.
+	config := (&RegistryConfig{DockerConfig: upstream}).
+		ForRepository("registry.example.com/deckhouse/ee", log.NewNop())
+
+	_, err := cr.NewClient("registry.example.com/deckhouse/ee", GenerateRegistryOptions(config, log.NewNop())...)
+	require.NoError(t, err)
 }
 
 // TestForRepositoryFallsBackWhenTheAuthorityIsMissing is about the shape of the failure.

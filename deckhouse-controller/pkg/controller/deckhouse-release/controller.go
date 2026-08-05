@@ -1034,7 +1034,11 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 		return fmt.Errorf("incorrect image: %s", image)
 	}
 
-	repo := imageRepoTag.Context().Name()
+	// Dialled, because this repository comes from a pod image reference — the one place the
+	// in-cluster address is certain to appear once the module manages the pull path. Nothing
+	// resolves that name here: this pod is on the host network, and the Service behind it
+	// exists only on a cluster that runs the cache.
+	repo := utils.Dial(imageRepoTag.Context().Name())
 	tag := imageRepoTag.TagStr()
 
 	if r.registrySecret == nil {

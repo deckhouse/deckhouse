@@ -74,7 +74,16 @@ spec:
   serviceName: registry
   # One replica per master node. The cache is part of the control plane: putting it
   # on every node would multiply the disk cost by the size of the cluster.
-  replicas: {{ $.Values.global.discovery.d8SpecificNodeCountByRole.master | default 1 }}
+  #
+  # Counted from clusterMasterCount, which counts exactly the nodes this StatefulSet is
+  # scheduled onto — the ones labelled `node-role.kubernetes.io/control-plane`, the same
+  # selector as the nodeSelector below. The obvious-looking alternative,
+  # `d8SpecificNodeCountByRole.master`, is keyed by `node-role.deckhouse.io/<role>` labels,
+  # which master nodes do not carry under that name: the key is absent, the default applies,
+  # and a three-master cluster silently runs one replica. It did — with no redundancy and no
+  # replication happening at all, while the StatefulSet reported 1/1 ready and every check
+  # that compares ready against desired passed.
+  replicas: {{ $.Values.global.discovery.clusterMasterCount | default 1 }}
   podManagementPolicy: Parallel
   updateStrategy:
     type: RollingUpdate

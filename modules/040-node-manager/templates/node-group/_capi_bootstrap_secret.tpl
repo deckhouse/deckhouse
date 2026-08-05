@@ -3,6 +3,23 @@
 {{- $ng := index . 1 }}
 {{- $zone_name := index . 2 }}
 {{- $bootstrap_secret_name := index . 3 }}
+{{- $bootstrap_token := pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first }}
+{{- /*
+  Not rendered at all until this NodeGroup has a bootstrap token.
+
+  The token is ordered by a hook that does not run on NodeGroup events, so a render can see a
+  NodeGroup the hook has not ordered a token for yet — a window of seconds, right after the
+  group is created. Rendered anyway, the token becomes the literal string `<no value>`, and a
+  machine created from this secret carries that onto the node: it is written to
+  /var/lib/bashible/bootstrap-token, the kube-apiserver answers 401 to everything the node
+  asks with it, and the node never joins. Nothing recovers it either, because a machine's
+  user data is fixed when the machine is created — this secret is corrected by the next
+  render, minutes before anyone could notice which machines were built from the wrong one.
+
+  Absent instead, Cluster API simply waits for the bootstrap data, and the next render — which
+  the hook's own values change triggers — provides it.
+*/}}
+{{- if $bootstrap_token }}
 ---
 apiVersion: v1
 kind: Secret
@@ -17,7 +34,8 @@ metadata:
 type: Opaque
 data:
   format: {{ "cloud-config" | b64enc}}
-  value: {{ include "node_group_capi_cloud_init_cloud_config" (list $context $ng (pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first)) | b64enc }}
+  value: {{ include "node_group_capi_cloud_init_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}
+{{- end }}
 {{- end }}
 
 {{- define "capi_infrastructure_cluster" }}

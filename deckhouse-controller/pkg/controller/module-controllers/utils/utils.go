@@ -87,7 +87,7 @@ func Dial(repository string) string {
 //
 // The agent is what the registry module puts in front of every pull once it manages the pull
 // path, and a process — unlike a container runtime, which is handed a drop-in that redirects
-// it — has to dial the agent to fetch through it. Two things about the agent are not
+// it — has to dial the agent to fetch through it. Three things about the agent are not
 // properties of the registry the cluster was told about, and cannot be:
 //
 //   - It serves HTTPS, whatever the upstream behind it speaks. An upstream reached over plain
@@ -97,10 +97,15 @@ func Dial(repository string) string {
 //     object can carry it — every node has a different one. That is deliberate: a node's
 //     ability to pull must not wait for cluster-wide certificate material to arrive. It is why
 //     this pod mounts the authority from the host instead.
+//   - Nothing authenticates to it. The agent holds credentials of its own for the registry
+//     behind it, and asks the client for none.
 //
-// Credentials are left as they are, and are simply not used: the agent authenticates to the
-// registry behind it with credentials of its own, and a docker config naming other hosts has
-// nothing to say about the loopback address.
+// The last of those is why the credentials are cleared rather than left to go unused. A docker
+// config is not a bag of credentials the client may ignore — it is looked up by host, and a
+// config with no entry for the host being dialled makes building the client fail outright,
+// before any request is made. Left in place, it took the whole pull path down the moment the
+// module took it over: the deckhouse ModuleSource sat on `"127.0.0.1:5001/system/deckhouse/
+// modules" credentials not found in the dockerCfg`, and no module could be fetched again.
 func (rc *RegistryConfig) ForRepository(repository string, logger *log.Logger) *RegistryConfig {
 	// Either spelling of the same agent: as recorded, or as dialled.
 	if !registry_const.IsInCluster(repository) && !registry_const.IsLocalAgent(repository) {
@@ -108,6 +113,9 @@ func (rc *RegistryConfig) ForRepository(repository string, logger *log.Logger) *
 	}
 
 	rc.Scheme = registry_const.Scheme
+	rc.DockerConfig = ""
+	rc.Login = ""
+	rc.Password = ""
 
 	authority, err := os.ReadFile(agentCAFile)
 	if err != nil {
