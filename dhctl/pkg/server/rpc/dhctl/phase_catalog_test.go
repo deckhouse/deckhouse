@@ -49,6 +49,8 @@ func TestGetPhaseCatalog(t *testing.T) {
 
 	phaseTitle = got.Phases[installDeckhousePhase].ByLocale[string(phases.RULocale)]
 	subTitle = got.SubPhases[installDeckhousePhase].ByLocale[string(phases.RULocale)]
+	assert.NotEmpty(t, phaseTitle)
+	assert.NotEmpty(t, subTitle)
 }
 
 func TestGetPhaseCatalog_MatchesLoader(t *testing.T) {
