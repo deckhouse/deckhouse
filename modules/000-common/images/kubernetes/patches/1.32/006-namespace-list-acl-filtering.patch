@@ -4008,10 +4008,10 @@ index 00000000000..cf070f1812d
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity.go
 new file mode 100644
-index 00000000000..e7806d73efc
+index 00000000000..2f89a671fe3
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity.go
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,122 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -4100,7 +4100,16 @@ index 00000000000..e7806d73efc
 +	for _, namespace := range namespaces {
 +		if project, ok := membership[namespace]; ok {
 +			projects[project] = struct{}{}
++			continue
 +		}
++		// A main namespace carries the label only once multitenancy-manager
++		// has reconciled the project; an adopted namespace is bare until
++		// then, and its project would blink out of the listing for the whole
++		// window. The name answers on its own -- a main namespace is named
++		// after its project -- which is the same fallback the module's own
++		// reader makes. A name no Project answers to costs nothing: the
++		// derived set is matched against metadata.name.
++		projects[namespace] = struct{}{}
 +	}
 +
 +	names := make([]string, 0, len(projects))
@@ -4127,10 +4136,10 @@ index 00000000000..e7806d73efc
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
 new file mode 100644
-index 00000000000..97b89679b56
+index 00000000000..24a3a48fede
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/identity_test.go
-@@ -0,0 +1,236 @@
+@@ -0,0 +1,241 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -4266,9 +4275,14 @@ index 00000000000..97b89679b56
 +			expected:   []string{"team-a"},
 +		},
 +		{
-+			name:       "namespaces outside every project reveal nothing",
++			name:       "an unlabeled main namespace still reveals its project",
++			accessible: []string{"team-d"},
++			expected:   []string{"team-d"},
++		},
++		{
++			name:       "namespaces outside every project offer only their own name, which no Project answers to",
 +			accessible: []string{"d8-system", "default"},
-+			expected:   nil,
++			expected:   []string{"d8-system", "default"},
 +		},
 +		{
 +			name:       "unrelated projects stay hidden",
