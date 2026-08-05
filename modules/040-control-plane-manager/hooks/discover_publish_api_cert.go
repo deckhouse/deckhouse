@@ -86,15 +86,6 @@ func discoverPublishAPICA(_ context.Context, input *go_hook.HookInput) error {
 		kubeCAPath     = "global.discovery.kubernetesCA"
 	)
 
-	caCertificates := make(map[string][]byte)
-	for publishCert, err := range sdkobjectpatch.SnapshotIter[PublishAPICert](input.Snapshots.Get("secret")) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'secret' snapshot: %w", err)
-		}
-
-		caCertificates[publishCert.Name] = publishCert.Data
-	}
-
 	var cert string
 	var err error
 	switch input.Values.Get(modePath).String() {
