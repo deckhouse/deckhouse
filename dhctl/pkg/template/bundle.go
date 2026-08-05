@@ -30,6 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -71,11 +72,12 @@ func PrepareBundle(
 	devicePath string,
 	metaConfig *config.MetaConfig,
 	globalOptions *options.GlobalOptions,
+	pkiProvider registry.PKIProvider,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBundle")
 	defer span.End()
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, nodeIP)
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, nodeIP, pkiProvider)
 	if err != nil {
 		return err
 	}

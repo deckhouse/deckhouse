@@ -686,6 +686,7 @@ func (b *ClusterBootstrapper) bootstrapKubernetes(ctx context.Context, bctx *boo
 		CommanderMode:          b.CommanderMode,
 		GlobalOpts:             &b.Options.Global,
 		PhasedExecutionContext: b.PhasedExecutionContext,
+		BootstrapState:         bctx.bootstrapState,
 	})
 
 	if err != nil {

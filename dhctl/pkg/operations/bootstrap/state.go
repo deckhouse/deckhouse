@@ -19,12 +19,15 @@ package bootstrap
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 const (
 	PostBootstrapResultCacheKey      = "post-bootstrap-result"
 	ManifestCreatedInClusterCacheKey = "tf-state-and-manifests-in-cluster"
+	BashibleStepsStatusCacheKey      = "bashible-bundle-steps-status"
+	RegistryPKICacheKey              = "registry-pki"
 )
 
 type State struct {
@@ -47,6 +50,59 @@ func (s *State) SaveManifestsCreated(ctx context.Context) error {
 
 func (s *State) IsManifestsCreated(ctx context.Context) (bool, error) {
 	return s.cache.InCache(ctx, ManifestCreatedInClusterCacheKey)
+}
+
+// SaveBashibleStepsStatus persists the set of bashible bundle steps that have
+// already completed successfully (name -> content checksum), so a later
+// dhctl run can resume the bootstrap bashible pipeline without re-running them.
+func (s *State) SaveBashibleStepsStatus(ctx context.Context, statuses map[string]string) error {
+	return s.cache.SaveStruct(ctx, BashibleStepsStatusCacheKey, statuses)
+}
+
+// BashibleStepsStatus loads the previously saved bashible bundle steps status.
+// It returns an empty map, not an error, if nothing has been saved yet.
+func (s *State) BashibleStepsStatus(ctx context.Context) (map[string]string, error) {
+	inCache, err := s.cache.InCache(ctx, BashibleStepsStatusCacheKey)
+	if err != nil {
+		return nil, err
+	}
+	if !inCache {
+		return map[string]string{}, nil
+	}
+
+	statuses := make(map[string]string)
+	if err := s.cache.LoadStruct(ctx, BashibleStepsStatusCacheKey, &statuses); err != nil {
+		return nil, err
+	}
+
+	return statuses, nil
+}
+
+// SaveRegistryPKI persists the generated registry CA/user PKI so subsequent
+// bootstrap attempts for the same cluster reuse it instead of generating a
+// new one every process invocation (which would push different credentials
+// than an earlier, possibly interrupted, attempt already used).
+func (s *State) SaveRegistryPKI(ctx context.Context, pki registry.PKI) error {
+	return s.cache.SaveStruct(ctx, RegistryPKICacheKey, pki)
+}
+
+// RegistryPKI loads the previously saved registry PKI. ok is false, with no
+// error, if nothing has been saved yet.
+func (s *State) RegistryPKI(ctx context.Context) (registry.PKI, bool, error) {
+	inCache, err := s.cache.InCache(ctx, RegistryPKICacheKey)
+	if err != nil {
+		return registry.PKI{}, false, err
+	}
+	if !inCache {
+		return registry.PKI{}, false, nil
+	}
+
+	var pki registry.PKI
+	if err := s.cache.LoadStruct(ctx, RegistryPKICacheKey, &pki); err != nil {
+		return registry.PKI{}, false, err
+	}
+
+	return pki, true, nil
 }
 
 func (s *State) PostBootstrapScriptResult(ctx context.Context) ([]byte, error) {
