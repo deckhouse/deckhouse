@@ -1,7 +1,15 @@
 diff --git a/go.mod b/go.mod
-index 4be5be0..116e3ea 100644
+index 4be5be0..d56e689 100644
 --- a/go.mod
 +++ b/go.mod
+@@ -1,6 +1,6 @@
+ module github.com/ratify-project/ratify
+ 
+-go 1.26.0
++go 1.25.7
+ 
+ // Accidentally published prior to 1.0.0 release
+ retract (
 @@ -9,32 +9,32 @@ retract (
  )
  
@@ -61,14 +69,14 @@ index 4be5be0..116e3ea 100644
 +	go.opentelemetry.io/otel/exporters/prometheus v0.65.0
 +	go.opentelemetry.io/otel/metric v1.44.0
 +	go.opentelemetry.io/otel/sdk/metric v1.44.0
-+	golang.org/x/sync v0.21.0
++	golang.org/x/sync v0.22.0
 +	google.golang.org/grpc v1.82.1
  	google.golang.org/protobuf v1.36.11
  	k8s.io/api v0.35.3
  	k8s.io/apimachinery v0.35.3
  	k8s.io/client-go v0.35.3
 -	oras.land/oras-go/v2 v2.6.0
-+	oras.land/oras-go/v2 v2.6.1
++	oras.land/oras-go/v2 v2.6.2
  )
  
  require (
@@ -325,7 +333,7 @@ index 4be5be0..116e3ea 100644
  	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4 // indirect
  	sigs.k8s.io/controller-runtime v0.23.3
 diff --git a/go.sum b/go.sum
-index 5af0a24..88e36d0 100644
+index 5af0a24..d665ec5 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -3,36 +3,38 @@ al.essio.dev/pkg/shellescape v1.6.0/go.mod h1:6sIqp7X2P6mThCQ7twERpZTuigpr6KbZWt
@@ -1000,8 +1008,8 @@ index 5af0a24..88e36d0 100644
  golang.org/x/sync v0.10.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
 -golang.org/x/sync v0.20.0 h1:e0PTpb7pjO8GAtTs2dQ6jYa5BWYlMuX047Dco/pItO4=
 -golang.org/x/sync v0.20.0/go.mod h1:9xrNwdLfx4jkKbNva9FpL6vEN7evnE43NNNJQ2LF3+0=
-+golang.org/x/sync v0.21.0 h1:HLII4xRRTtCRkxYp4HNFF0Js/Og6q2i++KXbg0gHCwM=
-+golang.org/x/sync v0.21.0/go.mod h1:9xrNwdLfx4jkKbNva9FpL6vEN7evnE43NNNJQ2LF3+0=
++golang.org/x/sync v0.22.0 h1:SZjpbeLmrCk4xhRSZFNZW5gFUeCeFgjekvI/+gfScek=
++golang.org/x/sync v0.22.0/go.mod h1:9xrNwdLfx4jkKbNva9FpL6vEN7evnE43NNNJQ2LF3+0=
  golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
@@ -1116,8 +1124,8 @@ index 5af0a24..88e36d0 100644
  k8s.io/utils v0.0.0-20251002143259-bc988d571ff4/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 -oras.land/oras-go/v2 v2.6.0 h1:X4ELRsiGkrbeox69+9tzTu492FMUu7zJQW6eJU+I2oc=
 -oras.land/oras-go/v2 v2.6.0/go.mod h1:magiQDfG6H1O9APp+rOsvCPcW1GD2MM7vgnKY0Y+u1o=
-+oras.land/oras-go/v2 v2.6.1 h1:bonOEkjLfp8tt6qXWRRWP6p1F+9octchOf2EqnWB4Zs=
-+oras.land/oras-go/v2 v2.6.1/go.mod h1:dhtFrFOuZuDtAVeZ9FUnaa5zfzplG3ZnFX9/uH1J/Yk=
++oras.land/oras-go/v2 v2.6.2 h1:N04RXngAp1LJKTG6ifz3xHPipasEkWr+hFmInja5YKo=
++oras.land/oras-go/v2 v2.6.2/go.mod h1:PlTtg4JTDJkDe8yVHpM2wz7/YDc00GVas+i4jAW2TZ4=
  sigs.k8s.io/controller-runtime v0.23.3 h1:VjB/vhoPoA9l1kEKZHBMnQF33tdCLQKJtydy4iqwZ80=
  sigs.k8s.io/controller-runtime v0.23.3/go.mod h1:B6COOxKptp+YaUT5q4l6LqUJTRpizbgf9KSRNdQGns0=
  sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 h1:IpInykpT6ceI+QxKBbEflcR5EXP7sU1kvOlxwZh5txg=
