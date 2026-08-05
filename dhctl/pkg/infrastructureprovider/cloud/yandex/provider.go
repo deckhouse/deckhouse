@@ -15,23 +15,3 @@
 package yandex
 
 const ProviderName = "yandex"
-
-type instanceClass struct {
-	ExternalIPAddresses []string `json:"externalIPAddresses"`
-}
-
-type masterNodeGroupSpec struct {
-	Replicas      int           `json:"replicas"`
-	InstanceClass instanceClass `json:"instanceClass"`
-}
-
-type nodeGroupSpec struct {
-	Name          string        `json:"name"`
-	Replicas      int           `json:"replicas"`
-	InstanceClass instanceClass `json:"instanceClass"`
-}
-
-type withNatInstanceSpec struct {
-	InternalSubnetCIDR string `json:"internalSubnetCIDR,omitempty"`
-	InternalSubnetID   string `json:"internalSubnetID,omitempty"`
-}

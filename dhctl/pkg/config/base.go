@@ -680,8 +680,7 @@ func FetchDocuments(ctx context.Context, paths []string) ([]string, error) {
 // inTreeValidatorProviders mirrors selectValidator in infrastructureprovider
 // (not imported from here to avoid a cycle).
 var inTreeValidatorProviders = map[string]struct{}{
-	"yandex": {},
-	"vcd":    {},
+	"vcd": {},
 }
 
 // ProviderBundledInCandi reports whether the provider ships its schemas in the
