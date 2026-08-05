@@ -22,6 +22,9 @@ git:
   stageDependencies:
     install:
       - "**/*.go"
+      # go_lib/controlplane/manifests embeds these, so editing one has to rebuild dhctl —
+      # otherwise the binary ships whatever templates the stage was last cached with.
+      - "**/*.yaml.tpl"
 - add: {{ printf "%s/pkg/log" $prefix }}
   to: /src/pkg/log
   stageDependencies:
