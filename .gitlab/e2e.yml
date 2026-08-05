@@ -1,5 +1,5 @@
 # E2E pipelines via e2e-framework (Commander).
-# Start: GitLab UI "New pipeline" (web) or Pipelines API (api) with E2E_RUN=true.
+# Start: GitLab UI "New pipeline" (web) or Pipelines API (api).
 #
 # Instruction: 1.md
 # Framework templates: deckhouse/ssdlc-tools/e2e-framework
@@ -14,13 +14,6 @@ include:
 variables:
   # Same JWT role as other GitLab jobs in this repo (.gitlab/*.yml → VAULT_AUTH_ROLE).
   VAULT_ROLE: "deckhouse"
-
-  E2E_RUN:
-    value: "true"
-    options:
-      - "false"
-      - "true"
-    description: "Set to true for e2e pipeline (web/API only)."
 
   E2E_PROVIDER:
     value: "Yandex"
@@ -144,7 +137,7 @@ e2e-yandex-create:
     - .e2e-yandex-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex"
 
 e2e-yandex-update:
   extends:
@@ -155,7 +148,7 @@ e2e-yandex-update:
       artifacts: true
     - job: e2e-yandex-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-yandex-tests:
   extends:
@@ -170,7 +163,7 @@ e2e-yandex-tests:
     - job: e2e-yandex-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex"
 
 e2e-yandex-delete:
   extends:
@@ -180,7 +173,7 @@ e2e-yandex-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex"
 
 e2e-yandex-delete-auto:
   extends:
@@ -192,7 +185,7 @@ e2e-yandex-delete-auto:
       artifacts: true
     - job: e2e-yandex-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex"
 
 # --- AWS ---
 e2e-aws-create:
@@ -200,7 +193,7 @@ e2e-aws-create:
     - .e2e-aws-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS"
 
 e2e-aws-update:
   extends:
@@ -211,7 +204,7 @@ e2e-aws-update:
       artifacts: true
     - job: e2e-aws-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-aws-tests:
   extends:
@@ -226,7 +219,7 @@ e2e-aws-tests:
     - job: e2e-aws-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS"
 
 e2e-aws-delete:
   extends:
@@ -236,7 +229,7 @@ e2e-aws-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS"
 
 e2e-aws-delete-auto:
   extends:
@@ -248,7 +241,7 @@ e2e-aws-delete-auto:
       artifacts: true
     - job: e2e-aws-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS"
 
 # --- Azure ---
 e2e-azure-create:
@@ -256,7 +249,7 @@ e2e-azure-create:
     - .e2e-azure-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure"
 
 e2e-azure-update:
   extends:
@@ -267,7 +260,7 @@ e2e-azure-update:
       artifacts: true
     - job: e2e-azure-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-azure-tests:
   extends:
@@ -282,7 +275,7 @@ e2e-azure-tests:
     - job: e2e-azure-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure"
 
 e2e-azure-delete:
   extends:
@@ -292,7 +285,7 @@ e2e-azure-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure"
 
 e2e-azure-delete-auto:
   extends:
@@ -304,7 +297,7 @@ e2e-azure-delete-auto:
       artifacts: true
     - job: e2e-azure-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure"
 
 # --- GCP ---
 e2e-gcp-create:
@@ -312,7 +305,7 @@ e2e-gcp-create:
     - .e2e-gcp-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP"
 
 e2e-gcp-update:
   extends:
@@ -323,7 +316,7 @@ e2e-gcp-update:
       artifacts: true
     - job: e2e-gcp-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-gcp-tests:
   extends:
@@ -338,7 +331,7 @@ e2e-gcp-tests:
     - job: e2e-gcp-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP"
 
 e2e-gcp-delete:
   extends:
@@ -348,7 +341,7 @@ e2e-gcp-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP"
 
 e2e-gcp-delete-auto:
   extends:
@@ -360,7 +353,7 @@ e2e-gcp-delete-auto:
       artifacts: true
     - job: e2e-gcp-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP"
 
 # --- OpenStack ---
 e2e-openstack-create:
@@ -368,7 +361,7 @@ e2e-openstack-create:
     - .e2e-openstack-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack"
 
 e2e-openstack-update:
   extends:
@@ -379,7 +372,7 @@ e2e-openstack-update:
       artifacts: true
     - job: e2e-openstack-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-openstack-tests:
   extends:
@@ -394,7 +387,7 @@ e2e-openstack-tests:
     - job: e2e-openstack-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack"
 
 e2e-openstack-delete:
   extends:
@@ -404,7 +397,7 @@ e2e-openstack-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack"
 
 e2e-openstack-delete-auto:
   extends:
@@ -416,7 +409,7 @@ e2e-openstack-delete-auto:
       artifacts: true
     - job: e2e-openstack-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack"
 
 # --- Vsphere ---
 e2e-vsphere-create:
@@ -424,7 +417,7 @@ e2e-vsphere-create:
     - .e2e-vsphere-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere"
 
 e2e-vsphere-update:
   extends:
@@ -435,7 +428,7 @@ e2e-vsphere-update:
       artifacts: true
     - job: e2e-vsphere-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-vsphere-tests:
   extends:
@@ -450,7 +443,7 @@ e2e-vsphere-tests:
     - job: e2e-vsphere-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere"
 
 e2e-vsphere-delete:
   extends:
@@ -460,7 +453,7 @@ e2e-vsphere-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere"
 
 e2e-vsphere-delete-auto:
   extends:
@@ -472,7 +465,7 @@ e2e-vsphere-delete-auto:
       artifacts: true
     - job: e2e-vsphere-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere"
 
 # --- DVP ---
 e2e-dvp-create:
@@ -480,7 +473,7 @@ e2e-dvp-create:
     - .e2e-dvp-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP"
 
 e2e-dvp-update:
   extends:
@@ -491,7 +484,7 @@ e2e-dvp-update:
       artifacts: true
     - job: e2e-dvp-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-dvp-tests:
   extends:
@@ -506,7 +499,7 @@ e2e-dvp-tests:
     - job: e2e-dvp-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP"
 
 e2e-dvp-delete:
   extends:
@@ -516,7 +509,7 @@ e2e-dvp-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP"
 
 e2e-dvp-delete-auto:
   extends:
@@ -528,7 +521,7 @@ e2e-dvp-delete-auto:
       artifacts: true
     - job: e2e-dvp-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP"
 
 # --- Zvirt ---
 e2e-zvirt-create:
@@ -536,7 +529,7 @@ e2e-zvirt-create:
     - .e2e-zvirt-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt"
 
 e2e-zvirt-update:
   extends:
@@ -547,7 +540,7 @@ e2e-zvirt-update:
       artifacts: true
     - job: e2e-zvirt-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-zvirt-tests:
   extends:
@@ -562,7 +555,7 @@ e2e-zvirt-tests:
     - job: e2e-zvirt-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt"
 
 e2e-zvirt-delete:
   extends:
@@ -572,7 +565,7 @@ e2e-zvirt-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt"
 
 e2e-zvirt-delete-auto:
   extends:
@@ -584,7 +577,7 @@ e2e-zvirt-delete-auto:
       artifacts: true
     - job: e2e-zvirt-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt"
 
 # --- VCD ---
 e2e-vcd-create:
@@ -592,7 +585,7 @@ e2e-vcd-create:
     - .e2e-vcd-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD"
 
 e2e-vcd-update:
   extends:
@@ -603,7 +596,7 @@ e2e-vcd-update:
       artifacts: true
     - job: e2e-vcd-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-vcd-tests:
   extends:
@@ -618,7 +611,7 @@ e2e-vcd-tests:
     - job: e2e-vcd-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD"
 
 e2e-vcd-delete:
   extends:
@@ -628,7 +621,7 @@ e2e-vcd-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD"
 
 e2e-vcd-delete-auto:
   extends:
@@ -640,7 +633,7 @@ e2e-vcd-delete-auto:
       artifacts: true
     - job: e2e-vcd-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD"
 
 # --- Huawei ---
 e2e-huawei-create:
@@ -648,7 +641,7 @@ e2e-huawei-create:
     - .e2e-huawei-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei"
 
 e2e-huawei-update:
   extends:
@@ -659,7 +652,7 @@ e2e-huawei-update:
       artifacts: true
     - job: e2e-huawei-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-huawei-tests:
   extends:
@@ -674,7 +667,7 @@ e2e-huawei-tests:
     - job: e2e-huawei-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei"
 
 e2e-huawei-delete:
   extends:
@@ -684,7 +677,7 @@ e2e-huawei-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei"
 
 e2e-huawei-delete-auto:
   extends:
@@ -696,7 +689,7 @@ e2e-huawei-delete-auto:
       artifacts: true
     - job: e2e-huawei-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei"
 
 # --- StaticPrivate ---
 e2e-static-private-create:
@@ -704,7 +697,7 @@ e2e-static-private-create:
     - .e2e-static-private-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate"
 
 e2e-static-private-update:
   extends:
@@ -715,7 +708,7 @@ e2e-static-private-update:
       artifacts: true
     - job: e2e-static-private-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate" && $E2E_UPDATE_DECKHOUSE == "true"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate" && $E2E_UPDATE_DECKHOUSE == "true"
 
 e2e-static-private-tests:
   extends:
@@ -730,7 +723,7 @@ e2e-static-private-tests:
     - job: e2e-static-private-update
       optional: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate"
 
 e2e-static-private-delete:
   extends:
@@ -740,7 +733,7 @@ e2e-static-private-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate"
 
 e2e-static-private-delete-auto:
   extends:
@@ -752,4 +745,4 @@ e2e-static-private-delete-auto:
       artifacts: true
     - job: e2e-static-private-tests
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate"
