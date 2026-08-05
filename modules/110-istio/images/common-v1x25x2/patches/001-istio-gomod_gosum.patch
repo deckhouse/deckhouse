@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 2ca62a410c..e330f67aea 100644
+index 2ca62a410c..7e5c9b4126 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,119 +1,119 @@
  module istio.io/istio
  
 -go 1.23.0
-+go 1.26.0
++go 1.25.0
  
  require (
 -	cloud.google.com/go/compute/metadata v0.6.0
