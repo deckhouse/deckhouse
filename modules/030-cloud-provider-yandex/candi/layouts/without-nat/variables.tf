@@ -16,21 +16,20 @@ variable "clusterConfiguration" {
   type = any
 }
 
+# Absent in ModuleConfig-only clusters; the migration module resolves the source
+# of truth and validates the result.
 variable "providerClusterConfiguration" {
-  type = any
-  validation {
-    condition = cidrsubnet(var.providerClusterConfiguration.nodeNetworkCIDR, 0, 0) == var.providerClusterConfiguration.nodeNetworkCIDR
-    error_message = "Invalid nodeNetworkCIDR in YandexClusterConfiguration."
-  }
+  type    = any
+  default = null
 }
 
 variable "nodeIndex" {
-  type = number
+  type    = number
   default = 0
 }
 
 variable "cloudConfig" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -38,16 +37,52 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "nodeGroups" {
+  type    = any
+  default = {}
+}
+
+variable "instanceClasses" {
+  type    = any
+  default = {}
+}
+
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
+}
+
+module "migration" {
+  source                       = "../../../terraform-modules/migration"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  nodeGroups                   = var.nodeGroups
+  instanceClasses              = var.instanceClasses
+  secrets                      = var.secrets
+  settings                     = var.settings
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
-  existing_network_id = lookup(var.providerClusterConfiguration, "existingNetworkID", "")
-  node_network_cidr = var.providerClusterConfiguration.nodeNetworkCIDR
-  existing_zone_to_subnet_id_map = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", {})
 
-  dhcp_options = lookup(var.providerClusterConfiguration, "dhcpOptions", null)
-  dhcp_domain_name = local.dhcp_options != null ? lookup(local.dhcp_options, "domainName", null) : null
-  dhcp_domain_name_servers = local.dhcp_options != null ? lookup(local.dhcp_options, "domainNameServers", null) : null
+  # The migration module resolves which source of truth wins; everything below
+  # reads the resolved ModuleConfig. tolist/tomap also absorb explicit nulls,
+  # which try() alone does not.
+  _node_params = try(module.migration.settings.spec.settings.nodes.parameters, {})
 
-  labels = lookup(var.providerClusterConfiguration, "labels", {})
-  layout = var.providerClusterConfiguration.layout
+  layout                         = try(local._node_params.layout, "")
+  zones                          = try(tolist(local._node_params.zones), [])
+  node_network_cidr              = try(local._node_params.nodeNetworkCIDR, "")
+  existing_network_id            = try(local._node_params.existingNetworkID, "")
+  existing_zone_to_subnet_id_map = try(tomap(local._node_params.existingZoneToSubnetIDMap), {})
+  labels                         = try(tomap(local._node_params.labels), {})
+
+  # vpc-components branches on null, so an unset option must not arrive as "".
+  _dhcp                    = try(local._node_params.dhcpOptions, {})
+  dhcp_domain_name         = try(local._dhcp.domainName, "") != "" ? local._dhcp.domainName : null
+  dhcp_domain_name_servers = length(try(tolist(local._dhcp.domainNameServers), [])) > 0 ? local._dhcp.domainNameServers : null
 }

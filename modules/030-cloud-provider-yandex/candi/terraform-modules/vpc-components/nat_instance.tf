@@ -18,40 +18,45 @@ data "yandex_compute_image" "nat_image" {
 }
 
 data "yandex_vpc_subnet" "user_internal_subnet" {
-  count = var.nat_instance_internal_subnet_id == null ? 0 : 1
+  count     = var.nat_instance_internal_subnet_id == null ? 0 : 1
   subnet_id = var.nat_instance_internal_subnet_id
 }
 
 data "yandex_vpc_subnet" "external_subnet" {
-  count = var.nat_instance_external_subnet_id == null ? 0 : 1
+  count     = var.nat_instance_external_subnet_id == null ? 0 : 1
   subnet_id = var.nat_instance_external_subnet_id
 }
 
 locals {
-  user_internal_subnet_zone = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].zone
-  external_subnet_zone = var.nat_instance_external_subnet_id == null ? null : join("", data.yandex_vpc_subnet.external_subnet.*.zone) # https://github.com/hashicorp/terraform/issues/23222#issuecomment-547462883
-  internal_subnet_zone = local.user_internal_subnet_zone == null ? (local.external_subnet_zone == null ? "ru-central1-a" : local.external_subnet_zone) : local.user_internal_subnet_zone
+  user_internal_subnet_zone = var.nat_instance_internal_subnet_id == null ? null : one(data.yandex_vpc_subnet.user_internal_subnet[*].zone)
+  external_subnet_zone      = var.nat_instance_external_subnet_id == null ? null : join("", data.yandex_vpc_subnet.external_subnet.*.zone) # https://github.com/hashicorp/terraform/issues/23222#issuecomment-547462883
+  internal_subnet_zone      = local.user_internal_subnet_zone == null ? (local.external_subnet_zone == null ? "ru-central1-a" : local.external_subnet_zone) : local.user_internal_subnet_zone
 
   # used for backward compatability
+  # one(x[*].attr) instead of x[0].attr: a conditional in HCL evaluates both arms, so the
+  # indexed form fails whenever the resource has no instances even though the guarding
+  # condition says it does not. one() yields the same value for a count = 1 resource and
+  # null for an empty one, which is exactly what the guard means — see the join() workaround
+  # a few lines above for the same non-short-circuit gotcha.
   zone_to_subnet_id = tomap({
-    "ru-central1-a" = local.should_create_subnets ? yandex_vpc_subnet.kube_a[0].id : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].id)
-    "ru-central1-b" = local.should_create_subnets ? yandex_vpc_subnet.kube_b[0].id : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].id)
-    "ru-central1-e" = local.should_create_subnets ? yandex_vpc_subnet.kube_e[0].id : (local.not_have_existing_subnet_e ? null : data.yandex_vpc_subnet.kube_e[0].id)
-    "ru-central1-d" = local.should_create_subnets ? yandex_vpc_subnet.kube_d[0].id : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].id)
+    "ru-central1-a" = local.should_create_subnets ? one(yandex_vpc_subnet.kube_a[*].id) : (local.not_have_existing_subnet_a ? null : one(data.yandex_vpc_subnet.kube_a[*].id))
+    "ru-central1-b" = local.should_create_subnets ? one(yandex_vpc_subnet.kube_b[*].id) : (local.not_have_existing_subnet_b ? null : one(data.yandex_vpc_subnet.kube_b[*].id))
+    "ru-central1-e" = local.should_create_subnets ? one(yandex_vpc_subnet.kube_e[*].id) : (local.not_have_existing_subnet_e ? null : one(data.yandex_vpc_subnet.kube_e[*].id))
+    "ru-central1-d" = local.should_create_subnets ? one(yandex_vpc_subnet.kube_d[*].id) : (local.not_have_existing_subnet_d ? null : one(data.yandex_vpc_subnet.kube_d[*].id))
   })
 
   # used for backward compatability
   # we can not use one map because we will get cycle
   # local.nat_instance_internal_address_calculated uses in route table and yandex_vpc_subnet.kube_* depend on route table
   zone_to_cidr = tomap({
-    "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].v4_cidr_blocks[0])
-    "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].v4_cidr_blocks[0])
-    "ru-central1-e" = local.should_create_subnets ? local.kube_e_v4_cidr_block : (local.not_have_existing_subnet_e ? null : data.yandex_vpc_subnet.kube_e[0].v4_cidr_blocks[0])
-    "ru-central1-d" = local.should_create_subnets ? local.kube_d_v4_cidr_block : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].v4_cidr_blocks[0])
+    "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.not_have_existing_subnet_a ? null : try(one(data.yandex_vpc_subnet.kube_a[*].v4_cidr_blocks)[0], null))
+    "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.not_have_existing_subnet_b ? null : try(one(data.yandex_vpc_subnet.kube_b[*].v4_cidr_blocks)[0], null))
+    "ru-central1-e" = local.should_create_subnets ? local.kube_e_v4_cidr_block : (local.not_have_existing_subnet_e ? null : try(one(data.yandex_vpc_subnet.kube_e[*].v4_cidr_blocks)[0], null))
+    "ru-central1-d" = local.should_create_subnets ? local.kube_d_v4_cidr_block : (local.not_have_existing_subnet_d ? null : try(one(data.yandex_vpc_subnet.kube_d[*].v4_cidr_blocks)[0], null))
   })
 
   # if user set internal subnet id for nat instance get cidr from its subnet
-  user_internal_subnet_cidr = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].v4_cidr_blocks[0]
+  user_internal_subnet_cidr = var.nat_instance_internal_subnet_id == null ? null : try(one(data.yandex_vpc_subnet.user_internal_subnet[*].v4_cidr_blocks)[0], null)
 
   nat_instance_internal_cidr = var.nat_instance_internal_subnet_cidr != null ? var.nat_instance_internal_subnet_cidr : (local.user_internal_subnet_cidr != null ? local.user_internal_subnet_cidr : local.zone_to_cidr[local.internal_subnet_zone])
 
@@ -126,23 +131,23 @@ resource "yandex_compute_instance" "nat_instance" {
 
   boot_disk {
     initialize_params {
-      type = "network-hdd"
+      type     = "network-hdd"
       image_id = data.yandex_compute_image.nat_image.0.image_id
-      size = 13
+      size     = 13
     }
   }
 
   dynamic "network_interface" {
     for_each = var.nat_instance_external_subnet_id != null ? [var.nat_instance_external_subnet_id] : []
     content {
-      subnet_id = network_interface.value
+      subnet_id  = network_interface.value
       ip_address = var.nat_instance_external_address
-      nat       = false
+      nat        = false
     }
   }
 
   network_interface {
-    subnet_id      = var.nat_instance_internal_subnet_cidr != null ? yandex_vpc_subnet.nat_instance[0].id: (var.nat_instance_internal_subnet_id != null ? var.nat_instance_internal_subnet_id: local.zone_to_subnet_id[local.internal_subnet_zone])
+    subnet_id      = var.nat_instance_internal_subnet_cidr != null ? yandex_vpc_subnet.nat_instance[0].id : (var.nat_instance_internal_subnet_id != null ? var.nat_instance_internal_subnet_id : local.zone_to_subnet_id[local.internal_subnet_zone])
     ip_address     = local.nat_instance_internal_address_calculated
     nat            = local.assign_external_ip_address
     nat_ip_address = local.assign_external_ip_address ? var.nat_instance_external_address : null
