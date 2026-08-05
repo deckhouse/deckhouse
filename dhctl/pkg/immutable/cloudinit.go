@@ -68,11 +68,7 @@ func BuildMasterPayload(ctx context.Context, in MasterPayloadInput) (string, err
 		return "", fmt.Errorf("build node config: %w", err)
 	}
 
-	controlPlaneConfig, err := buildControlPlaneConfig(ctx, controlPlaneInput{
-		NodeName:   in.NodeName,
-		MetaConfig: in.MetaConfig,
-		StateCache: in.StateCache,
-	})
+	controlPlaneConfig, err := buildControlPlaneConfig(ctx, in)
 	if err != nil {
 		return "", fmt.Errorf("build control-plane config: %w", err)
 	}
