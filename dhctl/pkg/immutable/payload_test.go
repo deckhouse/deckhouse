@@ -48,7 +48,7 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), controlPlaneInput{
+	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), MasterPayloadInput{
 		NodeName:   "zykov-master-0",
 		MetaConfig: metaConfig,
 		StateCache: cache.NewTestCache(),
@@ -93,7 +93,7 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
 	metaConfig := testMetaConfig(t)
 
-	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), controlPlaneInput{
+	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), MasterPayloadInput{
 		NodeName:   "zykov-master-0",
 		MetaConfig: metaConfig,
 		StateCache: cache.NewTestCache(),

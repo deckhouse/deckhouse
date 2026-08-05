@@ -21,25 +21,13 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 // controlPlaneDigestsKey is the images_digests.json module the control-plane
 // component images are built in.
 const controlPlaneDigestsKey = "controlPlaneManager"
 
-// controlPlaneInput is everything buildControlPlaneConfig needs.
-type controlPlaneInput struct {
-	// NodeName is the name the first master registers under. It is also the
-	// name the handoff endpoint's certificate is issued for.
-	NodeName string
-	// MetaConfig is the parsed cluster configuration.
-	MetaConfig *config.MetaConfig
-	// StateCache carries the handoff material between bootstrap attempts.
-	StateCache state.Cache
-}
-
-func (in controlPlaneInput) validate() error {
+func (in MasterPayloadInput) validate() error {
 	switch {
 	case in.NodeName == "":
 		return errors.New("node name is empty")
@@ -57,7 +45,7 @@ func (in controlPlaneInput) validate() error {
 // Nothing here is an artifact: the node generates the cluster PKI and renders
 // the static pod manifests itself. The only key in the result belongs to the
 // handoff endpoint dhctl collects the admin kubeconfig through.
-func buildControlPlaneConfig(ctx context.Context, in controlPlaneInput) (*controlPlaneConfig, error) {
+func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*controlPlaneConfig, error) {
 	if err := in.validate(); err != nil {
 		return nil, fmt.Errorf("build control-plane config: %w", err)
 	}
