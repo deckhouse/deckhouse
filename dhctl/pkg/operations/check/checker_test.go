@@ -609,6 +609,13 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	opts := options.New()
 	opts.Global.EnsureCandiAvailable = false
 	options.SetPaths("/", &opts.Global)
+	opts.Global.DownloadDir = t.TempDir()
+
+	// Yandex's external validator ships in the terraform-manager bundle, not
+	// in-tree, so parseConfigFromCluster requires a downloaded bundle even
+	// though the ClusterConfiguration schema is already baked into candi.
+	// Fake the delivery instead of hitting the registry.
+	tests.StubDeliveredProviderBundle(t, opts.Global.DownloadDir, opts.Global.CandiDir, "yandex")
 
 	return &testCheckClusterConfig{
 		testCheckClusterConfigBase: p.testCheckClusterConfigBase,
