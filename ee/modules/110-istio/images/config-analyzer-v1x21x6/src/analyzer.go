@@ -79,18 +79,20 @@ func runAnalysis(ctx context.Context, istioNamespace, revision string, allNamesp
 }
 
 const (
-	heritageLabel     = "heritage"
-	heritageDeckhouse = "deckhouse"
+	deckhouseSystemNamespacePrefix = "d8-"
+	sidecarInjectLabel             = "sidecar.istio.io/inject"
 )
 
-// mutedCodesForDeckhouseHeritage are Info-level findings that are noise for
-// Deckhouse-managed resources (heritage=deckhouse): system namespaces are not
-// meant for sidecar injection, and Deckhouse Service ports do not follow Istio
-// naming because those Services are not mesh workloads.
+// mutedCodesForDeckhouseSystem are Info-level findings that are noise for
+// Deckhouse system namespaces (d8-*), including d8-ingress-nginx / d8-ingress-istio:
+// those namespaces are not meant for namespace-wide sidecar injection, and Service
+// ports there often do not follow Istio naming because the Services are not mesh
+// workloads (including operator-created ones like prometheus-operated).
 //
-// Ingress / ALB namespaces (d8-ingress-*) are excluded from this mute: ingress
-// controllers may use Istio sidecars / gateways, so IST0102 and IST0118 remain useful.
-var mutedCodesForDeckhouseHeritage = map[string]struct{}{
+// Exception: resources explicitly opted into sidecar injection via
+// label/annotation sidecar.istio.io/inject=true (e.g. IngressNginxController
+// with enableIstioSidecar) keep all findings — they are real mesh workloads.
+var mutedCodesForDeckhouseSystem = map[string]struct{}{
 	"IST0102": {}, // NamespaceNotInjected
 	"IST0118": {}, // PortNameIsNotUnderNamingConvention
 }
@@ -99,33 +101,36 @@ func shouldReportMessage(message diag.Message) bool {
 	if !message.Type.Level().IsWorseThanOrEqualTo(outputThreshold) {
 		return false
 	}
-	if _, muted := mutedCodesForDeckhouseHeritage[message.Type.Code()]; muted &&
-		isDeckhouseHeritageResource(message) &&
-		!isIngressOrALBRelated(message) {
+	if _, muted := mutedCodesForDeckhouseSystem[message.Type.Code()]; muted &&
+		isDeckhouseSystemNamespaceResource(message) &&
+		!hasIstioSidecarInject(message) {
 		return false
 	}
 	return true
 }
 
-func isDeckhouseHeritageResource(message diag.Message) bool {
-	if message.Resource == nil {
-		return false
-	}
-	return message.Resource.Metadata.Labels[heritageLabel] == heritageDeckhouse
-}
-
-func isIngressOrALBRelated(message diag.Message) bool {
+func isDeckhouseSystemNamespaceResource(message diag.Message) bool {
 	if message.Resource == nil {
 		return false
 	}
 	name := string(message.Resource.Metadata.FullName.Name)
 	ns := string(message.Resource.Metadata.FullName.Namespace)
 	// Namespace objects are cluster-scoped: name is the namespace itself.
-	return isIngressRelatedNamespace(ns) || isIngressRelatedNamespace(name)
+	return isDeckhouseSystemNamespace(ns) || isDeckhouseSystemNamespace(name)
 }
 
-func isIngressRelatedNamespace(ns string) bool {
-	return strings.HasPrefix(ns, "d8-ingress-")
+func hasIstioSidecarInject(message diag.Message) bool {
+	if message.Resource == nil {
+		return false
+	}
+	if message.Resource.Metadata.Labels[sidecarInjectLabel] == "true" {
+		return true
+	}
+	return message.Resource.Metadata.Annotations[sidecarInjectLabel] == "true"
+}
+
+func isDeckhouseSystemNamespace(ns string) bool {
+	return strings.HasPrefix(ns, deckhouseSystemNamespacePrefix)
 }
 
 func messageLabels(message diag.Message, revision string) (messageType, namespace, resourceName, severity, code, messageText string) {
