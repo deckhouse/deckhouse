@@ -11,8 +11,6 @@ relatedLinks:
     url: ../../user/search.html
   - title: "API OpenSearch"
     url: opensearch-api.html
-  - title: "API поиска"
-    url: ../../user/search-api.html
 # После публикации страницы advanced-search в документации модуля code
 # добавить сюда пункт «Расширенный поиск — документация модуля code».
 ---

@@ -11,8 +11,6 @@ relatedLinks:
     url: ../../user/search.html
   - title: "OpenSearch API"
     url: opensearch-api.html
-  - title: "Search API"
-    url: ../../user/search-api.html
 # Once the advanced-search page is published in the code module documentation,
 # add an "Advanced search — code module documentation" item here.
 ---

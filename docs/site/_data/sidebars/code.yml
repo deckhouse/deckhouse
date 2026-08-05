@@ -128,10 +128,6 @@ entries:
           ru: Расширенный поиск
         url: /code/documentation/user/search.html
       - title:
-          en: Search API
-          ru: API поиска
-        url: /code/documentation/user/search-api.html
-      - title:
           en: Push rules
           ru: Правила отправки изменений
         url: /code/documentation/user/push-rules.html

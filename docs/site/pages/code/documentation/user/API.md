@@ -12,4 +12,4 @@ Example use cases:
 - Automating project management: creating, updating, and retrieving project information.
 - Retrieving data about users, merge requests, and commits.
 - Automatically rotating user secrets and access keys.
-- Programmatic search with OpenSearch-backed filters is described in ["Search API"](search-api.html).
+- Programmatic search with OpenSearch-backed filters is described in ["Search API"](search.html#search-api).

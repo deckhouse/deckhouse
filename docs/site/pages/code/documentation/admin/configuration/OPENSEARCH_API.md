@@ -9,7 +9,7 @@ weight: 38
 ---
 
 This page documents Deckhouse Code admin OpenSearch endpoints.
-For user-facing search parameters, see ["Search API"](../../user/search-api.html).
+For user-facing search parameters, see ["Search API"](../../user/search.html#search-api).
 
 ## Permissions
 
