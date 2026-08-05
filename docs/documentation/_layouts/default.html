@@ -29,7 +29,6 @@
     {%- endif %}
     {{ content }}
   </div>
-site.d8Revision - {{ site.d8Revision }}
      <!--#include virtual="{%- if site.mode == 'module' %}/{{ page.lang }}{%- endif %}/includes/footer.html" -->
 {%- if page.sidebar == 'embedded-modules' or site.mode == 'module' %}
 <script type="text/javascript">
@@ -50,7 +49,6 @@ site.d8Revision - {{ site.d8Revision }}
     });
   }
   {%- else %}
-  site.d8Revision - {{ site.d8Revision }}
   let subUrls = ['/modules/'];
   subUrls.forEach(function (element) {
     if (window.location.pathname.toLowerCase().includes(element)) {
