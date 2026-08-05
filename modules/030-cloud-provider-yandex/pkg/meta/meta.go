@@ -20,5 +20,6 @@ const (
 	ModuleName = "cloud-provider-yandex"
 	// Namespace is the Kubernetes namespace of the cloud-provider-yandex module.
 	Namespace = "d8-cloud-provider-yandex"
+	// ExporterCredentialSecretName is the CredentialSecret name with exporter API key
 	ExporterCredentialSecretName = "d8-credentials-exporter"
 )

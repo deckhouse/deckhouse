@@ -20,6 +20,8 @@ package v1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 const (
@@ -29,7 +31,9 @@ const (
 )
 
 var (
-	SchemeGroupVersion = schema.GroupVersion{Group: YandexInstanceClassGroupName, Version: YandexInstanceClassVersion}
+	_ cpapi.InstanceClassObject = (*YandexInstanceClass)(nil)
+
+	GroupVersionKind = schema.GroupVersionKind{Group: YandexInstanceClassGroupName, Version: YandexInstanceClassVersion, Kind: YandexInstanceClassKind}
 )
 
 // +kubebuilder:object:root=true
@@ -160,8 +164,15 @@ type YandexInstanceClassSpec struct {
 
 	// Subnet IDs that VirtualMachines' secondary NICs will connect to.
 	//
-	// Each subnet listed here translates into one additional network interface.
+	// For `CloudEphemeral` nodes, every subnet in the list is attached as a separate network interface.
+	//
+	// For `CloudPermanent` nodes, a single subnet is selected from the list by the node index,
+	// so the list must contain at least as many subnets as there are nodes in the group.
 	// +deckhouse:ru:description:value="Список дополнительных подсетей, которые будут подключены к виртуальной машине."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Для узлов типа `CloudEphemeral` каждая подсеть из списка подключается как отдельный сетевой интерфейс."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Для узлов типа `CloudPermanent` из списка выбирается одна подсеть по индексу узла, поэтому список должен содержать не меньше подсетей, чем узлов в группе."
 	// +deckhouse:XDocExamples:value="[b0csh41c1or82vuch89v, e2lgddi5svochh5fbq96]"
 	// +optional
 	AdditionalSubnets []string `json:"additionalSubnets,omitempty"`
@@ -192,4 +203,27 @@ type YandexInstanceClassStatus struct {
 	// NodeGroupConsumers lists the names of NodeGroups that use this instance class.
 	// +deckhouse:ru:description:value="Список имен NodeGroup, использующих этот instance class."
 	NodeGroupConsumers []string `json:"nodeGroupConsumers,omitempty"`
+}
+
+// GroupVersionKind returns the GroupVersionKind for the resource.
+func (c *YandexInstanceClass) GroupVersionKind() cpapi.GroupVersionKind {
+	return cpapi.GroupVersionKind{Group: YandexInstanceClassGroupName, Version: YandexInstanceClassVersion, Kind: YandexInstanceClassKind}
+}
+
+// GetEtcdDisk returns the etcd disk value for error reporting, or nil when the class
+// defines no dedicated etcd disk.
+func (c *YandexInstanceClass) GetEtcdDisk() any {
+	if c == nil || c.Spec.EtcdDiskSizeGB == nil {
+		return nil
+	}
+	return c.Spec.EtcdDiskSizeGB
+}
+
+// GetNodeGroupConsumers returns names of NodeGroups that use the class.
+func (c *YandexInstanceClass) GetNodeGroupConsumers() []string {
+	if c == nil {
+		return nil
+	}
+
+	return c.Status.NodeGroupConsumers
 }
