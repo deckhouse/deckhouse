@@ -127,7 +127,7 @@ To get the list of availability zones in the region, run:
 openstack --os-region-name <REGION> availability zone list --compute
 ```
 
-CloudPermanent node groups are defined in the [`nodeGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups) section of the OpenStackClusterConfiguration resource. To limit availability zones, use the `nodeGroups[].zones` parameter.
+CloudPermanent node groups are defined in the [`nodeGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups) section of the OpenStackClusterConfiguration resource. To limit availability zones, use the [`nodeGroups[].zones`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-zones) parameter.
 
 CloudEphemeral nodes are created with a separate [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with `nodeType: CloudEphemeral`. Availability zones for them are set in the [`spec.cloudInstances.zones`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) parameter. If the [`zones`](cluster_configuration.html#openstackclusterconfiguration-zones) parameter is specified in OpenStackClusterConfiguration, the required zones must also be added to it.
 

@@ -131,7 +131,7 @@ spec:
 openstack --os-region-name <REGION> availability zone list --compute
 ```
 
-Группы узлов типа CloudPermanent задаются в секции [`nodeGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups) ресурса OpenStackClusterConfiguration. Для ограничения зон доступности используйте параметр `nodeGroups[].zones`.
+Группы узлов типа CloudPermanent задаются в секции [`nodeGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups) ресурса OpenStackClusterConfiguration. Для ограничения зон доступности используйте параметр [`nodeGroups[].zones`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-zones).
 
 Узлы типа CloudEphemeral создаются отдельным ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с `nodeType: CloudEphemeral`. Зоны доступности для них задаются в параметре [`spec.cloudInstances.zones`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones). Если в OpenStackClusterConfiguration указан параметр [`zones`](cluster_configuration.html#openstackclusterconfiguration-zones), необходимые зоны также должны быть добавлены в него.
 
