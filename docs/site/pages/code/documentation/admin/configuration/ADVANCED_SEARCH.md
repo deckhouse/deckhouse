@@ -9,8 +9,6 @@ weight: 55
 relatedLinks:
   - title: "Advanced search — user guide"
     url: ../../user/search.html
-  - title: "OpenSearch API"
-    url: opensearch-api.html
 # Once the advanced-search page is published in the code module documentation,
 # add an "Advanced search — code module documentation" item here.
 ---
@@ -92,7 +90,7 @@ The same operations are available through the administrative REST API:
 - `POST /api/v4/admin/opensearch/recreate_indices` — recreate indices;
 - `GET /api/v4/admin/opensearch/indexing_queue_stats` — indexing queue stats.
 
-For permissions, allowed `schema_class` values, response codes, and request examples, see the ["OpenSearch API"](opensearch-api.html) reference.
+For permissions, allowed `schema_class` values, response codes, and request examples, see the ["OpenSearch API"](#opensearch-api) section.
 
 ### Monitoring
 
@@ -146,7 +144,7 @@ For repository indexing, use `search_repository_indexer_*`; for OpenSearch reque
 For user search, use `http_elasticsearch_*`.
 
 The indexing progress widget on "Admin" → "Settings" → "Search" shows the number of remaining full reindex jobs.
-The same data is available through the `indexing_queue_stats` endpoint of the [OpenSearch API](opensearch-api.html).
+The same data is available through the [`indexing_queue_stats`](#get-apiv4adminopensearchindexing_queue_stats) endpoint.
 
 #### Sidekiq queue
 
@@ -194,3 +192,77 @@ If new jobs are not enqueued to the `global-search-indexing` queue:
    ```
 
    The script clears the exclusive lease for `Search::RepositoryIndexerWorker`, concurrency limits, and dedup keys for the `global-search-indexing` queue.
+
+## OpenSearch API
+
+This section documents Deckhouse Code admin OpenSearch endpoints.
+For user-facing search parameters, see ["Search API"](../../user/search.html#search-api).
+
+### Permissions
+
+- `POST /api/v4/admin/opensearch/recreate_indices`: Admin only (`authenticated_as_admin!`).
+- `GET /api/v4/admin/opensearch/indexing_queue_stats`: Authenticated user with permission `read_admin_search_indexing_queue_stats` on `:global`.
+
+### POST /api/v4/admin/opensearch/recreate_indices
+
+Synchronously recreates OpenSearch index(es) and enqueues background reindex jobs.
+
+#### Request body
+
+| Field | Type | Required | Allowed values |
+|---|---|---|---|
+| `schema_class` | string | Yes | `recreate_all`, `Search::Opensearch::IndicesSchema::Code`, `Search::Opensearch::IndicesSchema::Wiki`, `Search::Opensearch::IndicesSchema::Note`, `Search::Opensearch::IndicesSchema::Milestone`, `Search::Opensearch::IndicesSchema::WorkItem`, `Search::Opensearch::IndicesSchema::MergeRequest` |
+
+#### Responses
+
+- `202 Accepted`
+
+```json
+{
+  "message": "OpenSearch indices were reset; reindex jobs were enqueued."
+}
+```
+
+- `400 Bad Request` (for example, if OpenSearch is disabled or there is a service error)
+
+```json
+{
+  "message": "OpenSearch is disabled"
+}
+```
+
+#### Request example
+
+```bash
+curl --request POST \
+  --header "PRIVATE-TOKEN: <your_access_token>" \
+  --header "Content-Type: application/json" \
+  --data '{"schema_class":"recreate_all"}' \
+  --url "https://gitlab.example.com/api/v4/admin/opensearch/recreate_indices"
+```
+
+### GET /api/v4/admin/opensearch/indexing_queue_stats
+
+Returns Sidekiq queue stats for OpenSearch indexing.
+
+#### Response (200 OK)
+
+```json
+{
+  "total": 42,
+  "updated_at": "2026-07-01T12:34:56.789Z"
+}
+```
+
+Fields:
+
+- `total`: Total number of indexing jobs in the queue.
+- `updated_at`: ISO8601 timestamp with milliseconds (or `null`).
+
+#### Request example
+
+```bash
+curl --request GET \
+  --header "PRIVATE-TOKEN: <your_access_token>" \
+  --url "https://gitlab.example.com/api/v4/admin/opensearch/indexing_queue_stats"
+```
