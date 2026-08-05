@@ -11,6 +11,8 @@ spec:
     kind: ApplicationPackage
     listKind: ApplicationPackageList
     plural: applicationpackages
+    shortNames:
+    - ap
     singular: applicationpackage
   scope: Cluster
   versions:
@@ -18,6 +20,9 @@ spec:
     - jsonPath: .status.usedByCount
       name: UsedBy
       type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:

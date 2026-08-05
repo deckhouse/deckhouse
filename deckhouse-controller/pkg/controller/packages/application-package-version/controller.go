@@ -272,6 +272,8 @@ func (r *reconciler) handleDelete(ctx context.Context, apv *v1alpha1.Application
 
 // setMetadataLoadedConditionTrue sets the condition MetadataLoaded to True, clearing reason and message.
 func (r *reconciler) setMetadataLoadedConditionTrue(apv *v1alpha1.ApplicationPackageVersion) {
+	apv.Status.ObservedGeneration = apv.Generation
+
 	metautils.SetStatusCondition(&apv.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 		Status:             metav1.ConditionTrue,
@@ -283,6 +285,8 @@ func (r *reconciler) setMetadataLoadedConditionTrue(apv *v1alpha1.ApplicationPac
 
 // setMetadataLoadedConditionFalse sets the condition MetadataLoaded to  False with a reason and message.
 func (r *reconciler) setMetadataLoadedConditionFalse(apv *v1alpha1.ApplicationPackageVersion, reason, message string) {
+	apv.Status.ObservedGeneration = apv.Generation
+
 	metautils.SetStatusCondition(&apv.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 		Status:             metav1.ConditionFalse,
@@ -293,16 +297,31 @@ func (r *reconciler) setMetadataLoadedConditionFalse(apv *v1alpha1.ApplicationPa
 	})
 }
 
-// disableOptionsToCR projects parsed disable protection onto the CR shape. It
-// returns nil when no disable protection is configured, so an empty block is not
-// surfaced on every package version.
+// disableOptionsToCR projects parsed disable protection onto the CR shape. It returns nil
+// when no disable protection is configured, so an empty block is not surfaced on every
+// package version.
 func disableOptionsToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableOptions {
+	messages := disableMessagesToCR(opts)
+	if !opts.Confirmation && messages == nil {
+		return nil
+	}
+
 	return &v1alpha1.PackageDisableOptions{
 		Confirmation: opts.Confirmation,
-		Messages: v1alpha1.PackageDisableMessages{
-			Ru: opts.Messages.Ru,
-			En: opts.Messages.En,
-		},
+		Messages:     messages,
+	}
+}
+
+// disableMessagesToCR projects the localized confirmation messages, returning nil when
+// neither translation is set.
+func disableMessagesToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableMessages {
+	if opts.Messages.Ru == "" && opts.Messages.En == "" {
+		return nil
+	}
+
+	return &v1alpha1.PackageDisableMessages{
+		Ru: opts.Messages.Ru,
+		En: opts.Messages.En,
 	}
 }
 

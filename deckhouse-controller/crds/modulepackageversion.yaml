@@ -23,18 +23,23 @@ spec:
     - jsonPath: .spec.packageRepositoryName
       name: Repository
       type: string
-    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime
-      name: TransitionTime
-      type: date
     - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].status
       name: MetadataLoaded
-      type: string
-    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].message
-      name: Message
       type: string
     - jsonPath: .status.used
       name: Used
       type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime
+      name: TransitionTime
+      priority: 1
+      type: date
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].message
+      name: Message
+      priority: 1
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -66,6 +71,8 @@ spec:
                 description: Name of the module package.
                 minLength: 1
                 type: string
+                x-doc-examples:
+                - sds-node-configurator
                 x-kubernetes-validations:
                 - message: packageName is immutable
                   rule: self == oldSelf
@@ -73,6 +80,8 @@ spec:
                 description: The name of the repository containing the package.
                 minLength: 1
                 type: string
+                x-doc-examples:
+                - deckhouse
                 x-kubernetes-validations:
                 - message: packageRepositoryName is immutable
                   rule: self == oldSelf
@@ -80,6 +89,8 @@ spec:
                 description: Version of the module package.
                 minLength: 1
                 type: string
+                x-doc-examples:
+                - v1.0.0
                 x-kubernetes-validations:
                 - message: packageVersion is immutable
                   rule: self == oldSelf
@@ -152,6 +163,13 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              observedGeneration:
+                description: |-
+                  Generation of the spec this status was computed from; a lower value means the status
+                  has not caught up with the latest spec yet.
+                format: int64
+                minimum: 0
+                type: integer
               packageMetadata:
                 description: Metadata about the package such as description, requirements,
                   etc.
@@ -204,8 +222,6 @@ spec:
                             description: Russian disable confirmation message.
                             type: string
                         type: object
-                    required:
-                    - messages
                     type: object
                   licensing:
                     description: Licensing information for different editions.
@@ -281,6 +297,7 @@ spec:
                                         type: string
                                       name:
                                         description: Module name.
+                                        minLength: 1
                                         type: string
                                     required:
                                     - name
@@ -289,6 +306,7 @@ spec:
                                 name:
                                   description: Stable identifier used by the scheduler
                                     in diagnostics.
+                                  minLength: 1
                                   type: string
                               required:
                               - modules
@@ -310,6 +328,7 @@ spec:
                                   type: string
                                 name:
                                   description: Module name.
+                                  minLength: 1
                                   type: string
                               required:
                               - name
@@ -329,6 +348,7 @@ spec:
                                   type: string
                                 name:
                                   description: Module name.
+                                  minLength: 1
                                   type: string
                               required:
                               - name
@@ -365,6 +385,7 @@ spec:
                                         type: string
                                       name:
                                         description: Module name.
+                                        minLength: 1
                                         type: string
                                     required:
                                     - name
@@ -373,6 +394,7 @@ spec:
                                 name:
                                   description: Stable identifier used by the scheduler
                                     in diagnostics.
+                                  minLength: 1
                                   type: string
                               required:
                               - modules
@@ -399,12 +421,18 @@ spec:
                         properties:
                           allowSkipMajor:
                             description: How many major versions can be skipped.
+                            format: int32
+                            minimum: 0
                             type: integer
                           allowSkipMinor:
                             description: How many minor versions can be skipped.
+                            format: int32
+                            minimum: 0
                             type: integer
                           allowSkipPatches:
                             description: How many patch versions can be skipped.
+                            format: int32
+                            minimum: 0
                             type: integer
                           from:
                             description: Starting version range for compatibility.
@@ -412,6 +440,8 @@ spec:
                           maxRollback:
                             description: Maximum number of versions that can be rolled
                               back.
+                            format: int32
+                            minimum: 0
                             type: integer
                           to:
                             description: Ending version range for compatibility.
@@ -422,12 +452,18 @@ spec:
                         properties:
                           allowSkipMajor:
                             description: How many major versions can be skipped.
+                            format: int32
+                            minimum: 0
                             type: integer
                           allowSkipMinor:
                             description: How many minor versions can be skipped.
+                            format: int32
+                            minimum: 0
                             type: integer
                           allowSkipPatches:
                             description: How many patch versions can be skipped.
+                            format: int32
+                            minimum: 0
                             type: integer
                           from:
                             description: Starting version range for compatibility.
@@ -435,6 +471,8 @@ spec:
                           maxRollback:
                             description: Maximum number of versions that can be rolled
                               back.
+                            format: int32
+                            minimum: 0
                             type: integer
                           to:
                             description: Ending version range for compatibility.
@@ -473,9 +511,19 @@ spec:
                 description: |-
                   Whether a module uses this version. A single flag suffices because the object name
                   embeds the module name, so at most one module can ever use it. Blocks deletion.
+                  Serialized even when false, so the Used print column reads false rather than blank.
                 type: boolean
             type: object
         type: object
+        x-doc-examples:
+        - apiVersion: deckhouse.io/v1alpha1
+          kind: ModulePackageVersion
+          metadata:
+            name: example
+          spec:
+            packageName: sds-node-configurator
+            packageRepositoryName: deckhouse
+            packageVersion: v1.0.0
     served: true
     storage: true
     subresources:

@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"strconv"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -68,13 +70,15 @@ var _ runtime.Object = (*ModulePackageVersion)(nil)
 // +kubebuilder:resource:scope=Cluster,shortName=mpv
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName
-// +kubebuilder:printcolumn:name="TransitionTime",type="date",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime"
 // +kubebuilder:printcolumn:name="MetadataLoaded",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].status"
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].message"
 // +kubebuilder:printcolumn:name="Used",type=boolean,JSONPath=`.status.used`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:printcolumn:name="TransitionTime",type="date",priority=1,JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime"
+// +kubebuilder:printcolumn:name="Message",type="string",priority=1,JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].message"
 // +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)"
 // +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)"
 
+// +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: ModulePackageVersion, metadata: {name: example}, spec: {packageName: sds-node-configurator, packageRepositoryName: deckhouse, packageVersion: v1.0.0}}
 // ModulePackageVersion represents a version of a module package.
 type ModulePackageVersion struct {
 	metav1.TypeMeta `json:",inline"`
@@ -96,21 +100,30 @@ type ModulePackageVersionSpec struct {
 	// Name of the module package.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="packageName is immutable"
+	// +crd-enricher:deckhouse:documentation:examples=sds-node-configurator
 	PackageName string `json:"packageName"`
 
 	// The name of the repository containing the package.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="packageRepositoryName is immutable"
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName"`
 
 	// Version of the module package.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="packageVersion is immutable"
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 }
 
 // ModulePackageVersionStatus reports loaded package metadata and whether the version is in use.
 type ModulePackageVersionStatus struct {
+	// Generation of the spec this status was computed from; a lower value means the status
+	// has not caught up with the latest spec yet.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
 	// Metadata about the package such as description, requirements, etc.
 	// +optional
 	PackageMetadata *ModulePackageVersionStatusMetadata `json:"packageMetadata,omitempty"`
@@ -129,29 +142,9 @@ type ModulePackageVersionStatus struct {
 
 	// Whether a module uses this version. A single flag suffices because the object name
 	// embeds the module name, so at most one module can ever use it. Blocks deletion.
+	// Serialized even when false, so the Used print column reads false rather than blank.
 	// +optional
-	Used bool `json:"used,omitempty"`
-}
-
-// PackageDisableOptions describes the package's disable protection surfaced to the UI.
-type PackageDisableOptions struct {
-	// Whether confirmation is required to disable the package.
-	// +optional
-	Confirmation bool `json:"confirmation,omitempty"`
-
-	// Localized disable confirmation messages.
-	Messages PackageDisableMessages `json:"messages"`
-}
-
-// PackageDisableMessages holds localized disable confirmation messages for the package.
-type PackageDisableMessages struct {
-	// Russian disable confirmation message.
-	// +optional
-	Ru string `json:"ru,omitempty"`
-
-	// English disable confirmation message.
-	// +optional
-	En string `json:"en,omitempty"`
+	Used bool `json:"used"`
 }
 
 // ModulePackageVersionStatusMetadata is the package metadata loaded from the registry.
@@ -198,14 +191,23 @@ type ModulePackageVersionStatusMetadata struct {
 	Compatibility *PackageVersionCompatibilityRules `json:"versionCompatibilityRules,omitempty"`
 }
 
-// IsDraft checks if this package version is marked as a draft.
+// IsDraft reports whether this package version is marked as a draft.
 func (m *ModulePackageVersion) IsDraft() bool {
-	val, ok := m.Labels[ModulePackageVersionLabelDraft]
-	if ok && val == "true" {
-		return true
-	}
+	return m.hasTrueLabel(ModulePackageVersionLabelDraft)
+}
 
-	return false
+// IsLegacy reports whether this package version was produced from a legacy ModuleRelease
+// rather than discovered as a package in a repository.
+func (m *ModulePackageVersion) IsLegacy() bool {
+	return m.hasTrueLabel(ModulePackageVersionLabelLegacy)
+}
+
+// hasTrueLabel reports whether the named label holds a truthy value. An unparsable value
+// counts as false, so a hand-edited label cannot flip behaviour by accident.
+func (m *ModulePackageVersion) hasTrueLabel(label string) bool {
+	val, err := strconv.ParseBool(m.Labels[label])
+
+	return err == nil && val
 }
 
 // +kubebuilder:object:root=true

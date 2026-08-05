@@ -11,10 +11,16 @@ spec:
     kind: ModulePackage
     listKind: ModulePackageList
     plural: modulepackages
+    shortNames:
+    - mp
     singular: modulepackage
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ModulePackage represents information about available module package.
@@ -49,6 +55,11 @@ spec:
                 type: array
             type: object
         type: object
+        x-doc-examples:
+        - apiVersion: deckhouse.io/v1alpha1
+          kind: ModulePackage
+          metadata:
+            name: example
     served: true
     storage: true
     subresources:
