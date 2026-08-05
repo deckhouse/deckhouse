@@ -1,0 +1,27 @@
+- name: d8.cloud-provider-yandex.migration
+  rules:
+    - alert: D8CloudProviderYandexCloudMigrationPending
+      expr: |
+        max(d8_cloud_provider_yandexcloud_migration_pending) > 0
+      for: 1m
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: cloud-provider-yandex
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The cloud-provider-yandex module is waiting for migration resources to be applied.
+        description: |-
+          The `cloud-provider-yandex` module has detected the legacy `YandexProviderClusterConfiguration` secret in the cluster
+          and is waiting for the new migration resources (ModuleConfig v2, CredentialSecret, NodeGroups, InstanceClasses)
+          to be applied before completing the migration.
+
+          To complete the migration, apply the resources from the `d8-migration-resources` Secret:
+
+          ```bash
+          d8 k -n d8-cloud-provider-yandex get secret d8-migration-resources -o jsonpath='{.data.resources\.yaml}' | base64 -d | d8 k apply -f -
+          ```
+
+          After applying the resources, the alert will disappear automatically once the module
+          detects that all required resources are in place.
