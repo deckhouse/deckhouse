@@ -25,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 )
@@ -40,12 +39,15 @@ const (
 
 // MetaConfigValidatorProvider selects the validator for a provider. Every cloud
 // provider is validated, in-tree and external alike:
-//   - yandex and vcd have dedicated in-tree validators;
-//   - an external provider is validated by the validator binary from its
-//     unpacked OCI bundle, which runs the provider's own pre-bootstrap checks
-//     (DVP: kubeconfig, credential Secret, master NodeGroup, InstanceClass
-//     references) — the in-cluster admission webhook cannot cover those,
-//     because during bootstrap there is no cluster yet;
+//   - vcd has a dedicated in-tree validator;
+//   - a provider whose bundle carries a validator binary (yandex, DVP, ...) is
+//     validated by running it — for yandex the bundle is the terraform-manager
+//     image, already baked into candi, so no extra download is needed; for a
+//     genuinely external provider (DVP) the bundle is downloaded at runtime.
+//     Either way the binary runs the provider's own pre-bootstrap checks
+//     (credential Secret, master NodeGroup, InstanceClass references, ...) —
+//     the in-cluster admission webhook cannot cover those, because during
+//     bootstrap there is no cluster yet;
 //   - the remaining in-tree providers get the default cluster-prefix check.
 //
 // An external provider whose bundle carries no usable validator is an error,
@@ -59,11 +61,6 @@ func selectValidator(ctx context.Context, provider, downloadRootDir string) conf
 	case "":
 		// static cluster
 		return nil
-	case yandex.ProviderName:
-		// Top-level dhctl paths validate the cluster prefix; the yandex hook
-		// builds its own validator with that check off (the prefix of a running
-		// cluster is already a fact).
-		return yandex.NewMetaConfigValidator(true).Validate
 	case vcd.ProviderName:
 		return vcd.NewMetaConfigValidator(true).Validate
 	default:

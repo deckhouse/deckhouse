@@ -41,11 +41,11 @@ serviceSubnetCIDR: 10.111.0.0/16
 	require.NoError(t, err)
 
 	candiDir := t.TempDir()
-	schemaPath := filepath.Join(candiDir, "cloud-providers", "yandex", "openapi", "cluster_configuration.yaml")
+	schemaPath := filepath.Join(candiDir, "cloud-providers", "vcd", "openapi", "cluster_configuration.yaml")
 	require.NoError(t, os.MkdirAll(filepath.Dir(schemaPath), 0o755))
 	require.NoError(t, os.WriteFile(schemaPath, []byte("type: object\n"), 0o644))
 
-	yandexCluster := `
+	vcdCluster := `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
@@ -53,9 +53,9 @@ kubernetesVersion: "1.32"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 cloud:
-  provider: Yandex
+  provider: VCD
   prefix: test
 `
-	err = EnsureExternalProviderBundle(t.Context(), nil, yandexCluster, &options.GlobalOptions{DownloadDir: t.TempDir(), CandiDir: candiDir})
+	err = EnsureExternalProviderBundle(t.Context(), nil, vcdCluster, &options.GlobalOptions{DownloadDir: t.TempDir(), CandiDir: candiDir})
 	require.NoError(t, err)
 }
