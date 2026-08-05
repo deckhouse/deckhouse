@@ -1,0 +1,41 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectTemplate
+metadata:
+  name: simple
+  labels:
+    heritage: deckhouse
+spec:
+  description: Minimal template that creates only the project namespace.
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties:
+        namespace:
+          type: object
+          default: {}
+          description: |
+            Additional labels and annotations for the project namespace.
+          properties:
+            labels:
+              type: object
+              additionalProperties:
+                type: string
+            annotations:
+              type: object
+              additionalProperties:
+                type: string
+  resourcesTemplate: |
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: {{ .projectName }}
+      {{- with .parameters.namespace.labels }}
+      labels:
+        {{- toYaml . | nindent 4 }}
+      {{- end }}
+      {{- with .parameters.namespace.annotations }}
+      annotations:
+        {{- toYaml . | nindent 4 }}
+      {{- end }}

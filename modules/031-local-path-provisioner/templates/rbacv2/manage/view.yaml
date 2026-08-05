@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: local-path-provisioner
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.local-path-provisioner.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-local-path-provisioner
-  name: d8:manage:permission:module:local-path-provisioner:view
+  name: d8:system-capability:local-path-provisioner:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module local-path-provisioner: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль local-path-provisioner: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the local-path-provisioner module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля local-path-provisioner."
 rules:
 - apiGroups:
   - deckhouse.io

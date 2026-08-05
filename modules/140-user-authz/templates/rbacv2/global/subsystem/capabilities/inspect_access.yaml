@@ -1,0 +1,33 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem-capability:security:inspect_access
+  annotations:
+    en.meta.deckhouse.io/title: "Security: inspect access of any subject"
+    ru.meta.deckhouse.io/title: "Безопасность: разбор прав любого субъекта"
+    en.meta.deckhouse.io/description: "Query the permission browser about other subjects: who can perform an action and what a user, group or ServiceAccount is allowed to do."
+    ru.meta.deckhouse.io/description: "Запросы к permission browser о чужих правах: кто может выполнить действие и что разрешено пользователю, группе или ServiceAccount'у."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "subsystem-capability.security.inspect_access"
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: security
+    # Aggregated at the manager level; the superadmin role of the subsystem
+    # aggregates the manager role, so both levels get it.
+    rbac.deckhouse.io/aggregate-to-security-as: manager
+rules:
+  # Reviewing one's own permissions is available to everyone; the nonself
+  # subresources are the elevated part, since a report about another subject
+  # discloses its full permission map across namespaces.
+  - apiGroups:
+      - authorization.deckhouse.io
+    resources:
+      - bulksubjectaccessreviews
+      - bulksubjectaccessreviews/nonself
+      - subjectaccessreports
+      - subjectaccessreports/nonself
+      - whocans
+    verbs:
+      - create

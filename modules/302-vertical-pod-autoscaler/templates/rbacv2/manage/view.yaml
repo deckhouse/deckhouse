@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: vertical-pod-autoscaler
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.vertical-pod-autoscaler.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: kube-system
-  name: d8:manage:permission:module:vertical-pod-autoscaler:view
+  name: d8:system-capability:vertical-pod-autoscaler:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module vertical-pod-autoscaler: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль vertical-pod-autoscaler: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the vertical-pod-autoscaler module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля vertical-pod-autoscaler."
 rules:
 - apiGroups:
   - deckhouse.io

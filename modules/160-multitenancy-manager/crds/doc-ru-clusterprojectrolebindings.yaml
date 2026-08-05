@@ -1,0 +1,20 @@
+spec:
+  versions:
+    - name: v1alpha3
+      schema:
+        openAPIV3Schema:
+          description: |
+            ClusterProjectRoleBinding выдаёт роль субъектам во всех пространствах имён всех проектов кластера.
+          properties:
+            spec:
+              properties:
+                subjects:
+                  description: |
+                    Субъекты (пользователи, группы или сервисные аккаунты), которым выдаётся роль.
+                roleRef:
+                  description: |
+                    Ссылка на выдаваемую ClusterRole. Допускаются только роли уровня проекта (`d8:project:*`).
+            status:
+              properties:
+                boundProjects:
+                  description: Количество проектов, к которым в данный момент применена привязка.
