@@ -626,6 +626,16 @@ type InventoryResource struct {
 	// +optional
 	Custom bool
 
+	// System is true for a kind only the platform is meant to touch: the
+	// internal storage of a controller, like the sessions and passwords of dex.
+	// +optional
+	System bool
+
+	// ClusterConfig is true for a kind that holds the configuration of the
+	// cluster -- the objects a human writes.
+	// +optional
+	ClusterConfig bool
+
 	// Verbs are the ones the API server accepts for this resource. Coverage is
 	// measured against them rather than against a fixed list of eight:
 	// tokenreviews only ever accept create, and "1 of 8" would read as a gap in

@@ -620,6 +620,8 @@ func autoConvert_v1alpha1_InventoryResource_To_authorization_InventoryResource(i
 	out.Namespaced = in.Namespaced
 	out.Module = in.Module
 	out.Custom = in.Custom
+	out.System = in.System
+	out.ClusterConfig = in.ClusterConfig
 	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
 	return nil
 }
@@ -636,6 +638,8 @@ func autoConvert_authorization_InventoryResource_To_v1alpha1_InventoryResource(i
 	out.Namespaced = in.Namespaced
 	out.Module = in.Module
 	out.Custom = in.Custom
+	out.System = in.System
+	out.ClusterConfig = in.ClusterConfig
 	out.Verbs = *(*[]string)(unsafe.Pointer(&in.Verbs))
 	return nil
 }

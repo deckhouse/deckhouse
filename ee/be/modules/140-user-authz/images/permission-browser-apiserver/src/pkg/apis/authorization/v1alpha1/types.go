@@ -733,6 +733,19 @@ type InventoryResource struct {
 	// +optional
 	Custom bool `json:"custom,omitempty" protobuf:"varint,7,opt,name=custom"`
 
+	// System is true for a kind only the platform is meant to touch: the
+	// internal storage of a controller, like the sessions and passwords of dex.
+	// Nobody is supposed to be granted it, so a coverage review has nothing to
+	// look for there.
+	// +optional
+	System bool `json:"system,omitempty" protobuf:"varint,8,opt,name=system"`
+
+	// ClusterConfig is true for a kind that holds the configuration of the
+	// cluster -- the objects a human writes. Read from the label the backup of
+	// the cluster configuration is built from.
+	// +optional
+	ClusterConfig bool `json:"clusterConfig,omitempty" protobuf:"varint,9,opt,name=clusterConfig"`
+
 	// Verbs are the ones the API server accepts for this resource. Coverage is
 	// measured against them rather than against a fixed list of eight:
 	// tokenreviews only ever accept create, and "1 of 8" would read as a gap in

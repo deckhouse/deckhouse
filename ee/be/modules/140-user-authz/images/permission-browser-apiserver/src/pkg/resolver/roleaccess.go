@@ -223,8 +223,10 @@ func (r *RoleAccessResolver) inventory(index *roleIndex) []v1alpha1.InventoryRes
 		defined := false
 		if r.moduleIndex != nil {
 			if origin, known := r.moduleIndex.Origin(resource.Group, resource.Resource); known {
-				entry.Module = origin.Module
+				entry.ClusterConfig = origin.ClusterConfig
 				entry.Custom = origin.Custom
+				entry.Module = origin.Module
+				entry.System = origin.System
 				defined = true
 			}
 		}

@@ -86,6 +86,38 @@ func TestModuleIndex_CustomIsWhatThePlatformDoesNotInstall(t *testing.T) {
 	assert.False(t, platform.Custom)
 }
 
+// Dex keeps its sessions and passwords in resources of its own, and nobody is
+// meant to be granted them. A coverage review has nothing to look for there, so
+// the report has to say which kinds are like that -- and which, on the contrary,
+// hold the configuration a human writes.
+func TestModuleIndex_TellsServiceKindsFromConfigurationOnes(t *testing.T) {
+	t.Parallel()
+
+	index := newTestModuleIndex(t,
+		crdMetadata("dexauthenticators.deckhouse.io", map[string]string{
+			"backup.deckhouse.io/cluster-config": "true",
+			"heritage":                           "deckhouse",
+			"module":                             "user-authn",
+		}),
+		crdMetadata("passwords.dex.coreos.com", map[string]string{"deckhouse.io/system-resource": "true", "heritage": "deckhouse"}),
+		crdMetadata("offlinesessionses.dex.coreos.com", map[string]string{"heritage": "deckhouse"}),
+	)
+
+	config, _ := index.Origin("deckhouse.io", "dexauthenticators")
+	assert.True(t, config.ClusterConfig)
+	assert.False(t, config.System)
+
+	service, _ := index.Origin("dex.coreos.com", "passwords")
+	assert.True(t, service.System)
+	assert.False(t, service.ClusterConfig)
+
+	// Ничем не помеченный ресурс остаётся обычным: отчёт не догадывается за платформу.
+	plain, known := index.Origin("dex.coreos.com", "offlinesessionses")
+	assert.True(t, known)
+	assert.False(t, plain.System)
+	assert.False(t, plain.ClusterConfig)
+}
+
 // Built-in APIs have no CRD and no APIService of a module: the index has to say
 // it does not know them rather than call them custom or invent a module.
 func TestModuleIndex_KnowsNothingAboutBuiltInResources(t *testing.T) {
