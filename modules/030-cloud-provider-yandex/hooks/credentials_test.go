@@ -30,7 +30,7 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: credentials ::", 
 	const initValues = `
 global:
   discovery: {}
-cloudProviderDvp:
+cloudProviderYandex:
   internal: {}
 `
 
@@ -80,7 +80,7 @@ data:
 		It("should result in empty credentialSecrets", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			secrets := f.ValuesGet("cloudProviderDvp.internal.credentialSecrets")
+			secrets := f.ValuesGet("cloudProviderYandex.internal.credentialSecrets")
 			Expect(secrets.Map()).To(HaveLen(0))
 		})
 	})
@@ -95,7 +95,7 @@ data:
 		It("should populate credentialSecrets with one entry", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			secrets := f.ValuesGet("cloudProviderDvp.internal.credentialSecrets")
+			secrets := f.ValuesGet("cloudProviderYandex.internal.credentialSecrets")
 			Expect(secrets.Map()).To(HaveLen(1))
 
 			entry := secrets.Get("d8-credentials")
@@ -114,7 +114,7 @@ data:
 		It("should populate credentialSecrets with both entries", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			secrets := f.ValuesGet("cloudProviderDvp.internal.credentialSecrets")
+			secrets := f.ValuesGet("cloudProviderYandex.internal.credentialSecrets")
 			Expect(secrets.Map()).To(HaveLen(2))
 
 			entry1 := secrets.Get("d8-credentials")
@@ -137,7 +137,7 @@ data:
 		It("should be ignored and result in empty credentialSecrets", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			secrets := f.ValuesGet("cloudProviderDvp.internal.credentialSecrets")
+			secrets := f.ValuesGet("cloudProviderYandex.internal.credentialSecrets")
 			Expect(secrets.Map()).To(HaveLen(0))
 		})
 	})

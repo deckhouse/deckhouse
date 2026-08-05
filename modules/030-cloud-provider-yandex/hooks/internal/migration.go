@@ -23,8 +23,10 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -58,10 +60,15 @@ func IsMigrationResourcesApplied(input *go_hook.HookInput, pcc ycpccv1.YandexPro
 	if err != nil {
 		return false
 	}
+	credFound := false
 	for _, cred := range existingCreds {
-		if cred.Name == "" {
-			return false
+		if cred.Name == cpapi.CredentialSecretName {
+			credFound = true
+			break
 		}
+	}
+	if !credFound {
+		return false
 	}
 
 	// Check NodeGroups and InstanceClasses
@@ -84,13 +91,13 @@ func IsMigrationResourcesApplied(input *go_hook.HookInput, pcc ycpccv1.YandexPro
 	}
 
 	// hybrid clusters have no masterNodeGroup
-	if !nodeGroupSet["master"] || !icSet[cpapi.BuildInstanceClassName("master")] {
+	if pcc.MasterNodeGroup.Replicas > 0 && (!nodeGroupSet["master"] || !icSet[cpapi.BuildInstanceClassName("master")]) {
 		return false
 	}
 
 	for _, nodeGroup := range pcc.NodeGroups {
 		if nodeGroup.Name == "" {
-			return false
+			continue
 		}
 
 		if !nodeGroupSet[nodeGroup.Name] || !icSet[cpapi.BuildInstanceClassName(nodeGroup.Name)] {
@@ -221,7 +228,10 @@ func buildMigrationResources(pcc ycpccv1.YandexProviderClusterConfiguration, mc 
 			return nil, err
 		}
 
-		instanceClass.Spec.EtcdDiskSizeGB = pcc.MasterNodeGroup.InstanceClass.EtcdDiskSizeGB
+		instanceClass.Spec.EtcdDiskSizeGB = ptr.To(defaultEtcdDiskSizeGB)
+		if pcc.MasterNodeGroup.InstanceClass.EtcdDiskSizeGB != nil {
+			instanceClass.Spec.EtcdDiskSizeGB = pcc.MasterNodeGroup.InstanceClass.EtcdDiskSizeGB
+		}
 
 		resources = append(resources, nodeGroup, instanceClass)
 	}
@@ -294,9 +304,9 @@ func BuildCredentialsSecrets(pcc ycpccv1.YandexProviderClusterConfiguration) []c
 }
 
 func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings) ycsettingsv2.ModuleConfigSettings {
-	withNATSettings := ycsettingsv2.NATInstanceParameters{}
+	var withNATParams ycsettingsv2.NATInstanceParameters
 	if cfg.WithNATInstance != nil {
-		withNATResources := ycsettingsv2.NATInstanceResources{}
+		var withNATResources ycsettingsv2.NATInstanceResources
 		if cfg.WithNATInstance.NATInstanceResources != nil {
 			withNATResources = ycsettingsv2.NATInstanceResources{
 				Cores:    ptr.Deref(cfg.WithNATInstance.NATInstanceResources.Cores, 0),
@@ -305,7 +315,7 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 			}
 		}
 
-		withNATSettings = ycsettingsv2.NATInstanceParameters{
+		withNATParams = ycsettingsv2.NATInstanceParameters{
 			ExternalSubnetID:           ptr.Deref(cfg.WithNATInstance.ExternalSubnetID, ""),
 			InternalSubnetID:           ptr.Deref(cfg.WithNATInstance.InternalSubnetID, ""),
 			InternalSubnetCIDR:         ptr.Deref(cfg.WithNATInstance.InternalSubnetCIDR, ""),
@@ -315,12 +325,37 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 		}
 	}
 
-	dhcpOptions := ycsettingsv2.DHCPOptions{}
+	var dhcpOptions ycsettingsv2.DHCPOptions
 	if cfg.DHCPOptions != nil {
 		dhcpOptions = ycsettingsv2.DHCPOptions{
 			DomainName:        ptr.Deref(cfg.DHCPOptions.DomainName, ""),
 			DomainNameServers: cfg.DHCPOptions.DomainNameServers,
 		}
+	}
+
+	// externalIPAddresses and externalSubnetIDs are per-node-group lists in the
+	// PCC instanceClass. YandexInstanceClass has no externalIPAddresses
+	// counterpart, so both move into nodes.parameters keyed by node group name.
+	externalIPAddresses := map[string][]string{}
+	externalSubnetIDs := map[string][]string{}
+
+	collectExternalAddressing := func(name string, ic ycpccv1.YandexInstanceClass) {
+		if len(ic.ExternalIPAddresses) > 0 {
+			externalIPAddresses[name] = ic.ExternalIPAddresses
+		}
+		if len(ic.ExternalSubnetIDs) > 0 {
+			externalSubnetIDs[name] = ic.ExternalSubnetIDs
+		}
+	}
+
+	if cfg.MasterNodeGroup.Replicas > 0 {
+		collectExternalAddressing("master", cfg.MasterNodeGroup.InstanceClass.YandexInstanceClass)
+	}
+	for _, ng := range cfg.NodeGroups {
+		if ng.Name == "" {
+			continue
+		}
+		collectExternalAddressing(ng.Name, ng.InstanceClass.YandexInstanceClass)
 	}
 
 	settings := ycsettingsv2.ModuleConfigSettings{
@@ -336,14 +371,20 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 				SSHPublicKey:              cfg.SSHPublicKey,
 				Layout:                    cfg.Layout,
 				NodeNetworkCIDR:           cfg.NodeNetworkCIDR,
-				WithNATInstance:           withNATSettings,
+				WithNATInstance:           withNATParams,
 				ExistingNetworkID:         ptr.Deref(cfg.ExistingNetworkID, ""),
 				ExistingZoneToSubnetIDMap: cfg.ExistingZoneToSubnetIDMap,
 				DHCPOptions:               dhcpOptions,
+				ExternalIPAddresses:       externalIPAddresses,
+				ExternalSubnetIDs:         externalSubnetIDs,
 				Labels:                    cfg.Labels,
 				Zones:                     cfg.Zones,
 			},
 		},
+		// storage and ccm are projected from ModuleConfig v1 here, but not by the terraform
+		// projection: it never sees the v1 ModuleConfig, and nothing in candi/ reads these two
+		// sections — only nodes.parameters drives the infrastructure. Both sides therefore agree
+		// on everything terraform consumes, see candi/terraform-modules/migration/locals.tf.
 		Storage: ycsettingsv2.Storage{
 			Disabled: false,
 			Parameters: ycsettingsv2.StorageParameters{
@@ -378,7 +419,7 @@ func BuildNodeGroupAndInstanceClassResources(
 	icSpec := mapPCCInstanceClassToYandexInstanceClassSpec(instanceClass)
 	instanceClassResource := yciccv1.YandexInstanceClass{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: yciccv1.SchemeGroupVersion.String(),
+			APIVersion: yciccv1.GroupVersionKind.GroupVersion().String(),
 			Kind:       yciccv1.YandexInstanceClassKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -423,14 +464,35 @@ func BuildNodeGroupAndInstanceClassResources(
 	return nodeGroupResource, instanceClassResource, nil
 }
 
+// DecodeCredentialSecret decodes a Secret and reports whether the module manages it.
+//
+// Both credential filters — the name-only one below and the value-carrying one in
+// hooks/credentials.go — need the same decode and type guard, and a Secret of another type must
+// produce an empty snapshot rather than an error.
+func DecodeCredentialSecret(obj *unstructured.Unstructured) (*corev1.Secret, bool, error) {
+	secret := &corev1.Secret{}
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return nil, false, err
+	}
+
+	if secret.Type != cpapi.CredentialsSecretType {
+		return nil, false, nil
+	}
+
+	return secret, true, nil
+}
+
 // mapPCCInstanceClassToYandexInstanceClassSpec converts the PCC-level
 // YandexInstanceClass (used in both master and regular node groups) to the
 // YandexInstanceClass CRD spec.
 func mapPCCInstanceClassToYandexInstanceClassSpec(ic ycpccv1.YandexInstanceClass) yciccv1.YandexInstanceClassSpec {
 	spec := yciccv1.YandexInstanceClassSpec{
-		Cores:   ic.Cores,
-		Memory:  ic.Memory,
-		ImageID: ic.ImageID,
+		Cores:      ic.Cores,
+		Memory:     ic.Memory,
+		ImageID:    ic.ImageID,
+		PlatformID: defaultPlatformID,
+		DiskType:   defaultDiskType,
+		DiskSizeGB: defaultDiskSizeGB,
 	}
 
 	if ic.CoreFraction != nil {
@@ -464,30 +526,33 @@ func mapPCCInstanceClassToYandexInstanceClassSpec(ic ycpccv1.YandexInstanceClass
 // resolveZones returns the node-group zones, falling back to clusterZones.
 // Returns nil (not empty slice) so that a nil Zones engages node-manager's
 // defaultZones fallback.
+// resolveZones picks the zones for a projected NodeGroup: the node group ones win, the
+// cluster-wide ones are the fallback, and nil omits the key so node-manager uses every zone.
+//
+// A node group that declares zones keeps them even when every entry is blank: pre-migration
+// terraform did the same — candi/terraform-modules/master-node/main.tf takes the intersection
+// with the node group zones whenever they are set (non-null), and only an unset list lets the
+// cluster-wide zones through. Falling back on a blank list would silently narrow such a node
+// group to the cluster zones and recreate its nodes.
 func resolveZones(nodeGroupZones, clusterZones []string) []any {
 	if len(nodeGroupZones) > 0 {
-		zones := make([]any, 0, len(nodeGroupZones))
-		for _, z := range nodeGroupZones {
-			if z != "" {
-				zones = append(zones, z)
-			}
-		}
-		if len(zones) > 0 {
-			return zones
+		return nonEmptyZones(nodeGroupZones)
+	}
+
+	return nonEmptyZones(clusterZones)
+}
+
+func nonEmptyZones(zones []string) []any {
+	result := make([]any, 0, len(zones))
+	for _, zone := range zones {
+		if zone != "" {
+			result = append(result, zone)
 		}
 	}
 
-	if len(clusterZones) > 0 {
-		zones := make([]any, 0, len(clusterZones))
-		for _, z := range clusterZones {
-			if z != "" {
-				zones = append(zones, z)
-			}
-		}
-		if len(zones) > 0 {
-			return zones
-		}
+	if len(result) == 0 {
+		return nil
 	}
 
-	return nil
+	return result
 }

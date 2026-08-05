@@ -22,13 +22,13 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	ycmeta "github.com/deckhouse/deckhouse/cloud-provider-yandex/pkg/meta"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal"
 )
 
 type credentialSecretSnapshot struct {
@@ -62,14 +62,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleCredentials)
 
 func filterCredentialSecrets(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &corev1.Secret{}
-	if err := sdk.FromUnstructured(obj, secret); err != nil {
+	secret, managed, err := internal.DecodeCredentialSecret(obj)
+	if err != nil || !managed {
 		return nil, err
-	}
-
-	// Only process secrets of the correct type.
-	if secret.Type != cpapi.CredentialsSecretType {
-		return nil, nil
 	}
 
 	snap := credentialSecretSnapshot{
@@ -106,6 +101,6 @@ func handleCredentials(_ context.Context, input *go_hook.HookInput) error {
 		result[snap.Name] = entry
 	}
 
-	input.Values.Set("cloudProviderDvp.internal.credentialSecrets", result)
+	input.Values.Set("cloudProviderYandex.internal.credentialSecrets", result)
 	return nil
 }
