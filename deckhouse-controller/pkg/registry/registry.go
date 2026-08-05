@@ -83,7 +83,7 @@ func registerReleaseCommand(parent *cobra.Command, logger *log.Logger) {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			ctx := context.TODO()
 
-			registry, channel, rconf, err := getDeckhouseRegistry(ctx)
+			registry, channel, rconf, err := getDeckhouseRegistry(ctx, logger)
 			if err != nil {
 				return fmt.Errorf("get deckhouse registry: %w", err)
 			}
@@ -241,7 +241,7 @@ func registerModuleCommand(parent *cobra.Command, logger *log.Logger) {
 				moduleName = args[1]
 			}
 
-			registry, rconf, err := getModuleRegistry(ctx, moduleSource)
+			registry, rconf, err := getModuleRegistry(ctx, moduleSource, logger)
 			if err != nil {
 				return fmt.Errorf("get module registry: %w", err)
 			}
@@ -397,7 +397,7 @@ func newKubernetesClient() (client.Client, error) {
 	return k8sClient, nil
 }
 
-func getDeckhouseRegistry(ctx context.Context) (string, string, *utils.RegistryConfig, error) {
+func getDeckhouseRegistry(ctx context.Context, logger *log.Logger) (string, string, *utils.RegistryConfig, error) {
 	k8sClient, err := newKubernetesClient()
 	if err != nil {
 		panic(err)
@@ -427,17 +427,10 @@ func getDeckhouseRegistry(ctx context.Context) (string, string, *utils.RegistryC
 
 	releaseChannel := string(discoverySecret.Data["releaseChannel"])
 
-	rconf := &utils.RegistryConfig{
-		DockerConfig: drs.DockerConfig,
-		Scheme:       drs.Scheme,
-		UserAgent:    string(clusterUUID),
-		CA:           drs.CA,
-	}
-
-	return drs.ImageRegistry, releaseChannel, rconf, nil
+	return drs.Fetch(), releaseChannel, drs.RegistryConfig(string(clusterUUID), logger), nil
 }
 
-func getModuleRegistry(ctx context.Context, moduleSource string) (string, *utils.RegistryConfig, error) {
+func getModuleRegistry(ctx context.Context, moduleSource string, logger *log.Logger) (string, *utils.RegistryConfig, error) {
 	k8sClient, err := newKubernetesClient()
 	if err != nil {
 		panic(err)
@@ -458,7 +451,7 @@ func getModuleRegistry(ctx context.Context, moduleSource string) (string, *utils
 		UserAgent:    clusterUUID,
 	}
 
-	return ms.Spec.Registry.Repo, rconf, nil
+	return utils.Dial(ms.Spec.Registry.Repo), rconf.ForRepository(ms.Spec.Registry.Repo, logger), nil
 }
 
 func getClusterUUID(ctx context.Context, client client.Client) (string, error) {

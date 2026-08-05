@@ -1,0 +1,30 @@
+{{- /*
+  The address container image references are rendered from.
+
+  Published for a reader outside this module: a global hook renders the image references of
+  every embedded module, and until this existed it took that address from the
+  `deckhouse-registry` secret — the contour this implementation removes. A cluster object
+  and not a value, because that hook runs before any module and cannot see module values.
+
+  Rendered by Helm rather than written by the hook, because it is Helm that has to withdraw
+  it. Its absence means "render images from the registry the cluster was installed with",
+  and that is exactly what must happen the moment this module stops managing the pull path
+  — `mode: Unmanaged`, or the module disabled, in which case no hook of it runs at all to
+  clean up after itself.
+
+  Its own existence is also what makes the decision to publish it stick: the hook reads it
+  back. See `hooks/v2/image_address.go`.
+*/}}
+{{- if eq (include "registry_v2_manages" .) "true" }}
+  {{- if .Values.registry.internal.v2.imageAddress }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-image-address
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
+data:
+  base: {{ .Values.registry.internal.v2.imageAddress | quote }}
+  {{- end }}
+{{- end }}

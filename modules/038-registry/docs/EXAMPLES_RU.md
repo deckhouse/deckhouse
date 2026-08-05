@@ -7,7 +7,217 @@ description: "Пошаговые примеры переключения меж�
 Если в процессе переключения образ какого-либо модуля не загрузился заново и модуль не переустановился, для устранения проблемы воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-образ-модуля-не-скачался-и-модуль-не-переустанов).
 {% endalert  %}
 
-## Переключение на режим `Direct`
+## Включение модуля
+
+Чтобы модуль начал управлять тем, как кластер загружает образы, задайте `mode: Managed` и
+укажите registry:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  version: 1
+  enabled: true
+  settings:
+    mode: Managed
+    primary:
+      upstream:
+        host: registry.deckhouse.io
+        path: /deckhouse/ee
+        scheme: HTTPS
+        auth:
+          license: <LICENSE_KEY>
+```
+
+Модуль публикует готовый вариант этой конфигурации для вашего кластера — с адресом, путём,
+схемой, удостоверяющим центром и учётными данными того registry, из которого кластер уже
+загружает образы:
+
+```bash
+d8 k -n d8-system get secret registry-suggested-config -o jsonpath='{.data.registry-mc\.yaml}' | base64 -d
+```
+
+Просмотрите его и примените. Это экономит не столько набор текста, сколько перенос: эти значения
+разбросаны по секрету и по docker-конфигурации, и именно при переписывании руками появляется
+обрезанный путь или неверный удостоверяющий центр — в единственной настройке, которая решает,
+сможет ли кластер загружать образы вообще.
+
+Посмотреть, как изменение вступает в силу:
+
+```bash
+d8 k get registryconfig registry -o jsonpath='{.status}' | jq
+d8 k get registrynodes -o custom-columns=\
+NODE:.metadata.name,APPLIED:.status.observedGeneration,OK:.status.reconciled,BACKENDS:.status.activeBackends
+```
+
+## Включение внутрикластерного кэша
+
+Добавьте `storage.cache` и размер хранилища:
+
+```yaml
+spec:
+  settings:
+    mode: Managed
+    primary:
+      upstream:
+        host: registry.deckhouse.io
+        path: /deckhouse/ee
+        auth:
+          license: <LICENSE_KEY>
+    storage:
+      cache: true
+      size: 50Gi
+```
+
+На узлах при этом не перенастраивается ничего. Container runtime и так спрашивает агент про
+любой registry, а агент начинает предпочитать кэш, оставляя upstream резервным путём, — поэтому
+промах кэша с первой же минуты означает более медленную загрузку, а не неудачную.
+
+```bash
+d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,leader,allReplicasFull}'
+```
+
+Выключение — то же изменение в обратную сторону, и такое же безопасное. Блобы на диске
+остаются нетронутыми, поэтому повторное включение дольётся из того, что уже есть, а не начнёт с
+нуля — см. [как освободить это место](faq.html#на-узле-остались-данные-кэша-которые-никто-не-использует),
+если возвращаться к кэшу вы не собираетесь.
+
+## Переход в air-gap
+
+У изолированного кластера нет upstream'а: кэш — единственный источник образов, а путь внутрь —
+`d8 mirror push`. Поскольку полнота кэша должна быть проверяемой, прежде чем ему можно
+доверять в одиночку, `storage.source` описывает ожидаемый набор образов.
+
+1. Скачайте образы там, где есть доступ в интернет:
+
+   ```bash
+   d8 mirror pull --license <LICENSE_KEY> ./d8-bundle
+   ```
+
+1. Загрузите их в кластер через endpoint публикации:
+
+   ```bash
+   PUSH_SECRET=$(d8 k -n d8-system get secret registry-storage-push -o json)
+   d8 mirror push ./d8-bundle registry.example.com/system/deckhouse \
+     --username "$(echo "$PUSH_SECRET" | jq -r .data.username | base64 -d)" \
+     --password "$(echo "$PUSH_SECRET" | jq -r .data.password | base64 -d)"
+   ```
+
+1. Опишите, что кэш должен держать, и уберите upstream:
+
+   ```yaml
+   spec:
+     settings:
+       mode: Managed
+       storage:
+         cache: true
+         size: 50Gi
+         source:
+           bundleRef: d8-mirror-bundle
+           expectedDigests: 459
+   ```
+
+Upstream убирается с узлов не в тот момент, когда вы убрали его из конфигурации, а когда лидер
+кэша будет держать весь ожидаемый набор. Это единственный переход, который иначе мог бы оставить
+все узлы без источника образов, поэтому он ждёт — и сообщает об этом:
+
+```bash
+d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{safeToDropUpstream,fill}'
+d8 k get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
+```
+
+Пока `effectiveUpstream` заполнен, кластер им пользуется. Когда он опустеет, кластер изолирован.
+
+## Добавление ещё одного registry
+
+Registry, который не является источником образов компонентов Deckhouse, объявляется отдельным
+ресурсом, а не ещё одним полем в ModuleConfig:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryUpstream
+metadata:
+  name: virtualization-images
+spec:
+  match: images.virtualization.example.com
+  upstream:
+    host: vendor.example.com
+    path: /virtualization
+    scheme: HTTPS
+    auth:
+      username: robot
+      password: <PASSWORD>
+```
+
+После этого загрузки, обращающиеся к `images.virtualization.example.com`, маршрутизируются
+агентом на каждом узле в `vendor.example.com/virtualization`, а учётные данные и удостоверяющий
+центр держит кластер, а не каждая нагрузка по отдельности. На узлах для этого не
+перенастраивается ничего.
+
+Проверьте, что ресурс принят: конфликт с основным registry или с другим ресурсом, претендующим
+на то же имя, отвергается, а не объединяется:
+
+```bash
+d8 k get registryupstreams -o custom-columns=\
+NAME:.metadata.name,MATCH:.spec.match,ACCEPTED:.status.conditions[0].status,REASON:.status.conditions[0].reason
+```
+
+## Загрузка из приватного registry без его объявления
+
+Объявлять ничего не нужно. Агент на узле проксирует незнакомый ему registry без изменений,
+вместе с теми учётными данными, которые уже были в запросе, поэтому обычный `imagePullSecret`
+ведёт себя точно так же, как на кластере, где этот модуль никогда не включался:
+
+```bash
+d8 k create secret docker-registry my-private-registry \
+  --docker-server=private.example.com \
+  --docker-username=robot \
+  --docker-password=<PASSWORD>
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example
+spec:
+  imagePullSecrets:
+  - name: my-private-registry
+  containers:
+  - name: app
+    image: private.example.com/team/app:v1
+```
+
+`RegistryUpstream` вместо этого стоит объявлять, если вы хотите, чтобы учётные данные хранил
+кластер, или если registry требует удостоверяющий центр, которого на узлах нет.
+
+## Выключение управления
+
+Верните режим в `Unmanaged`:
+
+```yaml
+spec:
+  settings:
+    mode: Unmanaged
+```
+
+После этого модуль не управляет ничем: его компоненты удаляются, написанная им конфигурация
+узлов отзывается, и кластер возвращается к загрузке образов из того registry, который записан в
+секрете `deckhouse-registry`, — то есть оттуда, откуда загружал до включения модуля.
+
+Данные кэша на master-узлах намеренно остаются, чтобы повторное включение долилось из того, что
+уже есть. См.
+[как освободить это место](faq.html#на-узле-остались-данные-кэша-которые-никто-не-использует).
+
+## Примеры для предыдущей реализации
+
+Всё, что ниже, относится к кластеру, который всё ещё работает на реализации, настраиваемой
+через ModuleConfig `deckhouse`. См.
+[как завершить миграцию](faq.html#как-завершить-миграцию).
+
+### Переключение на режим `Direct`
 
 Для переключения уже работающего кластера на режим `Direct` выполните следующие шаги:
 
@@ -107,7 +317,7 @@ description: "Пошаговые примеры переключения меж�
    target_mode: Direct
    ```
 
-## Переключение на режим `Proxy`
+### Переключение на режим `Proxy`
 
 Для переключения уже работающего кластера на режим `Proxy` выполните следующие шаги:
 
@@ -208,7 +418,7 @@ description: "Пошаговые примеры переключения меж�
    target_mode: Proxy
    ```
 
-## Переключение на режим `Local`
+### Переключение на режим `Local`
 
 Для переключения уже работающего кластера на режим `Local` выполните следующие шаги:
 
@@ -396,7 +606,7 @@ description: "Пошаговые примеры переключения меж�
    target_mode: Local
    ```
 
-## Переключение на режим `Unmanaged`
+### Переключение на режим `Unmanaged`
 
 Для переключения уже работающего кластера на режим `Unmanaged` выполните следующие шаги:
 

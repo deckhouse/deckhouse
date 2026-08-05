@@ -113,6 +113,7 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000 // indirect
+	github.com/deckhouse/deckhouse/go_lib/registry/apis v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/lib-connection v0.14.0 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -387,6 +388,8 @@ replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ./go_lib/d
 replace github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ./go_lib/dependency/vsphere
 
 replace github.com/deckhouse/deckhouse/go_lib/registry => ./go_lib/registry
+
+replace github.com/deckhouse/deckhouse/go_lib/registry/apis => ./go_lib/registry/apis
 
 replace github.com/deckhouse/deckhouse/go_lib/registry-bundle => ./go_lib/registry-bundle
 

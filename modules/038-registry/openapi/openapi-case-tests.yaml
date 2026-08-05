@@ -1,10 +1,164 @@
 positive:
-  values:
-    - {}
   configValues:
+    # An empty config is the default, and the default is that the module manages
+    # nothing. Enabling the module must not change how a cluster pulls images until
+    # someone says so.
     - {}
+    # The publication parameters that predate the new model keep working as they are.
+    - whitelistSourceRanges: ["10.0.0.0/10", "192.168.0.0/16"]
+      ingressClass: nginx
+      https:
+        mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    # Unmanaged spelled out, which is the state a cluster mid-migration sits in.
+    - mode: Unmanaged
+    # cache off with an upstream: nodes pull straight from the upstream.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io
+          path: /deckhouse/ee
+          scheme: HTTPS
+          auth:
+            license: "DECKHOUSE_LICENSE_KEY"
+      storage:
+        cache: false
+    # cache on with an upstream: a pass-through cache.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io
+          path: /deckhouse/ee
+          auth:
+            username: user
+            password: password
+      storage:
+        cache: true
+        size: 50Gi
+    # cache on without an upstream: air-gap, with a decidable expected set.
+    - mode: Managed
+      storage:
+        cache: true
+        size: 50Gi
+        source:
+          bundleRef: d8-mirror-bundle
+          expectedDigests: 459
+    # HA mirrors of the same content, each with its own credentials and CA.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io
+          path: /deckhouse/ee
+          auth:
+            license: "DECKHOUSE_LICENSE_KEY"
+          mirrors:
+            - host: registry-mirror.example.com
+              scheme: HTTPS
+              auth:
+                username: user
+                password: password
+      storage:
+        cache: true
+    # An insecure upstream inside a trusted perimeter.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.local:5000
+          scheme: HTTP
+      storage:
+        cache: false
+
 negative:
-  values:
-    - somethingInConfig: yes
   configValues:
     - somethingInConfig: yes
+    # Settings with the mode left at its default. Accepting this would leave a cluster
+    # configured on paper and unchanged in practice, with nothing to say why.
+    - primary:
+        upstream:
+          host: registry.deckhouse.io
+          path: /deckhouse/ee
+      storage:
+        cache: false
+    - storage:
+        cache: true
+        size: 50Gi
+        source:
+          bundleRef: d8-mirror-bundle
+          expectedDigests: 459
+    # Neither an upstream nor a cache: the nodes would have nothing to pull from.
+    - mode: Managed
+      storage:
+        cache: false
+    # Managed with nothing at all is the same case.
+    - mode: Managed
+    # Air-gap without an expected set: completeness would not be decidable, so the
+    # upstream could never be safely dropped.
+    - mode: Managed
+      storage:
+        cache: true
+    # A license and an explicit user are two ways to say the same thing.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io
+          auth:
+            license: "DECKHOUSE_LICENSE_KEY"
+            username: user
+            password: password
+      storage:
+        cache: false
+    # A username without a password.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io
+          auth:
+            username: user
+      storage:
+        cache: false
+    # A password without a username.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io
+          auth:
+            password: password
+      storage:
+        cache: false
+    # An upstream without a host.
+    - mode: Managed
+      primary:
+        upstream:
+          path: /deckhouse/ee
+      storage:
+        cache: false
+    # A mirror without a host.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io
+          mirrors:
+            - scheme: HTTPS
+      storage:
+        cache: false
+    # An unknown scheme.
+    - mode: Managed
+      primary:
+        upstream:
+          host: registry.deckhouse.io
+          scheme: FTP
+      storage:
+        cache: false
+    # The removed discriminator. There is no choice of implementation, so naming one
+    # has to be an error rather than something silently ignored.
+    - implementation: V2
+    # An unknown mode.
+    - mode: Direct
+    # A malformed cache size.
+    - mode: Managed
+      storage:
+        cache: true
+        size: "50 gigabytes"
+        source:
+          expectedDigests: 459

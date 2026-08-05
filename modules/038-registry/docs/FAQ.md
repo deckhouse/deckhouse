@@ -3,12 +3,256 @@ title: "Registry Module: FAQ"
 description: "Frequently asked questions about the Deckhouse Kubernets Platform registry module including migration procedures, containerd configuration, and troubleshooting registry issues."
 ---
 
-## How to Migrate to the registry module?
+## Which implementation is my cluster running?
+
+The module records what the cluster is actually running, not what any configuration asks for:
+
+```bash
+d8 k -n d8-system get secret registry-v2-switch >/dev/null 2>&1 \
+  && echo "current implementation" || echo "previous implementation"
+```
+
+If it is the previous one, the module says why on every reconciliation, and raises
+[`D8RegistryMigrationPending`](#what-do-the-registry-alerts-mean):
+
+```bash
+d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+```
+
+## How do I complete the migration?
+
+There is no implementation to select — the handover is automatic, and it waits for one thing:
+that the previous implementation has let go of the pull path. Both configure the same thing on
+every node, which registry the container runtime asks and with which credentials, so running
+both would not merge those answers but race them.
+
+1. Bring the registry configuration in the `deckhouse` ModuleConfig to `Unmanaged`. If that
+   cluster is in `Direct`, `Proxy` or `Local`, follow
+   [the mode switching examples](examples.html#examples-for-the-previous-implementation).
+
+1. Wait for that transition to settle — `mode: Unmanaged` with no pending target mode:
+
+   ```bash
+   d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+   ```
+
+1. Nothing else is required. On its next reconciliation the module takes over, and the cluster
+   keeps pulling from the same registry throughout: with `mode: Unmanaged` — the default of the
+   current implementation — it manages nothing either, so the handover changes no behaviour.
+
+1. To have it manage the pull path, set `mode: Managed` in the `registry` ModuleConfig together
+   with the registry to pull from. A ready-made configuration for your cluster is published in
+   the `registry-suggested-config` secret — see
+   [enabling the module](examples.html#enabling-the-module).
+
+## What do the registry alerts mean?
+
+None of these mean the cluster has stopped pulling images. Most of them mean it is pulling in a
+way that is working but not what was asked for, which is the state that would otherwise go
+unnoticed.
+
+`D8RegistryMigrationPending`
+: The cluster is still on the previous implementation. Nothing is degraded; the migration has
+  not completed. See [above](#how-do-i-complete-the-migration).
+
+`D8RegistryConfigInvalid`
+: The configuration was rejected, so the cluster keeps the arrangement it already had. What was
+  wrong is in `registryconfig/registry` under `.status.conditions`.
+
+`D8RegistryNodeNotConverged`
+: The agent on some nodes has not applied the layout it was given. Those nodes keep pulling as
+  they were configured before, so a change has not reached them — and neither will the next one.
+
+`D8RegistryNodeRunningFromDisk`
+: Some nodes cannot reach the API server and are routing from their on-disk copy. That copy
+  working as designed, which is exactly why it is worth saying: those nodes pull normally, so
+  from every other angle it looks like success, and their configuration can drift arbitrarily
+  far behind the cluster's.
+
+`D8RegistryStorageIncomplete`
+: Some cache replicas do not hold the whole expected image set. With an upstream configured this
+  costs nothing at pull time, but the cluster could not survive losing that upstream — and this
+  is what holds an air-gap transition back.
+
+`D8RegistryAirGapTransitionHeld`
+: You removed the upstream and the module is still using it, because the cache cannot stand
+  alone yet. The safe outcome, and the one transition here that could otherwise cut every node
+  off from images. It does not resolve on its own if the cache has stopped filling.
+
+`D8RegistryUpstreamProbeFailing`
+: A change to the primary upstream was refused and the cluster is still using the last one that
+  worked. The `outcome` label distinguishes three different problems: `unreachable` is network
+  or registry, `auth` is usually an expired license key, `sentinel` means the registry answered
+  and accepted the credentials but does not hold the Deckhouse images — usually the wrong
+  repository path.
+
+`D8RegistryUpstreamRejected`
+: A `RegistryUpstream` was not accepted, so pulls for the registry it names are not intercepted
+  anywhere. The `reason` label says whether it conflicts with the primary registry or with
+  another resource claiming the same name.
+
+`D8RegistryStorageNotReclaimed`
+: No replica has reclaimed its disk for a week. The collection is the only thing that removes
+  anything from the store, so a cluster where it has stopped is on a path that ends with a full
+  disk. See [below](#the-cache-keeps-growing-what-reclaims-it).
+
+`D8RegistryStaleCacheData`
+: A node holds cache data nothing uses. See [below](#a-node-still-holds-cache-data-nothing-uses).
+
+## A node still holds cache data nothing uses
+
+When the cache is turned off, the blobs under `/opt/deckhouse/registry` are deliberately left
+behind: turning it back on then refills from what is already there rather than from scratch, and
+over a slow link that difference is hours. Deleting them automatically would make the decision
+irreversible in the one direction that hurts.
+
+What the module will not do is keep them quietly — nothing else would ever mention the disk they
+occupy, since the storage that wrote them is gone. So the agent measures them and reports:
+
+```bash
+d8 k get registrynodes -o custom-columns=\
+NODE:.metadata.name,STALE:.status.staleStorageDataBytes
+```
+
+To reclaim the space, remove the directory on the node:
+
+```bash
+ssh <node> 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registry'
+```
+
+## The cache keeps growing. What reclaims it?
+
+A garbage collection, on a schedule, run by the replicas themselves.
+
+It exists because nothing else ever removes anything. Every release adds a slice of the
+repository, so a cluster that lives for years fills its store and then stops being able to
+write to it — which in an air-gapped cluster means it cannot be updated.
+
+What it removes is the slices belonging to releases the cluster has moved past. What it keeps:
+
+- the deployed release, and the previous one, so a rollback does not re-download what it rolls
+  back to;
+- anything newer than the deployed release, which is an update in progress — or, in air-gap, a
+  release someone pushed on purpose;
+- every tag that is not a version at all: release channel names like `stable`, floating tags,
+  anything pushed by hand. Not "this is garbage" but "what this means is unknown", and those
+  are different.
+
+That asymmetry is deliberate throughout. Deleting a blob the cluster still needs is, in
+air-gap, unrecoverable without another `d8 mirror push`; keeping one nobody needs costs disk.
+So a run that cannot establish what to keep — no deployed release, for instance — does nothing
+at all rather than its best.
+
+Where it stands:
+
+```bash
+d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
+  'map({node, collectedAt, collectionError})'
+d8 k get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
+```
+
+### When it runs, and why a replica goes read-only
+
+Collecting reclaims blobs by walking the store, and the registry's own collector computes the
+set of reachable blobs and then deletes the rest — so a blob uploaded between those two steps
+would be deleted. The only safe way to run it is against a store nothing is writing to, so the
+replica refuses writes for the duration.
+
+That replica keeps serving every image it holds. What it cannot do is store the result of a
+cache miss (the node's agent falls back to the upstream, so the pull is slower rather than
+failed) or accept a `d8 mirror push` (which fails visibly and can be retried). Only one replica
+collects at a time, so the others are unaffected throughout.
+
+Because of that, the schedule defaults to a night hour — or, if the `master` node group has a
+maintenance window, to the start of it, that being an hour already declared safe for disruption.
+To choose your own:
+
+```yaml
+spec:
+  settings:
+    storage:
+      garbageCollection:
+        schedule: "0 2 * * Sun"
+```
+
+An expression that cannot be read is refused rather than guessed at: collecting at some other
+hour than the one you wrote would be worse than not collecting.
+
+### Turning it off
+
+```yaml
+spec:
+  settings:
+    storage:
+      garbageCollection:
+        enabled: false
+```
+
+Which only makes sense with a disk large enough that a store growing without bound never
+matters. [`D8RegistryStorageNotReclaimed`](#what-do-the-registry-alerts-mean) fires a week after
+the last collection either way, since "switched off" and "silently stopped" look identical from
+the outside.
+
+## A pull is failing on a node. Where do I look?
+
+The agent is on the path of every pull on the node, so start there. It runs as a static pod, so
+it is present even when the cluster is not:
+
+```bash
+d8 k -n kube-system logs -l component=registry-agent --tail=100
+```
+
+What the agent thinks it should be doing, and whether it agrees with the cluster:
+
+```bash
+d8 k get registrynode <node> -o jsonpath='{.status}' | jq
+```
+
+Its own view of the pulls passing through it, read from the node. Not scraped by Prometheus, and
+deliberately: the agent is a static pod because it has to work when the API server does not, and
+a kube-rbac-proxy beside it would authenticate against that same API server.
+
+```bash
+ssh <node> 'curl -s http://127.0.0.1:4286/metrics | grep d8_registry_agent'
+```
+
+What the container runtime was told, which is one file and does not depend on how many
+registries are configured:
+
+```bash
+ssh <node> 'cat /etc/containerd/registry.d/_default/hosts.toml'
+```
+
+If that file is missing, the agent has not applied a layout yet — nothing on the node can pull,
+and the reason is in its log. If it is present and pulls still fail, the failure is past the
+agent: the metrics above name which target failed and why.
+
+## How do I check the state of the in-cluster cache?
+
+```bash
+d8 k get registrystorage registry -o jsonpath='{.status}' | jq
+```
+
+`replicas` is the only place completeness is reported, and each entry is a replica's own account
+of itself. A replica reporting `full: true` alongside an `error` is not complete: `full` says
+what it holds, and the error says whether its last pass finished.
+
+`Leader` is the replica filling from the upstream and acting as the replication source for the
+others. It is not a plain election — only a replica holding the whole set stands for it, and one
+holding it steps aside when another does. That condition is what keeps an air-gapped cluster
+from deadlocking with an empty leader and a full follower.
+
+## The previous implementation
+
+Everything below applies to a cluster still running the implementation configured through the
+`deckhouse` ModuleConfig.
+
+### How to Migrate to the registry module?
 
 During the migration, Containerd v1 will switch to the new registry configuration format.
 Containerd v2 uses the new format by default. For more details, see the section [with a description of configuration methods](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry).
 
-### For containerd v2
+#### For containerd v2
 
 1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module documentation for proper configuration.
 
@@ -52,7 +296,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
    target_mode: Unmanaged
    ```
 
-### For Containerd v1
+#### For Containerd v1
 
 {% alert level="danger" %}
 - During the switch, containerd v1 will be restarted.
@@ -238,7 +482,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
    The list should not contain the NodeGroupConfiguration to be deleted (for this example, `containerd-additional-config-auth-delete.sh`).
 
-## How to Migrate Back from the Registry Module?
+### How to Migrate Back from the Registry Module?
 
 {% alert level="danger" %}
 - This is a deprecated registry management format.
@@ -397,7 +641,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
      version: 1
    ```
 
-## How to check the registry mode switch status?
+### How to check the registry mode switch status?
 
 The status of the registry mode switch can be retrieved using the following command:
 

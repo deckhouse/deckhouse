@@ -1,5 +1,232 @@
 type: object
+x-deckhouse-validations:
+  # These expressions are evaluated against the raw config values, BEFORE schema
+  # defaults are materialized. So an absent `mode` has to be read as its default
+  # `Unmanaged` explicitly, and an absent `storage.cache` correctly reads as `false`.
+  #
+  # A Managed registry must have a source of images. The two axes give three valid
+  # combinations; the fourth (no upstream, no cache) leaves the nodes with nothing
+  # to pull from. Rejected on `kubectl apply`, so the mistake never reaches a CR.
+  - expression: |
+      !has(self.mode) || self.mode != 'Managed' ||
+      (has(self.primary) && has(self.primary.upstream)) ||
+      (has(self.storage) && has(self.storage.cache) && self.storage.cache)
+    message: "registry: a Managed registry needs a source of images: set 'primary.upstream', or enable 'storage.cache' for an air-gapped cluster."
+  # In air-gap there is no upstream to fall back on, so cache completeness must be
+  # decidable before it is safe to serve from the cache alone.
+  - expression: |
+      !has(self.mode) || self.mode != 'Managed' ||
+      (has(self.primary) && has(self.primary.upstream)) ||
+      (has(self.storage) && has(self.storage.source))
+    message: "registry: 'storage.source' is required when 'primary.upstream' is not set: in air-gap there is no upstream to fall back on."
+  # Settings without `mode: Managed` are settings nothing acts on, which is worse than
+  # an error: the cluster keeps pulling the way it did and nothing says why.
+  - expression: |
+      !has(self.primary) && !has(self.storage) ||
+      (has(self.mode) && self.mode == 'Managed')
+    message: "registry: set 'mode: Managed' to apply these settings; with the default 'Unmanaged' the module manages nothing and they have no effect."
 properties:
+  mode:
+    type: string
+    enum:
+      - Managed
+      - Unmanaged
+    default: Unmanaged
+    description: |
+      Whether the module manages how the cluster pulls images.
+
+      - `Unmanaged` — the module manages nothing. No components are created and no node configuration is written; the cluster keeps pulling from the registry it was installed with. This is the default, so enabling the module changes nothing on its own.
+      - `Managed` — the module owns the pull path: it configures the container runtime on every node through its node agent, and optionally runs an in-cluster cache.
+
+      There is no choice of implementation. A cluster that has never run the previous implementation of this module always uses the current one; a cluster that has runs the previous one until it is brought to its `Unmanaged` state, after which the migration completes on its own.
+    x-doc-default: 'Unmanaged'
+  primary:
+    type: object
+    description: |
+      The single authoritative source of Deckhouse component images. Applies only when `mode` is `Managed`.
+
+      Additional registries are declared as separate [RegistryUpstream](cr.html#registryupstream) resources rather than here: a module or a user bringing their own registry must not have to edit a ModuleConfig owned by someone else.
+    properties:
+      upstream:
+        type: object
+        description: |
+          The registry to pull Deckhouse component images from.
+
+          If omitted, the cluster is air-gapped: the in-cluster cache becomes authoritative and is populated with `d8 mirror push`. Omitting it requires `storage.cache: true` and `storage.source`.
+        x-examples:
+          - host: registry.deckhouse.io
+            path: /deckhouse/ee
+            scheme: HTTPS
+            auth:
+              license: "DECKHOUSE_LICENSE_KEY"
+        required:
+          - host
+        properties:
+          scheme:
+            type: string
+            enum:
+              - HTTP
+              - HTTPS
+            default: HTTPS
+            description: |
+              The protocol used to reach the registry.
+
+              Use `HTTP` only for insecure, trusted registries.
+          host:
+            type: string
+            minLength: 1
+            description: |
+              The registry host, optionally with a port.
+            x-examples:
+              - registry.deckhouse.io
+              - my-private-registry.com:5000
+          path:
+            type: string
+            description: |
+              The repository prefix inside the registry.
+            x-examples:
+              - /deckhouse/ee
+          ca:
+            type: string
+            description: |
+              A PEM-encoded certificate authority bundle used to verify the registry when `scheme` is `HTTPS`.
+
+              If not specified, the system trust store is used.
+          auth: &registryAuth
+            type: object
+            description: |
+              Credentials for the registry.
+            x-deckhouse-validations:
+              - expression: "has(self.license) ? (!has(self.username) && !has(self.password)) : true"
+                message: "'license' and 'username'/'password' are mutually exclusive."
+              - expression: "has(self.username) ? has(self.password) : true"
+                message: "'password' is required when 'username' is provided."
+              - expression: "has(self.password) ? has(self.username) : true"
+                message: "'username' is required when 'password' is provided."
+            properties:
+              license:
+                type: string
+                description: |
+                  The Deckhouse license key.
+
+                  A shorthand for the `username`/`password` pair used with `registry.deckhouse.io`. Mutually exclusive with them.
+
+                  Changing the license changes the registry credentials, so it goes through the same preflight probe as an address change: the new credentials are verified before the cluster is switched over, and the last known good ones are kept if the probe fails.
+              username:
+                type: string
+                description: |
+                  The username for basic authentication.
+              password:
+                type: string
+                description: |
+                  The password for basic authentication.
+          mirrors:
+            type: array
+            description: |
+              Additional addresses serving **the same** content as the primary registry, used for failover and load balancing.
+
+              Mirrors are not separate sources: the cache holds one de-duplicated set regardless of which mirror the images came from. A registry with different content is an additional upstream and belongs in a [RegistryUpstream](cr.html#registryupstream) resource.
+            items:
+              type: object
+              required:
+                - host
+              properties:
+                scheme:
+                  type: string
+                  enum:
+                    - HTTP
+                    - HTTPS
+                  default: HTTPS
+                  description: |
+                    The protocol used to reach the mirror.
+                host:
+                  type: string
+                  minLength: 1
+                  description: |
+                    The mirror host, optionally with a port.
+                path:
+                  type: string
+                  description: |
+                    The repository prefix inside the mirror.
+                ca:
+                  type: string
+                  description: |
+                    A PEM-encoded certificate authority bundle used to verify the mirror.
+                auth:
+                  <<: *registryAuth
+  storage:
+    type: object
+    description: |
+      The in-cluster registry cache. Applies only when `mode` is `Managed`.
+    properties:
+      garbageCollection:
+        type: object
+        default: {}
+        description: |
+          When the cache reclaims the disk taken by releases the cluster has moved past.
+
+          Needed because nothing else ever removes anything: every release adds a slice of the repository, so a cluster that lives for years fills its store and then stops being able to pull.
+
+          A collection puts one replica read-only for as long as it takes. That replica keeps serving every image it holds; what it cannot do is store the result of a cache miss, or accept a `d8 mirror push`. Only one replica collects at a time, so the others are unaffected.
+        properties:
+          enabled:
+            type: boolean
+            default: true
+            description: |
+              Whether the cache reclaims its disk at all.
+
+              Turning this off leaves the store to grow without bound, which only makes sense with a disk large enough that it never matters.
+          schedule:
+            type: string
+            pattern: '^\s*\S+\s+\S+\s+\S+\s+\S+\s+\S+\s*$'
+            description: |
+              A five-field cron expression, in the replicas' own time zone.
+
+              Defaults to a night hour. If the `master` node group has a maintenance window, the start of that window is used instead — that being a time the operator has already declared safe for disruption.
+            x-examples:
+              - "17 3 * * *"
+              - "0 2 * * Sun"
+      cache:
+        type: boolean
+        default: false
+        description: |
+          Whether pulls go through the in-cluster cache on the master nodes.
+
+          This is one of the two configuration axes; the other is whether `primary.upstream` is set. Together they cover every supported layout:
+
+          - `cache: false` with an upstream — nodes pull straight from the upstream, no cache is deployed.
+          - `cache: true` with an upstream — a pass-through cache, filled from the upstream.
+          - `cache: true` without an upstream — air-gap: the cache is the only source of images and is filled with `d8 mirror push`.
+
+          Turning the cache on or off is a safe, idempotent reconfiguration. Removing the upstream while the cache is on is the one transition with a condition: it takes effect only once the cache leader holds the whole expected image set, so nodes are never cut off.
+      size:
+        type: string
+        pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+        description: |
+          The size of the persistent volume backing the cache.
+        x-examples:
+          - 50Gi
+      source:
+        type: object
+        description: |
+          The image set the cache is expected to hold.
+
+          Required in an air-gapped cluster: with no upstream to fall back on, completeness must be decidable before the cache can be trusted as the only source.
+        properties:
+          bundleRef:
+            type: string
+            description: |
+              The name of the image set, for example the bundle pushed with `d8 mirror push`.
+            x-examples:
+              - d8-mirror-bundle
+          expectedDigests:
+            type: integer
+            format: int32
+            minimum: 0
+            description: |
+              The number of distinct digests the set contains.
+            x-examples:
+              - 459
   whitelistSourceRanges:
     type: array
     items:

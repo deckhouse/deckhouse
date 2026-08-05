@@ -7,7 +7,7 @@
         - creates a similar secret named "registry-ingress-tls-customcertificate" in the "d8-system" namespace
 */ -}}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
-{{- if (($orchestrator).state).ingress_enabled -}}
+{{- if and ((($orchestrator).state).ingress_enabled) (eq (include "registry_legacy_owns_the_cluster" .) "true") -}}
 {{- if .Values.global.enabledModules | has "cert-manager" -}}
 
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-ingress-tls") -}}

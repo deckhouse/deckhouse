@@ -28,8 +28,16 @@ var (
 	_ validation.Validatable = ContextMirrorHost{}
 )
 
+// ContextAgent mirrors ConfigAgent on the node side.
+type ContextAgent struct {
+	Endpoint   string `json:"endpoint" yaml:"endpoint"`
+	DropInFile string `json:"dropInFile,omitempty" yaml:"dropInFile,omitempty"`
+	Layout     string `json:"layout,omitempty" yaml:"layout,omitempty"`
+}
+
 type Context struct {
 	Bootstrap            *ContextBootstrap       `json:"bootstrap,omitempty" yaml:"bootstrap,omitempty"`
+	Agent                *ContextAgent           `json:"agent,omitempty" yaml:"agent,omitempty"`
 	RegistryModuleEnable bool                    `json:"registryModuleEnable" yaml:"registryModuleEnable"`
 	Mode                 string                  `json:"mode" yaml:"mode"`
 	Version              string                  `json:"version" yaml:"version"`
@@ -155,6 +163,15 @@ func (c Context) ToMap() map[string]any {
 
 	if c.Bootstrap != nil {
 		ret["bootstrap"] = c.Bootstrap.ToMap()
+	}
+	// Present only when the agent owns the runtime configuration, so a template can ask
+	// "is there an agent" rather than compare a mode against a list of names.
+	if c.Agent != nil {
+		ret["agent"] = map[string]any{
+			"endpoint":   c.Agent.Endpoint,
+			"dropInFile": c.Agent.DropInFile,
+			"layout":     c.Agent.Layout,
+		}
 	}
 	return ret
 }

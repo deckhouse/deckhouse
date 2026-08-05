@@ -1,0 +1,47 @@
+- name: d8.registry.migration
+  rules:
+  - alert: D8RegistryMigrationPending
+    expr: max by (reason) (d8_registry_migration_pending) > 0
+    for: 5m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_migration_pending: "D8RegistryMigrationPending,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_migration_pending: "D8RegistryMigrationPending,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry module is still running its previous implementation.
+      description: |-
+        This cluster still pulls images the way the previous implementation of the
+        `registry` module arranged it. Nothing is broken and nothing is degraded — the
+        migration has simply not completed, and until it does the current
+        implementation manages nothing.
+
+        Reason: `{{ $labels.reason }}`
+
+        The handover waits because both implementations configure the same thing on
+        every node: which registry the container runtime asks, and with which
+        credentials. Running both would not merge those two answers, it would race
+        them. So the current implementation takes over only once the previous one has
+        let go of the pull path, which is its `Unmanaged` state.
+
+        What to do:
+
+        1. Bring the registry configuration in the `deckhouse` ModuleConfig to
+           `Unmanaged` and wait for that transition to finish:
+
+           ```
+           kubectl get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
+           kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+           ```
+
+        2. Once the state reports `mode: Unmanaged` with no pending target mode, the
+           handover happens on the module's next reconciliation and this alert clears.
+           The cluster keeps pulling from the same registry throughout.
+
+        3. To have the module manage the pull path afterwards, set `mode: Managed` in
+           the `registry` ModuleConfig together with the registry to pull from. The
+           module publishes a ready-made configuration for this cluster in the
+           `registry-suggested-config` secret in `d8-system`.

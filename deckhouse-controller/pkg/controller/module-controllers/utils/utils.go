@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
 	"strconv"
 	"strings"
 
@@ -39,6 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -51,7 +54,95 @@ func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterU
 		UserAgent:    clusterUUID,
 	}
 
-	return GenerateRegistryOptions(rconf, logger)
+	return GenerateRegistryOptions(rconf.ForRepository(ms.Spec.Registry.Repo, logger), logger)
+}
+
+// agentCAFile is where the node agent's authority is read from. A variable rather than the
+// constant itself only so that a test can point it at a file it is allowed to create.
+var agentCAFile = registry_const.AgentCAFile
+
+// Dial is the address to actually connect to in order to reach a repository.
+//
+// Everything the cluster records names the in-cluster registry, because a recorded address is
+// read by more than one party: it ends up in pod image references, in a ModuleSource, in a
+// status. The loopback address belongs in none of those — it is node-local, and a cluster-wide
+// object naming it is wrong even where it happens to work. What made that concrete was a
+// ModuleSource whose repository named the loopback: the pods kept running on content their
+// nodes already held, while the agent answered 502 to every fresh pull, since a request naming
+// the agent as its own registry is a loop and is refused.
+//
+// So the translation happens here, at the one place that has to dial, and nowhere else.
+func Dial(repository string) string {
+	if host, rest, found := strings.Cut(repository, "/"); found && host == registry_const.Host {
+		return registry_const.ProxyHost + "/" + rest
+	}
+	if repository == registry_const.Host {
+		return registry_const.ProxyHost
+	}
+	return repository
+}
+
+// ForRepository adjusts a registry client configuration for the repository it will fetch
+// from, and does nothing at all unless that repository is served by the node agent.
+//
+// The agent is what the registry module puts in front of every pull once it manages the pull
+// path, and a process — unlike a container runtime, which is handed a drop-in that redirects
+// it — has to dial the agent to fetch through it. Two things about the agent are not
+// properties of the registry the cluster was told about, and cannot be:
+//
+//   - It serves HTTPS, whatever the upstream behind it speaks. An upstream reached over plain
+//     HTTP is perfectly ordinary, and taking the configured scheme here would send a plaintext
+//     request to a TLS listener.
+//   - Its authority is generated on the node at bootstrap and never leaves it, so no cluster
+//     object can carry it — every node has a different one. That is deliberate: a node's
+//     ability to pull must not wait for cluster-wide certificate material to arrive. It is why
+//     this pod mounts the authority from the host instead.
+//
+// Credentials are left as they are, and are simply not used: the agent authenticates to the
+// registry behind it with credentials of its own, and a docker config naming other hosts has
+// nothing to say about the loopback address.
+func (rc *RegistryConfig) ForRepository(repository string, logger *log.Logger) *RegistryConfig {
+	// Either spelling of the same agent: as recorded, or as dialled.
+	if !registry_const.IsInCluster(repository) && !registry_const.IsLocalAgent(repository) {
+		return rc
+	}
+
+	rc.Scheme = registry_const.Scheme
+
+	authority, err := os.ReadFile(agentCAFile)
+	if err != nil {
+		// Said out loud, because the failure it leads to says nothing about a file: the
+		// fetch fails to verify a certificate, and the reason is that the authority which
+		// signed it was never read.
+		logger.Error("cannot read the registry agent authority, so nothing fetched through "+
+			"the agent on this node can be verified",
+			slog.String("path", registry_const.AgentCAFile),
+			log.Err(err))
+		return rc
+	}
+	rc.CA = string(authority)
+
+	return rc
+}
+
+// RegistryConfig is what a client for the registry this secret describes is built from.
+func (s *DeckhouseRegistrySecret) RegistryConfig(userAgent string, logger *log.Logger) *RegistryConfig {
+	rc := &RegistryConfig{
+		DockerConfig: s.DockerConfig,
+		Scheme:       s.Scheme,
+		CA:           s.CA,
+		UserAgent:    userAgent,
+	}
+
+	return rc.ForRepository(s.Fetch(), logger)
+}
+
+// Fetch is the repository this process pulls from, ready to be dialled.
+func (s *DeckhouseRegistrySecret) Fetch() string {
+	if s.FetchRegistry != "" {
+		return Dial(s.FetchRegistry)
+	}
+	return Dial(s.ImageRegistry)
 }
 
 type RegistryConfig struct {
@@ -91,6 +182,20 @@ type DeckhouseRegistrySecret struct {
 	Path                  string
 	Scheme                string
 	CA                    string
+
+	// FetchRegistry is where THIS process fetches from, which is not always the registry
+	// ImageRegistry names.
+	//
+	// Its own field because the two have different readers. ImageRegistry is the registry as
+	// seen from outside the cluster — dhctl reads it from wherever it is run and will not
+	// touch a cluster whose docker config has no credentials for the host it names — while
+	// this one is read only in the cluster, where the registry module may have put a node
+	// agent in front of every pull. Going through that agent is what makes a change of
+	// registry reach this process: nothing writes a registry address into the secret when the
+	// module moves the pull path.
+	//
+	// Empty on a cluster whose secret predates the field, and then ImageRegistry is used.
+	FetchRegistry string
 }
 
 var ErrDockerConfigFieldIsNotFound = errors.New("secret has no .dockerconfigjson field")
@@ -150,11 +255,16 @@ func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySec
 		err = errors.Join(err, ErrCAFieldIsNotFound)
 	}
 
+	// Optional, deliberately: every cluster installed before it existed has a secret without
+	// it, and making it required would refuse to read any of them.
+	fetchRegistry := data["fetchRegistry"]
+
 	return &DeckhouseRegistrySecret{
 		DockerConfig:          string(dockerConfig),
 		Address:               string(address),
 		ClusterIsBootstrapped: clusterIsBootstrapped,
 		ImageRegistry:         string(imagesRegistry),
+		FetchRegistry:         string(fetchRegistry),
 		Path:                  string(path),
 		Scheme:                string(scheme),
 		CA:                    string(ca),

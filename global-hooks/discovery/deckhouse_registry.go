@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -32,6 +33,19 @@ import (
 
 const (
 	imageModulesD8RegistryConfSnap = "d8_registry_secret"
+	imageAddressSnap               = "registry_image_address"
+
+	// imageAddressConfigMapName is where the registry module publishes the address
+	// container image references are to be rendered from.
+	//
+	// Read here rather than decided here. Whether the cluster's pull path is managed at
+	// all, whether the previous implementation of that module is still the one managing
+	// it, and whether every node's agent has applied the layout it was given are three
+	// questions that module already answers; asking them a second time in a global hook
+	// would put two writers on one decision, and the one that got it wrong would point
+	// every image reference in the cluster at something nothing can pull.
+	imageAddressConfigMapName = "registry-image-address"
+	imageAddressConfigMapKey  = "base"
 )
 
 type registrySecret struct {
@@ -58,6 +72,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyD8RegistrySecretFilter,
 		},
+		{
+			Name:       imageAddressSnap,
+			ApiVersion: "v1",
+			Kind:       "ConfigMap",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{imageAddressConfigMapName},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: applyImageAddressFilter,
+		},
 	},
 }, discoveryDeckhouseRegistry)
 
@@ -83,6 +111,16 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
+func applyImageAddressFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var cm v1core.ConfigMap
+
+	if err := sdk.FromUnstructured(obj, &cm); err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
+	}
+
+	return cm.Data[imageAddressConfigMapKey], nil
+}
+
 func discoveryDeckhouseRegistry(_ context.Context, input *go_hook.HookInput) error {
 	registryConfSnap, err := sdkobjectpatch.UnmarshalToStruct[registrySecret](input.Snapshots, imageModulesD8RegistryConfSnap)
 	if err != nil {
@@ -106,7 +144,24 @@ func discoveryDeckhouseRegistry(_ context.Context, input *go_hook.HookInput) err
 	// In values we store base64-encoded docker config because in this form it is applied in other places.
 	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)
 
-	input.Values.Set("global.modulesImages.registry.base", fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path))
+	// `base` is the address container image references are rendered from, and it is the only
+	// one of these values that the registry module can move.
+	//
+	// The others describe the registry the cluster was installed with, and they keep doing
+	// that: `address`, `path` and the docker config are what an out-of-cluster caller reads —
+	// dhctl among them, which refuses to touch a cluster whose docker config has no
+	// credentials for the host they name. Whether anything in the cluster fetches through the
+	// node agent instead is decided from `base`, by the party that has to dial it.
+	imageBase := fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path)
+	if published, err := publishedImageAddress(input); err != nil {
+		return err
+	} else if published != "" {
+		input.Logger.Info("rendering image references from the address the registry module published",
+			slog.String("address", published))
+		imageBase = published
+	}
+
+	input.Values.Set("global.modulesImages.registry.base", imageBase)
 	input.Values.Set("global.modulesImages.registry.dockercfg", registryConfEncoded)
 	input.Values.Set("global.modulesImages.registry.scheme", registrySecretRaw.Scheme)
 	input.Values.Set("global.modulesImages.registry.CA", registrySecretRaw.CA)
@@ -129,4 +184,24 @@ func discoveryDeckhouseRegistry(_ context.Context, input *go_hook.HookInput) err
 
 	input.Values.Set("global.modulesImages.registry.hash", hash)
 	return nil
+}
+
+// publishedImageAddress is the address the registry module asks image references to be
+// rendered from, or empty when it asks for nothing.
+//
+// Empty is the normal case and the safe one: a cluster whose pull path the module does not
+// manage, one still on the module's previous implementation, and one where the node agents
+// have not yet applied the layout they were given all leave this unset, and image
+// references keep naming the registry the cluster was installed with.
+func publishedImageAddress(input *go_hook.HookInput) (string, error) {
+	published, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, imageAddressSnap)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal %s snapshot: %w", imageAddressSnap, err)
+	}
+
+	if len(published) == 0 {
+		return "", nil
+	}
+
+	return published[0], nil
 }

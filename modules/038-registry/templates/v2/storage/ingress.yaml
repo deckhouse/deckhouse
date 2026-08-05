@@ -1,0 +1,91 @@
+{{- /*
+The publication endpoint: the only way into the storage from outside the cluster,
+used by `d8 mirror push`.
+
+Rendered exactly when the configuration asks for air-gap, which is when there is no
+upstream to pull from and pushing is the only way images get in. The controller
+decides the same thing for `RegistryStorage.spec.publish` from the custom resource;
+the rule is duplicated because helm does not read custom resources, so keep the two
+in step: no upstream means publish.
+
+Publishing it unconditionally would give every cluster that merely caches an
+internet-facing endpoint that can REPLACE an image, in exchange for nothing.
+
+Waits for cert-manager, the same way the previous implementation's ingress does. Not a
+statement about needing certificates: this module has weight 38 and cert-manager has 101,
+so on the first converge of a new cluster cert-manager is not enabled yet, and the ingress
+helpers refuse an https mode they cannot satisfy — loudly enough to fail the whole module
+and, with it, the installation. The endpoint appears on a later converge instead.
+*/ -}}
+{{- if eq (include "registry_v2_caches" .) "true" }}
+{{- $config := (.Values.registry.internal.v2).registryConfig | default dict }}
+{{- $upstream := ($config.primary | default dict).upstream }}
+{{- $pki := (.Values.registry.internal.v2).pki }}
+{{- if and (not $upstream) $pki .Values.global.modules.publicDomainTemplate (.Values.global.enabledModules | has "cert-manager") }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-push
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-storage")) | nindent 2 }}
+spec:
+  # A routable service, unlike the headless one the cluster pulls through: the
+  # ingress controller needs an address to send a write to, and any replica will do
+  # — an upload is signed with a secret shared by all of them.
+  selector:
+    app: registry-storage
+  ports:
+  - name: registry
+    port: 5001
+    protocol: TCP
+    targetPort: registry
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: registry-push
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-storage")) | nindent 2 }}
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    # The storage requires a client certificate on this path, so a leaked password
+    # alone cannot be used to replace an image.
+    nginx.ingress.kubernetes.io/proxy-ssl-secret: "d8-system/registry-storage-ingress-client"
+    nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
+    # An image layer has no meaningful size limit, and the default would reject the
+    # large ones without saying why.
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    # A push is a sequence of requests that has to reach the same replica: an upload
+    # started against one and finished against another would fail halfway.
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$remote_addr"
+    {{- if .Values.registry.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.registry.whitelistSourceRanges | join "," }}
+    {{- end }}
+    {{- with (include "helm_lib_module_ingress_configuration_snippet" .) }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{- . | nindent 6 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "registry") }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: registry-push
+            port:
+              number: 5001
+        path: /
+        pathType: Prefix
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "registry") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "registry-ingress-tls") }}
+  {{- end }}
+{{- end }}
+{{- end }}

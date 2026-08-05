@@ -49,7 +49,7 @@ spec:
         app: deckhouse
     spec:
       containers:
-      - image: my.registry.com/deckhouse:v1.50.0
+      - image: dev-registry.deckhouse.io/deckhouse/deckhouse:v1.50.0
         name: deckhouse
         resources: {}
 status:
