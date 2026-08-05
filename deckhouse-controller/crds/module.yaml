@@ -101,7 +101,6 @@ spec:
                   messages:
                     description: |-
                       Warning messages displayed when disabling the module, localized for different languages.
-
                       If a message for the selected language is not defined, the value of the `message` field is used instead.
                     properties:
                       en:
