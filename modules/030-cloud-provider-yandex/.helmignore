@@ -1,4 +1,3 @@
-candi
 crds
 docs
 enabled
@@ -9,3 +8,7 @@ tools
 template_tests
 openapi
 README.md
+candi/layouts/
+candi/terraform-modules/
+candi/cni-bootstrap.yml
+candi/terraform_versions.yml
