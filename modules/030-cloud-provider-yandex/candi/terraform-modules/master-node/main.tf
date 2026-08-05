@@ -13,7 +13,7 @@
 # limitations under the License.
 
 locals {
-  mapping = lookup(var.providerClusterConfiguration, "existingZoneToSubnetIDMap", {})
+  mapping = local.existing_zone_to_subnet_id_map
 
   zone_to_subnet = length(local.mapping) == 0 ? {
     "ru-central1-a" = length(data.yandex_vpc_subnet.kube_a) > 0 ? data.yandex_vpc_subnet.kube_a[0] : object({})
@@ -22,8 +22,8 @@ locals {
     "ru-central1-d" = length(data.yandex_vpc_subnet.kube_d) > 0 ? data.yandex_vpc_subnet.kube_d[0] : object({})
   } : data.yandex_vpc_subnet.existing
 
-  actual_zones    = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(keys(local.zone_to_subnet), var.providerClusterConfiguration.zones)) : keys(local.zone_to_subnet)
-  zones           = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
+  actual_zones    = length(local.cluster_zones) > 0 ? tolist(setintersection(keys(local.zone_to_subnet), local.cluster_zones)) : keys(local.zone_to_subnet)
+  zones           = local.node_group_zones != null ? tolist(setintersection(local.actual_zones, local.node_group_zones)) : local.actual_zones
   subnets         = length(local.zones) > 0 ? [for z in local.zones : local.zone_to_subnet[z]] : values(local.zone_to_subnet)
   internal_subnet = element(local.subnets, var.nodeIndex)
 
@@ -156,6 +156,16 @@ resource "yandex_compute_instance" "master" {
       metadata,
       secondary_disk,
     ]
+    # Fails the plan on a networkType this module cannot translate, so a typo or a future
+    # enum value can never be swallowed into the provider default. The check lives here
+    # rather than on its own terraform_data resource: a new resource would add an entry to
+    # the terraform state of every existing node, and rather than on a variable validation
+    # block, because it inspects the resolved instance class (a local).
+    precondition {
+      condition     = local._network_type_raw == "" || local.network_type != null
+      error_message = "ERROR: unknown YandexInstanceClass networkType '${local._network_type_raw}' on instance class '${local._instance_class_name}': expected one of ${join(", ", keys(var.network_types))}."
+    }
+
     create_before_destroy = true
   }
 

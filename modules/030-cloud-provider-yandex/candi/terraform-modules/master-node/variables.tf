@@ -16,8 +16,11 @@ variable "clusterConfiguration" {
   type = any
 }
 
+# Absent in ModuleConfig-only clusters; the migration module resolves the source
+# of truth and validates the result.
 variable "providerClusterConfiguration" {
-  type = any
+  type    = any
+  default = null
 }
 
 variable "nodeIndex" {
@@ -34,37 +37,117 @@ variable "clusterUUID" {
   type = string
 }
 
+# Maps a YandexInstanceClass `networkType` onto the provider's
+# `network_acceleration_type`. Both API version spellings are listed on purpose:
+# v1 (the storage version, and what YandexClusterConfiguration used) spells them
+# Standard/SoftwareAccelerated, v1alpha1 spells them STANDARD/SOFTWARE_ACCELERATED.
+# The conversion webhook normalises objects that go through the apiserver, but
+# dhctl parses the bootstrap resources YAML verbatim
+# (dhctl/pkg/config/cloud_provider_resources.go), so a v1alpha1 instance class
+# reaches this module unconverted and must still map to the right value instead of
+# silently degrading to the provider default.
 variable "network_types" {
   type = map(any)
   default = {
-    "Standard"            = "standard"
-    "SoftwareAccelerated" = "software_accelerated"
+    "Standard"             = "standard"
+    "SoftwareAccelerated"  = "software_accelerated"
+    "STANDARD"             = "standard"
+    "SOFTWARE_ACCELERATED" = "software_accelerated"
   }
 }
 
 variable "resourceManagementTimeout" {
-  type = string
+  type    = string
   default = "10m"
 }
 
+variable "nodeGroups" {
+  type    = any
+  default = {}
+}
+
+variable "instanceClasses" {
+  type    = any
+  default = {}
+}
+
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
+}
+
+module "migration" {
+  source                       = "../migration"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  nodeGroups                   = var.nodeGroups
+  instanceClasses              = var.instanceClasses
+  secrets                      = var.secrets
+  settings                     = var.settings
+}
+
 locals {
-  prefix                = var.clusterConfiguration.cloud.prefix
-  mng                   = var.providerClusterConfiguration.masterNodeGroup
-  master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
-  platform              = lookup(local.master_instance_class, "platform", "standard-v2")
-  cores                 = local.master_instance_class.cores
-  memory                = local.master_instance_class.memory / 1024
-  disk_size_gb          = lookup(local.master_instance_class, "diskSizeGB", 50)
-  disk_type             = lookup(local.master_instance_class, "diskType", "network-ssd")
-  etcd_disk_size_gb     = local.master_instance_class.etcdDiskSizeGb
-  image_id              = local.master_instance_class.imageID
-  ssh_public_key        = var.providerClusterConfiguration.sshPublicKey
-  node_network_cidr     = var.providerClusterConfiguration.nodeNetworkCIDR
+  prefix          = var.clusterConfiguration.cloud.prefix
+  node_group_name = "master"
 
-  external_ip_addresses         = lookup(local.master_instance_class, "externalIPAddresses", [])
-  external_subnet_ids           = lookup(local.master_instance_class, "externalSubnetIDs", [])
-  external_subnet_id_deprecated = lookup(local.master_instance_class, "externalSubnetID", null)
+  # The migration module resolves which source of truth wins; everything below
+  # reads the resolved ModuleConfig. tolist/tomap also absorb explicit nulls,
+  # which try() alone does not.
+  _node_params = try(module.migration.settings.spec.settings.nodes.parameters, {})
 
-  network_type      = contains(keys(local.master_instance_class), "networkType") ? var.network_types[local.master_instance_class.networkType] : null
-  additional_labels = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(local.master_instance_class, "additionalLabels", {}))
+  _node_group           = lookup(module.migration.nodeGroups, local.node_group_name, null)
+  _instance_class_name  = try(local._node_group.spec.cloudInstances.classReference.name, "")
+  master_instance_class = try(module.migration.instanceClasses[local._instance_class_name].spec, {})
+
+  # Zones are already resolved in the NodeGroup (node group zones, then the
+  # cluster-wide zones); null means "every zone the subnets cover".
+  cluster_zones                  = try(tolist(local._node_params.zones), [])
+  node_group_zones               = try(local._node_group.spec.cloudInstances.zones, null)
+  existing_zone_to_subnet_id_map = try(tomap(local._node_params.existingZoneToSubnetIDMap), {})
+
+  platform          = try(local.master_instance_class.platformID, "standard-v2")
+  cores             = try(local.master_instance_class.cores, 0)
+  memory            = try(local.master_instance_class.memory, 0) / 1024
+  disk_size_gb      = try(local.master_instance_class.diskSizeGB, 50)
+  disk_type         = try(local.master_instance_class.diskType, "network-ssd")
+  etcd_disk_size_gb = try(local.master_instance_class.etcdDiskSizeGB, 10)
+  image_id          = try(local.master_instance_class.imageID, "")
+
+  ssh_public_key    = try(local._node_params.sshPublicKey, "")
+  node_network_cidr = try(local._node_params.nodeNetworkCIDR, "")
+
+  # Per-node-group external addressing lives in nodes.parameters because
+  # YandexInstanceClass has no externalIPAddresses counterpart. The
+  # assignPublicIPAddress fallback covers ModuleConfig-only clusters that only
+  # ask for an automatically allocated address.
+  _external_ip_addresses = try(local._node_params.externalIPAddresses[local.node_group_name], [])
+  external_ip_addresses = length(local._external_ip_addresses) > 0 ? local._external_ip_addresses : (
+    try(local.master_instance_class.assignPublicIPAddress, false) ? ["Auto"] : []
+  )
+
+  _external_subnet_ids = try(local._node_params.externalSubnetIDs[local.node_group_name], [])
+  external_subnet_ids  = length(local._external_subnet_ids) > 0 ? local._external_subnet_ids : try(local.master_instance_class.additionalSubnets, [])
+
+  # Keep null for "unset": main.tf branches on it to decide whether to attach an
+  # extra network interface.
+  external_subnet_id_deprecated = try(local.master_instance_class.mainSubnet, "") != "" ? local.master_instance_class.mainSubnet : null
+
+  # An unset networkType leaves network_acceleration_type at the provider default,
+  # which is what YandexClusterConfiguration did before the migration. A *set* but
+  # unrecognised value is an error rather than a silent fallback: the pre-migration
+  # code indexed var.network_types directly and failed on an unknown key, and
+  # silently ignoring it would hand the user a standard network while their
+  # instance class asks for a software-accelerated one. See
+  # the precondition on yandex_compute_instance.master.
+  _network_type_raw = try(local.master_instance_class.networkType, "")
+  network_type      = lookup(var.network_types, local._network_type_raw, null)
+
+  additional_labels = merge(
+    try(tomap(local._node_params.labels), {}),
+    try(local.master_instance_class.additionalLabels, {}),
+  )
 }
