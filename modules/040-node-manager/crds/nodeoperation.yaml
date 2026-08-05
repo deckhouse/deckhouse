@@ -43,6 +43,8 @@ spec:
             An operation is a record of intent, not a switch: it is created once, carried through its phases by node-manager and the on-node agent, and kept afterwards as the history of what was done to the node and why. Editing the spec of an existing operation is rejected — create another one instead.
 
             Operations are how disruptive work is coordinated for the nodes of a NodeGroup with `systemType: Immutable`, and the same resource is available to an operator who needs to reboot or drain such a node by hand.
+
+            Every operation carries the label `node-manager.deckhouse.io/node` with the value of `.spec.nodeName`; node-manager stamps it on operations that reach it without one. It is how operations on the same node find each other, which is what keeps two of them from disagreeing about the state the node was in before either started.
           required:
             - spec
           properties:
@@ -144,10 +146,26 @@ spec:
                   description: |
                     When the operation reached a terminal phase. A finished operation is kept as the
                     record of what was done to the node and is collected once it is a day old.
+                nodeWasUnschedulable:
+                  type: boolean
+                  description: |
+                    Whether the node was already out of the scheduler when the operation reached it.
+
+                    Releasing the node at the end of the operation restores this value instead of making the node schedulable, so an operation does not quietly undo a cordon an operator put there by hand.
+                drainDeadline:
+                  type: string
+                  format: date-time
+                  description: |
+                    When the eviction this operation asked for runs out of the time it was given.
+
+                    It is pinned at the moment the eviction is requested, from the NodeGroup's `nodeDrainTimeoutSecond` as it stood then, because that is the bound the draining controller itself started running to. Deriving it again later would let a change to the NodeGroup cut short a drain that is still running.
                 conditions:
                   type: array
                   description: |
                     The latest details of the operation's progress.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
                   items:
                     type: object
                     required:

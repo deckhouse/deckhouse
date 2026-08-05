@@ -22,7 +22,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,15 +51,33 @@ func renderBootstrapData(ctx context.Context, cl client.Client, reader client.Re
 	return wrapCloudConfig(spec, machineName, ng.Name)
 }
 
+// bootstrapDocument is the shape written to /config/nodeconfig.yaml: the same
+// object the cluster holds, minus the status.
+//
+// Spelled out rather than marshalled from the API type, whose Status is a struct
+// — and omitempty does nothing on a struct, so every machine would boot with a
+// `status: {lastReconcileTime: null}` it has no business carrying. dhctl writes
+// the first master's copy from a spec-only type of its own for the same reason
+// (dhctl/pkg/immutable/types.go).
+type bootstrapDocument struct {
+	APIVersion string                    `json:"apiVersion"`
+	Kind       string                    `json:"kind"`
+	Metadata   bootstrapMetadata         `json:"metadata"`
+	Spec       internalv1alpha1.NodeSpec `json:"spec"`
+}
+
+type bootstrapMetadata struct {
+	Name   string            `json:"name"`
+	Labels map[string]string `json:"labels,omitempty"`
+}
+
 // wrapCloudConfig marshals the NodeConfig for the machine and wraps it in the
 // cloud-config document the on-node loader reads from /config/nodeconfig.yaml.
 func wrapCloudConfig(spec internalv1alpha1.NodeSpec, machineName, ngName string) ([]byte, error) {
-	config := &internalv1alpha1.NodeConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: internalv1alpha1.GroupVersion.String(),
-			Kind:       "NodeConfig",
-		},
-		ObjectMeta: metav1.ObjectMeta{
+	config := &bootstrapDocument{
+		APIVersion: internalv1alpha1.GroupVersion.String(),
+		Kind:       "NodeConfig",
+		Metadata: bootstrapMetadata{
 			Name:   machineName,
 			Labels: map[string]string{nodecommon.NodeGroupLabel: ngName},
 		},

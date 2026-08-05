@@ -16,7 +16,6 @@ package immutable
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -39,16 +38,16 @@ const (
 	testSchedulerDigest         = "sha256:8888888888888888888888888888888888888888888888888888888888888888"
 )
 
-func testMetaConfig(t *testing.T, rootDiskSize, etcdDiskSize string) *config.MetaConfig {
+func testMetaConfig(t *testing.T) *config.MetaConfig {
 	t.Helper()
 
-	masterNodeGroup := fmt.Sprintf(`{
+	const masterNodeGroup = `{
 	  "replicas": 1,
 	  "instanceClass": {
-	    "rootDisk": {"size": %q},
-	    "etcdDisk": {"size": %q}
+	    "rootDisk": {"size": "50Gi"},
+	    "etcdDisk": {"size": "10Gi"}
 	  }
-	}`, rootDiskSize, etcdDiskSize)
+	}`
 
 	metaConfig := &config.MetaConfig{
 		ClusterType:       config.CloudClusterType,
@@ -97,33 +96,158 @@ func testMetaConfig(t *testing.T, rootDiskSize, etcdDiskSize string) *config.Met
 	return metaConfig
 }
 
-// The installer states nothing about the disk: it renders this document before
-// the machine exists, and the only facts it would have are the sizes it asked
-// for. A size threshold matches whatever falls under it — the cloud-init image
-// among others — so the machine is left to pick the disk that already carries
-// its layout.
-func TestMasterSystemDiskIsLeftToTheMachine(t *testing.T) {
-	disk := MasterSystemDisk()
+// maxPods is a function of how many addresses a node's slice of the pod subnet
+// holds, and bashible computes it that way for every other node in the cluster
+// (064_configure_kubelet.sh.tpl). A first master that used a flat default would
+// advertise 120 on a /22 cluster where every bashible node advertises 500, and
+// the scheduler believes both.
+//
+// The ladder is then capped at what the nodeConfig schema accepts, exactly as
+// node-controller caps it, so the first day-2 render of this node writes the
+// number it already booted with rather than a spec diff and a rollout slot.
+func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
+	const cappedFrom1000 = "bashible computes 1000 here; the nodeConfig schema caps it at 500"
 
-	require.Nil(t, disk.DiskSelector, "a selector here would be a guess about a machine that does not exist yet")
-	require.Empty(t, disk.Device)
+	tests := []struct {
+		prefix  string
+		expect  int
+		comment string
+	}{
+		{prefix: "26", expect: 120},
+		{prefix: "24", expect: 120},
+		{prefix: "23", expect: 250},
+		{prefix: "22", expect: 500},
+		{prefix: "21", expect: 500, comment: cappedFrom1000},
+		{prefix: "20", expect: 500, comment: cappedFrom1000},
+		{prefix: "", expect: 120, comment: "bashible defaults the prefix to 24"},
+	}
+
+	for _, tt := range tests {
+		t.Run("prefix "+tt.prefix, func(t *testing.T) {
+			metaConfig := testMetaConfig(t)
+			if tt.prefix == "" {
+				delete(metaConfig.ClusterConfig, "podSubnetNodeCIDRPrefix")
+			} else {
+				metaConfig.ClusterConfig["podSubnetNodeCIDRPrefix"] = json.RawMessage(`"` + tt.prefix + `"`)
+			}
+
+			nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
+				NodeName:   "zykov-master-0",
+				MetaConfig: metaConfig,
+			})
+			require.NoError(t, err)
+			require.Equal(t, tt.expect, nodeConfig.Spec.Kubelet.MaxPods, tt.comment)
+		})
+	}
 }
 
 func TestSysextDigestsMissing(t *testing.T) {
-	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig := testMetaConfig(t)
 	delete(metaConfig.Images["registrypackages"], "kubeletSysext1349")
 
-	_, err := SysextDigests(metaConfig)
+	_, err := SysextDigests(t.Context(), metaConfig)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), `no "kubelet" system extension digest for Kubernetes 1.34`)
 }
 
 func TestSysextDigestsPicksNewestPatch(t *testing.T) {
-	metaConfig := testMetaConfig(t, "50Gi", "10Gi")
+	metaConfig := testMetaConfig(t)
 	metaConfig.Images["registrypackages"]["kubeletSysext13410"] = testKubeletDigest
 	metaConfig.Images["registrypackages"]["kubeletSysext1349"] = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
 
-	digests, err := SysextDigests(metaConfig)
+	digests, err := SysextDigests(t.Context(), metaConfig)
 	require.NoError(t, err)
 	require.Equal(t, testKubeletDigest, digests["kubelet"])
+}
+
+// The camelcase function that builds the digest map strips the separators out
+// of the version, so "kubernetesCniSysext1610" is 1.6.10, 1.61.0 and 16.1.0 at
+// once. A numeric compare on it reads 1610 > 170 and installs CNI 1.6.10 over
+// 1.7.0; there is no comparison that gets all three readings right, so two
+// candidates are refused instead of silently resolved.
+func TestSysextDigestsRefusesAmbiguousVersions(t *testing.T) {
+	metaConfig := testMetaConfig(t)
+	metaConfig.Images["registrypackages"]["kubernetesCniSysext1610"] = testCNIDigest
+	metaConfig.Images["registrypackages"]["kubernetesCniSysext170"] = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+	delete(metaConfig.Images["registrypackages"], "kubernetesCniSysext162")
+
+	_, err := SysextDigests(t.Context(), metaConfig)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "kubernetesCniSysext1610, kubernetesCniSysext170")
+	require.Contains(t, err.Error(), "which one is newer")
+}
+
+// The one containerd and the one CNI extension the installer ships are found by
+// their prefix alone, and an image whose name merely starts the same way is not
+// one of them.
+func TestSysextDigestsIgnoresNonVersionSuffixes(t *testing.T) {
+	metaConfig := testMetaConfig(t)
+	metaConfig.Images["registrypackages"]["containerdSysextArtifact224"] = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+
+	digests, err := SysextDigests(t.Context(), metaConfig)
+	require.NoError(t, err)
+	require.Equal(t, testContainerdDigest, digests["containerd"])
+}
+
+// Both image references the node pulls before it has a cluster — its own OS and
+// the pause image every pod sandbox starts from — are built from the registry it
+// was given, not from the public one and not from the raw imagesRepo. A private
+// or air-gapped registry is the normal case here, and a first master that cannot
+// pull either has no cluster yet in which to be fixed.
+//
+// The trailing-slash row is the reason the raw value is the wrong input: the
+// InitConfiguration pattern admits it (the path class contains "/"), and
+// ".../ce/@sha256:…" is not a reference containerd can pull.
+func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
+	tests := []struct {
+		name        string
+		imagesRepo  string
+		wantAddress string
+		wantPath    string
+		wantOSImage string
+		wantSandbox string
+	}{
+		{
+			name:        "address, port and path",
+			imagesRepo:  "registry.internal.example.com:5000/mirror/deckhouse",
+			wantAddress: "registry.internal.example.com:5000",
+			wantPath:    "/mirror/deckhouse",
+			wantOSImage: "registry.internal.example.com:5000/mirror/deckhouse/" + osImageNameAndTag,
+			wantSandbox: "registry.internal.example.com:5000/mirror/deckhouse@" + testPauseDigest,
+		},
+		{
+			name:        "a trailing slash the schema lets through",
+			imagesRepo:  "registry.example.com/deckhouse/ce/",
+			wantAddress: "registry.example.com",
+			wantPath:    "/deckhouse/ce",
+			wantOSImage: "registry.example.com/deckhouse/ce/" + osImageNameAndTag,
+			wantSandbox: "registry.example.com/deckhouse/ce@" + testPauseDigest,
+		},
+		{
+			name:        "no path at all",
+			imagesRepo:  "registry.example.com",
+			wantAddress: "registry.example.com",
+			wantPath:    "",
+			wantOSImage: "registry.example.com/" + osImageNameAndTag,
+			wantSandbox: "registry.example.com@" + testPauseDigest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metaConfig := testMetaConfig(t)
+			metaConfig.Registry.Settings.RemoteData.ImagesRepo = tt.imagesRepo
+
+			nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
+				NodeName:   "zykov-master-0",
+				MetaConfig: metaConfig,
+			})
+			require.NoError(t, err)
+
+			require.Equal(t, tt.wantAddress, nodeConfig.Spec.Registry.Address)
+			require.Equal(t, tt.wantPath, nodeConfig.Spec.Registry.Path)
+			require.Equal(t, tt.wantOSImage, nodeConfig.Spec.OSImage)
+			require.Equal(t, tt.wantSandbox, nodeConfig.Spec.ContainerRuntime.SandboxImage)
+		})
+	}
 }

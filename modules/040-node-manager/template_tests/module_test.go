@@ -1388,6 +1388,44 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		})
 	})
 
+	// The node-agent ClusterRole grants its verbs cluster-wide, because both
+	// resources are cluster-scoped and RBAC cannot narrow them to "this node's
+	// own object". These policies are what narrows them, so a render that
+	// silently drops one gives every kubelet write access to every other node's
+	// objects.
+	//
+	// What is guarded here is that they are rendered, bound and scoped to
+	// kubelets. What the expressions decide is beyond a template test — inverting
+	// one leaves every assertion below green — and is checked by applying the
+	// rendered policies to a real apiserver.
+	Context("Node-controller admission policies", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStatic)
+			setBashibleAPIServerTLSValues(f)
+			f.HelmRender()
+		})
+
+		It("constrains a kubelet to its own NodeConfig and NodeOperation", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for _, name := range []string{
+				"nodeconfigs-own-node-only.deckhouse.io",
+				"nodeoperations-own-node-only.deckhouse.io",
+			} {
+				policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name)
+				Expect(policy.Exists()).To(BeTrue(), "ValidatingAdmissionPolicy %s must be rendered", name)
+				Expect(policy.Field("spec.matchConditions.0.expression").String()).
+					To(ContainSubstring("system:nodes"), "%s must apply to kubelets only", name)
+				Expect(policy.Field("spec.validations").Array()).ToNot(BeEmpty(), "%s must validate something", name)
+
+				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name)
+				Expect(binding.Exists()).To(BeTrue(), "ValidatingAdmissionPolicyBinding %s must be rendered", name)
+				Expect(binding.Field("spec.policyName").String()).To(Equal(name))
+				Expect(binding.Field("spec.validationActions").String()).To(ContainSubstring("Deny"))
+			}
+		})
+	})
+
 	Context("Static", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStatic)

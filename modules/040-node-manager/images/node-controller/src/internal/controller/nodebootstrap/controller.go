@@ -26,7 +26,6 @@ package nodebootstrap
 import (
 	"context"
 	"fmt"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -97,6 +96,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
+	// Paused is the one wait this controller does not write a condition for:
+	// paused means leave the object alone, status included, and the annotation
+	// already says why nothing is happening.
 	if isPaused(config) {
 		return ctrl.Result{}, nil
 	}
@@ -109,7 +111,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// The MachineSet sets the Machine owner shortly after cloning; the
 		// config update that carries it re-enqueues this pass, and the requeue
 		// is a backstop.
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: ownerWaitInterval},
+			r.notReady(ctx, config, reasonWaitingForOwner, "the MachineSet has not made a Machine the owner of this config yet")
 	}
 	if isPaused(machine) {
 		return ctrl.Result{}, nil
@@ -118,13 +121,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	ngName := machine.Labels[machineNodeGroupLabel]
 	if ngName == "" {
 		logger.Info("machine carries no node-group label yet, waiting", "machine", machine.Name)
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: ownerWaitInterval},
+			r.notReady(ctx, config, reasonWaitingForOwner,
+				fmt.Sprintf("machine %s carries no %s label yet", machine.Name, machineNodeGroupLabel))
 	}
 
+	// Both answers below are requeued rather than left to an event: this
+	// controller watches Machines, not NodeGroups, so a group created afterwards
+	// — or switched to Immutable — would otherwise be noticed only if its
+	// Machine happened to change, while the config sat there carrying a
+	// condition that reads final.
 	ng := &v1.NodeGroup{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: ngName}, ng); err != nil {
 		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: ownerWaitInterval}, r.notReady(ctx, config, reasonNodeGroupUnusable,
+				fmt.Sprintf("NodeGroup %s does not exist yet", ngName))
 		}
 		return ctrl.Result{}, err
 	}
@@ -132,36 +143,72 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// non-immutable group here means a misconfiguration, not work to do.
 	if ng.Spec.SystemType != v1.SystemTypeImmutable {
 		logger.Info("node-group is not immutable, skipping", "nodeGroup", ngName)
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: ownerWaitInterval}, r.notReady(ctx, config, reasonNodeGroupUnusable,
+			fmt.Sprintf("NodeGroup %s is not immutable, so there is no bootstrap data to render yet", ngName))
 	}
 
 	secretName := machine.Name + dataSecretSuffix
 
-	// Bootstrap data is consumed once. If the secret already exists, do not
-	// re-render it: rotating the group token must not churn a live machine's
-	// userdata. Only make sure the status still points at it.
 	existing := &corev1.Secret{}
 	err = r.reader.Get(ctx, types.NamespacedName{Namespace: config.Namespace, Name: secretName}, existing)
-	if err == nil {
-		return ctrl.Result{}, r.ensureStatus(ctx, config, secretName)
-	}
-	if !apierrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{}, fmt.Errorf("get bootstrap secret %s: %w", secretName, err)
+	}
+	rendered := err == nil
+
+	// Bootstrap data is consumed once, but only once something has consumed it.
+	// The userdata embeds the group's bootstrap token, which expires four hours
+	// after it is issued; a machine whose VM is created late — quota, image
+	// replication, a paused MachineDeployment, a provider error loop — would
+	// otherwise be handed a token kubelet's TLS bootstrap refuses, with nothing
+	// left to re-render it.
+	//
+	// Consumed means the infrastructure provider has built the VM from it, or
+	// the node it carried has joined. Rendering again after that changes a
+	// Secret nobody will read, at the cost of a full pass over the uncached
+	// cluster inputs every refresh interval for the life of the Machine.
+	if rendered && consumed(machine) {
+		return ctrl.Result{}, r.ensureStatus(ctx, config, secretName)
 	}
 
 	userdata, err := renderBootstrapData(ctx, r.Client, r.reader, ng, machine.Name)
 	if err != nil {
 		// The CA, token or digests may not be published yet; requeue with backoff.
-		return ctrl.Result{}, fmt.Errorf("render bootstrap data for %s: %w", machine.Name, err)
+		renderErr := fmt.Errorf("render bootstrap data for %s: %w", machine.Name, err)
+		if statusErr := r.notReady(ctx, config, reasonRenderFailed, renderErr.Error()); statusErr != nil {
+			logger.Error(statusErr, "record why the bootstrap data is unavailable", "config", config.Name)
+		}
+		return ctrl.Result{}, renderErr
 	}
 
 	secret := buildSecret(config, secretName, ngName, userdata)
-	if err := r.Client.Create(ctx, secret); err != nil && !apierrors.IsAlreadyExists(err) {
-		return ctrl.Result{}, fmt.Errorf("create bootstrap secret %s: %w", secretName, err)
-	}
-	logger.Info("bootstrap secret rendered", "machine", machine.Name, "secret", secretName)
+	switch {
+	case !rendered:
+		if err := r.Client.Create(ctx, secret); err != nil && !apierrors.IsAlreadyExists(err) {
+			return ctrl.Result{}, fmt.Errorf("create bootstrap secret %s: %w", secretName, err)
+		}
+		logger.Info("bootstrap secret rendered", "machine", machine.Name, "secret", secretName)
 
-	return ctrl.Result{}, r.ensureStatus(ctx, config, secretName)
+	case !apiequality.Semantic.DeepEqual(existing.Data, secret.Data):
+		// Only the one label this controller owns: the Secret may carry others
+		// that are not ours to drop.
+		if existing.Labels == nil {
+			existing.Labels = map[string]string{}
+		}
+		existing.Labels[machineNodeGroupLabel] = ngName
+		existing.Data = secret.Data
+		if err := r.Client.Update(ctx, existing); err != nil {
+			return ctrl.Result{}, fmt.Errorf("refresh bootstrap secret %s: %w", secretName, err)
+		}
+		logger.V(1).Info("bootstrap secret refreshed while the node has not registered", "machine", machine.Name, "secret", secretName)
+	}
+
+	if err := r.ensureStatus(ctx, config, secretName); err != nil {
+		return ctrl.Result{}, err
+	}
+	// Nothing watches the group's token secret, so the refresh has to be driven
+	// by the clock until the node shows up.
+	return ctrl.Result{RequeueAfter: bootstrapRefreshInterval}, nil
 }
 
 // ownerMachine returns the Machine that controls the config, or nil when the
@@ -201,6 +248,26 @@ func (r *Reconciler) ensureStatus(ctx context.Context, config *bootstrapv1alpha1
 		ObservedGeneration: config.Generation,
 	})
 
+	return r.patchStatus(ctx, config, updated)
+}
+
+// notReady records why the bootstrap data is not available yet. Without it an
+// operator looking at a Machine stuck on WaitingForBootstrapScript finds an
+// empty condition list and no sign of which input is missing.
+func (r *Reconciler) notReady(ctx context.Context, config *bootstrapv1alpha1.NodeBootstrapConfig, reason, message string) error {
+	updated := config.DeepCopy()
+	apimeta.SetStatusCondition(&updated.Status.Conditions, metav1.Condition{
+		Type:               conditionDataSecretAvailable,
+		Status:             metav1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: config.Generation,
+	})
+
+	return r.patchStatus(ctx, config, updated)
+}
+
+func (r *Reconciler) patchStatus(ctx context.Context, config, updated *bootstrapv1alpha1.NodeBootstrapConfig) error {
 	if apiequality.Semantic.DeepEqual(config.Status, updated.Status) {
 		return nil
 	}
@@ -213,6 +280,12 @@ func (r *Reconciler) ensureStatus(ctx context.Context, config *bootstrapv1alpha1
 // buildSecret wraps the rendered userdata in the Secret capdvp reads as the
 // machine's user-data. It is owned by the config so it is garbage-collected
 // together with it (Machine -> NodeBootstrapConfig -> Secret).
+//
+// Deliberately without BlockOwnerDeletion: with the
+// OwnerReferencesPermissionEnforcement admission plugin on — a supported
+// control-plane-manager option — setting it would require update on the owner's
+// finalizers subresource, and every Create here would be refused instead. The
+// collection chain works without it.
 func buildSecret(config *bootstrapv1alpha1.NodeBootstrapConfig, name, ngName string, userdata []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -220,12 +293,11 @@ func buildSecret(config *bootstrapv1alpha1.NodeBootstrapConfig, name, ngName str
 			Namespace: config.Namespace,
 			Labels:    map[string]string{machineNodeGroupLabel: ngName},
 			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         bootstrapv1alpha1.GroupVersion.String(),
-				Kind:               nodeBootstrapConfigKind,
-				Name:               config.Name,
-				UID:                config.UID,
-				Controller:         ptr.To(true),
-				BlockOwnerDeletion: ptr.To(true),
+				APIVersion: bootstrapv1alpha1.GroupVersion.String(),
+				Kind:       nodeBootstrapConfigKind,
+				Name:       config.Name,
+				UID:        config.UID,
+				Controller: ptr.To(true),
 			}},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -239,4 +311,20 @@ func buildSecret(config *bootstrapv1alpha1.NodeBootstrapConfig, name, ngName str
 func isPaused(obj client.Object) bool {
 	_, paused := obj.GetAnnotations()[capiv1beta2.PausedAnnotation]
 	return paused
+}
+
+// consumed reports whether the bootstrap data has already been handed over: the
+// infrastructure provider built the machine's VM from it, or the node it carried
+// registered. Either way re-rendering it changes nothing on the machine.
+//
+// The infrastructure arm rests on the Cluster API contract that a provider reads
+// this secret once, when it creates the machine, and copies the userdata in. A
+// provider that instead re-read it on a later rebuild would find the token
+// inside expired — the very failure this refresh exists to prevent, one step
+// further along — and the freeze would have to rest on the NodeRef arm alone.
+func consumed(machine *capiv1beta2.Machine) bool {
+	if machine.Status.NodeRef.IsDefined() {
+		return true
+	}
+	return ptr.Deref(machine.Status.Initialization.InfrastructureProvisioned, false)
 }

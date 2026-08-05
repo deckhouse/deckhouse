@@ -201,10 +201,8 @@ spec:
                     type: string
                   containerLogMaxFiles:
                     default: 4
-                    description: |-
-                      ContainerLogMaxFiles is the number of rotated log files to retain.
-                      Keep the maximum in sync with MaxContainerLogFiles: a marker cannot read
-                      the constant, and the file loader enforces the same bound.
+                    description: ContainerLogMaxFiles is the number of rotated log
+                      files to retain.
                     maximum: 1000
                     minimum: 1
                     type: integer

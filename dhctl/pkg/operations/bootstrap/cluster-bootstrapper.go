@@ -423,7 +423,7 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	// The master NodeGroup arrives as a plain resource document, so the answer
 	// has to be read out of the resources section before they are templated and
 	// applied: it decides how the very first node is created.
-	immutableMaster, err := immutable.IsImmutableMaster(metaConfig.ResourcesYAML)
+	immutableMaster, err := immutable.IsImmutableMaster(ctx, metaConfig.ResourcesYAML)
 	if err != nil {
 		return err
 	}
@@ -530,6 +530,7 @@ func (b *ClusterBootstrapper) applyImmutablePreflights(runner *preflight.Preflig
 		MetaConfig:    bctx.metaConfig,
 		BootstrapOpts: &b.Options.Bootstrap,
 		GlobalOpts:    &b.Options.Global,
+		CommanderMode: b.CommanderMode,
 	}))
 
 	// The cloud API check tunnels through the master host; there is no sshd

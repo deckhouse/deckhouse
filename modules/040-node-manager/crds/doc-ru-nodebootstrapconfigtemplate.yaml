@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Шаблон первичной загрузки Cluster API, на который ссылается MachineDeployment группы узлов на базе гипервизора первого типа.
+            Шаблон первичной загрузки Cluster API, на который ссылается MachineDeployment группы immutable-узлов.
 
             Для каждой машины MachineSet клонирует из `spec.template` объект NodeBootstrapConfig, а node-controller рендерит для него данные первичной загрузки.
           properties:
@@ -18,11 +18,11 @@ spec:
                   properties:
                     metadata:
                       description: |
-                        Метки и аннотации, которые Cluster API копирует в каждый клонированный NodeBootstrapConfig.
+                        Лейблы и аннотации, которые Cluster API копирует в каждый клонированный NodeBootstrapConfig.
                       properties:
                         labels:
                           description: |
-                            Метки, добавляемые к клону.
+                            Лейблы, добавляемые к клону.
                         annotations:
                           description: |
                             Аннотации, добавляемые к клону.

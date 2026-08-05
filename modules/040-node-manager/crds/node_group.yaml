@@ -88,6 +88,22 @@ spec:
               type: object
               required:
                 - nodeType
+              # Written against spec rather than against the field: a transition
+              # rule on the field itself is skipped when the field is absent on
+              # either side, so `self == oldSelf` there would let an immutable
+              # group have its systemType removed and turn back into a bashible
+              # one.
+              #
+              # Only a value that is already set is frozen. A group that has none
+              # must still be able to record what it is: the bootstrap hook
+              # creates the master NodeGroup before dhctl applies the manifest
+              # naming its systemType, and every NodeGroup predating the field is
+              # in the same position. Setting it on a group that is already
+              # running bashible nodes is the harmful case, and deciding that
+              # needs to see the cluster, so the webhook denies that one.
+              x-kubernetes-validations:
+                - rule: "!has(oldSelf.systemType) ? true : (has(self.systemType) && self.systemType == oldSelf.systemType)"
+                  message: .spec.systemType field is immutable once set
               properties:
 
                 nodeType:
@@ -110,16 +126,13 @@ spec:
                   description: |
                     How the node is managed:
                     - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means;
-                    - `Immutable` — the node runs a type 1 hypervisor: an agent on the node reconciles it from a NodeConfig object, bashible is not used.
+                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object; bashible is not used.
 
-                    The field cannot be changed after the NodeGroup is created.
+                    Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
                   type: string
                   enum:
                     - Mutable
                     - Immutable
-                  x-kubernetes-validations:
-                    - rule: self == oldSelf
-                      message: systemType is immutable
                 kubernetesVersion:
                   description: |
                     The desired minor version of Kubernetes.
@@ -739,6 +752,22 @@ spec:
               type: object
               required:
                 - nodeType
+              # Written against spec rather than against the field: a transition
+              # rule on the field itself is skipped when the field is absent on
+              # either side, so `self == oldSelf` there would let an immutable
+              # group have its systemType removed and turn back into a bashible
+              # one.
+              #
+              # Only a value that is already set is frozen. A group that has none
+              # must still be able to record what it is: the bootstrap hook
+              # creates the master NodeGroup before dhctl applies the manifest
+              # naming its systemType, and every NodeGroup predating the field is
+              # in the same position. Setting it on a group that is already
+              # running bashible nodes is the harmful case, and deciding that
+              # needs to see the cluster, so the webhook denies that one.
+              x-kubernetes-validations:
+                - rule: "!has(oldSelf.systemType) ? true : (has(self.systemType) && self.systemType == oldSelf.systemType)"
+                  message: .spec.systemType field is immutable once set
               properties:
                 nodeType:
                   description: |
@@ -760,16 +789,13 @@ spec:
                   description: |
                     How the node is managed:
                     - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means;
-                    - `Immutable` — the node runs a type 1 hypervisor: an agent on the node reconciles it from a NodeConfig object, bashible is not used.
+                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object; bashible is not used.
 
-                    The field cannot be changed after the NodeGroup is created.
+                    Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
                   type: string
                   enum:
                     - Mutable
                     - Immutable
-                  x-kubernetes-validations:
-                    - rule: self == oldSelf
-                      message: systemType is immutable
                 cri:
                   type: object
                   description: |
@@ -1430,6 +1456,22 @@ spec:
               type: object
               required:
                 - nodeType
+              # Written against spec rather than against the field: a transition
+              # rule on the field itself is skipped when the field is absent on
+              # either side, so `self == oldSelf` there would let an immutable
+              # group have its systemType removed and turn back into a bashible
+              # one.
+              #
+              # Only a value that is already set is frozen. A group that has none
+              # must still be able to record what it is: the bootstrap hook
+              # creates the master NodeGroup before dhctl applies the manifest
+              # naming its systemType, and every NodeGroup predating the field is
+              # in the same position. Setting it on a group that is already
+              # running bashible nodes is the harmful case, and deciding that
+              # needs to see the cluster, so the webhook denies that one.
+              x-kubernetes-validations:
+                - rule: "!has(oldSelf.systemType) ? true : (has(self.systemType) && self.systemType == oldSelf.systemType)"
+                  message: .spec.systemType field is immutable once set
               properties:
                 nodeType:
                   description: |
@@ -1453,20 +1495,21 @@ spec:
                   description: |
                     How the node is managed:
                     - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means;
-                    - `Immutable` — the node runs a type 1 hypervisor: an agent on the node reconciles it from a NodeConfig object, bashible is not used.
+                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object; bashible is not used.
 
-                    The field cannot be changed after the NodeGroup is created.
+                    Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
                   type: string
                   enum:
                     - Mutable
                     - Immutable
-                  x-kubernetes-validations:
-                    - rule: self == oldSelf
-                      message: systemType is immutable
                 nodeDrainTimeoutSecond:
                   type: integer
+                  minimum: 30
+                  maximum: 7200
                   description: |
                     Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
+
+                    The range is the one the module's own settings have always enforced. A value outside it used to be accepted here and then rejected when the module read it, which stopped node-manager reconciling anything at all.
                 gpu:
                   x-doc-d8Editions:
                     - ee

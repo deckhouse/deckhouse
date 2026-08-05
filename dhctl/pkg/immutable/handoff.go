@@ -75,10 +75,27 @@ const (
 	handoffResponseLimit = 1 << 20
 )
 
-// HandoffCacheKey names the handoff material in the dhctl state cache. A second
+// handoffCacheKey names the handoff material in the dhctl state cache. A second
 // bootstrap attempt has to present the same token to a node that already booted
 // with the first payload, and verify the certificate that payload carried.
-const HandoffCacheKey = "immutable-control-plane-handoff"
+const handoffCacheKey = "immutable-control-plane-handoff"
+
+// collectedKubeconfigCacheKey names the record that the admin kubeconfig is on
+// disk, and where. That claim, not "the handover is confirmed", is what a rerun
+// needs: the credentials are usable from the moment the file exists.
+//
+// It is what makes a rerun possible at all. The bootstrap has phases left after
+// the handover — installing Deckhouse takes minutes — and nothing skips a phase
+// that already completed, so a rerun re-enters the same step. Without this
+// record it would go back to a channel that answers 410 at best and, once the
+// listener is gone, nothing at all — a refused dial being exactly what a node
+// that is still installing itself looks like, so the wait would spend its full
+// budget — while the credentials it is looking for sit unread on disk.
+//
+// Written before ConfirmCollected, never after: that call is what makes the node
+// shut the channel for good, so a process that dies between the two — or a cache
+// write that fails — must not leave a closed channel and no record of the file.
+const collectedKubeconfigCacheKey = "immutable-control-plane-collected-kubeconfig"
 
 var (
 	// ErrHandoffUnauthorized means the node rejected the token. dhctl and the
@@ -98,7 +115,7 @@ var (
 // HandoffMaterial is dhctl's side of the one-shot channel.
 //
 // The CA that signed ServerCertPEM is generated, used and dropped inside
-// NewHandoffMaterial: its private key is never stored and never leaves the
+// generateHandoffMaterial: its private key is never stored and never leaves the
 // process. Only the issued certificate travels to the node, and only the
 // certificate of the CA is kept, to verify what the node serves with.
 type HandoffMaterial struct {
@@ -114,9 +131,11 @@ type HandoffMaterial struct {
 	ClientKeyPEM string `json:"clientKey"`
 }
 
-// Payload is the part of the material the node is given.
-func (m HandoffMaterial) Payload() Handoff {
-	return Handoff{
+// handoffPayload is the part of the material the node is given. Everything it
+// reads has to survive ForgetHandoffClientKey untouched: a rerun renders this
+// again and the bytes must match what the master already booted with.
+func handoffPayload(m HandoffMaterial) handoff {
+	return handoff{
 		Token:      m.Token,
 		ServerCert: m.ServerCertPEM,
 		ServerKey:  m.ServerKeyPEM,
@@ -139,40 +158,100 @@ func HandoffMaterialFor(ctx context.Context, cache state.Cache, nodeName string)
 		return cached, nil
 	}
 
-	material, err := NewHandoffMaterial(nodeName)
+	material, err := generateHandoffMaterial(nodeName)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := cache.SaveStruct(ctx, HandoffCacheKey, material); err != nil {
+	if err := cache.SaveStruct(ctx, handoffCacheKey, material); err != nil {
 		return nil, fmt.Errorf("save the bootstrap handoff credentials to the state cache: %w", err)
 	}
 
 	return material, nil
 }
 
+// ForgetHandoffClientKey blanks the installer's client key in the cached
+// material and keeps everything else it holds.
+//
+// The key is the one part worth stealing — a private key behind a cluster-admin
+// certificate — and it has done its job by the time the handover is confirmed,
+// so leaving it in a cache that for dhctl-server is a Secret in the management
+// cluster would outlive the bootstrap for nothing.
+//
+// Dropping the whole entry instead is what must not happen: the state cache
+// survives a failed run, so a bootstrap that is rerun after a later phase failed
+// would mint fresh material, and a fresh payload renders a different cloudConfig
+// tfvar than the one already in the master's user_data. Everything
+// handoffPayload() carries therefore stays exactly as the node booted
+// with it.
+func ForgetHandoffClientKey(ctx context.Context, cache state.Cache) error {
+	material, err := LoadHandoffMaterial(ctx, cache)
+	if err != nil {
+		return err
+	}
+	if material == nil || material.ClientKeyPEM == "" {
+		return nil
+	}
+
+	material.ClientKeyPEM = ""
+	if err := cache.SaveStruct(ctx, handoffCacheKey, material); err != nil {
+		return fmt.Errorf("save the bootstrap handoff credentials to the state cache: %w", err)
+	}
+	return nil
+}
+
+// SaveCollectedKubeconfig records where the admin kubeconfig the node served now
+// lives.
+func SaveCollectedKubeconfig(ctx context.Context, cache state.Cache, adminKubeconfigPath string) error {
+	if adminKubeconfigPath == "" {
+		return errors.New("record the collected admin kubeconfig: the path is empty")
+	}
+	if err := cache.Save(ctx, collectedKubeconfigCacheKey, []byte(adminKubeconfigPath)); err != nil {
+		return fmt.Errorf("record the collected admin kubeconfig in the state cache: %w", err)
+	}
+	return nil
+}
+
+// LoadCollectedKubeconfig returns the path SaveCollectedKubeconfig stored, or ""
+// when no attempt has collected the credentials yet.
+func LoadCollectedKubeconfig(ctx context.Context, cache state.Cache) (string, error) {
+	inCache, err := cache.InCache(ctx, collectedKubeconfigCacheKey)
+	if err != nil {
+		return "", fmt.Errorf("look up %s in the state cache: %w", collectedKubeconfigCacheKey, err)
+	}
+	if !inCache {
+		return "", nil
+	}
+
+	path, err := cache.Load(ctx, collectedKubeconfigCacheKey)
+	if err != nil {
+		return "", fmt.Errorf("load %s from the state cache: %w", collectedKubeconfigCacheKey, err)
+	}
+	return string(path), nil
+}
+
 // LoadHandoffMaterial returns the material a previous HandoffMaterialFor
 // stored, or nil when the cache holds none.
 func LoadHandoffMaterial(ctx context.Context, cache state.Cache) (*HandoffMaterial, error) {
-	inCache, err := cache.InCache(ctx, HandoffCacheKey)
+	inCache, err := cache.InCache(ctx, handoffCacheKey)
 	if err != nil {
-		return nil, fmt.Errorf("look up %s in the state cache: %w", HandoffCacheKey, err)
+		return nil, fmt.Errorf("look up %s in the state cache: %w", handoffCacheKey, err)
 	}
 	if !inCache {
 		return nil, nil
 	}
 
 	material := new(HandoffMaterial)
-	if err := cache.LoadStruct(ctx, HandoffCacheKey, material); err != nil {
-		return nil, fmt.Errorf("load %s from the state cache: %w", HandoffCacheKey, err)
+	if err := cache.LoadStruct(ctx, handoffCacheKey, material); err != nil {
+		return nil, fmt.Errorf("load %s from the state cache: %w", handoffCacheKey, err)
 	}
 	if material.Token == "" || material.CACertPEM == "" {
-		return nil, fmt.Errorf("%s in the state cache carries no token or CA certificate", HandoffCacheKey)
+		return nil, fmt.Errorf("%s in the state cache carries no token or CA certificate", handoffCacheKey)
 	}
 	return material, nil
 }
 
-// NewHandoffMaterial mints the token and the TLS material of the handoff
+// generateHandoffMaterial mints the token and the TLS material of the handoff
 // endpoint.
 //
 // The certificate is issued for the node's NAME rather than for its address:
@@ -180,9 +259,9 @@ func LoadHandoffMaterial(ctx context.Context, cache state.Cache) (*HandoffMateri
 // and an unverified endpoint would let anything on the path hand dhctl a
 // kubeconfig of its own. dhctl dials whatever address the infrastructure
 // reports and tells the TLS handshake to check this name instead.
-func NewHandoffMaterial(nodeName string) (*HandoffMaterial, error) {
+func generateHandoffMaterial(nodeName string) (*HandoffMaterial, error) {
 	if nodeName == "" {
-		return nil, fmt.Errorf("generate the handoff credentials: node name is empty")
+		return nil, errors.New("generate the handoff credentials: node name is empty")
 	}
 
 	token := make([]byte, handoffTokenBytes)
@@ -269,17 +348,26 @@ type FetchKubeconfigInput struct {
 
 // Status is what the node reports about its own bootstrap.
 type Status struct {
-	Phase    string `json:"phase"`
+	Phase    Phase  `json:"phase"`
 	Message  string `json:"message,omitempty"`
 	NodeName string `json:"nodeName,omitempty"`
 }
 
-// Phases the node reports. PhaseReady means the kubeconfig can be collected.
+// Phase is what the node says it is doing. A named type rather than bare
+// strings: the comparisons live in another package, and between two untyped
+// strings any typo compiles and quietly never matches.
+type Phase string
+
+// The phases the node reports. PhaseReady means the kubeconfig can be
+// collected. PhasePreparing is the only one of the four nothing ever compares
+// against — the wait treats anything that is not Ready, Collected or Failed as
+// "still working" — and is declared because it is part of the protocol the node
+// speaks and appears in the status line the operator reads.
 const (
-	PhasePreparing = "Preparing"
-	PhaseReady     = "Ready"
-	PhaseFailed    = "Failed"
-	PhaseCollected = "Collected"
+	PhasePreparing Phase = "Preparing"
+	PhaseReady     Phase = "Ready"
+	PhaseFailed    Phase = "Failed"
+	PhaseCollected Phase = "Collected"
 )
 
 // FetchStatus asks the node what it is doing. The channel opens when the node
@@ -307,7 +395,7 @@ func FetchKubeconfig(ctx context.Context, in FetchKubeconfigInput) ([]byte, erro
 		return nil, err
 	}
 	if len(body) == 0 {
-		return nil, fmt.Errorf("the handoff endpoint returned an empty admin kubeconfig")
+		return nil, errors.New("the handoff endpoint returned an empty admin kubeconfig")
 	}
 	return body, nil
 }
@@ -324,12 +412,12 @@ func ConfirmCollected(ctx context.Context, in FetchKubeconfigInput) error {
 // call performs one authenticated request against the node's bootstrap channel.
 func (in FetchKubeconfigInput) call(ctx context.Context, method, path string) ([]byte, error) {
 	if in.Address == "" || in.ServerName == "" || in.Material == nil {
-		return nil, fmt.Errorf("reach the node's bootstrap channel: address, server name or handoff material is empty")
+		return nil, errors.New("reach the node's bootstrap channel: address, server name or handoff material is empty")
 	}
 
 	roots := x509.NewCertPool()
 	if !roots.AppendCertsFromPEM([]byte(in.Material.CACertPEM)) {
-		return nil, fmt.Errorf("the handoff CA certificate PEM holds no certificate")
+		return nil, errors.New("the handoff CA certificate PEM holds no certificate")
 	}
 
 	request, err := http.NewRequestWithContext(ctx, method, "https://"+in.Address+path, nil)

@@ -19,6 +19,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
 	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -88,26 +91,40 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
-		// The cache is keyed by whatever identifies this cluster. With SSH that is
-		// the connection string; without it, the kubeconfig. Getting this wrong
-		// does not fail loudly — it silently addresses somebody else's state.
+		// The cache is keyed by whatever identifies this cluster. Getting it wrong
+		// does not fail loudly — it silently addresses somebody else's state, and
+		// destroy reads the terraform state out of that cache and deletes what it
+		// finds there.
+		//
+		// A kubeconfig and an SSH host together are refused rather than ranked.
+		// kube.Config.getModes() (lib-connection pkg/kube/config.go) makes
+		// OverSSH() false the moment KubeConfig is set, so the client that reads
+		// the state talks to the kubeconfig's server and not to anything behind
+		// SSH — but --kubeconfig also reads DHCTL_CLI_KUBE_CONFIG, and kingpin
+		// cannot tell an exported variable from a typed flag. An operator with
+		// that variable set for one cluster who types --ssh-host for another would
+		// get the second cluster's address on the prompt and the first cluster's
+		// infrastructure deleted. Neither source can be trusted over the other, so
+		// this declines to guess.
 		var sshProvider libcon.SSHProvider
+		sshHostConfigured := sshProviderInitializer != nil && sshProviderInitializer.CheckHosts(ctx)
+		if sshHostConfigured && (opts.Kube.Config != "" || opts.Kube.InCluster) {
+			// Tested before either source is read, so the operator hears about the
+			// collision rather than about a kubeconfig they never meant to name.
+			source := "--kube-client-from-cluster"
+			if opts.Kube.Config != "" {
+				source = "--kubeconfig " + opts.Kube.Config
+			}
+			return fmt.Errorf(
+				"%s and an SSH host both name a cluster, and they may be different clusters: "+
+					"the Kubernetes source is where the infrastructure state is read from, the SSH host is where it is not. "+
+					"Note that --kubeconfig also reads the DHCTL_CLI_KUBE_CONFIG environment variable. "+
+					"Unset one of them and run destroy again",
+				source,
+			)
+		}
+
 		cacheIdentity := ""
-		if opts.Kube.InCluster {
-			cacheIdentity = "in-cluster"
-		}
-		if sshProviderInitializer != nil && sshProviderInitializer.CheckHosts(ctx) {
-			provider, err := sshProviderInitializer.GetSSHProvider(ctx)
-			if err != nil {
-				return err
-			}
-			sshClient, err := provider.Client(ctx)
-			if err != nil {
-				return err
-			}
-			sshProvider = provider
-			cacheIdentity = sshClient.Check().String()
-		}
 		if opts.Kube.Config != "" {
 			// NOT GetCacheIdentityFromKubeconfig: that hashes the path, and on an
 			// immutable cluster the path is always the same one the bootstrap wrote
@@ -122,8 +139,30 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			}
 			cacheIdentity = identity
 		}
+		if opts.Kube.InCluster {
+			// No conflict with --kubeconfig to handle here: lib-connection's
+			// Config.IsConflict rejects two set modes while the providers are built
+			// above, and that error is returned at once.
+			identity, err := inClusterCacheIdentity()
+			if err != nil {
+				return err
+			}
+			cacheIdentity = identity
+		}
+		if sshHostConfigured {
+			provider, err := sshProviderInitializer.GetSSHProvider(ctx)
+			if err != nil {
+				return err
+			}
+			sshClient, err := provider.Client(ctx)
+			if err != nil {
+				return err
+			}
+			sshProvider = provider
+			cacheIdentity = sshClient.Check().String()
+		}
 		if cacheIdentity == "" {
-			return fmt.Errorf("nothing identifies this cluster: pass --ssh-host for a cluster with SSH, or --kubeconfig for one without")
+			return errors.New("nothing identifies this cluster: pass --ssh-host for a cluster with SSH, or --kubeconfig for one without")
 		}
 
 		if err = cache.Init(ctx, cacheIdentity, opts.Cache); err != nil {
@@ -180,9 +219,27 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 	})
 }
 
+// inClusterCacheIdentity names the cluster from the API server this pod talks
+// to, rather than from a bare "in-cluster" constant that every in-cluster run
+// on this machine would share — the same collision one directory further up.
+func inClusterCacheIdentity() (string, error) {
+	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+	if host == "" {
+		return "", errors.New(
+			"nothing identifies this cluster: --kube-client-from-cluster is set but KUBERNETES_SERVICE_HOST is empty, so dhctl runs outside a cluster",
+		)
+	}
+	return "in-cluster-" + net.JoinHostPort(host, port), nil
+}
+
 // kubeconfigClusterIdentity names the cluster a kubeconfig points at, from what
 // is inside it rather than from where it sits: the API server address and the
 // cluster CA. Two clusters cannot share both.
+//
+// The CA has to be there. The address alone identifies nothing here — the line
+// this command prints for an immutable cluster tells every operator to point
+// their kubeconfig at https://127.0.0.1:6445 through a bastion forward, so
+// "same address, different cluster" is the normal shape and not the exotic one.
 func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 	cfg, err := clientcmd.LoadFromFile(path)
 	if err != nil {
@@ -203,8 +260,36 @@ func kubeconfigClusterIdentity(path, contextName string) (string, error) {
 		return "", fmt.Errorf("context %q has no server address", contextName)
 	}
 
+	// certificate-authority is a path and is left as one by LoadFromFile, so an
+	// unread file would leave the address hashed on its own — the very
+	// collision this function exists to prevent, and a silent one.
+	certificateAuthority := cluster.CertificateAuthorityData
+	if len(certificateAuthority) == 0 && cluster.CertificateAuthority != "" {
+		caPath := cluster.CertificateAuthority
+		if !filepath.IsAbs(caPath) {
+			caPath = filepath.Join(filepath.Dir(path), caPath)
+		}
+		certificateAuthority, err = os.ReadFile(caPath)
+		if err != nil {
+			return "", fmt.Errorf("read the cluster CA %s: %w", caPath, err)
+		}
+	}
+	if len(certificateAuthority) == 0 {
+		return "", fmt.Errorf(
+			"context %q carries no cluster CA (certificate-authority or certificate-authority-data): "+
+				"its server address alone does not tell this cluster from another one reached at the same address, "+
+				"and destroy reads the infrastructure state out of a cache keyed by that answer",
+			contextName,
+		)
+	}
+
+	// The CA alone, deliberately not the server address: this same command prints
+	// a sed line telling the operator to rewrite that address to
+	// https://127.0.0.1:6445 for a bastion forward, so hashing it would give an
+	// interrupted destroy a different cache directory when it is resumed through
+	// the tunnel — an empty cache, and no infrastructure state to finish from. A
+	// cluster CA is unique to its cluster, which is all this has to establish.
 	h := sha256.New()
-	h.Write([]byte(cluster.Server))
-	h.Write(cluster.CertificateAuthorityData)
+	h.Write(certificateAuthority)
 	return "kubeconfig-" + hex.EncodeToString(h.Sum(nil)), nil
 }
