@@ -551,10 +551,15 @@ type RoleAccessReportSpec struct {
 	IncludeInventory *bool
 }
 
-// RoleSelection narrows which roles a report covers. The fields are combined
-// with AND; an empty selection matches every role of the model.
+// RoleSelection narrows which roles a report covers. Names and Scopes are
+// combined with AND; an empty selection matches every role of the model.
 type RoleSelection struct {
 	// Names lists roles by name.
+	//
+	// The legacy model has no role names -- it is the fixed list of access
+	// levels -- so there a name is read as a level and joins AccessLevels
+	// instead of narrowing it. Naming "Editor" in either field reports the
+	// Editor level.
 	// +optional
 	Names []string
 

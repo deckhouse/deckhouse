@@ -40,7 +40,7 @@ func setupRoleAccessResolver(t *testing.T, objs []runtime.Object) *RoleAccessRes
 		}
 	}
 
-	resolver := NewRoleAccessResolver(clusterRoleLister, newTestScopeCache())
+	resolver := NewRoleAccessResolver(clusterRoleLister, newTestScopeCache(), nil)
 	// A fixed clock, so a test can assert that two reports of the same cluster
 	// are identical without the timestamp getting in the way.
 	resolver.now = func() time.Time { return time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC) }
@@ -144,6 +144,63 @@ func TestRoleReport_RowsComeFromTheAggregatedCapabilities(t *testing.T) {
 
 	logs := rowOf(t, role, "", "pods/log")
 	assert.Equal(t, []string{"get"}, logs.Verbs)
+}
+
+// A role whose aggregation matches nothing looks exactly like a role that
+// grants nothing, and the difference matters to whoever reads the catalogue:
+// one is a decision, the other is a subsystem that is not installed or a
+// capability whose label was lost.
+func TestRoleReport_SaysWhenAnAggregationMatchesNothing(t *testing.T) {
+	t.Parallel()
+
+	objs := []runtime.Object{aggregatingRole("d8:namespace:admin", "namespace")}
+
+	status, err := setupRoleAccessResolver(t, objs).Report(context.Background(), RoleAccessRequest{})
+	require.NoError(t, err)
+
+	role := roleOf(t, status, "d8:namespace:admin")
+	assert.Empty(t, role.Resources)
+	require.Len(t, role.Notes, 1)
+	assert.Contains(t, role.Notes[0], "none match right now")
+}
+
+// A role that carries its own rules is not aggregating anything, so the note
+// would be a lie -- it grants what it says it grants.
+func TestRoleReport_APlainRoleIsNotReportedAsAnEmptyAggregation(t *testing.T) {
+	t.Parallel()
+
+	plain := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "custom-role",
+			Labels: map[string]string{labelRoleKind: "custom-role", labelRoleScope: "namespace"},
+		},
+		Rules: []rbacv1.PolicyRule{policyRule("apps", "deployments", "get")},
+	}
+
+	status, err := setupRoleAccessResolver(t, []runtime.Object{plain}).Report(context.Background(), RoleAccessRequest{})
+	require.NoError(t, err)
+
+	role := roleOf(t, status, "custom-role")
+	assert.NotEmpty(t, role.Resources)
+	assert.Empty(t, role.Notes)
+}
+
+// Expanding the roles of a large cluster takes seconds. A client that gave up
+// waiting should not keep the API server working for it.
+func TestRoleReport_StopsWhenTheClientIsGone(t *testing.T) {
+	t.Parallel()
+
+	objs := []runtime.Object{
+		aggregatingRole("d8:namespace:admin", "namespace"),
+		capability("d8:namespace-capability:kubernetes:manage_workloads", "namespace",
+			policyRule("apps", "deployments", "get")),
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := setupRoleAccessResolver(t, objs).Report(ctx, RoleAccessRequest{})
+	require.ErrorIs(t, err, context.Canceled)
 }
 
 // The simple mode is the plain matrix; the detailed one has to say which
@@ -596,7 +653,7 @@ func TestRoleReport_InventoryTakesTheModuleFromTheCapabilities(t *testing.T) {
 		"shared.io/widgets":            true,
 		"/pods":                        true,
 	})
-	resolver = resolver.WithModuleIndex(moduleIndexOfCRDs(t, "certificates.cert-manager.io", "widgets.shared.io"))
+	resolver.moduleIndex = moduleIndexOfCRDs(t, "certificates.cert-manager.io", "widgets.shared.io")
 
 	status, err := resolver.Report(context.Background(), RoleAccessRequest{IncludeInventory: true})
 	require.NoError(t, err)
@@ -618,7 +675,7 @@ func TestRoleReport_InventoryDoesNotGiveKubernetesToTheModuleGrantingIt(t *testi
 	resolver := setupRoleAccessResolver(t, []runtime.Object{aggregatingRole("d8:namespace:admin", "namespace"), granting})
 	resolver.scopeCache = scopeCacheWith(map[string]bool{"/pods": true})
 	// The index knows the CRDs of the cluster; pods are not among them.
-	resolver = resolver.WithModuleIndex(moduleIndexOfCRDs(t, "projects.deckhouse.io"))
+	resolver.moduleIndex = moduleIndexOfCRDs(t, "projects.deckhouse.io")
 
 	status, err := resolver.Report(context.Background(), RoleAccessRequest{IncludeInventory: true})
 	require.NoError(t, err)
@@ -652,7 +709,7 @@ func TestRoleReport_InventoryAttributesAGroupWithOneClaimant(t *testing.T) {
 		"dex.coreos.com/passwords": true,
 		"deckhouse.io/others":      false,
 	})
-	resolver = resolver.WithModuleIndex(moduleIndexOfCRDs(t, "passwords.dex.coreos.com", "others.deckhouse.io"))
+	resolver.moduleIndex = moduleIndexOfCRDs(t, "passwords.dex.coreos.com", "others.deckhouse.io")
 
 	status, err := resolver.Report(context.Background(), RoleAccessRequest{IncludeInventory: true})
 	require.NoError(t, err)
@@ -677,7 +734,7 @@ func TestRoleReport_InventoryTakesTheModuleFromTheLegacyRoles(t *testing.T) {
 
 	resolver := setupRoleAccessResolver(t, []runtime.Object{moduleRole})
 	resolver.scopeCache = scopeCacheWith(map[string]bool{"cert-manager.io/certificates": true})
-	resolver = resolver.WithModuleIndex(moduleIndexOfCRDs(t, "certificates.cert-manager.io"))
+	resolver.moduleIndex = moduleIndexOfCRDs(t, "certificates.cert-manager.io")
 
 	status, err := resolver.Report(context.Background(), RoleAccessRequest{Model: RoleModelLegacy, IncludeInventory: true})
 	require.NoError(t, err)

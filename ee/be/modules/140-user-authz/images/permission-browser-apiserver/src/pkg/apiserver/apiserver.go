@@ -322,10 +322,9 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		)
 		klog.Info("Subject access resolver initialized for SubjectAccessReport API")
 
-		roleAccess = resolver.NewRoleAccessResolver(rbacInformers.ClusterRoles().Lister(), scopeCache)
-		if moduleIndex != nil {
-			roleAccess = roleAccess.WithModuleIndex(moduleIndex)
-		}
+		// moduleIndex may be nil: the inventory is then reported without module
+		// attribution rather than not at all.
+		roleAccess = resolver.NewRoleAccessResolver(rbacInformers.ClusterRoles().Lister(), scopeCache, moduleIndex)
 		klog.Info("Role access resolver initialized for RoleAccessReport API")
 	}
 

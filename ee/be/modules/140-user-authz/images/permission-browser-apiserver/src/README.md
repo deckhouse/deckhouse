@@ -383,7 +383,7 @@ spec:
   model: primary
   # Empty selection reports every role of the model.
   roles:
-    names: []
+    names: []           # in the legacy model a name is read as an access level
     scopes: []          # namespace | project | subsystem | system (primary)
     accessLevels: []    # User | PrivilegedUser | ... (legacy)
     excludeCustom: false  # leave out the roles created in this cluster (primary)
@@ -470,6 +470,9 @@ status:
 - **Subresources are only expanded when a rule names them.** A bare `*` grants
   top-level resources; enumerating every subresource would bury the rows that
   matter.
+- **An aggregating role that currently selects nothing says so in `notes`.** It
+  reports no rows either way, but "grants nothing" and "grants whatever gets
+  labelled for it, and nothing is yet" are different findings for a reviewer.
 
 #### Security
 

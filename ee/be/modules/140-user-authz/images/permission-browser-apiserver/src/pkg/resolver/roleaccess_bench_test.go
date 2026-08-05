@@ -137,7 +137,7 @@ func newBenchRoleAccessResolver(b *testing.B) *RoleAccessResolver {
 	informerFactory.Start(stopCh)
 	informerFactory.WaitForCacheSync(stopCh)
 
-	resolver := NewRoleAccessResolver(lister, benchScopeCache())
+	resolver := NewRoleAccessResolver(lister, benchScopeCache(), nil)
 	resolver.now = func() time.Time { return time.Date(2026, 8, 5, 0, 0, 0, 0, time.UTC) }
 
 	return resolver

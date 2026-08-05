@@ -91,31 +91,40 @@ type RoleAccessResolver struct {
 	now func() time.Time
 }
 
-// NewRoleAccessResolver creates a resolver. scopeCache may be nil: without a
-// discovery snapshot wildcards are reported as written instead of expanded.
-func NewRoleAccessResolver(clusterRoleLister rbaclisters.ClusterRoleLister, scopeCache *ResourceScopeCache) *RoleAccessResolver {
+// NewRoleAccessResolver creates a resolver.
+//
+// scopeCache may be nil: without a discovery snapshot wildcards are reported as
+// written instead of expanded. moduleIndex may be nil too: the inventory is then
+// reported without module names, and a coverage report without grouping beats
+// none.
+//
+// Both are taken here rather than through setters because the resolver is shared
+// by every request: a setter would be a write to a value that concurrent reports
+// are reading.
+func NewRoleAccessResolver(
+	clusterRoleLister rbaclisters.ClusterRoleLister,
+	scopeCache *ResourceScopeCache,
+	moduleIndex *ModuleIndex,
+) *RoleAccessResolver {
 	return &RoleAccessResolver{
 		clusterRoleLister: clusterRoleLister,
 		scopeCache:        scopeCache,
+		moduleIndex:       moduleIndex,
 		limits:            DefaultReportLimits,
 		now:               time.Now,
 	}
-}
-
-// WithModuleIndex attributes the inventory to the modules that ship it. Without
-// the index the inventory is still reported, just without module names: the CRDs
-// may be unreadable, and a coverage report without grouping beats none.
-func (r *RoleAccessResolver) WithModuleIndex(index *ModuleIndex) *RoleAccessResolver {
-	r.moduleIndex = index
-
-	return r
 }
 
 // RoleAccessRequest is the resolved input of a role report.
 type RoleAccessRequest struct {
 	// Model is primary or legacy.
 	Model string
-	// Names restricts the report to the named roles (or access levels).
+	// Names restricts the report to the named roles.
+	//
+	// In the legacy model there are no role names to ask for -- the model is
+	// the fixed list of access levels -- so a name is read as a level and joins
+	// AccessLevels. Both fields then mean the same thing, and naming "Editor"
+	// in either of them reports the Editor level.
 	Names []string
 	// Scopes restricts the primary model to these scopes.
 	Scopes []string
@@ -132,7 +141,7 @@ type RoleAccessRequest struct {
 }
 
 // Report builds the catalogue for the requested roles.
-func (r *RoleAccessResolver) Report(_ context.Context, req RoleAccessRequest) (v1alpha1.RoleAccessReportStatus, error) {
+func (r *RoleAccessResolver) Report(ctx context.Context, req RoleAccessRequest) (v1alpha1.RoleAccessReportStatus, error) {
 	roles, err := r.clusterRoleLister.List(labels.Everything())
 	if err != nil {
 		return v1alpha1.RoleAccessReportStatus{}, fmt.Errorf("list cluster roles: %w", err)
@@ -147,11 +156,17 @@ func (r *RoleAccessResolver) Report(_ context.Context, req RoleAccessRequest) (v
 
 	switch req.Model {
 	case RoleModelLegacy:
-		reported = r.legacyRoles(index, req)
+		reported, err = r.legacyRoles(ctx, index, req)
+		if err != nil {
+			return v1alpha1.RoleAccessReportStatus{}, err
+		}
 	default:
 		var skippedCustom int
 
-		reported, skippedCustom = r.primaryRoles(index, req)
+		reported, skippedCustom, err = r.primaryRoles(ctx, index, req)
+		if err != nil {
+			return v1alpha1.RoleAccessReportStatus{}, err
+		}
 		if skippedCustom > 0 {
 			notes = append(notes, fmt.Sprintf(
 				"%d custom roles are left out: the catalogue describes the platform role model. Name a custom role explicitly to include it",
@@ -194,7 +209,14 @@ func (r *RoleAccessResolver) Report(_ context.Context, req RoleAccessRequest) (v
 		}
 	}
 
-	status.Snapshot.Digest = digestOf(status.Roles)
+	digest, err := digestOf(status.Roles)
+	if err != nil {
+		// A digest that could not be computed must not be reported as an empty
+		// one: two such reports would compare equal, which is the answer the
+		// digest exists to give truthfully.
+		return v1alpha1.RoleAccessReportStatus{}, fmt.Errorf("digest the report: %w", err)
+	}
+	status.Snapshot.Digest = digest
 
 	return status, nil
 }
@@ -408,7 +430,7 @@ func newRoleIndex(roles []*rbacv1.ClusterRole) *roleIndex {
 // mixing them with the model reads as if the platform shipped them. A role named
 // explicitly is reported either way, and the count of the skipped ones is
 // returned so that the omission stays visible in the document.
-func (r *RoleAccessResolver) primaryRoles(index *roleIndex, req RoleAccessRequest) ([]v1alpha1.RoleAccess, int) {
+func (r *RoleAccessResolver) primaryRoles(ctx context.Context, index *roleIndex, req RoleAccessRequest) ([]v1alpha1.RoleAccess, int, error) {
 	wantName := setOf(req.Names)
 	wantScope := setOf(req.Scopes)
 
@@ -416,6 +438,13 @@ func (r *RoleAccessResolver) primaryRoles(index *roleIndex, req RoleAccessReques
 
 	reported := make([]v1alpha1.RoleAccess, 0, len(index.all))
 	for _, role := range index.all {
+		// Expanding every role of a large cluster is seconds of work. If the
+		// client is gone -- and a report is requested by a person waiting for a
+		// download -- finishing it serves nobody.
+		if err := ctx.Err(); err != nil {
+			return nil, 0, err
+		}
+
 		kind := role.Labels[labelRoleKind]
 		if kind != roleKindRole && kind != roleKindCustomRole {
 			continue
@@ -443,7 +472,7 @@ func (r *RoleAccessResolver) primaryRoles(index *roleIndex, req RoleAccessReques
 
 	slices.SortFunc(reported, compareRoles)
 
-	return reported, skippedCustom
+	return reported, skippedCustom, nil
 }
 
 // The catalogue is read from the narrowest access to the widest, so that is how
@@ -506,6 +535,16 @@ func (r *RoleAccessResolver) describeRole(
 		// A role with no aggregationRule carries its rules itself. The model
 		// does not ship such roles, but a custom one may.
 		builder.expand(scope, roleOrigin(role.Name, descriptor), role.Rules, namespaced)
+
+		// An aggregating role that currently selects nothing is a different
+		// story: it has no rules of its own to fall back on, so it reports as
+		// an empty row. Empty reads as "grants nothing", while what it means is
+		// "grants whatever gets labelled for it, and nothing is yet" -- a role
+		// whose capabilities were removed, or a subsystem not installed.
+		if role.AggregationRule != nil {
+			entry.Notes = append(entry.Notes,
+				"this role aggregates capabilities and none match right now: it grants nothing until a capability is labelled for it")
+		}
 	}
 	for _, component := range components {
 		builder.expand(scope, roleOrigin(component.Name, component.descriptor), component.role.Rules, namespaced)
@@ -616,7 +655,10 @@ func (r *RoleAccessResolver) collectComponents(
 // A level is not a role: the fan-out binds the level's own ClusterRole plus
 // every ClusterRole annotated for that level or a lower one. The report says
 // what the level grants, which is the union of those.
-func (r *RoleAccessResolver) legacyRoles(index *roleIndex, req RoleAccessRequest) []v1alpha1.RoleAccess {
+//
+// The model has no role names of its own, so req.Names is read as levels and
+// joins req.AccessLevels rather than narrowing it -- see RoleAccessRequest.Names.
+func (r *RoleAccessResolver) legacyRoles(ctx context.Context, index *roleIndex, req RoleAccessRequest) ([]v1alpha1.RoleAccess, error) {
 	wanted := setOf(req.AccessLevels)
 	for _, name := range req.Names {
 		wanted[name] = struct{}{}
@@ -624,6 +666,10 @@ func (r *RoleAccessResolver) legacyRoles(index *roleIndex, req RoleAccessRequest
 
 	reported := make([]v1alpha1.RoleAccess, 0, len(legacyAccessLevels))
 	for position, level := range legacyAccessLevels {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		if len(wanted) > 0 {
 			if _, ok := wanted[level]; !ok {
 				continue
@@ -633,7 +679,7 @@ func (r *RoleAccessResolver) legacyRoles(index *roleIndex, req RoleAccessRequest
 		reported = append(reported, r.describeLegacyLevel(index, level, position, req))
 	}
 
-	return reported
+	return reported, nil
 }
 
 func (r *RoleAccessResolver) describeLegacyLevel(index *roleIndex, level string, position int, req RoleAccessRequest) v1alpha1.RoleAccess {
@@ -795,20 +841,19 @@ func stripInternal(roles []v1alpha1.RoleAccess) []v1alpha1.RoleAccess {
 // can verify instead of having to diff two documents by eye. The snapshot
 // itself is not hashed -- the timestamp would make every digest unique, which
 // is the opposite of the point.
-// digestOf hashes the reported roles.
 //
 // The JSON is streamed into the hash rather than marshalled into memory first:
 // a report of a large cluster is tens of megabytes, and holding a second copy
 // of it only to throw it away is the most expensive thing this function could
-// do. The digest itself is opaque -- it is compared between two reports, never
-// to a constant -- so the framing of the stream does not matter.
-func digestOf(roles []v1alpha1.RoleAccess) string {
+// do. The digest is opaque -- it is compared between two reports, never to a
+// constant -- so the framing of the stream does not matter.
+func digestOf(roles []v1alpha1.RoleAccess) (string, error) {
 	hasher := sha256.New()
 	if err := json.NewEncoder(hasher).Encode(roles); err != nil {
-		return ""
+		return "", fmt.Errorf("encode roles: %w", err)
 	}
 
-	return hex.EncodeToString(hasher.Sum(nil))
+	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
 func setOf(values []string) map[string]struct{} {
