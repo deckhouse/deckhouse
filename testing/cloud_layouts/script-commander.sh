@@ -221,6 +221,27 @@ function prepare_environment() {
     }"
     ;;
 
+  "Huawei")
+    KEY_ID=$LAYOUT_HUAWEI_KEY_ID
+    KEY_SECRET=$LAYOUT_HUAWEI_KEY_SECRET
+    ssh_user="ubuntu"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"keyId\": \"${KEY_ID}\",
+      \"keySecret\": \"${KEY_SECRET}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
+    }"
+    ;;
+
   "DVP")
     KUBECONFIGDATABASE64=$LAYOUT_DVP_KUBECONFIGDATABASE64
     ssh_user="debian"
