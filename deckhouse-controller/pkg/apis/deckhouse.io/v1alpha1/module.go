@@ -144,6 +144,15 @@ type Module struct {
 
 	Properties ModuleProperties `json:"properties,omitempty"`
 
+	// +Spec preserves the raw spec of newer API versions (for example, v1alpha2) so that
+	// +their fields are not pruned when an object is stored as this (storage) version.
+	// +Conversion strategy is None, so fields are not remapped between versions; this only
+	// +prevents data loss on round-trip. Consumers that need the newer fields must read the
+	// +object in its own version.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	Spec *runtime.RawExtension `json:"spec,omitempty"`
+
 	Status ModuleStatus `json:"status,omitempty"`
 }
 
