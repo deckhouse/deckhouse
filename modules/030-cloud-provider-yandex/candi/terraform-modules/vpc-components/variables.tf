@@ -17,12 +17,12 @@ variable "prefix" {
 }
 
 variable "dhcp_domain_name" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "dhcp_domain_name_servers" {
-  type = list(string)
+  type    = list(string)
   default = null
 }
 
@@ -31,12 +31,12 @@ variable "network_id" {
 }
 
 variable "node_network_cidr" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "existing_zone_to_subnet_id_map" {
-  type = map
+  type    = map(any)
   default = {}
 }
 
@@ -45,55 +45,55 @@ variable "layout" {
 }
 
 variable "nat_instance_external_address" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "nat_instance_internal_address" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "nat_instance_internal_subnet_cidr" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "nat_instance_internal_subnet_id" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "nat_instance_external_subnet_id" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "nat_instance_cores" {
-  type = number
+  type    = number
   default = null
 }
 
 variable "nat_instance_memory" {
-  type = number
+  type    = number
   default = null
 }
 
 variable "nat_instance_ssh_key" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "labels" {
-  type = map
+  type = map(any)
 }
 
 variable "nat_instance_platform" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "resourceManagementTimeout" {
-  type = string
+  type    = string
   default = "10m"
 }
