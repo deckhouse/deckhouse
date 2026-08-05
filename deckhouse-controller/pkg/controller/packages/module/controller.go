@@ -204,6 +204,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 		Settings:        module.Spec.Settings.GetMap(),
 		SettingsVersion: module.Spec.SettingsVersion,
 		Maintenance:     module.Spec.Maintenance,
+		Enabled:         module.Spec.Enabled,
 	}, false)
 
 	// Both references are non-controller and block owner deletion, so neither the package
