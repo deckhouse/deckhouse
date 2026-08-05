@@ -59,9 +59,9 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: |
-          Describes the module's status in the cluster. The `Module` object is created automatically after configuring the [ModuleSource](#modulesource) and successfully completing synchronization.
-
+        description: Describes the module's status in the cluster. The `Module` object
+          is created automatically after configuring the [ModuleSource](#modulesource)
+          and successfully completing synchronization.
         properties:
           properties:
             properties:
@@ -95,6 +95,8 @@ spec:
                   confirmation:
                     type: boolean
                   message:
+                    description: 'Deprecated: use Messages with localized ru/en fields
+                      instead.'
                     type: string
                   messages:
                     description: |-
@@ -109,7 +111,8 @@ spec:
                     type: object
                 type: object
               exclusiveGroup:
-                description: Indicates the group where only one module can be active at a time.
+                description: Indicates the group where only one module can be active
+                  at a time.
                 type: string
               namespace:
                 description: Module namespace.
@@ -118,10 +121,12 @@ spec:
                 description: Module release channel.
                 type: string
               requirements:
-                description: Module dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
+                description: Module dependencies, a set of requirements that must
+                  be met for Deckhouse Kubernetes Platform (DKP) to run the module.
                 properties:
                   bootstrapped:
-                    description: Required cluster installation status (for built-in DKP modules only).
+                    description: Required cluster installation status (for built-in
+                      DKP modules only).
                     type: string
                   deckhouse:
                     description: Required Deckhouse version.
@@ -132,12 +137,14 @@ spec:
                   modules:
                     additionalProperties:
                       type: string
-                    description: A list of other enabled modules required for the module.
+                    description: A list of other enabled modules required for the
+                      module.
                     type: object
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               source:
-                description: Source the module was downloaded from (otherwise will be blank).
+                description: Source the module was downloaded from (otherwise will
+                  be blank).
                 type: string
               stage:
                 description: Current stage of the module lifecycle.
@@ -199,6 +206,19 @@ spec:
                 - Ready
                 - Error
                 type: string
+                x-doc-examples:
+                - Unavailable
+                - Available
+                - Downloading
+                - DownloadingError
+                - Reconciling
+                - Installing
+                - HooksDisabled
+                - WaitSyncTasks
+                - Downloaded
+                - Conflict
+                - Ready
+                - Error
             type: object
         type: object
     served: true
