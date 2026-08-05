@@ -49,7 +49,7 @@ memory: 10Mi
 {{- with .Values.controlPlaneManager.internal.resourcesRequests }}
   {{- $_ := set $tpl_context.settings "resourcesRequests" (dict
     "milliCPU" .milliCpuControlPlane
-    "memoryBytes" (printf "%.0f" (.memoryControlPlane | float64))
+    "memoryBytes" .memoryControlPlane
   ) }}
   {{- with .components }}
     {{- $_ := set $tpl_context.settings.resourcesRequests "components" . }}
