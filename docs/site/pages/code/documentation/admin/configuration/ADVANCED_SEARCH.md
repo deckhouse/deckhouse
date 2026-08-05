@@ -26,7 +26,7 @@ This section is available after OpenSearch is connected.
 
 #### Pause indexing
 
-Enable **Pause OpenSearch indexing** to pause background indexing and reindexing jobs.
+Enable "Pause OpenSearch indexing" to pause background indexing and reindexing jobs.
 After removing the pause, Sidekiq pause control resumes jobs automatically within a few minutes.
 
 #### Branch indexing mode
@@ -34,7 +34,7 @@ After removing the pause, Sidekiq pause control resumes jobs automatically withi
 | Mode | Description |
 |------|-------------|
 | **Default branch only** | Only the default branch is indexed for all projects |
-| **Allow per-project branch regex** | Projects can configure a regex to index additional branches |
+| **Allow per-project branch regex** | For projects, you can configure a regex to index additional branches |
 
 {% alert level="warning" %}
 After changing the branch indexing mode, manually enqueue a code reindex.
@@ -124,7 +124,7 @@ An increase in `*_duration_seconds` with a stable `*_total` indicates slow OpenS
 For repository indexing, use `search_repository_indexer_*`; for OpenSearch requests from Sidekiq, use `sidekiq_elasticsearch_*`.
 For user search, use `http_elasticsearch_*`.
 
-The indexing progress widget on **Admin** → **Settings** → **Search** shows the number of remaining full reindex jobs.
+The indexing progress widget on "Admin" → "Settings" → "Search" shows the number of remaining full reindex jobs.
 The same data is available through the `indexing_queue_stats` endpoint of the [OpenSearch API](opensearch-api.html).
 
 #### Sidekiq queue
@@ -134,6 +134,8 @@ Routing is configured with a Sidekiq rule: all workers with the `fe_global_searc
 A separate queue isolates indexing load from other Deckhouse Code background jobs.
 
 #### Cron jobs
+
+The following cron jobs are regularly performed to automate indexing:
 
 | Schedule | Purpose |
 |----------|---------|
@@ -150,20 +152,20 @@ OpenSearch indexing jobs are written to Sidekiq logs. Filter by queue name `glob
 
 #### OpenSearch is unavailable
 
-- Check the connection settings — see the code module documentation.
-- The **Admin** → **Settings** → **Search** page displays a connection failure message.
+- Check the connection settings. For more information see the `code` module documentation.
+- The "Admin" → "Settings" → "Search" page displays a connection failure message.
 - Search returns an error.
 
 #### Incomplete search results
 
-- Wait for background indexing to complete (progress widget on **Admin** → **Settings** → **Search**).
-- Run reindexing at the project level or **Reindex** for the required index in **Admin** → **Settings** → **Search**.
+- Wait for background indexing to complete (progress widget on "Admin" → "Settings" → "Search").
+- Run reindexing at the project level or "Reindex" for the required index in "Admin" → "Settings" → "Search".
 
 #### Indexing jobs are not appearing
 
 If new jobs are not enqueued to the `global-search-indexing` queue:
 
-1. Check whether **Pause OpenSearch indexing** is enabled in **Admin** → **Settings** → **Search**. Clear the flag and wait for jobs to resume (the cron job runs every 5 minutes).
+1. Check whether "Pause OpenSearch indexing" is enabled in "Admin" → "Settings" → "Search". Clear the flag and wait for jobs to resume (the cron job runs every 5 minutes).
 1. If the pause is cleared but jobs still do not appear, run Redis cleanup — stuck leases or Sidekiq duplicate keys are possible:
 
    ```shell
