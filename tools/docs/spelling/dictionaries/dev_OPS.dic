@@ -1,4 +1,4 @@
-2794
+2807
 1GB
 2GB
 5XX
@@ -552,6 +552,8 @@ FileManagement
 filesystem
 FileSystem
 filesystems
+finalizer
+finalizers
 flant
 flavorname
 flavorName
@@ -2708,6 +2710,16 @@ ZvirtInstanceClass
 фикстурой
 фикстуру
 фикстуры
+финалайзер
+финалайзера
+финалайзерам
+финалайзерами
+финалайзерах
+финалайзере
+финалайзеров
+финалайзером
+финалайзеру
+финалайзеры
 фич
 фичах
 фичи

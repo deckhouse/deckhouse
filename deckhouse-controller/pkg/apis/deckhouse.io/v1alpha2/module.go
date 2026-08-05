@@ -28,13 +28,6 @@ const (
 	ModuleResource = "modules"
 	ModuleKind     = "Module"
 
-	// ModuleConditionTypeCompleted changes only by module controller
-	ModuleConditionTypeCompleted                = "Completed"
-	ModuleConditionReasonVersionNotFound        = "VersionNotFound"
-	ModuleConditionReasonModulePackageNotFound  = "ModulePackageNotFound"
-	ModuleConditionReasonVersionIsDraft         = "VersionIsDraft"
-	ModuleConditionReasonVersionSpecIsCorrupted = "VersionSpecIsCorrupted"
-
 	ModuleFinalizerStatisticRegistered = "module.deckhouse.io/statistic-registered"
 
 	ModuleAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
@@ -99,6 +92,29 @@ type ModuleSpec struct {
 	// Release channel for the module package.
 	// +optional
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
+
+	// Enables or disables the module. Unset leaves the decision to the platform.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Defines the module maintenance mode.
+	//
+	// - `NoResourceReconciliation`: A mode for developing or tweaking the module.
+	//
+	//   In this mode:
+	//
+	//   - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
+	//   - Resource monitoring is disabled, which prevents deleted resources from being restored.
+	//   - All the module's resources are labeled with `maintenance: NoResourceReconciliation`.
+	//   - The `ModuleIsInMaintenanceMode` alert is triggered.
+	// +kubebuilder:validation:Enum=NoResourceReconciliation
+	// +optional
+	Maintenance string `json:"maintenance,omitempty"`
+
+	// Version of the settings schema. Distinct from packageVersion, which selects the module package.
+	// +kubebuilder:validation:Type=number
+	// +optional
+	SettingsVersion int `json:"settingsVersion,omitempty"`
 
 	// Configuration settings for the module.
 	// +kubebuilder:pruning:PreserveUnknownFields

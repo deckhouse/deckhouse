@@ -46,6 +46,7 @@ type Module struct {
 	Settings        addonutils.Values
 	SettingsVersion int // schema version from ModuleConfig.Spec.Version
 	Maintenance     string
+	Enabled         *bool
 }
 
 // UpdateModulesSettings applies a settings-and-enabled change to an
@@ -87,7 +88,7 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 	}
 }
 
-// UpdateModule handles module creation and version changes from the module controller.
+// UpdateModule handles module creation, version changes, and enabled intent from the module controller.
 //
 // Flow mirrors UpdateApp: version changes enqueue the full pipeline
 // (Disable → Deploy → Load), settings-only changes trigger
@@ -110,9 +111,14 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 
 	name := module.Name
 	version := module.Definition.Version
+	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
 
 	// A forced update skips change detection it would fail anyway.
 	if !force && !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
+		if enabledChanged {
+			r.scheduler.Reschedule(name)
+		}
+
 		return
 	}
 

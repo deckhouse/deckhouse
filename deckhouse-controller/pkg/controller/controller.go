@@ -65,8 +65,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
-	modulev2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
-	modulepackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
@@ -381,7 +380,7 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		err = application.RegisterController(runtimeManager, pkgRuntime, operator.ModuleManager, dc, logger.Named("application-controller"))
+		err = application.RegisterController(runtimeManager, pkgRuntime, operator.ModuleManager, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}
@@ -391,17 +390,12 @@ func NewDeckhouseController(
 	if app.ModulePackagesEnabled() {
 		logger.Info("Module package controllers are enabled")
 
-		err = modulepackage.RegisterController(runtimeManager, dc, logger.Named("module-package-controller"))
-		if err != nil {
-			return nil, fmt.Errorf("register module package controller: %w", err)
-		}
-
-		err = modulepackageversion.RegisterController(runtimeManager, dc, logger.Named("module-package-version-controller"))
+		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register module package version controller: %w", err)
 		}
 
-		err = modulev2.RegisterController(runtimeManager, dc, logger.Named("module-v2-controller"))
+		err = module.RegisterController(preflightCountDown, runtimeManager, pkgRuntime, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register module v2 controller: %w", err)
 		}
