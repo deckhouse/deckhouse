@@ -626,6 +626,41 @@ func TestRoleReport_InventoryDoesNotGiveKubernetesToTheModuleGrantingIt(t *testi
 	assert.Empty(t, inventoryOf(t, status, "", "pods").Module)
 }
 
+// A module names the resources it expects people to use, not every resource it
+// installs: user-authn grants dexclients, and the passwords of the same group
+// belong to it just as much. A group claimed by two modules stays unattributed.
+func TestRoleReport_InventoryAttributesAGroupWithOneClaimant(t *testing.T) {
+	t.Parallel()
+
+	moduleCapability := func(name, module string, rules ...rbacv1.PolicyRule) *rbacv1.ClusterRole {
+		role := capability(name, "namespace", rules...)
+		role.Labels[labelModule] = module
+
+		return role
+	}
+
+	objs := []runtime.Object{
+		aggregatingRole("d8:namespace:admin", "namespace"),
+		moduleCapability("d8:namespace-capability:user-authn:view", "user-authn", policyRule("dex.coreos.com", "dexclients", "get")),
+		// Два модуля расширяют deckhouse.io, поэтому группа целиком ничья.
+		moduleCapability("d8:namespace-capability:a:view", "module-a", policyRule("deckhouse.io", "widgets", "get")),
+		moduleCapability("d8:namespace-capability:b:view", "module-b", policyRule("deckhouse.io", "gadgets", "get")),
+	}
+
+	resolver := setupRoleAccessResolver(t, objs)
+	resolver.scopeCache = scopeCacheWith(map[string]bool{
+		"dex.coreos.com/passwords": true,
+		"deckhouse.io/others":      false,
+	})
+	resolver = resolver.WithModuleIndex(moduleIndexOfCRDs(t, "passwords.dex.coreos.com", "others.deckhouse.io"))
+
+	status, err := resolver.Report(context.Background(), RoleAccessRequest{IncludeInventory: true})
+	require.NoError(t, err)
+
+	assert.Equal(t, "user-authn", inventoryOf(t, status, "dex.coreos.com", "passwords").Module, "no role names passwords, but the group is user-authn's")
+	assert.Empty(t, inventoryOf(t, status, "deckhouse.io", "others").Module, "two modules extend the group, so it belongs to neither")
+}
+
 // The legacy model says the same thing in its own words, and on a cluster that
 // never adopted capabilities it is the only source there is.
 func TestRoleReport_InventoryTakesTheModuleFromTheLegacyRoles(t *testing.T) {

@@ -243,6 +243,14 @@ func (r *RoleAccessResolver) inventory(index *roleIndex) []v1alpha1.InventoryRes
 			entry.Module = byCapability[capabilityKey(resource.Group, resource.Resource)]
 		}
 
+		// The group is the last word. A module names the resources it expects
+		// people to use, not every resource it installs, and a group claimed by
+		// exactly one module belongs to it whole. Claimed by several -- like
+		// deckhouse.io, which two dozen modules extend -- it stays unattributed.
+		if defined && entry.Module == "" {
+			entry.Module = byCapability[resource.Group]
+		}
+
 		inventory = append(inventory, entry)
 	}
 
@@ -303,15 +311,14 @@ func capabilityModules(index *roleIndex) map[string]string {
 			}
 
 			for _, group := range rule.APIGroups {
-				for _, resource := range rule.Resources {
-					key := capabilityKey(group, resource)
+				// The group is claimed as a whole too. A module names the
+				// resources it expects people to use, not every resource it
+				// installs: user-authn grants dexclients, and the passwords of
+				// the same group belong to it just as much.
+				claim(owners, group, module)
 
-					switch owner := owners[key]; owner {
-					case "", module:
-						owners[key] = module
-					default:
-						owners[key] = ambiguousModule
-					}
+				for _, resource := range rule.Resources {
+					claim(owners, capabilityKey(group, resource), module)
 				}
 			}
 		}
@@ -324,6 +331,17 @@ func capabilityModules(index *roleIndex) map[string]string {
 	}
 
 	return owners
+}
+
+// claim records that the module names this key, or marks the key ambiguous when
+// a second module names it too.
+func claim(owners map[string]string, key, module string) {
+	switch owners[key] {
+	case "", module:
+		owners[key] = module
+	default:
+		owners[key] = ambiguousModule
+	}
 }
 
 func modelOf(model string) string {
