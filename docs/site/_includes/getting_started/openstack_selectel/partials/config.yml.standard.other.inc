@@ -130,7 +130,7 @@ standard:
     volumeType: fast.ru-3a
     instanceClass:
       flavorName: c2m2-d0
-      imageName: ubuntu-24-04
+      imageName: Ubuntu 24.04 LTS 64-bit
       rootDiskSize: 20
   # [<en>] Network name for external communication. Default is external-network
   # [<ru>] Имя сети для внешнего взаимодействия. Значение по умолчанию: external-network
@@ -186,9 +186,9 @@ masterNodeGroup:
     # [<ru>] Используемый образ виртуальной машины.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    # [<en>] Don't use images provided by Selectel. Upload and use cloud images, provided by distribution maintainers.
-    # [<ru>] Не используйте образы, предоставленные Selectel. Загружайте и используйте образы для облачных сред, предоставленные разработчиками дистрибутива.
-    imageName: ubuntu-24.04
+    # [<en>] Use an image available in your project (check with `openstack image list`).
+    # [<ru>] Используйте образ, доступный в вашем проекте (проверьте командой `openstack image list`).
+    imageName: Ubuntu 24.04 LTS 64-bit
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40
@@ -217,7 +217,7 @@ spec:
   # [<ru>] Используемый образ виртуальной машины.
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  imageName: ubuntu-24.04
+  imageName: Ubuntu 24.04 LTS 64-bit
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
