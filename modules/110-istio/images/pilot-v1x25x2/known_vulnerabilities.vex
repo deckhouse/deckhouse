@@ -6,62 +6,6 @@
   "statements": [
     {
       "vulnerability": {
-        "name": "CVE-2026-40179"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Stored XSS in the Prometheus 3.x web UI (CVE-2026-40179). This binary does not run the Prometheus server or expose that UI; github.com/prometheus/prometheus is a library dependency only.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-42151"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Azure OAuth client_secret disclosure via Prometheus /-/config API (CVE-2026-42151). This binary does not run the Prometheus server or expose that endpoint; the dependency is library-only.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-42154"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "DoS via snappy payload on Prometheus remote-read /api/v1/read (CVE-2026-42154). This binary does not run the Prometheus server or handle that endpoint; the dependency is library-only.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-44903"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Stored XSS in the legacy Prometheus UI (CVE-2026-44903). This binary does not run the Prometheus server or expose that UI; the dependency is library-only.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
         "name": "GO-2026-5932"
       },
       "products": [
