@@ -17,9 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"encoding/base64"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -99,4 +105,96 @@ var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
+
+	Context("d8-istio namespace exists without secret", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.ValuesSet("istio.internal.globalVersion", "0.991")
+			_, err := dependency.TestDC.MustGetK8sClient().CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: "d8-istio"},
+			}, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("creates module-values-store with configured max version", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Field("spec.scope").String()).To(Equal("0.991"))
+
+			secret := f.KubernetesResource("Secret", "d8-istio", "module-values-store")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(decodeSecretData(secret.Field("data.maxIstioVersionBeenInCluster").String())).To(Equal("0.991"))
+		})
+	})
+
+	Context("secret has higher version than configured", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.ValuesSet("istio.internal.globalVersion", "0.991")
+			_, err := dependency.TestDC.MustGetK8sClient().CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: "d8-istio"},
+			}, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = dependency.TestDC.MustGetK8sClient().CoreV1().Secrets("d8-istio").Create(context.TODO(), &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "module-values-store",
+					Namespace: "d8-istio",
+				},
+				Data: map[string][]byte{
+					"maxIstioVersionBeenInCluster": []byte("0.992"),
+				},
+			}, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("applies CRDs of secret version and keeps watermark", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Field("spec.scope").String()).To(Equal("0.992"))
+
+			secret := f.KubernetesResource("Secret", "d8-istio", "module-values-store")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(decodeSecretData(secret.Field("data.maxIstioVersionBeenInCluster").String())).To(Equal("0.992"))
+		})
+	})
+
+	Context("secret has lower version than configured", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.ValuesSet("istio.internal.globalVersion", "0.992")
+			_, err := dependency.TestDC.MustGetK8sClient().CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: "d8-istio"},
+			}, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = dependency.TestDC.MustGetK8sClient().CoreV1().Secrets("d8-istio").Create(context.TODO(), &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "module-values-store",
+					Namespace: "d8-istio",
+				},
+				Data: map[string][]byte{
+					"maxIstioVersionBeenInCluster": []byte("0.991"),
+				},
+			}, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("applies CRDs of configured max and raises watermark", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Field("spec.scope").String()).To(Equal("0.992"))
+
+			secret := f.KubernetesResource("Secret", "d8-istio", "module-values-store")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(decodeSecretData(secret.Field("data.maxIstioVersionBeenInCluster").String())).To(Equal("0.992"))
+		})
+	})
 })
+
+func decodeSecretData(encoded string) string {
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	Expect(err).ToNot(HaveOccurred())
+	return string(decoded)
+}
