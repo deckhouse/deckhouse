@@ -121,6 +121,8 @@
     - job: build_fe:mr
       artifacts: true
   rules:
+    - if: $E2E_RUN == "true"
+      when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "deckhouse/deckhouse"
   variables:
     VAULT_AUTH_PATH: fox

@@ -1,0 +1,745 @@
+# E2E pipelines via e2e-framework (Commander).
+# Start: GitLab UI "New pipeline" (web) or Pipelines API (api) with E2E_RUN=true.
+#
+# Instruction: 1.md
+# Framework templates: deckhouse/ssdlc-tools/e2e-framework
+# Providers without CSE: e2e-framework/src/providers.py + CI templates
+#   (Static has no CI template — excluded; StaticCSE/DVPCSE/Custom excluded)
+
+include:
+  - project: 'deckhouse/ssdlc-tools/e2e-framework'
+    file: '/ci-templates/e2e-framework.gitlab-ci.yml'
+    ref: 'main'
+
+variables:
+  # Same JWT role as other GitLab jobs in this repo (.gitlab/*.yml → VAULT_AUTH_ROLE).
+  VAULT_ROLE: "deckhouse"
+
+  E2E_RUN:
+    value: "false"
+    options:
+      - "false"
+      - "true"
+    description: "Set to true for e2e pipeline (web/API only)."
+
+  E2E_PROVIDER:
+    value: "Yandex"
+    options:
+      - "Yandex"
+      - "AWS"
+      - "Azure"
+      - "GCP"
+      - "OpenStack"
+      - "Vsphere"
+      - "DVP"
+      - "Zvirt"
+      - "VCD"
+      - "Huawei"
+      - "StaticPrivate"
+    description: "Cloud provider for e2e-framework (providers without CSE)."
+
+  E2E_EDITION:
+    value: "EE"
+    options:
+      - "FE"
+      - "CE"
+      - "EE"
+    description: "Deckhouse edition to install (maps to build_* job / image tag suffix)."
+
+  KUBERNETES_VERSION:
+    value: "Automatic"
+    options:
+      - "Automatic"
+      - "1.32"
+      - "1.33"
+      - "1.34"
+      - "1.35"
+      - "1.36"
+    description: "Kubernetes version (candi/version_map.yml)."
+
+  E2E_UPDATE_DECKHOUSE:
+    value: "false"
+    options:
+      - "false"
+      - "true"
+    description: "Run deckhouse update after cluster create (requires UPDATE_IMAGE_TAG)."
+
+  UPDATE_IMAGE_TAG:
+    value: ""
+    description: "Target image tag for deckhouse update (used when E2E_UPDATE_DECKHOUSE=true)."
+
+  TASKFILE_COMMAND:
+    value: "task -t testing/e2e-framework/Taskfile.yml smoke"
+    description: "task command for e2e-tests job."
+
+# ---------------------------------------------------------------------------
+# Find edition build on existing branch/tag pipeline and play/wait if needed
+# ---------------------------------------------------------------------------
+
+e2e-ensure-build:
+  extends:
+    - .rules:on_e2e
+  stage: e2e-ensure-build
+  timeout: 4h
+  interruptible: false
+  needs: []
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/bash:${CI_IMAGES_TAG}
+  variables:
+    DOTENV_FILE: e2e-build.env
+    GIT_STRATEGY: fetch
+  script:
+    - chmod +x .gitlab/scripts/e2e-ensure-build.sh
+    - .gitlab/scripts/e2e-ensure-build.sh
+  artifacts:
+    reports:
+      dotenv: e2e-build.env
+    expire_in: 3 days
+
+# ---------------------------------------------------------------------------
+# Shared e2e job wiring
+# ---------------------------------------------------------------------------
+
+.e2e-needs-build:
+  interruptible: false
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+
+e2e-prestart:
+  extends:
+    - .e2e-prestart
+    - .rules:on_e2e
+    - .e2e-needs-build
+  stage: e2e-prestart
+  variables:
+    DOTENV_FILE: dotenv-e2e.env
+
+.e2e-provider-create:
+  interruptible: false
+  stage: e2e-create
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+
+# ---------------------------------------------------------------------------
+# Per-provider jobs (PROVIDER values from e2e-framework CloudProviderFactory,
+# excluding *CSE* and Custom; Static omitted — no CI template).
+# ---------------------------------------------------------------------------
+
+# --- Yandex ---
+e2e-yandex-create:
+  extends:
+    - .e2e-yandex-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex"
+
+e2e-yandex-update:
+  extends:
+    - .e2e-yandex-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-yandex-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-yandex-tests:
+  extends:
+    - .e2e-yandex-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-yandex-create
+    - job: e2e-yandex-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex"
+
+e2e-yandex-delete:
+  extends:
+    - .e2e-yandex-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex"
+
+e2e-yandex-delete-auto:
+  extends:
+    - .e2e-yandex-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-yandex-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Yandex"
+
+# --- AWS ---
+e2e-aws-create:
+  extends:
+    - .e2e-aws-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS"
+
+e2e-aws-update:
+  extends:
+    - .e2e-aws-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-aws-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-aws-tests:
+  extends:
+    - .e2e-aws-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-aws-create
+    - job: e2e-aws-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS"
+
+e2e-aws-delete:
+  extends:
+    - .e2e-aws-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS"
+
+e2e-aws-delete-auto:
+  extends:
+    - .e2e-aws-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-aws-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "AWS"
+
+# --- Azure ---
+e2e-azure-create:
+  extends:
+    - .e2e-azure-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure"
+
+e2e-azure-update:
+  extends:
+    - .e2e-azure-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-azure-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-azure-tests:
+  extends:
+    - .e2e-azure-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-azure-create
+    - job: e2e-azure-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure"
+
+e2e-azure-delete:
+  extends:
+    - .e2e-azure-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure"
+
+e2e-azure-delete-auto:
+  extends:
+    - .e2e-azure-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-azure-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Azure"
+
+# --- GCP ---
+e2e-gcp-create:
+  extends:
+    - .e2e-gcp-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP"
+
+e2e-gcp-update:
+  extends:
+    - .e2e-gcp-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-gcp-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-gcp-tests:
+  extends:
+    - .e2e-gcp-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-gcp-create
+    - job: e2e-gcp-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP"
+
+e2e-gcp-delete:
+  extends:
+    - .e2e-gcp-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP"
+
+e2e-gcp-delete-auto:
+  extends:
+    - .e2e-gcp-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-gcp-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "GCP"
+
+# --- OpenStack ---
+e2e-openstack-create:
+  extends:
+    - .e2e-openstack-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack"
+
+e2e-openstack-update:
+  extends:
+    - .e2e-openstack-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-openstack-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-openstack-tests:
+  extends:
+    - .e2e-openstack-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-openstack-create
+    - job: e2e-openstack-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack"
+
+e2e-openstack-delete:
+  extends:
+    - .e2e-openstack-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack"
+
+e2e-openstack-delete-auto:
+  extends:
+    - .e2e-openstack-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-openstack-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "OpenStack"
+
+# --- Vsphere ---
+e2e-vsphere-create:
+  extends:
+    - .e2e-vsphere-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere"
+
+e2e-vsphere-update:
+  extends:
+    - .e2e-vsphere-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-vsphere-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-vsphere-tests:
+  extends:
+    - .e2e-vsphere-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-vsphere-create
+    - job: e2e-vsphere-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere"
+
+e2e-vsphere-delete:
+  extends:
+    - .e2e-vsphere-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere"
+
+e2e-vsphere-delete-auto:
+  extends:
+    - .e2e-vsphere-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-vsphere-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Vsphere"
+
+# --- DVP ---
+e2e-dvp-create:
+  extends:
+    - .e2e-dvp-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP"
+
+e2e-dvp-update:
+  extends:
+    - .e2e-dvp-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-dvp-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-dvp-tests:
+  extends:
+    - .e2e-dvp-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-dvp-create
+    - job: e2e-dvp-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP"
+
+e2e-dvp-delete:
+  extends:
+    - .e2e-dvp-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP"
+
+e2e-dvp-delete-auto:
+  extends:
+    - .e2e-dvp-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-dvp-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "DVP"
+
+# --- Zvirt ---
+e2e-zvirt-create:
+  extends:
+    - .e2e-zvirt-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt"
+
+e2e-zvirt-update:
+  extends:
+    - .e2e-zvirt-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-zvirt-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-zvirt-tests:
+  extends:
+    - .e2e-zvirt-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-zvirt-create
+    - job: e2e-zvirt-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt"
+
+e2e-zvirt-delete:
+  extends:
+    - .e2e-zvirt-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt"
+
+e2e-zvirt-delete-auto:
+  extends:
+    - .e2e-zvirt-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-zvirt-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Zvirt"
+
+# --- VCD ---
+e2e-vcd-create:
+  extends:
+    - .e2e-vcd-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD"
+
+e2e-vcd-update:
+  extends:
+    - .e2e-vcd-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-vcd-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-vcd-tests:
+  extends:
+    - .e2e-vcd-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-vcd-create
+    - job: e2e-vcd-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD"
+
+e2e-vcd-delete:
+  extends:
+    - .e2e-vcd-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD"
+
+e2e-vcd-delete-auto:
+  extends:
+    - .e2e-vcd-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-vcd-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "VCD"
+
+# --- Huawei ---
+e2e-huawei-create:
+  extends:
+    - .e2e-huawei-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei"
+
+e2e-huawei-update:
+  extends:
+    - .e2e-huawei-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-huawei-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-huawei-tests:
+  extends:
+    - .e2e-huawei-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-huawei-create
+    - job: e2e-huawei-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei"
+
+e2e-huawei-delete:
+  extends:
+    - .e2e-huawei-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei"
+
+e2e-huawei-delete-auto:
+  extends:
+    - .e2e-huawei-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-huawei-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "Huawei"
+
+# --- StaticPrivate ---
+e2e-static-private-create:
+  extends:
+    - .e2e-static-private-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate"
+
+e2e-static-private-update:
+  extends:
+    - .e2e-static-private-update-deckhouse
+  stage: e2e-update-deckhouse
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-static-private-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate" && $E2E_UPDATE_DECKHOUSE == "true"
+
+e2e-static-private-tests:
+  extends:
+    - .e2e-static-private-run-tests
+  stage: e2e-tests
+  variables:
+    TASKFILE_COMMAND: $TASKFILE_COMMAND
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-static-private-create
+    - job: e2e-static-private-update
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate"
+
+e2e-static-private-delete:
+  extends:
+    - .e2e-static-private-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate"
+
+e2e-static-private-delete-auto:
+  extends:
+    - .e2e-static-private-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-static-private-tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true" && $E2E_PROVIDER == "StaticPrivate"

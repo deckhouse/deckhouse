@@ -1,11 +1,13 @@
 # Pipeline creation rules.
-# Pipeline runs only for: tags, main, merge requests, release-x.xx branches.
+# Pipeline runs for: tags, main, merge requests, release-x.xx, schedule,
+# and manual/API e2e (web|api with E2E_RUN=true).
 workflow:
   # Cancel previous pipeline jobs for the same ref when a new commit arrives
   # (MR pushes, main pushes). Jobs with interruptible: false are kept.
   auto_cancel:
     on_new_commit: interruptible
   rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true"
     - if: $CI_COMMIT_TAG
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -15,36 +17,53 @@ workflow:
 
 # Reusable job-level rules (use via: extends: .rules:...)
 
+# Skip regular CI jobs when the pipeline is an e2e run (web/api + E2E_RUN=true).
+.rules:skip_e2e_run: &skip_e2e_run
+  if: $E2E_RUN == "true"
+  when: never
+
+# E2E jobs: only for manual (web) or API pipelines with E2E_RUN=true.
+.rules:on_e2e:
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_RUN == "true"
+
 # --- single-context -----------------------------------------------------------
 
 .rules:on_tag:
   rules:
+    - *skip_e2e_run
     - if: $CI_COMMIT_TAG
 
 .rules:on_main:
   rules:
+    - *skip_e2e_run
     - if: $CI_COMMIT_BRANCH == "main"
 
 .rules:on_merge_request:
   rules:
+    - *skip_e2e_run
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 .rules:on_release_branch:
   rules:
+    - *skip_e2e_run
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
 
 .rules:on_schedule_cve_scans:
   rules:
+    - *skip_e2e_run
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_CVE_SCANS_ENABLE == "true"
 
 # Manual edition builds (MR / main). Release-branch editions are automatic.
 .rules:on_main_manual:
   rules:
+    - *skip_e2e_run
     - if: $CI_COMMIT_BRANCH == "main"
       when: manual
 
 .rules:on_merge_request_manual:
   rules:
+    - *skip_e2e_run
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: manual
 
@@ -53,6 +72,7 @@ workflow:
 # PR + main + release-x.xx (validate, unit/lint, tests, doc_web).
 .rules:on_validate:
   rules:
+    - *skip_e2e_run
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^release-\d+\.\d+$/
@@ -60,6 +80,7 @@ workflow:
 # PR + main only (security_scan, main_web_build).
 .rules:on_pr_main:
   rules:
+    - *skip_e2e_run
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
@@ -67,12 +88,14 @@ workflow:
 
 .rules:on_merge_request_node_controller:
   rules:
+    - *skip_e2e_run
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - modules/040-node-manager/images/node-controller/**/*
 
 .rules:on_merge_request_docs:
   rules:
+    - *skip_e2e_run
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - "**/*.md"
