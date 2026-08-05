@@ -81,9 +81,11 @@ type ModuleSpec struct {
 	// Name of the repository where the package is located.
 	// If not specified, the default repository is used.
 	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
-	// Version of the module package to install.
+	// Version of the module package to install
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0.
 	PackageVersion string `json:"packageVersion"`
 
 	// Release channel for the module package.
@@ -173,6 +175,7 @@ type ModuleStatusSummary struct {
 	// +optional
 	Tip string `json:"tip,omitempty"`
 }
+
 type ModuleStatusVersion struct {
 	// Semantic version of the installed module.
 	// +optional

@@ -284,9 +284,13 @@ spec:
                   Name of the repository where the package is located.
                   If not specified, the default repository is used.
                 type: string
+                x-doc-examples:
+                - deckhouse
               packageVersion:
-                description: Version of the module package to install.
+                description: Version of the module package to install
                 type: string
+                x-doc-examples:
+                - v1.0.0.
               releaseChannel:
                 description: Release channel for the module package.
                 type: string
