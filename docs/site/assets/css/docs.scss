@@ -1636,7 +1636,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
   @include breakpoints.max-w(l) {
     font-size: 22px;
-    line-height: 20px;
   }
 
   @include breakpoints.max-w(s) {
@@ -2453,11 +2452,12 @@ ul .resources__prop_name.deprecated {
 
     & .form__row {
       margin-bottom: 0;
-      min-width: 383px;
-    }
+      width: 383px;
+      margin-right: 20px;
 
-    & a.button {
-      margin-left: 20px;
+      @include breakpoints.max-w(s) {
+        margin-right: 10px;
+      }
     }
   }
 

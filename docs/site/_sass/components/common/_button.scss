@@ -159,7 +159,7 @@
         overflow: hidden;
 
         &:not(.button_disabled):hover {
-            transform: scale(1.1);
+            transform: scale(1.06);
         }
 
         & div.icon {
@@ -170,8 +170,11 @@
             height: 40px;
         }
         & span.name {
-            width: 9em;
             margin: 5px 0px 0px 0px;
+
+            @include breakpoints.min-w(s) {
+                width: 9em;
+            }
         }
 
         & div.footer {
@@ -229,8 +232,20 @@
     align-items: center;
     justify-content: flex-start;
     flex-wrap: wrap;
+    gap: 14px;
+
+    @include breakpoints.max-w(s) {
+        flex-direction: column;
+    }
+
+    @include breakpoints.max-w(xs) {
+        gap: 10px;
+    }
+
     .button {
-        margin-right: 1em;
-        margin-bottom: 1em;
+        @include breakpoints.max-w(s) {
+            width: 100%;
+            text-align: center;
+        }
     }
 }

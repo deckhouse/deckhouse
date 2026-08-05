@@ -1,5 +1,5 @@
 <section class="cards-blocks">
-<div class="cards-blocks__content container">
+<div class="cards-blocks__content">
 <h2 class="cards-blocks__title text_h2">
 Essentials
 </h2>
@@ -55,12 +55,6 @@ Prepare your cluster to receive traffic.
 Use our [checklist](/products/virtualization-platform/guides/production.html) to make sure you haven't forgotten anything.
 </div>
 </div>
-
-<div style="width: 30%">&nbsp;</div>
-{%- endif %}
-
-{% if page.platform_code == 'kind' %}
-<div style="width: 30%">&nbsp;</div>
 {%- endif %}
 </div>
 </div>
