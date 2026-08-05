@@ -94,7 +94,7 @@ The module consists of the following components:
 
    * **kube-rbac-proxy***: Container with an authorization proxy based on Kubernetes RBAC, providing secure access for metrics of the components of the cluster control plane. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
 
-1. **control-plane-proxy-etcd-arbiter** (DaemonSet): Optional component that is installed in the cluster when the [`prometheus`](/modules/prometheus/) module is enabled, if the cluster operates [in HA mode with two master nodes and an arbiter node](../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). In this case, Control-plane-proxy-etcd-arbiter runs on the arbiter node and forwards authorized requests for metrics to the etcd instance running on it.
+1. **control-plane-proxy-etcd-arbiter** (DaemonSet): Optional component that is installed in the cluster when the [`prometheus`](/modules/prometheus/) module is enabled, if the cluster operates [in HA mode with two master nodes and an arbiter node](../../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). In this case, Control-plane-proxy-etcd-arbiter runs on the arbiter node and forwards authorized requests for metrics to the etcd instance running on it.
 
    It consists of a single container:
 
