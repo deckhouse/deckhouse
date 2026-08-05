@@ -49,7 +49,7 @@ The Level 2 C4 architecture of the [`control-plane-manager`](/modules/control-pl
 
 ![control-plane-manager module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.png)
 
-## Module components
+### Module components
 
 The module consists of the following components:
 
@@ -57,15 +57,15 @@ The module consists of the following components:
 
    The **d8-control-plane-manager** controller performs the following actions:
 
-   - Monitors the `d8-control-plane-manager-config` and `d8-pki` Secrets and, based on their information, creates or updates the ControlPlaneNode custom resource for each master node.
+   * Monitors the `d8-control-plane-manager-config` and `d8-pki` Secrets and, based on their information, creates or updates the ControlPlaneNode custom resource for each master node.
 
-   - If the required node configuration differs from the current one, creates a ControlPlaneOperation resource to perform operations to update the node's configuration.
+   * If the required node configuration differs from the current one, creates a ControlPlaneOperation resource to perform operations to update the node's configuration.
 
-   - Determines the order in which to execute the requested ControlPlaneOperation operations to maintain the required cluster fault tolerance during updates.
+   * Determines the order in which to execute the requested ControlPlaneOperation operations to maintain the required cluster fault tolerance during updates.
 
-   - Monitors the execution of operations specified in the ControlPlaneOperation resource.
+   * Monitors the execution of operations specified in the ControlPlaneOperation resource.
 
-   - After the requested operations are completed, updates the current state of the master node in the ControlPlaneNode resource.
+   * After the requested operations are completed, updates the current state of the master node in the ControlPlaneNode resource.
 
    It consists of the following containers:
 
@@ -79,12 +79,28 @@ The module consists of the following components:
      * **image-holder-kube-scheduler**
      * **image-holder-etcd**
 
-2. **kubernetes-api-proxy** (static pods): Additional proxy server configured on each master node to handle requests to `localhost`. By default, it proxies requests to the local **kube-apiserver** instance. If the latter is unavailable, it sequentially queries the remaining **kube-apiserver** instances. It includes the following containers:
+1. **kubernetes-api-proxy** (static pods): Additional proxy server configured on each master node to handle requests to `localhost`. By default, it proxies requests to the local **kube-apiserver** instance. If the latter is unavailable, it sequentially queries the remaining **kube-apiserver** instances. It includes the following containers:
 
    * **kubernetes-api-proxy**: [NGINX](https://github.com/nginx/nginx)-based proxy server.
    * **kubernetes-api-proxy-reloader**: Sidecar container that restarts the proxy server when its configuration changes. Developed by Flant.
 
-3. **d8-etcd-backup** (CronJob): Periodically performs backups of the cluster's **etcd** database. It consists of the following container:
+1. **control-plane-proxy** (DaemonSet): Component that is installed in the cluster when the [`prometheus`] module(/modules/prometheus/) is enabled. In this case, the control-plane-proxy runs on all master nodes and forwards authorized requests for metrics of the following components of the cluster control plane:
+
+   * **kube-controller-manager**;
+   * **kube-scheduler**;
+   * **etcd**.
+
+   It consists of a single container:
+
+   * **kube-rbac-proxy***: Container with an authorization proxy based on Kubernetes RBAC, providing secure access for metrics of the components of the cluster control plane. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
+
+1. **control-plane-proxy-etcd-arbiter** (DaemonSet): Optional component that is installed in the cluster when the [`prometheus`](/modules/prometheus/) module is enabled, if the cluster operates [in HA mode with two master nodes and an arbiter node](../../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). In this case, Control-plane-proxy-etcd-arbiter runs on the arbiter node and forwards authorized requests for metrics to the etcd instance running on it.
+
+   It consists of a single container:
+
+   * **kube-rbac-proxy***: Container with an authorization proxy based on Kubernetes RBAC, providing secure access for metrics of the etcd instance (described above).
+
+1. **d8-etcd-backup** (CronJob): Periodically performs backups of the cluster's **etcd** database. It consists of the following container:
 
    * **backup**: Container running a shell script that creates an etcd snapshot using `etcdctl` and stores it in `/var/lib/etcd` on the master node (default directory, configurable via the [module parameters](/modules/control-plane-manager/configuration.html#parameters-etcd-backup)).
 
@@ -98,8 +114,9 @@ The module interacts with the following components:
    * Reconciles ControlPlaneNode and ControlPlaneOperation custom resources.
    * Watches `d8-control-plane-manager-config` and `d8-pki` Secrets.
    * Proxies and load-balances requests to **kube-apiserver** sent to `localhost`.
+   * Authorizes the requests for metrics.
 
-2. **etcd**:
+1. **etcd**:
 
    * Manages etcd cluster configuration and membership.
    * Performs periodic database backups.
@@ -107,40 +124,15 @@ The module interacts with the following components:
 The following external components interact with the module:
 
 * **kubelet**: Requests to **kube-apiserver** sent to `localhost` are proxied by the module's **kubernetes-api-proxy** component.
+* **Prometheus-main**: Collects metrics of the control plane components.
 
 ## Cluster control plane monitoring
 
-The module provides control plane monitoring, ensuring secure metrics collection and providing a basic set of monitoring rules for the following cluster components:
+The [`control-plane-manager`](/modules/control-plane-manager/) module provides control plane monitoring, ensuring secure metrics collection and providing a basic set of monitoring rules for the following cluster components:
 
 * **kube-apiserver**
 * **kube-controller-manager**
 * **kube-scheduler**
 * **etcd**
 
-### Control plane metrics collection components
-
-A single component is responsible for control plane metrics collection:
-
-1. **control-plane-proxy** (DaemonSet): Runs on all master nodes and includes a single container:
-
-   * **kube-rbac-proxy**: Authorization proxy based on Kubernetes RBAC that provides secure access to metrics.
-
-### Interactions of control-plane-proxy component
-
-Control-plane-proxy interacts with the following components:
-
-1. **kube-apiserver**: Authorizes requests for metrics.
-
-2. Control plane components: **control-plane-proxy** forwards authorized metric requests to the following components:
-
-   * **kube-controller-manager**
-   * **kube-scheduler**
-   * **etcd**
-
-**Prometheus-main** interacts with **control-plane-proxy** to collect control plane component metrics.
-
-The interaction between the control-plane-proxy component and the cluster control plane is shown in the module's architecture diagram above.
-
-### Metrics collection from kube-apiserver
-
-Metrics from **kube-apiserver** are collected directly by **prometheus-main**. The `control-plane-manager` module adds the corresponding metric collection rules to the **prometheus-main** configuration.
+Metrics from **kube-apiserver** are collected directly by **prometheus-main**. Metrics of the other control-plane components are collected by **prometheus-main** with authorization in kube-apiserver via the control-plane-proxy component. The [`control-plane-manager`](/modules/control-plane-manager/) module adds the corresponding metric collection rules to the **prometheus-main** configuration.
