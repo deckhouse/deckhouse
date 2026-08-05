@@ -1820,6 +1820,22 @@ MY_VAR: "myvalue"
 			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
 			Expect(cniConfig.Field("data.ENABLE_AMBIENT_DETECTION_RETRY").String()).To(Equal("false"))
 		})
+
+		It("renders istio config analyzer for control plane 1.29", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x29")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("istio-config-analyzer"))
+			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--revision=v1x29"))
+			Expect(deployment.Field("spec.template.spec.containers.0.image").String()).To(ContainSubstring("configAnalyzerV1x29x6"))
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x29")
+			Expect(podMonitor.Exists()).To(BeTrue())
+
+			clusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:config-analyzer:v1x29")
+			Expect(clusterRole.Exists()).To(BeTrue())
+		})
 	})
 
 	Context("operator-free sidecar with custom static resourcesManagement configuration", func() {
