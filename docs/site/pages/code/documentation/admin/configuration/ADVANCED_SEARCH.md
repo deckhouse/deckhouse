@@ -9,9 +9,10 @@ weight: 55
 ---
 
 Administrator documentation for advanced search in Deckhouse Code: operating indexing after OpenSearch is connected.
-<!-- Restore the links to /modules/code/stable/advanced-search.html once that page is published in the code module documentation.
-For connection and setup, see the [code module documentation](/modules/code/stable/advanced-search.html).
--->
+<!-- Once the advanced-search page is published in the code module documentation, restore the
+sentence linking to it: "For connection and setup, see the code module documentation".
+Do not use markdown link syntax inside this comment: the related links collector does not
+strip HTML comments and would pull the link into the "Additional resources" block. -->
 For user instructions, see the [user guide](../../user/search.html).
 
 ## Operations
@@ -27,9 +28,12 @@ This section is available after OpenSearch is connected.
 #### Pause indexing
 
 Enable "Pause OpenSearch indexing" to pause background indexing and reindexing jobs.
+To enable indexing again, disable the "Pause OpenSearch indexing" flag.
 After removing the pause, Sidekiq pause control resumes jobs automatically within a few minutes.
 
 #### Branch indexing mode
+
+The following branch indexing modes can be used in projects:
 
 | Mode | Description |
 |------|-------------|
@@ -179,4 +183,5 @@ If new jobs are not enqueued to the `global-search-indexing` queue:
 - [Advanced search — user guide](../../user/search.html)
 - [OpenSearch API](opensearch-api.html)
 - [Search API](../../user/search-api.html)
-<!-- - [Advanced search — code module documentation](/modules/code/stable/advanced-search.html) -->
+<!-- Restore the "Advanced search — code module documentation" item here, linking to the
+advanced-search page of the code module, once that page is published. -->
