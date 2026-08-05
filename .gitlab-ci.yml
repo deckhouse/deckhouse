@@ -4,6 +4,12 @@ stages:
   - build
   - test
   - deploy
+  - e2e-ensure-build
+  - e2e-prestart
+  - e2e-create
+  - e2e-update-deckhouse
+  - e2e-tests
+  - e2e-delete
   - .post
 
 include:
