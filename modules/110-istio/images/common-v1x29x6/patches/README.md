@@ -6,7 +6,11 @@ Fix Istio CVE vulnerabilities
 
 ## 001-kiali-gomod_gosum.patch
 
-Fix Kiali CVE vulnerabilities
+Fix Kiali CVE vulnerabilities.
+
+Bumps `k8s.io/*` to v0.36.3 and `sigs.k8s.io/controller-runtime` to v0.24.1
+(controller-runtime v0.22.x is incompatible with client-go v0.36 — missing
+`HasSyncedChecker` on `ResourceEventHandlerRegistration`).
 
 ## 002-istio-multicluster-regenerate-token-timeout.patch
 
