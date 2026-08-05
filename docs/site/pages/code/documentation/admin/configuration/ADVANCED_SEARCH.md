@@ -6,6 +6,15 @@ description: Configure and operate advanced search powered by OpenSearch in Deck
 permalink: en/code/documentation/admin/configuration/advanced-search.html
 lang: en
 weight: 55
+relatedLinks:
+  - title: "Advanced search — user guide"
+    url: ../../user/search.html
+  - title: "OpenSearch API"
+    url: opensearch-api.html
+  - title: "Search API"
+    url: ../../user/search-api.html
+# Once the advanced-search page is published in the code module documentation,
+# add an "Advanced search — code module documentation" item here.
 ---
 
 Administrator documentation for advanced search in Deckhouse Code: operating indexing after OpenSearch is connected.
@@ -57,6 +66,10 @@ The page displays a table with four indices:
 | Note | Comments |
 
 For each index, the table shows the OpenSearch index name, presence, document count, and index health.
+
+#### Index operations
+
+The following operations are available on the same page:
 
 - **Reindex** — reindex a single index (removes existing documents and enqueues background jobs).
 - **Reindex all indices** — reindex all indices.
@@ -177,11 +190,3 @@ If new jobs are not enqueued to the `global-search-indexing` queue:
    ```
 
    The script clears the exclusive lease for `Search::RepositoryIndexerWorker`, concurrency limits, and dedup keys for the `global-search-indexing` queue.
-
-## Related topics
-
-- [Advanced search — user guide](../../user/search.html)
-- [OpenSearch API](opensearch-api.html)
-- [Search API](../../user/search-api.html)
-<!-- Restore the "Advanced search — code module documentation" item here, linking to the
-advanced-search page of the code module, once that page is published. -->

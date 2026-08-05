@@ -6,6 +6,11 @@ description: Guide to using advanced search in Deckhouse Code
 permalink: en/code/documentation/user/search.html
 lang: en
 weight: 45
+relatedLinks:
+  - title: "Advanced search (OpenSearch) — administrator guide"
+    url: ../admin/configuration/advanced-search.html
+  - title: "Search API"
+    url: search-api.html
 ---
 
 Search in Deckhouse Code helps you quickly find the information you need across projects, groups, or the entire instance.
@@ -204,8 +209,3 @@ A successful update enqueues a full code reindex for the project.
 A group owner can go to **Settings** → **Search**.
 
 Group wiki reindexing is available: index status and the **Reindex wiki** button.
-
-## Related topics
-
-- [Advanced search (OpenSearch) — administrator guide](../admin/configuration/advanced-search.html)
-- [Search API](search-api.html)

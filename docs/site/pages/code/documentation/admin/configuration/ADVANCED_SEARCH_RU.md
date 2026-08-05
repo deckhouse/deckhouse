@@ -6,6 +6,15 @@ description: Настройка и эксплуатация расширенно
 permalink: ru/code/documentation/admin/configuration/advanced-search.html
 lang: ru
 weight: 55
+relatedLinks:
+  - title: "Расширенный поиск — руководство пользователя"
+    url: ../../user/search.html
+  - title: "API OpenSearch"
+    url: opensearch-api.html
+  - title: "API поиска"
+    url: ../../user/search-api.html
+# После публикации страницы advanced-search в документации модуля code
+# добавить сюда пункт «Расширенный поиск — документация модуля code».
 ---
 
 Документация для администратора по расширенному поиску в Deckhouse Code: эксплуатация индексации после подключения OpenSearch.
@@ -56,6 +65,10 @@ weight: 55
 | Note | Комментарии |
 
 Для каждого индекса показаны: имя в OpenSearch, наличие, количество документов, состояние индекса.
+
+#### Операции над индексами
+
+На той же странице доступны следующие операции:
 
 - **Переиндексировать** — переиндексация одного индекса (удаляет существующие документы и ставит фоновые задачи).
 - **Переиндексировать все индексы** — переиндексация всех индексов.
@@ -176,11 +189,3 @@ Cron-задачи не выполняют индексацию напрямую:
    ```
 
    Скрипт снимает exclusive lease для `Search::RepositoryIndexerWorker`, concurrency limit и dedup-ключи очереди `global-search-indexing`.
-
-## Связанные темы
-
-- [Расширенный поиск — руководство пользователя](../../user/search.html)
-- [API OpenSearch](opensearch-api.html)
-- [API поиска](../../user/search-api.html)
-<!-- Вернуть сюда пункт «Расширенный поиск — документация модуля code» со ссылкой
-на страницу advanced-search модуля code после её публикации. -->

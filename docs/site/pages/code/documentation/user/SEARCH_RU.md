@@ -6,6 +6,11 @@ description: Руководство по использованию расшир
 permalink: ru/code/documentation/user/search.html
 lang: ru
 weight: 45
+relatedLinks:
+  - title: "Расширенный поиск (OpenSearch) — руководство администратора"
+    url: ../admin/configuration/advanced-search.html
+  - title: "API поиска"
+    url: search-api.html
 ---
 
 Поиск в Deckhouse Code помогает быстро находить нужную информацию по проектам, группам или всему инстансу.
@@ -204,8 +209,3 @@ curl --request PUT \
 Owner группы может перейти в «Настройки» → «Поиск».
 
 Доступна переиндексация wiki группы: статус индекса и кнопка **Переиндексировать вики**.
-
-## Связанные темы
-
-- [Расширенный поиск (OpenSearch) — руководство администратора](../admin/configuration/advanced-search.html)
-- [API поиска](search-api.html)
