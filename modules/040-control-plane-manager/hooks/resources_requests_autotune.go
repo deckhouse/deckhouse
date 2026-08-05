@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -440,7 +441,8 @@ func projectComponentsToValues(state autotuneState, cpuOverridden, memoryOverrid
 		if !memoryOverridden {
 			if m := state[resourceMemory]; m != nil {
 				if cs, ok := m.Components[comp]; ok && cs.AppliedBytes != nil {
-					entry["memoryBytes"] = *cs.AppliedBytes
+					// Decimal string — Helm renders large float64 values in scientific notation.
+					entry["memoryBytes"] = strconv.FormatInt(*cs.AppliedBytes, 10)
 				}
 			}
 		}

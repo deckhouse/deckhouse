@@ -257,7 +257,7 @@ spec:
       requests:
         {{- $c := (($resourcesRequests.components | default dict).kubeApiserver) | default dict }}
         cpu: "{{ $c.milliCPU | default (div (mul $millicpu 33) 100) }}m"
-        memory: "{{ $c.memoryBytes | default (div (mul $memory 33) 100) }}"
+        memory: "{{ $c.memoryBytes | default (printf "%.0f" (div (mul $memory 33) 100)) }}"
     securityContext:
       capabilities:
         drop:
