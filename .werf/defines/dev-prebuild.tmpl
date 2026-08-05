@@ -1,6 +1,11 @@
 # render git imports include paths
 {{- define "dev_prebuild_git_imports_include_paths" }}
 - candi
+# The control-plane manifest templates. They live inside the Go module because go:embed neither
+# follows symlinks nor reaches outside it, and candi/control-plane is a symlink to them now — so
+# the 040-control-plane-manager chart, which reads them through its own symlink when helm renders
+# the Secret, needs the real files present in the image.
+- go_lib/controlplane/manifests/templates
 - global-hooks
 - shell_lib.sh
 - shell_lib
