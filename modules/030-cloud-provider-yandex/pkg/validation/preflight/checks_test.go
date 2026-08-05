@@ -94,6 +94,18 @@ func TestValidatePreflightRejectsInvalidCredentialSecretType(t *testing.T) {
 	}
 }
 
+func TestValidatePreflightInvalidCredentialSecretServiceAccount(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.CredentialSecrets[0].StringData.Secret = "invalid"
+
+	result := ValidatePreflight(state, proto.OperationBootstrap)
+	if !hasViolationCode(result, cpval.CodeInvalidServiceAccountSecret) {
+		t.Fatalf("ValidatePreflight() = %q", result.Error())
+	}
+}
+
 func TestValidatePreflightRequiresMasterNodeGroup(t *testing.T) {
 	t.Parallel()
 
@@ -290,8 +302,8 @@ func validState(t *testing.T) *ycval.State {
 				},
 				Type: cpapi.CredentialsSecretType,
 				StringData: cpapi.CredentialSecretStringData{
-					AuthScheme: cpapi.AuthSchemeAPIToken,
-					Secret:     "test-token",
+					AuthScheme: cpapi.AuthSchemeServiceAccount,
+					Secret:     "{}",
 				},
 			},
 		},
