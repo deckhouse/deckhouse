@@ -415,6 +415,11 @@ func (h *Handler) validateCredentials(ctx context.Context, login, password strin
 
 	h.cache.SetWithTTL(key, cacheEntry{groups: groups}, h.GroupsCacheTTL)
 	h.logger.Printf("received groups for %s: %s", login, groups)
+	for _, group := range groups {
+		if isReservedIdentity(group) {
+			h.logger.Warningf("group %q of user %s will not be forwarded: the %q prefix is reserved by kube-apiserver", group, login, reservedIdentityPrefix)
+		}
+	}
 	return groups, nil
 }
 
@@ -441,12 +446,13 @@ func isReservedIdentity(name string) bool {
 	return strings.HasPrefix(name, reservedIdentityPrefix)
 }
 
-// filterReservedGroups drops directory groups that claim a reserved name.
-func (h *Handler) filterReservedGroups(login string, groups []string) []string {
+// filterReservedGroups drops directory groups that claim a reserved name. It is
+// silent by design: it runs on every proxied request, while validateCredentials
+// reports the same groups once per cache fill.
+func filterReservedGroups(groups []string) []string {
 	filtered := make([]string, 0, len(groups))
 	for _, group := range groups {
 		if isReservedIdentity(group) {
-			h.logger.Warningf("dropping group %q of user %s: the %q prefix is reserved by kube-apiserver", group, login, reservedIdentityPrefix)
 			continue
 		}
 		filtered = append(filtered, group)
@@ -463,7 +469,7 @@ func (h *Handler) modifyRequest(w http.ResponseWriter, r *http.Request, login st
 
 	stripIdentityHeaders(r.Header)
 	r.Header.Set("X-Remote-User", login)
-	for _, group := range h.filterReservedGroups(login, groups) {
+	for _, group := range filterReservedGroups(groups) {
 		r.Header.Add("X-Remote-Group", group)
 	}
 
