@@ -119,7 +119,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 
    Registry-scanner читает кастомные ресурсы [RegistryScanTarget](/modules/operator-trivy/cr.html#registryscantarget), запускает сканирование образов через компонент trivy-server и сохраняет результаты обработки в кастомном ресурсе [RegistryImageVulnerabilityReport](/modules/operator-trivy/cr.html#registryimagevulnerabilityreport).
 
-1. **Security-storage** (Deployment) — контроллер, состоящий из одного контейнера **apiserver**, является расширением API Kubernetes и выполняет обработку операции создания, чтения, обновления и удаления (CRUD), watch-запросов и list-запросов к кастомным ресурсам API-групп `trivy.deckhouse.io` и `spdx.softwarecomposition.kubescape.io`.
+1. **Security-storage** (Deployment) — контроллер, состоящий из одного контейнера **apiserver**, является расширением API Kubernetes и выполняет обработку запросов к кастомным ресурсам API-групп `trivy.deckhouse.io` и `spdx.softwarecomposition.kubescape.io`.
 
    Также security-storage реализует бэкенд для хранения этих ресурсов:
    - метаданные сохраняются в базе данных SQLite;

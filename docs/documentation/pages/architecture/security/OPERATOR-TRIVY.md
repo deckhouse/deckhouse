@@ -118,7 +118,7 @@ The module consists of the following components:
 
    Registry-scanner reads [RegistryScanTarget](/modules/operator-trivy/cr.html#registryscantarget) custom resources, runs image scans through the trivy-server component, and stores processed results in the [RegistryImageVulnerabilityReport](/modules/operator-trivy/cr.html#registryimagevulnerabilityreport) custom resource.
 
-1. **Security-storage** (Deployment): A controller that includes a single **apiserver** container, extends Kubernetes API, and processes create, read, update, and delete (CRUD) operations, watch requests, and list requests for custom resources from the `trivy.deckhouse.io` and `spdx.softwarecomposition.kubescape.io` API groups.
+1. **Security-storage** (Deployment): A controller that includes a single **apiserver** container, extends Kubernetes API, and processes requests for custom resources from the `trivy.deckhouse.io` and `spdx.softwarecomposition.kubescape.io` API groups.
 
    Security-storage also implements the backend for storing these resources:
    - Metadata is stored in an SQLite database.
