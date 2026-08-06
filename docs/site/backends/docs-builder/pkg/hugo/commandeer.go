@@ -46,6 +46,12 @@ import (
 )
 
 func (c *command) Run() error {
+	// Close the HugoSites when the build is done. Each HugoSites owns a
+	// dynacache whose background goroutine keeps the whole site model
+	// reachable; without Close() that graph never becomes eligible for GC
+	// and memory grows with every build.
+	defer c.closeHugoSites()
+
 	b := newHugoBuilder(c, c.logger)
 
 	err := b.loadConfig()
@@ -59,6 +65,23 @@ func (c *command) Run() error {
 	}
 
 	return nil
+}
+
+// closeHugoSites closes and evicts every cached HugoSites, stopping the
+// dynacache goroutine each one holds so the site model can be collected.
+func (c *command) closeHugoSites() {
+	if c.hugoSites == nil {
+		return
+	}
+
+	c.hugoSites.DeleteFunc(func(_ int32, h *hugolib.HugoSites) bool {
+		if h != nil {
+			if err := h.Close(); err != nil {
+				c.logger.Warn("close hugo sites", log.Err(err))
+			}
+		}
+		return true
+	})
 }
 
 func (c *command) PreRun() error {

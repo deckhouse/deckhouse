@@ -18,9 +18,11 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -32,6 +34,7 @@ import (
 	"github.com/flant/docs-builder/internal/docs"
 	v1 "github.com/flant/docs-builder/internal/http/v1"
 	"github.com/flant/docs-builder/internal/metrics"
+	"github.com/flant/docs-builder/internal/pprof"
 	"github.com/flant/docs-builder/pkg/k8s"
 )
 
@@ -41,6 +44,8 @@ var (
 	src              string
 	dst              string
 	metricsAddress   string
+	pprofEnabled     string
+	pprofAddress     string
 	highAvailability bool
 )
 
@@ -49,7 +54,9 @@ func init() {
 	flag.StringVar(&src, "src", "/app/hugo/", "Directory to load source files")
 	flag.StringVar(&dst, "dst", "/mount/", "Directory for site files")
 	flag.StringVar(&metricsAddress, "metrics-address", ":9090", "Address to listen on metrics")
+	flag.StringVar(&pprofAddress, "pprof-address", ":6060", "Address to listen on pprof")
 	flag.BoolVar(&highAvailability, "highAvailability", false, "high availability mod")
+	pprofEnabled = os.Getenv("PPROF_ENABLED")
 }
 
 func main() {
@@ -86,12 +93,21 @@ func main() {
 		Handler: mStorage.Handler(),
 	}
 
+	var pprofSrv *http.Server
+	if strings.ToLower(pprofEnabled) == "true" {
+		logger.Warn("pprof enabled", slog.String("address", pprofAddress))
+		pprofSrv = pprof.NewServer(pprofAddress)
+	}
+
 	eg, ctx := errgroup.WithContext(ctx)
 
 	logger.Info("starting application")
 
 	eg.Go(srv.ListenAndServe)
 	eg.Go(metricsSrv.ListenAndServe)
+	if pprofSrv != nil {
+		eg.Go(pprofSrv.ListenAndServe)
+	}
 	eg.Go(lManager.Run(ctx))
 
 	logger.Info("application started")
@@ -118,6 +134,11 @@ func main() {
 	shutdownEg.Go(func() error {
 		return metricsSrv.Shutdown(shutdownCtx)
 	})
+	if pprofSrv != nil {
+		shutdownEg.Go(func() error {
+			return pprofSrv.Shutdown(shutdownCtx)
+		})
+	}
 
 	waitErr := shutdownEg.Wait()
 	if waitErr != nil && !errors.Is(waitErr, context.Canceled) {

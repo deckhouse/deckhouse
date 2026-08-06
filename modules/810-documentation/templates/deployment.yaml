@@ -47,6 +47,9 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "web_resources" . | nindent 12 }}
   {{- end }}
+          limits:
+            cpu: 200m
+            memory: 100Mi
         volumeMounts:
           - name: config
             mountPath: /app/config
@@ -102,6 +105,9 @@ spec:
           - containerPort: 9090
             name: http-metrics
             protocol: TCP
+          - containerPort: 6060
+            name: pprof
+            protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz
@@ -116,6 +122,9 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "builder_resources" . | nindent 12 }}
   {{- end }}
+          limits:
+            cpu: 200m
+            memory: 2Gi
         volumeMounts:
           - mountPath: /tmp
             name: tmp
