@@ -37,8 +37,8 @@ var updateGolden = flag.Bool("update-golden", false, "rewrite the golden payload
 // Both documents are built the way the bootstrap builds them; only the three
 // handoff strings are replaced with placeholders afterwards, because they are
 // freshly minted on every run. Everything else in the golden file is what
-// actually boots the node — which is what makes the absence of any cluster key
-// and of any rendered manifest visible here.
+// actually boots the node — the rendered control-plane manifests included, which
+// is what makes the absence of any cluster key in them visible here.
 func TestBuildCloudConfigGolden(t *testing.T) {
 	metaConfig := testMetaConfig(t)
 
