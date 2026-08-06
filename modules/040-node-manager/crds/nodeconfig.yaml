@@ -70,19 +70,6 @@ spec:
                       downloads.
                     minimum: 1
                     type: integer
-                  registryMirrors:
-                    additionalProperties:
-                      description: RegistryMirror lists mirror endpoints for a registry.
-                      properties:
-                        endpoints:
-                          items:
-                            type: string
-                          type: array
-                      type: object
-                    description: |-
-                      RegistryMirrors lists mirror endpoints per registry host (not yet rendered
-                      into hosts.toml; reserved for future use).
-                    type: object
                   sandboxImage:
                     default: registry.k8s.io/pause:3.10
                     description: SandboxImage is the pause image used for pod sandboxes.

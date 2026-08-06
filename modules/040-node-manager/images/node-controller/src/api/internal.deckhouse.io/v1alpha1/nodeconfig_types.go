@@ -563,16 +563,6 @@ type ContainerRuntime struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=3
 	MaxConcurrentDownloads int `json:"maxConcurrentDownloads,omitempty"`
-	// RegistryMirrors lists mirror endpoints per registry host (not yet rendered
-	// into hosts.toml; reserved for future use).
-	// +optional
-	RegistryMirrors map[string]RegistryMirror `json:"registryMirrors,omitempty"`
-}
-
-// RegistryMirror lists mirror endpoints for a registry.
-type RegistryMirror struct {
-	// +optional
-	Endpoints []string `json:"endpoints,omitempty"`
 }
 
 // UpdatePolicy controls how/when the node is updated.
