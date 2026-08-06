@@ -26,13 +26,17 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -139,6 +143,55 @@ func nodeRenderInputsChanged(before, after client.Object) bool {
 	return !maps.Equal(before.GetLabels(), after.GetLabels())
 }
 
+// nodeConfigRolloutInputsChanged reports whether an update to a NodeConfig
+// touched anything a pass reads off it. An event missing either side is passed
+// through, for the same reason nodeRenderInputsChanged does it.
+//
+// Generation stands in for the whole spec: the resource has a status
+// subresource, so only a spec write moves it. Everything else here is what the
+// rollout gate reads (rollout.go: applied) or what decides whether the object is
+// still ours (labels, owner references, deletion).
+func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
+	oldConfig, okOld := before.(*internalv1alpha1.NodeConfig)
+	newConfig, okNew := after.(*internalv1alpha1.NodeConfig)
+	if !okOld || !okNew {
+		return true
+	}
+	if oldConfig.Generation != newConfig.Generation ||
+		oldConfig.Status.AppliedGeneration != newConfig.Status.AppliedGeneration {
+		return true
+	}
+	if (oldConfig.DeletionTimestamp == nil) != (newConfig.DeletionTimestamp == nil) {
+		return true
+	}
+	if !maps.Equal(oldConfig.Labels, newConfig.Labels) ||
+		!slices.EqualFunc(oldConfig.OwnerReferences, newConfig.OwnerReferences, ownerRefEqual) {
+		return true
+	}
+	for _, condition := range []string{configurationAppliedCondition, disruptionRequiredCondition} {
+		if !conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, condition) {
+			return true
+		}
+	}
+	return false
+}
+
+func ownerRefEqual(a, b metav1.OwnerReference) bool {
+	return a.UID == b.UID && a.Name == b.Name && a.Kind == b.Kind
+}
+
+// conditionEqual compares one condition across two status lists by the two
+// fields the rollout gate tests it on.
+func conditionEqual(before, after []metav1.Condition, name string) bool {
+	oldCondition := meta.FindStatusCondition(before, name)
+	newCondition := meta.FindStatusCondition(after, name)
+	if oldCondition == nil || newCondition == nil {
+		return oldCondition == newCondition
+	}
+	return oldCondition.Status == newCondition.Status &&
+		oldCondition.ObservedGeneration == newCondition.ObservedGeneration
+}
+
 func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// A NodeGroup change affects every node of every group, so it is funnelled
 	// into one pass instead of a request per node.
@@ -148,7 +201,18 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.Watches(&v1.NodeGroup{}, allMapper)
 	// A node reporting the spec it was given frees its rollout slot, which is
 	// what lets the next node of the group be updated.
-	w.Watches(&internalv1alpha1.NodeConfig{}, allMapper)
+	//
+	// Predicated, and it has to be: the agent republishes its status on every
+	// pass of its own — units, extensions, the maintenance token, the last
+	// reconcile time — and this mapper enqueues the ALL-nodes key, so without a
+	// filter every heartbeat of every node re-renders the whole fleet. With one
+	// worker (MaxConcurrentReconciles) a fleet large enough to heartbeat faster
+	// than a pass completes never leaves that loop.
+	w.Watches(&internalv1alpha1.NodeConfig{}, allMapper, builder.WithPredicates(predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return nodeConfigRolloutInputsChanged(e.ObjectOld, e.ObjectNew)
+		},
+	}))
 	// A NodeExtensionRequest change alters which extensions a node merges, so it
 	// re-renders every node — the broad mapper is enough until per-request
 	// selection is tracked.
@@ -185,6 +249,12 @@ type pass struct {
 	// Kubernetes version: the ~6 uncached reads readClusterInputs performs are
 	// done once per distinct version rather than once per node.
 	inputs map[string]clusterInputsResult
+	// versions is the Kubernetes version each group runs, keyed by group name.
+	// It is the key the inputs above are memoised under, and producing it is not
+	// free: derived_status lists MachineDeployments and InstanceClasses and
+	// unmarshals the whole instance-type catalogue. Without this the memo below
+	// was paid for once per node anyway.
+	versions map[string]versionResult
 	// rollouts is each group's remaining rollout budget, keyed by group name.
 	// One listing of the group's NodeConfigs per pass, rather than one per node
 	// of the group — a NodeGroup edit drifts every node at once, so listing per
@@ -222,9 +292,18 @@ type clusterInputsResult struct {
 	err    error
 }
 
+// versionResult is one attempt at answering which Kubernetes version a group
+// runs, kept whether it succeeded or not, for the same reason as the inputs
+// above: the answer is a property of the group, not of the node being rendered.
+type versionResult struct {
+	version string
+	err     error
+}
+
 func newPass() *pass {
 	return &pass{
 		inputs:   map[string]clusterInputsResult{},
+		versions: map[string]versionResult{},
 		rollouts: map[string]*rolloutBudget{},
 		created:  map[string]map[string]struct{}{},
 	}
@@ -233,15 +312,20 @@ func newPass() *pass {
 // clusterInputs returns the render inputs for the group's Kubernetes version,
 // reading them once per version per pass and serving the rest from the pass.
 func (r *Reconciler) clusterInputs(ctx context.Context, ng *v1.NodeGroup, p *pass) (clusterInputs, error) {
-	version, err := resolveKubernetesVersion(ctx, r.derived, ng)
-	if err != nil {
-		return clusterInputs{}, err
+	resolved, ok := p.versions[ng.Name]
+	if !ok {
+		version, err := resolveKubernetesVersion(ctx, r.derived, ng)
+		resolved = versionResult{version: version, err: err}
+		p.versions[ng.Name] = resolved
 	}
-	if result, ok := p.inputs[version]; ok {
+	if resolved.err != nil {
+		return clusterInputs{}, resolved.err
+	}
+	if result, ok := p.inputs[resolved.version]; ok {
 		return result.inputs, result.err
 	}
-	in, err := r.sources.readClusterInputs(ctx, version)
-	p.inputs[version] = clusterInputsResult{inputs: in, err: err}
+	in, err := r.sources.readClusterInputs(ctx, resolved.version)
+	p.inputs[resolved.version] = clusterInputsResult{inputs: in, err: err}
 	return in, err
 }
 
@@ -262,7 +346,9 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 	failed := 0
 	p := newPass()
 	for i := range nodes.Items {
-		if _, err := r.reconcileNode(ctx, nodes.Items[i].Name, logger, p); err != nil {
+		// The listing already carries the Node, so it is rendered from that
+		// rather than fetched again once per node.
+		if _, err := r.reconcileNodeObject(ctx, &nodes.Items[i], logger, p); err != nil {
 			logger.V(1).Info("cannot render the NodeConfig of a node", "node", nodes.Items[i].Name, "error", err.Error())
 			failed++
 			if firstErr == nil {
@@ -295,6 +381,13 @@ func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger 
 		}
 		return ctrl.Result{}, fmt.Errorf("get node %s: %w", nodeName, err)
 	}
+
+	return r.reconcileNodeObject(ctx, node, logger, p)
+}
+
+// reconcileNodeObject is reconcileNode for a Node the caller already holds.
+func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node, logger logr.Logger, p *pass) (ctrl.Result, error) {
+	nodeName := node.Name
 
 	ngName := node.Labels[nodeGroupNameLabel]
 	if ngName == "" {
