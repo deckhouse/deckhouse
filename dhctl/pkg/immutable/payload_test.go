@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -41,6 +42,7 @@ var updateGolden = flag.Bool("update-golden", false, "rewrite the golden payload
 // is what makes the absence of any cluster key in them visible here.
 func TestBuildCloudConfigGolden(t *testing.T) {
 	metaConfig := testMetaConfig(t)
+	globalOptions := options.NewGlobalOptions()
 
 	nodeConfig, err := buildNodeConfig(context.Background(), nodeConfigInput{
 		NodeName:   "zykov-master-0",
@@ -49,10 +51,11 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 	require.NoError(t, err)
 
 	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), MasterPayloadInput{
-		NodeName:   "zykov-master-0",
-		MetaConfig: metaConfig,
-		StateCache: cache.NewTestCache(),
-		CandiDir:   testCandiDir(t),
+		NodeName:      "zykov-master-0",
+		MetaConfig:    metaConfig,
+		StateCache:    cache.NewTestCache(),
+		CandiDir:      testCandiDir(t),
+		GlobalOptions: &globalOptions,
 	})
 	require.NoError(t, err)
 
@@ -93,12 +96,14 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 // it is in the handoff section.
 func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
 	metaConfig := testMetaConfig(t)
+	globalOptions := options.NewGlobalOptions()
 
 	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), MasterPayloadInput{
-		NodeName:   "zykov-master-0",
-		MetaConfig: metaConfig,
-		StateCache: cache.NewTestCache(),
-		CandiDir:   testCandiDir(t),
+		NodeName:      "zykov-master-0",
+		MetaConfig:    metaConfig,
+		StateCache:    cache.NewTestCache(),
+		CandiDir:      testCandiDir(t),
+		GlobalOptions: &globalOptions,
 	})
 	require.NoError(t, err)
 
