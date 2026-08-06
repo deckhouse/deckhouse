@@ -12,20 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation
+package api
 
 import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
-type legacyProviderClusterConfig struct {
-	MasterNodeGroup map[string]any   `json:"masterNodeGroup,omitempty"`
-	NodeGroups      []map[string]any `json:"nodeGroups,omitempty"`
-}
-
 // MigrationStatusFromState derives migration status from the decoded validation state.
-func MigrationStatusFromState(state *State) cpapi.MigrationStatus {
-	if state == nil || len(state.LegacyProviderClusterConfig) == 0 {
+func MigrationStatusFromState[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *State[IC, S, PCC]) cpapi.MigrationStatus {
+	if state == nil || !state.HasProviderClusterConfig() {
 		return cpapi.MigrationStatus{}
 	}
 
@@ -38,7 +37,11 @@ func MigrationStatusFromState(state *State) cpapi.MigrationStatus {
 }
 
 // IsNewResourcesComplete reports whether all new-model resources required by legacy PCC are present.
-func IsNewResourcesComplete(state *State) bool {
+func IsNewResourcesComplete[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *State[IC, S, PCC]) bool {
 	if state == nil {
 		return false
 	}
@@ -46,42 +49,48 @@ func IsNewResourcesComplete(state *State) bool {
 	if state.ModuleConfig == nil ||
 		state.ModuleConfig.Spec.Version < 2 ||
 		!isModuleConfigEnabled(state.ModuleConfig) ||
-		!hasProviderSettings(state.ModuleConfig) {
+		!state.ModuleConfig.Spec.Settings.HasProviderSection() {
 		return false
 	}
 
-	if _, ok := findCredentialSecret(state, cpapi.CredentialSecretName); !ok {
+	if !state.ExistsCredentialSecret(cpapi.CredentialSecretName) {
 		return false
 	}
 
-	legacy, err := DecodeJSONValue[legacyProviderClusterConfig](state.LegacyProviderClusterConfig)
-	if err != nil {
+	if !state.HasProviderClusterConfig() {
 		return false
 	}
 
+	// Only CloudPermanent NodeGroups can stand in for the legacy PCC node groups, so a
+	// same-named NodeGroup of another type must not count as a migrated resource.
 	nodeGroups := make(map[string]struct{}, len(state.NodeGroups))
 	for _, nodeGroup := range state.NodeGroups {
+		if nodeGroup.Spec.NodeType != cpapi.NodeTypeCloudPermanent {
+			continue
+		}
+
 		nodeGroups[nodeGroup.Name] = struct{}{}
 	}
 
 	instanceClasses := make(map[string]struct{}, len(state.InstanceClasses))
 	for _, class := range state.InstanceClasses {
-		instanceClasses[class.Name] = struct{}{}
+		instanceClasses[class.GetName()] = struct{}{}
 	}
 
-	if legacy.MasterNodeGroup != nil {
-		if !hasNamedResource(nodeGroups, "master") || !hasNamedResource(instanceClasses, cpapi.BuildInstanceClassName("master")) {
+	if state.ProviderClusterConfig.HasMasterNodeGroup() {
+		if !hasNamedResource(nodeGroups, "master") ||
+			!hasNamedResource(instanceClasses, cpapi.BuildInstanceClassName("master")) {
 			return false
 		}
 	}
 
-	for _, nodeGroup := range legacy.NodeGroups {
-		name, _ := nodeGroup["name"].(string)
+	for _, name := range state.ProviderClusterConfig.NodeGroupNames() {
 		if name == "" {
 			return false
 		}
 
-		if !hasNamedResource(nodeGroups, name) || !hasNamedResource(instanceClasses, cpapi.BuildInstanceClassName(name)) {
+		if !hasNamedResource(nodeGroups, name) ||
+			!hasNamedResource(instanceClasses, cpapi.BuildInstanceClassName(name)) {
 			return false
 		}
 	}
@@ -89,12 +98,8 @@ func IsNewResourcesComplete(state *State) bool {
 	return true
 }
 
-func isModuleConfigEnabled(moduleConfig *cpapi.ModuleConfig) bool {
+func isModuleConfigEnabled[S cpapi.ModuleSettingsObject](moduleConfig *cpapi.ModuleConfig[S]) bool {
 	return moduleConfig.Spec.Enabled != nil && *moduleConfig.Spec.Enabled
-}
-
-func hasProviderSettings(moduleConfig *cpapi.ModuleConfig) bool {
-	return moduleConfig.Spec.Settings.Provider != nil && len(moduleConfig.Spec.Settings.Provider.Parameters) > 0
 }
 
 func hasNamedResource(resources map[string]struct{}, name string) bool {

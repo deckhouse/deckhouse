@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation
+package api
 
 import (
 	"testing"
 
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	"k8s.io/utils/ptr"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 )
 
 func TestMigrationStatusFromState(t *testing.T) {
@@ -26,19 +28,19 @@ func TestMigrationStatusFromState(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		state *State
+		state *testState
 		want  cpapi.MigrationStatus
 	}{
 		{
 			name:  "state A - no PCC",
-			state: migrationBaseState(t),
+			state: migrationBaseState(),
 			want:  cpapi.MigrationStatus{},
 		},
 		{
 			name: "state B - PCC with incomplete new resources",
-			state: &State{
-				LegacyProviderClusterConfig: map[string]any{
-					"masterNodeGroup": map[string]any{"replicas": 3},
+			state: &testState{
+				ProviderClusterConfig: &testprovider.ProviderClusterConfig{
+					MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
 				},
 			},
 			want: cpapi.MigrationStatus{
@@ -49,7 +51,7 @@ func TestMigrationStatusFromState(t *testing.T) {
 		},
 		{
 			name:  "state C - PCC with complete new resources",
-			state: migrationCompleteState(t),
+			state: newCompleteMigrationState(),
 			want: cpapi.MigrationStatus{
 				LegacyPCCPresent:     true,
 				NewResourcesComplete: true,
@@ -71,37 +73,25 @@ func TestMigrationStatusFromState(t *testing.T) {
 	}
 }
 
-func migrationBaseState(t *testing.T) *State {
-	t.Helper()
-
+func migrationBaseState() *testState {
 	const (
 		moduleName        = "cloud-provider-test"
 		namespaceName     = "d8-cloud-provider-test"
 		instanceClassKind = "TestInstanceClass"
 	)
 
-	state := &State{
-		ModuleName:        moduleName,
-		NamespaceName:     namespaceName,
-		InstanceClassKind: instanceClassKind,
-		ModuleConfig: &cpapi.ModuleConfig{
+	state := &testState{
+		ModuleName:    moduleName,
+		NamespaceName: namespaceName,
+		ModuleConfig: &cpapi.ModuleConfig[*testprovider.Settings]{
 			ObjectMeta: cpapi.ObjectMeta{Name: moduleName},
-			Spec: cpapi.ModuleConfigSpec{
+			Spec: cpapi.ModuleConfigSpec[*testprovider.Settings]{
 				Enabled: ptr.To(true),
 				Version: 2,
-				Settings: cpapi.ModuleConfigSpecSettings{
-					Provider: &cpapi.ModuleConfigSpecProviderSettings{
-						Parameters: map[string]any{
-							"namespace": namespaceName,
-						},
-					},
-					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Disabled:   ptr.To(false),
-						Parameters: map[string]any{},
-					},
-					Nodes: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Disabled: ptr.To(true),
-					},
+				Settings: &testprovider.Settings{
+					Provider: testprovider.Section{Parameters: map[string]string{"namespace": namespaceName}},
+					Storage:  testprovider.Section{Disabled: false, Parameters: map[string]string{}},
+					Nodes:    testprovider.Section{Disabled: true},
 				},
 			},
 		},
@@ -122,34 +112,24 @@ func migrationBaseState(t *testing.T) *State {
 					CloudInstances: &cpapi.CloudInstances{
 						ClassReference: &cpapi.ClassReference{
 							Kind: instanceClassKind,
-							Name: "master-fc613b4dfd67",
+							Name: cpapi.BuildInstanceClassName("master"),
 						},
 					},
 				},
 			},
 		},
-		InstanceClasses: []cpapi.InstanceClass{
-			{
-				TypeMeta:   cpapi.TypeMeta{Kind: instanceClassKind},
-				ObjectMeta: cpapi.ObjectMeta{Name: "master-fc613b4dfd67"},
-				Spec: cpapi.InstanceClassSpec{
-					EtcdDisk: map[string]any{},
-				},
-			},
+		InstanceClasses: []*testprovider.InstanceClass{
+			testInstanceClass(cpapi.BuildInstanceClassName("master")),
 		},
 	}
 	return state
 }
 
-func migrationCompleteState(t *testing.T) *State {
-	t.Helper()
-
-	state := migrationBaseState(t)
-	state.LegacyProviderClusterConfig = map[string]any{
-		"masterNodeGroup": map[string]any{"replicas": 3},
-		"nodeGroups": []any{
-			map[string]any{"name": "worker"},
-		},
+func newCompleteMigrationState() *testState {
+	state := migrationBaseState()
+	state.ProviderClusterConfig = &testprovider.ProviderClusterConfig{
+		MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
+		NodeGroups:      []testprovider.NodeGroup{{Name: "worker", Replicas: 1}},
 	}
 	state.NodeGroups = append(state.NodeGroups, cpapi.NodeGroup{
 		ObjectMeta: cpapi.ObjectMeta{Name: "worker"},
@@ -157,19 +137,27 @@ func migrationCompleteState(t *testing.T) *State {
 			NodeType: cpapi.NodeTypeCloudPermanent,
 		},
 	})
-	state.InstanceClasses = append(state.InstanceClasses, cpapi.InstanceClass{
-		TypeMeta:   cpapi.TypeMeta{Kind: state.InstanceClassKind},
-		ObjectMeta: cpapi.ObjectMeta{Name: "worker-87eba76e7f31"},
-	})
+	state.InstanceClasses = append(state.InstanceClasses, testInstanceClass(cpapi.BuildInstanceClassName("worker")))
 
 	return state
+}
+
+func TestIsNewResourcesCompleteRequiresProviderSection(t *testing.T) {
+	t.Parallel()
+	state := newCompleteMigrationState()
+	state.ModuleConfig.Spec.Settings = &testprovider.Settings{}
+	if IsNewResourcesComplete(state) {
+		t.Fatal("IsNewResourcesComplete() = true, want false without provider section")
+	}
 }
 
 func TestMigrationStatusIncompleteWhenModuleConfigMissing(t *testing.T) {
 	t.Parallel()
 
-	got := MigrationStatusFromState(&State{
-		LegacyProviderClusterConfig: map[string]any{"masterNodeGroup": map[string]any{}},
+	got := MigrationStatusFromState(&testState{
+		ProviderClusterConfig: &testprovider.ProviderClusterConfig{
+			MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
+		},
 	})
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
@@ -179,8 +167,10 @@ func TestMigrationStatusIncompleteWhenModuleConfigMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenModuleDisabled(t *testing.T) {
 	t.Parallel()
 
-	state := migrationBaseState(t)
-	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{}}
+	state := migrationBaseState()
+	state.ProviderClusterConfig = &testprovider.ProviderClusterConfig{
+		MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
+	}
 	disabled := false
 	state.ModuleConfig.Spec.Enabled = &disabled
 
@@ -193,8 +183,10 @@ func TestMigrationStatusIncompleteWhenModuleDisabled(t *testing.T) {
 func TestMigrationStatusIncompleteWhenModuleVersionTooLow(t *testing.T) {
 	t.Parallel()
 
-	state := migrationBaseState(t)
-	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{}}
+	state := migrationBaseState()
+	state.ProviderClusterConfig = &testprovider.ProviderClusterConfig{
+		MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
+	}
 	state.ModuleConfig.Spec.Version = 1
 
 	got := MigrationStatusFromState(state)
@@ -206,10 +198,12 @@ func TestMigrationStatusIncompleteWhenModuleVersionTooLow(t *testing.T) {
 func TestMigrationStatusIncompleteWhenProviderSettingsMissing(t *testing.T) {
 	t.Parallel()
 
-	state := migrationBaseState(t)
-	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{}}
-	state.ModuleConfig.Spec.Settings = cpapi.ModuleConfigSpecSettings{
-		Storage: &cpapi.ModuleConfigSpecSubsystemSettings{Disabled: ptr.To(false)},
+	state := migrationBaseState()
+	state.ProviderClusterConfig = &testprovider.ProviderClusterConfig{
+		MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
+	}
+	state.ModuleConfig.Spec.Settings = &testprovider.Settings{
+		Storage: testprovider.Section{Disabled: false},
 	}
 
 	got := MigrationStatusFromState(state)
@@ -221,21 +215,11 @@ func TestMigrationStatusIncompleteWhenProviderSettingsMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenCredentialSecretMissing(t *testing.T) {
 	t.Parallel()
 
-	state := migrationBaseState(t)
-	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{}}
-	state.CredentialSecrets = nil
-
-	got := MigrationStatusFromState(state)
-	if !got.MigrationPending {
-		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
+	state := migrationBaseState()
+	state.ProviderClusterConfig = &testprovider.ProviderClusterConfig{
+		MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
 	}
-}
-
-func TestMigrationStatusIncompleteWhenLegacyPCCDecodeFails(t *testing.T) {
-	t.Parallel()
-
-	state := migrationBaseState(t)
-	state.LegacyProviderClusterConfig = map[string]any{"nodeGroups": "invalid"}
+	state.CredentialSecrets = nil
 
 	got := MigrationStatusFromState(state)
 	if !got.MigrationPending {
@@ -246,8 +230,10 @@ func TestMigrationStatusIncompleteWhenLegacyPCCDecodeFails(t *testing.T) {
 func TestMigrationStatusIncompleteWhenMasterNodeGroupMissing(t *testing.T) {
 	t.Parallel()
 
-	state := migrationBaseState(t)
-	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{"replicas": 3}}
+	state := migrationBaseState()
+	state.ProviderClusterConfig = &testprovider.ProviderClusterConfig{
+		MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
+	}
 	state.NodeGroups = nil
 
 	got := MigrationStatusFromState(state)
@@ -259,8 +245,10 @@ func TestMigrationStatusIncompleteWhenMasterNodeGroupMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenMasterInstanceClassMissing(t *testing.T) {
 	t.Parallel()
 
-	state := migrationBaseState(t)
-	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{"replicas": 3}}
+	state := migrationBaseState()
+	state.ProviderClusterConfig = &testprovider.ProviderClusterConfig{
+		MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
+	}
 	state.InstanceClasses = nil
 
 	got := MigrationStatusFromState(state)
@@ -272,10 +260,10 @@ func TestMigrationStatusIncompleteWhenMasterInstanceClassMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenLegacyWorkerNameMissing(t *testing.T) {
 	t.Parallel()
 
-	state := migrationCompleteState(t)
-	state.LegacyProviderClusterConfig = map[string]any{
-		"masterNodeGroup": map[string]any{"replicas": 3},
-		"nodeGroups":      []any{map[string]any{"name": ""}},
+	state := newCompleteMigrationState()
+	state.ProviderClusterConfig = &testprovider.ProviderClusterConfig{
+		MasterNodeGroup: &testprovider.MasterNodeGroup{Replicas: 3},
+		NodeGroups:      []testprovider.NodeGroup{{Name: ""}},
 	}
 
 	got := MigrationStatusFromState(state)
@@ -287,7 +275,7 @@ func TestMigrationStatusIncompleteWhenLegacyWorkerNameMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenWorkerInstanceClassMissing(t *testing.T) {
 	t.Parallel()
 
-	state := migrationCompleteState(t)
+	state := newCompleteMigrationState()
 	state.InstanceClasses = state.InstanceClasses[:1]
 
 	got := MigrationStatusFromState(state)
