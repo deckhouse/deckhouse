@@ -28,19 +28,22 @@ import (
 // StubDeliveredProviderBundle makes dhctl/pkg/config.providerCandiPresent treat
 // provider's bundle as already delivered under downloadDir, without a
 // registry pull. Providers whose validator ships externally (e.g. yandex)
-// require a downloaded bundle even when their ClusterConfiguration schema is
-// already baked into candiDir — this fakes the validator binary and copies
-// the real schema alongside it, so callers keep validating against the
-// actual OpenAPI spec instead of a synthetic one.
-func StubDeliveredProviderBundle(t *testing.T, downloadDir, candiDir, provider string) {
+// require a downloaded bundle — this fakes the validator binary and copies the
+// real ClusterConfiguration schema alongside it, so callers keep validating
+// against the actual OpenAPI spec instead of a synthetic one. The schema comes
+// from RequireProviderCandiDir, i.e. from the provider module when the candi
+// bundle is not baked into the image.
+func StubDeliveredProviderBundle(t *testing.T, downloadDir, provider string) {
 	t.Helper()
 	provider = strings.ToLower(provider)
+
+	candiDir := RequireProviderCandiDir(t, provider)
 
 	providerDir := providerdir.ProviderDir(downloadDir, provider)
 	openapiDir := filepath.Join(providerDir, "openapi")
 	require.NoError(t, os.MkdirAll(openapiDir, 0o755))
 
-	schema, err := os.ReadFile(filepath.Join(candiDir, "cloud-providers", provider, "openapi", "cluster_configuration.yaml"))
+	schema, err := os.ReadFile(filepath.Join(candiDir, "openapi", "cluster_configuration.yaml"))
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(openapiDir, "cluster_configuration.yaml"), schema, 0o644))
 

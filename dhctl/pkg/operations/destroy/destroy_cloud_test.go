@@ -57,13 +57,11 @@ import (
 var rootTmpDirCloud = path.Join(os.TempDir(), "dhctl-test-cloud-destroy")
 
 func TestCloudDestroy(t *testing.T) {
-	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
-
 	// Params.Options is nil in these tests, so ParseConfigFromCluster resolves
 	// to the fixed default download dir (withDownloadDir(nil)). Yandex's
 	// external validator ships in the terraform-manager bundle, not in-tree,
 	// so fake the delivery there instead of hitting the registry.
-	tests.StubDeliveredProviderBundle(t, options.DefaultTmpDir(), options.DefaultCandiDir, "yandex")
+	tests.StubDeliveredProviderBundle(t, options.DefaultTmpDir(), "yandex")
 
 	defer func() {
 		logger := dhlog.Discard()
