@@ -24,7 +24,7 @@ The Level 2 C4 architecture of the [`pod-reloader`](/modules/pod-reloader/) modu
 
 ## Module components
 
-The `pod-reloader` module module consists of a single **pod-reloader**component that includes the following containers:
+The `pod-reloader` module module consists of a single **pod-reloader** component that includes the following containers:
 
 * **manager**: Main container.
 * **kube-rbac-proxy**: Sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to pod-reloader metrics. It is an [open-source project](https://github.com/brancz/kube-rbac-proxy).
