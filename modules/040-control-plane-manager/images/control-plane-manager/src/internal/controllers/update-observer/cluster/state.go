@@ -33,6 +33,7 @@ func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneS
 		Spec: Spec{
 			DesiredVersion: cfg.DesiredVersion,
 			UpdateMode:     cfg.UpdateMode,
+			MaxUsedVersion: cfg.MaxUsedVersion,
 		},
 		Status: Status{
 			CurrentVersion:    currentVersion,
@@ -110,6 +111,7 @@ func determineCurrentVersion(nodes *version.UniqueAggregator, controlPlane *vers
 type Spec struct {
 	DesiredVersion string
 	UpdateMode     UpdateMode
+	MaxUsedVersion string
 }
 
 type Status struct {

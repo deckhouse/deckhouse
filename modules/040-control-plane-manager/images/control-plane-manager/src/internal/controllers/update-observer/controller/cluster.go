@@ -95,6 +95,10 @@ func getDesiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuratio
 	return &cluster.Configuration{
 		DesiredVersion: desiredVersion,
 		UpdateMode:     updateMode,
+		// Carried through unvalidated on purpose: this key is written by this controller, so a
+		// value that fails to parse here can only come from a hand edit. Rejecting the whole
+		// ConfigMap over it would block the very reconcile that overwrites it.
+		MaxUsedVersion: strings.TrimSpace(spec.MaxUsedVersion),
 	}, nil
 }
 

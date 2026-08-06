@@ -31,4 +31,8 @@ const (
 type Configuration struct {
 	DesiredVersion string
 	UpdateMode     UpdateMode
+	// MaxUsedVersion is the highest Kubernetes minor the cluster has ever run, mirrored into
+	// spec.maxUsedKubernetesVersion. Unlike the other two it is a fact about the past rather than
+	// a declaration, and it is monotonic: readers use it as the floor a downgrade may not cross.
+	MaxUsedVersion string
 }
