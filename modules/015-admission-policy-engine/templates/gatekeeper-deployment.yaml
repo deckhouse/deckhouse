@@ -95,6 +95,8 @@ spec:
               matchLabels:
                 app: "gatekeeper"
                 control-plane: "controller-manager"
+            matchLabelKeys:
+            - pod-template-hash
             topologyKey: kubernetes.io/hostname
         {{- end }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-no-csi") | nindent 6 }}
