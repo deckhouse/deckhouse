@@ -35,11 +35,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        autotuneQueue,
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
-		autotuneNodesBinding(true, true),
+		controlPlaneNodesBinding(true, true),
 		autotuneStateBinding(true),
 	},
-}, dependency.WithExternalDependencies(autotuneResourcesRequestsSync))
-
-func autotuneResourcesRequestsSync(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+}, dependency.WithExternalDependencies(func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	return runAutotune(ctx, input, dc, false)
-}
+}))

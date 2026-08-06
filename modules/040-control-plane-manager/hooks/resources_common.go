@@ -25,7 +25,9 @@ import (
 	"github.com/tidwall/gjson"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -100,8 +102,22 @@ func fallbackSplit(total, percent int64) int64 {
 	return total * percent / 100
 }
 
-func autotuneMetricNameFor(resourceName resourceKind) string {
-	return "d8-cpm-autotune-" + string(resourceName)
+// controlPlaneNodesBinding watches master Nodes (shared by calculate + autotune).
+func controlPlaneNodesBinding(onSync, onEvents bool) go_hook.KubernetesConfig {
+	return go_hook.KubernetesConfig{
+		Name:       "NodesResources",
+		ApiVersion: "v1",
+		Kind:       "Node",
+		LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+			{
+				Key:      "node-role.kubernetes.io/control-plane",
+				Operator: metav1.LabelSelectorOpExists,
+			},
+		}},
+		FilterFunc:                   applyNodesResourcesFilter,
+		ExecuteHookOnEvents:          ptr.To(onEvents),
+		ExecuteHookOnSynchronization: ptr.To(onSync),
+	}
 }
 
 const (
