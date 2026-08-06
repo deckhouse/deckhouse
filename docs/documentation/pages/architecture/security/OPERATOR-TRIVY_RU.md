@@ -6,7 +6,7 @@ search: operator-trivy, сканирование образов, сканиро�
 description: Архитектура модуля operator-trivy в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`operator-trivy`](/modules/operator-trivy/) обеспечивает сканирование пользовательских образов в рантайм на известные CVE (Common Vulnerabilities and Exposures), включая уязвимости Astra Linux, ALT Linux и РЕД ОС. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), обогащаемые базами Astra Linux, ALT Linux и РЕД ОС, а также [БДУ ФСТЭК (Банк данных угроз Федеральной службы по техническому и экспортному контролю)](https://bdu.fstec.ru/vul).
+Модуль [`operator-trivy`](/modules/operator-trivy/) обеспечивает сканирование пользовательских образов в рантайм на известные CVE (Common Vulnerabilities and Exposures), включая уязвимости Astra Linux, ALT Linux и РЕД ОС. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy). Для сканирования используются [публичные базы уязвимостей](https://github.com/aquasecurity/trivy-db/tree/main/pkg/vulnsrc), обогащаемые базами Astra Linux, ALT Linux и РЕД ОС, а также [БДУ ФСТЭК (Банком данных угроз Федеральной службы по техническому и экспортному контролю)](https://bdu.fstec.ru/vul).
 
 Также модуль производит анализ соответствия кластера Kubernetes требованиям [CIS (Center for Internet Security) Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes).
 
