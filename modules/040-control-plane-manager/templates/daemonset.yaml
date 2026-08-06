@@ -368,11 +368,21 @@ spec:
           The block sits outside the `if eq $profile "etcd-arbiter"` branch on purpose: both
           DaemonSets render from the same values in one loop, so both observers see identical
           values and cannot disagree about what to write.
-        */ -}}
+
+          The closing marker must not right-trim: that variant swallows the newline separating
+          this comment from the list item below, splices it onto the previous value line and
+          makes the whole manifest unparsable.
+        */}}
         - name: DESIRED_KUBERNETES_VERSION
           value: {{ $.Values.global.discovery.targetKubernetesVersion | quote }}
+        {{- /*
+          if/else and not `ternary`, which takes a typed bool and dies on anything else. The
+          global values schema defaults this key to false, so it is always a bool in a real
+          cluster — but a values set that predates the key (or any test fixture that omits it)
+          yields an untyped nil and would take the whole chart down. Truthiness is enough here.
+        */}}
         - name: KUBERNETES_UPDATE_MODE
-          value: {{ ternary "Automatic" "Manual" $.Values.global.discovery.kubernetesVersionIsDefault | quote }}
+          value: {{ if $.Values.global.discovery.kubernetesVersionIsDefault }}"Automatic"{{ else }}"Manual"{{ end }}
         - name: MAX_USED_KUBERNETES_VERSION
           value: {{ $.Values.controlPlaneManager.internal.maxUsedKubernetesVersion | quote }}
         - name: NODE_NAME

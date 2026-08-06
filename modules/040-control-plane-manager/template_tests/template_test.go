@@ -1305,6 +1305,81 @@ apiserver:
 		})
 	})
 
+	// These three variables are the entire input update-observer uses to author data.spec of
+	// kube-system/d8-cluster-kubernetes. Nothing else in this suite renders the DaemonSet env
+	// block, so a template mistake here reaches a cluster unnoticed.
+	Context("update-observer environment", func() {
+		envValue := func(name string) (string, bool) {
+			ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+			Expect(ds.Exists()).To(BeTrue())
+
+			for _, container := range ds.Field("spec.template.spec.containers").Array() {
+				if container.Get("name").String() != "control-plane-manager" {
+					continue
+				}
+				for _, env := range container.Get("env").Array() {
+					if env.Get("name").String() == name {
+						return env.Get("value").String(), true
+					}
+				}
+			}
+			return "", false
+		}
+
+		assertEnv := func(name, want string) {
+			value, found := envValue(name)
+			Expect(found).To(BeTrue(), "%s must be present in the DaemonSet", name)
+			Expect(value).To(Equal(want))
+		}
+
+		Context("when the cluster tracks the Deckhouse default", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.35")
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
+				f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.36")
+				f.HelmRender()
+			})
+
+			It("passes the declared version, Automatic mode and the historical maximum", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertEnv("DESIRED_KUBERNETES_VERSION", "1.35")
+				assertEnv("KUBERNETES_UPDATE_MODE", "Automatic")
+				assertEnv("MAX_USED_KUBERNETES_VERSION", "1.36")
+			})
+		})
+
+		Context("when the version is pinned", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", false)
+				f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.34")
+				f.HelmRender()
+			})
+
+			It("passes Manual mode", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertEnv("DESIRED_KUBERNETES_VERSION", "1.34")
+				assertEnv("KUBERNETES_UPDATE_MODE", "Manual")
+			})
+		})
+
+		// The global values schema defaults kubernetesVersionIsDefault to false, but a values set
+		// that predates the key yields an untyped nil. `ternary` rejects that and takes the whole
+		// chart down, which is why the template tests truthiness instead.
+		Context("when kubernetesVersionIsDefault is absent from values", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")
+				f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.34")
+				f.HelmRender()
+			})
+
+			It("still renders, falling back to Manual", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertEnv("KUBERNETES_UPDATE_MODE", "Manual")
+			})
+		})
+	})
+
 	Context("rootKubeconfigSymlink (control-plane-manager module values)", func() {
 		Context("when user-authz is enabled and controlPlaneManager.rootKubeconfigSymlink is false", func() {
 			BeforeEach(func() {
