@@ -80,10 +80,12 @@ The namespace role defines permissions for accessing namespaced resources of mod
 
 The module creates the following namespace roles:
 - `d8:namespace:viewer` — allows viewing standard Kubernetes resources (except for Secrets and RBAC resources), pod logs and metrics in a specific namespace, as well as authenticating in the cluster;
-- `d8:namespace:user` — in addition to the role `d8:namespace:viewer` it allows viewing secrets and RBAC resources in a specific namespace, connecting to pods (`kubectl exec`, `kubectl attach`), deleting pods (but not creating or modifying them), executing `kubectl port-forward` and `kubectl proxy`, as well as changing the number of replicas of controllers;
-- `d8:namespace:manager` — in addition to the role `d8:namespace:user` it allows managing module resources (for example, `Certificate`, `PodLoggingConfig`, etc.) and standard namespaced Kubernetes resources (`Pod`, `Deployment`, `ConfigMap`, `Secret`, `Service`, `Ingress`, `NetworkPolicy`, `CronJob`, etc.) in a specific namespace;
+- `d8:namespace:user` — in addition to the role `d8:namespace:viewer` it allows viewing RBAC resources in a specific namespace, deleting pods (but not creating or modifying them), executing `kubectl port-forward` and `kubectl proxy`, as well as changing the number of replicas of controllers;
+- `d8:namespace:manager` — in addition to the role `d8:namespace:user` it allows viewing secrets and connecting to pods (`kubectl exec`, `kubectl attach`), as well as managing module resources (for example, `Certificate`, `PodLoggingConfig`, etc.) and standard namespaced Kubernetes resources (`Pod`, `Deployment`, `ConfigMap`, `Secret`, `Service`, `Ingress`, `NetworkPolicy`, `CronJob`, etc.) in a specific namespace;
 - `d8:namespace:admin` — in addition to the role `d8:namespace:manager` it allows managing the resources `ResourceQuota`, `LimitRange`, `ServiceAccount`, `Role`, `RoleBinding` in a specific namespace;
 - `d8:namespace:superadmin` — in addition to the role `d8:namespace:admin` it allows security-sensitive operations: minting ServiceAccount tokens, making requests on behalf of ServiceAccounts, and managing [system resources placed in the namespace](#admin-level-restrictions-and-superadmin-rights) (for example, Dex pods or pods/PVCs of virtual machines).
+
+Reading every Secret of a namespace and executing commands inside its containers are the two permissions that turn access to a namespace into control over whatever runs there, so they belong to `manager` — the level that manages the namespace — and not to `user`, the level that merely works in it.
 
 The detailed split of permissions between `admin` and `superadmin` is described [below](#admin-level-restrictions-and-superadmin-rights).
 
@@ -263,7 +265,7 @@ Name mapping:
 | `d8:manage:<subsystem>:<level>` | `d8:subsystem:<subsystem>:<level>` |
 | `d8:use:role:<level>` | `d8:namespace:<level>` |
 
-Note: the deprecated `d8:use:role:admin` role maps to `d8:namespace:admin` and, just like it, [no longer grants](#admin-level-restrictions-and-superadmin-rights) the right to mint ServiceAccount tokens — that now requires the `superadmin` level.
+Note: the deprecated `d8:use:role:admin` role maps to `d8:namespace:admin` and, just like it, [no longer grants](#admin-level-restrictions-and-superadmin-rights) the right to mint ServiceAccount tokens — that now requires the `superadmin` level. Likewise, the deprecated `d8:use:role:user` and `d8:use:role:user:kubernetes` roles map to `d8:namespace:user` and no longer grant [viewing secrets and connecting to pods](#namespace-roles) — those now require the `manager` level.
 
 As long as bindings to the deprecated names remain in the cluster, the `D8UserAuthzDeprecatedRBACv2RoleInUse` (a binding to an alias role) and `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (a binding to a deprecated capability that no longer grants access) alerts fire.
 
