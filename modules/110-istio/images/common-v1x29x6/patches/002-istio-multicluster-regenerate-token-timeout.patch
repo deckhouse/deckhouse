@@ -1,8 +1,8 @@
 diff --git a/pkg/kube/multicluster/secretcontroller.go b/pkg/kube/multicluster/secretcontroller.go
-index 91a700d857..89be0a6ae0 100644
+index 2106189990..f709570ba6 100644
 --- a/pkg/kube/multicluster/secretcontroller.go
 +++ b/pkg/kube/multicluster/secretcontroller.go
-@@ -261,6 +261,26 @@ func (c *Controller) createRemoteCluster(kubeConfig []byte, clusterID string) (*
+@@ -333,6 +333,26 @@ func (c *Controller) createRemoteCluster(kubeConfig []byte, clusterID string) (*
  	}, nil
  }
  
@@ -29,7 +29,7 @@ index 91a700d857..89be0a6ae0 100644
  func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) error {
  	secretKey := name.String()
  	// First delete clusters
-@@ -280,6 +300,7 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
+@@ -352,6 +372,7 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
  		}
  
  		action := Add
@@ -37,7 +37,7 @@ index 91a700d857..89be0a6ae0 100644
  		if prev := c.cs.Get(secretKey, cluster.ID(clusterID)); prev != nil {
  			action = Update
  			// clusterID must be unique even across multiple secrets
-@@ -288,8 +309,8 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
+@@ -360,8 +381,8 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
  				logger.Infof("skipping update (kubeconfig are identical)")
  				continue
  			}
@@ -45,10 +45,10 @@ index 91a700d857..89be0a6ae0 100644
 -			prev.Stop()
 +			// Keep the previous cluster alive until the replacement is ready.
 +			prevCluster = prev
- 			prev.Client.Shutdown() // Shutdown all of the informers so that the goroutines won't leak
- 		} else if c.cs.Contains(cluster.ID(clusterID)) {
- 			// if the cluster has been registered before by another secret, ignore the new one.
-@@ -309,6 +330,10 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
+ 			for _, h := range c.handlers {
+ 				h.clusterClosing(prev.ID)
+ 			}
+@@ -384,6 +405,10 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
  		go func() {
  			remoteCluster.Run(c.meshWatcher, c.handlers, action)
  		}()
