@@ -279,9 +279,11 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 		}
 	}
 
+	result := filterLatestTags(newTags)
+
 	// double check for registries that do not support filtering
 	// to warn user about it
-	if len(newTags) != len(rawTags) {
+	if len(result) != len(rawTags) {
 		s.logger.Info("looks like your registry does not support tag listing with filtering by last version",
 			slog.String("package", packageName),
 			slog.String("lastVersion", lastVersion),
@@ -289,7 +291,42 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 			slog.Int("newTagsCount", len(newTags)))
 	}
 
-	return newTags, nil
+	return result, nil
+}
+
+// filterLatestTags filters out the latest version for every major.minor version
+func filterLatestTags(tags []*semver.Version) []*semver.Version {
+	latestTagsMap := map[uint64]map[uint64]*semver.Version{}
+	newLength := 0
+	for _, tag := range tags {
+		major := tag.Major()
+		minor := tag.Minor()
+
+		if latestTagsMap[major] == nil {
+			latestTagsMap[major] = map[uint64]*semver.Version{}
+		}
+
+		present, ok := latestTagsMap[major][minor]
+		if !ok || present == nil {
+			latestTagsMap[major][minor] = tag
+			continue
+		}
+		if present.GreaterThan(tag) {
+			continue
+		}
+
+		latestTagsMap[major][minor] = tag
+		newLength++
+	}
+
+	result := make([]*semver.Version, 0, newLength)
+	for _, major := range latestTagsMap {
+		for _, minor := range major {
+			result = append(result, minor)
+		}
+	}
+
+	return result
 }
 
 func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageName string) string {
