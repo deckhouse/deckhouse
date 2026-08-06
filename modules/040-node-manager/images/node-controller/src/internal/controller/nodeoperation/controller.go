@@ -66,7 +66,7 @@ type Reconciler struct {
 }
 
 // Setup wires the uncached reader.
-func (r *Reconciler) Setup(mgr ctrl.Manager) error {
+func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
 	return nil
 }
