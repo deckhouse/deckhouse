@@ -91,7 +91,7 @@ var _ = BeforeSuite(func() {
 	// disruption of a node is a conversation between them, so the suite runs
 	// the pair the cluster runs.
 	By("starting the manager with the node-config and node-operation controllers")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 	apiReader = mgr.GetAPIReader()
 
