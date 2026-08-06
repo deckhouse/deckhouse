@@ -248,7 +248,6 @@ func (r *RoleAccessResolver) inventory(index *roleIndex) []v1alpha1.InventoryRes
 				entry.ClusterConfig = origin.ClusterConfig
 				entry.Custom = origin.Custom
 				entry.Module = origin.Module
-				entry.System = origin.System
 				defined = true
 			}
 		}

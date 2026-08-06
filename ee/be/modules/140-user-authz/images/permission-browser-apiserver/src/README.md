@@ -421,6 +421,10 @@ status:
       resource: deployments
       kind: Deployment
       namespaced: true
+      module: ""              # the module that ships the resource, when its CRD says so
+      custom: false           # a CRD the platform does not install
+      clusterConfig: false    # holds cluster configuration: read from the label the
+                              # cluster-configuration backup is built from
       verbs: [get, list, watch, create, update, patch, delete, deletecollection]
   notes: []
   truncated: false

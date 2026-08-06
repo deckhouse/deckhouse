@@ -86,11 +86,10 @@ func TestModuleIndex_CustomIsWhatThePlatformDoesNotInstall(t *testing.T) {
 	assert.False(t, platform.Custom)
 }
 
-// Dex keeps its sessions and passwords in resources of its own, and nobody is
-// meant to be granted them. A coverage review has nothing to look for there, so
-// the report has to say which kinds are like that -- and which, on the contrary,
-// hold the configuration a human writes.
-func TestModuleIndex_TellsServiceKindsFromConfigurationOnes(t *testing.T) {
+// A coverage review is mostly about the objects a human writes, and the platform
+// already maintains that list: the label the cluster-configuration backup is
+// built from. The report carries it so the review can narrow to those kinds.
+func TestModuleIndex_TellsConfigurationKindsFromTheRest(t *testing.T) {
 	t.Parallel()
 
 	index := newTestModuleIndex(t,
@@ -99,22 +98,15 @@ func TestModuleIndex_TellsServiceKindsFromConfigurationOnes(t *testing.T) {
 			"heritage":                           "deckhouse",
 			"module":                             "user-authn",
 		}),
-		crdMetadata("passwords.dex.coreos.com", map[string]string{"deckhouse.io/system-resource": "true", "heritage": "deckhouse"}),
 		crdMetadata("offlinesessionses.dex.coreos.com", map[string]string{"heritage": "deckhouse"}),
 	)
 
 	config, _ := index.Origin("deckhouse.io", "dexauthenticators")
 	assert.True(t, config.ClusterConfig)
-	assert.False(t, config.System)
-
-	service, _ := index.Origin("dex.coreos.com", "passwords")
-	assert.True(t, service.System)
-	assert.False(t, service.ClusterConfig)
 
 	// Ничем не помеченный ресурс остаётся обычным: отчёт не догадывается за платформу.
 	plain, known := index.Origin("dex.coreos.com", "offlinesessionses")
 	assert.True(t, known)
-	assert.False(t, plain.System)
 	assert.False(t, plain.ClusterConfig)
 }
 

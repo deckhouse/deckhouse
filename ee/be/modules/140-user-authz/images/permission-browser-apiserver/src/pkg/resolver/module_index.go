@@ -23,10 +23,6 @@ const (
 	heritageLabel = "heritage"
 	// moduleLabel names the module a CustomResourceDefinition comes from.
 	moduleLabel = "module"
-	// systemResourceLabel marks what only the platform is meant to touch. The
-	// webhook enforces it on objects; on a CustomResourceDefinition it says the
-	// same about the whole kind.
-	systemResourceLabel = "deckhouse.io/system-resource"
 	// clusterConfigLabel marks the kinds that hold the configuration of the
 	// cluster -- the objects a human writes. The backup of the cluster
 	// configuration is built from it, which is why it is maintained.
@@ -66,10 +62,6 @@ type ResourceOrigin struct {
 	// Custom is true for a CRD the platform does not install: the resources of
 	// the cluster owner, the ones a coverage review of "our own" looks at.
 	Custom bool
-	// System is true for a kind only the platform is meant to touch -- the
-	// internal storage of a controller. Nobody is supposed to be granted it,
-	// so a coverage review has nothing to look for there.
-	System bool
 	// ClusterConfig is true for a kind that holds the configuration of the
 	// cluster: the objects a human writes, and the ones a coverage review is
 	// really about.
@@ -200,7 +192,6 @@ func (i *ModuleIndex) refresh(ctx context.Context) {
 			ClusterConfig: labels[clusterConfigLabel] == "true",
 			Custom:        labels[heritageLabel] != deckhouseHeritage,
 			Module:        labels[moduleLabel],
-			System:        labels[systemResourceLabel] == "true",
 		}
 	}
 

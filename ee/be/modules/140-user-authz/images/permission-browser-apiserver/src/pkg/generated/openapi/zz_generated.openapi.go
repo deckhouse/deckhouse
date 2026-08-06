@@ -3308,13 +3308,6 @@ func schema_pkg_apis_authorization_v1alpha1_InventoryResource(ref common.Referen
 							Format:      "",
 						},
 					},
-					"system": {
-						SchemaProps: spec.SchemaProps{
-							Description: "System is true for a kind only the platform is meant to touch: the internal storage of a controller, like the sessions and passwords of dex. Nobody is supposed to be granted it, so a coverage review has nothing to look for there.",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 					"clusterConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ClusterConfig is true for a kind that holds the configuration of the cluster -- the objects a human writes. Read from the label the backup of the cluster configuration is built from.",

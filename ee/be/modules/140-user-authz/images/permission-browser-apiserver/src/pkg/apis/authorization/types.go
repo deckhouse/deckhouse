@@ -631,11 +631,6 @@ type InventoryResource struct {
 	// +optional
 	Custom bool
 
-	// System is true for a kind only the platform is meant to touch: the
-	// internal storage of a controller, like the sessions and passwords of dex.
-	// +optional
-	System bool
-
 	// ClusterConfig is true for a kind that holds the configuration of the
 	// cluster -- the objects a human writes.
 	// +optional
