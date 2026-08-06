@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -550,4 +551,99 @@ func TestDeckhouseInstallCreatesClusterUUIDConfigMap(t *testing.T) {
 	cm, err := fakeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-uuid", metav1.GetOptions{})
 	require.NoError(t, err, "d8-cluster-uuid ConfigMap must be created when UUID is set")
 	require.Equal(t, clusterUUID, cm.Data["cluster-uuid"])
+}
+
+// update-observer owns kube-system/d8-cluster-kubernetes, but it only starts once the
+// control-plane-manager DaemonSet is running — long after the deckhouse Deployment. node-controller
+// reads spec.desiredVersion from that ConfigMap on its very first reconcile, so bootstrap has to
+// seed it alongside the d8-cluster-configuration Secret.
+//
+// The create-only half matters just as much: an installer that also updated the object would wipe
+// the status, labels and accumulated maxUsedKubernetesVersion the observer wrote.
+func TestDeckhouseInstallCreatesClusterKubernetesConfigMap(t *testing.T) {
+	ctx := t.Context()
+	require.NoError(t, os.Setenv("DHCTL_TEST", "yes"))
+	require.NoError(t, os.Setenv("DHCTL_TEST_VERSION_TAG", "1.54.1"))
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
+	}()
+
+	installConfig := func() *config.DeckhouseInstaller {
+		return &config.DeckhouseInstaller{
+			ClusterConfig:                 []byte("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\n"),
+			KubernetesVersion:             "1.35",
+			TrackDefaultKubernetesVersion: true,
+			Registry: registry_mocks.ConfigBuilder(
+				registry_mocks.WithModeUnmanaged(),
+				registry_mocks.WithLegacyMode(),
+			),
+		}
+	}
+
+	t.Run("creates the ConfigMap from the version being installed", func(t *testing.T) {
+		fakeClient := client.NewFakeKubernetesClient()
+
+		_, err := CreateDeckhouseManifests(ctx, fakeClient, installConfig(), func() error { return nil })
+		require.NoError(t, err)
+
+		cm, err := fakeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-kubernetes", metav1.GetOptions{})
+		require.NoError(t, err, "d8-cluster-kubernetes ConfigMap must be created during bootstrap")
+		require.Contains(t, cm.Data["spec"], `desiredVersion: "1.35"`)
+		require.Contains(t, cm.Data["spec"], "updateMode: Automatic")
+		require.Contains(t, cm.Data["spec"], `maxUsedKubernetesVersion: "1.35"`)
+		// The delete-protection webhook selects the object by this label.
+		require.Equal(t, "d8-cluster-kubernetes", cm.Labels["name"])
+	})
+
+	t.Run("an explicit pin becomes Manual", func(t *testing.T) {
+		fakeClient := client.NewFakeKubernetesClient()
+
+		cfg := installConfig()
+		cfg.TrackDefaultKubernetesVersion = false
+
+		_, err := CreateDeckhouseManifests(ctx, fakeClient, cfg, func() error { return nil })
+		require.NoError(t, err)
+
+		cm, err := fakeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-kubernetes", metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Contains(t, cm.Data["spec"], "updateMode: Manual")
+	})
+
+	t.Run("does not overwrite what update-observer already wrote", func(t *testing.T) {
+		fakeClient := client.NewFakeKubernetesClient()
+
+		observed := &apiv1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-kubernetes", Namespace: "kube-system"},
+			Data: map[string]string{
+				"spec":   "desiredVersion: \"1.36\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n",
+				"status": "currentVersion: \"1.36\"\n",
+			},
+		}
+		_, err := fakeClient.CoreV1().ConfigMaps("kube-system").Create(ctx, observed, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		_, err = CreateDeckhouseManifests(ctx, fakeClient, installConfig(), func() error { return nil })
+		require.NoError(t, err)
+
+		cm, err := fakeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-kubernetes", metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Contains(t, cm.Data["spec"], `desiredVersion: "1.36"`)
+		require.Contains(t, cm.Data["status"], `currentVersion: "1.36"`)
+	})
+
+	// A managed installation has no ClusterConfiguration, control-plane-manager is disabled, and
+	// nothing would ever own or read this object.
+	t.Run("is skipped without a ClusterConfiguration", func(t *testing.T) {
+		fakeClient := client.NewFakeKubernetesClient()
+
+		cfg := installConfig()
+		cfg.ClusterConfig = nil
+
+		_, err := CreateDeckhouseManifests(ctx, fakeClient, cfg, func() error { return nil })
+		require.NoError(t, err)
+
+		_, err = fakeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "d8-cluster-kubernetes", metav1.GetOptions{})
+		require.Error(t, err)
+	})
 }

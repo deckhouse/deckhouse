@@ -753,6 +753,41 @@ func getClusterConfigTasks(kubeCl *client.KubernetesClient, cfg *config.Deckhous
 				return err
 			},
 		})
+
+		// Seeded next to the Secret and under the same condition: a non-empty ClusterConfig is
+		// exactly what distinguishes an installation that runs control-plane-manager from a
+		// managed one, where this ConfigMap has no meaning and no owner.
+		//
+		// Create-only, deliberately: update-observer owns the object from the moment it starts,
+		// and an UpdateFunc here would overwrite what it wrote — status, labels and the
+		// accumulated maxUsedKubernetesVersion — with the state of the world at install time.
+		tasks = append(tasks, actions.ManifestTask{
+			Name: `ConfigMap "d8-cluster-kubernetes"`,
+			Manifest: func() any {
+				return manifests.ClusterKubernetesConfigMap(cfg.KubernetesVersion, cfg.TrackDefaultKubernetesVersion)
+			},
+			CreateFunc: func(ctx context.Context, manifest any) error {
+				configMap := manifest.(*apiv1.ConfigMap)
+				_, err := kubeCl.
+					CoreV1().ConfigMaps(manifests.ClusterKubernetesCmNamespace).
+					Get(ctx, configMap.GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.
+							CoreV1().ConfigMaps(manifests.ClusterKubernetesCmNamespace).
+							Create(ctx, configMap, metav1.CreateOptions{})
+					}
+				} else {
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
+				}
+
+				return err
+			},
+			UpdateFunc: func(ctx context.Context, _ any) error {
+				dhlog.FromContext(ctx).InfoContext(ctx, "Owned by update-observer. Skip!")
+				return nil
+			},
+		})
 	}
 
 	if cfg.HasProviderModuleConfig() {

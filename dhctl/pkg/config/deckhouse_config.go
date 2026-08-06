@@ -53,6 +53,13 @@ type DeckhouseInstaller struct {
 	ProviderName             string
 	ModuleConfigs            []*ModuleConfig
 
+	// KubernetesVersion is the resolved Kubernetes version being installed — never the "Default"
+	// sentinel. TrackDefaultKubernetesVersion records whether it was resolved from that sentinel
+	// (or from nothing being pinned at all) rather than from an explicit pin, which is what the
+	// cluster ConfigMap calls updateMode.
+	KubernetesVersion             string
+	TrackDefaultKubernetesVersion bool
+
 	// ModuleConfigCRDPath is the path to the ModuleConfig CRD manifest shipped
 	// in the installer image (or downloaded candi image). Empty means the file
 	// is unavailable and the CRD will be installed by deckhouse-controller.
@@ -258,6 +265,12 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		InstallerVersion:      metaConfig.InstallerVersion,
 		VersionFilePath:       metaConfig.VersionFilePath,
 		DownloadDir:           metaConfig.DownloadRootDir,
+
+		// kubernetesVersionRaw returns "" for "track the Deckhouse default" — whether that came
+		// from Default/Automatic in ModuleConfig or from nothing being pinned anywhere — and
+		// resolveKubernetesVersion turns it into the concrete version this installer ships.
+		KubernetesVersion:             resolveKubernetesVersion(metaConfig.kubernetesVersionRaw()),
+		TrackDefaultKubernetesVersion: metaConfig.kubernetesVersionRaw() == "",
 	}
 
 	return &installConfig, nil
