@@ -50,9 +50,12 @@ import (
 // only that the watch was registered, not that it is already delivering events.
 //
 // Watches are only ever added, never removed: a registration that changes its version leaves the
-// old handler on the old informer. That is harmless as a trigger (the workqueue deduplicates)
-// and costs one orphaned informer until the next pod restart — not worth the machinery of
-// unsubscription.
+// old handler on the old informer. Its events stay harmless (the workqueue deduplicates), and
+// once the old version stops being served its reflector only retries under backoff — a couple of
+// log lines per minute, no crash, with the new version's watch delivering throughout. The cost is
+// that one orphaned informer until the next pod restart, which every Deckhouse release performs
+// anyway. Unsubscribing would mean hand-rolling the event translation source.Kind gives us for
+// free, because it discards the handler registration RemoveEventHandler would need.
 func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
 	return source.Func(func(ctx context.Context, queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
 		secretInformer, err := informers.GetInformer(ctx, &corev1.Secret{})
