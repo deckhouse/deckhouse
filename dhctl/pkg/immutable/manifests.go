@@ -25,42 +25,32 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-// nodeAddressPlaceholder stands for the first master's own address. This payload
-// is built before the machine exists, so the address cannot be known here; the
-// node substitutes its own when it writes the files. It is the placeholder
-// bashible and control-plane-manager have always used on this path.
+// nodeAddressPlaceholder stands for the first master's own address, which this
+// payload cannot know: it is built before the machine exists. The node puts its
+// own in — the placeholder bashible has always used on this path.
 const nodeAddressPlaceholder = "$MY_IP"
 
-// controlPlaneTemplatesDir is where the control-plane templates live, relative
-// to CandiDir. The same directory the classic bootstrap renders from, through
-// the same engine — which is what makes a master brought up this way run the
-// bytes a master brought up classically runs.
+// controlPlaneTemplatesDir is where the templates live under CandiDir. The same
+// directory the classic bootstrap renders from, through the same engine, so both
+// kinds of master run the same bytes.
 const controlPlaneTemplatesDir = "control-plane"
 
 // runTypeClusterBootstrap is the run that brings the first control plane up,
-// before there is a cluster to read anything from. The templates gate several
-// flags on it.
+// before there is a cluster to read anything from.
 const runTypeClusterBootstrap = "ClusterBootstrap"
 
 // etcdManifest is written first: kubelet starts a pod the moment its manifest
 // appears, and an apiserver started before its datastore only crash-loops.
 const etcdManifest = "etcd.yaml"
 
-// authenticationConfig is the one file kube-apiserver demands on every run,
-// bootstrap included — the manifest passes --authentication-config
-// unconditionally, and an apiserver that cannot read the file exits before it
-// opens a port.
+// authenticationConfig is the one file kube-apiserver demands on every run: the
+// manifest passes --authentication-config unconditionally, and an apiserver that
+// cannot read it exits before opening a port.
 const authenticationConfig = "authentication-config.yaml"
 
-// bootstrapAuthenticationConfig is what bashible writes into that file before it
-// copies the kube-apiserver manifest into place, quoted byte for byte from the
-// heredoc in candi/bashible/common-steps/cluster-bootstrap/072_install_control_plane.sh.tpl.
-//
-// A constant rather than a template because at bootstrap it has no variables:
-// everything the module's helm define branches on — an OIDC issuer, a CA — comes
-// from a ModuleConfig that does not exist yet. It is the minimum kube-apiserver
-// needs to answer its own probes; control-plane-manager rewrites the file from
-// its own render as soon as Deckhouse is installed.
+// bootstrapAuthenticationConfig is what bashible writes into that file, quoted
+// byte for byte from 072_install_control_plane.sh.tpl. A constant, not a
+// template: at bootstrap there is no ModuleConfig to branch on.
 const bootstrapAuthenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
 anonymous:
@@ -83,10 +73,9 @@ type controlPlaneBundle struct {
 	ExtraFiles []renderedFile
 }
 
-// controlPlaneRenderParams are the cluster-wide settings the manifests are
-// rendered from. Wider than the clusterParamsSpec that travels in the payload:
-// four of these decide component command lines and nothing else, so they are
-// consumed here rather than sent to a node that has nothing left to render.
+// controlPlaneRenderParams are the settings the manifests are rendered from.
+// Wider than the clusterParamsSpec that travels in the payload: four of these
+// decide component command lines and are consumed here.
 type controlPlaneRenderParams struct {
 	ClusterDomain     string
 	ServiceSubnetCIDR string
@@ -134,13 +123,9 @@ type manifestsInput struct {
 	CandiDir string
 }
 
-// renderControlPlaneBundle renders what the first master's control plane is
-// made of.
-//
-// It runs in the installer rather than on the node because only the installer
-// knows the release it belongs to: the image digests, the template revision and
-// the cluster settings all come from here. The node receives files and writes
-// them, which leaves it with nothing to render and nothing to be a version of.
+// renderControlPlaneBundle renders what the first master's control plane is made
+// of. Here rather than on the node because only the installer knows its own
+// release: the digests, the templates and the settings all come from here.
 func renderControlPlaneBundle(ctx context.Context, in manifestsInput) (*controlPlaneBundle, error) {
 	if err := in.validate(); err != nil {
 		return nil, err
@@ -207,10 +192,9 @@ func (in manifestsInput) data() map[string]any {
 			"address": in.Registry.Address,
 			"path":    in.Registry.Path,
 		},
-		// The image keys carry the Kubernetes minor with the dot removed —
-		// kubeApiserver134 — because the templates look them up as `printf
-		// "kubeApiserver%s" (.clusterConfiguration.kubernetesVersion | replace
-		// "." "")`.
+		// The keys carry the Kubernetes minor with the dot removed —
+		// kubeApiserver134 — because the templates build the name with
+		// `printf "kubeApiserver%s" (… | replace "." "")`.
 		"images": map[string]any{
 			"controlPlaneManager": map[string]any{
 				"etcd":                                   in.Images.Etcd,
@@ -230,11 +214,9 @@ func (in manifestsInput) data() map[string]any {
 			// error rather than a false.
 			"clusterType": in.Cluster.ClusterType,
 		},
-		// Empty on purpose, and load-bearing twice over: the first master runs
-		// the manifests these two produce nothing for, and it is their emptiness
-		// that makes bootstrapAuthenticationConfig a constant rather than a
-		// render. control-plane-manager fills both in from the operator's
-		// settings as soon as it is installed.
+		// Empty on purpose, and load-bearing: their emptiness is what makes
+		// bootstrapAuthenticationConfig a constant. control-plane-manager fills
+		// both in from the operator's settings once it is installed.
 		"apiserver": map[string]any{},
 		"settings":  map[string]any{},
 	}
