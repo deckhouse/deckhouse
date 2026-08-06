@@ -121,7 +121,7 @@ func controlPlaneNodesBinding(onSync, onEvents bool) go_hook.KubernetesConfig {
 }
 
 const (
-	controlPlanePercent     = 40                // %
+	controlPlanePercent     = 35                // %
 	configEveryNodeMilliCPU = 300               // 0.3 Cpu
 	configEveryNodeMemory   = 512 * 1024 * 1024 // 512Mb
 	hardLimitMilliCPU       = 4 * 1000          // 4 Cpu
