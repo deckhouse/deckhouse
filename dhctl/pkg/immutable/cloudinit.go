@@ -22,6 +22,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
@@ -51,6 +52,10 @@ type MasterPayloadInput struct {
 	// CandiDir is the installer's own candi directory, where the control-plane
 	// templates come from.
 	CandiDir string
+	// GlobalOptions is what the operator's control-plane-manager settings are
+	// read through: resolving them needs that module's schema, and the schema
+	// store is built from these.
+	GlobalOptions *options.GlobalOptions
 }
 
 // BuildMasterPayload renders the cloud-init the first master boots with. The
