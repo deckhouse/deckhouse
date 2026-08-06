@@ -12,6 +12,8 @@ affinity:
     {{- range $key, $value := $labels }}
           {{ $key }}: {{ $value | quote }}
     {{- end }}
+      matchLabelKeys:
+      - pod-template-hash
       topologyKey: kubernetes.io/hostname
   {{- end }}
 {{- end }}
@@ -40,6 +42,8 @@ affinity:
     {{- range $key, $value := $labels }}
             {{ $key }}: {{ $value | quote }}
     {{- end }}
+        matchLabelKeys:
+          - pod-template-hash
         topologyKey: kubernetes.io/hostname
   {{- end }}
   {{- if $hasArch }}
