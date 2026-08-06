@@ -73,6 +73,7 @@ shell:
         cp -rf /srv/jekyll-data/site/* /srv/jekyll-data/documentation/
         {{ if eq .Edition "CSE" }}
         mv -f /srv/jekyll-data/documentation_override/pages/cse/* /srv/jekyll-data/documentation/pages
+        mv -f /srv/jekyll-data/documentation_override/images/cse/* /srv/jekyll-data/documentation/images
         mv -f /srv/jekyll-data/documentation_override/_data/topnav-cse.yml /srv/jekyll-data/documentation/_data/topnav.yml
         {{ end }}
         cp -rf /srv/jekyll-data/documentation_override/* /srv/jekyll-data/documentation
@@ -103,6 +104,9 @@ shell:
         #cp -Rf /app/_site/site/ru /app/_site/documentation/
         #cp -Rf /app/_site/site/en /app/_site/documentation/
         #rm -rf /app/_site/documentation/compare/
+        {{- if eq .Edition "CSE" }}
+        rm -rf /app/_site/documentation/en
+        {{- end }}
 {{ end }}
 git:
 - add: /{{ .ModulePath }}docs
@@ -185,6 +189,7 @@ git:
 {{ if eq .Edition "CSE" }}
     - _data/topnav.yml
 {{ else }}
+    - images/cse
     - pages/cse
     - _data/topnav-cse.yml
 {{ end }}

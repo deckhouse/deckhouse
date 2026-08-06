@@ -92,12 +92,13 @@
     let pageByModuleType = false;
     if (moduleType) {
       const selector = '.header.header__product-menu ul.nav li, .header__content.container ul.nav li';
-      $(selector).removeClass('active');
       $(selector).each(function () {
         const elementModuleType = $(this).attr('data-module-type');
         if (elementModuleType && elementModuleType === moduleType) {
           $(this).addClass('active');
           pageByModuleType = true;
+        } else {
+          $(this).removeClass('active');
         }
       });
     }
