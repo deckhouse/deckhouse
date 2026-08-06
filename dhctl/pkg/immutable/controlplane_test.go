@@ -44,7 +44,7 @@ func TestClusterParams(t *testing.T) {
 
 	params, err := clusterParams(metaConfig)
 	require.NoError(t, err)
-	require.Equal(t, clusterParamsSpec{
+	require.Equal(t, controlPlaneRenderParams{
 		ClusterDomain:           "cluster.local",
 		ServiceSubnetCIDR:       "10.223.0.0/16",
 		PodSubnetCIDR:           "10.222.0.0/16",
@@ -64,9 +64,8 @@ func TestClusterParams(t *testing.T) {
 	}
 }
 
-// TestResolveControlPlaneImages pins what travels to the node: bare digests.
-// The node prepends the registry address and path itself, from the registry it
-// was given in nodeConfig.
+// TestResolveControlPlaneImages pins what the templates are handed: bare
+// digests, with the registry address and path prepended at render time.
 func TestResolveControlPlaneImages(t *testing.T) {
 	metaConfig := testMetaConfig(t)
 

@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    control-plane-manager.deckhouse.io/kubernetes-version: "1.34"
+    control-plane-manager.deckhouse.io/kube-apiserver.advertise-address.endpoint: "10.241.32.10"
+  labels:
+    component: kube-apiserver
+    tier: control-plane
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+  - command:
+    - kube-apiserver
+    - --api-audiences=https://kubernetes.default.svc.cluster.local
+    - --service-account-issuer=https://kubernetes.default.svc.cluster.local
+    - --service-account-jwks-uri=https://kubernetes.default.svc.cluster.local/openid/v1/jwks
+    - --service-account-key-file=/etc/kubernetes/pki/sa.pub
+    - --service-account-signing-key-file=/etc/kubernetes/pki/sa.key
+    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
+    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+    - --client-ca-file=/etc/kubernetes/pki/ca.crt
+    - --secure-port=6443
+    - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
+    - --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt
+    - --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key
+    - --authorization-mode=Node,RBAC
+    - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
+    - --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key
+    - --requestheader-allowed-names=front-proxy-client
+    - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
+    - --requestheader-extra-headers-prefix=X-Remote-Extra-
+    - --requestheader-group-headers=X-Remote-Group
+    - --requestheader-username-headers=X-Remote-User
+    - --service-cluster-ip-range=10.222.0.0/16
+    - --advertise-address=10.241.32.10
+    - --enable-bootstrap-token-auth=true
+    - --allow-privileged=true
+    - --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt
+    - --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key
+    - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+    - --bind-address=10.241.32.10
+    - --etcd-servers=https://127.0.0.1:2379
+    - --feature-gates=RotateKubeletServerCertificate=true,CRDSensitiveData=true,TopologyAwareHints=true,DRADeviceBindingConditions=true,DRAConsumableCapacity=true,DRAExtendedResource=true,DRADeviceTaints=true,DRAPartitionableDevices=true
+    - --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true,resource.k8s.io/v1alpha3=true
+    - --profiling=false
+    - --request-timeout=60s
+    - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+    - --authentication-config=/etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
+    - --watch-cache-sizes=manifestcheckpointcontentchunks.state-snapshotter.deckhouse.io#0
+    env:
+    - name: GOGC
+      value: "50"
+    image: registry.deckhouse.io/deckhouse/ce@sha256:2222
+    imagePullPolicy: IfNotPresent
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: 10.241.32.10
+        path: /livez
+        port: 6443
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
+    name: kube-apiserver
+    readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        host: 10.241.32.10
+        path: /healthz
+        port: 6443
+        scheme: HTTPS
+      periodSeconds: 1
+      timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: "168m"
+        memory: "177167400"
+    securityContext:
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
+      seccompProfile:
+        type: RuntimeDefault
+    startupProbe:
+      failureThreshold: 24
+      httpGet:
+        host: 10.241.32.10
+        path: /livez
+        port: 6443
+        scheme: HTTPS
+      initialDelaySeconds: 1
+      periodSeconds: 1
+      timeoutSeconds: 5
+    volumeMounts:
+    - mountPath: /etc/kubernetes/deckhouse/extra-files
+      name: deckhouse-extra-files
+      readOnly: true
+    - mountPath: /etc/pki
+      name: etc-pki
+      readOnly: true
+    - mountPath: /usr/share/ca-certificates
+      name: usr-share-ca-certificates
+      readOnly: true
+    - mountPath: /usr/local/share/ca-certificates
+      name: usr-local-share-ca-certificates
+      readOnly: true
+    - mountPath: /etc/ssl/certs
+      name: ca-certs
+      readOnly: true
+    - mountPath: /etc/kubernetes/pki
+      name: k8s-certs
+      readOnly: true
+  dnsPolicy: ClusterFirstWithHostNet
+  hostNetwork: true
+  priority: 2000001000
+  priorityClassName: system-node-critical
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/deckhouse/extra-files
+      type: DirectoryOrCreate
+    name: deckhouse-extra-files
+  - hostPath:
+      path: /etc/pki
+      type: DirectoryOrCreate
+    name: etc-pki
+  - hostPath:
+      path: /etc/ssl/certs
+      type: DirectoryOrCreate
+    name: ca-certs
+  - hostPath:
+      path: /etc/kubernetes/pki
+      type: DirectoryOrCreate
+    name: k8s-certs
+  - hostPath:
+      path: /usr/share/ca-certificates
+      type: DirectoryOrCreate
+    name: usr-share-ca-certificates
+  - hostPath:
+      path: /usr/local/share/ca-certificates
+      type: DirectoryOrCreate
+    name: usr-local-share-ca-certificates
