@@ -72,10 +72,11 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 
 	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Prepare immutable master payload", func(ctx context.Context) error {
 		payload, err := immutable.BuildMasterPayload(ctx, immutable.MasterPayloadInput{
-			NodeName:   nodeName,
-			MetaConfig: bctx.metaConfig,
-			StateCache: bctx.stateCache,
-			CandiDir:   b.Options.Global.CandiDir,
+			NodeName:      nodeName,
+			MetaConfig:    bctx.metaConfig,
+			StateCache:    bctx.stateCache,
+			CandiDir:      b.Options.Global.CandiDir,
+			GlobalOptions: &b.Options.Global,
 		})
 		if err != nil {
 			return err

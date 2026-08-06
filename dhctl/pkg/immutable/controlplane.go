@@ -20,7 +20,10 @@ import (
 	"fmt"
 	"strings"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 )
 
 // controlPlaneDigestsKey is the images_digests.json module the control-plane
@@ -37,8 +40,30 @@ func (in MasterPayloadInput) validate() error {
 		return errors.New("state cache is nil")
 	case in.CandiDir == "":
 		return errors.New("candi dir is empty")
+	case in.GlobalOptions == nil:
+		return errors.New("global options are nil")
 	}
 	return nil
+}
+
+// controlPlaneSettings are the operator's control-plane-manager settings, in the
+// shape the templates read them in. Read through the same extractor the classic
+// bootstrap uses: the templates behind both masters are the same files, and
+// resourcesRequests honoured on one master and ignored on the other is a
+// difference nothing reports.
+func controlPlaneSettings(ctx context.Context, in MasterPayloadInput) (map[string]any, error) {
+	extractor := controlplane.NewSettingsExtractor(
+		in.MetaConfig,
+		config.NewSchemaStore(in.GlobalOptions),
+		config.GetEdition(),
+		dhlog.FromContext(ctx),
+	)
+
+	cfg, err := extractor.TemplateConfigForBootstrap(nodeAddressPlaceholder)
+	if err != nil {
+		return nil, fmt.Errorf("read control-plane-manager settings: %w", err)
+	}
+	return cfg.Settings, nil
 }
 
 // buildControlPlaneConfig assembles what the first master brings its own control
@@ -68,12 +93,18 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 		return nil, err
 	}
 
+	settings, err := controlPlaneSettings(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
 	bundle, err := renderControlPlaneBundle(ctx, manifestsInput{
 		NodeName: in.NodeName,
 		NodeIP:   nodeAddressPlaceholder,
 		Cluster:  cluster,
 		Registry: registry,
 		Images:   images,
+		Settings: settings,
 		CandiDir: in.CandiDir,
 	})
 	if err != nil {
