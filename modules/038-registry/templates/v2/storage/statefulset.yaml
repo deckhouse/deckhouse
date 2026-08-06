@@ -85,8 +85,19 @@ spec:
   # that compares ready against desired passed.
   replicas: {{ $.Values.global.discovery.clusterMasterCount | default 1 }}
   podManagementPolicy: Parallel
+  # Replaced by the controller, one replica at a time, and never the leader first.
+  #
+  # A StatefulSet's own RollingUpdate goes by ordinal, highest first. Which ordinal holds the fill
+  # lease is not a property of the ordinal, so the built-in order has an even chance of taking the
+  # leader down first and handing the role over during an update that was about to restart the new
+  # holder as well. What the design asks for instead is followers first and the leader last, which
+  # no update strategy can express — the lease is not something a StatefulSet knows about.
+  #
+  # OnDelete makes the StatefulSet stop replacing pods on its own: it keeps the new revision ready
+  # and waits. The registry-storage-update controller then deletes one pod at a time, checking that
+  # the node already holds the new images and that every other replica is serving before it does.
   updateStrategy:
-    type: RollingUpdate
+    type: OnDelete
   selector:
     matchLabels:
       app: registry-storage

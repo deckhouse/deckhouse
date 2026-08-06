@@ -479,6 +479,41 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 			Expect(containers[0].Get("ports.0.hostPort").Exists()).To(BeFalse())
 		})
 
+		// The update path of the cache, which is two facts that only make sense together.
+		//
+		// The images the cache will be replaced with have to be on the node BEFORE the replica is
+		// replaced, because a replaced replica pulls from the registry it is itself part of. And
+		// the replacement has to be driven by something that knows which replica holds the fill
+		// lease, because the leader must go last — which is why the StatefulSet is told to stop
+		// replacing pods on its own.
+		It("holds the new images on the masters and leaves the replacing to the controller", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			set := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
+			Expect(set.Field("spec.updateStrategy.type").String()).To(Equal("OnDelete"),
+				"a StatefulSet replacing pods by ordinal would take the leader down whenever the leader happens to be the highest one")
+
+			holder := f.KubernetesResource("DaemonSet", "d8-system", "registry-storage-image-holder")
+			Expect(holder.Exists()).To(BeTrue())
+			Expect(holder.Field("spec.template.spec.nodeSelector").String()).
+				To(ContainSubstring("node-role.deckhouse.io/control-plane"),
+					"holding the cache's images on every node in the cluster would occupy disk for nothing")
+
+			// Every image the StatefulSet runs is held, and by the same reference: a version that
+			// changes one and not the other would preload an image nobody is about to start.
+			var holderImages, storageImages []string
+			for _, container := range holder.Field("spec.template.spec.containers").Array() {
+				Expect(container.Get("command").Array()).To(HaveLen(1))
+				Expect(container.Get("command.0").String()).To(Equal("/pause"),
+					"a holder container that does anything can fail at doing it")
+				holderImages = append(holderImages, container.Get("image").String())
+			}
+			for _, container := range set.Field("spec.template.spec.containers").Array() {
+				storageImages = append(storageImages, container.Get("image").String())
+			}
+			Expect(holderImages).To(ConsistOf(storageImages))
+		})
+
 		It("keeps the blobs on the host at the fixed path", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

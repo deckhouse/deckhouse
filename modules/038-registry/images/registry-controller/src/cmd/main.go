@@ -21,6 +21,7 @@ import (
 	"os"
 	"strings"
 
+	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,6 +33,7 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -41,6 +43,10 @@ import (
 	"github.com/deckhouse/registry-controller/internal/register"
 	_ "github.com/deckhouse/registry-controller/internal/register/controllers"
 )
+
+// registryNamespace is where the module's own workloads live, and the only namespace this
+// controller has any business reading pods in.
+const registryNamespace = "d8-system"
 
 var (
 	scheme     = runtime.NewScheme()
@@ -73,6 +79,29 @@ func clientOptions() client.Options {
 	return client.Options{
 		Cache: &client.CacheOptions{
 			DisableFor: []client.Object{&corev1.Secret{}, &coordinationv1.Lease{}},
+		},
+	}
+}
+
+// cacheOptions confines the workload objects to the module's own namespace.
+//
+// The storage update controller WATCHES pods and daemonsets, and a watch cannot go uncached — an
+// informer is the only thing that can serve one. So these cannot be handled the way secrets and
+// the lease are; what they get instead is a namespaced informer, which lists and watches inside
+// d8-system alone and is therefore authorized by a Role there.
+//
+// The distinction matters and has been got wrong before: confining the cache does nothing for an
+// object granted by resourceNames, because a list is not a request for a name. It works here
+// precisely because these three are granted for the whole namespace.
+func cacheOptions() cache.Options {
+	inModuleNamespace := cache.ByObject{
+		Namespaces: map[string]cache.Config{registryNamespace: {}},
+	}
+	return cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.Pod{}:         inModuleNamespace,
+			&appsv1.StatefulSet{}: inModuleNamespace,
+			&appsv1.DaemonSet{}:   inModuleNamespace,
 		},
 	}
 }
@@ -115,6 +144,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 
 		Client: clientOptions(),
+		Cache:  cacheOptions(),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

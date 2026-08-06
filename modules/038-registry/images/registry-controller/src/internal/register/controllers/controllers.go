@@ -25,4 +25,5 @@ import (
 	_ "github.com/deckhouse/registry-controller/internal/controller/config"
 	_ "github.com/deckhouse/registry-controller/internal/controller/layout"
 	_ "github.com/deckhouse/registry-controller/internal/controller/observe"
+	_ "github.com/deckhouse/registry-controller/internal/controller/storageupdate"
 )

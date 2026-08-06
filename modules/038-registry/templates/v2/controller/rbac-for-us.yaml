@@ -95,6 +95,30 @@ rules:
     resources: ["secrets"]
     resourceNames: ["registry-resolved-auth"]
     verbs: ["get", "update", "patch"]
+  # The cache's own workloads, for replacing its replicas in an order a StatefulSet cannot express.
+  #
+  # Granted for the namespace rather than by name, because these are watched: a watch is served by
+  # an informer, an informer lists, and a list is not a request for a name. The informers are
+  # confined to this namespace in the manager's cache options, which is what makes a Role here
+  # sufficient — the same confinement does nothing for an object granted by resourceNames, and that
+  # difference has been got wrong before.
+  - apiGroups: ["apps"]
+    resources: ["statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  # Deleting a replica is how it is replaced under `updateStrategy: OnDelete`, and it is the one
+  # verb here that changes anything. Named, so that this cannot remove anything else in the
+  # namespace: the names of a StatefulSet's pods are its own name and an ordinal, and there is one
+  # per master.
+  - apiGroups: [""]
+    resources: ["pods"]
+    resourceNames:
+{{- range $i := until (int ($.Values.global.discovery.clusterMasterCount | default 1)) }}
+    - registry-storage-{{ $i }}
+{{- end }}
+    verbs: ["delete"]
   # And `create` on its own, unnamed, because RBAC cannot name it.
   #
   # The rules above restrict by resourceNames, which only works for verbs that address an
