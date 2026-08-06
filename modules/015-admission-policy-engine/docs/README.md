@@ -70,6 +70,20 @@ When `controllerValidation: false`, constraints are applied only to Pods. In thi
 - SecurityPolicyException labels on `spec.template.metadata.labels` of controllers are not resolved, since constraints are not applied to controllers;
 - Pods are still validated at launch time, as they are when `true` is set.
 
+### Lenient mode for fields injected by Kubernetes
+
+When controller-level validation is enabled, some constraints use a **lenient mode** for fields that Kubernetes admission controllers (LimitRange, PodSecurity, ServiceAccount admission) may inject at Pod creation time. This prevents false positives where a controller's pod template lacks a field that would be added automatically before the Pod is created.
+
+The following constraints skip violations for absent fields when reviewing controllers (but still enforce violations when fields are **explicitly set** to disallowed values):
+
+| Constraint | Skipped fields (when absent on controllers) | Kubernetes component |
+|---|---|---|
+| `D8RequiredResources` | `container.resources` (when completely absent) | LimitRange |
+| `D8AllowedUsers` | `runAsUser`, `runAsGroup`, `fsGroup`, `supplementalGroups` (with `MustRunAs` / `MustRunAsNonRoot`) | PodSecurity admission |
+| `D8AllowedSeccompProfiles` | `seccompProfile.type` (when not set in any source) | PodSecurity admission |
+
+For example, a Deployment without `resources` in its pod template will **not** be denied by `D8RequiredResources`, because a LimitRange in the namespace may inject default `requests` and `limits`. However, if `resources` is partially set (e.g., only `limits.memory` but not `limits.cpu`), the violation is still enforced.
+
 ## Pod validation when policies are modified or new ones are added
 
 For all three policy categories (Pod Security Standards, operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.

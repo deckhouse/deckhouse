@@ -1003,3 +1003,22 @@ spec:
                   name: nginx
       exception: ''
       exceptionRef: ''
+    - name: controller-allowed-absent-seccomp
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.seccompProfile
+        scenario: absent
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-absent-seccomp
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
