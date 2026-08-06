@@ -299,6 +299,10 @@ func filterLatestTags(tags []*semver.Version) []*semver.Version {
 	latestTagsMap := map[uint64]map[uint64]*semver.Version{}
 	newLength := 0
 	for _, tag := range tags {
+		if tag == nil {
+			continue
+		}
+
 		major := tag.Major()
 		minor := tag.Minor()
 
