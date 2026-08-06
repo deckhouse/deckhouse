@@ -18,14 +18,15 @@
 // Such a node runs no sshd, no bash and no bashible: the on-node agent
 // (nodelet) reads its desired state from /config/nodeconfig.yaml and
 // /config/controlplane.yaml, generates the whole cluster PKI itself — the CA
-// included — renders the control-plane manifests, brings its own apiserver up
-// and creates the first cluster objects.
+// included — writes the control-plane manifests rendered here, brings its own
+// apiserver up and creates the first cluster objects.
 //
-// The payload therefore carries inputs, never artifacts: nothing secret about
-// the cluster travels through cloud-init, which would otherwise leave the
-// cluster CA keys in a Secret, in the infrastructure state and in the
-// installer's cache. dhctl collects the admin kubeconfig afterwards from the
-// one-shot handoff endpoint the node opens for it — see handoff.go.
+// No key of the cluster travels in the payload. cloud-init ends up in a Secret
+// of somebody else's namespace, in the infrastructure state and in the
+// installer's cache, so the node generates the PKI and dhctl collects the admin
+// kubeconfig afterwards from the one-shot handoff endpoint the node opens for
+// it — see handoff.go. The manifests that do travel carry image references,
+// flags and file paths, and nothing that is worth stealing.
 //
 // A few exported helpers here are pure and take a context they never use. The
 // rule is that every exported function takes one first, and the alternative —
@@ -156,8 +157,8 @@ type updatePolicy struct {
 }
 
 // controlPlaneConfig is the document written to /config/controlplane.yaml. The
-// node generates the cluster PKI, renders the manifests and brings its own
-// apiserver up from the inputs carried here.
+// node generates the cluster PKI, writes the manifests carried here and brings
+// its own apiserver up.
 type controlPlaneConfig struct {
 	APIVersion string           `json:"apiVersion"`
 	Kind       string           `json:"kind"`
@@ -170,33 +171,34 @@ type controlPlaneSpec struct {
 	// Bootstrap marks the very first control-plane node: the one that has to
 	// create the initial cluster objects nobody else can create yet.
 	Bootstrap bool `json:"bootstrap"`
-	// Cluster are the cluster-wide inputs behind the certificate SANs and the
-	// command line of every control-plane component.
+	// Cluster are the cluster-wide inputs behind the certificate SANs. Only what
+	// the node still decides for itself is here: everything the components are
+	// started with has already been rendered into Manifests.
 	Cluster clusterParamsSpec `json:"cluster"`
-	// Images are the digests of the four static-pod images. They come from the
-	// digest map of the release the installer was built from, which the node
-	// cannot reach.
-	Images controlPlaneImages `json:"images"`
+	// Manifests are the static pods, rendered, in the order they must be
+	// written. The node writes them as they are, with its own address in place
+	// of nodeAddressPlaceholder.
+	Manifests []renderedFile `json:"manifests"`
+	// ExtraFiles are the files the manifests reference by path — the ones that
+	// live in /etc/kubernetes/deckhouse/extra-files.
+	ExtraFiles []renderedFile `json:"extraFiles,omitempty"`
 	// handoff is the one-shot channel dhctl collects the admin kubeconfig
 	// through once the node has a control plane.
 	Handoff handoff `json:"handoff"`
 }
 
-// clusterParamsSpec are the cluster-wide settings the node needs to issue its own
-// certificates and render the control-plane manifests.
+// renderedFile is one file the node writes without reading it.
+type renderedFile struct {
+	// Name is the file name, not a path: the directory is the node's to choose.
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+// clusterParamsSpec are the cluster-wide settings the node needs to issue its
+// own certificates.
 type clusterParamsSpec struct {
 	ClusterDomain     string `json:"clusterDomain"`
 	ServiceSubnetCIDR string `json:"serviceSubnetCIDR"`
-	PodSubnetCIDR     string `json:"podSubnetCIDR"`
-	// PodSubnetNodeCIDRPrefix is the per-node prefix length, e.g. "24".
-	PodSubnetNodeCIDRPrefix string `json:"podSubnetNodeCIDRPrefix"`
-	// KubernetesVersion is the minor version, e.g. "1.34". "Automatic" is
-	// resolved before it gets here: the node has no default to fall back on.
-	KubernetesVersion string `json:"kubernetesVersion"`
-	// ClusterType is Cloud or Static. Without Cloud the controller manager
-	// never gets --cloud-provider=external and never hands node lifecycle to
-	// the cloud-controller-manager.
-	ClusterType string `json:"clusterType"`
 	// EncryptionAlgorithm is empty when the cluster does not pin one; the node
 	// then falls back to the PKI library default.
 	EncryptionAlgorithm string `json:"encryptionAlgorithm"`
@@ -204,16 +206,6 @@ type clusterParamsSpec struct {
 	// to cover, the same list control-plane-manager keeps under the "cert-sans"
 	// key of its config secret.
 	CertSANs []string `json:"certSANs,omitempty"`
-}
-
-// controlPlaneImages are the digests of the four static-pod images. The node
-// prepends the registry address and path from nodeConfig.spec.registry to build
-// the reference, which is why only the digest travels here.
-type controlPlaneImages struct {
-	Etcd                  string `json:"etcd"`
-	KubeAPIServer         string `json:"kubeApiserver"`
-	KubeControllerManager string `json:"kubeControllerManager"`
-	KubeScheduler         string `json:"kubeScheduler"`
 }
 
 // handoff is the TLS material and the bearer token of the one-shot endpoint the
