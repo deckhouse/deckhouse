@@ -712,6 +712,25 @@ Enforcement notes:
 - A grant that matches no project, or a project with no matching grant, imposes no
   restriction.
 
+#### When a project has no default
+
+`AvailableClusterResource` reports the project default in `status.default`, and flags it among the
+names in `status.available` with `default: true`. Both may be absent, which is a normal state rather
+than an error — a resource can be granted without any name being the one to fall back on. It happens
+in four cases:
+
+- the grant policy sets no `default` and the registration has no `defaultFrom`;
+- the resource is value-backed (granted as a list of values rather than as objects of the cluster),
+  and `defaultFrom` does not apply to it;
+- `defaultFrom` is set, but the number of objects carrying that annotation is not exactly one:
+  a default by annotation is defined only when a single object claims it;
+- a default is set but the project may not use it — for example, the cluster-wide default
+  StorageClass is not among the names granted to this project. It is deliberately dropped, so that
+  the defaulting webhook never fills in a value the validating webhook would reject a moment later.
+
+The practical effect of the last one is that the field stays empty and the object is created (or
+denied) by the usual rules, instead of being denied over a name the project's user never chose.
+
 ### Granting cluster-scoped resources through a project template
 
 The availability rules for cluster-scoped resources can be set directly in a [structured template](#structured-templates) — they then automatically apply to all projects created from that template:
