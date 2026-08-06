@@ -1,8 +1,9 @@
 ---
 title: "Service account"
+description: How to create and use service accounts for CI/CD pipelines and integrations
 menuTitle: Service account
 force_searchable: true
-description: Service account
+description: How to create and use service accounts for CI/CD pipelines and integrations
 permalink: en/code/documentation/admin/service-account.html
 lang: en
 weight: 50

@@ -1,5 +1,6 @@
 ---
 title: "Creating a project"
+description: How to create a project and configure its initial settings
 permalink: en/code/documentation/user/project.html
 ---
 

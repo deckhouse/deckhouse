@@ -1,8 +1,9 @@
 ---
 title: "CODEOWNERS"
+description: How to assign owners responsible for repository paths with the CODEOWNERS file
 menuTitle: CODEOWNERS
 force_searchable: true
-description: CODEOWNERS
+description: How to assign owners responsible for repository paths with the CODEOWNERS file
 permalink: en/code/documentation/user/code-owners.html
 weight: 50
 ---
@@ -211,7 +212,7 @@ Things to note about the example:
 
 Used to exclude files within a section:
 
-```plaintext
+```console
 * @default
 !package-lock.json
 !**/generated/**

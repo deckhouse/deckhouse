@@ -1,5 +1,6 @@
 ---
 title: "API"
+description: Интерфейсы REST API и GraphQL для автоматизации повседневных задач
 permalink: ru/code/documentation/user/api.html 
 lang: ru
 ---

@@ -1,8 +1,9 @@
 ---
 title: "Сервисный аккаунт"
+description: Как создать и использовать сервисные аккаунты для CI/CD-пайплайнов и интеграций
 menuTitle: Сервисный аккаунт
 force_searchable: true
-description: Сервисный аккаунт
+description: Как создать и использовать сервисные аккаунты для CI/CD-пайплайнов и интеграций
 permalink: ru/code/documentation/admin/service-account.html
 lang: ru
 weight: 50

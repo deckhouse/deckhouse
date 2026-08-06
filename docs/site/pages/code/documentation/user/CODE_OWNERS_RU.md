@@ -1,8 +1,9 @@
 ---
 title: "CODEOWNERS"
+description: Как назначить ответственных за части репозитория с помощью файла CODEOWNERS
 menuTitle: CODEOWNERS
 force_searchable: true
-description: CODEOWNERS
+description: Как назначить ответственных за части репозитория с помощью файла CODEOWNERS
 permalink: ru/code/documentation/user/code-owners.html
 lang: ru
 weight: 50

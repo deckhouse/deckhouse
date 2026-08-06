@@ -1,8 +1,9 @@
 ---
 title: "Security credentials"
+description: Overview of tokens and SSH or GPG keys with options to filter, revoke, and delete them
 menuTitle: Security credentials
 force_searchable: true
-description: Security credentials
+description: Overview of tokens and SSH or GPG keys with options to filter, revoke, and delete them
 permalink: en/code/documentation/admin/security-credentials.html
 lang: en
 weight: 50

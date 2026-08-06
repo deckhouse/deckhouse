@@ -1,5 +1,6 @@
 ---
 title: "Working with the codebase and Code Review"
+description: How to review changes in merge requests before merging into the main branch
 permalink: en/code/documentation/user/code-review.html
 ---
 
