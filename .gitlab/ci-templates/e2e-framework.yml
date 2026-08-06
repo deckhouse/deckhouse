@@ -119,6 +119,8 @@ spec:
       aud: gitlab-access-aud
   before_script:
     - D8_BIN=/usr/local/bin/d8
+    - echo "VAULT_ROLE=$VAULT_ROLE"
+    - echo "$VAULT_ID_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq '.'
     - export VAULT_TOKEN=$(${D8_BIN} stronghold write -field=token auth/fox/login role=$VAULT_ROLE jwt=$VAULT_ID_TOKEN)
     - |
       while IFS='=' read -r name value; do
