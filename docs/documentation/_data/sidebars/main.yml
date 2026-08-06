@@ -1723,9 +1723,9 @@ entries:
                 ru: Deckhouse Virtualization Container Registry (DVCR)
               url: /architecture/virtualization/dvcr.html
             - title:
-                en: Containerized Data Importer (CDI)
-                ru: Containerized Data Importer (CDI)
-              url: /architecture/virtualization/cdi.html
+                en: Importing and uploading VM images and disks
+                ru: Импорт и загрузка образов и дисков ВМ
+              url: /architecture/virtualization/import.html
             - title:
                 en: Auxiliary components
                 ru: Вспомогательные компоненты

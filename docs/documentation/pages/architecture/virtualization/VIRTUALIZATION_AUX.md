@@ -76,7 +76,7 @@ The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/
 
 1. **Vm-route-forge**: A controller that monitors [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) custom resources of the `virtualization.deckhouse.io` API group and updates network routes on the node via Linux netlink/eBPF in routing tables used by [CNI Cilium](/modules/cni-cilium/) for routing traffic between VMs.
 
-1. **Pre-delete-hook** (Job): A Job started by the Deckhouse controller before the [`virtualization`](/modules/virtualization/) module is deleted. It removes the InternalVirtualizationKubeVirt and InternalVirtualizationCDI custom resources named `config`.
+1. **Pre-delete-hook** (Job): A Job started by the Deckhouse controller before the [`virtualization`](/modules/virtualization/) module is deleted. It removes the InternalVirtualizationKubeVirt custom resource named `config`.
 
 ### Interactions
 
@@ -92,7 +92,7 @@ Vm-route-forge interacts with the following components:
 
 Pre-delete-hook interacts with the following components:
 
-1. **Kube-apiserver**: Deletes InternalVirtualizationKubeVirt and InternalVirtualizationCDI resources named `config`.
+1. **Kube-apiserver**: Deletes InternalVirtualizationKubeVirt resource named `config`.
 
 The following external components interact with Virtualization-dra:
 
