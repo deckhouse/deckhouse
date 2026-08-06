@@ -70,12 +70,8 @@ func NewNodeGroupController(name string, state state.NodeGroupInfrastructureStat
 
 func (c *NodeGroupController) Run(ctx *context.Context) error {
 	// we hide deckhouse logs because we always have config
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
 
-	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs)
+	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
 	if err != nil {
 		return err
 	}
@@ -170,6 +166,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	settings []byte,
 	nodesToDeleteInfo []nodeToDeleteInfo,
 	getHookByNodeName func(nodeName string) infrastructure.InfraActionHook,
+	stopClientForNode func(nodeName string),
 ) error {
 	cfg, err := ctx.MetaConfig()
 	if err != nil {
@@ -233,6 +230,10 @@ func (c *NodeGroupController) deleteRedundantNodes(
 		}, ctx.ChangesSettings().AutomaticSettings)
 		if err != nil {
 			return err
+		}
+
+		if stopClientForNode != nil {
+			stopClientForNode(nodeToDeleteInfo.name)
 		}
 
 		if err := infrastructure.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
@@ -383,16 +384,8 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 				return err
 			}
 
-			// Resolved after the update, not before the loop: updating a master node makes the
-			// pipeline hook switch the converge to another master and stop the client tunneled
-			// through this one.
-			kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-			if err != nil {
-				return fmt.Errorf("Could not get kube client: %w", err)
-			}
-
 			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs)
+			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
 			if err != nil {
 				return err
 			}

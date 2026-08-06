@@ -87,7 +87,8 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance)
+	// applications have immutable tags, so a version change is the only invalidation
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance, false)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return

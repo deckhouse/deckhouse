@@ -41,6 +41,7 @@ import (
 
 type capiMDInput struct {
 	ng                  *deckhousev1.NodeGroup
+	resolved            derived_status.ResolvedNodeGroup
 	mdName              string
 	templateName        string
 	bootstrapSecretName string
@@ -65,6 +66,14 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	}
 	if s := serializeNodeGroupTaints(in.ng); s != "" {
 		annotations["capacity.cluster-autoscaler.kubernetes.io/taints"] = s
+	}
+	if nodeCapacity, _ := in.resolved.NodeCapacity.(map[string]interface{}); nodeCapacity != nil {
+		if cpu := nestedString(nodeCapacity, "cpu"); cpu != "" {
+			annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = cpu
+		}
+		if memory := nestedString(nodeCapacity, "memory"); memory != "" {
+			annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = memory
+		}
 	}
 
 	// Separate instances on purpose: the provider spec patch is deep-merged into spec below,
@@ -397,6 +406,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(ctx context.Cont
 
 		md := buildCAPIMachineDeployment(capiMDInput{
 			ng:                  ng,
+			resolved:            resolved,
 			mdName:              mdName,
 			templateName:        templateName,
 			bootstrapSecretName: bootstrapSecretName,

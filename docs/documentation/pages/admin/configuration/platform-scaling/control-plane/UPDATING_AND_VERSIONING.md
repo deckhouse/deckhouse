@@ -32,6 +32,7 @@ You can downgrade only one minor version from the highest version ever used in t
      provider: Yandex
    clusterDomain: cloud.education
    clusterType: Cloud
+   defaultCRI: Containerd
    kubernetesVersion: "1.30"
    podSubnetCIDR: 10.111.0.0/16
    podSubnetNodeCIDRPrefix: "24"

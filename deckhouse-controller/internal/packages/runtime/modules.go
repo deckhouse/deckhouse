@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"slices"
 
@@ -44,6 +45,8 @@ type Module struct {
 	Definition      modules.Definition
 	Settings        addonutils.Values
 	SettingsVersion int // schema version from ModuleConfig.Spec.Version
+	Maintenance     string
+	Enabled         *bool
 }
 
 // UpdateModulesSettings applies a settings-and-enabled change to an
@@ -85,17 +88,22 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 	}
 }
 
-// UpdateModule handles module creation and version changes from the module controller.
+// UpdateModule handles module creation, version changes, and enabled intent from the module controller.
 //
 // Flow mirrors UpdateApp: version changes enqueue the full pipeline
 // (Disable → Deploy → Load), settings-only changes trigger
 // Reschedule to re-apply settings through the scheduler's schedule pipeline.
 // See UpdateApp for detailed flow documentation.
-func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
+//
+// force runs the pipeline even when nothing the runtime tracks changed and makes the
+// Deploy task discard the cached copy of the version. It is for callers that resolved the
+// image digest and found it changed under a tag the runtime still sees as unchanged, and
+// is transitional: it goes away once module tags are immutable.
+func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.logger.Debug("update module", slog.String("name", module.Name))
+	r.logger.Debug("update module", slog.String("name", module.Name), slog.Bool("force", force))
 
 	if len(module.Settings) == 0 {
 		module.Settings = make(addonutils.Values)
@@ -103,13 +111,18 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 
 	name := module.Name
 	version := module.Definition.Version
+	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
 
-	// Modules do not support maintenance mode, so it is always empty here.
-	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, "") {
+	// A forced update skips change detection it would fail anyway.
+	if !force && !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
+		if enabledChanged {
+			r.scheduler.Reschedule(name)
+		}
+
 		return
 	}
 
-	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, "")
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, force)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
@@ -118,7 +131,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	r.status.NewStatus(name)
 
 	tasks := []queue.Task{
-		taskdeploy.NewModuleTask(name, version, repo, r.moduleDeployer, r.status, r.logger),
+		taskdeploy.NewModuleTask(name, version, repo, force, r.moduleDeployer, r.status, r.logger),
 		taskload.NewModuleTask(name, repo, r.loadModule, r.status, r.logger),
 	}
 
@@ -209,4 +222,23 @@ func (r *Runtime) RemoveModule(name string) {
 	})
 
 	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
+}
+
+// GetModuleDigest returns the digest the module tag currently resolves to. Callers compare
+// it against the last known one and pass the answer back as UpdateModule's force flag.
+func (r *Runtime) GetModuleDigest(ctx context.Context, remote registry.Remote, name, tag string) (string, error) {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "GetModuleDigest")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("tag", tag))
+	span.SetAttributes(attribute.String("repository", remote.Name))
+
+	digest, err := r.registry.GetImageDigest(ctx, remote, name, tag)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", fmt.Errorf("get %s module digest: %w", name, err)
+	}
+
+	return digest, nil
 }

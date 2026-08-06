@@ -16,6 +16,7 @@ openapi/values\.ya?ml$
 werf.yaml
 werf-giterminism.yaml
 ^.github/.+$
+^.gitlab/.+$
 ^go_lib/.+$
 ^helm_lib/.+$
 ^jq_lib/.+$

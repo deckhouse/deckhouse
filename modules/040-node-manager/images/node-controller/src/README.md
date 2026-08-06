@@ -74,11 +74,8 @@ kubectl apply NodeGroup
 │  │ 1. Decode AdmissionRequest (new + old object)   │ │
 │  │ 2. Load cluster state:                          │ │
 │  │    ├─ Secret d8-cluster-configuration           │ │
-│  │    │  (clusterType, prefix,                     │ │
-│  │    │   defaultCRI [fallback],                   │ │
-│  │    │   podSubnetNodeCIDRPrefix)                 │ │
-│  │    ├─ ModuleConfig "node-manager"               │ │
-│  │    │  (defaultCRI)                              │ │
+│  │    │  (clusterType, prefix, defaultCRI,         │ │
+│  │    │   podSubnetNodeCIDRPrefix)                  │ │
 │  │    ├─ Secret d8-provider-cluster-configuration  │ │
 │  │    │  (zones from discovery data)               │ │
 │  │    ├─ ModuleConfig "global"                     │ │

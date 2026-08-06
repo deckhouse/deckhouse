@@ -8,10 +8,6 @@ dependencies that are linked into the binary (x/crypto/ssh, x/net, k8s
 staging modules), not in cluster-autoscaler logic, so the fix is a pure
 `go.mod`/`go.sum` bump. The gardener tag stays `v1.34.1`.
 
-This patch also covers the k8s 1.35 and 1.36 images: `werf.inc.yaml` clamps
-`$maxVersion = "1.34"`, so those images are built from gardener `v1.34.1`
-with `patches/1.34/`.
-
 Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
 
 - `go` directive: `1.24.0` -> `1.25.0`

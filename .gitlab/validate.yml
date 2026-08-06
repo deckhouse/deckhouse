@@ -1,0 +1,146 @@
+# Pre-build / parallel-to-build validations (no built deckhouse images required).
+# Default runner tag from .gitlab-ci.yml (k8s-intteam-cloud-d8-ssdlc-runner).
+
+.validate_base:
+  stage: validate
+  needs: []
+  variables:
+    GIT_DEPTH: "0"
+
+# --- go generate (Go + werf for generate-tools / werf config render) ---
+go_generate:
+  extends:
+    - .validate_base
+    - .rules:on_validate
+  image:
+    name: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  before_script:
+    - !reference [.scripts, read_werf_version]
+    - !reference [.scripts, install_werf]
+  script:
+    - make generate
+    - git diff --exit-code || { echo 'Regenerated code does not match source, please run "make generate"' >&2; exit 1; }
+
+# --- unit tests (controller + modules) ---
+tests:
+  extends:
+    - .validate_base
+    - .rules:on_validate
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  variables:
+    TEST_TIMEOUT: 15m
+    TESTS_TIMEOUT: 15m
+    CGO_ENABLED: "1"
+    GIT_CLONE_PATH: /builds/deckhouse/deckhouse
+  script:
+    - make tests-controller tests-modules
+
+# --- node-controller unit + envtest ---
+tests_node_controller:
+  extends:
+    - .validate_base
+    - .rules:on_merge_request_node_controller
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  variables:
+    GOFLAGS: -buildvcs=false
+    GOCACHE: ${HOME}/go-build-cache-node-controller
+    GOMODCACHE: ${HOME}/go-mod-cache-node-controller
+  script:
+    - mkdir -p "${HOME}/envtest-assets" "${GOCACHE}" "${GOMODCACHE}"
+    - cd modules/040-node-manager/images/node-controller/src
+    - make test LOCALBIN="${HOME}/envtest-assets"
+
+# --- python webhook tests ---
+tests_python_webhooks:
+  extends:
+    - .validate_base
+    - .rules:on_validate
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/python-3.12.12:${CI_IMAGES_TAG}
+  script:
+    - |
+      # Same flow as testing/webhooks/test.sh, adapted for python image (no alpine/apk).
+      REQUIREMENTS="${CI_PROJECT_DIR}/modules/002-deckhouse/images/webhook-handler/src/requirements.txt"
+      pip3 install --break-system-packages -r "${REQUIREMENTS}"
+
+      TESTS_DIR="$(mktemp -d)"
+      trap 'rm -rf "${TESTS_DIR}"' EXIT
+
+      find "${CI_PROJECT_DIR}" -wholename '*/webhooks/*.py' -exec sh -c '
+        module="$(echo "$1" | grep -Po "\d{3}\-[a-z\-]+" || true)"
+        if [[ -z "${module}" ]]; then
+          exit 0
+        fi
+        mkdir -p "$2/${module}"
+        cp "$1" "$2/${module}/"
+      ' sh {} "${TESTS_DIR}" \;
+
+      cd "${TESTS_DIR}"
+      find . -wholename '*_test.py' -print0 | xargs -n 1 -t --null python3
+
+# --- DMT lint ---
+tests_dmt_lint:
+  extends:
+    - .validate_base
+    - .rules:on_validate
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/dmt:${CI_IMAGES_TAG}
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+  secrets:
+    DMT_METRICS_URL:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics/url@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DMT_METRICS_TOKEN:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics/token@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - |
+      # structure_prepare from tools/dmt-lint.sh (work on a copy; dmt binary from image).
+      WORK_DIR="$(mktemp -d)"
+      trap 'rm -rf "${WORK_DIR}"' EXIT
+      cp -a "${CI_PROJECT_DIR}/." "${WORK_DIR}/"
+      mkdir -p "${WORK_DIR}/candi/cloud-providers"
+
+      modules_dir=("ee/modules" "ee/be/modules" "ee/fe/modules" "ee/se/modules" "ee/se-plus/modules")
+      cloud_providers_glob="030-cloud-provider-*"
+
+      for dir in "${modules_dir[@]}"; do
+        shopt -s nullglob
+        for source_module_dir in "${WORK_DIR}/${dir}"/*; do
+          [[ -d "${source_module_dir}" ]] || continue
+          module_name="$(basename "${source_module_dir}")"
+          target_module_dir="${WORK_DIR}/modules/${module_name}"
+          merged_oss_tmp=""
+
+          if [[ -f "${target_module_dir}/oss.yaml" && -f "${source_module_dir}/oss.yaml" ]]; then
+            merged_oss_tmp="$(mktemp)"
+            cat "${target_module_dir}/oss.yaml" > "${merged_oss_tmp}"
+            printf "\n" >> "${merged_oss_tmp}"
+            cat "${source_module_dir}/oss.yaml" >> "${merged_oss_tmp}"
+          fi
+
+          if [[ -d "${target_module_dir}" ]]; then
+            cp -R "${source_module_dir}"/. "${target_module_dir}/"
+          else
+            cp -R "${source_module_dir}" "${target_module_dir}"
+          fi
+
+          if [[ -n "${merged_oss_tmp}" ]]; then
+            mv "${merged_oss_tmp}" "${target_module_dir}/oss.yaml"
+          fi
+        done
+
+        for cloud_provider_dir in "${WORK_DIR}/${dir}"/${cloud_providers_glob}; do
+          [[ -d "${cloud_provider_dir}" ]] || continue
+          cloud_provider_name="$(basename "${cloud_provider_dir}" | sed -E 's/^030-cloud-provider-//')"
+          cp -R "${cloud_provider_dir}" "${WORK_DIR}/candi/cloud-providers/${cloud_provider_name}"
+        done
+        shopt -u nullglob
+      done
+
+      dmt lint -l INFO "${WORK_DIR}/modules"

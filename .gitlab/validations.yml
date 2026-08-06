@@ -1,0 +1,101 @@
+# Source validations (GitHub validation.yml subset). PR-only.
+# Title/description from MR vars. Diff from merge-base SHA.
+
+.validation_base:
+  stage: validate
+  needs: []
+  variables:
+    GIT_DEPTH: "0"
+    DIFF_PATH: ./pr.diff
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  before_script:
+    - !reference [.scripts, prepare_validation_diff]
+
+no_cyrillic_validation:
+  extends:
+    - .validation_base
+    - .rules:on_merge_request
+  script:
+    - ./testing/validate_no_cyrillic.sh "${DIFF_PATH}"
+
+doc_validation:
+  extends:
+    - .validation_base
+    - .rules:on_merge_request
+  script:
+    - ./testing/validate_doc_changes.sh "${DIFF_PATH}"
+
+doc_validation_reference:
+  extends:
+    - .validation_base
+    - .rules:on_merge_request
+  script:
+    - ./testing/validate_doc_reference.sh "${DIFF_PATH}"
+
+copyright_validation:
+  extends:
+    - .validation_base
+    - .rules:on_merge_request
+  script:
+    - ./testing/validate_copyright.sh "${DIFF_PATH}"
+
+grafana_dashboard_validation:
+  extends:
+    - .validation_base
+    - .rules:on_merge_request
+  script:
+    - ./testing/validate_grafana_dashboard.sh "${DIFF_PATH}"
+
+release_requirements_validation:
+  extends:
+    - .validation_base
+    - .rules:on_merge_request
+  script:
+    - ./testing/validate_release_requirements.sh "${DIFF_PATH}"
+
+# Markdown / spellcheck need docker (make targets pull images).
+.docs_docker_base:
+  stage: validate
+  needs: []
+  tags:
+    - vm-intteam-cloud-d8-ssdlc-runner
+  variables:
+    GIT_DEPTH: "0"
+    DIFF_PATH: ./pr.diff
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    DECKHOUSE_DEV_REGISTRY_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_DEV_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  before_script:
+    - !reference [.scripts, docker_config_isolation]
+    - !reference [.scripts, login_dev_registry]
+    - !reference [.scripts, prepare_validation_diff]
+
+markdown_linter:
+  extends:
+    - .docs_docker_base
+    - .rules:on_merge_request
+  script:
+    - make lint-markdown
+
+doc_spell_check:
+  extends:
+    - .docs_docker_base
+    - .rules:on_merge_request_docs
+  script:
+    - ./tools/docs/spelling/validate_dictionary_sync.sh "${DIFF_PATH}"
+    - make lint-doc-spellcheck-pr
