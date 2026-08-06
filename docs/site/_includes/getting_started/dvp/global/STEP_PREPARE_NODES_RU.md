@@ -44,7 +44,8 @@
    sudo apt install nfs-common
    sudo mkdir -p /mnt/dvp-nfs-test
    sudo mount -t nfs4 <NFS_HOST>:<NFS_SHARE> /mnt/dvp-nfs-test
-   ls /mnt/dvp-nfs-test
+   sudo touch /mnt/dvp-nfs-test/probe && echo "OK: монтирование и запись работают"
+   sudo rm -f /mnt/dvp-nfs-test/probe
    sudo umount /mnt/dvp-nfs-test
    sudo rmdir /mnt/dvp-nfs-test
    ```
@@ -54,14 +55,19 @@
    sudo dnf install -y nfs-utils
    sudo mkdir -p /mnt/dvp-nfs-test
    sudo mount -t nfs4 <NFS_HOST>:<NFS_SHARE> /mnt/dvp-nfs-test
-   ls /mnt/dvp-nfs-test
+   sudo touch /mnt/dvp-nfs-test/probe && echo "OK: монтирование и запись работают"
+   sudo rm -f /mnt/dvp-nfs-test/probe
    sudo umount /mnt/dvp-nfs-test
    sudo rmdir /mnt/dvp-nfs-test
    ```
    {% endtab %}
    {% endtabs %}
 
-   Если монтирование не удаётся, проверьте, что NFS-сервер доступен с master-узла, его IP не совпадает с IP master- и worker-узлов, а запись в `/etc/exports` разрешает доступ из подсети узлов кластера.
+   Строка `OK: монтирование и запись работают` означает, что узел смонтировал каталог и записал в него от имени root, то есть работает и сеть, и опция `no_root_squash`. Если строки нет, ориентируйтесь на сообщение об ошибке:
+
+   - `mount.nfs4: Connection timed out` — NFS-сервер недоступен по сети. Проверьте firewall и что его IP не совпадает с IP master- и worker-узлов.
+   - `mount.nfs4: access denied by server` — узел не попадает в подсеть, указанную в `/etc/exports` на NFS-сервере.
+   - `touch: cannot touch ...: Permission denied` — каталог экспортирован без опции `no_root_squash`.
 
 ## Подготовка worker-узла
 

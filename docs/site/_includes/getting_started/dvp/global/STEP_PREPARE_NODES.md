@@ -44,7 +44,8 @@ To configure NFS, complete the following steps:
    sudo apt install nfs-common
    sudo mkdir -p /mnt/dvp-nfs-test
    sudo mount -t nfs4 <NFS_HOST>:<NFS_SHARE> /mnt/dvp-nfs-test
-   ls /mnt/dvp-nfs-test
+   sudo touch /mnt/dvp-nfs-test/probe && echo "OK: mount and write work"
+   sudo rm -f /mnt/dvp-nfs-test/probe
    sudo umount /mnt/dvp-nfs-test
    sudo rmdir /mnt/dvp-nfs-test
    ```
@@ -54,14 +55,19 @@ To configure NFS, complete the following steps:
    sudo dnf install -y nfs-utils
    sudo mkdir -p /mnt/dvp-nfs-test
    sudo mount -t nfs4 <NFS_HOST>:<NFS_SHARE> /mnt/dvp-nfs-test
-   ls /mnt/dvp-nfs-test
+   sudo touch /mnt/dvp-nfs-test/probe && echo "OK: mount and write work"
+   sudo rm -f /mnt/dvp-nfs-test/probe
    sudo umount /mnt/dvp-nfs-test
    sudo rmdir /mnt/dvp-nfs-test
    ```
    {% endtab %}
    {% endtabs %}
 
-   If mount fails, check that the NFS server is reachable from the master node, its IP differs from the master and worker IPs, and that the export in `/etc/exports` allows access from the cluster nodes subnet.
+   The `OK: mount and write work` line means the node mounted the directory and wrote to it as root, so both networking and the `no_root_squash` option are in place. If the line is missing, use the error message:
+
+   - `mount.nfs4: Connection timed out` — the NFS server is unreachable. Check the firewall and make sure its IP differs from the master and worker IPs.
+   - `mount.nfs4: access denied by server` — the node is outside the subnet listed in `/etc/exports` on the NFS server.
+   - `touch: cannot touch ...: Permission denied` — the directory is exported without the `no_root_squash` option.
 
 ## Prepare the worker node
 
