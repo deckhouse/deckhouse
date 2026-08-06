@@ -159,3 +159,7 @@ Added a 5s timeout context wrapping the Delete call in DeleteMirrorPod, that kub
 
 See issues:
 - https://github.com/kubernetes/kubernetes/issues/139502
+
+### 014-cel-go-two-var-comprehensions.patch (1.32 only)
+
+Adapts `staging/src/k8s.io/apiserver/pkg/cel/environment/base.go` to `github.com/google/cel-go` v0.29.0, which is required to fix GHSA-gcjh-h69q-9w9g. In v0.29.0 `ext.TwoVarComprehensions` became variadic (`func(...TwoVarComprehensionsOption) cel.EnvOption`), so the `UnversionedLib(ext.TwoVarComprehensions)` tripwire no longer compiles. The call is replaced with a direct `ext.TwoVarComprehensions()` invocation, mirroring the upstream change from commit 8a3d0d68a20 ("Update the env option."), part of the k8s PR "Bump cel-go to v0.23.2" ([kubernetes/kubernetes#129844](https://github.com/kubernetes/kubernetes/pull/129844)), which introduced the variadic API and switched `base.go` to the direct call. Only 1.32 needs this patch; k8s 1.33+ already ship the adapted code.
