@@ -35,7 +35,7 @@ The module consists of the following components:
 
 1. **Extended-monitoring-exporter**: Prometheus exporter that collects additional metrics, and also includes ready-made alerts and dashboards that allow you to detect and diagnose incidents faster:
 
-   * Collects and expounds metrics for free space and inodes on nodes, as well as for objects with a label extended-monitoring.deckhouse.io/enabled ="" in the namespace.
+   * Collects and expounds metrics for free space and inodes on nodes, as well as for objects with a label `extended-monitoring.deckhouse.io/enabled =""` in the namespace.
    * Automatically generates alerts when the thresholds are reached.
 
    It consists of the following containers:
