@@ -43,43 +43,30 @@ import (
 )
 
 const (
-	// immutableAPIWaitAttempts and immutableAPIWaitInterval bound the wait for
-	// the node — 30 minutes. Nothing has happened on the VM yet when this wait
-	// starts: it still has to install the OS onto its disk, reboot into it, pull
-	// three system extensions, start containerd and kubelet, generate the
-	// cluster PKI, pull four control-plane images and only then serve. The
-	// classic path spends its budget on "sshd answers", which is a fraction of
-	// that.
-	//
-	// The interval is short because the node now answers with its progress from
-	// the moment it starts working: a poll is one cheap request, while a long
-	// one is dead time on the clock of every bootstrap. At thirty seconds a node
-	// that became ready right after a poll was left waiting for the rest of the
-	// interval, which is most of a minute added to the wall time for nothing.
+	// 30 minutes, because nothing has happened on the VM yet: it still has to
+	// install its OS, reboot, pull three system extensions, start kubelet,
+	// generate the PKI and pull four control-plane images before it can answer.
 	immutableAPIWaitAttempts = 360
 	immutableAPIWaitInterval = 5 * time.Second
 
-	// immutableWaitAttempts and immutableWaitInterval bound everything that
-	// happens after the apiserver answers. Registering the Node is the node's
+	// Everything after the apiserver answers. Registering the Node is the node's
 	// next step, so a couple of minutes is generous.
 	immutableWaitAttempts = 120
 	immutableWaitInterval = time.Second
 
-	// immutableReadyWaitAttempts bounds the client's own wait for /version. The
-	// node has already reported Ready and served its kubeconfig by then, so this
-	// covers a restarting static pod or a freshly rebuilt forward rather than the
-	// install; at immutableAPIWaitInterval that is five minutes.
+	// The client's own wait for /version — a restarting static pod or a rebuilt
+	// forward, not the install, which is over by then. Five minutes.
 	immutableReadyWaitAttempts = 60
 )
 
-// errImmutableMasterFailed is the node reporting that it has given up. Nothing
-// on the other side is still working towards a control plane, so the wait ends
-// with the node's own message instead of half an hour of polling a dead node.
+// errImmutableMasterFailed is the node reporting that it has given up: nothing
+// is still working towards a control plane, so the wait ends with the node's
+// own message instead of half an hour of polling a dead node.
 var errImmutableMasterFailed = errors.New("the first master gave up bringing the control plane up")
 
 // buildImmutableMasterPayload renders the cloud-init the first master boots
-// with, under a progress line of its own: it is the step that decides what the
-// machine will be, and it runs before the machine exists.
+// with. A progress line of its own: it decides what the machine will be, and it
+// runs before the machine exists.
 func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, bctx *bootstrapContext, nodeName string) (string, error) {
 	var cloudConfig string
 
@@ -103,20 +90,16 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 }
 
 // connectToImmutableMaster collects the cluster credentials from the node and
-// hands the rest of the bootstrap a Kubernetes client.
-//
-// There is no bashible pipeline here: the node generates the cluster PKI, lays
-// the manifests down, waits for its apiserver and creates the first cluster
-// objects itself. dhctl never sees a cluster key until the node gives it one.
+// hands the rest of the bootstrap a Kubernetes client. No bashible pipeline:
+// dhctl never sees a cluster key until the node gives it one.
 func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
 	if bctx.masterIP == "" {
 		return errors.New("the first master address is unknown: rerun the bootstrap so the BaseInfra phase reports it")
 	}
 
-	// A rerun does not come back through the node's bootstrap channel. Once an
-	// attempt has collected the credentials that channel is closing or already
-	// shut, and what it served is on disk — so the rerun reads them from there
-	// instead of waiting half an hour on a listener that may no longer exist.
+	// A rerun does not come back through the channel: once an attempt has
+	// collected the credentials that channel is closed, and what it served is on
+	// disk. Reading from there beats waiting on a listener that may be gone.
 	complete, collectedPath, err := adminKubeconfigFromCache(ctx, bctx.stateCache)
 	if err != nil {
 		return err
@@ -162,32 +145,21 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	}
 
 	// The credentials are stored and proven to work, so the node may stop
-	// offering them. Attempted on a rerun too: the record above is written before
-	// the confirmation, so reaching this point again says nothing about whether
-	// the node was ever told, and a node that was told answers that it was.
+	// offering them. Attempted on a rerun too: a node that was already told
+	// answers that it was.
 	b.confirmImmutableHandoff(ctx, bctx)
 
-	// The file holds admin credentials and is read exactly once, here: the runner
-	// behind a kubeconfig-backed provider is RunnerInterfaceNoAction, which never
-	// reports a switched connection, so no later Client() call rebuilds the
-	// client from it. In dhctl-server the process outlives the bootstrap, so waiting for
-	// the shutdown hook to remove it means leaving it on disk for hours.
+	// Read exactly once, here — no later Client() call rebuilds from it. In
+	// dhctl-server the process outlives the bootstrap, so leaving it to the
+	// shutdown hook means admin credentials on disk for hours.
 	removeImmutableKubeconfig(ctx, kubeconfigPath)
 
 	return waitForImmutableMasterNode(ctx, kubeCl, bctx.masterNodeName)
 }
 
 // adminKubeconfigFromCache returns the admin kubeconfig a previous attempt
-// already collected and the path it was read from, or nil and "" when there is
-// nothing to reuse.
-//
-// A recorded path that no longer resolves is reported and treated as nothing to
-// reuse. The record is written before the confirmation, so it does not say the
-// node's channel is closed — and the operator is told, in as many words, that
-// this file is the only way into the cluster, which is an invitation to move it
-// somewhere safer. Refusing to go on would turn that into an unrecoverable
-// bootstrap with no flag to clear the record. The channel either serves again or
-// says for itself that it has already served.
+// collected, or nil when there is nothing to reuse. A recorded path that no
+// longer resolves is warned about: refusing would make the bootstrap dead.
 func adminKubeconfigFromCache(ctx context.Context, stateCache state.Cache) ([]byte, string, error) {
 	path, err := immutable.LoadCollectedKubeconfig(ctx, stateCache)
 	if err != nil {
@@ -208,10 +180,8 @@ func adminKubeconfigFromCache(ctx context.Context, stateCache state.Cache) ([]by
 }
 
 // collectImmutableCredentials waits for the node's bootstrap channel, collects
-// the admin kubeconfig from it and stores the operator's copy.
-//
-// The node returns a certificate, not credentials. They become credentials here,
-// where the installer's key has been all along.
+// the admin kubeconfig and stores the operator's copy. The node returns a
+// certificate; it becomes credentials here, where the installer's key lives.
 func (b *ClusterBootstrapper) collectImmutableCredentials(ctx context.Context, bctx *bootstrapContext) ([]byte, error) {
 	kubeconfig, err := b.collectImmutableKubeconfig(ctx, bctx, immutable.HandoffPort)
 	if err != nil {
@@ -223,15 +193,9 @@ func (b *ClusterBootstrapper) collectImmutableCredentials(ctx context.Context, b
 		return nil, err
 	}
 
-	// Stored before anything else is attempted. These are the only credentials
-	// that will ever leave the node, and everything after this — building a
-	// client, waiting up to half an hour for the API server — can fail. Losing
-	// them there would leave a running cluster nobody can reach.
-	//
-	// The operator's copy keeps the address the node put in it: its own. The
-	// retargeted one points at a tunnel this process owns, which stops existing
-	// the moment the bootstrap ends — saving that one would hand over a
-	// kubeconfig that works exactly until it is needed.
+	// Stored first: these are the only credentials that will ever leave the node
+	// and everything after this can fail. The operator's copy keeps the node's
+	// own address; the retargeted one dies with this process's tunnel.
 	if err := b.saveAdminKubeconfig(ctx, complete, bctx); err != nil {
 		return nil, err
 	}
@@ -240,12 +204,8 @@ func (b *ClusterBootstrapper) collectImmutableCredentials(ctx context.Context, b
 }
 
 // collectImmutableKubeconfig waits for the node's one-shot handoff endpoint and
-// reads the admin kubeconfig out of it.
-//
-// This is the whole "wait for the node to install itself and bring a control
-// plane up" step: the endpoint does not answer before that is done. The channel
-// to it is closed again as soon as the credentials are in hand — it serves
-// once, so there is nothing left to reach.
+// reads the admin kubeconfig out of it. This is the whole "wait for the node to
+// install itself and bring a control plane up" step.
 func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bctx *bootstrapContext, handoffPort int) ([]byte, error) {
 	material, err := immutable.LoadHandoffMaterial(ctx, bctx.stateCache)
 	if err != nil {
@@ -276,10 +236,9 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		Material:   material,
 	}
 
-	// The wait is narrated rather than silent: the node answers the status
-	// endpoint from the moment it starts working, so an operator watching a
-	// bootstrap sees "generating the cluster PKI" instead of nothing at all,
-	// and a node that fails says why instead of just staying unreachable.
+	// Narrated rather than silent: the node answers the status endpoint from the
+	// moment it starts working, so an operator sees what it is doing and a node
+	// that fails says why instead of just staying unreachable.
 	logger := dhlog.FromContext(ctx)
 	var (
 		kubeconfig  []byte
@@ -288,24 +247,17 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		// what tells "the tunnel died" apart from "the node is not up yet".
 		answered bool
 	)
-	// channelGone is the state the reopen hangs off, rather than a branch of the
-	// error classifier: an attempt that stops the tunnel and then fails to open a
-	// new one must leave the next attempt reopening, not dialling a local port
-	// nothing listens on. That failure looks like ECONNREFUSED, which
-	// channelBroken deliberately excludes, so a classifier-driven reopen would
-	// never run again and the loop would burn its whole budget.
+	// State rather than a branch of the classifier: an attempt that stops the
+	// tunnel and fails to reopen must leave the next attempt reopening, not
+	// dialling a local port nothing listens on.
 	channelGone := false
-	// noteChannelBroken records that the channel is gone when the error says so,
-	// and hands the error back unchanged. Both requests below go through it: the
-	// kubeconfig transfer is the longer of the two and the likelier one to be cut
-	// in half, and a break there that did not arm the reopen would spend every
-	// remaining attempt dialling a local port nothing listens on.
+	// Both requests below go through it. A break in the kubeconfig transfer that
+	// did not arm the reopen would spend every remaining attempt dialling a dead
+	// local port.
 	noteChannelBroken := func(err error) error {
-		// Only after the channel has answered at least once. Before that a refused
-		// connection is simply the node still installing itself, which is most of
-		// this wait — reopening on it would rebuild the tunnel every few seconds
-		// and hammer the bastion with hundreds of connections for a bootstrap that
-		// is going perfectly well.
+		// Only after the channel has answered once: before that a refused
+		// connection is just the node still installing itself, and reopening on it
+		// would hammer the bastion throughout a healthy bootstrap.
 		if !answered || !channelBroken(err) {
 			return err
 		}
@@ -382,13 +334,9 @@ func (b *ClusterBootstrapper) openImmutableAPIChannel(ctx context.Context, bctx 
 	return "https://" + address, nil
 }
 
-// openImmutableChannel returns the host:port dhctl reaches the given port of
-// the master on, and the function that closes the tunnel behind it — nil when
-// there is no tunnel.
-//
-// Without a bastion that is the master itself; with one it is the local end of
-// a forward through the bastion, which opens a direct-tcpip channel to an
-// arbitrary address, so no sshd on the master is involved.
+// openImmutableChannel returns the host:port dhctl reaches the given port on,
+// and the closer of the tunnel behind it — nil without a bastion. The forward
+// is a direct-tcpip channel, so no sshd on the master is involved.
 func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bootstrapContext, remotePort int, purpose string) (string, func(), error) {
 	connectionConfig := b.SSHProviderInitializer.GetConfig()
 	if connectionConfig == nil || connectionConfig.Config == nil || connectionConfig.Config.BastionHost == "" {
@@ -456,10 +404,9 @@ func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *
 		return nil, nil, fmt.Errorf("forward %d to %s:%d through the bastion %s: %w", localPort, masterIP, remotePort, sshConfig.BastionHost, err)
 	}
 
-	// No HealthMonitor goroutine draining the tunnel's error channel: gossh's
-	// Tunnel.sendError is a non-blocking send, so an unread channel cannot stall
-	// the accept loop, and the errors themselves say nothing worth acting on —
-	// a request that hits one fails on its own and the caller retries.
+	// Nothing drains the tunnel's error channel: gossh sends there non-blocking,
+	// so an unread channel cannot stall the accept loop, and a request that hits
+	// an error fails on its own and the caller retries.
 	stop := func() {
 		tunnel.Stop()
 		cleanupSSHProvider(ctx, sshProvider)
@@ -485,10 +432,9 @@ func statusLine(status *immutable.Status) string {
 	return string(status.Phase) + ": " + status.Message
 }
 
-// confirmImmutableHandoff tells the node the credentials are safely stored, and
-// only then does the node stop offering them. Reported rather than returned:
-// the kubeconfig is already on disk by this point, so a failed confirmation
-// costs a node that keeps its channel open, not a lost cluster.
+// confirmImmutableHandoff tells the node the credentials are stored, and only
+// then does it stop offering them. Reported, not returned: the kubeconfig is
+// already on disk, so a failed confirmation costs an open channel, not a cluster.
 func (b *ClusterBootstrapper) confirmImmutableHandoff(ctx context.Context, bctx *bootstrapContext) {
 	logger := dhlog.FromContext(ctx)
 
@@ -526,10 +472,9 @@ func (b *ClusterBootstrapper) confirmImmutableHandoff(ctx context.Context, bctx 
 		return
 	}
 
-	// The rest of the material stays: the state cache survives a failed run, and
-	// a rerun that found it gone would mint fresh material and render a payload
-	// the master never booted with. Only the client key goes — see
-	// immutable.ForgetHandoffClientKey.
+	// The rest of the material stays: a rerun that found it gone would mint fresh
+	// material and render a payload the master never booted with. Only the
+	// client key goes — see immutable.ForgetHandoffClientKey.
 	if err := immutable.ForgetHandoffClientKey(ctx, bctx.stateCache); err != nil {
 		logger.WarnContext(ctx, fmt.Sprintf("drop the installer's client key from the state cache: %v", err))
 	}
@@ -567,15 +512,9 @@ func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, dir 
 	return path, nil
 }
 
-// saveAdminKubeconfig hands the admin kubeconfig to the operator, at the path
-// --kubeconfig-out names or next to the run's log and trace files.
-//
-// It is written by default rather than on request because a cluster whose first
-// master runs an immutable OS has no second way in: the node runs no SSH server,
-// so the kubeconfig the classic bootstrap leaves in /root/.kube/config on the
-// master cannot be fetched from it, and the handoff endpoint this one came
-// through serves once and is already closed. Defaulting to "do not keep it"
-// would mean defaulting to a cluster nobody can reach.
+// saveAdminKubeconfig hands the admin kubeconfig to the operator. Written by
+// default: the node runs no sshd and the handoff endpoint has already served
+// its one read, so "do not keep it" means a cluster nobody can reach.
 func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content []byte, bctx *bootstrapContext) error {
 	path := b.Options.Bootstrap.KubeconfigOut
 	if path != "" {
@@ -586,26 +525,15 @@ func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content [
 		}
 	}
 	if path == "" {
-		// Only the CLI gets a default path. In server mode TmpDir is one directory
-		// for the whole process, so the default would put the cluster-admin
-		// credentials of every cluster this server ever bootstraps into a single
-		// long-lived file, each run silently overwriting the last.
-		//
-		// There is no other channel either: the bootstrap response carries a state
-		// and an error and nothing else. So this is the last point at which the run
-		// can still be stopped with the cluster reachable — the handover is
-		// confirmed after it, and after that the node's channel is shut and an
-		// immutable master answers no SSH.
+		// Only the CLI gets a default path. In server mode TmpDir is shared by the
+		// whole process, so the default would funnel every cluster's cluster-admin
+		// credentials into one file, each run overwriting the last.
 		if b.CommanderMode {
 			return immutable.ErrKubeconfigOutRequired
 		}
-		// Named after the cluster, not just "admin.kubeconfig": TmpDir defaults to
-		// one directory per machine, the tmp cleaner deliberately preserves this
-		// file, and the write below removes whatever is at the path first. A
-		// second immutable cluster bootstrapped from the same machine would
-		// therefore delete the first one's only credentials — on a node that runs
-		// no sshd and has already closed its channel. The suffix is kept so the
-		// cleaner, which matches by suffix, still spares the file.
+		// Named after the cluster: the write below clears the path first, so a
+		// second immutable cluster from the same machine would delete the first
+		// one's only credentials. The suffix keeps the tmp cleaner off it.
 		name := cache.AdminKubeconfigName
 		if bctx.metaConfig != nil && bctx.metaConfig.ClusterPrefix != "" {
 			name = bctx.metaConfig.ClusterPrefix + "-" + name
@@ -613,11 +541,9 @@ func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content [
 		path = filepath.Join(b.TmpDir, name)
 	}
 
-	// Removed rather than truncated, then created fresh with O_EXCL. Writing
-	// into whatever is already at that path would inherit its mode: a rerun over
-	// a file left at 0644 puts cluster-admin credentials on disk world-readable
-	// for as long as it takes to widen them back, and follows a symlink someone
-	// else put there. O_EXCL is safe here because the path was just cleared.
+	// Removed rather than truncated, then created with O_EXCL: writing into
+	// whatever is at that path inherits its mode and follows a symlink someone
+	// else put there. O_EXCL is safe because the path was just cleared.
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("replace the admin kubeconfig %s: %w", path, err)
 	}
@@ -634,13 +560,9 @@ func (b *ClusterBootstrapper) saveAdminKubeconfig(ctx context.Context, content [
 	}
 	bctx.adminKubeconfigPath = path
 
-	// Recorded here rather than after the confirmation, because the claim it makes
-	// — the credentials are on disk at this path — is true from this line onward,
-	// and ConfirmCollected is what makes the node shut its channel for good. A run
-	// that died between the two with the record unwritten would leave every rerun
-	// dialling a closed channel while the file sat here unread. Returned rather
-	// than warned for the same reason: without the record, the channel must stay
-	// open.
+	// Recorded before the confirmation, not after: a run that died between the two
+	// with the record unwritten would leave every rerun dialling a closed channel
+	// while the file sat here unread. Returned, not warned, for the same reason.
 	if err := immutable.SaveCollectedKubeconfig(ctx, bctx.stateCache, path); err != nil {
 		return err
 	}
@@ -668,13 +590,9 @@ func newKubeconfigKubeProvider(ctx context.Context, b *ClusterBootstrapper, kube
 		return nil, fmt.Errorf("build the Kubernetes runner interface: %w", err)
 	}
 
-	// The long wait is over by the time this runs: collectImmutableKubeconfig
-	// only returns once the node has reported Ready and served a kubeconfig, so
-	// its apiserver is already answering. InitClient builds the client out of the
-	// kubeconfig, which either works at once or is broken; WaitingReady polls
-	// /version, and what it covers here is the gap of a restarting static pod or
-	// a bastion forward that has just been rebuilt — a couple of minutes, not the
-	// half hour the collection was budgeted.
+	// The long wait is over by now: the node has reported Ready and served its
+	// kubeconfig, so what these cover is a restarting static pod or a rebuilt
+	// forward — a couple of minutes, not the half hour the collection had.
 	initParams := libretry.NewEmptyParams(
 		libretry.WithWait(immutableWaitInterval),
 		libretry.WithAttempts(immutableWaitAttempts),
@@ -723,24 +641,18 @@ func freeLocalPort() (int, error) {
 	return addr.Port, nil
 }
 
-// printHowToReachTheCluster says where the credentials are and what to do with
-// them. It is the equivalent of the SSH line the classic bootstrap prints: on a
-// cluster of immutable nodes there is no SSH, and this file is the only way in.
-//
-// Called twice on purpose. Once when the file appears, which is where it belongs
-// if the run stops there, and once when the bootstrap is over — the ten minutes
-// and two thousand lines between the two are exactly how a line printed only at
-// the first point gets lost.
+// printHowToReachTheCluster says where the credentials are — the equivalent of
+// the SSH line the classic bootstrap prints. Called twice because two thousand
+// log lines separate the points, and one print gets lost between them.
 func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kubeconfigPath string, bctx *bootstrapContext) {
 	logger := dhlog.FromContext(ctx)
 	logger.InfoContext(ctx, fmt.Sprintf("Admin kubeconfig written to %s — cluster-admin credentials, "+
 		"and on a cluster of immutable nodes the only way in.", kubeconfigPath))
 	logger.InfoContext(ctx, fmt.Sprintf("To use the cluster:  export KUBECONFIG=%s && kubectl get nodes", kubeconfigPath))
 
-	// With a bastion the address in that file is reachable from the bastion and
-	// from nowhere else, so the line above is true only for someone already
-	// inside the network. Print how to get there rather than leave the operator
-	// to work out that the file needs a tunnel and to guess its shape.
+	// With a bastion that address is reachable from the bastion and nowhere else,
+	// so the line above is true only inside the network. Print how to get there
+	// rather than leave the operator to guess the shape of the tunnel.
 	if line := bastionForwardLine(b.SSHProviderInitializer, bctx.masterIP, kubeconfigPath); line != "" {
 		logger.InfoContext(ctx, "The master has no public address; reach it through the bastion first:")
 		logger.InfoContext(ctx, "  "+line)
@@ -748,11 +660,8 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 }
 
 // bastionForwardLine builds the command that makes the saved kubeconfig usable
-// from outside, or "" when the master is directly reachable and it already is.
-//
-// The forward lands on 127.0.0.1, which every kube-apiserver certificate carries
-// in its SAN list — so the kubeconfig needs no tls-server-name and differs from
-// the saved one by the server line alone.
+// from outside, or "" when the master is directly reachable. It forwards to
+// 127.0.0.1, which every apiserver certificate covers.
 func bastionForwardLine(initializer *providerinitializer.SSHProviderInitializer, masterIP, kubeconfigPath string) string {
 	if initializer == nil {
 		return ""
@@ -790,15 +699,13 @@ func buildBastionForwardLine(bastionUser, bastionHost string, bastionPort int, m
 		masterIP, immutable.APIServerPort, localPort, kubeconfigPath)
 }
 
-// channelBroken reports whether err is the local end of the channel having gone
-// away rather than the node saying something. A refused dial, a reset
-// connection or a stream that ends mid-answer all mean the tunnel is gone; a
-// node answering "not ready yet" does not.
+// channelBroken reports whether the local end of the channel went away rather
+// than the node saying something. A reset connection or a stream that ends
+// mid-answer means the tunnel is gone; "not ready yet" does not.
 func channelBroken(err error) bool {
-	// ECONNREFUSED is deliberately absent: a refused dial is what a node that has
-	// not finished installing itself looks like, and it is also what a closed
-	// local forward looks like. Treating it as a break would rebuild the tunnel
-	// throughout a healthy bootstrap.
+	// ECONNREFUSED is deliberately absent: it is what a node still installing
+	// itself looks like as well as a closed forward, and treating it as a break
+	// would rebuild the tunnel throughout a healthy bootstrap.
 	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) ||
 		errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE)
 }
