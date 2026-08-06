@@ -92,9 +92,9 @@ var componentContainer = map[string]string{
 // componentFallbackPercent is the fixed %-split used when per-component
 // autotune values are absent (bootstrap / manual override / cold start).
 var componentFallbackPercent = map[string]int64{
-	componentKubeApiserver:         33,
-	componentEtcd:                  35,
-	componentKubeControllerManager: 20,
+	componentKubeApiserver:         45,
+	componentEtcd:                  30,
+	componentKubeControllerManager: 15,
 	componentKubeScheduler:         10,
 }
 
