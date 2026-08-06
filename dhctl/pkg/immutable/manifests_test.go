@@ -85,6 +85,8 @@ func TestRenderControlPlaneBundleMatchesTheAgentsRender(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.in.CandiDir = testCandiDir(t)
+
 			bundle, err := renderControlPlaneBundle(t.Context(), tc.in)
 			require.NoError(t, err)
 
@@ -111,7 +113,7 @@ func TestRenderControlPlaneBundleMatchesTheAgentsRender(t *testing.T) {
 // kubelet starts a static pod the moment its manifest appears, and an apiserver
 // that comes up before its datastore only crash-loops until etcd catches up.
 func TestRenderControlPlaneBundleOrdersEtcdFirst(t *testing.T) {
-	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput())
+	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
 	require.Equal(t, "etcd.yaml", bundle.Manifests[0].Name)
@@ -125,7 +127,7 @@ func TestRenderControlPlaneBundleOrdersEtcdFirst(t *testing.T) {
 // node's address travels as a placeholder and every manifest that needs it keeps
 // it verbatim.
 func TestRenderControlPlaneBundleLeavesTheAddressToTheNode(t *testing.T) {
-	in := testManifestsInput()
+	in := testManifestsInput(t)
 	in.NodeIP = nodeAddressPlaceholder
 
 	bundle, err := renderControlPlaneBundle(t.Context(), in)
@@ -174,7 +176,7 @@ func TestRenderControlPlaneBundleRefusesWhatTheNodeCannotFix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			in := testManifestsInput()
+			in := testManifestsInput(t)
 			registry := *in.Registry
 			in.Registry = &registry
 			tt.mutate(&in)
@@ -188,7 +190,7 @@ func TestRenderControlPlaneBundleRefusesWhatTheNodeCannotFix(t *testing.T) {
 // A manifest kubelet cannot parse is a static pod that never appears at all,
 // with the reason only in the kubelet log of a node nobody can log in to.
 func TestRenderedManifestsAreValidPods(t *testing.T) {
-	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput())
+	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
 	for _, file := range bundle.Manifests {
@@ -209,7 +211,7 @@ const extraFilesDir = "/etc/kubernetes/deckhouse/extra-files"
 // there, so the manifest and the extra files have to agree on the name. They
 // come out of two separate renders, and nothing but this connects them.
 func TestTheApiserverFlagNamesAFileTheExtraFilesRender(t *testing.T) {
-	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput())
+	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 	require.NotEmpty(t, bundle.ExtraFiles, "the bootstrap needs the authentication config")
 
@@ -228,7 +230,7 @@ func TestTheApiserverFlagNamesAFileTheExtraFilesRender(t *testing.T) {
 // preparators have run, and nothing runs them on a node bringing a cluster up.
 // A component started with one of them exits before it opens a port.
 func TestRenderOmitsFlagsWhoseFilesDoNotExistYet(t *testing.T) {
-	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput())
+	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
 	rendered := make(map[string]string, len(bundle.Manifests))
@@ -257,7 +259,7 @@ func TestRenderOmitsFlagsWhoseFilesDoNotExistYet(t *testing.T) {
 // An unset clusterType is a template comparison against a missing key, which is
 // an execution error rather than a false — the render must survive it.
 func TestRenderWithoutAClusterTypeStillRenders(t *testing.T) {
-	in := testManifestsInput()
+	in := testManifestsInput(t)
 	in.Cluster.ClusterType = ""
 
 	bundle, err := renderControlPlaneBundle(t.Context(), in)
@@ -271,8 +273,28 @@ func TestRenderWithoutAClusterTypeStillRenders(t *testing.T) {
 	}
 }
 
-func testManifestsInput() manifestsInput {
+// testCandiDir finds the installer's candi directory from wherever the test is
+// run, so the render reads the same templates the classic bootstrap renders.
+func testCandiDir(t *testing.T) string {
+	t.Helper()
+
+	dir, err := os.Getwd()
+	require.NoError(t, err)
+
+	for {
+		candidate := filepath.Join(dir, "candi")
+		if _, err := os.Stat(filepath.Join(candidate, controlPlaneTemplatesDir)); err == nil {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		require.NotEqual(t, parent, dir, "candi/%s not found above %s", controlPlaneTemplatesDir, dir)
+		dir = parent
+	}
+}
+
+func testManifestsInput(t *testing.T) manifestsInput {
 	return manifestsInput{
+		CandiDir: testCandiDir(t),
 		NodeName: "master-0",
 		NodeIP:   "10.241.32.10",
 		Cluster: controlPlaneRenderParams{

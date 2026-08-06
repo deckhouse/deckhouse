@@ -35,6 +35,8 @@ func (in MasterPayloadInput) validate() error {
 		return errors.New("meta config is nil")
 	case in.StateCache == nil:
 		return errors.New("state cache is nil")
+	case in.CandiDir == "":
+		return errors.New("candi dir is empty")
 	}
 	return nil
 }
@@ -72,6 +74,7 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 		Cluster:  cluster,
 		Registry: registry,
 		Images:   images,
+		CandiDir: in.CandiDir,
 	})
 	if err != nil {
 		return nil, err
