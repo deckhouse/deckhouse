@@ -7,6 +7,7 @@ require (
 	github.com/getkin/kin-openapi v0.135.0
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.3
+	golang.org/x/tools v0.40.0
 	k8s.io/api v0.34.8
 	k8s.io/apiextensions-apiserver v0.34.8
 	k8s.io/apimachinery v0.34.8
@@ -43,7 +44,6 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
