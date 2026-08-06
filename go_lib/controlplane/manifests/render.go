@@ -35,6 +35,7 @@ import (
 	"maps"
 	"path"
 	"sort"
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -43,14 +44,31 @@ import (
 //go:embed templates/*.yaml.tpl
 var templatesFS embed.FS
 
+//go:embed extra-files/*.yaml.tpl
+var extraFilesFS embed.FS
+
 // templates is parsed once at package load. A template that does not parse fails `go test` of
 // this package rather than the bootstrap of a cluster.
 var templates = template.Must(
 	template.New("control-plane").Funcs(funcMap()).ParseFS(templatesFS, "templates/*.yaml.tpl"),
 )
 
+var extraFiles = template.Must(
+	template.New("extra-files").Funcs(funcMap()).ParseFS(extraFilesFS, "extra-files/*.yaml.tpl"),
+)
+
 // templateDir is where the embedded templates live inside the package.
 const templateDir = "templates"
+
+// authenticationConfig is the one extra file kube-apiserver demands on every run, bootstrap
+// included — the manifest passes --authentication-config unconditionally.
+const authenticationConfig = "authentication-config.yaml"
+
+const templateSuffix = ".tpl"
+
+// RunTypeClusterBootstrap is the run that brings the first control plane up, before there is a
+// cluster to read anything from. The manifests gate several flags on it.
+const RunTypeClusterBootstrap = "ClusterBootstrap"
 
 // etcdManifest is rendered first: control-plane-manager writes the bundle in order, and etcd
 // has to exist before anything that talks to it.
@@ -99,10 +117,7 @@ func Render(_ context.Context, data map[string]any, node NodeInput) (Bundle, err
 		return nil, fmt.Errorf("read embedded templates: %w", err)
 	}
 
-	ctxData := make(map[string]any, len(data)+2)
-	maps.Copy(ctxData, data)
-	ctxData["nodeName"] = node.NodeName
-	ctxData["nodeIP"] = node.NodeIP
+	ctxData := renderContext(data, node)
 
 	bundle := make(Bundle, 0, len(entries))
 	for _, entry := range entries {
@@ -124,6 +139,88 @@ func Render(_ context.Context, data map[string]any, node NodeInput) (Bundle, err
 
 	sortBundle(bundle)
 	return bundle, nil
+}
+
+// RenderExtraFiles renders the files the manifests reference by path — the ones that live in
+// /etc/kubernetes/deckhouse/extra-files rather than inside the pod spec.
+//
+// Only the bootstrap set is here. kube-apiserver passes --authentication-config on every run,
+// so a node that starts the static pod without that file on disk gets an apiserver that never
+// comes up and a bootstrap that hangs waiting for the API rather than failing. The rest of the
+// keys are still produced by the module's helm templates for the day-2 path.
+//
+// An input that would make a manifest reference a file this package cannot produce yet is an
+// error, not a silent omission: the alternative is exactly the hang above, discovered on a node
+// instead of here.
+func RenderExtraFiles(_ context.Context, data map[string]any, node NodeInput) (Bundle, error) {
+	if missing := unsupportedExtraFiles(data); len(missing) > 0 {
+		return nil, fmt.Errorf(
+			"the manifests would reference %s, which this package does not render yet — "+
+				"the control-plane module's helm templates still own those files",
+			strings.Join(missing, ", "),
+		)
+	}
+
+	ctxData := renderContext(data, node)
+
+	var buf bytes.Buffer
+	name := authenticationConfig + templateSuffix
+	if err := extraFiles.ExecuteTemplate(&buf, name, ctxData); err != nil {
+		return nil, fmt.Errorf("render %s: %w", authenticationConfig, err)
+	}
+
+	return Bundle{{Name: authenticationConfig, Content: buf.Bytes()}}, nil
+}
+
+// unsupportedExtraFiles names the files this input would make a manifest reference and that the
+// package does not render. The conditions mirror the gates in the manifests one for one; if a
+// gate there changes, this has to change with it.
+func unsupportedExtraFiles(data map[string]any) []string {
+	apiserver, _ := data["apiserver"].(map[string]any)
+
+	var missing []string
+	for _, dep := range []struct {
+		file     string
+		required bool
+	}{
+		{"audit-policy.yaml", isSet(apiserver["auditPolicy"])},
+		{"authorization-config.yaml", isSet(apiserver["webhookURL"])},
+		{"authn-webhook-config.yaml", isSet(apiserver["authnWebhookURL"])},
+		{"audit-webhook-config.yaml", isSet(apiserver["auditWebhookURL"])},
+		{"secret-encryption-config.yaml", isSet(apiserver["secretEncryptionKey"]) || isSet(apiserver["signature"])},
+		{"admission-control-config.yaml", data["runType"] != RunTypeClusterBootstrap},
+		{"scheduler-config.yaml", data["runType"] != RunTypeClusterBootstrap},
+	} {
+		if dep.required {
+			missing = append(missing, dep.file)
+		}
+	}
+
+	return missing
+}
+
+// isSet answers the question a template's {{ if }} asks: sprig truthiness, not presence.
+func isSet(v any) bool {
+	switch value := v.(type) {
+	case nil:
+		return false
+	case string:
+		return value != ""
+	case bool:
+		return value
+	default:
+		return true
+	}
+}
+
+// renderContext is the caller's data with the node placed on top. The node wins: it is the one
+// part of the context the caller cannot be trusted to have filled for the node being rendered.
+func renderContext(data map[string]any, node NodeInput) map[string]any {
+	ctxData := make(map[string]any, len(data)+2)
+	maps.Copy(ctxData, data)
+	ctxData["nodeName"] = node.NodeName
+	ctxData["nodeIP"] = node.NodeIP
+	return ctxData
 }
 
 // manifestName is the template name without the .tpl suffix, which is what dhctl has always
