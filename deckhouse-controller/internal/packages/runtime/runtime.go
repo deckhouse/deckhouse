@@ -54,7 +54,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/admission"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
@@ -102,8 +101,6 @@ type Runtime struct {
 	appDeployer      deployerI          // Deploys and undeploys application package images
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
 	registry         *registry.Service  // Registry service for managing package digests
-
-	admissionServer *admission.Server
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
@@ -162,11 +159,11 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
 
-	edition, err := edition.Parse(app.Version)
+	edit, err := edition.Parse(app.Version)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse edition: %w", err)
+		return nil, fmt.Errorf("parse edition: %w", err)
 	}
-	r.edition = edition
+	r.edition = edit
 
 	r.registry = registry.NewService(dc, logger)
 	downloadedDir := app.DownloadedModulesDir()

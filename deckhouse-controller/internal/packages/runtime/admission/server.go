@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package admission provides the HTTPS server used by package admission handlers.
+// Package admission provides the HTTPS server that serves deckhouse-controller admission handlers.
 package admission
 
 import (
@@ -24,6 +24,8 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -47,12 +49,18 @@ const (
 	privateKeyFilename = "tls.key"
 )
 
-// Server serves package admission handlers over HTTPS.
+// Server serves admission handlers over HTTPS. A Server may be started only once.
 type Server struct {
 	listenPort string
 	certsDir   string
 
 	mux *http.ServeMux
+
+	started atomic.Bool
+	ready   chan struct{} // closed once the listener is bound and addr is readable
+
+	mu   sync.RWMutex
+	addr net.Addr
 
 	logger *log.Logger
 }
@@ -63,8 +71,22 @@ func NewServer(listenPort, certsDir string, logger *log.Logger) *Server {
 		listenPort: listenPort,
 		certsDir:   certsDir,
 		mux:        http.NewServeMux(),
+		ready:      make(chan struct{}),
 		logger:     logger.Named("admission-server"),
 	}
+}
+
+// Addr returns the bound listener address, or nil before Start binds it.
+func (s *Server) Addr() net.Addr {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.addr
+}
+
+// Ready returns a channel closed once the server is listening; it stays open if Start fails to bind.
+func (s *Server) Ready() <-chan struct{} {
+	return s.ready
 }
 
 // RegisterHandler registers handler for route and reports malformed or conflicting routes as errors.
