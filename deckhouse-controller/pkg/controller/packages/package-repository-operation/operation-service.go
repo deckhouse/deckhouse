@@ -236,9 +236,7 @@ func (s *OperationService) performIncrementalScan(ctx context.Context, packageNa
 		return nil, fmt.Errorf("list tags from version: %w", err)
 	}
 
-	result := filterLatestTags(tags)
-
-	return result, nil
+	return filterLatestTags(tags), nil
 }
 
 func extractOnlySemverTags(rawTags []string) []*semver.Version {
