@@ -5,38 +5,44 @@ title: "The multitenancy-manager module: usage examples"
 
 ## Default project templates
 
-The following project templates are included in the Deckhouse Kubernetes Platform:
+The following project templates are included in the Deckhouse Kubernetes Platform. They are cumulative: each one includes the capabilities of the previous one and adds its own. Parameter values are set in the `.spec.parameters` field of a Project.
 
-- `simple` — a minimal template that creates only the project namespace (with optional extra labels and annotations). Use it when you only need an isolated namespace managed as a project and configure access and limits through the [standard fields](#standard-project-fields) and [project role bindings](#granting-access-within-a-project).
+- `simple` — a minimal template that creates only the project namespace. Use it when you only need an isolated namespace managed as a project and configure access and limits through the [standard fields](#standard-project-fields) and [project role bindings](#granting-access-within-a-project).
 
-  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/simple.yaml).
+  Parameters:
+  - `namespace.labels` and `namespace.annotations` — extra labels and annotations for the project namespace.
 
-- `default` — a template that covers basic project use cases:
-  - network isolation
-  - automatic alerts and log collection
-  - choice of security profile
+- `default` — a template that covers basic project use cases. On top of the namespace, it sets up network isolation, a pod security profile, extended monitoring and log shipping.
 
-  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/default.yaml).
+  Parameters (besides the ones listed for `simple`):
+  - `networkPolicy` — `Isolated` (default) denies all traffic except traffic within the project namespaces, DNS, Prometheus metrics scraping and ingress-nginx; `NotRestricted` allows all traffic.
+  - `podSecurityProfile` — the [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) profile for the project namespaces: `Baseline` (default) prevents known privilege escalations, `Restricted` applies the strictest hardening practices, `Privileged` restricts nothing.
+  - `extendedMonitoringEnabled` (default `true`) — alerts on controller outages and restarts, 5xx errors in ingress-nginx and low free space on the project's persistent volumes.
+  - `clusterLogDestinationName` — the name of the ClusterLogDestination to ship the project logs to. Left unset, the project logs are not shipped anywhere.
 
-- `secure` — includes all the capabilities of the `default` template and additional features:
-  - setting up permissible UID/GID for the project
-  - audit rules for project users' access to the Linux kernel
-  - scanning of launched container images for CVE presence
+- `secure` — includes all the capabilities of the `default` template, and additionally restricts the users and groups inside containers, audits their calls to the kernel and scans images for vulnerabilities.
 
-  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure.yaml).
+  Parameters (besides the ones listed for `default`):
+  - `allowedUIDs` and `allowedGIDs` — the ranges (`min`, `max`) of IDs permitted for users and groups inside the project containers. See [Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+  - `runtimeAuditEnabled` (default `false`) — audit rules that catch calls to the kernel and find malicious activity. They work only if the UID/GID ranges are set.
+  - `securityScanningEnabled` (default `true`) — periodic scanning of the launched images for known vulnerabilities (CVE) with Trivy, every 24 hours.
 
-- `secure-with-dedicated-nodes` — includes all the capabilities of the `secure` template and additional features:
-  - defining the node selector for all the pods in the project: if a pod is created, the node selector pod will be **substituted** with the project's node selector automatically.
-  - defining the default toleration for all the pods in the project: if a pod is created, the default toleration will be **added** to the pod automatically.
+- `secure-with-dedicated-nodes` — includes all the capabilities of the `secure` template, and additionally places the project on dedicated nodes.
 
-  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure-with-dedicated-nodes.yaml).
+  Parameters (besides the ones listed for `secure`), at least one of the two must be set:
+  - `dedicatedNodes.nodeSelector` — the node selector of the project. The node selector of a created pod is **substituted** with this value.
+  - `dedicatedNodes.defaultTolerations` — tolerations in the format of the pod's `spec.tolerations`. They are **added** to the created pods of the project.
 
 The `default`, `secure`, and `secure-with-dedicated-nodes` templates are described in the [structured form](#structured-templates) (`deckhouse.io/v1alpha2`); the `simple` template is a minimal legacy (`v1alpha1`) template.
 
-To list all available parameters for a project template, execute the command:
+For the exact set of parameters, read the template installed in your cluster -- it matches your version of the platform:
 
 ```shell
+# The parameter schema of the template.
 d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
+
+# The whole template.
+d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o yaml
 ```
 
 ## Creating a project
