@@ -5,6 +5,9 @@
 type: {{ b64enc "aws" | quote }}
 region: {{ $context.Values.cloudProviderAws.internal.region | b64enc | quote }}
 zones: {{ $context.Values.cloudProviderAws.internal.zones | toJson | b64enc | quote }}
+# Storage version of the InstanceClass CRD (spec.versions with storage: true). Not any served
+# version: node-controller hashes what it reads into a checksum that names an immutable template.
+instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 instanceClassKind: {{ b64enc "AWSInstanceClass" | quote }}
 machineClassKind: {{ b64enc "AWSMachineClass" | quote }}
 # AWS

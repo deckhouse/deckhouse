@@ -112,9 +112,14 @@ var _ = BeforeSuite(func() {
 	cloudProvider := &corev1.Secret{}
 	cloudProvider.Namespace = cloudProviderSecretNamespace
 	cloudProvider.Name = cloudProviderSecretName
+	// The label is how RegisteredInstanceClassGVKs finds registrations; without it the suite's
+	// controllers would build no InstanceClass watches at all.
+	cloudProvider.Labels = map[string]string{common.CloudProviderRegistrationLabel: ""}
 	cloudProvider.Data = map[string][]byte{
-		"type":                          []byte(`"dvp"`),
-		"instanceClassKind":             []byte(`"DVPInstanceClass"`),
+		"type": []byte(`"dvp"`),
+		// Raw, unquoted, exactly as the registration template's b64enc writes it.
+		"instanceClassKind":             []byte("DVPInstanceClass"),
+		"instanceClassAPIVersion":       []byte("v1alpha1"),
 		"capiClusterKind":               []byte(`"DeckhouseCluster"`),
 		"capiClusterName":               []byte("dvp"),
 		"capiMachineTemplateKind":       []byte("DeckhouseMachineTemplate"),
@@ -159,7 +164,7 @@ var _ = BeforeSuite(func() {
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, uuidCM))).To(Succeed())
 
 	By("starting the manager with the capi controllers")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 	go func() {
 		defer GinkgoRecover()
