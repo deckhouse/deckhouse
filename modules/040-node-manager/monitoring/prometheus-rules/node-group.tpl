@@ -167,11 +167,11 @@
         Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support containerd v2.
         Starting from Kubernetes 1.37, containerd v1.y [will no longer be supported](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
         Please check the requirements for containerd v2 and schedule your migration plan.
-
-        The exact reason is listed in the `node.deckhouse.io/containerd-v2-err` annotation on the node.
 {{- if and (.Values.global.clusterConfiguration) (hasKey .Values.global.clusterConfiguration "cloud") (eq .Values.global.clusterConfiguration.cloud.provider "AWS") }}
 
-         If the reason is `erofs` and the node runs Ubuntu in AWS, the module is shipped in a separate
+        The exact reason is listed in the `node.deckhouse.io/containerd-v2-err` annotation on the node.
+
+        If the reason is `erofs` and the node runs Ubuntu in AWS, the module is shipped in a separate
         `linux-modules-extra` package. Deckhouse installs it automatically, but for some kernels, mostly
         outdated ones, the package is no longer published in the APT repository. In that case the installation
         is skipped with a warning in the node logs. The problem is confirmed, in particular, on the
