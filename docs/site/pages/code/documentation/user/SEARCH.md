@@ -28,9 +28,9 @@ Advanced search powered by OpenSearch allows you to:
 
 To search:
 
-1. In the top bar, select **Search**.
+1. In the top bar, select "Search".
 1. Enter your search term.
-1. Press **Enter**.
+1. Press "Enter".
 
 You can also use advanced search in a project or group context.
 
@@ -86,9 +86,9 @@ For details, see ["API search scopes"](#api-search-scopes).
 
 General procedure for searching in Deckhouse Code:
 
-1. Click **Search** in the top navigation bar.
+1. Click "Search" in the top navigation bar.
 1. Enter a search query.
-1. Press **Enter** — results appear on the search page.
+1. Press "Enter" — results appear on the search page.
 1. Use filters to refine results by group, project, or object type.
 
 ![Search](/images/code/search_en.png)
@@ -97,20 +97,20 @@ General procedure for searching in Deckhouse Code:
 
 Allows searching across all projects and groups within the instance.
 
-1. In the left menu, select **Search**.
-1. Enter a query and press **Enter**.
+1. In the left menu, select "Search".
+1. Enter a query and press "Enter".
 
 ### Project search
 
 1. Open the target project.
-1. In the left menu, select **Search**.
-1. Enter a query and press **Enter**.
+1. In the left menu, select "Search".
+1. Enter a query and press "Enter".
 
 ### Group search
 
 1. Open the target group.
-1. In the left menu, select **Search**.
-1. Enter a query and press **Enter**.
+1. In the left menu, select "Search".
+1. Enter a query and press "Enter".
 
 ### Additional features
 
@@ -149,17 +149,17 @@ The code search UI also provides a language filter.
 
 | Query | Description |
 |-------|-------------|
-| `rails -filename:gemfile.lock` | Returns `rails` in all files except `gemfile.lock`. |
-| `RSpec.describe Resolvers -*builder` | Returns `RSpec.describe Resolvers` excluding matches starting with `builder`. |
-| `bug \| (display +banner)` | Returns `bug` or both `display` and `banner`. |
-| `helper -extension:yml -extension:js` | Returns `helper` in all files except `.yml` and `.js` files. |
-| `helper path:lib/git` | Returns `helper` in files with a `lib/git*` path (for example, `spec/lib/gitlab`). |
+| `rails -filename:gemfile.lock` | Returns `rails` in all files except `gemfile.lock`|
+| `RSpec.describe Resolvers -*builder` | Returns `RSpec.describe Resolvers` excluding matches starting with `builder` |
+| `bug \| (display +banner)` | Returns `bug` or both `display` and `banner` |
+| `helper -extension:yml -extension:js` | Returns `helper` in all files except `.yml` and `.js` files |
+| `helper path:lib/git` | Returns `helper` in files with a `lib/git*` path (for example, `spec/lib/gitlab`) |
 
 ## Indexing settings
 
 ### Project settings
 
-A project maintainer can go to **Settings** → **Search**.
+A project maintainer can go to "Settings" → "Search".
 
 #### Branch regex
 
@@ -177,13 +177,13 @@ Changing the regex triggers a full project reindex.
 - **Reindex code** — full reindex of the repository code.
 - **Reindex wiki** — full reindex of the wiki (if a wiki repository exists).
 
-The **Index up to date** badge shows whether indexing is complete for the current repository state.
+The "Index up to date" badge shows whether indexing is complete for the current repository state.
 
 ### Group settings
 
-A group owner can go to **Settings** → **Search**.
+A group owner can go to "Settings" → "Search".
 
-Group wiki reindexing is available: index status and the **Reindex wiki** button.
+Group wiki reindexing is available: index status and the "Reindex wiki" button.
 
 ## Search API
 

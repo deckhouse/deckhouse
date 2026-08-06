@@ -1,6 +1,6 @@
 ---
-title: "Advanced search (administration)"
-menuTitle: Advanced search (administration)
+title: "Advanced search"
+menuTitle: Advanced search
 searchable: true
 description: Configure and operate advanced search powered by OpenSearch in Deckhouse Code
 permalink: en/code/documentation/admin/configuration/advanced-search.html
@@ -9,7 +9,9 @@ weight: 55
 relatedLinks:
   - title: "Advanced search — user guide"
     url: ../../user/search.html
+
 # Once the advanced-search page is published in the code module documentation,
+
 # add an "Advanced search — code module documentation" item here.
 ---
 
@@ -83,14 +85,7 @@ Search results may be incomplete until background indexing catches up.
 The `commits` index is reindexed together with the `code` index: there is no separate operation for commits.
 For the same reason, commits have no dedicated `schema_class` value.
 
-#### Admin API
-
-The same operations are available through the administrative REST API:
-
-- `POST /api/v4/admin/opensearch/recreate_indices` — recreate indices;
-- `GET /api/v4/admin/opensearch/indexing_queue_stats` — indexing queue stats.
-
-For permissions, allowed `schema_class` values, response codes, and request examples, see the ["OpenSearch API"](#opensearch-api) section.
+You can also perform operations on indices using queries to the [OpenSearch API](#opensearch-api).
 
 ### Monitoring
 
@@ -198,14 +193,11 @@ If new jobs are not enqueued to the `global-search-indexing` queue:
 This section documents Deckhouse Code admin OpenSearch endpoints.
 For user-facing search parameters, see ["Search API"](../../user/search.html#search-api).
 
-### Permissions
-
-- `POST /api/v4/admin/opensearch/recreate_indices`: Admin only (`authenticated_as_admin!`).
-- `GET /api/v4/admin/opensearch/indexing_queue_stats`: Authenticated user with permission `read_admin_search_indexing_queue_stats` on `:global`.
-
 ### POST /api/v4/admin/opensearch/recreate_indices
 
-Synchronously recreates OpenSearch index(es) and enqueues background reindex jobs.
+Synchronously recreates OpenSearch index(es) and enqueues background reindex jobs. To rebuild (reindex) all indexes, run the query without a body. To rebuild a specific index, specify it in the query body.
+
+Access rights: admin only (`authenticated_as_admin!`).
 
 #### Request body
 
@@ -233,6 +225,8 @@ Synchronously recreates OpenSearch index(es) and enqueues background reindex job
 
 #### Request example
 
+This query rebuilds all indexes:
+
 ```bash
 curl --request POST \
   --header "PRIVATE-TOKEN: <your_access_token>" \
@@ -245,6 +239,8 @@ curl --request POST \
 
 Returns Sidekiq queue stats for OpenSearch indexing.
 
+Access rights: authenticated user with permission `read_admin_search_indexing_queue_stats` on `:global`.
+
 #### Response (200 OK)
 
 ```json
@@ -254,7 +250,7 @@ Returns Sidekiq queue stats for OpenSearch indexing.
 }
 ```
 
-Fields:
+Response fields:
 
 - `total`: Total number of indexing jobs in the queue.
 - `updated_at`: ISO8601 timestamp with milliseconds (or `null`).

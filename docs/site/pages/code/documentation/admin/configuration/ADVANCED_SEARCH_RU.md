@@ -1,6 +1,6 @@
 ---
-title: "Расширенный поиск (администрирование)"
-menuTitle: Расширенный поиск (администрирование)
+title: "Расширенный поиск"
+menuTitle: Расширенный поиск
 searchable: true
 description: Настройка и эксплуатация расширенного поиска на базе OpenSearch в Deckhouse Code
 permalink: ru/code/documentation/admin/configuration/advanced-search.html
@@ -9,7 +9,9 @@ weight: 55
 relatedLinks:
   - title: "Расширенный поиск — руководство пользователя"
     url: ../../user/search.html
+
 # После публикации страницы advanced-search в документации модуля code
+
 # добавить сюда пункт «Расширенный поиск — документация модуля code».
 ---
 
@@ -82,14 +84,7 @@ relatedLinks:
 Индекс `commits` переиндексируется вместе с индексом `code`: отдельной операции для коммитов нет.
 По этой же причине у коммитов нет отдельного значения `schema_class`.
 
-#### Admin API
-
-Те же операции доступны через административный REST API:
-
-- `POST /api/v4/admin/opensearch/recreate_indices` — пересоздание индексов;
-- `GET /api/v4/admin/opensearch/indexing_queue_stats` — статистика очереди индексации.
-
-Права доступа, допустимые значения `schema_class`, коды ответов и примеры запросов описаны в разделе [«API OpenSearch»](#api-opensearch).
+Операции над индексами также можно выполнять с помощью запросов к [API OpenSearch](#api-opensearch).
 
 ### Мониторинг
 
@@ -197,14 +192,11 @@ Cron-задачи не выполняют индексацию напрямую:
 В этом разделе описаны административные OpenSearch-эндпоинты Deckhouse Code.
 Параметры пользовательского поиска — [в разделе «API поиска»](../../user/search.html#api-поиска).
 
-### Права доступа
-
-- `POST /api/v4/admin/opensearch/recreate_indices` — только администратор (`authenticated_as_admin!`);
-- `GET /api/v4/admin/opensearch/indexing_queue_stats` — пользователь с правом `read_admin_search_indexing_queue_stats` на `:global`.
-
 ### POST /api/v4/admin/opensearch/recreate_indices
 
-Синхронно пересоздаёт индекс(ы) OpenSearch и ставит фоновые задачи повторной индексации.
+Синхронно пересоздаёт индекс(ы) OpenSearch и ставит фоновые задачи повторной индексации. Чтобы пересоздать (переиндексировать) все индексы, выполните запрос без тела. Чтобы пересоздать конкретный индекс, укажите его в теле запроса.
+
+Права доступа: только администратор (`authenticated_as_admin!`).
 
 #### Тело запроса
 
@@ -234,6 +226,8 @@ Cron-задачи не выполняют индексацию напрямую:
 
 #### Пример запроса
 
+Этот запрос пересоздает все индексы:
+
 ```bash
 curl --request POST \
   --header "PRIVATE-TOKEN: <your_access_token>" \
@@ -246,6 +240,8 @@ curl --request POST \
 
 Возвращает статистику Sidekiq-очереди индексации OpenSearch.
 
+Права доступа: пользователь с правом `read_admin_search_indexing_queue_stats` на `:global`.
+
 #### Ответ (200 OK)
 
 ```json
@@ -255,7 +251,7 @@ curl --request POST \
 }
 ```
 
-Поля:
+Поля ответа:
 
 - `total` — общее количество задач индексации в очереди;
 - `updated_at` — timestamp ISO8601 с миллисекундами (или `null`).
