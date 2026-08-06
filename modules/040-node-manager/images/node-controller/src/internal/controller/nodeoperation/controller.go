@@ -41,9 +41,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -84,6 +87,10 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 		return nil
 	}))
 
+	// Predicated, and it has to be: the mapper lists every operation in the
+	// cluster, and without a filter every kubelet heartbeat of every node runs
+	// that list. Retention keeps a finished operation for a day, so after one
+	// fleet-wide rollout the list is two per node for the rest of it.
 	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 		ops := &v1alpha1.NodeOperationList{}
 		if err := r.Client.List(ctx, ops); err != nil {
@@ -92,12 +99,39 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 		}
 		var requests []reconcile.Request
 		for i := range ops.Items {
-			if ops.Items[i].Spec.NodeName == obj.GetName() {
+			// A finished operation is only waiting out its retention, and it
+			// requeues itself for that. Waking it on somebody else's node write
+			// costs a reconcile that can only decide to wait again.
+			if ops.Items[i].Spec.NodeName == obj.GetName() && !terminal(&ops.Items[i]) {
 				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ops.Items[i].Name}})
 			}
 		}
 		return requests
+	}), builder.WithPredicates(predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return nodeDrainStateChanged(e.ObjectOld, e.ObjectNew)
+		},
 	}))
+}
+
+// nodeDrainStateChanged reports whether an update touched the only three things
+// an operation reads off its node: the two drain markers and whether the node is
+// out of the scheduler.
+func nodeDrainStateChanged(before, after client.Object) bool {
+	oldNode, okOld := before.(*corev1.Node)
+	newNode, okNew := after.(*corev1.Node)
+	if !okOld || !okNew {
+		return true
+	}
+	if oldNode.Spec.Unschedulable != newNode.Spec.Unschedulable {
+		return true
+	}
+	for _, key := range []string{nodecommon.DrainingAnnotation, nodecommon.DrainedAnnotation} {
+		if oldNode.Annotations[key] != newNode.Annotations[key] {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
