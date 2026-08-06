@@ -213,8 +213,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Requeue when the deadline is actually due, not a whole period later:
 	// requeuing a full operationTimeout here would only time the node out after
-	// roughly two periods.
-	return ctrl.Result{RequeueAfter: time.Until(hardDeadline(op))}, nil
+	// roughly two periods. Floored, because the deadline can pass while this
+	// pass runs, and a RequeueAfter of zero is "never" rather than "at once".
+	requeue := time.Until(hardDeadline(op))
+	if requeue < minRequeue {
+		requeue = minRequeue
+	}
+	return ctrl.Result{RequeueAfter: requeue}, nil
 }
 
 // hardDeadline is the moment this operation runs out of time.
