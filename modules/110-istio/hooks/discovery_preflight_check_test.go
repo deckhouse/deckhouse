@@ -49,6 +49,7 @@ istio:
   internal:
     istioToK8sCompatibilityMap:
       "1.27": ["1.32", "1.33", "1.34", "1.35", "1.36"]
+      "1.29": ["1.32", "1.33", "1.34", "1.35", "1.36"]
 `
 	f := HookExecutionConfigInit(initValues, "")
 
@@ -78,6 +79,7 @@ data:
 			Expect(exists).To(BeTrue())
 			Expect(compatibilityMap).To(BeEquivalentTo(map[string][]string{
 				"1.27": {"1.32", "1.33", "1.34", "1.35", "1.36"},
+				"1.29": {"1.32", "1.33", "1.34", "1.35", "1.36"},
 			}))
 		})
 	})
