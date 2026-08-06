@@ -13,8 +13,10 @@
 // limitations under the License.
 
 // This hook owns the *declared* Kubernetes version: it resolves ModuleConfig → ClusterConfiguration
-// → Deckhouse default, publishes global.discovery.targetKubernetesVersion, and is the single writer
-// of data.spec on ConfigMap kube-system/d8-cluster-kubernetes.
+// → Deckhouse default and publishes global.discovery.targetKubernetesVersion. It writes no objects
+// at all — ConfigMap kube-system/d8-cluster-kubernetes is owned end to end by update-observer,
+// which receives the values published here as container environment. This hook only reads that
+// ConfigMap, for the soft guard's floor and freeze memory.
 //
 // Three different "Kubernetes versions" exist in this system; do not confuse them:
 //
@@ -42,10 +44,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
@@ -85,9 +85,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "ConfigMap",
 			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{MatchNames: []string{desiredVersionConfigMapNamespace}},
+				NameSelector: &types.NameSelector{MatchNames: []string{clusterKubernetesConfigMapNamespace}},
 			},
-			NameSelector: &types.NameSelector{MatchNames: []string{desiredVersionConfigMapName}},
+			NameSelector: &types.NameSelector{MatchNames: []string{clusterKubernetesConfigMapName}},
 			FilterFunc:   applyClusterKubernetesConfigMapFilter,
 		},
 	},
@@ -98,11 +98,10 @@ const (
 	controlPlaneManagerModuleConfigSnapshot = "controlPlaneManagerModuleConfig"
 	clusterKubernetesConfigMapSnapshot      = "clusterKubernetesConfigMap"
 
-	desiredVersionConfigMapName      = "d8-cluster-kubernetes"
-	desiredVersionConfigMapNamespace = "kube-system"
+	clusterKubernetesConfigMapName      = "d8-cluster-kubernetes"
+	clusterKubernetesConfigMapNamespace = "kube-system"
 
 	maxUsedK8sVersionSecretKey = "maxUsedControlPlaneKubernetesVersion"
-	maxK8sVersionLabelKey      = "max-k8s-version"
 
 	defaultVersionDriftMetricGroup = "D8ControlPlaneDefaultVersionDrift"
 	defaultVersionDriftMetricName  = "d8_control_plane_default_version_drift"
@@ -119,19 +118,20 @@ const (
 	defaultKubernetesVersionSentinel = "Default"
 )
 
-// clusterKubernetesSnapshot carries freeze inputs + the raw data.spec for no-op detection.
-// Labels/status are owned by update-observer; this hook only writes data.spec.
+// clusterKubernetesSnapshot carries the soft-guard inputs this hook reads out of the ConfigMap:
+// the maxUsed floor and the two candidates for the frozen digit. The object itself is owned end to
+// end by update-observer — every key of it — and this hook only reads.
 type clusterKubernetesSnapshot struct {
 	MaxUsed        string
 	CurrentVersion string
 	DesiredVersion string
-	SpecYAML       string
 }
 
-// configMapSpec mirrors the Spec struct update-observer reads/writes for the ConfigMap "spec" key.
+// configMapSpec mirrors the Spec struct update-observer writes into the ConfigMap "spec" key.
 type configMapSpec struct {
 	DesiredVersion string `json:"desiredVersion"`
 	UpdateMode     string `json:"updateMode"`
+	MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
 }
 
 // applyControlPlaneManagerKubernetesVersionFilter returns the raw kubernetesVersion from
@@ -150,10 +150,7 @@ func applyClusterKubernetesConfigMapFilter(obj *unstructured.Unstructured) (go_h
 		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
-	snap := clusterKubernetesSnapshot{
-		MaxUsed:  cm.Labels[maxK8sVersionLabelKey],
-		SpecYAML: cm.Data["spec"],
-	}
+	snap := clusterKubernetesSnapshot{}
 
 	var status struct {
 		CurrentVersion string `json:"currentVersion"`
@@ -165,6 +162,7 @@ func applyClusterKubernetesConfigMapFilter(obj *unstructured.Unstructured) (go_h
 	var spec configMapSpec
 	if err := yaml.Unmarshal([]byte(cm.Data["spec"]), &spec); err == nil {
 		snap.DesiredVersion = spec.DesiredVersion
+		snap.MaxUsed = strings.TrimSpace(spec.MaxUsedVersion)
 	}
 
 	return snap, nil
@@ -232,21 +230,25 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 	// is dropped; the flag/Values key still mean "tracking Deckhouse default" (Default only).
 	publishedTarget := target
 	if isDefault {
-		// Secret maxUsedControlPlaneKubernetesVersion is the canonical baseline (same source
-		// admission uses). ConfigMap label max-k8s-version is a fallback when the Secret key
-		// is still absent.
-		maxUsed := secretMaxUsed
+		// spec.maxUsedKubernetesVersion of the cluster ConfigMap is the canonical baseline — the
+		// same source admission uses, so the two cannot disagree about the window.
+		//
+		// TODO(kubernetesVersion-deprecation): T+1 remove — the Secret key is a migration
+		// fallback, for the window between a Deckhouse upgrade and the DaemonSet rollout that
+		// first puts the value into the ConfigMap.
+		maxUsed := cmSnap.MaxUsed
 		if maxUsed == "" {
-			maxUsed = cmSnap.MaxUsed
+			maxUsed = secretMaxUsed
 		}
 		froze := false
 		if maxUsed != "" {
 			inWindow, err := kubernetesVersionInMaxUsedWindow(target, maxUsed)
 			if err == nil && !inWindow {
-				// Freeze memory, most authoritative first. The first two live inside the very
-				// ConfigMap this hook recreates, so `kubectl delete cm d8-cluster-kubernetes` wipes
-				// both at once — while maxUsed survives in the Secret. Without the third source the
-				// guard would know the window is violated and still publish the lower Default.
+				// Freeze memory, most authoritative first. The first two live inside the same
+				// ConfigMap the floor came from, so `kubectl delete cm d8-cluster-kubernetes`
+				// wipes all three at once — while maxUsed survives in the Secret until T+1.
+				// Without the third source the guard would know the window is violated and still
+				// publish the lower Default.
 				frozen := cmSnap.DesiredVersion
 				if frozen == "" {
 					frozen = cmSnap.CurrentVersion
@@ -269,12 +271,20 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 				)
 			}
 		}
-		// No baseline → fail-open: publish Default + track-default mode.
+		// No baseline anywhere → fail-open: publish Default + track-default mode. Logged rather
+		// than silent, because the guard switching itself off looks exactly like the guard finding
+		// nothing wrong.
+		if maxUsed == "" {
+			input.Logger.Warn(
+				"kubernetesVersion soft guard is disabled: no maxUsed baseline in the cluster ConfigMap or the ClusterConfiguration Secret",
+				slog.String("target", target),
+			)
+		}
 
 		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 		input.Logger.Info("E2E-KV soft-guard",
 			slog.String("secretMaxUsed", secretMaxUsed),
-			slog.String("cmLabelMaxUsed", cmSnap.MaxUsed),
+			slog.String("cmSpecMaxUsed", cmSnap.MaxUsed),
 			slog.String("maxUsedChosen", maxUsed),
 			slog.String("defaultTarget", target),
 			slog.String("publishedTarget", publishedTarget),
@@ -296,70 +306,6 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 	// the alias goes away on T+1 (see TODO on automaticKubernetesVersion) and this key is new in
 	// this change, so there is no older name to stay compatible with.
 	input.Values.Set("global.discovery.kubernetesVersionIsDefault", isDefault)
-
-	return publishDesiredKubernetesVersionSpec(input, publishedTarget, isDefault, cmSnap.SpecYAML)
-}
-
-// publishDesiredKubernetesVersionSpec is the single writer of data.spec on
-// kube-system/d8-cluster-kubernetes. It never touches status/labels (update-observer owns those).
-func publishDesiredKubernetesVersionSpec(input *go_hook.HookInput, desired string, isDefault bool, existingSpecYAML string) error {
-	if desired == "" {
-		return nil
-	}
-
-	updateMode := "Manual"
-	if isDefault {
-		// CM protocol value: UpdateMode Automatic = "follow Deckhouse default".
-		// Unrelated to the deprecated MC enum alias "Automatic"; this string stays after T+1.
-		updateMode = "Automatic"
-	}
-
-	specBytes, err := yaml.Marshal(configMapSpec{DesiredVersion: desired, UpdateMode: updateMode})
-	if err != nil {
-		return err
-	}
-	specYAML := string(specBytes)
-
-	if existingSpecYAML == specYAML {
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-		input.Logger.Info("E2E-KV publish CM.spec",
-			slog.String("desired", desired),
-			slog.Bool("isDefault", isDefault),
-			slog.Bool("noop", true),
-		)
-		return nil
-	}
-
-	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-	input.Logger.Info("E2E-KV publish CM.spec",
-		slog.String("desired", desired),
-		slog.Bool("isDefault", isDefault),
-		slog.Bool("noop", false),
-	)
-
-	input.PatchCollector.CreateIfNotExists(&v1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "ConfigMap"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      desiredVersionConfigMapName,
-			Namespace: desiredVersionConfigMapNamespace,
-			Labels:    map[string]string{"heritage": "deckhouse"},
-		},
-		Data: map[string]string{"spec": specYAML},
-	})
-
-	patch := map[string]interface{}{
-		"data": map[string]interface{}{
-			"spec": specYAML,
-		},
-	}
-	input.PatchCollector.PatchWithMerge(
-		patch,
-		"v1",
-		"ConfigMap",
-		desiredVersionConfigMapNamespace,
-		desiredVersionConfigMapName,
-		object_patch.WithIgnoreMissingObject(),
-	)
 
 	return nil
 }

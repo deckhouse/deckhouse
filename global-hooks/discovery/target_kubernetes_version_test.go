@@ -16,7 +16,6 @@ package hooks
 
 import (
 	"encoding/base64"
-	"fmt"
 
 	_ "github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
@@ -128,31 +127,19 @@ kubernetesVersion: "1.33"
 		})
 	})
 
-	Context("ConfigMap d8-cluster-kubernetes data.spec writer", func() {
-		It("creates CM with Manual mode for a pinned target", func() {
+	// update-observer owns every key of this ConfigMap and receives the values published here as
+	// container environment. Two writers on one object is exactly the arrangement this replaced.
+	Context("ConfigMap d8-cluster-kubernetes is not written by this hook", func() {
+		It("does not create the ConfigMap when it is missing", func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("1.35"), 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
-			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
-			Expect(cm.Exists()).To(BeTrue())
-			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.35"`))
-			Expect(cm.Field("data.spec").String()).To(ContainSubstring("updateMode: Manual"))
-			Expect(cm.Field("data.status").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.35"))
+			Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes").Exists()).To(BeFalse())
 		})
 
-		It("creates CM with Automatic mode when tracking Default", func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC, 1))
-			f.RunHook()
-
-			Expect(f).To(ExecuteSuccessfully())
-			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
-			Expect(cm.Exists()).To(BeTrue())
-			Expect(cm.Field("data.spec").String()).To(ContainSubstring(fmt.Sprintf("desiredVersion: %q", hooks.DefaultKubernetesVersion)))
-			Expect(cm.Field("data.spec").String()).To(ContainSubstring("updateMode: Automatic"))
-		})
-
-		It("updates only data.spec, leaving status and labels untouched", func() {
+		It("leaves an existing ConfigMap untouched", func() {
 			existing := `
 ---
 apiVersion: v1
@@ -162,12 +149,14 @@ metadata:
   namespace: kube-system
   labels:
     heritage: deckhouse
+    name: d8-cluster-kubernetes
     k8s-version: "1.34"
     max-k8s-version: "1.34"
 data:
   spec: |
     desiredVersion: "1.34"
     updateMode: Manual
+    maxUsedKubernetesVersion: "1.34"
   status: |
     currentVersion: "1.34"
     phase: UpToDate
@@ -176,11 +165,12 @@ data:
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.35"))
+
 			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
-			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.35"`))
+			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.34"`))
 			Expect(cm.Field("data.status").String()).To(ContainSubstring(`currentVersion: "1.34"`))
 			Expect(cm.Field("metadata.labels.k8s-version").String()).To(Equal("1.34"))
-			Expect(cm.Field("metadata.labels.max-k8s-version").String()).To(Equal("1.34"))
 		})
 	})
 
@@ -214,12 +204,14 @@ metadata:
   namespace: kube-system
   labels:
     heritage: deckhouse
+    name: d8-cluster-kubernetes
     k8s-version: "1.38"
     max-k8s-version: "1.38"
 data:
   spec: |
     desiredVersion: "1.38"
     updateMode: Automatic
+    maxUsedKubernetesVersion: "1.38"
   status: |
     currentVersion: "1.38"
     phase: UpToDate
@@ -231,14 +223,50 @@ data:
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
 			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 
-			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
-			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.38"`))
-			Expect(cm.Field("data.spec").String()).To(ContainSubstring("updateMode: Automatic"))
-
 			value, found := findDriftMetric()
 			Expect(found).To(BeTrue())
 			Expect(value).To(Equal(1.0))
 			Expect(driftMetricFrozenLabel()).To(Equal("true"))
+		})
+
+		// The ConfigMap floor outranks the Secret: the Secret key stops being written in this
+		// release, so a cluster that has since moved on would otherwise be judged against a stale
+		// baseline and freeze at a version it no longer runs.
+		It("prefers the ConfigMap floor over the Secret one", func() {
+			secretWithStaleMaxUsed := `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration)) + `
+  maxUsedControlPlaneKubernetesVersion: ` + base64.StdEncoding.EncodeToString([]byte("1.38")) + `
+`
+			// The ConfigMap says 1.36, which puts Default (1.36) inside the window — no freeze.
+			existing := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    name: d8-cluster-kubernetes
+data:
+  spec: |
+    desiredVersion: "1.36"
+    updateMode: Automatic
+    maxUsedKubernetesVersion: "1.36"
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithStaleMaxUsed+moduleConfigYAML("Automatic")+existing, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			_, found := findDriftMetric()
+			Expect(found).To(BeFalse())
 		})
 
 		// Both freeze-memory slots (data.spec.desiredVersion and data.status.currentVersion) live
@@ -265,10 +293,6 @@ data:
 
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
-
-			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-kubernetes")
-			Expect(cm.Field("data.spec").String()).To(ContainSubstring(`desiredVersion: "1.38"`))
-
 			Expect(driftMetricFrozenLabel()).To(Equal("true"))
 		})
 
