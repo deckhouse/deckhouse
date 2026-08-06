@@ -1,7 +1,9 @@
 module KubernetesConformance
   class Generator < Jekyll::Generator
     safe true
-    priority :high
+    priority :normal
+
+    JUNIT_FILENAME = 'junit_01.xml'
 
     def generate(site)
       conformance_dir = File.join(site.source, 'assets', 'conformance')
@@ -20,12 +22,12 @@ module KubernetesConformance
       Dir.children(conformance_dir).each_with_object([]) do |version, results|
         next unless version.match?(/\A\d+\.\d+\z/)
 
-        xml_path = File.join(conformance_dir, version, 'junit_01.xml')
+        xml_path = File.join(conformance_dir, version, JUNIT_FILENAME)
         next unless File.file?(xml_path)
 
         results << {
           'version' => version,
-          'xml_path' => "/assets/conformance/#{version}/junit_01.xml"
+          'xml_path' => "/assets/conformance/#{version}/#{JUNIT_FILENAME}"
         }
       end.sort_by { |result| result['version'].split('.').map(&:to_i) }.reverse
     end
