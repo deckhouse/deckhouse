@@ -2,7 +2,7 @@
 title: Модуль extended-monitoring
 permalink: ru/architecture/observability/extended-monitoring.html
 lang: ru
-search: extended-monitoring
+search: extended-monitoring, extended monitoring, image monitoring, certificate control, cluster events, расширенный мониторинг, мониторинг образов, контроль сертификатов, события кластера
 description: Архитектура модуля extended-monitoring в Deckhouse Kubernetes Platform.
 ---
 

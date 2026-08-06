@@ -1,7 +1,7 @@
 ---
 title: Extended-monitoring module
 permalink: en/architecture/observability/extended-monitoring.html
-search: extended-monitoring
+search: extended-monitoring, extended monitoring, image monitoring, certificate control, cluster events
 description: Architecture of the extended-monitoring module in Deckhouse Kubernetes Platform.
 ---
 
@@ -29,7 +29,7 @@ The Level 2 C4 architecture of the [`extended-monitoring`](/modules/extended-mon
 
 ![Extended-monitoring module architecture](../../../images/architecture/observability/c4-l2-extended-monitoring.png)
 
-## Компоненты модуля
+## Module components
 
 The module consists of the following components:
 
