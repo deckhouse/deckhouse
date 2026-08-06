@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.32.4",
+  "version": "v0.32.5",
   "aliases": null,
   "flags": {
     "help": {
@@ -46917,6 +46917,399 @@
             },
             "show-ignored": {
               "description": "Show ignored-level messages",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        }
+      ]
+    },
+    {
+      "name": "snapshot",
+      "description": "Snapshot operations (create, delete, download, restore, upload, get)",
+      "aliases": null,
+      "flags": {},
+      "subcommands": [
+        {
+          "name": "create \u003cname\u003e",
+          "description": "Create a Snapshot of a namespace",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "namespace to create the Snapshot in (defaults to the kubeconfig context namespace)",
+              "shorthand": "n",
+              "global": false
+            },
+            "output": {
+              "description": "Output format: name|json|yaml",
+              "shorthand": "o",
+              "global": false
+            },
+            "selector": {
+              "description": "capture only objects matching this label selector (e.g. app=demo,tier=db); sets spec.resourceSelector.matchLabels",
+              "shorthand": "l",
+              "global": false
+            },
+            "timeout": {
+              "description": "timeout for --wait",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "wait until the Snapshot reports Ready",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "delete [name...]",
+          "description": "Delete one or more Snapshots",
+          "aliases": null,
+          "flags": {
+            "all": {
+              "description": "delete all Snapshots in the namespace",
+              "shorthand": "",
+              "global": false
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "ignore-not-found": {
+              "description": "do not error if a named Snapshot does not exist",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "namespace of the Snapshots (defaults to the kubeconfig context namespace)",
+              "shorthand": "n",
+              "global": false
+            },
+            "selector": {
+              "description": "delete Snapshots matching this label selector (e.g. app=demo,tier=db)",
+              "shorthand": "l",
+              "global": false
+            },
+            "timeout": {
+              "description": "timeout for --wait",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "wait until the Snapshots are fully deleted",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "describe [flags] \u003cname\u003e",
+          "description": "Show the snapshot hierarchy as a tree",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "snapshot namespace (defaults to the kubeconfig context namespace)",
+              "shorthand": "n",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "download [flags] \u003csnapshot\u003e",
+          "description": "Download a snapshot to a local directory tree",
+          "aliases": null,
+          "flags": {
+            "cleanup": {
+              "description": "delete the per-volume DataExport (and its server-side export chain) after each volume completes; --cleanup=false leaves them in the cluster for debugging",
+              "shorthand": "",
+              "global": false
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            },
+            "max-parallel-downloads": {
+              "description": "global cap on concurrent whole-volume-stream downloads across all nodes (independent of --workers and --per-volume-concurrency)",
+              "shorthand": "",
+              "global": false
+            },
+            "namespace": {
+              "description": "snapshot namespace (required)",
+              "shorthand": "n",
+              "global": false
+            },
+            "node": {
+              "description": "restrict download to a single node subtree; format '\u003cKind\u003e/\u003cname\u003e' (e.g. --node DemoVirtualDisk/bk-disk-a, --node Snapshot/my-snap); the generated snapshot CR name form (e.g. DemoVirtualDiskSnapshot/nss-child-abc) is still accepted",
+              "shorthand": "",
+              "global": false
+            },
+            "output": {
+              "description": "root output directory (required)",
+              "shorthand": "o",
+              "global": false
+            },
+            "per-volume-concurrency": {
+              "description": "maximum parallel chunk/file downloads per volume",
+              "shorthand": "",
+              "global": false
+            },
+            "ttl": {
+              "description": "DataExport TTL (e.g. 2h, 30m)",
+              "shorthand": "",
+              "global": false
+            },
+            "volume-compression": {
+              "description": "volume compression codec (none, zstd); block volumes: data.bin[.\u003cext\u003e]; filesystem volumes: per-file compressed entries inside an uncompressed data.tar container",
+              "shorthand": "",
+              "global": false
+            },
+            "volume-compression-level": {
+              "description": "compression level for the selected codec (0 = codec default; ignored when --volume-compression=none)",
+              "shorthand": "",
+              "global": false
+            },
+            "workers": {
+              "description": "maximum number of nodes downloaded concurrently",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "get",
+          "description": "List Snapshot resources in the cluster",
+          "aliases": [
+            "list",
+            "ls"
+          ],
+          "flags": {
+            "all-namespaces": {
+              "description": "list Snapshots across all namespaces",
+              "shorthand": "A",
+              "global": false
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "namespace to list Snapshots from (defaults to the kubeconfig context namespace)",
+              "shorthand": "n",
+              "global": false
+            },
+            "output": {
+              "description": "Output format: table|json|yaml",
+              "shorthand": "o",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "local",
+          "description": "Operate on a locally downloaded snapshot archive (no kubeconfig required)",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "describe \u003cDIR\u003e",
+              "description": "Show the structure of a locally downloaded snapshot archive as a tree",
+              "aliases": null,
+              "flags": {
+                "allow-unauthenticated-legacy": {
+                  "description": "allow trusted pre-version archives with unauthenticated snapshot.yaml metadata (unsafe compatibility mode)",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "get \u003cDIR\u003e",
+              "description": "Print a one-line summary of a locally downloaded snapshot archive",
+              "aliases": null,
+              "flags": {
+                "allow-unauthenticated-legacy": {
+                  "description": "allow trusted pre-version archives with unauthenticated snapshot.yaml metadata (unsafe compatibility mode)",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "restore [flags] \u003csnapshot\u003e",
+          "description": "Restore a snapshot in-place into its namespace",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "dry-run": {
+              "description": "validate objects via DryRunAll without persisting; skips --wait (use to preflight a restore)",
+              "shorthand": "",
+              "global": false
+            },
+            "edit": {
+              "description": "open resolved manifests in $KUBE_EDITOR/$EDITOR (falling back to vi) before applying; aborts on non-zero exit, unchanged, or empty content",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "snapshot namespace; also the restore target namespace (required)",
+              "shorthand": "n",
+              "global": false
+            },
+            "no-auto-edit": {
+              "description": "disable the one automatic editor session for interactive Kubernetes Invalid (HTTP 422) preflight responses",
+              "shorthand": "",
+              "global": false
+            },
+            "node": {
+              "description": "restrict restore to a single node subtree; format '\u003cKind\u003e/\u003cname\u003e' (e.g. --node DemoVirtualDisk/bk-disk-a); the generated snapshot CR name form (e.g. DemoVirtualDiskSnapshot/nss-child-abc123) is still accepted",
+              "shorthand": "",
+              "global": false
+            },
+            "node-api-version": {
+              "description": "disambiguate --node by exact API version: 'v1' for core resources or '\u003cgroup\u003e/\u003cversion\u003e' for named groups (requires --node)",
+              "shorthand": "",
+              "global": false
+            },
+            "object": {
+              "description": "restrict a --scope node restore to a single captured object; format '\u003cKind\u003e/\u003cname\u003e' (requires --scope node)",
+              "shorthand": "",
+              "global": false
+            },
+            "scope": {
+              "description": "restore scope: 'subtree' (default) compiles the addressed node and its whole subtree; 'node' compiles only the addressed node itself",
+              "shorthand": "",
+              "global": false
+            },
+            "timeout": {
+              "description": "timeout for the --wait Bound check",
+              "shorthand": "",
+              "global": false
+            },
+            "wait": {
+              "description": "wait for manifest PVCs to become Bound; a dormant WaitForFirstConsumer PVC with no selected node, live consumer, or provisioning signal completes without polling",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "upload [flags]",
+          "description": "Upload a downloaded snapshot archive into a namespace",
+          "aliases": [
+            "import"
+          ],
+          "flags": {
+            "allow-existing": {
+              "description": "downgrade namespace preflight conflict check to a warning (import-mode markers from a prior run are never conflicts regardless of this flag)",
+              "shorthand": "",
+              "global": false
+            },
+            "allow-unauthenticated-legacy": {
+              "description": "allow trusted pre-version archives whose snapshot.yaml metadata is unauthenticated (unsafe; explicit compatibility mode)",
+              "shorthand": "",
+              "global": false
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "input": {
+              "description": "root archive directory produced by 'd8 snapshot download' (required)",
+              "shorthand": "i",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "target namespace to import into (required)",
+              "shorthand": "n",
+              "global": false
+            },
+            "node": {
+              "description": "restrict import to a single node subtree; format '\u003cKind\u003e/\u003cname\u003e' (e.g. --node VolumeSnapshot/pvc-1)",
+              "shorthand": "",
+              "global": false
+            },
+            "skip-unsupported-fs-entries": {
+              "description": "skip unsupported filesystem entries and report them after upload (causes data loss for skipped paths)",
+              "shorthand": "",
+              "global": false
+            },
+            "timeout": {
+              "description": "timeout for per-node readiness/completion waits",
+              "shorthand": "",
+              "global": false
+            },
+            "ttl": {
+              "description": "idle TTL for each data-leaf DataImport (e.g. 2h, 30m); must exceed the importer's provisioning and post-upload completion time",
+              "shorthand": "",
+              "global": false
+            },
+            "workers": {
+              "description": "maximum number of data-leaf volume uploads to run in parallel (fixed cap via errgroup.SetLimit; default 5)",
               "shorthand": "",
               "global": false
             }
