@@ -30,6 +30,7 @@ import (
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -267,19 +268,64 @@ type kubernetesVersionBaseline struct {
 }
 
 // kubernetesVersionBaselineFromSecret reads the baseline out of the d8-cluster-configuration Secret.
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — the Secret keys are a migration fallback for
+// kubernetesVersionBaselineFor below; nothing writes them any more.
 func kubernetesVersionBaselineFromSecret(secret *v1.Secret) kubernetesVersionBaseline {
 	if secret == nil {
 		return kubernetesVersionBaseline{}
 	}
 
-	maxUsed, maxUsedSet := secret.Data["maxUsedControlPlaneKubernetesVersion"]
-	deckhouseDefault, deckhouseDefaultSet := secret.Data["deckhouseDefaultKubernetesVersion"]
+	// A present-but-empty key counts as unset. The *Set flags gate a parseVersion call whose
+	// failure is fatal to the whole webhook, so treating "" as a value would turn a blank key into
+	// a fail-closed ClusterConfiguration — no edit of any field would be accepted.
+	maxUsed := strings.TrimSpace(string(secret.Data["maxUsedControlPlaneKubernetesVersion"]))
+	deckhouseDefault := strings.TrimSpace(string(secret.Data["deckhouseDefaultKubernetesVersion"]))
 	return kubernetesVersionBaseline{
-		MaxUsed:             string(maxUsed),
-		MaxUsedSet:          maxUsedSet,
-		DeckhouseDefault:    string(deckhouseDefault),
-		DeckhouseDefaultSet: deckhouseDefaultSet,
+		MaxUsed:             maxUsed,
+		MaxUsedSet:          maxUsed != "",
+		DeckhouseDefault:    deckhouseDefault,
+		DeckhouseDefaultSet: deckhouseDefault != "",
 	}
+}
+
+// kubernetesVersionBaselineFor resolves both facts from the d8-cluster-kubernetes ConfigMap, which
+// update-observer owns, and falls back to the d8-cluster-configuration Secret per field.
+//
+// The two facts come from different blocks because they are different kinds of thing:
+// spec.maxUsedKubernetesVersion is a monotonic record of what the cluster has run, while
+// status.automaticVersion is what the running Deckhouse build resolves "Default" to right now.
+// Note that the Secret key it replaces was only ever raised, so after a Deckhouse downgrade the
+// two disagree — and the ConfigMap is the one telling the truth about the current build.
+func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret *v1.Secret) kubernetesVersionBaseline {
+	baseline := kubernetesVersionBaselineFromSecret(secret)
+
+	cm := new(v1.ConfigMap)
+	if err := cli.Get(ctx, client.ObjectKey{
+		Name:      clusterKubernetesConfigMapName,
+		Namespace: kubeSystemNamespace,
+	}, cm); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Warn("cannot read the d8-cluster-kubernetes ConfigMap, falling back to the Secret baseline", log.Err(err))
+		}
+		return baseline
+	}
+
+	spec := new(clusterKubernetesSpec)
+	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err == nil {
+		if maxUsed := strings.TrimSpace(spec.MaxUsedVersion); maxUsed != "" {
+			baseline.MaxUsed, baseline.MaxUsedSet = maxUsed, true
+		}
+	}
+
+	status := new(clusterKubernetesStatus)
+	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesStatusDataKey]), status); err == nil {
+		if automaticVersion := strings.TrimSpace(status.AutomaticVersion); automaticVersion != "" {
+			baseline.DeckhouseDefault, baseline.DeckhouseDefaultSet = automaticVersion, true
+		}
+	}
+
+	return baseline
 }
 
 // validateKubernetesVersionDowngrade validates that Kubernetes version downgrade
@@ -559,7 +605,7 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 							if moduleConfigOwnsKubernetesVersion(ctx, cli) {
 								return allowResult(nil)
 							}
-							return validateKubernetesVersionDowngrade(oldClusterConf.KubernetesVersion, clusterConf.KubernetesVersion, kubernetesVersionBaselineFromSecret(secret))
+							return validateKubernetesVersionDowngrade(oldClusterConf.KubernetesVersion, clusterConf.KubernetesVersion, kubernetesVersionBaselineFor(ctx, cli, secret))
 						})
 
 						criChangeValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	v1 "k8s.io/api/core/v1"
@@ -39,9 +40,6 @@ const (
 	clusterConfigurationDataKey    = "cluster-configuration.yaml"
 	clusterKubernetesStatusDataKey = "status"
 	clusterKubernetesSpecDataKey   = "spec"
-	// maxK8sVersionLabelKey mirrors the label update-observer stamps on the ConfigMap; it survives
-	// a corrupted data.status and is one of the floor fallbacks below.
-	maxK8sVersionLabelKey = "max-k8s-version"
 
 	// automaticKubernetesVersion is the ClusterConfiguration sentinel and a deprecated MC alias.
 	automaticKubernetesVersion = "Automatic"
@@ -57,15 +55,20 @@ const (
 // encoding/json's case-insensitive fallback.
 type clusterKubernetesStatus struct {
 	AvailableVersions []string `json:"availableVersions"`
-	// CurrentVersion is what the control plane is actually running right now — a floor fallback
-	// when the Secret bookkeeping has not been written yet.
-	CurrentVersion string `json:"currentVersion"`
+	// AutomaticVersion is the Kubernetes version this Deckhouse build treats as its default —
+	// what "Default" resolves to. It is what deckhouseDefaultKubernetesVersion in the
+	// d8-cluster-configuration Secret used to answer.
+	AutomaticVersion string `json:"automaticVersion"`
 }
 
-// clusterKubernetesSpec is the subset of data.spec needed as the last floor fallback: the version
-// this cluster was last told to run, written by the global target_kubernetes_version hook.
+// clusterKubernetesSpec is the subset of data.spec admission needs. Written by update-observer,
+// which is the only writer of the whole object.
 type clusterKubernetesSpec struct {
-	DesiredVersion string `json:"desiredVersion"`
+	// MaxUsedVersion is the highest Kubernetes minor the cluster has ever run. It is the floor a
+	// downgrade may not cross by more than one minor, and it is monotonic — which is exactly why
+	// it is the only acceptable source: currentVersion is a point in time and drops as soon as a
+	// legitimate downgrade lands, which used to let a second downgrade straight through.
+	MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
 }
 
 // validateControlPlaneManagerKubernetesVersion guards ModuleConfig control-plane-manager's
@@ -240,7 +243,7 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 }
 
 // rejectKubernetesVersionBelowMaxUsed enforces "never land more than one minor below maxUsed"
-// using maxUsedControlPlaneKubernetesVersion from the d8-cluster-configuration Secret.
+// using spec.maxUsedKubernetesVersion from the d8-cluster-kubernetes ConfigMap.
 //
 // Deliberately not validateKubernetesVersionDowngrade: that one resolves "Automatic" on both
 // sides and forbids handing control back to Deckhouse, which is a contract this webhook
@@ -411,49 +414,86 @@ func (v *moduleConfigValidator) readAvailableKubernetesVersions(ctx context.Cont
 }
 
 // readKubernetesVersionFloor resolves the version the cluster must not land more than one minor
-// below, trying the sources in descending authority. Every one of them describes a *fact* about
-// the cluster — what it ran, runs, or was told to run — never the operator's intent in the request
-// being validated, which is why the previous declared value is deliberately not in this list.
+// below: the highest minor it has ever run.
 //
-// The chain exists because the first source is written lazily and the next three all live inside
-// one ConfigMap: a single `kubectl delete cm d8-cluster-kubernetes` used to disarm the guard
-// completely while maxUsed was still absent from the Secret. It also realigns this guard with the
-// soft-guard in the global hook, which already falls back to the ConfigMap label.
+// Exactly one quantity answers that, and it lives in spec.maxUsedKubernetesVersion of the cluster
+// ConfigMap. The previous chain of four sources mixed it with two that are not it —
+// status.currentVersion is a point in time and drops the moment a legitimate downgrade lands,
+// which silently lowered the floor and let a second downgrade through, and spec.desiredVersion is
+// a declaration rather than a record. Reading one monotonic value is also what keeps this guard
+// and the soft guard in the global discovery hook from disagreeing about the same window.
+//
+// The Secret key is the migration fallback for the window between a Deckhouse upgrade and the
+// DaemonSet rollout that first writes the ConfigMap key.
+// TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret branch.
 //
 // Returns ok=false only when nothing at all is known — a cluster still bootstrapping, where there
 // is no version to protect yet.
 func (v *moduleConfigValidator) readKubernetesVersionFloor(ctx context.Context) (string, bool) {
+	if spec, ok := v.readClusterKubernetesSpec(ctx); ok && spec.MaxUsedVersion != "" {
+		return spec.MaxUsedVersion, true
+	}
+
 	if baseline, ok := v.readKubernetesVersionBaseline(ctx); ok && baseline.MaxUsedSet && baseline.MaxUsed != "" {
 		return baseline.MaxUsed, true
 	}
 
+	return "", false
+}
+
+// readClusterKubernetesSpec returns data.spec of the cluster ConfigMap. ok=false means the object
+// or the block is missing or unreadable, i.e. the caller should fall back rather than fail.
+func (v *moduleConfigValidator) readClusterKubernetesSpec(ctx context.Context) (*clusterKubernetesSpec, bool) {
 	cm := &v1.ConfigMap{}
 	if err := v.client.Get(ctx, client.ObjectKey{
 		Name:      clusterKubernetesConfigMapName,
 		Namespace: kubeSystemNamespace,
 	}, cm); err != nil {
 		if !apierrors.IsNotFound(err) {
-			log.Warn("skipping the kubernetesVersion maxUsed guard: cannot read the d8-cluster-kubernetes ConfigMap", log.Err(err))
+			log.Warn("cannot read the d8-cluster-kubernetes ConfigMap", log.Err(err))
+		}
+		return nil, false
+	}
+
+	spec := new(clusterKubernetesSpec)
+	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err != nil {
+		log.Warn("cannot parse d8-cluster-kubernetes data.spec", log.Err(err))
+		return nil, false
+	}
+
+	spec.MaxUsedVersion = strings.TrimSpace(spec.MaxUsedVersion)
+
+	return spec, true
+}
+
+// readClusterKubernetesAutomaticVersion returns status.automaticVersion — the version "Default"
+// resolves to for the running Deckhouse build. ok=false means it is not published yet.
+//
+// Note the difference from the deckhouseDefaultKubernetesVersion Secret key it replaces: that key
+// was written monotonically (only ever raised), so after a Deckhouse downgrade it kept answering
+// with a default that no longer exists. This one always describes the build that is actually
+// running, which is what every caller of it actually wants.
+func (v *moduleConfigValidator) readClusterKubernetesAutomaticVersion(ctx context.Context) (string, bool) {
+	cm := &v1.ConfigMap{}
+	if err := v.client.Get(ctx, client.ObjectKey{
+		Name:      clusterKubernetesConfigMapName,
+		Namespace: kubeSystemNamespace,
+	}, cm); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Warn("cannot read the d8-cluster-kubernetes ConfigMap", log.Err(err))
 		}
 		return "", false
 	}
 
 	status := new(clusterKubernetesStatus)
-	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesStatusDataKey]), status); err == nil && status.CurrentVersion != "" {
-		return status.CurrentVersion, true
+	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesStatusDataKey]), status); err != nil {
+		log.Warn("cannot parse d8-cluster-kubernetes data.status", log.Err(err))
+		return "", false
 	}
 
-	// Survives a corrupted data.status, which is why it is checked before data.spec.
-	if label := cm.Labels[maxK8sVersionLabelKey]; label != "" {
-		return label, true
-	}
+	automaticVersion := strings.TrimSpace(status.AutomaticVersion)
 
-	spec := new(clusterKubernetesSpec)
-	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err == nil && spec.DesiredVersion != "" {
-		return spec.DesiredVersion, true
-	}
-
-	return "", false
+	return automaticVersion, automaticVersion != ""
 }
 
 // readKubernetesVersionBaseline returns the version bookkeeping control-plane-manager keeps in the

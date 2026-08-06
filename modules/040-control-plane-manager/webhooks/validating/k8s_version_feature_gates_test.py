@@ -27,6 +27,7 @@ from k8s_version_feature_gates import (
     normalize_version,
     CLUSTER_CONFIG_SNAPSHOT_NAME,
     MODULE_CONFIG_SNAPSHOT_NAME,
+    CLUSTER_KUBERNETES_SNAPSHOT_NAME,
 )
 from deckhouse import hook, tests
 from dotmap import DotMap
@@ -302,6 +303,7 @@ def _prepare_mc_validation_binding_context(
     cc_k8s_version: str = None,
     cc_default_version: str = "1.30.0",
     cc_snapshot_present: bool = None,
+    cm_automatic_version: str = None,
 ) -> DotMap:
     binding_context_json = """
 {
@@ -394,6 +396,17 @@ def _prepare_mc_validation_binding_context(
     else:
         ctx.snapshots[CLUSTER_CONFIG_SNAPSHOT_NAME] = []
 
+    if cm_automatic_version is not None:
+        ctx.snapshots[CLUSTER_KUBERNETES_SNAPSHOT_NAME] = [DotMap({
+            "object": {
+                "data": {
+                    "status": yaml.dump({"automaticVersion": cm_automatic_version}),
+                }
+            }
+        })]
+    else:
+        ctx.snapshots[CLUSTER_KUBERNETES_SNAPSHOT_NAME] = []
+
     return ctx
 
 
@@ -481,6 +494,49 @@ class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
             ['New123'],
             cc_default_version='1.32.0',
             cc_snapshot_present=True,
+        )
+        out = hook.testrun(main, [ctx])
+        error_msg = (
+            "Cannot change Kubernetes version to 1.32.0:\n"
+            "The following feature gates are deprecated in this version or earlier: 'New123'\n"
+            "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
+        )
+        tests.assert_validation_deny(self, out, error_msg)
+
+    # status.automaticVersion of the cluster ConfigMap is the source now; the Secret key it
+    # replaces was only ever raised and so kept answering with a default the running build no
+    # longer has. 'New123' is deprecated in 1.32 but not in 1.31, so this denies only if the
+    # ConfigMap value won over the Secret one.
+    def test_mc_automatic_prefers_the_configmap_default_over_the_secret(self):
+        ctx = _prepare_mc_validation_binding_context(
+            'Automatic', ['New123'], cc_snapshot_present=True,
+            cc_default_version='1.31.0', cm_automatic_version='1.32.0',
+        )
+        out = hook.testrun(main, [ctx])
+        error_msg = (
+            "Cannot change Kubernetes version to 1.32.0:\n"
+            "The following feature gates are deprecated in this version or earlier: 'New123'\n"
+            "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
+        )
+        tests.assert_validation_deny(self, out, error_msg)
+
+    # The migration window: update-observer has not written the ConfigMap yet.
+    def test_mc_automatic_falls_back_to_the_secret_default_without_the_configmap(self):
+        ctx = _prepare_mc_validation_binding_context(
+            'Automatic', ['New123'], cc_snapshot_present=True, cc_default_version='1.32.0',
+        )
+        out = hook.testrun(main, [ctx])
+        error_msg = (
+            "Cannot change Kubernetes version to 1.32.0:\n"
+            "The following feature gates are deprecated in this version or earlier: 'New123'\n"
+            "You can remove them from the enabledFeatureGates in the control-plane-manager ModuleConfig."
+        )
+        tests.assert_validation_deny(self, out, error_msg)
+
+    # A managed-style cluster with no ClusterConfiguration Secret at all still resolves Default.
+    def test_mc_automatic_uses_the_configmap_default_without_any_secret(self):
+        ctx = _prepare_mc_validation_binding_context(
+            'Automatic', ['New123'], cm_automatic_version='1.32.0',
         )
         out = hook.testrun(main, [ctx])
         error_msg = (

@@ -263,14 +263,17 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 			expectError: false,
 		},
 		{
+			// A present-but-empty key is not a value. Treating it as one made parseVersion fail
+			// and took the whole ClusterConfiguration webhook fail-closed — no edit to any field
+			// would be accepted — over bookkeeping that simply had not been written yet.
 			name:       "old version Automatic with empty maxUsed version",
 			oldVersion: "Automatic",
 			newVersion: "1.23.0",
 			secretData: map[string][]byte{
 				"maxUsedControlPlaneKubernetesVersion": []byte(""),
 			},
-			expectValid: false,
-			expectError: true,
+			expectValid: true,
+			expectError: false,
 		},
 		{
 			name:       "new version Automatic with empty deckhouse default",
@@ -279,8 +282,8 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 			secretData: map[string][]byte{
 				"deckhouseDefaultKubernetesVersion": []byte("   "),
 			},
-			expectValid: false,
-			expectError: true,
+			expectValid: true,
+			expectError: false,
 		},
 		{
 			name: "new version is numeric, old version is numeric too, " +

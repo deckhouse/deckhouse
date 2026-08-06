@@ -25,6 +25,7 @@ from feature_gates_generated import is_deprecated, is_feature_gate_deprecated_up
 
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
 MODULE_CONFIG_SNAPSHOT_NAME = "module-config-control-plane-manager"
+CLUSTER_KUBERNETES_SNAPSHOT_NAME = "d8-cluster-kubernetes"
 # Sentinel meaning "let Deckhouse pick the version".
 AUTOMATIC_VERSION = "Automatic"
 DEFAULT_VERSION = "Default"
@@ -38,7 +39,7 @@ configVersion: v1
 kubernetesValidating:
 - name: cpm-k8s-version-feature-gates.deckhouse.io
   group: cpm-feature-gates-validation
-  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{MODULE_CONFIG_SNAPSHOT_NAME}"]
+  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{MODULE_CONFIG_SNAPSHOT_NAME}", "{CLUSTER_KUBERNETES_SNAPSHOT_NAME}"]
   namespace:
     labelSelector:
       matchLabels:
@@ -56,7 +57,7 @@ kubernetesValidating:
 # d8-cluster-configuration secret above — this binding covers that path.
 - name: cpm-k8s-version-feature-gates-mc.deckhouse.io
   group: cpm-feature-gates-validation
-  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}"]
+  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{CLUSTER_KUBERNETES_SNAPSHOT_NAME}"]
   matchConditions:
   - name: "only-control-plane-manager-module"
     expression: 'request.name == "control-plane-manager"'
@@ -93,6 +94,26 @@ kubernetes:
   executeHookOnEvent: []
   executeHookOnSynchronization: true
   keepFullObjectsInMemory: true
+
+# status.automaticVersion of this ConfigMap is what "Default" resolves to for the running Deckhouse
+# build. It replaces deckhouseDefaultKubernetesVersion in the Secret above, which was only ever
+# raised and therefore kept answering with a default that no longer exists after a Deckhouse
+# downgrade. The Secret key stays as a fallback for the window before update-observer first writes
+# this object.
+- name: {CLUSTER_KUBERNETES_SNAPSHOT_NAME}
+  apiVersion: v1
+  kind: ConfigMap
+  group: cpm-version-validation
+  namespace:
+    nameSelector:
+      matchNames:
+      - kube-system
+  nameSelector:
+    matchNames:
+    - d8-cluster-kubernetes
+  executeHookOnEvent: []
+  executeHookOnSynchronization: true
+  keepFullObjectsInMemory: true
 """
 
 
@@ -120,14 +141,50 @@ def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
     encoded_version = secret_data.get('deckhouseDefaultKubernetesVersion')
     if not encoded_version:
         return None
-    
+
     try:
         decoded_version = base64.b64decode(encoded_version).decode('utf-8').strip()
         if decoded_version:
             return decoded_version
     except Exception as e:
         logging.error(f"Failed to decode deckhouse default Kubernetes version from base64: {e}")
-    
+
+    return None
+
+
+def get_deckhouse_default_version_from_configmap(ctx: DotMap) -> Optional[str]:
+    """Read status.automaticVersion from kube-system/d8-cluster-kubernetes.
+
+    update-observer owns that ConfigMap and writes automaticVersion from the version_map entry
+    marked default in the running build, so it always describes the Deckhouse that is actually
+    installed. Missing or unparsable means "not published yet" and the caller falls back to the
+    Secret key.
+    """
+    snapshot = ctx.snapshots.get(CLUSTER_KUBERNETES_SNAPSHOT_NAME, [])
+    if not snapshot or len(snapshot) == 0:
+        return None
+
+    config_map = snapshot[0]
+    if not config_map or not hasattr(config_map, 'object'):
+        return None
+
+    raw_status = config_map.object.get('data', {}).get('status')
+    if not raw_status:
+        return None
+
+    try:
+        status = yaml.safe_load(raw_status)
+    except Exception as e:
+        logging.error(f"Failed to parse d8-cluster-kubernetes data.status: {e}")
+        return None
+
+    if not isinstance(status, dict):
+        return None
+
+    automatic_version = status.get('automaticVersion')
+    if isinstance(automatic_version, str) and automatic_version.strip():
+        return automatic_version.strip()
+
     return None
 
 
@@ -214,24 +271,32 @@ def resolve_effective_version(
 
     if secret_data is None:
         secret_data = get_cluster_configuration_secret_data(ctx)
-    if not secret_data:
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-k8s-fg source=none reason=no-secret mc=%s", mc_kubernetes_version)
+
+    # The Deckhouse default now comes from status.automaticVersion of the cluster ConfigMap, with
+    # the Secret key kept only until update-observer has written that object at least once.
+    # TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret fallback.
+    def deckhouse_default() -> Optional[str]:
+        version = get_deckhouse_default_version_from_configmap(ctx)
+        if version:
+            return version
+        if secret_data:
+            return get_deckhouse_default_version_from_secret(secret_data)
         return None
 
     if is_track_default_version(mc_kubernetes_version):
-        version = get_deckhouse_default_version_from_secret(secret_data)
+        version = deckhouse_default()
         # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-k8s-fg source=mc-track-default version=%s mc=%s", version, mc_kubernetes_version)
         return version
 
-    cc_version = get_k8s_version_from_cluster_config(secret_data)
-    if cc_version and not is_track_default_version(cc_version):
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-k8s-fg source=cc-pin version=%s", cc_version)
-        return cc_version
+    if secret_data:
+        cc_version = get_k8s_version_from_cluster_config(secret_data)
+        if cc_version and not is_track_default_version(cc_version):
+            # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+            logging.info("E2E-KV python-k8s-fg source=cc-pin version=%s", cc_version)
+            return cc_version
 
-    version = get_deckhouse_default_version_from_secret(secret_data)
+    version = deckhouse_default()
     # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
     logging.info("E2E-KV python-k8s-fg source=deckhouse-default version=%s", version)
     return version

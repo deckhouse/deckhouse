@@ -447,13 +447,12 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	// The floor used to come from the Secret alone, and that key is written lazily. Everything
-	// below is a *fact* about the cluster (what it runs, or was last told to run), so each is a
-	// legitimate floor — and the three ConfigMap-based ones all vanish together if the ConfigMap
-	// is deleted, which is exactly why the Secret stays first.
-	t.Run("floor falls back to status.currentVersion when the Secret has no maxUsed", func(t *testing.T) {
+	// The floor is spec.maxUsedKubernetesVersion and nothing else. It is the only quantity that
+	// means "the highest minor this cluster ever ran"; the sources that used to stand in for it
+	// were a point in time (status.currentVersion) and a declaration (spec.desiredVersion).
+	t.Run("floor comes from spec.maxUsedKubernetesVersion", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
-		cm.Data["status"] = "currentVersion: \"1.36\"\n"
+		cm.Data["spec"] = "desiredVersion: \"1.33\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n"
 		handler := withObjs(t, cm)
 
 		newCfg := newControlPlaneManagerConfig("1.32")
@@ -466,40 +465,9 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.Contains(t, resp.Result.Message, "1.32")
 	})
 
-	t.Run("floor falls back to the max-k8s-version label when status is unparsable", func(t *testing.T) {
+	t.Run("the floor still allows exactly one minor down", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
-		cm.Data["status"] = "\tthis is not: valid: yaml\n"
-		cm.Labels = map[string]string{"max-k8s-version": "1.36"}
-		handler := withObjs(t, cm)
-
-		newCfg := newControlPlaneManagerConfig("1.32")
-		oldCfg := newControlPlaneManagerConfig("1.36")
-		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
-
-		resp := callHandler(t, handler, review)
-		require.False(t, resp.Allowed)
-		require.NotNil(t, resp.Result)
-		assert.Contains(t, resp.Result.Message, "1.32")
-	})
-
-	t.Run("floor falls back to spec.desiredVersion on a freshly seeded ConfigMap", func(t *testing.T) {
-		cm := newClusterKubernetesConfigMap(nil)
-		cm.Data["spec"] = "desiredVersion: \"1.36\"\nupdateMode: Manual\n"
-		handler := withObjs(t, cm)
-
-		newCfg := newControlPlaneManagerConfig("1.32")
-		oldCfg := newControlPlaneManagerConfig("1.36")
-		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
-
-		resp := callHandler(t, handler, review)
-		require.False(t, resp.Allowed)
-		require.NotNil(t, resp.Result)
-		assert.Contains(t, resp.Result.Message, "1.32")
-	})
-
-	t.Run("a fallback floor still allows exactly one minor down", func(t *testing.T) {
-		cm := newClusterKubernetesConfigMap(nil)
-		cm.Data["status"] = "currentVersion: \"1.36\"\n"
+		cm.Data["spec"] = "maxUsedKubernetesVersion: \"1.36\"\n"
 		handler := withObjs(t, cm)
 
 		newCfg := newControlPlaneManagerConfig("1.35")
@@ -510,21 +478,56 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	// The Secret stays authoritative: a stale ConfigMap must not lower the floor below what the
-	// cluster has actually run.
-	t.Run("Secret maxUsed wins over a lower ConfigMap currentVersion", func(t *testing.T) {
+	// The defect the single source fixes: after a legitimate 1.36 → 1.35 downgrade the control
+	// plane runs 1.35, so a floor taken from status.currentVersion would say 1.35 and wave a
+	// second step down to 1.34 through. maxUsed stays at 1.36 and rejects it.
+	t.Run("a second downgrade is rejected after the first one landed", func(t *testing.T) {
 		cm := newClusterKubernetesConfigMap(nil)
-		cm.Data["status"] = "currentVersion: \"1.33\"\n"
+		cm.Data["spec"] = "desiredVersion: \"1.35\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n"
+		cm.Data["status"] = "currentVersion: \"1.35\"\n"
+		handler := withObjs(t, cm)
+
+		newCfg := newControlPlaneManagerConfig("1.34")
+		oldCfg := newControlPlaneManagerConfig("1.35")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "1.36")
+	})
+
+	// The migration window: a Deckhouse upgrade lands before the DaemonSet rollout that first
+	// writes the ConfigMap key, and the floor must not be disarmed in the meantime.
+	// TODO(kubernetesVersion-deprecation): T+1 remove — drop with the Secret fallback.
+	t.Run("floor falls back to the Secret while the ConfigMap key is still absent", func(t *testing.T) {
+		cm := newClusterKubernetesConfigMap(nil)
+		cm.Data["spec"] = "desiredVersion: \"1.33\"\nupdateMode: Manual\n"
 		handler := withObjs(t, cm, newClusterConfigurationSecretWithMaxUsed("1.36", "1.36"))
 
-		newCfg := newControlPlaneManagerConfig("1.33")
+		newCfg := newControlPlaneManagerConfig("1.32")
 		oldCfg := newControlPlaneManagerConfig("1.36")
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
 		resp := callHandler(t, handler, review)
 		require.False(t, resp.Allowed)
 		require.NotNil(t, resp.Result)
-		assert.Contains(t, resp.Result.Message, "1.33")
+		assert.Contains(t, resp.Result.Message, "1.32")
+	})
+
+	// Once the ConfigMap carries the value it wins outright: the Secret key is no longer written,
+	// so it can only ever be the staler of the two.
+	t.Run("ConfigMap maxUsed wins over the Secret", func(t *testing.T) {
+		cm := newClusterKubernetesConfigMap(nil)
+		cm.Data["spec"] = "maxUsedKubernetesVersion: \"1.33\"\n"
+		handler := withObjs(t, cm, newClusterConfigurationSecretWithMaxUsed("1.36", "1.36"))
+
+		newCfg := newControlPlaneManagerConfig("1.32")
+		oldCfg := newControlPlaneManagerConfig("1.33")
+		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+
+		resp := callHandler(t, handler, review)
+		assert.True(t, resp.Allowed, "1.32 is one minor below the ConfigMap floor 1.33")
 	})
 
 	// spec.settings is x-kubernetes-preserve-unknown-fields, so an unquoted 1.35 reaches the guard
