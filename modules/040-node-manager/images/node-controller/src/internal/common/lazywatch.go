@@ -43,7 +43,11 @@ import (
 // This source therefore subscribes to the registration Secrets (their informer exists either
 // way) and, per registered GVK, starts the very source.Kind the builder would have started —
 // same handler, same predicates, just at the moment the registration actually exists.
-// source.Kind waits for the CRD itself when the Secret precedes it.
+//
+// Starting one is fire-and-forget by design: source.Kind returns as soon as it has spawned its
+// own goroutine, which then polls for the informer until the CRD exists. A registration that
+// precedes its CRD therefore needs no retry here — hence the log wording below, which claims
+// only that the watch was registered, not that it is already delivering events.
 //
 // Watches are only ever added, never removed: a registration that changes its version leaves the
 // old handler on the old informer. That is harmless as a trigger (the workqueue deduplicates)
@@ -111,7 +115,7 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 						continue
 					}
 					started[gvk] = true
-					logger.Info("instance class watch started", "gvk", gvk.String())
+					logger.Info("instance class watch registered; it attaches once the CRD is served", "gvk", gvk.String())
 				}
 			}
 		}()
