@@ -7,7 +7,7 @@ description: Architecture of the adaptive-resource-management module in Deckhous
 
 The [`adaptive-resource-management`](/modules/adaptive-resource-management/) module  is intended for cluster administrators and platform engineers who want to automate the selection of resource requests and limits for workloads. It eliminates the need to manually tune CPU and memory parameters by leveraging VPA (Vertical Pod Autoscaler) recommendations.
 
-The module deploys the AutoVPA controller, based on Goldilocks with additional Deckhouse-specific enhancements, which automatically creates and maintains VPA objects for workloads in selected namespaces and provides resource recommendations. AutoVPA replaces one-off, per-application guesswork with evidence-based sizing across the whole fleet: it prevents over-provisioning that drives up cloud spend, gives workloads reliable performance guardrails by basing requests and limits on observed usage rather than estimates, and scales the same recommendation workflow to as many workloads and namespaces as you manage — without touching a single manifest.
+The module deploys the AutoVPA controller, based on [Goldilocks](https://github.com/FairwindsOps/goldilocks) with additional Deckhouse-specific enhancements, which automatically creates and maintains VPA objects for workloads in selected namespaces and provides resource recommendations. AutoVPA replaces one-off, per-application guesswork with evidence-based sizing across the whole fleet: it prevents over-provisioning that drives up cloud spend, gives workloads reliable performance guardrails by basing requests and limits on observed usage rather than estimates, and scales the same recommendation workflow to as many workloads and namespaces as you manage — without touching a single manifest.
 
 Main features:
 
@@ -35,7 +35,7 @@ The Level 2 C4 architecture of the [`adaptive-resource-management`](/modules/ada
 
 ## Module components
 
-The `adaptive-resource-management` module module consists of a single **autovpa-controller** component that includes the following containers:
+The `adaptive-resource-management` module module consists of a single **autovpa-controller** component that includes the following container:
 
 * **autovpa**: Main container.
 
