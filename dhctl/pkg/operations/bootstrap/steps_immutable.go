@@ -88,6 +88,7 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 			NodeName:   nodeName,
 			MetaConfig: bctx.metaConfig,
 			StateCache: bctx.stateCache,
+			CandiDir:   b.Options.Global.CandiDir,
 		})
 		if err != nil {
 			return err

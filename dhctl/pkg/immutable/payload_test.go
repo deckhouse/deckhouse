@@ -52,6 +52,7 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 		NodeName:   "zykov-master-0",
 		MetaConfig: metaConfig,
 		StateCache: cache.NewTestCache(),
+		CandiDir:   testCandiDir(t),
 	})
 	require.NoError(t, err)
 
@@ -97,6 +98,7 @@ func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
 		NodeName:   "zykov-master-0",
 		MetaConfig: metaConfig,
 		StateCache: cache.NewTestCache(),
+		CandiDir:   testCandiDir(t),
 	})
 	require.NoError(t, err)
 

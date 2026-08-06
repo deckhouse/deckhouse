@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -26,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/manifests"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
@@ -232,34 +230,15 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	return nil
 }
 
-// PrepareControlPlaneManifests renders the control-plane static pods into the bundle.
-//
-// The templates are embedded in go_lib/controlplane/manifests rather than read from CandiDir:
-// dhctl, the on-node agent and control-plane-manager have to produce the same bytes, and a
-// directory read is one more way for them to drift. The node placeholders are what they have
-// always been on this path — the node expands them itself.
-func PrepareControlPlaneManifests(ctx context.Context, templateController *Controller, cfg *controlplane.TemplateConfig, _ *options.GlobalOptions) error {
-	dst := filepath.Join(templateController.TmpDir, bashibleDir, "control-plane")
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Rendering control-plane manifests to %q", dst))
-
-	bundle, err := manifests.Render(ctx, cfg.ToMap(), manifests.NodeInput{
-		NodeName: cfg.NodeName,
-		NodeIP:   cfg.NodeIP,
-	})
-	if err != nil {
-		return fmt.Errorf("render control-plane manifests: %w", err)
+func PrepareControlPlaneManifests(ctx context.Context, templateController *Controller, cfg *controlplane.TemplateConfig, globalOptions *options.GlobalOptions) error {
+	saveInfo := saveFromTo{
+		from: filepath.Join(globalOptions.CandiDir, "control-plane"),
+		to:   filepath.Join(bashibleDir, "control-plane"),
+		data: cfg.ToMap(),
 	}
-
-	if err := os.MkdirAll(dst, bundlePermissions); err != nil {
-		return fmt.Errorf("create %s: %w", dst, err)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("From %q to %q", saveInfo.from, saveInfo.to))
+	if err := templateController.RenderAndSaveTemplates(ctx, saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {
+		return err
 	}
-
-	for _, artifact := range bundle {
-		file := filepath.Join(dst, artifact.Name)
-		if err := os.WriteFile(file, artifact.Content, bundlePermissions); err != nil {
-			return fmt.Errorf("write %s: %w", file, err)
-		}
-	}
-
 	return nil
 }
