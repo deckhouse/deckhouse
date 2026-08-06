@@ -71,16 +71,16 @@ metadata:
 spec:
   version: 2
   settings:
-    # [<en>] Default StorageClass for cluster PVCs (must match NFSStorageClass metadata.name below).
-    # [<ru>] StorageClass по умолчанию для PVC кластера (должен совпадать с metadata.name у NFSStorageClass ниже).
+    # [<en>] StorageClass used for cluster PVCs when none is specified explicitly.
+    # [<ru>] StorageClass, который используется для PVC кластера, если он не указан явно.
     defaultClusterStorageClass: nfs-storage-class
     modules:
       # [<en>] Template for system application URLs in the cluster.
       # [<en>] E.g., Grafana for `%s.example.com` is available at `grafana.example.com`, the DVP web interface — at `console.example.com`.
-      # [<en>] The domain MUST NOT match `clusterDomain` in ClusterConfiguration (here `internal.cluster.local`).
+      # [<en>] The domain MUST NOT match the cluster domain (`clusterDomain`).
       # [<ru>] Шаблон адресов системных приложений в кластере.
       # [<ru>] Например, Grafana для `%s.example.com` будет на `grafana.example.com`, веб-интерфейс DVP — на `console.example.com`.
-      # [<ru>] Домен НЕ ДОЛЖЕН совпадать с `clusterDomain` в ClusterConfiguration (здесь `internal.cluster.local`).
+      # [<ru>] Домен НЕ ДОЛЖЕН совпадать с доменом кластера (`clusterDomain`).
       # [<en>] You might consider changing this.
       # [<ru>] Возможно, захотите изменить.
       publicDomainTemplate: "<PUBLIC_DOMAIN_TEMPLATE>"
@@ -190,9 +190,9 @@ internalNetworkCIDRs:
   # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с другими подсетями.
   - <INTERNAL_NETWORK_CIDRS>
 ---
-# [<en>] Worker NodeGroup for static machines (see node-manager docs).
+# [<en>] Worker NodeGroup for static machines.
 # [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
-# [<ru>] Группа worker-узлов для статических машин (см. документацию node-manager).
+# [<ru>] Группа worker-узлов для статических машин.
 # [<ru>] https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -207,18 +207,15 @@ spec:
     labelSelector:
       matchLabels:
         role: worker
-  # [<en>] Labels applied to nodes in this group.
-  # [<en>] `storage: "true"` is required for NFSStorageClass `workloadNodes` below.
-  # [<ru>] Метки на узлах группы.
-  # [<ru>] `storage: "true"` нужна для NFSStorageClass `workloadNodes` ниже.
+  # [<en>] Labels applied to every node of this group.
+  # [<ru>] Лейблы, которые проставляются на каждый узел группы.
   nodeTemplate:
     labels:
-      node-role.deckhouse.io/worker: ""
       storage: "true"
 ---
-# [<en>] SSH credentials for CAPS to connect to the worker node (private key is generated in the browser on step 2).
+# [<en>] SSH credentials for Cluster API Provider Static (CAPS) to connect to the worker node (private key is generated in the browser on step 2).
 # [<en>] https://deckhouse.io/modules/node-manager/cr.html#sshcredentials
-# [<ru>] SSH-доступ для CAPS к worker-узлу (приватный ключ генерируется в браузере на шаге 2).
+# [<ru>] SSH-доступ для Cluster API Provider Static (CAPS) к worker-узлу (приватный ключ генерируется в браузере на шаге 2).
 # [<ru>] https://deckhouse.ru/modules/node-manager/cr.html#sshcredentials
 apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
@@ -256,9 +253,9 @@ spec:
   version: 1
   enabled: true
 ---
-# [<en>] virtualization module settings (DVCR, VM networks).
+# [<en>] virtualization module settings (Deckhouse Virtualization Container Registry (DVCR), VM networks).
 # [<en>] https://deckhouse.io/modules/virtualization/configuration.html
-# [<ru>] Настройки модуля virtualization (DVCR, сети ВМ).
+# [<ru>] Настройки модуля virtualization (Deckhouse Virtualization Container Registry (DVCR), сети ВМ).
 # [<ru>] https://deckhouse.ru/modules/virtualization/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -271,8 +268,8 @@ spec:
     dvcr:
       storage:
         persistentVolumeClaim:
-          # [<en>] DVCR PVC size on a worker node with label `storage: "true"`.
-          # [<ru>] Размер PVC DVCR на worker-узле с меткой `storage: "true"`.
+          # [<en>] Size of the DVCR image storage.
+          # [<ru>] Размер хранилища образов DVCR.
           size: 50Gi
         type: PersistentVolumeClaim
     # [<en>] CIDRs for virtual machine traffic (must not overlap with pod/service subnets).
@@ -301,8 +298,8 @@ spec:
     nfsVersion: "4.1"
   reclaimPolicy: Delete
   volumeBindingMode: WaitForFirstConsumer
-  # [<en>] Provision volumes only on worker nodes (see `nodeTemplate.labels.storage` in NodeGroup `worker`).
-  # [<ru>] Тома создаются только на worker-узлах (см. `nodeTemplate.labels.storage` в NodeGroup `worker`).
+  # [<en>] Nodes allowed to mount volumes of this StorageClass.
+  # [<ru>] Узлы, на которых разрешено монтировать тома этого StorageClass.
   workloadNodes:
     nodeSelector:
       matchLabels:
@@ -336,8 +333,8 @@ spec:
   hostPort:
     httpPort: 80
     httpsPort: 443
-  # [<en>] You might consider changing this. Default is 300s (5 min); for large VM image uploads use 1800s or more (see the info box after config.yml).
-  # [<ru>] Возможно, захотите изменить. По умолчанию 300s (5 мин); для загрузки больших образов ВМ — 1800s или больше (см. info-блок ниже).
+  # [<en>] You might consider changing this. How long NGINX waits for worker processes to finish on a configuration reload.
+  # [<ru>] Возможно, захотите изменить. Сколько NGINX ждёт завершения worker-процессов при перезагрузке конфигурации.
   config:
     worker-shutdown-timeout: 300s
   nodeSelector:
