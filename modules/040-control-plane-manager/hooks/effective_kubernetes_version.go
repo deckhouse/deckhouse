@@ -299,6 +299,13 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 		return fmt.Errorf("kubernetesVersion required (global.discovery.targetKubernetesVersion is empty)")
 	}
 
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	input.Logger.Info("E2E-KV effective-k8s",
+		"source", "global.discovery.targetKubernetesVersion",
+		"target", configVersionRaw,
+		"prevEffective", prevEffectiveVersion,
+	)
+
 	configVersion, err := semver.NewVersion(configVersionRaw)
 	if err != nil {
 		return fmt.Errorf("kubernetesVersion is not valid semver: %s", configVersionRaw)
@@ -402,9 +409,8 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 	maxUsedStr := fmt.Sprintf("%d.%d", newMaxUsed.Major(), newMaxUsed.Minor())
 	input.Values.Set(maxUsedK8sVersionValuesKey, maxUsedStr)
 
-	// The throttling decision is invisible from the outside: the operator declared one version and
-	// the cluster moves onto another. Keep it on the record.
-	input.Logger.Info("resolved the effective Kubernetes version",
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	input.Logger.Info("E2E-KV effective-k8s result",
 		"target", configVersionRaw,
 		"effective", resultStr,
 		"floor", floor.String(),

@@ -210,13 +210,21 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 
 	target, isDefault := resolveTargetKubernetesVersion(mcVersion, ccRawVersion, hooks.DefaultKubernetesVersion)
 
-	// Soft-guard: only track-default mode (MC Default, or nothing pinned anywhere).
-	// Manual pins are admission-filtered and skip this block.
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	input.Logger.Info("E2E-KV resolve",
+		slog.String("mc", mcVersion),
+		slog.String("cc", ccRawVersion),
+		slog.String("target", target),
+		slog.Bool("isDefault", isDefault),
+	)
+
+	// Soft-guard: only track-default mode (MC Default, or deprecated Automatic alias, or
+	// unset→Default). Manual pins are admission-filtered and skip this block.
 	// When Default is below the maxUsed−1 window, FREEZE the digit (previous desired, else current)
 	// but keep isDefault=true / CM updateMode=Automatic and raise the drift metric.
 	//
-	// NOTE(kubernetesVersion-deprecation): keep — the soft guard survives the ClusterConfiguration
-	// field removal; the flag and the values key mean "tracking the Deckhouse default".
+	// NOTE(kubernetesVersion-deprecation): keep — soft-guard survives after the Automatic alias
+	// is dropped; the flag/Values key still mean "tracking Deckhouse default" (Default only).
 	publishedTarget := target
 	if isDefault {
 		// spec.maxUsedKubernetesVersion of the cluster ConfigMap is the canonical baseline — the
@@ -270,20 +278,30 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 			)
 		}
 
-		// The freeze is the one outcome worth a line of its own: the published version silently
-		// stops following the Deckhouse default, and the drift metric alone does not say at what.
-		if froze {
-			input.Logger.Info("holding the Kubernetes version below the Deckhouse default",
-				slog.String("deckhouseDefault", target),
-				slog.String("published", publishedTarget),
-				slog.String("maxUsed", maxUsed),
-			)
-		}
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		input.Logger.Info("E2E-KV soft-guard",
+			slog.String("secretMaxUsed", secretMaxUsed),
+			slog.String("cmSpecMaxUsed", cmSnap.MaxUsed),
+			slog.String("maxUsedChosen", maxUsed),
+			slog.String("defaultTarget", target),
+			slog.String("publishedTarget", publishedTarget),
+			slog.Bool("froze", froze),
+			slog.String("freezeFromDesired", cmSnap.DesiredVersion),
+			slog.String("freezeFromCurrent", cmSnap.CurrentVersion),
+		)
+	} else {
+		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+		input.Logger.Info("E2E-KV soft-guard",
+			slog.String("skipped", "manual-pin"),
+			slog.String("publishedTarget", publishedTarget),
+		)
 	}
 
 	input.Values.Set("global.discovery.targetKubernetesVersion", publishedTarget)
-	// kubernetesVersionIsDefault means "tracking the Deckhouse default" — MC Default, or nothing
-	// pinned anywhere.
+	// kubernetesVersionIsDefault means "tracking the Deckhouse default" — MC Default, the
+	// deprecated Automatic alias, or nothing pinned anywhere. Named after Default, not the alias:
+	// the alias goes away on T+1 (see TODO on automaticKubernetesVersion) and this key is new in
+	// this change, so there is no older name to stay compatible with.
 	input.Values.Set("global.discovery.kubernetesVersionIsDefault", isDefault)
 
 	return nil

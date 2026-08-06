@@ -271,11 +271,13 @@ def resolve_effective_version(
     ctx: DotMap,
     secret_data=None,
 ) -> Optional[str]:
-    # Mirrors global-hooks/discovery/target_kubernetes_version.go resolveTargetKubernetesVersion:
-    # a present ModuleConfig setting decides on its own, Default included (it then means the
+    # Mirrors global-hooks/discovery/cluster_configuration.go resolveTargetKubernetesVersion:
+    # a present ModuleConfig setting decides on its own, Default/Automatic included (it then means the
     # Deckhouse default, and ClusterConfiguration is not consulted at all). Only an absent setting
     # falls back to ClusterConfiguration, where "Automatic" is not a pin either.
     if mc_kubernetes_version and not is_module_config_track_default(mc_kubernetes_version):
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+        logging.info("E2E-KV python-k8s-fg source=mc-pin version=%s", mc_kubernetes_version)
         return mc_kubernetes_version
 
     if secret_data is None:
@@ -294,14 +296,20 @@ def resolve_effective_version(
 
     if is_module_config_track_default(mc_kubernetes_version):
         version = deckhouse_default()
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+        logging.info("E2E-KV python-k8s-fg source=mc-track-default version=%s mc=%s", version, mc_kubernetes_version)
         return version
 
     if secret_data:
         cc_version = get_k8s_version_from_cluster_config(secret_data)
         if is_cluster_configuration_pinned(cc_version):
+            # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+            logging.info("E2E-KV python-k8s-fg source=cc-pin version=%s", cc_version)
             return cc_version
 
     version = deckhouse_default()
+    # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+    logging.info("E2E-KV python-k8s-fg source=deckhouse-default version=%s", version)
     return version
 
 

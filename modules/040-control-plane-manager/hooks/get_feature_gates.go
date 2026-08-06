@@ -96,6 +96,12 @@ func isFeatureGateDeprecatedInFutureVersions(currentVersion KubernetesVersion, f
 func getFeatureGatesHandler(_ context.Context, input *go_hook.HookInput) error {
 	k8sVersionStr := input.Values.Get("global.discovery.targetKubernetesVersion").String()
 
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	input.Logger.Info("E2E-KV feature-gates",
+		"source", "global.discovery.targetKubernetesVersion",
+		"target", k8sVersionStr,
+	)
+
 	// An empty target means the global target_kubernetes_version hook has not published yet, or
 	// failed. Fail rather than publish an empty allow-list: these values feed --feature-gates on
 	// apiserver/controller-manager/scheduler/kubelet via arguments.yaml and daemonset.yaml, so
