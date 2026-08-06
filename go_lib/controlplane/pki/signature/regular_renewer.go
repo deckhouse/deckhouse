@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
@@ -95,7 +96,7 @@ func (s *RegularRenewer) renewOnce(k8sInterface kubernetes.Interface) error {
 	ctx, cancel := context.WithTimeout(context.Background(), ApiserverRequestTimeout)
 	defer cancel()
 
-	secret, err := k8sInterface.CoreV1().Secrets("kube-system").Get(ctx, "d8-pki", metav1.GetOptions{})
+	secret, err := k8sInterface.CoreV1().Secrets(constants.PKISecretNamespace).Get(ctx, constants.PKISecretName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get secret: %w", err)
 	}
@@ -103,8 +104,8 @@ func (s *RegularRenewer) renewOnce(k8sInterface kubernetes.Interface) error {
 	var privJWK jose.JSONWebKey
 	var jwks jose.JSONWebKeySet
 
-	jwkData := secret.Data["signature-private"]
-	jwksData := secret.Data["signature-public"]
+	jwkData := secret.Data[constants.PKISecretSignaturePrivate]
+	jwksData := secret.Data[constants.PKISecretSignaturePublic]
 	isSecretRecordsExists := len(jwkData) > 0 && len(jwksData) > 0
 
 	if isSecretRecordsExists {
@@ -127,9 +128,9 @@ func (s *RegularRenewer) renewOnce(k8sInterface kubernetes.Interface) error {
 
 	if isFilesExists && !isSecretRecordsExists {
 		logger.Info("no signature records in secret d8-pki, but files exists, syncing to secret")
-		secret.Data["signature-private"] = fileJwk
-		secret.Data["signature-public"] = fileJwks
-		if _, err = k8sInterface.CoreV1().Secrets("kube-system").Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
+		secret.Data[constants.PKISecretSignaturePrivate] = fileJwk
+		secret.Data[constants.PKISecretSignaturePublic] = fileJwks
+		if _, err = k8sInterface.CoreV1().Secrets(constants.PKISecretNamespace).Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("failed to update secret: %w", err)
 		}
 		if err := json.Unmarshal(fileJwk, &privJWK); err != nil {
@@ -251,13 +252,13 @@ func generateNewSignatureCerts(filePath string, k8sInterface kubernetes.Interfac
 	}
 	// write data to secret ns kube-system d8-pki
 	logger.Info("write data to secret d8-pki")
-	secret, err := k8sInterface.CoreV1().Secrets("kube-system").Get(ctx, "d8-pki", metav1.GetOptions{})
+	secret, err := k8sInterface.CoreV1().Secrets(constants.PKISecretNamespace).Get(ctx, constants.PKISecretName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get secret: %w", err)
 	}
-	secret.Data["signature-private"] = jwkJSON
-	secret.Data["signature-public"] = jwksJSON
-	_, err = k8sInterface.CoreV1().Secrets("kube-system").Update(ctx, secret, metav1.UpdateOptions{})
+	secret.Data[constants.PKISecretSignaturePrivate] = jwkJSON
+	secret.Data[constants.PKISecretSignaturePublic] = jwksJSON
+	_, err = k8sInterface.CoreV1().Secrets(constants.PKISecretNamespace).Update(ctx, secret, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update secret: %w", err)
 	}
