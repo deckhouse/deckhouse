@@ -117,6 +117,10 @@ type manifestsInput struct {
 	Registry *registrySpec
 	// Images are the digests of the four control-plane images.
 	Images controlPlaneImages
+	// Settings are the operator's control-plane-manager settings. Only
+	// resourcesRequests is read at bootstrap, and only by these four templates;
+	// empty leaves them on the defaults written into the templates.
+	Settings map[string]any
 	// CandiDir is the installer's own candi directory. The templates come from
 	// there rather than from the provider image, which ships no control-plane
 	// templates at all.
@@ -214,11 +218,12 @@ func (in manifestsInput) data() map[string]any {
 			// error rather than a false.
 			"clusterType": in.Cluster.ClusterType,
 		},
-		// Empty on purpose, and load-bearing: their emptiness is what makes
-		// bootstrapAuthenticationConfig a constant. control-plane-manager fills
-		// both in from the operator's settings once it is installed.
+		// Empty on purpose, and load-bearing: its emptiness is what makes
+		// bootstrapAuthenticationConfig a constant. The only key the templates
+		// would read from it is the signature mode, which the
+		// immutable-signature-mode preflight refuses outright.
 		"apiserver": map[string]any{},
-		"settings":  map[string]any{},
+		"settings":  in.Settings,
 	}
 }
 
