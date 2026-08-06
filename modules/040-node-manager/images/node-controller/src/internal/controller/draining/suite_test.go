@@ -78,7 +78,7 @@ var _ = BeforeSuite(func() {
 	// The draining controller registered itself via its package init(); since only this package is
 	// compiled into the test binary, NewManager wires up just the draining controller.
 	By("starting the manager with the draining controller")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {

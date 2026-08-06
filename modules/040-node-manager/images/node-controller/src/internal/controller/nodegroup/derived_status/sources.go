@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -40,7 +39,7 @@ import (
 
 const (
 	cloudProviderSecretName       = ngcommon.CloudProviderSecretName
-	cloudProviderSecretNamespace  = "kube-system"
+	cloudProviderSecretNamespace  = nodecommon.CloudProviderSecretNamespace
 	clusterConfigSecretName       = "d8-cluster-configuration"
 	clusterConfigSecretNamespace  = "kube-system"
 	automaticKubernetesVersion    = "Automatic"
@@ -52,7 +51,7 @@ const (
 	instanceClassGroup       = "deckhouse.io"
 
 	// InstanceTypesCatalog serves v1alpha1 only, so this one is safe to compile in. The
-	// InstanceClass version is not — see common.InstanceClassAPIVersion.
+	// InstanceClass version is not — see common.InstanceClassAPIVersionKey.
 	instanceTypesCatalogVersion = "v1alpha1"
 
 	apiserverPodNamespace  = "kube-system"
@@ -219,32 +218,19 @@ func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string
 	return zones
 }
 
-// ErrInstanceClassAPIVersionUnset is returned instead of a guess when the cloud provider has not
-// published the version yet. Callers that only describe a NodeGroup may carry on without the
-// instance class; callers that render from it must not, because a guessed version changes the
-// instance-class checksum and the checksum names an immutable MachineTemplate.
-var ErrInstanceClassAPIVersionUnset = errors.New("instanceClassAPIVersion is not published by the cloud provider")
-
-// instanceClassAPIVersion returns the version InstanceClass objects are read at, published by the
-// cloud provider module. See common.InstanceClassAPIVersion for why it is data and not something
-// node-controller may work out for itself.
-func (s *Service) instanceClassAPIVersion(ctx context.Context) (string, error) {
-	version, _ := s.readCloudProviderData(ctx)[nodecommon.InstanceClassAPIVersionKey].(string)
-	if version == "" {
-		return "", fmt.Errorf("%w (key %s of secret %s)", ErrInstanceClassAPIVersionUnset, nodecommon.InstanceClassAPIVersionKey, cloudProviderSecretName)
-	}
-	return version, nil
+// instanceClassAPIVersion returns the version InstanceClass objects are read at. An empty result
+// means the provider has not published it yet; see common.InstanceClassAPIVersionKey for why the
+// version is data.
+func instanceClassAPIVersion(cloudProvider map[string]interface{}) string {
+	version, _ := cloudProvider[nodecommon.InstanceClassAPIVersionKey].(string)
+	return version
 }
 
-func (s *Service) readInstanceClassSpec(ctx context.Context, kind, name string) (interface{}, error) {
-	version, err := s.instanceClassAPIVersion(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (s *Service) readInstanceClassSpec(ctx context.Context, version, kind, name string) (interface{}, error) {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: version, Kind: kind})
 	if err := s.Client.Get(ctx, types.NamespacedName{Name: name}, obj); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get %s %q at %s: %w", kind, name, version, err)
 	}
 	return obj.Object["spec"], nil
 }

@@ -18,11 +18,11 @@ package capi
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/node-controller/internal/common"
@@ -31,8 +31,8 @@ import (
 
 const (
 	capiNamespace                = "d8-cloud-instance-manager"
-	cloudProviderSecretName      = "d8-node-manager-cloud-provider"
-	cloudProviderSecretNamespace = "kube-system"
+	cloudProviderSecretName      = common.CloudProviderSecretName
+	cloudProviderSecretNamespace = common.CloudProviderSecretNamespace
 	clusterConfigSecretName      = "d8-cluster-configuration"
 	clusterConfigSecretNamespace = "kube-system"
 	clusterUUIDConfigMapName     = "d8-cluster-uuid"
@@ -42,27 +42,16 @@ const (
 type BaseWithReader struct {
 	register.Base
 	APIReader client.Reader
-	// InstanceClassKinds are the InstanceClass kinds this cluster serves, discovered once in
-	// Setup so SetupWatches can watch them (the kind is provider-specific, see
-	// common.ServedInstanceClassKinds).
-	InstanceClassKinds []schema.GroupVersionKind
+	// Cache backs the deferred InstanceClass watches (common.LazyInstanceClassSource): the
+	// kind and version are data in the provider registration Secret, which may appear only
+	// after this controller started.
+	Cache cache.Cache
 }
 
-func (b *BaseWithReader) Setup(mgr ctrl.Manager) error {
+func (b *BaseWithReader) Setup(_ context.Context, mgr ctrl.Manager) error {
 	b.APIReader = mgr.GetAPIReader()
-
-	kinds, err := common.ServedInstanceClassKinds(context.Background(), mgr.GetAPIReader(), mgr.GetConfig())
-	if err != nil {
-		return fmt.Errorf("discover InstanceClass kinds: %w", err)
-	}
-	b.InstanceClassKinds = kinds
+	b.Cache = mgr.GetCache()
 	return nil
-}
-
-func newUnstructuredForGVK(gvk schema.GroupVersionKind) *unstructured.Unstructured {
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(gvk)
-	return u
 }
 
 func newUnstructured(group, version, kind string) *unstructured.Unstructured {

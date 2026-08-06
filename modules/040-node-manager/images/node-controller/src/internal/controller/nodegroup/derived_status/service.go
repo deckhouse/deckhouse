@@ -19,7 +19,6 @@ package derived_status
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -136,17 +135,23 @@ func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, clou
 		return nil
 	}
 
-	instanceClassSpec, err := s.readInstanceClassSpec(ctx, kind, name)
+	// Without a published version there is no version to read the InstanceClass at, and guessing
+	// one is what this whole mechanism exists to prevent. Describing the NodeGroup survives it —
+	// rendering does not, and runCloudChecks reports it as a validation error.
+	version := instanceClassAPIVersion(cloudProvider)
+	if version == "" {
+		logger.V(1).Info("cloud provider published no instanceClassAPIVersion, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name)
+		return nil
+	}
+
+	instanceClassSpec, err := s.readInstanceClassSpec(ctx, version, kind, name)
 	if err != nil {
-		// Two states are not failures, and both leave instanceClass unset rather than guessed:
-		// a deleted InstanceClass, which RunCloudChecks already reports as a NodeGroup validation
-		// error, and a cloud provider that has not published its API version yet. Describing the
-		// NodeGroup must survive both; rendering from it must not, and does not — the CAPI
-		// reconciler checks the version itself before it renders anything.
-		if !apierrors.IsNotFound(err) && !errors.Is(err, ErrInstanceClassAPIVersionUnset) {
-			return fmt.Errorf("read %s %q: %w", kind, name, err)
+		// A deleted InstanceClass is not a failure: RunCloudChecks already reports it as a
+		// NodeGroup validation error, and instanceClass stays unset rather than guessed.
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("read instance class of %s: %w", ng.Name, err)
 		}
-		logger.V(1).Info("instance class unavailable, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name, "reason", err.Error())
+		logger.V(1).Info("instance class not found, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name)
 		return nil
 	}
 	if instanceClassSpec == nil {

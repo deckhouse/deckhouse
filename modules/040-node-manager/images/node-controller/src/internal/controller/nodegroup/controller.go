@@ -25,9 +25,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -58,19 +58,14 @@ func init() {
 
 type Status struct {
 	register.Base
-	apiReader          client.Reader
-	conditionService   ngconditions.Service
-	instanceClassKinds []schema.GroupVersionKind
+	apiReader        client.Reader
+	cache            cache.Cache
+	conditionService ngconditions.Service
 }
 
-func (r *Status) Setup(mgr ctrl.Manager) error {
+func (r *Status) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.apiReader = mgr.GetAPIReader()
-
-	kinds, err := nodecommon.ServedInstanceClassKinds(context.Background(), mgr.GetAPIReader(), mgr.GetConfig())
-	if err != nil {
-		return fmt.Errorf("discover InstanceClass kinds: %w", err)
-	}
-	r.instanceClassKinds = kinds
+	r.cache = mgr.GetCache()
 	return nil
 }
 
@@ -96,13 +91,13 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	})))
 	// status.error and the capacity checks are computed from the InstanceClass, so a class
 	// that appears, changes or is deleted must refresh the status of the NodeGroups pointing
-	// at it instead of leaving a stale error until the resync.
-	for _, gvk := range r.instanceClassKinds {
-		w.Watches(ngcommon.NewUnstructured(gvk), handler.EnqueueRequestsFromMapFunc(
-			func(ctx context.Context, obj client.Object) []reconcile.Request {
-				return nodecommon.InstanceClassToNodeGroups(ctx, r.Client, obj)
-			}))
-	}
+	// at it instead of leaving a stale error until the resync. The source is deferred: the kind
+	// and version come from the provider registration Secret, which may appear only after this
+	// pod started.
+	w.WatchesRawSource(nodecommon.LazyInstanceClassSource(r.cache, handler.EnqueueRequestsFromMapFunc(
+		func(ctx context.Context, obj client.Object) []reconcile.Request {
+			return nodecommon.InstanceClassToNodeGroups(ctx, r.Client, obj)
+		})))
 }
 
 func (r *Status) secretToAllNodeGroups(ctx context.Context, _ client.Object) []reconcile.Request {

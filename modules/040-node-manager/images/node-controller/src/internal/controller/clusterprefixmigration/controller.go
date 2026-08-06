@@ -85,7 +85,7 @@ type Reconciler struct {
 	apiReader client.Reader
 }
 
-func (r *Reconciler) Setup(mgr ctrl.Manager) error {
+func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	// Read directly from the API server: the manager cache does not watch the
 	// d8-cluster-configuration Secret.
 	r.apiReader = mgr.GetAPIReader()

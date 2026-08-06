@@ -29,6 +29,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/capacity"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 const (
@@ -60,7 +61,7 @@ func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, rawSpe
 }
 
 func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}) (CloudCheckResult, error) {
-	kindInUse, _ := cloudProvider["instanceClassKind"].(string)
+	kindInUse, _ := cloudProvider[nodecommon.InstanceClassKindKey].(string)
 
 	in := CloudCheckInput{
 		NodeType:  ng.Spec.NodeType,
@@ -75,10 +76,20 @@ func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudPro
 	}
 
 	if in.NodeType == v1.NodeTypeCloudEphemeral && kindInUse != "" {
+		// The provider names a kind but no version to read it at. Reporting it as a validation
+		// error is what every consumer already handles: rendering is skipped, and the bashible
+		// context keeps the entry it published last instead of dropping the cloud fields.
+		version := instanceClassAPIVersion(cloudProvider)
+		if version == "" {
+			return CloudCheckResult{Error: fmt.Sprintf(
+				"Cloud provider has not published %s yet. The %s cannot be read until it does.",
+				nodecommon.InstanceClassAPIVersionKey, kindInUse)}, nil
+		}
+
 		// A failed List must not reach the checks: an empty name set reads as "instance class
 		// not found", which marks the NodeGroup invalid and stops its MachineDeployments from
 		// being rendered. Surface the error so the reconcile retries instead.
-		names, err := s.readInstanceClassNames(ctx, kindInUse)
+		names, err := s.readInstanceClassNames(ctx, version, kindInUse)
 		if err != nil {
 			return CloudCheckResult{}, err
 		}
@@ -86,15 +97,15 @@ func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudPro
 		in.DefaultZones = s.readDefaultZones(ctx, cloudProvider)
 		if in.MinPerZone == 0 && in.MaxPerZone > 0 &&
 			in.ClassRefKind == kindInUse && containsString(in.KnownClassNames, in.ClassRefName) {
-			in.CapacityErr = s.capacityError(ctx, in.ClassRefKind, in.ClassRefName)
+			in.CapacityErr = s.capacityError(ctx, version, in.ClassRefKind, in.ClassRefName)
 		}
 	}
 
 	return RunCloudChecks(in), nil
 }
 
-func (s *Service) capacityError(ctx context.Context, kind, name string) error {
-	spec, err := s.readInstanceClassSpec(ctx, kind, name)
+func (s *Service) capacityError(ctx context.Context, version, kind, name string) error {
+	spec, err := s.readInstanceClassSpec(ctx, version, kind, name)
 	if err != nil || spec == nil {
 		return err
 	}
@@ -103,15 +114,11 @@ func (s *Service) capacityError(ctx context.Context, kind, name string) error {
 	return err
 }
 
-func (s *Service) readInstanceClassNames(ctx context.Context, kind string) ([]string, error) {
-	version, err := s.instanceClassAPIVersion(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (s *Service) readInstanceClassNames(ctx context.Context, version, kind string) ([]string, error) {
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: version, Kind: kind + "List"})
 	if err := s.Client.List(ctx, list); err != nil {
-		return nil, fmt.Errorf("list %s: %w", kind, err)
+		return nil, fmt.Errorf("list %s at %s: %w", kind, version, err)
 	}
 	names := make([]string, 0, len(list.Items))
 	for i := range list.Items {

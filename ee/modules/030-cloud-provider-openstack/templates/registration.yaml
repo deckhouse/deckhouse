@@ -5,10 +5,8 @@
 type: {{ b64enc "openstack" | quote }}
 region: {{ $context.Values.cloudProviderOpenstack.internal.connection.region | b64enc | quote }}
 zones: {{ $context.Values.cloudProviderOpenstack.internal.zones | toJson | b64enc | quote }}
-# Storage version of the InstanceClass CRD. node-controller reads the InstanceClass through it, so the
-# read never goes through a conversion webhook. Must not be a non-storage version: its result also
-# depends on whether that webhook is wired yet, and the value feeds a checksum that names an
-# immutable MachineTemplate — changing it recreates every node in the NodeGroup.
+# Storage version of the InstanceClass CRD (spec.versions with storage: true). Not any served
+# version: node-controller hashes what it reads into a checksum that names an immutable template.
 instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 instanceClassKind: {{ b64enc "OpenStackInstanceClass" | quote }}
 machineClassKind: {{ b64enc "OpenStackMachineClass" | quote }}

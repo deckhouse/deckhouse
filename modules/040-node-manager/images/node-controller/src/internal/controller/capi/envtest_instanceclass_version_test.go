@@ -17,8 +17,6 @@ limitations under the License.
 package capi
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -31,18 +29,12 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-// User story: As a cluster operator, I want the API version an InstanceClass is read through to be
-// published by my cloud provider, so that my nodes are never recreated because node-controller
-// worked the version out for itself and two of its pods disagreed.
-//
 // The version decides the value of every field the instance-class checksum hashes, and that
 // checksum names the infrastructure MachineTemplate. The name is immutable, so a checksum that
-// moves renames the template, the MachineDeployment follows the new infrastructureRef, and CAPI
-// rolls every machine in the NodeGroup — even when the template's spec is byte-identical, which is
-// exactly what a version-only difference produces.
+// moves renames the template and CAPI rolls every machine in the NodeGroup.
 //
 // Two versions of the same object cannot be made to differ inside envtest (that needs the
-// provider's conversion webhook), so this spec pins the decision instead of the divergence: the
+// provider's conversion webhook), so these specs pin the decision instead of the divergence: the
 // published version is the one used, and a version that cannot serve the read stops the rendering
 // rather than being quietly swapped for one that can.
 var _ = Describe("InstanceClass API version pinning", func() {
@@ -122,7 +114,7 @@ var _ = Describe("InstanceClass API version pinning", func() {
 			return alphaTemplate
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).ShouldNot(BeEmpty())
 
-		By("the other served version renders one too, so the key is genuinely consulted")
+		By("the other served version renders one too")
 		publishVersion("v1")
 		servedNG := createNodeGroup(testenv.UniqueName("icv-served"))
 		Eventually(func(g Gomega) int { return len(templatesOf(g, servedNG.Name)) },
@@ -147,7 +139,7 @@ var _ = Describe("InstanceClass API version pinning", func() {
 		ng := createNodeGroup(testenv.UniqueName("icv-unserved"))
 
 		Consistently(func(g Gomega) int { return len(templatesOf(g, ng.Name)) },
-			testenv.NegativeCheckDuration, 250*time.Millisecond).Should(BeZero(),
+			testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(BeZero(),
 			"an unserved version must stop the rendering, never fall back to one that works")
 
 		By("and the NodeGroup renders as soon as a usable version is published, proving the " +
@@ -163,7 +155,7 @@ var _ = Describe("InstanceClass API version pinning", func() {
 		ng := createNodeGroup(testenv.UniqueName("icv-absent"))
 
 		Consistently(func(g Gomega) int { return len(templatesOf(g, ng.Name)) },
-			testenv.NegativeCheckDuration, 250*time.Millisecond).Should(BeZero(),
+			testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(BeZero(),
 			"a provider that has not registered yet must not be guessed for")
 
 		publishVersion("v1alpha1")

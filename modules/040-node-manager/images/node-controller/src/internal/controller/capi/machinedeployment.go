@@ -109,14 +109,14 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 	// The InstanceClass is what the MachineClass and the machine template are rendered from,
 	// and its checksum names the template — an edit here is exactly what must re-render. Without
 	// this watch the change waits for the resync, so the cloud keeps handing out the previous
-	// instance type for up to resyncInterval.
-	for _, gvk := range r.InstanceClassKinds {
-		w.Watches(newUnstructuredForGVK(gvk),
-			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-				return common.InstanceClassToNodeGroups(ctx, r.Client, obj)
-			}),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
-	}
+	// instance type for up to resyncInterval. The source is deferred, not built from a
+	// setup-time list: the kind and version come from the provider registration Secret, which
+	// may appear only after this pod started.
+	w.WatchesRawSource(common.LazyInstanceClassSource(r.Cache,
+		handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			return common.InstanceClassToNodeGroups(ctx, r.Client, obj)
+		}),
+		predicate.GenerationChangedPredicate{}))
 }
 
 // ForPredicates filters NodeGroup events: the rendered MachineDeployments depend only on
@@ -200,6 +200,14 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		cloudProvider, err := r.readCloudProviderTree(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
+		}
+		// Both engines render from the InstanceClass, and the version it is read through decides
+		// the checksum that names the template. Guessing one would rename an immutable template
+		// and roll every machine in the NodeGroup, so wait instead: the provider secret is
+		// watched, and publishing the version re-enqueues this NodeGroup.
+		if version, _ := cloudProvider[common.InstanceClassAPIVersionKey].(string); version == "" {
+			logger.V(1).Info("skipping: instanceClassAPIVersion is not published yet")
+			return ctrl.Result{RequeueAfter: resyncInterval}, nil
 		}
 		switch derived_status.ComputeEngine(ng, cloudProvider) {
 		case engineCAPI:

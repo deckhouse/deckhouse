@@ -19,15 +19,12 @@ package common
 import (
 	"context"
 	"fmt"
-	"strings"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -35,88 +32,48 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-const instanceClassKindSuffix = "InstanceClass"
-
-// InstanceClassAPIVersion returns the API version every InstanceClass read must use. The cloud
-// provider module publishes it in the registration Secret next to instanceClassKind, and it is
-// always the CRD's storage version, so a read never goes through a conversion webhook. An empty
-// result means the Secret is not published yet; callers must wait rather than pick a version of
-// their own.
+// RegisteredInstanceClassGVKs returns the GVK every cloud provider registered its InstanceClass
+// under: for each registration Secret, the instanceClassKind it names at the
+// instanceClassAPIVersion it declares. Registrations are found by label rather than by the fixed
+// legacy name, so a cluster with several providers yields every provider's kind at that
+// provider's own version.
 //
-// The version is deliberately not resolved from discovery. Two independent things make a
-// non-pinned read return different values for the same unchanged object:
-//
-//   - Which version a group resolves to depends on whichever version the RESTMapper happened to
-//     load first, and it is then cached for the whole process lifetime (controller-runtime
-//     pkg/client/apiutil/restmapper.go, "Prepend if preferred version, else append"). Two pods of
-//     the same build can disagree, permanently.
-//   - Reading a non-storage version also changes answer the moment the CRD's conversion webhook is
-//     wired. Deckhouse CRDs ship without spec.conversion and get it patched in at runtime, so
-//     early in a cluster's life the same read returns the raw stored value instead of the
-//     converted one.
-//
-// Either difference changes the instance-class checksum. That checksum names an immutable
-// infrastructure MachineTemplate, so a changed checksum renames the template, and the rename
-// recreates every node in the NodeGroup.
-func InstanceClassAPIVersion(ctx context.Context, r client.Reader) (string, error) {
-	secret := &corev1.Secret{}
-	key := types.NamespacedName{Namespace: CloudProviderSecretNamespace, Name: CloudProviderSecretName}
-	if err := r.Get(ctx, key, secret); err != nil {
-		if apierrors.IsNotFound(err) {
-			return "", nil
-		}
-		return "", fmt.Errorf("get %s secret: %w", CloudProviderSecretName, err)
-	}
-	return string(secret.Data[InstanceClassAPIVersionKey]), nil
-}
-
-// ServedInstanceClassKinds discovers the InstanceClass kinds the cluster actually serves, so the
-// controllers can watch them. The kind is provider-specific (AWSInstanceClass, DVPInstanceClass,
-// …) and therefore cannot be compiled in; discovery is done once at controller setup.
-//
-// Without these watches an InstanceClass edit reaches the nodes only on the next resync — up to
-// ten minutes during which the rendered MachineClass, the machine template and the bashible
-// context all describe the previous instance type. The helm implementation reacted immediately.
-//
-// Only the pinned version is enumerated, never the group's preferred one: the derived-status
-// service reads these objects at exactly that version, and a watch on any other version would both
-// miss the informer it is supposed to share and observe values a conversion webhook rewrote.
-func ServedInstanceClassKinds(ctx context.Context, r client.Reader, cfg *rest.Config) ([]schema.GroupVersionKind, error) {
-	version, err := InstanceClassAPIVersion(ctx, r)
-	if err != nil {
-		return nil, err
-	}
-	// The provider module has not registered yet. The resync still covers InstanceClass objects.
-	if version == "" {
-		return nil, nil
+// A registration without the version contributes nothing — guessing a version is what this whole
+// mechanism exists to prevent (see InstanceClassAPIVersionKey). The CRD may lag the Secret:
+// callers hand the GVK to a watch that waits for it (source.Kind retries an unserved kind
+// itself), they must not assume it is served.
+func RegisteredInstanceClassGVKs(ctx context.Context, r client.Reader) ([]schema.GroupVersionKind, error) {
+	secrets := &corev1.SecretList{}
+	if err := r.List(ctx, secrets, client.InNamespace(CloudProviderSecretNamespace),
+		client.HasLabels{CloudProviderRegistrationLabel}); err != nil {
+		return nil, fmt.Errorf("list cloud provider registration secrets: %w", err)
 	}
 
-	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("build discovery client: %w", err)
-	}
-
-	gv := schema.GroupVersion{Group: v1.GroupVersion.Group, Version: version}
-	list, err := dc.ServerResourcesForGroupVersion(gv.String())
-	if err != nil {
-		// The provider's CRDs may not be applied yet; the resync still covers their objects.
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("list resources of %s: %w", gv.String(), err)
-	}
-
+	seen := map[schema.GroupVersionKind]bool{}
 	var gvks []schema.GroupVersionKind
-	for _, res := range list.APIResources {
-		// Subresources repeat the parent's Kind ("…instanceclasses/status") and would register
-		// the same watch twice.
-		if strings.Contains(res.Name, "/") {
+	for i := range secrets.Items {
+		kind := string(secrets.Items[i].Data[InstanceClassKindKey])
+		version := string(secrets.Items[i].Data[InstanceClassAPIVersionKey])
+		if kind == "" || version == "" {
 			continue
 		}
-		if strings.HasSuffix(res.Kind, instanceClassKindSuffix) && res.Kind != instanceClassKindSuffix {
-			gvks = append(gvks, gv.WithKind(res.Kind))
+
+		gvk := schema.GroupVersionKind{Group: v1.GroupVersion.Group, Version: version, Kind: kind}
+		// Providers publish the same registration twice, under the legacy fixed name and under
+		// the per-provider one.
+		if seen[gvk] {
+			continue
 		}
+		seen[gvk] = true
+		gvks = append(gvks, gvk)
 	}
+
+	sort.Slice(gvks, func(i, j int) bool {
+		if gvks[i].Version != gvks[j].Version {
+			return gvks[i].Version < gvks[j].Version
+		}
+		return gvks[i].Kind < gvks[j].Kind
+	})
 	return gvks, nil
 }
 

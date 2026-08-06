@@ -56,51 +56,62 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func cloudProviderSecret(data map[string][]byte) *corev1.Secret {
-	return testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, data)
-}
-
 func TestInstanceClassAPIVersion(t *testing.T) {
 	tests := []struct {
-		name       string
-		objs       []client.Object
-		expVersion string
-		expErr     string
+		name          string
+		cloudProvider map[string]interface{}
+		expVersion    string
 	}{
 		{
-			name:       "published version is used verbatim",
-			objs:       []client.Object{cloudProviderSecret(map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1")})},
-			expVersion: "v1",
+			name:          "published version is used verbatim",
+			cloudProvider: map[string]interface{}{nodecommon.InstanceClassAPIVersionKey: "v1"},
+			expVersion:    "v1",
 		},
 		{
-			name:       "a provider serving only v1alpha1 is honoured",
-			objs:       []client.Object{cloudProviderSecret(map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1alpha1")})},
-			expVersion: "v1alpha1",
+			name:          "a provider serving only v1alpha1 is honoured",
+			cloudProvider: map[string]interface{}{nodecommon.InstanceClassAPIVersionKey: "v1alpha1"},
+			expVersion:    "v1alpha1",
 		},
 		{
 			// No guessing: a version picked here would feed the instance-class checksum, and a
 			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
-			name:   "provider registered without the key errors instead of guessing",
-			objs:   []client.Object{cloudProviderSecret(map[string][]byte{"instanceClassKind": []byte("YandexInstanceClass")})},
-			expErr: "instanceClassAPIVersion is not published",
+			name:          "provider registered without the key yields no version",
+			cloudProvider: map[string]interface{}{"instanceClassKind": "YandexInstanceClass"},
 		},
 		{
-			name:   "no provider secret at all errors instead of guessing",
-			expErr: "instanceClassAPIVersion is not published",
+			name: "no provider secret at all yields no version",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := newTestService(t, tc.objs...).instanceClassAPIVersion(t.Context())
-			if tc.expErr != "" {
-				require.ErrorContains(t, err, tc.expErr)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, tc.expVersion, got)
+			assert.Equal(t, tc.expVersion, instanceClassAPIVersion(tc.cloudProvider))
 		})
 	}
+}
+
+// An unpublished version must reach the operator as a NodeGroup validation error rather than as a
+// reconcile error: every consumer already handles a validation error (rendering is skipped, the
+// bashible context keeps its previous entry), whereas a reconcile error stops the whole pass and
+// freezes the status of every NodeGroup, Static ones included.
+func TestRunCloudChecks_UnpublishedAPIVersionIsAValidationError(t *testing.T) {
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: v1.NodeGroupSpec{
+			NodeType: v1.NodeTypeCloudEphemeral,
+			CloudInstances: &v1.CloudInstancesSpec{
+				ClassReference: v1.ClassReference{Kind: "YandexInstanceClass", Name: "worker"},
+			},
+		},
+	}
+
+	check, err := newTestService(t).runCloudChecks(t.Context(), ng, map[string]interface{}{
+		"instanceClassKind": "YandexInstanceClass",
+	})
+
+	require.NoError(t, err)
+	assert.Contains(t, check.Error, "has not published instanceClassAPIVersion")
+	assert.False(t, check.Processed)
 }
 
 func TestReadStatic_ParsesInternalNetworkCIDRs(t *testing.T) {

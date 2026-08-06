@@ -889,7 +889,7 @@ func newTestInstanceController(
 	}
 
 	controller := &InstanceController{Base: register.Base{Client: controllerClient}}
-	require.NoError(t, controller.Setup(nil))
+	require.NoError(t, controller.Setup(t.Context(), nil))
 
 	return controller, k8sClient
 }
