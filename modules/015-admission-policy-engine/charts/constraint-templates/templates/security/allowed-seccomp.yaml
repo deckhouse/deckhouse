@@ -90,6 +90,7 @@ spec:
               import data.lib.common.object_labels
               import data.lib.common.object_namespace
               import data.lib.common.effective_metadata
+              import data.lib.common.is_controller
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_for_container
               import data.lib.expand_synonyms.expand
@@ -124,6 +125,10 @@ spec:
                 }
                 profile_raw := resolve_from_sources(normalized_obj, container, sources)
                 profile := normalize_seccomp_profile(profile_raw, container, normalized_obj)
+                # For controllers, skip if no seccomp profile is set anywhere —
+                # PodSecurity admission may default seccompProfile.type to
+                # RuntimeDefault at Pod creation time.
+                not controller_seccomp_absent(profile)
                 allowed_base := expand(input.parameters.allowedProfiles, naming_translation)
                 allowed := allowed_with_localhost_files(
                   normalize_empty_undefined_values(allowed_base),
@@ -141,6 +146,17 @@ spec:
                 )
                 not result.allowed
                 msg := violation_message("Seccomp profile is not allowed", sprintf("container: %v", [container.name]), result.detail)
+              }
+
+              # Returns true when the current review object is a controller
+              # (Deployment, StatefulSet, etc.) and no seccomp profile is set
+              # in any source (container field, pod field, or annotation).
+              # PodSecurity admission may default seccompProfile.type to
+              # RuntimeDefault at Pod creation, so we skip to avoid false
+              # positives on controllers.
+              controller_seccomp_absent(profile) if {
+                is_controller
+                profile == ""
               }
 
               input_wildcard_allowed_profiles if {

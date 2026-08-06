@@ -215,8 +215,8 @@ spec:
                       memory: 256Mi
       exception: ''
       exceptionRef: ''
-    - name: controller-disallowed-deployment-without-resources
-      violations: 'yes'
+    - name: controller-allowed-deployment-without-resources
+      violations: 'no'
       assertionMessage: ''
       fields:
       - path: spec.template.spec.containers[].resources
@@ -234,3 +234,28 @@ spec:
                 containers:
                 - image: nginx
                   name: nginx
+    - name: controller-disallowed-deployment-partial-resources
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].resources
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-partial-resources
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  resources:
+                    limits:
+                      memory: 128Mi
+                    requests:
+                      cpu: 1
+                      memory: 128Mi

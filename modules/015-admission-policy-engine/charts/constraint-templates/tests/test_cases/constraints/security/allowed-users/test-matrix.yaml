@@ -1710,3 +1710,43 @@ spec:
                     runAsUser: 0
       exception: ''
       exceptionRef: ''
+    - name: controller-allowed-absent-runasuser
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.runAsUser
+        scenario: absent
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-absent-runasuser
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
+    - name: controller-disallowed-runasnonroot-false
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.runAsNonRoot
+        scenario: negative
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-disallowed-runasnonroot-false
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    runAsNonRoot: false
+      exception: ''
+      exceptionRef: ''

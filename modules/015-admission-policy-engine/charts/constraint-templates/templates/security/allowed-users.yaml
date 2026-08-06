@@ -151,6 +151,7 @@ spec:
               import data.lib.common.input_containers
               import data.lib.common.object_labels
               import data.lib.common.object_namespace
+              import data.lib.common.is_controller
               import data.lib.range.is_in_any_range
 
               violation contains {"msg": msg} if {
@@ -192,6 +193,9 @@ spec:
               get_user_violation(params, container) := msg if {
                 not get_field_value("runAsUser", container, pod_spec)
                 params.rule == "MustRunAs"
+                # For controllers, skip if runAsUser is absent — PodSecurity
+                # admission may inject runAsUser/runAsNonRoot at Pod creation.
+                not controller_absent_run_as_user
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := "Actual runAsUser: not set"
                 labels := object_labels
@@ -205,6 +209,9 @@ spec:
                 params.rule == "MustRunAsNonRoot"
                 not get_field_value("runAsUser", container, pod_spec)
                 not get_field_value("runAsNonRoot", container, pod_spec)
+                # For controllers, skip if runAsUser and runAsNonRoot are both
+                # absent — PodSecurity admission may inject them at Pod creation.
+                not controller_absent_run_as_user
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := "Actual runAsUser: not set, runAsNonRoot: not set"
                 labels := object_labels
@@ -296,6 +303,10 @@ spec:
               get_group_violation(field, params, container) := msg if {
                 not get_field_value(field, container, pod_spec)
                 params.rule == "MustRunAs"
+                # For controllers, skip if group field is absent — PodSecurity
+                # admission may inject runAsGroup/fsGroup/supplementalGroups
+                # at Pod creation.
+                not controller_absent_group_field(field)
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
                 actual_value := sprintf("Actual %v: not set", [field])
                 msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [container.name, field, actual_value, allowed_by_policy])
@@ -344,6 +355,39 @@ spec:
                 not has_seccontext_field(field, container)
                 pod_ctx := object.get(pod_spec, "securityContext", {})
                 out := object.get(pod_ctx, field, default_val)
+              }
+
+              # Returns true when the current review object is a controller
+              # (Deployment, StatefulSet, etc.) and both runAsUser and
+              # runAsNonRoot are absent from the pod template. PodSecurity
+              # admission may inject these fields at Pod creation time, so
+              # we skip the violation to avoid false positives on controllers.
+              controller_absent_run_as_user if {
+                is_controller
+                not has_seccontext_field("runAsUser", pod_spec)
+                not container_has_seccontext_field("runAsUser")
+                not has_seccontext_field("runAsNonRoot", pod_spec)
+                not container_has_seccontext_field("runAsNonRoot")
+              }
+
+              # Returns true when the current review object is a controller
+              # and the given group field (runAsGroup, fsGroup,
+              # supplementalGroups) is absent from the pod template.
+              # PodSecurity admission may inject these at Pod creation.
+              controller_absent_group_field(field) if {
+                is_controller
+                not has_seccontext_field(field, pod_spec)
+                not container_has_seccontext_field(field)
+              }
+
+              container_has_seccontext_field(field) if {
+                c := input_containers[_]
+                has_seccontext_field(field, c)
+              }
+
+              container_has_seccontext_field(field) if {
+                c := input_containers[_]
+                has_seccontext_field(field, c) == false
               }
 
 
