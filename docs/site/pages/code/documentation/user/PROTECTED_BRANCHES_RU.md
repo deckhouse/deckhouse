@@ -1,7 +1,5 @@
 ---
 title: "Защищённые ветки"
-description: Как ограничить отправку изменений и слияния для важных ветвей репозитория
-menuTitle: Защищённые ветки
 force_searchable: true
 description: Как ограничить отправку изменений и слияния для важных ветвей репозитория
 permalink: ru/code/documentation/user/protected-branches.html

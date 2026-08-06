@@ -1,7 +1,5 @@
 ---
 title: "CODEOWNERS"
-description: How to assign owners responsible for repository paths with the CODEOWNERS file
-menuTitle: CODEOWNERS
 force_searchable: true
 description: How to assign owners responsible for repository paths with the CODEOWNERS file
 permalink: en/code/documentation/user/code-owners.html

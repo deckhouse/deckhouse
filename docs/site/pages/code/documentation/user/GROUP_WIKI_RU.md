@@ -1,7 +1,5 @@
 ---
 title: "Wiki группы"
-description: Как включить wiki на уровне группы и управлять доступом к ней
-menuTitle: Wiki группы
 force_searchable: true
 description: Как включить wiki на уровне группы и управлять доступом к ней
 permalink: ru/code/documentation/user/group-wiki.html

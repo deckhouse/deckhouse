@@ -1,7 +1,5 @@
 ---
 title: "Group Wiki"
-description: How to enable the group-level wiki and manage access to it
-menuTitle: Group Wiki
 force_searchable: true
 description: How to enable the group-level wiki and manage access to it
 permalink: en/code/documentation/user/group-wiki.html

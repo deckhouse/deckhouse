@@ -1,7 +1,5 @@
 ---
 title: "Push Rules"
-description: How to enforce commit and push policies for a repository
-menuTitle: Push Rules
 force_searchable: true
 description: How to enforce commit and push policies for a repository
 permalink: en/code/documentation/user/push-rules.html

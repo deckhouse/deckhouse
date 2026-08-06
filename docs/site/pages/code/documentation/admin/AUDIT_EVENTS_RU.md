@@ -1,7 +1,5 @@
 ---
 title: "События аудита безопасности"
-description: События аудита безопасности, которые фиксирует Deckhouse Code, и способы их просмотра
-menuTitle: События аудита безопасности
 searchable: true
 description: События аудита безопасности, которые фиксирует Deckhouse Code, и способы их просмотра
 permalink: ru/code/documentation/admin/audit-events.html
