@@ -96,8 +96,13 @@ EOF
 # Only an object under requests/limits is nesting. A scalar there is a quota key that happens to be
 # spelled "requests" (nothing in the schema forbids one), and it is carried over flat like any other
 # — expanding it would feed a string to to_entries and fail the conversion of the whole object.
+# quota_value keeps a whole number a number and stringifies everything else. spec.quota is
+# anyOf[integer, string], so a fractional "cpu: 0.5" is only representable as a string, while
+# stringifying "cpu: 1" as well would make the round trip back to v1alpha2 differ from what the client
+# wrote and leave kubectl apply with a diff it can never settle.
 function __on_conversion::v1alpha2_to_v1alpha3() {
-  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+  if converted=$(context::jq -rc 'def quota_value: if (type == "number") and (. == floor) then . else tostring end;
+  .review.request.objects//[] | map(
      if .apiVersion == "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha3" |
        (if (.spec.administrators | not) and (.spec.parameters.administrators) then
@@ -106,11 +111,11 @@ function __on_conversion::v1alpha2_to_v1alpha3() {
        (if (.spec.quota | not) and (.spec.parameters.resourceQuota) then
           .spec.parameters.resourceQuota as $rq |
           .spec.quota = (
-            (if (($rq.requests | type) == "object") then ($rq.requests | to_entries | map({key: ("requests." + .key), value: (.value | tostring)})) else [] end)
-            + (if (($rq.limits | type) == "object") then ($rq.limits | to_entries | map({key: ("limits." + .key), value: (.value | tostring)})) else [] end)
+            (if (($rq.requests | type) == "object") then ($rq.requests | to_entries | map({key: ("requests." + .key), value: (.value | quota_value)})) else [] end)
+            + (if (($rq.limits | type) == "object") then ($rq.limits | to_entries | map({key: ("limits." + .key), value: (.value | quota_value)})) else [] end)
             + ($rq | to_entries
                    | map(select(((.value | type) != "object") and ((.value | type) != "array")))
-                   | map({key: .key, value: (.value | tostring)}))
+                   | map({key: .key, value: (.value | quota_value)}))
             | from_entries
           )
         else . end) |
