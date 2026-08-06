@@ -77,7 +77,7 @@ description: Архитектура модуля extended-monitoring в Deckhous
 
 1. **Kube-apiserver**:
 
-   * cледит за ресурсами API Kubernetes;
+   * следит за ресурсами API Kubernetes;
    * следит за событиями в кластере (ресурсами Events);
    * сканирует Secret’ы кластера;
    * выполняет авторизацию запросов на метрики.
