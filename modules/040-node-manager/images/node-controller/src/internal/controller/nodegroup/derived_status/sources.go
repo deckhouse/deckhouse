@@ -25,6 +25,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -125,17 +126,27 @@ func (s *Service) readClusterConfiguration(ctx context.Context) string {
 }
 
 // readTargetKubernetesVersion reads the resolved target from kube-system/d8-cluster-kubernetes
-// data.spec.desiredVersion. That block is written by the global discovery hook; this controller
-// never falls back to ModuleConfig or ClusterConfiguration.
+// data.spec.desiredVersion. That block is owned by control-plane-manager; this controller never
+// falls back to ModuleConfig or ClusterConfiguration.
 //
-// An empty or missing spec is a cold-start condition: return an error so the reconciler requeues
-// until the ConfigMap is populated (R9).
+// A missing ConfigMap is not an error: it means either a cold start before control-plane-manager
+// seeded it, or a managed cluster where control-plane-manager is disabled and there is no such
+// object at all. Both degrade to the running kube-apiserver version (readControlPlaneMinVersion),
+// which is what this controller did before the version moved into the ConfigMap. Returning an
+// error here instead aborted Compute before that fallback, and the bashible context Secret was
+// then never written for any NodeGroup — node bootstrap stopped cluster-wide.
+//
+// A ConfigMap that exists with a missing, empty or unparsable spec is a different story: that is
+// not a cold start but a broken object, so it still returns an error and the reconciler requeues.
 func (s *Service) readTargetKubernetesVersion(ctx context.Context) (*semver.Version, error) {
 	configMap := &corev1.ConfigMap{}
 	if err := s.Client.Get(ctx, types.NamespacedName{
 		Namespace: clusterConfigSecretNamespace,
 		Name:      clusterKubernetesConfigMapName,
 	}, configMap); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("get ConfigMap %s/%s: %w", clusterConfigSecretNamespace, clusterKubernetesConfigMapName, err)
 	}
 
