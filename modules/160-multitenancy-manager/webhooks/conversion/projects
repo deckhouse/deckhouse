@@ -49,7 +49,7 @@ function __on_conversion::v1alpha1_to_v1alpha2() {
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"failedMessage":"Conversion of deckhouse.io failed"}
+{"failedMessage":"Conversion of projects.deckhouse.io failed"}
 EOF
   fi
 }
@@ -70,7 +70,7 @@ function __on_conversion::v1alpha2_to_v1alpha1() {
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"failedMessage":"Conversion of deckhouse.io.io failed"}
+{"failedMessage":"Conversion of projects.deckhouse.io failed"}
 EOF
   fi
 }
