@@ -465,9 +465,22 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		}
 	}
 
-	// check previous release
-	// only for awaiting purpose
 	if releaseIdx > 0 {
+		// Classify patch vs minor from the immediate lower-versioned neighbour
+		// (any phase) plus the deployed release, independently of the
+		// Pending/Deployed predecessor scan below. Otherwise, when every lower
+		// release is Superseded/Skipped/Suspended and no Deployed release object
+		// exists, a minor bump keeps the isPatch=true default and is routed
+		// through the patch path, which skips the minor approval gate — so the
+		// minor gets applied without confirmation in every mode except Manual.
+		immediatePrevRelease := releases[releaseIdx-1]
+		if !isPatchRelease(immediatePrevRelease.GetVersion(), release.GetVersion()) ||
+			(deployedReleaseInfo != nil && !isPatchRelease(deployedReleaseInfo.Version, release.GetVersion())) {
+			isPatch = false
+		}
+
+		// check previous release
+		// only for awaiting purpose
 		logger.Debug("checking previous release for awaiting logic")
 
 		// Find the previous release that is Pending or Deployed (skip Suspended, Superseded, Skipped)
@@ -494,7 +507,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				(deployedReleaseInfo != nil && !isPatchRelease(deployedReleaseInfo.Version, release.GetVersion())) {
 				logger.Debug("current release is not a patch")
 
-				isPatch = false
+				// isPatch is already set above; classification does not depend on
+				// the Pending/Deployed predecessor scan.
 
 				// it must await if previous release has Pending state (unless it's forced)
 				// truncate all not deployed phase releases

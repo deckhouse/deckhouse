@@ -581,6 +581,61 @@ func TestTaskCalculator_CalculatePendingReleaseTask(t *testing.T) {
 				QueueDepth: &ReleaseQueueDepthDelta{Major: 0, Minor: 2, Patch: 0},
 			},
 		},
+		{
+			// Regression guard: every lower release is Superseded and no Deployed
+			// release object exists at calculation time. Before the fix, isPatch
+			// kept its true default and the minor bump v1.75.* -> v1.76.* was
+			// routed through the patch path and auto-applied without approval.
+			name:           "minor bump is minor when all lower releases superseded and none deployed",
+			releaseChannel: "stable",
+			releases: []v1alpha1.Release{
+				&mockRelease{name: "v1.75.9", version: "1.75.9", phase: v1alpha1.DeckhouseReleasePhaseSuperseded},
+				&mockRelease{name: "v1.75.14", version: "1.75.14", phase: v1alpha1.DeckhouseReleasePhaseSuperseded},
+				&mockRelease{name: "v1.76.8", version: "1.76.8", phase: v1alpha1.DeckhouseReleasePhasePending},
+			},
+			pendingRelease: &mockRelease{name: "v1.76.8", version: "1.76.8", phase: v1alpha1.DeckhouseReleasePhasePending},
+			expectedTask: &Task{
+				TaskType:   Process,
+				IsPatch:    false,
+				IsLatest:   true,
+				QueueDepth: &ReleaseQueueDepthDelta{},
+			},
+		},
+		{
+			// Guard the opposite direction: a genuine patch must still be a patch
+			// when the lower releases are Superseded and no Deployed object exists.
+			name:           "patch stays patch when lower releases superseded and none deployed",
+			releaseChannel: "stable",
+			releases: []v1alpha1.Release{
+				&mockRelease{name: "v1.75.13", version: "1.75.13", phase: v1alpha1.DeckhouseReleasePhaseSuperseded},
+				&mockRelease{name: "v1.75.14", version: "1.75.14", phase: v1alpha1.DeckhouseReleasePhaseSuperseded},
+				&mockRelease{name: "v1.75.15", version: "1.75.15", phase: v1alpha1.DeckhouseReleasePhasePending},
+			},
+			pendingRelease: &mockRelease{name: "v1.75.15", version: "1.75.15", phase: v1alpha1.DeckhouseReleasePhasePending},
+			expectedTask: &Task{
+				TaskType:   Process,
+				IsPatch:    true,
+				IsLatest:   true,
+				QueueDepth: &ReleaseQueueDepthDelta{},
+			},
+		},
+		{
+			// The immediate neighbour of any non-Pending/Deployed phase (here
+			// Skipped) still drives minor classification.
+			name:           "minor bump is minor when previous is skipped and none deployed",
+			releaseChannel: "stable",
+			releases: []v1alpha1.Release{
+				&mockRelease{name: "v1.75.14", version: "1.75.14", phase: v1alpha1.DeckhouseReleasePhaseSkipped},
+				&mockRelease{name: "v1.76.0", version: "1.76.0", phase: v1alpha1.DeckhouseReleasePhasePending},
+			},
+			pendingRelease: &mockRelease{name: "v1.76.0", version: "1.76.0", phase: v1alpha1.DeckhouseReleasePhasePending},
+			expectedTask: &Task{
+				TaskType:   Process,
+				IsPatch:    false,
+				IsLatest:   true,
+				QueueDepth: &ReleaseQueueDepthDelta{},
+			},
+		},
 	}
 
 	for _, tt := range tests {
