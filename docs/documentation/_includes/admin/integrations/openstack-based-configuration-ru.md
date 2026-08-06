@@ -10,7 +10,7 @@
 | Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
 | Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
 
-* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
+\* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
 
 {% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
 Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
