@@ -69,6 +69,11 @@ const (
 	// resync, and lets the deadline above fire on time.
 	waitPollInterval = 30 * time.Second
 
+	// minRequeue is the floor under a requeue computed from a deadline. To
+	// controller-runtime a RequeueAfter of zero or less means "do not requeue",
+	// so a deadline that passed mid-pass would strand the operation.
+	minRequeue = time.Second
+
 	// retention is how long a finished operation is kept. It is the record of
 	// what was done to a node, which is worth having while someone is still
 	// looking into what happened, and worth nothing a day later — a cluster that
