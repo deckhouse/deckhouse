@@ -1,8 +1,0 @@
-apiVersion: apiserver.config.k8s.io/v1beta1
-kind: AuthenticationConfiguration
-anonymous:
-  enabled: true
-  conditions:
-  - path: /livez
-  - path: /readyz
-  - path: /healthz
