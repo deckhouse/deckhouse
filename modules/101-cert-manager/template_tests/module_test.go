@@ -269,6 +269,8 @@ podAntiAffinity:
   - labelSelector:
       matchLabels:
         app: cainjector
+    matchLabelKeys:
+    - pod-template-hash
     topologyKey: kubernetes.io/hostname
 `))
 			Expect(certManager.Exists()).To(BeTrue())
@@ -297,6 +299,8 @@ podAntiAffinity:
   - labelSelector:
       matchLabels:
         app: cert-manager
+    matchLabelKeys:
+    - pod-template-hash
     topologyKey: kubernetes.io/hostname
 `))
 		})
@@ -450,6 +454,8 @@ podAntiAffinity:
   - labelSelector:
       matchLabels:
         app: cainjector
+    matchLabelKeys:
+    - pod-template-hash
     topologyKey: kubernetes.io/hostname
 `))
 			Expect(certManager.Exists()).To(BeTrue())
@@ -478,6 +484,8 @@ podAntiAffinity:
   - labelSelector:
       matchLabels:
         app: cert-manager
+    matchLabelKeys:
+    - pod-template-hash
     topologyKey: kubernetes.io/hostname
 `))
 		})
