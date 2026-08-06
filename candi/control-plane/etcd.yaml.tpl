@@ -92,8 +92,8 @@ spec:
     resources:
       requests:
         {{- $c := (($resourcesRequests.components | default dict).etcd) | default dict }}
-        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 45) 100) }}m"
-        memory: "{{ $c.memoryBytes | default (div (mul $memory 45) 100) }}"
+        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 30) 100) }}m"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 30) 100) }}"
     securityContext:
       capabilities:
         drop:
