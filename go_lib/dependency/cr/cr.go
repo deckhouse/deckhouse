@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -374,5 +375,72 @@ func Extract(image crv1.Image) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("uncompress the layer: %w", err)
 	}
 
-	return rc, nil
+	return &completeReader{rc: rc}, nil
+}
+
+// completeReader withholds the final byte of a flattened image stream until the
+// underlying reader reports a clean end of stream.
+//
+// Flattening runs in a goroutine that writes into a pipe and reports its outcome
+// by closing the write end. Its tar.Writer is closed by a deferred call, so a
+// flatten that fails halfway through the layers still emits the tar trailer
+// before the error reaches the pipe. The truncated stream then looks like a
+// complete archive: every tar reader stops at the trailer and reports io.EOF,
+// the error behind it is never read, and the caller treats a partial image as
+// fully extracted. Withholding one byte keeps the trailer incomplete until the
+// flatten is known to have succeeded, which forces one more read and surfaces
+// the error instead of io.EOF.
+type completeReader struct {
+	rc io.ReadCloser
+
+	tail    byte  // last byte read from rc, released only on a clean end of stream
+	hasTail bool  // whether tail holds a byte
+	err     error // terminal state of rc, once reached
+}
+
+func (r *completeReader) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+
+	for {
+		if r.err != nil {
+			if !errors.Is(r.err, io.EOF) {
+				return 0, r.err
+			}
+			if !r.hasTail {
+				return 0, io.EOF
+			}
+
+			// rc ended cleanly, so the withheld byte does complete the stream.
+			p[0] = r.tail
+			r.hasTail = false
+
+			return 1, nil
+		}
+
+		n, err := r.rc.Read(p)
+		r.err = err
+		if n == 0 {
+			continue
+		}
+
+		tail := p[n-1]
+		if r.hasTail {
+			// Emit the byte withheld earlier first to keep the stream order.
+			copy(p[1:n], p[:n-1])
+			p[0] = r.tail
+		} else {
+			n--
+		}
+		r.tail, r.hasTail = tail, true
+
+		if n > 0 {
+			return n, nil
+		}
+	}
+}
+
+func (r *completeReader) Close() error {
+	return r.rc.Close()
 }

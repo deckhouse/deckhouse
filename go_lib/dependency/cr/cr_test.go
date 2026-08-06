@@ -17,16 +17,25 @@ limitations under the License.
 package cr
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -559,4 +568,90 @@ M/XWbYyHPEEhBR6l1lqRYLNQbGQDJph8aK4AZcxz
 
 		assert.Error(t, err)
 	})
+}
+
+// errLayerRead stands in for a transient failure while reading a layer blob:
+// a reset connection, an expired token, a 5xx from the registry.
+var errLayerRead = errors.New("read layer blob")
+
+// flakyReader fails every read once armed, which lets a test break a layer read
+// at an exact point of the extraction.
+type flakyReader struct {
+	r    io.Reader
+	fail *atomic.Bool
+}
+
+func (f *flakyReader) Read(p []byte) (int, error) {
+	if f.fail.Load() {
+		return 0, errLayerRead
+	}
+
+	return f.r.Read(p)
+}
+
+func testLayer(t *testing.T, files map[string]string, fail *atomic.Bool) crv1.Layer {
+	t.Helper()
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	for name, body := range files {
+		require.NoError(t, tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(body))}))
+		_, err := io.WriteString(tw, body)
+		require.NoError(t, err)
+	}
+	require.NoError(t, tw.Close())
+
+	data := buf.Bytes()
+	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		if fail == nil {
+			return io.NopCloser(bytes.NewReader(data)), nil
+		}
+
+		return io.NopCloser(&flakyReader{r: bytes.NewReader(data), fail: fail}), nil
+	})
+	require.NoError(t, err)
+
+	return layer
+}
+
+// TestExtract_LayerReadFailure pins the failure mode behind silently truncated
+// modules: image flattening closes its tar.Writer from a deferred call, so a
+// layer read that fails halfway still emits the tar trailer. The consumer then
+// reads a well-formed but truncated archive, sees io.EOF and treats the partial
+// image as fully extracted. Extract must report the error instead.
+func TestExtract_LayerReadFailure(t *testing.T) {
+	var fail atomic.Bool
+
+	// Flattening walks the layers top down, so the upper layer is delivered in
+	// full and everything below the broken layer goes missing.
+	upper := testLayer(t, map[string]string{"module.yaml": "m", "version.json": "v"}, nil)
+	lower := testLayer(t, map[string]string{"Chart.yaml": "c", "templates/deploy.yaml": "d"}, &fail)
+
+	img, err := mutate.AppendLayers(empty.Image, lower, upper)
+	require.NoError(t, err)
+
+	rc, err := Extract(img)
+	require.NoError(t, err)
+	defer rc.Close()
+
+	// Extract already read every layer to compute the flattened digest, so from
+	// here the only read left is the one the consumer drives.
+	fail.Store(true)
+
+	var names []string
+	tr := tar.NewReader(rc)
+	for {
+		hdr, nextErr := tr.Next()
+		if nextErr != nil {
+			err = nextErr
+
+			break
+		}
+
+		names = append(names, hdr.Name)
+	}
+
+	require.Error(t, err, "a truncated archive must not look like a complete one")
+	assert.ErrorIs(t, err, errLayerRead)
+	assert.NotContains(t, names, "Chart.yaml", "content below the broken layer must not be delivered")
 }
