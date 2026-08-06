@@ -45,7 +45,15 @@ func DefaultDeckhouseSettings() *DeckhouseSettings {
 		ReleaseChannel:           "",
 		AllowExperimentalModules: false,
 	}
-	settings.Update.Mode = "Auto"
+	// The documented OpenAPI default for settings.update.mode is AutoPatch
+	// (modules/002-deckhouse/openapi/config-values.yaml). This seed is applied
+	// before the deckhouse ModuleConfig is unmarshalled over it in
+	// syncDeckhouseSettings, and json.Unmarshal leaves an unset update.mode
+	// untouched — so this default is what an unset mode resolves to. It must
+	// match the OpenAPI default (and ParseUpdateMode's fallback), otherwise a
+	// cluster without an explicit update.mode silently runs in Auto and
+	// auto-applies minor releases without approval.
+	settings.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 	settings.Update.DisruptionApprovalMode = "Auto"
 
 	return settings
