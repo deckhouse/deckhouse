@@ -16,11 +16,14 @@ package template
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"path/filepath"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
 )
 
 var (
@@ -59,16 +62,31 @@ func RenderAndSavePreflightCheckLocalhostScript(ctx context.Context, globalOptio
 	)
 }
 
-func RenderAndSavePreflightReverseTunnelOpenScript(ctx context.Context, url string, globalOptions *options.GlobalOptions) (string, error) {
+func RenderAndSavePreflightReverseTunnelOpenScript(
+	ctx context.Context,
+	url string,
+	globalOptions *options.GlobalOptions,
+) (string, error) {
 	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering proxy reverse tunnel open script")
-	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkProxyRevTunnelOpenScriptPath)
+
+	encodedMinget, err := mingetBase64(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	scriptPath := filepath.Join(
+		globalOptions.CandiDir,
+		"bashible",
+		checkProxyRevTunnelOpenScriptPath,
+	)
 
 	return RenderAndSaveTemplate(
 		ctx,
 		"check_reverse_tunnel_open.sh",
 		scriptPath,
 		map[string]any{
-			"url": url,
+			"url":          url,
+			"mingetBase64": encodedMinget,
 		},
 	)
 }
@@ -88,16 +106,34 @@ func RenderAndSaveKillReverseTunnelScript(ctx context.Context, host, port string
 	)
 }
 
-func RenderAndSavePreflightReverseTunnelReachableScript(ctx context.Context, url string, globalOptions *options.GlobalOptions) (string, error) {
-	dhlog.FromContext(ctx).DebugContext(ctx, "Start render proxy reverse tunnel reachable script")
-	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkReverseTunnelReachableScriptPath)
+func RenderAndSavePreflightReverseTunnelReachableScript(
+	ctx context.Context,
+	url string,
+	globalOptions *options.GlobalOptions,
+) (string, error) {
+	dhlog.FromContext(ctx).DebugContext(
+		ctx,
+		"Rendering proxy reverse tunnel reachable script",
+	)
+
+	encodedMinget, err := mingetBase64(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	scriptPath := filepath.Join(
+		globalOptions.CandiDir,
+		"bashible",
+		checkReverseTunnelReachableScriptPath,
+	)
 
 	return RenderAndSaveTemplate(
 		ctx,
 		"check_reverse_tunnel_reachable.sh",
 		scriptPath,
-		map[string]interface{}{
-			"url": url,
+		map[string]any{
+			"url":          url,
+			"mingetBase64": encodedMinget,
 		},
 	)
 }
@@ -117,4 +153,13 @@ func RenderAndSavePreflightCheckScript(
 		filepath.Join(path, filename),
 		params,
 	)
+}
+
+func mingetBase64(ctx context.Context) (string, error) {
+	data, err := minget.Bytes(ctx)
+	if err != nil {
+		return "", fmt.Errorf("get minget binary: %w", err)
+	}
+
+	return base64.StdEncoding.EncodeToString(data), nil
 }

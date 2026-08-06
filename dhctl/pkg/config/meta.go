@@ -740,7 +740,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 	clusterMasterEndpoints := m.clusterMasterEndpointsBashibleContext()
 	configForBashibleBundleTemplate["clusterMasterEndpoints"] = clusterMasterEndpoints
 	configForBashibleBundleTemplate["clusterMasterKubeAPIEndpoints"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "kubeApiPort")
-	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppServerPort")
+	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterHTTPAddresses(clusterMasterEndpoints, "rppServerPort")
 	configForBashibleBundleTemplate["clusterMasterRPPBootstrapAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppBootstrapServerPort")
 
 	mingetBytes, err := minget.Bytes(ctx)
@@ -912,6 +912,16 @@ func clusterMasterEndpointAddresses(endpoints []map[string]any, portName string)
 		}
 
 		addresses = append(addresses, fmt.Sprintf("%s:%d", address, port))
+	}
+
+	return addresses
+}
+
+func clusterMasterHTTPAddresses(endpoints []map[string]any, portName string) []string {
+	addresses := clusterMasterEndpointAddresses(endpoints, portName)
+
+	for i := range addresses {
+		addresses[i] = "http://" + addresses[i]
 	}
 
 	return addresses
