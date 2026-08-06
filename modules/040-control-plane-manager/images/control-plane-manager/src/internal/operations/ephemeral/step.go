@@ -53,8 +53,3 @@ func (e *StepExecutor) Execute(ctx context.Context, stepName controlplanev1alpha
 		return operations.StepHasFailed(stepName, fmt.Errorf("unknown step %s", stepName))
 	}
 }
-
-// TODO(virtual): шаги-кандидаты по мере роста ephemeral-пайплайна:
-//   - bootstrap-шаг для RBAC и т.п.
-//   - генерация bootstrap-скрипта для подключения внешней ноды
-// для SyncManifests заполнять в STS (аннотация) имя операции, которая привела к изменению конфига (для обсервабилити)

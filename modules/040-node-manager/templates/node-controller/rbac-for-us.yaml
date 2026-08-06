@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -506,3 +508,5 @@ subjects:
   - kind: ServiceAccount
     name: deckhouse
     namespace: d8-system
+{{- end }}
+{{- /* /vcp-gate */ -}}

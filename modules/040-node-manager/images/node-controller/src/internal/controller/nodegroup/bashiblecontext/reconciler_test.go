@@ -31,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext"
+
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
@@ -50,7 +52,7 @@ func newReconciler(t *testing.T, objs ...client.Object) *Reconciler {
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 	return &Reconciler{
 		Client:        c,
-		Context:       &Service{Client: c},
+		Context:       &bashiblecontext.Service{Client: c},
 		DerivedStatus: &derived_status.Service{Client: c},
 	}
 }
@@ -63,17 +65,6 @@ func readAssembledNodeGroups(t *testing.T, c client.Client) []interface{} {
 	require.NoError(t, yaml.Unmarshal(secret.Data[secretInputKey], &parsed))
 	ngs, _ := parsed["nodeGroups"].([]interface{})
 	return ngs
-}
-
-func kubeDNSService(clusterIP string) *corev1.Service {
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kube-dns",
-			Namespace: kubeSystemNS,
-			Labels:    map[string]string{dnsAppLabel: "kube-dns"},
-		},
-		Spec: corev1.ServiceSpec{ClusterIP: clusterIP},
-	}
 }
 
 func staticNodeGroup(name string) *v1.NodeGroup {
@@ -101,7 +92,7 @@ func TestAssemble_SortsAndWritesAllNodeGroups(t *testing.T) {
 }
 
 func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
-	priorInput, err := Marshal(map[string]interface{}{
+	priorInput, err := bashiblecontext.Marshal(map[string]interface{}{
 		"nodeGroups": []interface{}{
 			map[string]interface{}{"name": "worker", "marker": "kept-from-prior"},
 		},

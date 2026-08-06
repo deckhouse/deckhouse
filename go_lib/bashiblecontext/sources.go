@@ -29,22 +29,22 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext/names"
 )
 
 const (
-	cloudInstanceManagerNS = "d8-cloud-instance-manager"
-	kubeSystemNS           = "kube-system"
+	cloudInstanceManagerNS = names.CloudInstanceManagerNS
+	kubeSystemNS           = names.KubeSystemNS
 
-	packagesProxyTokenSecretName = "registry-packages-proxy-token"
+	packagesProxyTokenSecretName = names.PackagesProxyTokenSecretName
 
-	controlPlaneArgsSecretName = "d8-control-plane-manager-control-plane-arguments"
+	controlPlaneArgsSecretName = names.ControlPlaneArgsSecretName
 
-	apiProxyCertSecretName = "kubernetes-api-proxy-discovery-cert"
+	apiProxyCertSecretName = names.APIProxyCertSecretName
 
-	cloudProviderSecretName = ngcommon.CloudProviderSecretName
+	cloudProviderSecretName = names.CloudProviderSecretName
 
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
+	bootstrapTokenNGLabel = names.BootstrapTokenNGLabel
 )
 
 // rootCAFiles are the candidate locations of the projected service-account CA, canonical path

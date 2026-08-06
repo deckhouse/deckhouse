@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- range $ng := .Values.nodeManager.internal.standbyNodeGroups }}
 ---
 apiVersion: apps/v1
@@ -45,3 +47,5 @@ spec:
             cpu: {{ $ng.reserveCPU | quote }}
             memory: {{ $ng.reserveMemory | quote }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

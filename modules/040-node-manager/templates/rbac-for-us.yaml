@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if include "machine_controller_manager_enabled" . }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
 ---
@@ -78,3 +80,5 @@ subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: Group
   name: system:nodes
+{{- end }}
+{{- /* /vcp-gate */ -}}

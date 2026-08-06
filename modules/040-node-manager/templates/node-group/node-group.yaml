@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- $engine := $ng.engine | default "" }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (eq $ng.nodeType "Cloud") }}
@@ -33,3 +35,5 @@
     {{- include "node_group_static_or_hybrid_secret" (list $ $ng) }}
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

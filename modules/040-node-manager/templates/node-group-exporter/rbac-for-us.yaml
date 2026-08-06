@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if .Values.global.clusterIsBootstrapped }}
 ---
 apiVersion: v1
@@ -49,3 +51,5 @@ subjects:
   name: node-group-exporter
   namespace: d8-cloud-instance-manager
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

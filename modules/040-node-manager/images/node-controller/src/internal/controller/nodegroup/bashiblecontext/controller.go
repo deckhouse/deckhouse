@@ -34,6 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext"
+
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -153,7 +155,7 @@ func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 
 	r := &Reconciler{
 		Client:        c.Client,
-		Context:       &Service{Client: c.Client, Reader: c.apiReader},
+		Context:       &bashiblecontext.Service{Client: c.Client, Reader: c.apiReader},
 		DerivedStatus: &derived_status.Service{Client: c.Client, Reader: c.apiReader},
 	}
 	if err := r.Assemble(ctx); err != nil {

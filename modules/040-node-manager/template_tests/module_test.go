@@ -38,6 +38,9 @@ func Test(t *testing.T) {
 
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler"]
+# The default of the global schema, which the test harness does not apply. Without it every
+# template behind the flag renders nothing and the suite silently tests a tenant cluster.
+deckhouseSelfHosted: true
 modules:
   placement: {}
 discovery:
