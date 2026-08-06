@@ -19,6 +19,9 @@ kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
 clusterDomain: "internal.cluster.local"
+# [<en>] Default container runtime on cluster nodes (NodeGroups).
+# [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -118,31 +121,17 @@ metadata:
 spec:
   version: 2
   enabled: true
----
-# [<en>] control-plane-manager module settings.
-# [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html
-# [<ru>] Настройки модуля control-plane-manager.
-# [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: control-plane-manager
-spec:
-  version: 3
-  enabled: true
   settings:
-    apiserver:
-      # [<en>] Enabling access to the API server through Ingress.
-      # [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
-      # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-      # [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
-      publishAPI:
-        ingress:
-          enabled: true
-          https:
-            mode: Global
-            global:
-              kubeconfigGeneratorMasterCA: ""
+    # [<en>] Enabling access to the API server through Ingress.
+    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
+    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
+    publishAPI:
+      enabled: true
+      https:
+        mode: Global
+        global:
+          kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] cni-cilium module settings.
 # [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
@@ -200,22 +189,6 @@ internalNetworkCIDRs:
   # [<en>] You might consider changing this. Ensure that there are no overlaps with other subnets.
   # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с другими подсетями.
   - <INTERNAL_NETWORK_CIDRS>
----
-# [<en>] node-manager module settings.
-# [<en>] https://deckhouse.io/modules/node-manager/configuration.html
-# [<ru>] Настройки модуля node-manager.
-# [<ru>] https://deckhouse.ru/modules/node-manager/configuration.html
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: node-manager
-spec:
-  version: 3
-  enabled: true
-  settings:
-    # [<en>] Default container runtime on cluster nodes (NodeGroups).
-    # [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
-    defaultCRI: ContainerdV2
 ---
 # [<en>] Worker NodeGroup for static machines (see node-manager docs).
 # [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
@@ -351,7 +324,7 @@ spec:
 # [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
 # [<ru>] Ingress NGINX Controller (HostPort на control-plane для быстрого старта).
 # [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
-apiVersion: deckhouse.io/v2
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
@@ -407,7 +380,7 @@ kind: ModuleConfig
 metadata:
   name: prometheus
 spec:
-  version: 3
+  version: 2
   enabled: true
   settings:
     # [<en>] Long-term metric storage is not started; the main Prometheus keeps metrics for 15 days.
