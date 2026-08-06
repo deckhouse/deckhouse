@@ -101,8 +101,12 @@ func ProviderModuleCandiDir(provider string) string {
 // provider module. Skips the test when neither is present. Returns the resolved
 // path so the test can read schemas or layouts from it.
 //
-// Prefer this over RequireDir on candi/cloud-providers: that directory exists in
-// the CI test image even when the provider a test needs is not in it.
+// A candidate counts only when it carries openapi/cluster_configuration.yaml:
+// for an external provider the build bakes a partial tree into the image (just
+// bashible, see externalCloudProviders in tools/build.go), so the directory
+// existing is not enough. Prefer this over RequireDir on candi/cloud-providers
+// for the same reason — that directory exists in the CI test image even when the
+// provider a test needs is not in it.
 func RequireProviderCandiDir(t *testing.T, provider string) string {
 	t.Helper()
 	provider = strings.ToLower(provider)
@@ -117,7 +121,7 @@ func RequireProviderCandiDir(t *testing.T, provider string) string {
 		ProviderModuleCandiDir(provider),
 	}
 	for _, dir := range candidates {
-		if isDir(dir) {
+		if isFile(filepath.Join(dir, "openapi", "cluster_configuration.yaml")) {
 			return dir
 		}
 	}
@@ -174,4 +178,9 @@ func RequireProviderEnv(t *testing.T) {
 func isDir(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
+}
+
+func isFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular()
 }

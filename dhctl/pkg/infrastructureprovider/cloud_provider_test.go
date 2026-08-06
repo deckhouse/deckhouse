@@ -50,9 +50,10 @@ const (
 	gcpTestLayout    = "without-nat"
 	gcpPluginVersion = "4.85.0"
 
-	modulesRootDir = "modules"
-	layoutsRootDir = "layouts"
-	lockFile       = ".terraform.lock.hcl"
+	modulesRootDir      = "modules"
+	layoutsRootDir      = "layouts"
+	terraformModulesDir = "terraform-modules"
+	lockFile            = ".terraform.lock.hcl"
 
 	tofuBin      = "opentofu"
 	terraformBin = "terraform"
@@ -75,13 +76,14 @@ var (
 )
 
 func getTestFSDIParams(t *testing.T, logger *slog.Logger) *fsprovider.DIParams {
-	prepareLocalRun(t, logger)
+	downloadDir := prepareLocalRun(t, logger)
 
 	return &fsprovider.DIParams{
 		InfraVersionsFile: "/deckhouse/candi/terraform_versions.yml",
 		BinariesDir:       "/dhctl-tests/bin",
 		CloudProviderDir:  cloudProvidersDir,
 		PluginsDir:        "/dhctl-tests/plugins",
+		DownloadDir:       downloadDir,
 	}
 }
 
@@ -940,7 +942,10 @@ func TestTofuApplyWithCreatingWorkerFilesInRoot(t *testing.T) {
 // the directory existing says nothing about a particular provider being in it —
 // each one is checked and linked separately, both on a developer machine (where
 // nothing is materialised) and in CI (where only external providers are absent).
-func prepareLocalRun(t *testing.T, logger *slog.Logger) {
+//
+// Returns the download dir to use as DIParams.DownloadDir: it holds a bundle-like
+// tree for the providers candi has no terraform_versions.yml entry for.
+func prepareLocalRun(t *testing.T, logger *slog.Logger) string {
 	stat, err := os.Stat(cloudProvidersDir)
 	switch {
 	case err == nil:
@@ -964,27 +969,29 @@ func prepareLocalRun(t *testing.T, logger *slog.Logger) {
 	candiDirs := make([]string, 0, len(cloudProviderModules))
 	for moduleName, moduleDir := range cloudProviderModules {
 		dest := filepath.Join(cloudProvidersDir, moduleName)
-		if _, err := os.Lstat(dest); err == nil {
+
+		switch {
+		case isDirForTest(filepath.Join(dest, layoutsRootDir)):
 			// Delivered with the image, nothing to link.
 			continue
-		}
-
-		require.NoError(t, os.Symlink(moduleDir, dest), "should create symlink %s to %s", moduleDir, dest)
-
-		t.Cleanup(func() {
-			if err := os.Remove(dest); err != nil && !os.IsNotExist(err) {
-				logger.Error(fmt.Sprintf("Could not remove cloud-provider symlink %s: %v\n", dest, err))
-				return
+		case isDirForTest(dest):
+			// A partial tree: the build bakes only bashible for external
+			// providers (externalCloudProviders in tools/build.go), so the
+			// layouts and shared modules still have to come from the module.
+			for _, sub := range []string{layoutsRootDir, terraformModulesDir} {
+				linkProviderCandiEntry(t, logger, filepath.Join(moduleDir, sub), filepath.Join(dest, sub))
 			}
-
-			logger.Info(fmt.Sprintf("cloud-provider symlink %s removed\n", dest))
-		})
+		default:
+			linkProviderCandiEntry(t, logger, moduleDir, dest)
+		}
 
 		candiDirs = append(candiDirs, moduleDir)
 	}
 
+	downloadDir := prepareProviderBundleSettings(t)
+
 	if len(candiDirs) == 0 {
-		return
+		return downloadDir
 	}
 
 	const schemasPathsEnv = "DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"
@@ -1001,6 +1008,67 @@ func prepareLocalRun(t *testing.T, logger *slog.Logger) {
 	schemasPathsEnvVal := strings.Join(candiDirs, ",")
 	err = os.Setenv(schemasPathsEnv, schemasPathsEnvVal)
 	require.NoError(t, err, "not set env %s", schemasPathsEnv)
+
+	return downloadDir
+}
+
+// linkProviderCandiEntry symlinks source to dest and removes the link after the
+// test. A missing source is not an error: not every provider ships every
+// subdirectory (terraform-modules is optional).
+func linkProviderCandiEntry(t *testing.T, logger *slog.Logger, source, dest string) {
+	t.Helper()
+
+	if !isDirForTest(source) {
+		return
+	}
+
+	require.NoError(t, os.Symlink(source, dest), "should create symlink %s to %s", source, dest)
+
+	t.Cleanup(func() {
+		if err := os.Remove(dest); err != nil && !os.IsNotExist(err) {
+			logger.Error(fmt.Sprintf("Could not remove cloud-provider symlink %s: %v\n", dest, err))
+			return
+		}
+
+		logger.Info(fmt.Sprintf("cloud-provider symlink %s removed\n", dest))
+	})
+}
+
+// prepareProviderBundleSettings fakes the part of an unpacked provider bundle the
+// settings store reads: <downloadDir>/<provider>/terraform-manager/{terraform_versions.yml,plan_rules.yml}.
+// External providers (yandex) carry no entry in candi's terraform_versions.yml, so
+// without this their settings — plugin version, useOpentofu — would be unknown.
+// plan_rules.yml is mandatory for a bundle: attachBundlePlanRules drops the whole
+// bundle when it is missing. Providers candi already knows (gcp) are skipped by
+// mergeBundleSettings anyway.
+func prepareProviderBundleSettings(t *testing.T) string {
+	t.Helper()
+
+	downloadDir := t.TempDir()
+	for moduleName, moduleDir := range cloudProviderModules {
+		versions := filepath.Join(moduleDir, "terraform_versions.yml")
+		planRules := filepath.Join(moduleDir, "plan_rules.yml")
+		if !isFileForTest(versions) || !isFileForTest(planRules) {
+			continue
+		}
+
+		bundleDir := filepath.Join(downloadDir, moduleName, "terraform-manager")
+		require.NoError(t, os.MkdirAll(bundleDir, 0o755))
+		require.NoError(t, os.Symlink(versions, filepath.Join(bundleDir, "terraform_versions.yml")))
+		require.NoError(t, os.Symlink(planRules, filepath.Join(bundleDir, "plan_rules.yml")))
+	}
+
+	return downloadDir
+}
+
+func isDirForTest(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+func isFileForTest(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular()
 }
 
 type assertApplyWithCreatingWorkerFilesInRootParams struct {

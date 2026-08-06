@@ -14,6 +14,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/030-cloud-provider-yandex/candi/bashible
+  to: /deckhouse/candi/cloud-providers/yandex/bashible
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/se-plus/modules/030-cloud-provider-vsphere/candi
   to: /deckhouse/candi/cloud-providers/vsphere
   stageDependencies:
