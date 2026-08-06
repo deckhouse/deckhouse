@@ -18,11 +18,15 @@ package controller
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"go.yaml.in/yaml/v2"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -64,12 +68,20 @@ type reconciler struct {
 	client client.Client
 }
 
-func RegisterController(manager manager.Manager) error {
+func RegisterController(mgr manager.Manager) error {
 	r := &reconciler{
-		client: manager.GetClient(),
+		client: mgr.GetClient(),
 	}
 
-	return ctrl.NewControllerManagedBy(manager).
+	// The watch alone does not cover a cluster where the ConfigMap does not exist at the moment
+	// this Pod starts: an informer replays Create events for objects that are there, and delivers
+	// nothing at all for one that is not. Without this first enqueue the controller would sit idle
+	// until some unrelated NodeGroup event happened to wake it.
+	if err := mgr.Add(manager.RunnableFunc(r.bootstrapConfigMap)); err != nil {
+		return fmt.Errorf("add the ConfigMap bootstrap runnable: %w", err)
+	}
+
+	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.TypedOptions[reconcile.Request]{
 			MaxConcurrentReconciles: maxConcurrentReconciles,
 			CacheSyncTimeout:        cacheSyncTimeout,
@@ -107,10 +119,53 @@ func RegisterController(manager manager.Manager) error {
 		Complete(r)
 }
 
+// bootstrapConfigMap makes sure the cluster ConfigMap exists, and does nothing beyond that.
+//
+// It answers the one case the watch cannot: an informer replays Create events for objects that
+// already exist when it starts, but delivers nothing for an object that does not exist at all. If
+// the ConfigMap is present this returns on the first check and the watch takes over; if it is
+// absent this reconciles until it is there.
+func (r *reconciler) bootstrapConfigMap(ctx context.Context) error {
+	err := wait.PollUntilContextCancel(ctx, requeueInterval, true, func(ctx context.Context) (bool, error) {
+		getErr := r.client.Get(ctx, client.ObjectKey{
+			Name:      common.ConfigMapName,
+			Namespace: common.KubeSystemNamespace,
+		}, &corev1.ConfigMap{})
+		if getErr == nil {
+			return true, nil
+		}
+
+		if !apierrors.IsNotFound(getErr) {
+			logger.Warn("Cannot check whether the cluster ConfigMap exists, retrying",
+				"namespace", common.KubeSystemNamespace, "name", common.ConfigMapName, log.Err(getErr))
+			return false, nil
+		}
+
+		logger.Info("Cluster ConfigMap does not exist, creating it",
+			"namespace", common.KubeSystemNamespace, "name", common.ConfigMapName)
+		// Reconcile reports its own failures and never returns an error, so the next tick is what
+		// decides whether this worked: it re-checks existence rather than trusting the call.
+		if _, reconcileErr := r.Reconcile(ctx, reconcile.Request{}); reconcileErr != nil {
+			logger.Warn("Bootstrap reconcile failed, retrying", log.Err(reconcileErr))
+		}
+
+		return false, nil
+	})
+
+	// A cancelled context is a shutdown, not a failure — returning it would make the manager log
+	// this runnable as having errored on every graceful stop.
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return nil
+	}
+
+	return err
+}
+
 // getConfigMapSpecPredicate reacts to the ConfigMap this controller owns, but only when its
-// data["spec"] block actually changed — that's the only part an external actor (the global
-// discovery hook) ever writes. Filtering out data["status"]-only changes is what keeps this
-// watch from re-triggering a reconcile on the controller's own status writes to the same object.
+// data["spec"] block actually changed. This controller now writes that block itself, so the
+// filter's job is no longer to separate an external writer's changes from its own — it is to keep
+// the write from feeding back: fillConfigMap stamps lastReconciliationTime on every pass, so any
+// broader comparison would spin forever.
 func getConfigMapSpecPredicate() predicate.Predicate {
 	parseSpec := func(cm *corev1.ConfigMap) Spec {
 		var spec Spec
@@ -154,8 +209,16 @@ func getConfigMapSpecPredicate() predicate.Predicate {
 			return parseSpec(oldCM) != parseSpec(newCM)
 		},
 
+		// Deletion has to wake the controller up: this object is the only durable record of
+		// maxUsedKubernetesVersion, and a `kubectl delete cm` that went through (the admission
+		// webhook that forbids it can be unavailable) must be followed by a recreate rather than
+		// silence until the next unrelated event.
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return false
+			cm, ok := e.Object.(*corev1.ConfigMap)
+			if !ok {
+				return false
+			}
+			return isTarget(cm)
 		},
 
 		GenericFunc: func(e event.GenericEvent) bool {
@@ -197,13 +260,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	clusterCfg, err := getDesiredConfiguration(configMap)
+	clusterCfg, err := desiredConfiguration(configMap)
 	if err != nil {
-		logger.Error("Failed to get desired cluster configuration from configMap", "namespace", common.KubeSystemNamespace, "name", common.ConfigMapName, log.Err(err))
+		logger.Error("Failed to build the desired cluster configuration from the environment", log.Err(err))
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
-
-	specBefore := configMap.Data["spec"]
 
 	reconcileTrigger := determineReconcileTrigger(configMap, clusterCfg)
 
@@ -223,8 +284,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	logger.Info("E2E-KV observer",
 		"spec_desired", clusterCfg.DesiredVersion,
 		"spec_mode", string(clusterCfg.UpdateMode),
+		"spec_max_used", clusterCfg.MaxUsedVersion,
 		"status_current", clusterState.CurrentVersion,
-		"preserving_spec", configMap.Data["spec"] == specBefore,
 		"reconcile_trigger", string(reconcileTrigger),
 	)
 

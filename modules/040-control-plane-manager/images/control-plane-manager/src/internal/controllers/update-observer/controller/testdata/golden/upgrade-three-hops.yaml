@@ -1,8 +1,9 @@
 ---
 data:
-  spec: |-
+  spec: |
     desiredVersion: "1.35"
     updateMode: Automatic
+    maxUsedKubernetesVersion: "1.32"
   status: |
     currentVersion: "1.32"
     supportedVersions:
@@ -38,5 +39,6 @@ metadata:
     heritage: deckhouse
     k8s-version: "1.32"
     max-k8s-version: "1.32"
+    name: d8-cluster-kubernetes
   name: d8-cluster-kubernetes
   namespace: kube-system

@@ -29,6 +29,56 @@ type VersionSettings struct {
 	Automatic string
 }
 
+// LoadConfigurationFromEnv builds the declared configuration this controller writes into data.spec
+// of the cluster ConfigMap. Every field comes from the container environment, rendered by
+// modules/040-control-plane-manager/templates/daemonset.yaml out of values the hooks publish —
+// this controller resolves nothing itself and reads nothing back from data.spec to build it.
+//
+// Every field is mandatory and every malformed value is an error rather than a silent default.
+// A default here would be written straight into the ConfigMap and from there read by
+// node-controller, the release requirements check and two admission webhooks: a guessed version
+// would look exactly like a declared one. Failing instead leaves the previous, correct content in
+// place and requeues.
+func LoadConfigurationFromEnv() (*Configuration, error) {
+	desiredVersion, err := requiredVersionFromEnv(desiredKubernetesVersionEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	maxUsedVersion, err := requiredVersionFromEnv(maxUsedKubernetesVersionEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	updateMode := UpdateMode(strings.TrimSpace(os.Getenv(kubernetesUpdateModeEnv)))
+	switch updateMode {
+	case UpdateModeAutomatic, UpdateModeManual:
+	default:
+		return nil, fmt.Errorf("invalid %s: %q, want %q or %q",
+			kubernetesUpdateModeEnv, updateMode, UpdateModeAutomatic, UpdateModeManual)
+	}
+
+	return &Configuration{
+		DesiredVersion: desiredVersion,
+		UpdateMode:     updateMode,
+		MaxUsedVersion: maxUsedVersion,
+	}, nil
+}
+
+func requiredVersionFromEnv(name string) (string, error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return "", fmt.Errorf("%s is not set", name)
+	}
+
+	normalized, err := version.Normalize(raw)
+	if err != nil {
+		return "", fmt.Errorf("invalid %s %q: %w", name, raw, err)
+	}
+
+	return normalized, nil
+}
+
 func LoadVersionSettingsFromEnv() (VersionSettings, error) {
 	supportedVersionsEnv := os.Getenv(supportedKubernetesVersionsEnv)
 	automaticVersion := os.Getenv(automaticKubernetesVersionEnv)

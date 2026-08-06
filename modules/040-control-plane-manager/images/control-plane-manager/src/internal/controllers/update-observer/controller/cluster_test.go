@@ -35,108 +35,113 @@ func makeCM(data map[string]string) *corev1.ConfigMap {
 	}
 }
 
-func TestGetDesiredConfiguration(t *testing.T) {
-	t.Run("parses spec written by the hook", func(t *testing.T) {
-		cm := makeCM(map[string]string{
-			"spec": "desiredVersion: \"1.35\"\nupdateMode: Manual\n",
-		})
+func setVersionEnv(t *testing.T, desired, updateMode, maxUsed string) {
+	t.Helper()
+	t.Setenv("DESIRED_KUBERNETES_VERSION", desired)
+	t.Setenv("KUBERNETES_UPDATE_MODE", updateMode)
+	t.Setenv("MAX_USED_KUBERNETES_VERSION", maxUsed)
+}
 
-		cfg, err := getDesiredConfiguration(cm)
+func TestDesiredConfiguration(t *testing.T) {
+	t.Run("builds the spec from the environment", func(t *testing.T) {
+		setVersionEnv(t, "1.35", "Manual", "1.35")
+
+		cfg, err := desiredConfiguration(makeCM(nil))
 		require.NoError(t, err)
 		assert.Equal(t, "1.35", cfg.DesiredVersion)
 		assert.Equal(t, cluster.UpdateModeManual, cfg.UpdateMode)
+		assert.Equal(t, "1.35", cfg.MaxUsedVersion)
 	})
 
 	t.Run("Automatic mode", func(t *testing.T) {
-		cm := makeCM(map[string]string{
-			"spec": "desiredVersion: \"1.34\"\nupdateMode: Automatic\n",
-		})
+		setVersionEnv(t, "1.34", "Automatic", "1.34")
 
-		cfg, err := getDesiredConfiguration(cm)
+		cfg, err := desiredConfiguration(makeCM(nil))
 		require.NoError(t, err)
-		assert.Equal(t, "1.34", cfg.DesiredVersion)
 		assert.Equal(t, cluster.UpdateModeAutomatic, cfg.UpdateMode)
 	})
 
-	t.Run("normalizes a full semantic version", func(t *testing.T) {
-		cm := makeCM(map[string]string{
-			"spec": "desiredVersion: \"v1.35.4\"\nupdateMode: Manual\n",
-		})
+	t.Run("normalizes full semantic versions and surrounding whitespace", func(t *testing.T) {
+		setVersionEnv(t, " v1.35.4 ", " Manual ", " v1.36.0 ")
 
-		cfg, err := getDesiredConfiguration(cm)
-		require.NoError(t, err)
-		assert.Equal(t, "1.35", cfg.DesiredVersion)
-	})
-
-	t.Run("rejects an unknown updateMode instead of degrading silently", func(t *testing.T) {
-		// desiredVersion is checked three times; updateMode used to be cast straight into the
-		// typed constant, where a typo matched neither value and quietly weakened the
-		// Automatic-mode drift detection in cluster/state.go.
-		cm := makeCM(map[string]string{
-			"spec": "desiredVersion: \"1.35\"\nupdateMode: automatic\n",
-		})
-
-		_, err := getDesiredConfiguration(cm)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "spec.updateMode")
-	})
-
-	t.Run("an absent updateMode is still accepted", func(t *testing.T) {
-		cm := makeCM(map[string]string{
-			"spec": "desiredVersion: \"1.35\"\n",
-		})
-
-		cfg, err := getDesiredConfiguration(cm)
-		require.NoError(t, err)
-		assert.Equal(t, cluster.UpdateMode(""), cfg.UpdateMode)
-	})
-
-	t.Run("tolerates surrounding whitespace in both fields", func(t *testing.T) {
-		// data.spec is a hand-editable ConfigMap field now, not a base64 Secret value, and the
-		// global hook trims the same values on its side.
-		cm := makeCM(map[string]string{
-			"spec": "desiredVersion: \"  1.35  \"\nupdateMode: \"  Manual  \"\n",
-		})
-
-		cfg, err := getDesiredConfiguration(cm)
+		cfg, err := desiredConfiguration(makeCM(nil))
 		require.NoError(t, err)
 		assert.Equal(t, "1.35", cfg.DesiredVersion)
 		assert.Equal(t, cluster.UpdateModeManual, cfg.UpdateMode)
+		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
 	})
 
-	t.Run("missing spec key errors", func(t *testing.T) {
-		cm := makeCM(map[string]string{})
+	// The recorded maximum must never walk backwards. A Pod whose template still carries the
+	// previous value — mid-rollout, or after leadership moved to a not-yet-updated Pod — would
+	// otherwise lower the floor and hand a downgrade an extra minor of room.
+	t.Run("keeps the higher of the stored and the declared maxUsed", func(t *testing.T) {
+		setVersionEnv(t, "1.33", "Manual", "1.34")
 
-		_, err := getDesiredConfiguration(cm)
-		require.Error(t, err)
+		cfg, err := desiredConfiguration(makeCM(map[string]string{
+			"spec": "desiredVersion: \"1.33\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.36\"\n",
+		}))
+		require.NoError(t, err)
+		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
 	})
 
-	t.Run("empty desiredVersion errors", func(t *testing.T) {
-		cm := makeCM(map[string]string{
-			"spec": "desiredVersion: \"\"\nupdateMode: Automatic\n",
-		})
+	t.Run("raises the stored maxUsed when the environment is ahead", func(t *testing.T) {
+		setVersionEnv(t, "1.36", "Manual", "1.36")
 
-		_, err := getDesiredConfiguration(cm)
-		require.Error(t, err)
+		cfg, err := desiredConfiguration(makeCM(map[string]string{
+			"spec": "desiredVersion: \"1.35\"\nupdateMode: Manual\nmaxUsedKubernetesVersion: \"1.35\"\n",
+		}))
+		require.NoError(t, err)
+		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
 	})
 
-	t.Run("invalid desiredVersion errors", func(t *testing.T) {
-		cm := makeCM(map[string]string{
-			"spec": "desiredVersion: invalid\nupdateMode: Automatic\n",
-		})
+	t.Run("an unreadable stored spec does not block the reconcile that repairs it", func(t *testing.T) {
+		setVersionEnv(t, "1.35", "Manual", "1.35")
 
-		_, err := getDesiredConfiguration(cm)
-		require.Error(t, err)
+		cfg, err := desiredConfiguration(makeCM(map[string]string{"spec": "desiredVersion: [broken\n"}))
+		require.NoError(t, err)
+		assert.Equal(t, "1.35", cfg.MaxUsedVersion)
+	})
+
+	// Each of these would otherwise be written into the ConfigMap as if it were declared, and read
+	// back from there by node-controller, the release requirements check and two webhooks.
+	t.Run("rejects malformed environment instead of defaulting", func(t *testing.T) {
+		for name, env := range map[string][3]string{
+			"empty desiredVersion":   {"", "Manual", "1.35"},
+			"empty updateMode":       {"1.35", "", "1.35"},
+			"empty maxUsed":          {"1.35", "Manual", ""},
+			"unknown updateMode":     {"1.35", "automatic", "1.35"},
+			"invalid desiredVersion": {"not-a-version", "Manual", "1.35"},
+			"invalid maxUsed":        {"1.35", "Manual", "not-a-version"},
+		} {
+			t.Run(name, func(t *testing.T) {
+				setVersionEnv(t, env[0], env[1], env[2])
+
+				_, err := desiredConfiguration(makeCM(nil))
+				require.Error(t, err)
+			})
+		}
 	})
 }
 
-func TestFillConfigMapPreservesRawSpec(t *testing.T) {
-	rawSpec := "updateMode: Manual\ndesiredVersion: \"1.35\"\n"
-	cm := makeCM(map[string]string{"spec": rawSpec})
+// The whole data.spec block is authored here now, so a hand edit must be corrected rather than
+// preserved — the opposite of the byte-for-byte passthrough this controller used to do.
+func TestFillConfigMapRewritesSpec(t *testing.T) {
+	cm := makeCM(map[string]string{"spec": "desiredVersion: \"1.31\"\nupdateMode: Automatic\n"})
 
-	got, err := fillConfigMap(cm, &cluster.State{}, ReconcileTriggerIdle)
+	got, err := fillConfigMap(cm, &cluster.State{
+		Spec: cluster.Spec{
+			DesiredVersion: "1.35",
+			UpdateMode:     cluster.UpdateModeManual,
+			MaxUsedVersion: "1.36",
+		},
+	}, ReconcileTriggerIdle)
 	require.NoError(t, err)
-	assert.Equal(t, rawSpec, got.Data["spec"])
+
+	assert.Contains(t, got.Data["spec"], "desiredVersion: \"1.35\"")
+	assert.Contains(t, got.Data["spec"], "updateMode: Manual")
+	assert.Contains(t, got.Data["spec"], "maxUsedKubernetesVersion: \"1.36\"")
+	assert.Equal(t, "d8-cluster-kubernetes", got.Labels["name"])
+	assert.Equal(t, "deckhouse", got.Labels["heritage"])
 }
 
 // getConfigMapSpecPredicate is the only thing standing between this controller and an infinite
@@ -178,5 +183,18 @@ func TestGetConfigMapSpecPredicate(t *testing.T) {
 		newer.Namespace = "default"
 
 		assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: older, ObjectNew: newer}))
+	})
+
+	// This object is the only durable record of maxUsedKubernetesVersion. A delete that got past
+	// the admission webhook has to be followed by a recreate, not by silence.
+	t.Run("reacts to deletion so the ConfigMap is recreated", func(t *testing.T) {
+		assert.True(t, pred.Delete(event.DeleteEvent{Object: withData(specA)}))
+	})
+
+	t.Run("ignores deletion of a same-named ConfigMap in another namespace", func(t *testing.T) {
+		other := withData(specA)
+		other.Namespace = "default"
+
+		assert.False(t, pred.Delete(event.DeleteEvent{Object: other}))
 	})
 }

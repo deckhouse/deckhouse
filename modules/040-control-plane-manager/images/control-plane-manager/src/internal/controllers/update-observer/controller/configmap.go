@@ -25,6 +25,7 @@ import (
 
 	"go.yaml.in/yaml/v2"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"control-plane-manager/internal/controllers/update-observer/cluster"
@@ -33,6 +34,7 @@ import (
 )
 
 type ConfigMapData struct {
+	*Spec
 	*Status
 }
 
@@ -80,28 +82,53 @@ func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error
 		return nil, err
 	}
 
-	// No synthesis on NotFound. The global discovery hook is the creator of this ConfigMap
-	// (CreateIfNotExists together with data.spec); this controller only ever updates data.status.
-	// Returning a bare in-memory object used to look like a bootstrap path, but it could never
-	// become one: Reconcile rejects it immediately for having no data.spec, so the Create branch
-	// below was unreachable. Report the absence instead and let Reconcite requeue.
+	// NotFound is a real bootstrap path, not a failure: this controller authors every key of the
+	// object, so it can synthesize the whole thing in memory and let touchConfigMap create it.
+	// dhctl seeds the ConfigMap during bootstrap so that node-controller finds it from the moment
+	// Deckhouse starts, but that seeding can be missed (dhctl deckhouse ... applies only the
+	// Deployment) and the object can be deleted, and neither must leave the cluster without it.
+	//
+	// The empty ResourceVersion is what touchConfigMap keys off to Create rather than Update.
 	if err != nil {
-		return nil, err
+		cm = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        common.ConfigMapName,
+				Namespace:   common.KubeSystemNamespace,
+				Annotations: map[string]string{},
+				Labels:      identifyingLabels(),
+			},
+		}
 	}
 
 	return cm, nil
 }
 
+// identifyingLabels returns the labels that make the object recognizable to things that select it
+// rather than name it. The name label is not decoration: the ValidatingWebhookConfiguration that
+// forbids deleting this ConfigMap picks it out by objectSelector, and heritage: deckhouse sits on
+// hundreds of objects so it cannot serve as that selector. Without the name label the delete
+// protection either misses this object or, if widened, intercepts every ConfigMap in kube-system.
+func identifyingLabels() map[string]string {
+	return map[string]string{
+		common.HeritageLabelKey: common.DeckhouseLabel,
+		common.NameLabelKey:     common.ConfigMapName,
+	}
+}
+
 func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, reconcileTrigger ReconcileTrigger) (*corev1.ConfigMap, error) {
-	rawSpec, hasSpec := configMap.Data["spec"]
 	configMapData := renderConfigMapData(clusterState)
 	configMap.Data = map[string]string{}
 
-	// data.spec is external input owned by the global discovery hook. Preserve it byte-for-byte;
-	// re-marshalling it here would make this controller a second writer and couple both
-	// components to identical YAML serialization.
-	if hasSpec {
-		configMap.Data["spec"] = rawSpec
+	// data.spec is rendered, not preserved. Copying the previous bytes through was what kept this
+	// controller from colliding with a second writer; now that it is the only writer, the block is
+	// simply authored from the container environment on every pass — which is also what lets a
+	// hand edit of data.spec be corrected instead of pinned.
+	if configMapData.Spec != nil {
+		specBytes, err := yaml.Marshal(configMapData.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Spec: %w", err)
+		}
+		configMap.Data["spec"] = string(specBytes)
 	}
 
 	if configMapData.Status != nil {
@@ -113,9 +140,9 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 	}
 
 	// GetAnnotations/GetLabels can return nil for a ConfigMap this controller didn't create itself
-	// (e.g. one seeded by the global discovery hook with data.spec only, or a ConfigMap that came
-	// back from the API server with an empty map omitted via `omitempty`) — guard against
-	// assigning into a nil map below.
+	// (e.g. one seeded by dhctl during bootstrap, or a ConfigMap that came back from the API
+	// server with an empty map omitted via `omitempty`) — guard against assigning into a nil map
+	// below.
 	annotations := configMap.GetAnnotations()
 	if annotations == nil {
 		annotations = map[string]string{}
@@ -123,6 +150,12 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 	labels := configMap.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
+	}
+	// Re-asserted on every pass, not only at creation: an object that lost the name label — an
+	// older ConfigMap from before this release, or one edited by hand — would otherwise stay
+	// outside the delete-protection webhook's objectSelector forever.
+	for key, value := range identifyingLabels() {
+		labels[key] = value
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 
@@ -183,6 +216,11 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 	}
 
 	return ConfigMapData{
+		Spec: &Spec{
+			DesiredVersion: clusterState.Spec.DesiredVersion,
+			UpdateMode:     string(clusterState.Spec.UpdateMode),
+			MaxUsedVersion: clusterState.Spec.MaxUsedVersion,
+		},
 		Status: &Status{
 			CurrentVersion:    clusterState.CurrentVersion,
 			SupportedVersions: clusterState.SupportedVersions,
@@ -199,11 +237,18 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 	}
 }
 
-// touchConfigMap writes the reconciled object back. Update only: the object always came from a
-// successful Get, so it always carries a ResourceVersion — which also makes this write
-// optimistically concurrent, so a data.spec patch racing in from the global hook yields a conflict
-// rather than clobbering the hook's value.
+// touchConfigMap writes the reconciled object back. An empty ResourceVersion means getConfigMap
+// synthesized the object because it did not exist, so this is a create; anything else came from a
+// successful Get and its ResourceVersion also makes the write optimistically concurrent.
 func (r *reconciler) touchConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
+	if configMap.ResourceVersion == "" {
+		if err := r.client.Create(ctx, configMap); err != nil {
+			return fmt.Errorf("failed to create configMap: %w", err)
+		}
+
+		return nil
+	}
+
 	if err := r.client.Update(ctx, configMap); err != nil {
 		return fmt.Errorf("failed to update configMap: %w", err)
 	}

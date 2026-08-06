@@ -46,60 +46,52 @@ func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configura
 		return nil, fmt.Errorf("failed to get control plane state: %w", err)
 	}
 
-	maxUsedVersion := configmapLabels[common.MaxK8sVersionLabelKey]
 	versionSettings, err := cluster.LoadVersionSettingsFromEnv()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse versions from env: %w", err)
 	}
 
-	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, maxUsedVersion, sourceVersion, downgradeInProgress), nil
+	// availableVersions is derived from the maxUsed this pass computed, not from the max-k8s-version
+	// label or from the value still stored in the ConfigMap. Both of those describe the previous
+	// pass, so the published list would lag a reconcile behind the floor the ModuleConfig admission
+	// webhook enforces from the same quantity — and the two must not contradict each other.
+	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, cfg.MaxUsedVersion, sourceVersion, downgradeInProgress), nil
 }
 
-// getDesiredConfiguration reads the operator-declared desired Kubernetes version straight from
-// the already-fetched ConfigMap's own data["spec"] block. That block is external input, written
-// by the global discovery hook — this controller never computes it itself, only reconciles
-// data["status"] against it.
-func getDesiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuration, error) {
-	rawSpec, ok := configMap.Data["spec"]
-	if !ok {
-		return nil, fmt.Errorf("configMap %s/%s has no 'spec' data key yet", configMap.Namespace, configMap.Name)
-	}
-
-	var spec Spec
-	if err := yaml.Unmarshal([]byte(rawSpec), &spec); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal 'spec': %w", err)
-	}
-
-	if spec.DesiredVersion == "" {
-		return nil, fmt.Errorf("configMap %s/%s 'spec.desiredVersion' is empty", configMap.Namespace, configMap.Name)
-	}
-
-	desiredVersion, err := version.Normalize(spec.DesiredVersion)
+// desiredConfiguration returns the data.spec block to write: the declared configuration from the
+// container environment, with maxUsedKubernetesVersion raised to the value already recorded in the
+// ConfigMap when that one is higher.
+//
+// The max() is what makes the value monotonic in practice rather than only in intent. The
+// environment is a snapshot of what values held when this Pod's template was rendered, so during a
+// DaemonSet rollout an older Pod can still be the one reconciling, and on an HA cluster leadership
+// can move to it mid-roll. Writing the environment verbatim would let such a Pod walk the recorded
+// maximum backwards and hand a downgrade one extra minor of room.
+//
+// Reads of ConfigMaps in this binary bypass the cache (internal/manager.go), so the stored value
+// compared here is the live one.
+func desiredConfiguration(configMap *corev1.ConfigMap) (*cluster.Configuration, error) {
+	cfg, err := cluster.LoadConfigurationFromEnv()
 	if err != nil {
-		return nil, fmt.Errorf("invalid configMap %s/%s 'spec.desiredVersion': %w", configMap.Namespace, configMap.Name, err)
+		return nil, err
 	}
 
-	// desiredVersion gets three checks above; updateMode used to get none, so a typo was cast
-	// straight into the typed constant and then matched nothing — degrading the Automatic-mode
-	// drift detection in cluster/state.go into a mislabeled phase instead of failing. External
-	// input deserves the same loud failure as the version next to it.
-	updateMode := cluster.UpdateMode(strings.TrimSpace(spec.UpdateMode))
-	switch updateMode {
-	case "", cluster.UpdateModeAutomatic, cluster.UpdateModeManual:
-	default:
-		return nil, fmt.Errorf("invalid configMap %s/%s 'spec.updateMode': %q, want %q or %q",
-			configMap.Namespace, configMap.Name, spec.UpdateMode,
-			cluster.UpdateModeAutomatic, cluster.UpdateModeManual)
+	cfg.MaxUsedVersion = version.GetMax(storedMaxUsedVersion(configMap), cfg.MaxUsedVersion)
+
+	return cfg, nil
+}
+
+// storedMaxUsedVersion returns spec.maxUsedKubernetesVersion as currently written, or "" when the
+// block is absent or unreadable. Unreadable is not an error: this controller is about to overwrite
+// data.spec anyway, and refusing to reconcile over a hand-mangled block would block the very write
+// that repairs it. Losing the stored value costs at most the floor the environment already carries.
+func storedMaxUsedVersion(configMap *corev1.ConfigMap) string {
+	var spec Spec
+	if err := yaml.Unmarshal([]byte(configMap.Data["spec"]), &spec); err != nil {
+		return ""
 	}
 
-	return &cluster.Configuration{
-		DesiredVersion: desiredVersion,
-		UpdateMode:     updateMode,
-		// Carried through unvalidated on purpose: this key is written by this controller, so a
-		// value that fails to parse here can only come from a hand edit. Rejecting the whole
-		// ConfigMap over it would block the very reconcile that overwrites it.
-		MaxUsedVersion: strings.TrimSpace(spec.MaxUsedVersion),
-	}, nil
+	return strings.TrimSpace(spec.MaxUsedVersion)
 }
 
 func (r *reconciler) getNodesState(ctx context.Context, desiredVersion, sourceVersion string) (*cluster.NodesState, error) {
