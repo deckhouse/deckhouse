@@ -949,6 +949,14 @@ func writeToFile(path string, content []byte) error {
 	}
 
 	_, err = f.Write(content)
+	if err != nil {
+		return err
+	}
+
+	// Ensure file ends with a trailing newline.
+	if len(content) > 0 && content[len(content)-1] != '\n' {
+		_, err = f.Write([]byte("\n"))
+	}
 	return err
 }
 
