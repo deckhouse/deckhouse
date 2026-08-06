@@ -309,14 +309,7 @@ func (r *Reconciler) collect(ctx context.Context, op *v1alpha1.NodeOperation, lo
 		}
 	}
 
-	// An operation that finished before this field existed is measured from its
-	// creation instead of being kept forever.
-	finished := op.CreationTimestamp.Time
-	if op.Status.FinishedAt != nil {
-		finished = op.Status.FinishedAt.Time
-	}
-
-	if age := time.Since(finished); age < retention {
+	if age := time.Since(op.Status.FinishedAt.Time); age < retention {
 		return ctrl.Result{RequeueAfter: retention - age}, nil
 	}
 
