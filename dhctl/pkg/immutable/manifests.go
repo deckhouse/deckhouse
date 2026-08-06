@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
+	"sort"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/manifests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 // nodeAddressPlaceholder stands for the first master's own address. This payload
@@ -28,6 +30,46 @@ import (
 // node substitutes its own when it writes the files. It is the placeholder
 // bashible and control-plane-manager have always used on this path.
 const nodeAddressPlaceholder = "$MY_IP"
+
+// controlPlaneTemplatesDir is where the control-plane templates live, relative
+// to CandiDir. The same directory the classic bootstrap renders from, through
+// the same engine — which is what makes a master brought up this way run the
+// bytes a master brought up classically runs.
+const controlPlaneTemplatesDir = "control-plane"
+
+// runTypeClusterBootstrap is the run that brings the first control plane up,
+// before there is a cluster to read anything from. The templates gate several
+// flags on it.
+const runTypeClusterBootstrap = "ClusterBootstrap"
+
+// etcdManifest is written first: kubelet starts a pod the moment its manifest
+// appears, and an apiserver started before its datastore only crash-loops.
+const etcdManifest = "etcd.yaml"
+
+// authenticationConfig is the one file kube-apiserver demands on every run,
+// bootstrap included — the manifest passes --authentication-config
+// unconditionally, and an apiserver that cannot read the file exits before it
+// opens a port.
+const authenticationConfig = "authentication-config.yaml"
+
+// bootstrapAuthenticationConfig is what bashible writes into that file before it
+// copies the kube-apiserver manifest into place, quoted byte for byte from the
+// heredoc in candi/bashible/common-steps/cluster-bootstrap/072_install_control_plane.sh.tpl.
+//
+// A constant rather than a template because at bootstrap it has no variables:
+// everything the module's helm define branches on — an OIDC issuer, a CA — comes
+// from a ModuleConfig that does not exist yet. It is the minimum kube-apiserver
+// needs to answer its own probes; control-plane-manager rewrites the file from
+// its own render as soon as Deckhouse is installed.
+const bootstrapAuthenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+anonymous:
+  enabled: true
+  conditions:
+  - path: /livez
+  - path: /readyz
+  - path: /healthz
+`
 
 // controlPlaneBundle is everything the node writes into /etc/kubernetes,
 // rendered here rather than there.
@@ -86,6 +128,10 @@ type manifestsInput struct {
 	Registry *registrySpec
 	// Images are the digests of the four control-plane images.
 	Images controlPlaneImages
+	// CandiDir is the installer's own candi directory. The templates come from
+	// there rather than from the provider image, which ships no control-plane
+	// templates at all.
+	CandiDir string
 }
 
 // renderControlPlaneBundle renders what the first master's control plane is
@@ -100,30 +146,48 @@ func renderControlPlaneBundle(ctx context.Context, in manifestsInput) (*controlP
 		return nil, err
 	}
 
-	data := in.data()
-	node := manifests.NodeInput{NodeName: in.NodeName, NodeIP: in.NodeIP}
+	dir := filepath.Join(in.CandiDir, controlPlaneTemplatesDir)
+	rendered, err := template.RenderTemplatesDir(ctx, dir, in.data(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("render the control-plane manifests from %s: %w", dir, err)
+	}
+	// A missing directory is not an error to RenderTemplatesDir — it logs and
+	// returns nothing. Here it would mean a node that waits for an apiserver
+	// nobody is going to start, so it has to be one.
+	if len(rendered) == 0 {
+		return nil, fmt.Errorf("no control-plane templates in %s", dir)
+	}
 
-	rendered, err := manifests.Render(ctx, data, node)
-	if err != nil {
-		return nil, fmt.Errorf("render the control-plane manifests: %w", err)
+	manifests := make([]renderedFile, 0, len(rendered))
+	for _, artifact := range rendered {
+		manifests = append(manifests, renderedFile{
+			Name:    artifact.FileName,
+			Content: artifact.Content.String(),
+		})
 	}
-	extra, err := manifests.RenderExtraFiles(ctx, data, node)
-	if err != nil {
-		return nil, fmt.Errorf("render the control-plane extra files: %w", err)
-	}
+	sortEtcdFirst(manifests)
 
 	return &controlPlaneBundle{
-		Manifests:  filesOf(rendered),
-		ExtraFiles: filesOf(extra),
+		Manifests: manifests,
+		ExtraFiles: []renderedFile{
+			{Name: authenticationConfig, Content: bootstrapAuthenticationConfig},
+		},
 	}, nil
 }
 
-func filesOf(bundle manifests.Bundle) []renderedFile {
-	files := make([]renderedFile, 0, len(bundle))
-	for _, artifact := range bundle {
-		files = append(files, renderedFile{Name: artifact.Name, Content: string(artifact.Content)})
-	}
-	return files
+// sortEtcdFirst puts etcd at the head and the rest in name order, so the same
+// inputs always produce the same sequence of writes on the node.
+func sortEtcdFirst(files []renderedFile) {
+	sort.Slice(files, func(i, j int) bool {
+		switch {
+		case files[i].Name == etcdManifest:
+			return true
+		case files[j].Name == etcdManifest:
+			return false
+		default:
+			return files[i].Name < files[j].Name
+		}
+	})
 }
 
 // data turns the typed input into the map the templates index into. Three of
@@ -136,7 +200,7 @@ func (in manifestsInput) data() map[string]any {
 		// A constant, not an input, and that is the single most important line
 		// here: it is what tells the templates there is no cluster to read from
 		// yet.
-		"runType":  manifests.RunTypeClusterBootstrap,
+		"runType":  runTypeClusterBootstrap,
 		"nodeName": in.NodeName,
 		"nodeIP":   in.NodeIP,
 		"registry": map[string]any{
@@ -166,9 +230,11 @@ func (in manifestsInput) data() map[string]any {
 			// error rather than a false.
 			"clusterType": in.Cluster.ClusterType,
 		},
-		// Empty on purpose. The first master runs the manifests these two
-		// produce nothing for; control-plane-manager renders them again with
-		// the operator's settings as soon as it is installed.
+		// Empty on purpose, and load-bearing twice over: the first master runs
+		// the manifests these two produce nothing for, and it is their emptiness
+		// that makes bootstrapAuthenticationConfig a constant rather than a
+		// render. control-plane-manager fills both in from the operator's
+		// settings as soon as it is installed.
 		"apiserver": map[string]any{},
 		"settings":  map[string]any{},
 	}
@@ -183,6 +249,7 @@ func (in manifestsInput) validate() error {
 		field string
 		value string
 	}{
+		{"candiDir", in.CandiDir},
 		{"nodeName", in.NodeName},
 		{"nodeIP", in.NodeIP},
 		{"cluster.kubernetesVersion", in.Cluster.KubernetesVersion},

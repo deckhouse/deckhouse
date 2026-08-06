@@ -48,6 +48,9 @@ type MasterPayloadInput struct {
 	MetaConfig *config.MetaConfig
 	// StateCache carries the handoff material between bootstrap attempts.
 	StateCache state.Cache
+	// CandiDir is the installer's own candi directory, where the control-plane
+	// templates come from.
+	CandiDir string
 }
 
 // BuildMasterPayload renders the cloud-init the first master boots with. The
