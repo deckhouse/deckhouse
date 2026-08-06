@@ -131,6 +131,8 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - backendtlspolicies
+  - backendtlspolicies/status
   - gatewayclasses
   - gatewayclasses/status
   - gateways
