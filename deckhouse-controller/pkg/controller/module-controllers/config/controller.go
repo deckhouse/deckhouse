@@ -27,6 +27,8 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -42,6 +44,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -244,6 +247,25 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		}
 
 		return ctrl.Result{}, err
+	}
+
+	modulev2 := new(v1alpha2.Module)
+	err := r.client.Get(ctx, types.NamespacedName{Name: moduleConfig.Name}, modulev2)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{Requeue: true}, nil
+	}
+	if err != nil {
+		modulev2, err = r.createModuleV2(ctx, moduleConfig)
+		if err != nil {
+			r.logger.Error("failed to create module v2", slog.String("name", moduleConfig.Name), log.Err(err))
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	_, err = r.updateModuleV2Spec(ctx, module, modulev2, moduleConfig)
+	if err != nil {
+		r.logger.Error("failed to update module v2 settings", slog.String("name", moduleConfig.Name), log.Err(err))
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	return r.processModule(ctx, moduleConfig, module)
@@ -595,4 +617,38 @@ func (r *reconciler) ensureModuleDocumentation(ctx context.Context, module *v1al
 	}
 
 	return nil
+}
+
+func (r *reconciler) createModuleV2(ctx context.Context, mc *v1alpha1.ModuleConfig) (*v1alpha2.Module, error) {
+	module := &v1alpha2.Module{
+		ObjectMeta: v1.ObjectMeta{
+			Name: mc.Name,
+		},
+	}
+
+	err := r.client.Create(ctx, module)
+	if err != nil {
+		return nil, fmt.Errorf("create module: %w", err)
+	}
+
+	return module, nil
+}
+
+func (r *reconciler) updateModuleV2Spec(ctx context.Context, module *v1alpha1.Module, modulev2 *v1alpha2.Module, mc *v1alpha1.ModuleConfig) (*v1alpha2.Module, error) {
+	patch := client.MergeFrom(modulev2.DeepCopy())
+
+	modulev2.Spec.Settings = mc.Spec.Settings
+	modulev2.Spec.Enabled = ptr.To(mc.IsEnabled())
+	modulev2.Spec.SettingsVersion = mc.Spec.Version
+	modulev2.Spec.Maintenance = mc.Spec.Maintenance
+
+	modulev2.Spec.PackageVersion = module.Properties.Version
+	modulev2.Spec.ReleaseChannel = module.Properties.ReleaseChannel
+
+	err := r.client.Patch(ctx, modulev2, patch)
+	if err != nil {
+		return nil, fmt.Errorf("update module: %w", err)
+	}
+
+	return modulev2, nil
 }

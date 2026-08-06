@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -57,12 +58,14 @@ func (suite *ControllerTestSuite) SetupSuite() {
 	suite.Init(reconcilertest.Config{
 		StatusSubresources: []client.Object{
 			&v1alpha1.Module{},
+			&v1alpha2.Module{},
 			&v1alpha1.ModuleConfig{},
 			&v1alpha1.ModuleRelease{},
 		},
 		SnapshotKinds: []schema.GroupVersionKind{
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleConfig"),
 			v1alpha1.SchemeGroupVersion.WithKind("Module"),
+			v1alpha2.SchemeGroupVersion.WithKind("Module"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"),
 		},
 		ObjectNormalizers: []reconcilertest.ObjectNormalizer{clearModuleConditionTimes},

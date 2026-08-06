@@ -36,3 +36,15 @@ status:
     status: Unknown
     type: LastReleaseDeployed
   phase: Ready
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+  resourceVersion: "2"
+spec:
+  enabled: false
+  packageVersion: ""
+status:
+  lastAppliedConfiguration: null
+  tracking: null
