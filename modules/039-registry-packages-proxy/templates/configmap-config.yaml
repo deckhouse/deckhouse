@@ -1,0 +1,25 @@
+{{- /* The port kube-rbac-proxy listens on, see the deployment. */ -}}
+{{- $proxyPort := 4219 }}
+{{- $cert := .Values.registryPackagesProxy.internal.proxyCert | default dict }}
+{{- $endpoints := list }}
+{{- range .Values.registryPackagesProxy.internal.proxyAddresses }}
+  {{- $endpoints = append $endpoints (printf "%s:%d" . $proxyPort) }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-packages-proxy-config
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+data:
+  # What a client needs to reach the proxy. Reading this one object is enough:
+  # where to connect, and which CA signs the certificate it will be served.
+  endpoints: {{ toJson $endpoints | quote }}
+  {{- if $cert.ca }}
+  ca.crt: |
+    {{- $cert.ca | trim | nindent 4 }}
+  {{- end }}
+  {{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+  publicEndpoint: {{ printf "https://%s" (include "helm_lib_module_public_domain" (list . "registry-packages-proxy")) | quote }}
+  {{- end }}

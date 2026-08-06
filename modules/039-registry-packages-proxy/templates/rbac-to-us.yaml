@@ -73,6 +73,13 @@ rules:
       - "deployments/cli-binary"
     resourceNames: ["registry-packages-proxy"]
     verbs: ["get"]
+  # The client reads registry-packages-proxy-config to learn where the proxy is and
+  # which CA signs its certificate. Keeping that read in this role means an operator
+  # binds one role and nothing else.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["registry-packages-proxy-config"]
+    verbs: ["get"]
 ---
 # ClusterRole for future authenticated /v1/packages/* endpoints (icons are served
 # anonymously via kube-rbac-proxy excludePaths). Bind it when adding routes that still
