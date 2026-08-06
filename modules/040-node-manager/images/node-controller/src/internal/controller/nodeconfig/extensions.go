@@ -54,10 +54,9 @@ func nodeExtensions(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.
 			continue
 		}
 
-		ext, reason := resolveExtension(ner)
-		if reason != "" {
-			continue
-		}
+		// The reason is not checked: orderedNERs has already dropped every
+		// request resolveExtension could refuse.
+		ext, _ := resolveExtension(ner)
 		extensions = append(extensions, ext)
 
 		for _, module := range ner.Spec.KernelModules {
