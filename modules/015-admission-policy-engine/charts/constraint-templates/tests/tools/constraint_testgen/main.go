@@ -104,6 +104,31 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println("constraint_testgen coverage: OK")
+	case "lint":
+		templatesRoot := defaultTemplatesRoot()
+		for i := 2; i < len(os.Args); i++ {
+			if os.Args[i] == "-templates-root" && i+1 < len(os.Args) {
+				templatesRoot = os.Args[i+1]
+				i++
+			}
+		}
+		if err := runLint(templatesRoot); err != nil {
+			fmt.Fprintf(os.Stderr, "constraint_testgen lint: %v\n", err)
+			os.Exit(1)
+		}
+	case "webhook-scope":
+		moduleRoot := defaultModuleRoot()
+		for i := 2; i < len(os.Args); i++ {
+			if os.Args[i] == "-module-root" && i+1 < len(os.Args) {
+				moduleRoot = os.Args[i+1]
+				i++
+			}
+		}
+		templatesDir := filepath.Join(moduleRoot, "templates")
+		if err := runWebhookScope(templatesDir); err != nil {
+			fmt.Fprintf(os.Stderr, "constraint_testgen webhook-scope: %v\n", err)
+			os.Exit(1)
+		}
 	default:
 		usage()
 		os.Exit(2)
@@ -116,7 +141,28 @@ func usage() {
 	 %s verify [-tests-root <path>]
 	 %s generate -bundle <test-matrix.yaml> [-tests-root <path>]
 	 %s coverage [-tests-root <path>] [-constraint <name|path>] [-format table|json|markdown]
-`, b, b, b)
+	 %s lint [-templates-root <path>]
+	 %s webhook-scope [-module-root <path>]
+`, b, b, b, b, b)
+}
+
+func defaultTemplatesRoot() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "charts/constraint-templates/templates"
+	}
+	candidates := []string{
+		filepath.Join(cwd, "charts", "constraint-templates", "templates"),
+		filepath.Join(cwd, "..", "charts", "constraint-templates", "templates"),
+		// cwd is tools/constraint_testgen when running `go run` from that directory
+		filepath.Join(cwd, "..", "..", "charts", "constraint-templates", "templates"),
+	}
+	for _, c := range candidates {
+		if st, e := os.Stat(c); e == nil && st.IsDir() {
+			return c
+		}
+	}
+	return filepath.Join(cwd, "charts", "constraint-templates", "templates")
 }
 
 func defaultTestsRoot() string {
@@ -136,4 +182,23 @@ func defaultTestsRoot() string {
 		}
 	}
 	return filepath.Join(cwd, "charts", "constraint-templates", "tests")
+}
+
+func defaultModuleRoot() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "modules/015-admission-policy-engine"
+	}
+	candidates := []string{
+		filepath.Join(cwd, "modules", "015-admission-policy-engine"),
+		filepath.Join(cwd, "..", "modules", "015-admission-policy-engine"),
+		filepath.Join(cwd, "..", "..", "modules", "015-admission-policy-engine"),
+		filepath.Join(cwd, "..", "..", "..", "modules", "015-admission-policy-engine"),
+	}
+	for _, c := range candidates {
+		if st, e := os.Stat(filepath.Join(c, "templates")); e == nil && st.IsDir() {
+			return c
+		}
+	}
+	return filepath.Join(cwd, "modules", "015-admission-policy-engine")
 }

@@ -7,7 +7,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
@@ -17,90 +17,129 @@ spec:
           namespace: testns
         spec:
           containers:
-            - image: nginx
-              name: nginx
+          - image: nginx
+            name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
-    - name: security-policy
-      gatorBlock: security-policy
-      defaultObjectBase: ""
-      template: ../rendered/constraint-template.yaml
-      constraint: constraints/policy_1.yaml
-      cases:
-        - name: 001-example-allowed
-          violations: "no"
-          assertionMessage: ""
-          fields:
-            - path: spec.volumes[].flexVolume.driver
-              scenario: positive
-          exception: ""
-          exceptionRef: ""
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                labels:
-                  app: nginx-flex-volumes
-                name: nginx-flex-volumes
+  - name: security-policy
+    gatorBlock: security-policy
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: 001-example-allowed
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].flexVolume.driver
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              app: nginx-flex-volumes
+            name: nginx-flex-volumes
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /cache
+                name: demo-vol
+            volumes:
+            - flexVolume:
+                driver: volume.sh
+              name: demo-vol
+    - name: 002-example-disallowed
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].flexVolume.driver
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              app: nginx-flex-volumes
+            name: nginx-flex-volumes
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /cache
+                name: demo-vol
+            volumes:
+            - flexVolume:
+                driver: volume.sh/lvm
+              name: demo-vol
+    - name: 003-no-flex-volume
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes[].flexVolume.driver
+        scenario: absent
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              app: nginx-no-flex-volume
+            name: nginx-no-flex-volume
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /cache
+                name: demo-vol
+            volumes:
+            - emptyDir: {}
+              name: demo-vol
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: controller-allowed-allowed-flex-volumes
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.volumes[].flexVolume.driver
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-allowed-flex-volumes
+          spec:
+            template:
               spec:
                 containers:
-                  - image: nginx
-                    name: nginx
-                    volumeMounts:
-                      - mountPath: /cache
-                        name: demo-vol
+                - image: nginx
+                  name: nginx
                 volumes:
-                  - flexVolume:
-                      driver: volume.sh
-                    name: demo-vol
-        - name: 002-example-disallowed
-          violations: "yes"
-          assertionMessage: ""
-          fields:
-            - path: spec.volumes[].flexVolume.driver
-              scenario: negative
-          exception: ""
-          exceptionRef: ""
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                labels:
-                  app: nginx-flex-volumes
-                name: nginx-flex-volumes
-              spec:
-                containers:
-                  - image: nginx
-                    name: nginx
-                    volumeMounts:
-                      - mountPath: /cache
-                        name: demo-vol
-                volumes:
-                  - flexVolume:
-                      driver: volume.sh/lvm
-                    name: demo-vol
-        - name: 003-no-flex-volume
-          violations: "no"
-          assertionMessage: ""
-          fields:
-            - path: spec.volumes[].flexVolume.driver
-              scenario: absent
-          exception: ""
-          exceptionRef: ""
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                labels:
-                  app: nginx-no-flex-volume
-                name: nginx-no-flex-volume
-              spec:
-                containers:
-                  - image: nginx
-                    name: nginx
-                    volumeMounts:
-                      - mountPath: /cache
-                        name: demo-vol
-                volumes:
-                  - emptyDir: {}
-                    name: demo-vol
+                - name: test
+                  emptyDir: {}
+      exception: ''
+      exceptionRef: ''

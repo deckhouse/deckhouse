@@ -390,6 +390,34 @@ spec:
                     image: gcr.io/app:v1
 ```
 
+## Lint and webhook-scope checks
+
+Two additional `constraint_testgen` subcommands provide static analysis:
+
+```bash
+# Lint: detect Rego anti-patterns (object.get(..., "") default, fail-open on unknown kind)
+go run $constraint_testgen lint
+
+# Webhook-scope: detect Helm template issues (ReplicaSet in kinds, duplicated kinds blocks, DELETE on controllers)
+go run $constraint_testgen webhook-scope
+```
+
+Run both before committing constraint template changes. See [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) for rule details.
+
+## Controller-level constraint patterns
+
+When a constraint matches both Pods and controllers (Deployment, StatefulSet, etc.):
+
+1. **`labelSelector`** evaluates against the reviewed object's own `metadata.labels`. For controllers, this is the **top-level** metadata, not the pod template's `spec.template.metadata.labels`.
+
+2. **`is_update` guard**: if a rule checks immutable Pod fields (e.g. `automountServiceAccountToken`), scope the guard to `kind == "Pod"` only — controller UPDATEs should still be checked since pod template fields are mutable.
+
+3. **`input_containers` vs `pod_spec.containers`**: `input_containers` includes `containers + initContainers + ephemeralContainers`. Use `pod_spec.containers` only for rules where Kubernetes doesn't support the field on init/ephemeral containers (e.g. probes, imagePullPolicy). Use `input_containers` for security rules that should check all container types.
+
+4. **SPE label/annotation resolution**: for controllers, SPE-relevant labels and annotations are resolved from the pod template only (`spec.template.metadata`), not the controller's top-level metadata.
+
+5. **`workload_kinds` helper**: always use `{{- include "workload_kinds" . }}` instead of inline YAML kind blocks in constraint templates.
+
 ## Checklist before committing
 
 - [ ] `test_fields.yaml` lists all object fields the Rego reads
@@ -401,4 +429,6 @@ spec:
 - [ ] `gator verify -v ./rendered` passes
 - [ ] `go run $constraint_testgen verify` passes
 - [ ] `go run $constraint_testgen coverage -tests-root ./ -format table` shows 100%
+- [ ] `go run $constraint_testgen lint` passes (no anti-patterns)
+- [ ] `go run $constraint_testgen webhook-scope` passes (no webhook scope issues)
 - [ ] `rendered/` artifacts are committed alongside source files

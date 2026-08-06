@@ -52,6 +52,7 @@ spec:
               package d8.operation_policies
 
               import data.lib.common.input_containers
+              import data.lib.common.is_controller
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
@@ -60,6 +61,11 @@ spec:
                 required := {resource_type | resource_type := input.parameters.limits[_]}
                 missing := required - provided
                 count(missing) > 0
+                # For controllers, skip if resources are completely absent —
+                # LimitRange admission controller may inject them at Pod creation.
+                # If resources are partially set, still validate (user explicitly
+                # set some but missed others).
+                not controller_resources_absent(container)
                 msg := sprintf("container <%v> does not have <%v> limits defined", [container.name, missing])
               }
 
@@ -70,5 +76,20 @@ spec:
                 required := {resource_type | resource_type := input.parameters.requests[_]}
                 missing := required - provided
                 count(missing) > 0
+                # For controllers, skip if resources are completely absent —
+                # LimitRange admission controller may inject them at Pod creation.
+                # If resources are partially set, still validate (user explicitly
+                # set some but missed others).
+                not controller_resources_absent(container)
                 msg := sprintf("container <%v> does not have <%v> requests defined", [container.name, missing])
+              }
+
+              # Returns true when the current review object is a controller
+              # (Deployment, StatefulSet, etc.) and the container has no
+              # resources defined at all. In this case, LimitRange admission
+              # may inject resources at Pod creation time, so we skip the
+              # violation to avoid false positives on controllers.
+              controller_resources_absent(container) if {
+                is_controller
+                not container.resources
               }

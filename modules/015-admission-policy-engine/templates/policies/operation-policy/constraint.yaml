@@ -65,8 +65,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
   parameters:
     repos:
@@ -87,8 +86,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
   parameters:
     {{- if $cr.spec.policies.requiredResources.limits }}
@@ -115,8 +113,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
   parameters:
     tags:
@@ -185,8 +182,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
   parameters:
     probes:
@@ -229,8 +225,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
   parameters:
     policy: {{$cr.spec.policies.imagePullPolicy | quote }}
@@ -250,8 +245,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
   parameters:
     priorityClassNames:
@@ -313,8 +307,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
 
@@ -331,8 +324,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}
 
@@ -372,8 +364,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
   parameters:
     tolerations:

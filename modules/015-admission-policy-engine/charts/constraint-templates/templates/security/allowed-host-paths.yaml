@@ -47,22 +47,28 @@ spec:
                 {{- include "constraint-templates.lib.check_path" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
               import data.lib.check_path.check_hostpath_allowed
               import data.lib.common.has_field
               import data.lib.common.input_containers
+              import data.lib.common.pod_spec
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_from_labels
+              import data.lib.message.violation_message
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
-                volume := input.review.object.spec.volumes[_]
+                volume := pod_spec.volumes[_]
                 has_field(volume, "hostPath")
                 allowed_paths := get_allowed_paths(input)
-                labels := object.get(input.review.object.metadata, "labels", {})
-                spe := resolve_spe_from_labels(labels, input.review.object.metadata.namespace)
+                labels := object_labels
+                spe := resolve_spe_from_labels(labels, object_namespace)
                 spe_paths := allowed_values_or_empty(spe, ["spec", "volumes", "hostPath", "allowedValues"])
                 result := check_hostpath_allowed(
                   volume,
@@ -71,9 +77,7 @@ spec:
                   spe_paths
                 )
                 not result.allowed
-                actual_value := sprintf("Actual HostPath volume: %v", [volume])
-                allowed_by_policy := sprintf("Allowed paths: %v", [allowed_paths])
-                msg := sprintf("HostPath volume is not allowed, pod: %v. | %v | %v", [input.review.object.metadata.name, actual_value, allowed_by_policy])
+                msg := violation_message("HostPath volume is not allowed", sprintf("pod: %v", [input.review.object.metadata.name]), result.detail)
               }
 
               get_allowed_paths(arg) := out if {
@@ -91,7 +95,7 @@ spec:
               }
 
               input_hostpath_volumes contains v if {
-                v := input.review.object.spec.volumes[_]
+                v := pod_spec.volumes[_]
                 has_field(v, "hostPath")
               }
 

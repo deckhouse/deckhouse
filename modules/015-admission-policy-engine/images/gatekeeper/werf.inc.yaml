@@ -35,6 +35,12 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $gatekeeperVersion }} $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
   - cd /src
+  # `--allow-empty` is intentional: the patch set (incl. 999-fix-cve.patch) may be
+  # empty after an upstream version bump that already ships the fixes. Keeping a
+  # (possibly empty) patch file in place avoids having to add/remove it on every
+  # version bump. An empty 999-fix-cve.patch MUST be reflected in README.md
+  # (e.g. "CVEs are closed by upstream X.Y.Z") so the build does not silently
+  # claim a fix that is no longer applied.
   - git apply /patches/*.patch --verbose --allow-empty
   - rm -rf website
   - rm -rf .git

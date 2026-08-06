@@ -7,4 +7,3 @@ This patch provides the way of setting default secure http transport for the Ora
 ### 999-fix-cve.patch
 
 Fix CVEs:
-

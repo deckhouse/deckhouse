@@ -4,6 +4,12 @@ metadata:
   name: allowed-apparmor-profiles
 spec:
   objectKind: Pod
+  objectKinds:
+    - Pod
+    - Deployment
+  operations:
+    - CREATE
+    - UPDATE
   objectFields:
     - path: spec.containers[].securityContext.appArmorProfile
       level: container

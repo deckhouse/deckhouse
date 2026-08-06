@@ -11,6 +11,7 @@
 package lib.check_bool
 
 import data.lib.common.get_field
+import data.lib.common.effective_labels
 import data.lib.exception.allowed_values_or_empty
 import data.lib.exception.path_value_resolved
 import data.lib.exception.resolve_spe_for_container
@@ -30,8 +31,7 @@ check_container_bool(container, field_path, field_name, expected, default_val, s
   exception := resolve_spe_for_container(container, labels, namespace)
   allowed_values := allowed_values_or_empty(exception, spe_path)
   count(allowed_values) > 0
-  allowed_value := allowed_values[0]
-  allowed_value == actual
+  spe_allows(allowed_values, actual)
   result := {"allowed": true, "msg": "", "detail": {}}
 }
 
@@ -53,7 +53,7 @@ check_container_bool(container, field_path, field_name, expected, default_val, s
 
 spe_allows(allowed_values, actual) if {
   count(allowed_values) > 0
-  allowed_values[0] == actual
+  allowed_values[_] == actual
 }
 
 bool_violation_msg(field_name, actual, expected, false, _) := out if {
@@ -75,7 +75,7 @@ check_pod_bool(obj, field_path, field_name, expected, default_val, spe_path) := 
 check_pod_bool(obj, field_path, field_name, expected, default_val, spe_path) := result if {
   actual := get_field(obj, field_path, default_val)
   actual != expected
-  labels := object.get(obj, ["metadata", "labels"], {})
+  labels := effective_labels(obj)
   namespace := object.get(obj, ["metadata", "namespace"], "")
   exception := resolve_spe_from_labels(labels, namespace)
   spe_val := object.get(exception, spe_path, null)
@@ -87,7 +87,7 @@ check_pod_bool(obj, field_path, field_name, expected, default_val, spe_path) := 
 check_pod_bool(obj, field_path, field_name, expected, default_val, spe_path) := result if {
   actual := get_field(obj, field_path, default_val)
   actual != expected
-  labels := object.get(obj, ["metadata", "labels"], {})
+  labels := effective_labels(obj)
   namespace := object.get(obj, ["metadata", "namespace"], "")
   exception := resolve_spe_from_labels(labels, namespace)
   spe_val := object.get(exception, spe_path, null)

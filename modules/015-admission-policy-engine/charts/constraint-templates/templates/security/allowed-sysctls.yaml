@@ -8,7 +8,7 @@ metadata:
     security.deckhouse.io: security-policy
   annotations:
     metadata.gatekeeper.sh/title: "Forbidden Sysctls"
-    metadata.gatekeeper.sh/version: 1.1.1
+    metadata.gatekeeper.sh/version: 1.2.0
     description: >-
       Controls the `sysctl` profile used by containers. Corresponds to the
       `allowedUnsafeSysctls` and `forbiddenSysctls` fields in a PodSecurityPolicy.
@@ -60,14 +60,17 @@ spec:
               package d8.security_policies
 
               import data.lib.check_set.check_allowlist_denylist
+              import data.lib.common.pod_spec
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_from_labels
 
               violation contains {"msg": msg, "details": {}} if {
                   not input.review.operation == "DELETE"
-                  sysctl := input.review.object.spec.securityContext.sysctls[_].name
-                  labels := object.get(input.review.object, ["metadata", "labels"], {})
-                  namespace := object.get(input.review.object, ["metadata", "namespace"], "")
+                  sysctl := pod_spec.securityContext.sysctls[_].name
+                  labels := object_labels
+                  namespace := object_namespace
                   spe := resolve_spe_from_labels(labels, namespace)
                   spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "sysctls", "allowedValues"])
                   result := check_allowlist_denylist(
