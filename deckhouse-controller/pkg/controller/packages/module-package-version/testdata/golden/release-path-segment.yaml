@@ -27,6 +27,7 @@ status:
     description:
       en: Legacy module from old registry
     stage: Sandbox
+  used: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
