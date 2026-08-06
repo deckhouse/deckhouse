@@ -1,0 +1,19 @@
+{{- $platformCA := dig "internal" "modules" "kubeRBACProxyCA" "cert" "" .Values.global }}
+{{- $clusterCA := dig "discovery" "kubernetesCA" "" .Values.global }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-packages-proxy-client-ca
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+data:
+  # Client certificates from two issuers are accepted. The platform CA covers
+  # in-cluster callers. The cluster CA covers an operator whose kubeconfig
+  # authenticates with a client certificate, for example /etc/kubernetes/admin.conf.
+  #
+  # Authentication alone grants nothing here: kube-rbac-proxy still authorizes
+  # every request through a SubjectAccessReview.
+  ca.crt: |
+    {{- $platformCA | trim | nindent 4 }}
+    {{- $clusterCA | trim | nindent 4 }}
