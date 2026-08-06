@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -212,6 +214,147 @@ func TestValidation_NodeTypeImmutability_SameType(t *testing.T) {
 	if !resp.Allowed {
 		t.Fatalf("expected allowed for same nodeType, got denied: %s", resp.Result.Message)
 	}
+}
+
+// A value that is already set is frozen: changing it — or dropping it — re-renders
+// the group's bootstrap and re-creates every machine in it. A group that has no
+// value yet is not frozen, because that is how a group records what it is: the
+// master NodeGroup exists before dhctl applies the manifest naming its
+// systemType, and every NodeGroup predating the field is in the same position.
+func TestValidation_SystemTypeImmutability(t *testing.T) {
+	tests := []struct {
+		name        string
+		oldType     v1.SystemType
+		newType     v1.SystemType
+		wantAllowed bool
+	}{
+		{name: "recording Immutable on a group with no nodes is allowed", oldType: "", newType: v1.SystemTypeImmutable, wantAllowed: true},
+		{name: "recording Mutable on a group that never named one is allowed", oldType: "", newType: v1.SystemTypeMutable, wantAllowed: true},
+		{name: "clearing it on an immutable group is denied", oldType: v1.SystemTypeImmutable, newType: ""},
+		{name: "changing Immutable to Mutable is denied", oldType: v1.SystemTypeImmutable, newType: v1.SystemTypeMutable},
+		{name: "changing Mutable to Immutable is denied", oldType: v1.SystemTypeMutable, newType: v1.SystemTypeImmutable},
+		{name: "clearing it on a mutable group is denied", oldType: v1.SystemTypeMutable, newType: ""},
+		{name: "leaving it unset is allowed", oldType: "", newType: "", wantAllowed: true},
+		{name: "leaving it Immutable is allowed", oldType: v1.SystemTypeImmutable, newType: v1.SystemTypeImmutable, wantAllowed: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newScheme()
+			c := fake.NewClientBuilder().WithScheme(s).Build()
+			w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+			oldNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+			oldNG.Spec.SystemType = tc.oldType
+			newNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+			newNG.Spec.SystemType = tc.newType
+
+			resp := w.Handle(t.Context(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
+			if resp.Allowed != tc.wantAllowed {
+				t.Fatalf("Allowed = %v, want %v (result: %v)", resp.Allowed, tc.wantAllowed, resp.Result)
+			}
+			if tc.wantAllowed {
+				return
+			}
+			if resp.Result == nil || resp.Result.Code != http.StatusForbidden {
+				t.Fatalf("expected 403, got: %v", resp.Result)
+			}
+			if resp.Result.Message != ".spec.systemType field is immutable once set" {
+				t.Fatalf("message = %q, want %q", resp.Result.Message, ".spec.systemType field is immutable once set")
+			}
+		})
+	}
+}
+
+// The CRD cannot tell a group whose nodes bashible already configured from one
+// that has none, so this is the half of the rule that has to see the cluster:
+// turning a running bashible group immutable strands its nodes.
+func TestValidation_SystemTypeAdoptionChecksNodes(t *testing.T) {
+	tests := []struct {
+		name        string
+		nodes       []client.Object
+		wantAllowed bool
+	}{
+		{
+			name:        "no nodes at all",
+			wantAllowed: true,
+		},
+		{
+			name:        "an olcedar node, which bashible never configured",
+			nodes:       []client.Object{groupNode("master-0", "worker", false)},
+			wantAllowed: true,
+		},
+		{
+			name:        "a node of another group that bashible configured",
+			nodes:       []client.Object{groupNode("other-0", "another", true)},
+			wantAllowed: true,
+		},
+		{
+			name:  "a node bashible already configured",
+			nodes: []client.Object{groupNode("worker-0", "worker", true)},
+		},
+		{
+			// The case a configuration-checksum check is blind to: a whole group
+			// can sit here for days under Manual approval.
+			name:  "a node partway through a rolling update, waiting for approval",
+			nodes: []client.Object{midRolloutNode("worker-0", "worker")},
+		},
+	}
+
+	for _, op := range []admissionv1.Operation{admissionv1.Update, admissionv1.Create} {
+		for _, tc := range tests {
+			t.Run(string(op)+": "+tc.name, func(t *testing.T) {
+				s := newScheme()
+				c := fake.NewClientBuilder().WithScheme(s).WithObjects(tc.nodes...).Build()
+				w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+				newNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+				newNG.Spec.SystemType = v1.SystemTypeImmutable
+
+				// On CREATE there is no old object at all: deleting a NodeGroup
+				// leaves its nodes behind, so recreating it under the same name
+				// arrives here as a create over live bashible nodes.
+				var oldNG *v1.NodeGroup
+				if op == admissionv1.Update {
+					oldNG = baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+				}
+
+				resp := w.Handle(t.Context(), makeAdmissionRequest(t, op, newNG, oldNG))
+				if resp.Allowed != tc.wantAllowed {
+					t.Fatalf("Allowed = %v, want %v (result: %v)", resp.Allowed, tc.wantAllowed, resp.Result)
+				}
+				if tc.wantAllowed {
+					return
+				}
+				if !strings.Contains(resp.Result.Message, "already configured by bashible") {
+					t.Fatalf("message = %q, want it to name the bashible nodes", resp.Result.Message)
+				}
+			})
+		}
+	}
+}
+
+func groupNode(name, nodeGroup string, bashibleConfigured bool) *corev1.Node {
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"node.deckhouse.io/group": nodeGroup},
+		},
+	}
+	if bashibleConfigured {
+		node.Labels["node.deckhouse.io/bashible-first-run-finished"] = "true"
+	}
+	return node
+}
+
+// midRolloutNode is a bashible node partway through an update: it has deleted
+// its own configuration-checksum annotation and is blocked waiting for approval,
+// which is what bashible's 001_waiting_approval_annotations step does. The label
+// stays, because bashible sets it once and never takes it off.
+func midRolloutNode(name, nodeGroup string) *corev1.Node {
+	node := groupNode(name, nodeGroup, true)
+	node.Annotations = map[string]string{"update.node.deckhouse.io/waiting-for-approval": ""}
+	return node
 }
 
 func TestValidation_MinPerZoneGreaterThanMaxPerZone(t *testing.T) {
