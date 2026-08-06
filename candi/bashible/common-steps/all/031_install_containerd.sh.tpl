@@ -77,6 +77,9 @@ command -v containerd &>/dev/null && cntrd_integrity_migration_check
 
 if bb-flag? cntrd-integrity-migration-required; then
   bb-log-info "Pre-installing local image packages before containerd state wipe"
+  if ! bb-flag? cntrd-major-version-changed; then
+    bb-flag-set cntrd-integrity-restore-kubelet
+  fi
   bb-package-install "pause:{{ $.images.registrypackages.pause }}"
   bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
   bb-package-install "registry-proxy:{{ $.images.registrypackages.registryProxy }}"
