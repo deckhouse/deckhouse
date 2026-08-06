@@ -123,7 +123,7 @@
         and requests of other (non-control-plane) pods already scheduled there.
 
         {{- if eq $labels.resource "memory" }}
-        Missing capacity: `{{ $value }}M`.
+        Missing capacity: `{{ humanize $value }}B`.
         {{- else }}
         Missing capacity: `{{ $value }}m` CPU.
         {{- end }}
