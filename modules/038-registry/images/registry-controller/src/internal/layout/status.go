@@ -31,8 +31,20 @@ import (
 //
 // The aggregate fields are derived here rather than written by any syncer,
 // because no single replica can know whether the others are done.
+//
+// Which replica leads is decided by `leaseHolder` — the identity in the election lease — and
+// not by the Role a replica wrote about itself. A replica owns its entry and cannot update it
+// once its pod is gone, so the entry keeps whatever it last claimed: measured on a live
+// cluster, the lease moved to another node in eight seconds while the departed replica's
+// entry went on saying Leader for as long as the pod stayed away. Two entries then claimed
+// leadership, and reading them by array order made `status.Leader` name the replica that no
+// longer existed while `LeaderFull` answered from the other one — two fields describing two
+// different replicas, one of which was gone. Since LeaderFull is what authorizes dropping the
+// upstream, that is the one decision in this module that must never be made from a guess.
 func Aggregate(
-	spec *registryv1alpha1.RegistryStorageSpec, replicas []registryv1alpha1.StorageReplicaStatus,
+	spec *registryv1alpha1.RegistryStorageSpec,
+	replicas []registryv1alpha1.StorageReplicaStatus,
+	leaseHolder string,
 ) registryv1alpha1.RegistryStorageStatus {
 	status := registryv1alpha1.RegistryStorageStatus{
 		// The cache is the only source of images exactly when no upstream is left.
@@ -47,16 +59,13 @@ func Aggregate(
 		return status
 	}
 
-	var leader *registryv1alpha1.StorageReplicaStatus
+	leader := leaseHolderReport(replicas, leaseHolder)
 	allFull := true
 	anyFailed := false
 
 	for i := range replicas {
 		replica := &replicas[i]
 
-		if replica.Role == registryv1alpha1.ReplicaRoleLeader {
-			leader = replica
-		}
 		if !replica.Full {
 			allFull = false
 		}
@@ -68,9 +77,10 @@ func Aggregate(
 	status.AllReplicasFull = allFull
 
 	if leader == nil {
-		// Replicas exist but none holds the lease. This happens during a leader
-		// change and must not read as progress: with no leader there is nothing
-		// whose completeness could authorize going air-gap.
+		// Either no replica holds the lease, or the one that does has not reported
+		// yet. Both happen during a leader change and must not read as progress:
+		// with no leader there is nothing whose completeness could authorize going
+		// air-gap.
 		status.Phase = registryv1alpha1.StoragePhaseIdle
 		return status
 	}
@@ -78,7 +88,7 @@ func Aggregate(
 	status.Leader = leader.Node
 	// Reported through the very same predicate the transition is gated on, so the
 	// field cannot claim "safe" while the controller refuses to act on it.
-	status.SafeToDropUpstream = LeaderFull(replicas)
+	status.SafeToDropUpstream = LeaderFull(replicas, leaseHolder)
 
 	if expected := expectedDigests(spec); expected > 0 {
 		status.Fill = &registryv1alpha1.FillProgress{
@@ -116,12 +126,31 @@ func expectedDigests(spec *registryv1alpha1.RegistryStorageSpec) int32 {
 // gates the air-gap transition. It reads the reports directly rather than the
 // aggregate so that a stale or hand-edited aggregate cannot authorize the
 // transition.
-func LeaderFull(replicas []registryv1alpha1.StorageReplicaStatus) bool {
+//
+// Which report to read is decided by the lease and not by the Role in the report, for the
+// reason given on Aggregate: a departed replica's entry keeps claiming what it last claimed,
+// and this predicate is what takes the upstream away.
+func LeaderFull(replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder string) bool {
+	leader := leaseHolderReport(replicas, leaseHolder)
+	return leader != nil && leader.Full && leader.Error == ""
+}
+
+// leaseHolderReport is the report of the replica that holds the election lease, or nil when
+// there is no holder or the holder has not reported.
+//
+// Nil rather than a fallback to whatever else looks like a leader: without the holder's own
+// report there is nothing to say about what the leader holds, and every caller here treats
+// "nothing to say" as "not safe".
+func leaseHolderReport(
+	replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder string,
+) *registryv1alpha1.StorageReplicaStatus {
+	if leaseHolder == "" {
+		return nil
+	}
 	for i := range replicas {
-		replica := &replicas[i]
-		if replica.Role == registryv1alpha1.ReplicaRoleLeader {
-			return replica.Full && replica.Error == ""
+		if replicas[i].Node == leaseHolder {
+			return &replicas[i]
 		}
 	}
-	return false
+	return nil
 }

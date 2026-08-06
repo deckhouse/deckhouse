@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -63,6 +64,20 @@ func registryConfig(spec registryv1alpha1.RegistryConfigSpec) *registryv1alpha1.
 
 func node(name string) *corev1.Node {
 	return &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name, UID: types.UID("uid-" + name)}}
+}
+
+// storageLease is the election lease the storage replicas take, and the only thing that says
+// which of them leads.
+//
+// Present in any test that expects a leader, because the reports alone no longer decide: a
+// replica cannot update its entry once its pod is gone, so a Role written there outlives the
+// replica that wrote it. Which means a test that sets up a Leader-role report and no lease is
+// describing a cluster where nobody leads — and that is exactly what it now gets.
+func storageLease(holder string) *coordinationv1.Lease {
+	return &coordinationv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{Namespace: Namespace, Name: StorageLeaseName},
+		Spec:       coordinationv1.LeaseSpec{HolderIdentity: &holder},
+	}
 }
 
 func accessSecret() *corev1.Secret {
@@ -278,7 +293,9 @@ func TestReconcileAirGapTransition(t *testing.T) {
 		Storage: registryv1alpha1.StorageConfig{Cache: true, Size: "50Gi", Source: source()},
 	})
 
-	r, c := newReconciler(t, cfg, accessSecret(), node("master-0"))
+	// The lease is part of the cluster this walks through: a replica reporting itself as
+	// leader is not what makes it one.
+	r, c := newReconciler(t, cfg, accessSecret(), node("master-0"), storageLease("master-0"))
 	ctx := context.Background()
 	runReconcile(t, r)
 
@@ -358,7 +375,7 @@ func TestReconcileKeepsTheUpstreamWhenTheLeaderFails(t *testing.T) {
 		},
 	}
 
-	r, c := newReconciler(t, cfg, accessSecret(), storage, node("master-0"))
+	r, c := newReconciler(t, cfg, accessSecret(), storage, node("master-0"), storageLease("master-0"))
 	runReconcile(t, r)
 
 	got := getStorage(t, c)
@@ -366,6 +383,52 @@ func TestReconcileKeepsTheUpstreamWhenTheLeaderFails(t *testing.T) {
 	assert.Equal(t, registryv1alpha1.StoragePhaseFailed, got.Status.Phase)
 	assert.False(t, got.Status.SafeToDropUpstream)
 	assert.Len(t, listNodes(t, c)["master-0"].Spec.Backends, 2)
+}
+
+// TestReconcileIgnoresTheClaimOfAReplicaThatNoLongerLeads is the whole air-gap gate against the
+// one thing that can lie to it.
+//
+// A replica owns its entry in the status and cannot touch it again once its pod is gone, so the
+// entry keeps whatever it last said. Measured on a three-master cluster: the lease moved to
+// another node in eight seconds, and the departed replica's entry went on saying Leader for as
+// long as the pod stayed away — two entries claiming leadership, indefinitely. Resolved by
+// array order, as it was, the stale entry could answer "full" and take the upstream away while
+// the replica that actually leads held a fraction of the images. There is no going back from
+// that: the upstream it dropped is, in an air-gapped cluster, an address that answers nothing.
+func TestReconcileIgnoresTheClaimOfAReplicaThatNoLongerLeads(t *testing.T) {
+	// Air-gap requested: no upstream in the config, so the only thing holding the upstream in
+	// place is the gate under test.
+	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Storage: registryv1alpha1.StorageConfig{Cache: true, Source: source()},
+	})
+	storage := &registryv1alpha1.RegistryStorage{
+		ObjectMeta: metav1.ObjectMeta{Name: registryv1alpha1.SingletonName},
+		Spec:       registryv1alpha1.RegistryStorageSpec{Upstream: upstream("registry.deckhouse.io")},
+		Status: registryv1alpha1.RegistryStorageStatus{
+			Replicas: []registryv1alpha1.StorageReplicaStatus{
+				// Gone, and complete as of when it left. First in the list, which is what
+				// made the difference.
+				{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 459},
+				// Holds the lease now, and is nowhere near done.
+				{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: false, VerifiedDigests: 120},
+			},
+		},
+	}
+
+	r, c := newReconciler(t, cfg, accessSecret(), storage,
+		node("master-0"), node("master-1"), storageLease("master-1"))
+	runReconcile(t, r)
+
+	got := getStorage(t, c)
+	require.NotNil(t, got.Spec.Upstream,
+		"the upstream must be held: the only replica that could authorize dropping it holds 120 of 459")
+	assert.Equal(t, "master-1", got.Status.Leader, "the leader is whoever holds the lease")
+	assert.Equal(t, registryv1alpha1.StoragePhaseFilling, got.Status.Phase)
+	assert.False(t, got.Status.SafeToDropUpstream)
+
+	// And the nodes keep the upstream as a fallback, which is the half a node feels.
+	assert.Len(t, listNodes(t, c)["master-1"].Spec.Backends, 2)
 }
 
 func TestReconcileSkipsAnInvalidConfig(t *testing.T) {

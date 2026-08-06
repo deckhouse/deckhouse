@@ -365,7 +365,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		availableModule.Policy = policy.Name
 
-		logger = logger.With(slog.String("release channel", policy.Spec.ReleaseChannel))
+		logger = logger.With(slog.String("release_channel", policy.Spec.ReleaseChannel))
 
 		// create or update module
 		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)

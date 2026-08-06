@@ -33,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -81,6 +82,14 @@ const (
 	// masterNodeGroup is the node group whose maintenance windows place the garbage
 	// collection, being the one the storage replicas run on.
 	masterNodeGroup = "master"
+
+	// StorageLeaseName is the election lease the storage replicas take to decide which
+	// of them fills the cache, and the authority on which one leads.
+	//
+	// Read here rather than trusting the Role each replica writes about itself, because a
+	// replica that has gone away cannot retract its claim. It must be the same name the
+	// syncer's --lease-name defaults to.
+	StorageLeaseName = "registry-storage"
 
 	// probeRetryInterval is how often a rejected upstream is retried.
 	//
@@ -469,7 +478,7 @@ func (r *Reconciler) collectInputs(
 	err := r.Client.Get(ctx, types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage)
 	switch {
 	case err == nil:
-		inputs.LeaderFull = layout.LeaderFull(storage.Status.Replicas)
+		inputs.LeaderFull = layout.LeaderFull(storage.Status.Replicas, r.storageLeaseHolder(ctx))
 		if inputs.AppliedUpstream == nil {
 			// Nothing recorded yet, which is what an upgrade from a release without
 			// the status field looks like. The upstream the storage is running on is
@@ -479,6 +488,10 @@ func (r *Reconciler) collectInputs(
 	case !apierrors.IsNotFound(err):
 		return inputs, fmt.Errorf("reading RegistryStorage: %w", err)
 	}
+
+	// What this module wrote last time, for the upstream it may now be holding without any
+	// credentials of its own. See layout.Inputs.PersistedCredentials.
+	inputs.PersistedCredentials = r.persistedCredentials(ctx)
 
 	nodes := &corev1.NodeList{}
 	if err := r.Client.List(ctx, nodes); err != nil {
@@ -506,6 +519,52 @@ func (r *Reconciler) collectInputs(
 // manager's Go types for four strings. Failures are swallowed on purpose: this only decides a
 // default hour, and a cluster where it cannot be read should collect at night rather than
 // never.
+// persistedCredentials reads back the credentials this module wrote last time.
+//
+// Best-effort, and nil on any failure. The one thing they are used for is giving a held
+// upstream back the credentials it was working with, and a hold arriving without them is the
+// state this repairs — not a reason to abandon the whole reconciliation. If the Secret is not
+// there yet, there is nothing to hold over anyway.
+//
+// A plain Get, which reaches the API rather than a cache: the manager excludes Secrets from
+// its cache precisely because the role granting this one is scoped by resourceNames, and a
+// rule with resourceNames cannot authorize the list an informer would need.
+func (r *Reconciler) persistedCredentials(ctx context.Context) map[string]registryv1alpha1.Auth {
+	secret := &corev1.Secret{}
+	key := types.NamespacedName{Namespace: Namespace, Name: constant.AuthSecretName}
+	if err := r.Client.Get(ctx, key, secret); err != nil {
+		return nil
+	}
+
+	out := make(map[string]registryv1alpha1.Auth, len(secret.Data))
+	for name := range secret.Data {
+		// The pre-encoded form, which is the only form applyAuthSecret writes.
+		if value := string(secret.Data[name]); value != "" {
+			out[name] = registryv1alpha1.Auth{Auth: value}
+		}
+	}
+	return out
+}
+
+// storageLeaseHolder is the node whose replica currently fills the cache, or empty when
+// nobody holds the lease and when it cannot be read.
+//
+// Empty on failure rather than an error, and empty is the safe answer: without a known leader
+// nothing reports as complete, so the cluster keeps its upstream. The alternative — falling
+// back to the Role a replica wrote about itself — is what this exists to avoid, since a replica
+// that has gone away leaves that claim behind.
+func (r *Reconciler) storageLeaseHolder(ctx context.Context) string {
+	lease := &coordinationv1.Lease{}
+	key := types.NamespacedName{Namespace: Namespace, Name: StorageLeaseName}
+	if err := r.Client.Get(ctx, key, lease); err != nil {
+		return ""
+	}
+	if lease.Spec.HolderIdentity == nil {
+		return ""
+	}
+	return *lease.Spec.HolderIdentity
+}
+
 func (r *Reconciler) maintenanceWindows(ctx context.Context) []layout.MaintenanceWindow {
 	group := &unstructured.Unstructured{}
 	group.SetGroupVersionKind(schema.GroupVersionKind{
@@ -679,7 +738,7 @@ func (r *Reconciler) patchStorageStatus(
 ) error {
 	patch := client.MergeFrom(storage.DeepCopy())
 
-	aggregate := layout.Aggregate(&storage.Spec, storage.Status.Replicas)
+	aggregate := layout.Aggregate(&storage.Spec, storage.Status.Replicas, r.storageLeaseHolder(ctx))
 	aggregate.ObservedGeneration = storage.Generation
 	// Conditions are merged rather than replaced, so an entry another writer owns
 	// is not dropped.

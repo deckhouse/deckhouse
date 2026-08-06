@@ -70,6 +70,22 @@ type Inputs struct {
 	// cluster stays on.
 	AppliedUpstream *registryv1alpha1.Upstream
 
+	// PersistedCredentials are the credentials this module wrote last time, read back
+	// from its auth Secret and keyed exactly as they were written.
+	//
+	// They exist for one case: a held upstream. AppliedUpstream comes from a status, and
+	// a status deliberately records addresses without credentials — so the moment the
+	// configuration stops supplying them, the only surviving copy is the Secret. Read
+	// back here, they are reattached to the upstream that is being held.
+	//
+	// Without this the hold keeps the address and loses the ability to use it, which is
+	// worse than not holding it at all: every node keeps a fallback it cannot
+	// authenticate to, so a cache miss stops being slower and becomes a failure, and any
+	// image reference naming the upstream by its own name is answered with a 401 the
+	// agent has no credentials to avoid. Measured on a cluster that had asked for
+	// air-gap with an incomplete cache — which is exactly the state the hold exists for.
+	PersistedCredentials map[string]registryv1alpha1.Auth
+
 	// UpstreamProbeFailed reports that the configured upstream did not pass its
 	// preflight probe, so the cluster must stay on AppliedUpstream.
 	//
@@ -162,7 +178,8 @@ func compute(in Inputs) Desired {
 	//   - the configuration asks for air-gap, but the cache cannot stand alone yet.
 	effectiveUpstream := desiredUpstream
 	if in.UpstreamProbeFailed || effectiveUpstream == nil {
-		effectiveUpstream = in.AppliedUpstream
+		// Held, so it arrives without credentials: see Inputs.PersistedCredentials.
+		effectiveUpstream = withPersistedAuth(in.AppliedUpstream, in.PersistedCredentials)
 	}
 
 	if !in.Config.Storage.Cache {
@@ -433,6 +450,43 @@ func storageBackend(access Access) registryv1alpha1.Backend {
 		backend.Mirrors = append(backend.Mirrors, endpoint(address))
 	}
 	return backend
+}
+
+// withPersistedAuth gives a held upstream back the credentials it was working with.
+//
+// A held upstream comes from RegistryConfig.status, which records addresses and not
+// credentials — deliberately, so a status is not one more place to read a license from. The
+// surviving copy is the Secret this module wrote, and this is where it goes back on, under the
+// same keys withReferencedAuth used to write it: the endpoint under AuthKeyUpstream, mirror j
+// under its own key.
+//
+// Only ever fills what is empty. A configured upstream arrives with its own credentials and
+// must keep them; this exists for the one that does not have any left.
+func withPersistedAuth(
+	upstream *registryv1alpha1.Upstream, persisted map[string]registryv1alpha1.Auth,
+) *registryv1alpha1.Upstream {
+	if upstream == nil || len(persisted) == 0 {
+		return upstream
+	}
+
+	fill := func(endpoint *registryv1alpha1.Endpoint, key string) {
+		if !endpoint.Auth.IsEmpty() {
+			return
+		}
+		if auth, ok := persisted[key]; ok && !auth.IsEmpty() {
+			endpoint.Auth = auth.DeepCopy()
+		}
+	}
+
+	// Copied, because the caller passed in an object it also compares against: filling
+	// this in place would rewrite the recorded upstream and the comparison would then be
+	// against itself.
+	out := upstream.DeepCopy()
+	fill(&out.Endpoint, constant.AuthKeyUpstream)
+	for j := range out.Mirrors {
+		fill(&out.Mirrors[j], mirrorAuthKey(constant.AuthKeyUpstream, j))
+	}
+	return out
 }
 
 func upstreamBackends(upstream *registryv1alpha1.Upstream) []registryv1alpha1.Backend {

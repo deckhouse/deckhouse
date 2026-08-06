@@ -265,8 +265,8 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 	logger.Debug("Checking release channel",
 		slog.String("channel", f.releaseChannel),
-		slog.String("ltsChannel", ltsReleaseChannel),
-		slog.Bool("isLTS", isLTSChannel))
+		slog.String("lts_channel", ltsReleaseChannel),
+		slog.Bool("is_lts", isLTSChannel))
 
 	if isLTSChannel {
 		logger.Debug("LTS channel detected, creating release directly without intermediate versions")

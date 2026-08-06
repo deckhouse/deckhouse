@@ -37,6 +37,26 @@ func testUpstream(host string) *registryv1alpha1.Upstream {
 	}
 }
 
+// heldUpstream is an upstream as the CLUSTER records it: the addresses, and no credentials.
+//
+// The distinction that hid a defect through a whole run of these tests. A held upstream comes
+// from RegistryConfig.status, which records addresses deliberately without credentials — while
+// every test here built it with `testUpstream`, credentials included, and so described a
+// cluster that cannot exist. What reaches a real reconciliation is this shape.
+func heldUpstream(host string) *registryv1alpha1.Upstream {
+	out := testUpstream(host)
+	out.Endpoint.Auth = nil
+	return out
+}
+
+// persistedUpstreamAuth is what this module wrote into its own auth Secret last time, in the
+// pre-encoded form that is the only form it writes.
+func persistedUpstreamAuth() map[string]registryv1alpha1.Auth {
+	return map[string]registryv1alpha1.Auth{
+		constant.AuthKeyUpstream: {Auth: "bGljZW5zZS10b2tlbjprZXk="},
+	}
+}
+
 func testAccess() Access {
 	return Access{
 		// Node addresses: what a client can actually dial. The Service name is what
@@ -139,11 +159,14 @@ func TestComputeAirGapWaitsForTheLeader(t *testing.T) {
 
 	t.Run("the leader is not full yet", func(t *testing.T) {
 		got := Compute(Inputs{
-			Config:          config,
-			AppliedUpstream: applied,
-			LeaderFull:      false,
-			Nodes:           []string{"master-0", "worker-1"},
-			StorageAccess:   testAccess(),
+			Config: config,
+			// As the cluster records it — without credentials — plus the copy this
+			// module keeps of them. That is the whole of what a hold has to work with.
+			AppliedUpstream:      heldUpstream("registry.deckhouse.io"),
+			PersistedCredentials: persistedUpstreamAuth(),
+			LeaderFull:           false,
+			Nodes:                []string{"master-0", "worker-1"},
+			StorageAccess:        testAccess(),
 		})
 
 		assert.False(t, got.DropUpstream)
@@ -154,10 +177,42 @@ func TestComputeAirGapWaitsForTheLeader(t *testing.T) {
 		assert.Equal(t, "registry.deckhouse.io", got.Storage.Upstream.Host)
 		assert.True(t, got.Storage.Publish, "an air-gapped cache is filled through the write endpoint")
 
+		// Held WITH its credentials, which is the difference between a fallback and a
+		// fallback nobody can use.
+		//
+		// The upstream is private, so a backend without credentials turns a cache miss
+		// from something slower into a failure, and answers any reference naming the
+		// upstream by its own name with a 401. Measured on a cluster in exactly this
+		// state: asked for air-gap, cache incomplete, and every node holding an
+		// upstream it could not authenticate to.
+		require.Contains(t, got.Credentials, constant.AuthKeyUpstream,
+			"the credentials of a held upstream must survive into the auth Secret")
+
 		for name, node := range got.Nodes {
 			require.Lenf(t, node.Backends, 2, "node %s must keep the upstream as a fallback", name)
-			assert.Equal(t, registryv1alpha1.BackendUpstream, node.Backends[1].Name)
+			upstream := node.Backends[1]
+			assert.Equal(t, registryv1alpha1.BackendUpstream, upstream.Name)
+			require.NotNilf(t, upstream.Endpoint.Auth,
+				"node %s holds an upstream with no credentials, so its fallback cannot authenticate", name)
+			require.NotNil(t, upstream.Endpoint.Auth.SecretRef)
+			assert.Equal(t, constant.AuthKeyUpstream, upstream.Endpoint.Auth.SecretRef.Key)
 		}
+	})
+
+	// Nothing is invented when there is nothing to reattach: the fallback goes out without
+	// credentials, which is honest, and is what a cluster whose upstream never had any looks
+	// like.
+	t.Run("nothing was persisted to hold over", func(t *testing.T) {
+		got := Compute(Inputs{
+			Config:          config,
+			AppliedUpstream: heldUpstream("registry.deckhouse.io"),
+			LeaderFull:      false,
+			Nodes:           []string{"master-0"},
+			StorageAccess:   testAccess(),
+		})
+
+		assert.NotContains(t, got.Credentials, constant.AuthKeyUpstream)
+		assert.Nil(t, got.Nodes["master-0"].Backends[1].Endpoint.Auth)
 	})
 
 	t.Run("the leader is full", func(t *testing.T) {
