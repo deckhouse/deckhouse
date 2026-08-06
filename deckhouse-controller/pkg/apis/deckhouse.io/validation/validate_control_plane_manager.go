@@ -20,12 +20,16 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"slices"
 	"strings"
 
+	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
+	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -534,4 +538,33 @@ func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.C
 		return "", false
 	}
 	return cc.KubernetesVersion, true
+}
+
+// clusterKubernetesConfigMapHandler forbids deleting kube-system/d8-cluster-kubernetes.
+//
+// After this release that ConfigMap is the only durable record of maxUsedKubernetesVersion, the
+// floor that stops a cluster from being downgraded more than one minor below what it has ever run.
+// update-observer recreates the object when it is deleted, but it recreates it from its own
+// container environment — the history is gone, and the floor silently drops to the current
+// version. The d8-cluster-configuration Secret carries the same protection for the same reason.
+//
+// Only DELETE. Hand edits of data.spec need no rule: update-observer rewrites the whole block on
+// its next reconcile, which the delete of any key already triggers.
+func clusterKubernetesConfigMapHandler() http.Handler {
+	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, ar *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+		if ar.Operation == model.OperationDelete {
+			return rejectResult("It is forbidden to delete configmap d8-cluster-kubernetes")
+		}
+
+		return allowResult(nil)
+	})
+
+	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
+		ID:        "cluster-kubernetes-configmap-validator",
+		Validator: validator,
+		Logger:    nil,
+		Obj:       &v1.ConfigMap{},
+	})
+
+	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
 }
