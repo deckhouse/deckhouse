@@ -294,6 +294,7 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 
 // filterLatestTags filters out the latest version for every major.minor version
 func filterLatestTags(tags []*semver.Version) []*semver.Version {
+	// map of major.minor.semver
 	latestTagsMap := map[uint64]map[uint64]*semver.Version{}
 	newLength := 0
 	for _, tag := range tags {
