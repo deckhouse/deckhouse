@@ -398,6 +398,22 @@ spec:
   version: 2
   enabled: true
 ---
+# [<en>] prometheus module settings (metrics, Grafana).
+# [<en>] https://deckhouse.io/modules/prometheus/configuration.html
+# [<ru>] Настройки модуля prometheus (метрики, Grafana).
+# [<ru>] https://deckhouse.ru/modules/prometheus/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 3
+  enabled: true
+  settings:
+    # [<en>] Long-term metric storage is not started; the main Prometheus keeps metrics for 15 days.
+    # [<ru>] Долговременное хранение метрик не запускается; основной Prometheus хранит метрики 15 дней.
+    longtermRetentionDays: 0
+---
 # [<en>] upmeter module settings (availability metrics, status page).
 # [<en>] https://deckhouse.io/modules/upmeter/configuration.html
 # [<ru>] Настройки модуля upmeter (метрики доступности, страница статуса).

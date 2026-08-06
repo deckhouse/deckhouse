@@ -97,10 +97,7 @@ Installing Deckhouse Virtualization Platform requires the following components t
     {% offtopic title="Requirements..." %}
   - **System requirements**:
     - a [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html) with an NFS server package available;
-    - at least 150 GB of disk space, including:
-      - about 50 GB for the DVCR image storage;
-      - about 90 GB for the PVCs of cluster system components;
-      - the rest for VM disks; size it according to the number and size of your VMs.
+    - at least 60 GB of disk space: VM images and disks, metrics, and cluster component data.
   - **Access and networking**:
     - NFS access (NFSv4.1 recommended) from master and worker nodes;
     - export the DVP directory with the `no_root_squash` option;
