@@ -156,5 +156,5 @@ The module ensures high availability through:
 - The module runs exclusively on master nodes.
 - It requires `hostNetwork: true` to function during bootstrap phase.
 - Cache size is limited to 1 GB per pod.
-- Most HTTP endpoints require Kubernetes RBAC; only health checks (healthz) and package icons are anonymous. Package icons are additionally limited to in-cluster access (no public Ingress route).
+- Most HTTP endpoints require Kubernetes RBAC; only health checks (`/healthz`) and package icons are anonymous. Package icons are additionally limited to in-cluster access (no public Ingress route).
 - Package icons are read from fixed paths inside the package image (`docs/icon.svg`, `docs/icon.png`, `docs/icon.jpg`, `docs/icon.jpeg`) with SVG preferred. Maximum icon size is 4 MiB.
