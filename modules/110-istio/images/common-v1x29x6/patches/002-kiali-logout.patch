@@ -1,5 +1,5 @@
 diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
-index d244f26..e8f304d 100644
+index c717ffe86..2f6c37a2b 100644
 --- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
 +++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
 @@ -10,6 +10,8 @@ import { AuthStrategy } from '../../../types/Auth';
@@ -11,11 +11,10 @@ index d244f26..e8f304d 100644
  import { connect } from 'react-redux';
  import * as API from '../../../services/Api';
  import { kialiStyle } from 'styles/StyleUtils';
-@@ -51,6 +53,14 @@ const dropdownStyle = kialiStyle({
-   paddingRight: 0
+@@ -50,6 +52,13 @@ const dropdownStyle = kialiStyle({
+   marginRight: '0.5rem'
  });
  
-+
 +const DEX_LOGOUT_STORAGE_KEY = 'kiali-dex-logout';
 +
 +const headerAuthLogoutURL = (): string => {
@@ -26,7 +25,7 @@ index d244f26..e8f304d 100644
  class UserDropdownComponent extends React.Component<UserProps, UserState> {
    constructor(props: UserProps) {
      super(props);
-@@ -72,6 +82,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -71,6 +80,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
        this.setState({ timeCountDownSeconds: this.timeLeft() / MILLISECONDS });
      }, 1000);
  
@@ -35,7 +34,7 @@ index d244f26..e8f304d 100644
      this.setState({
        checkSessionTimerId: checkSessionTimerId,
        timeLeftTimerId: timeLeftTimerId
-@@ -86,6 +98,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -85,6 +96,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
      if (this.state.timeLeftTimerId) {
        clearInterval(this.state.timeLeftTimerId);
      }
@@ -44,11 +43,10 @@ index d244f26..e8f304d 100644
    }
  
    timeLeft = (): number => {
-@@ -104,7 +118,23 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -103,7 +116,22 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
      }
    };
  
-+
 +  handleStorageLogout = (event: StorageEvent): void => {
 +    if (event.key !== DEX_LOGOUT_STORAGE_KEY || !event.newValue) {
 +      return;
@@ -68,7 +66,7 @@ index d244f26..e8f304d 100644
      if (authenticationConfig.logoutEndpoint) {
        API.logout()
          .then(_ => {
-@@ -143,8 +173,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -142,8 +170,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
      const clusterIsInSessionInfo = (cluster: string): boolean =>
        this.props.session?.clusterInfo?.[cluster] !== undefined;
  

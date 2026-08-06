@@ -31,7 +31,7 @@ shell:
   # kiali
   - cd /src/kiali/
   - git apply --verbose /patches/001-kiali-gomod_gosum.patch
-  #- git apply --verbose /patches/002-kiali-logout.patch
+  - git apply --verbose /patches/002-kiali-logout.patch
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-kiali-frontend-build-artifact
 from: {{ index $.Images "builder/node-alpine-22.16" }}
