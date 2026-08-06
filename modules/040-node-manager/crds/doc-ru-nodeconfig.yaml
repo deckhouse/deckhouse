@@ -211,12 +211,6 @@ spec:
                     maxConcurrentDownloads:
                       description: |
                         Максимальное количество потоков одновременного скачивания слоёв образов.
-                    registryMirrors:
-                      description: |
-                        Адреса зеркал для каждого хоста registry. Пока не переносятся в `hosts.toml` и зарезервированы на будущее.
-                      additionalProperties:
-                        description: |
-                          Список адресов зеркал для registry.
                     sandboxImage:
                       description: |
                         Образ pause, используемый для песочниц подов.
