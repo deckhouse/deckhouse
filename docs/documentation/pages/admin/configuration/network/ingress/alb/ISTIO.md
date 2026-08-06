@@ -4,8 +4,10 @@ permalink: en/admin/configuration/network/ingress/alb/istio.html
 description: "Configure Application Load Balancer with Istio in Deckhouse Kubernetes Platform. Istio Ingress Gateway setup, traffic management, and service mesh integration."
 ---
 
-ALB with Istio is implemented via [Istio Ingress Gateway](#istio-ingress-gateway) or Istio Ingress Gateway or [Ingress NGINX](#ingress-nginx).
+ALB with Istio is implemented via [Istio Ingress Gateway](#istio-ingress-gateway) or [Ingress NGINX](#ingress-nginx).
 The [`istio`](/modules/istio/) module is used for this purpose.
+
+Choose this option when you need advanced traffic management in a service mesh (for example, canary routing or mTLS). Module reference: [`istio`](/modules/istio/).
 
 ## Ingress to publish applications
 
@@ -19,7 +21,7 @@ To publish the application using the Istio Ingress Gateway, follow these steps:
    apiVersion: deckhouse.io/v1alpha1
    kind: IngressIstioController
    metadata:
-    name: main
+     name: main
    spec:
      # ingressGatewayClass contains the label selector value used to create the Gateway resource.
      ingressGatewayClass: istio-hp
@@ -31,7 +33,7 @@ To publish the application using the Istio Ingress Gateway, follow these steps:
        node-role.deckhouse.io/frontend: ""
      tolerations:
        - effect: NoExecute
-         key: key: dedicated.deckhouse.io
+         key: dedicated.deckhouse.io
          operator: Equal
          value: frontend
      resourcesRequests:
