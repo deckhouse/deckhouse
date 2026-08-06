@@ -25,7 +25,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 - [ConfigAuditReport](/modules/operator-trivy/cr.html#configauditreport) — хранит результаты аудита конфигурации Kubernetes-объектов;
 - [ExposedSecretReport](/modules/operator-trivy/cr.html#exposedsecretreport) — хранит результаты поиска потенциальных секретов в образе контейнера;
 - InfraAssessmentReport — хранит результаты проверок безопасности инфраструктуры Kubernetes-объектов;
-- [NodeVulnerabilityReport](/modules/operator-trivy/cr.html#nodevulnerabilityreport) — хранит результаты сканирования уязвимостей в `rootfs` (корневой файловой системы) узла;
+- [NodeVulnerabilityReport](/modules/operator-trivy/cr.html#nodevulnerabilityreport) — хранит результаты сканирования уязвимостей в `rootfs` (корневой файловой системе) узла;
 - [RbacAssessmentReport](/modules/operator-trivy/cr.html#rbacassessmentreport) — хранит результаты проверки RBAC-настроек на предмет избыточных привилегий и других рисков;
 - [RegistryImageVulnerabilityReport](/modules/operator-trivy/cr.html#registryimagevulnerabilityreport) — хранит результаты CVE-сканирования конкретного тега образа из реестра;
 - [RegistryScanTarget](/modules/operator-trivy/cr.html#registryscantarget) — задаёт целевой реестр, репозитории и параметры периодического сканирования;
