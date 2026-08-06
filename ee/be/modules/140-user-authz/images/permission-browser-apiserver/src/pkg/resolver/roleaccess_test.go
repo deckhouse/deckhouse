@@ -392,6 +392,41 @@ func TestRoleReport_DigestIsStableAndSensitive(t *testing.T) {
 	assert.NotEqual(t, first.Snapshot.Digest, changed.Snapshot.Digest, "one more verb is a changed document")
 }
 
+// Two rules can grant the same resource and differ only in the objects they
+// name. Both are rows with the same group and resource, so an order that stops
+// at those two fields leaves them to the iteration order of a map -- and the
+// export of an unchanged cluster comes out shuffled, with a digest that says
+// the cluster changed. Repeated because a random order is right sometimes.
+func TestRoleReport_RowsOfTheSameResourceKeepTheirOrder(t *testing.T) {
+	t.Parallel()
+
+	objs := []runtime.Object{
+		aggregatingRole("d8:system:superadmin", "system"),
+		capability("d8:system-capability:deckhouse:manage_modules", "system",
+			policyRule("deckhouse.io", "moduleconfigs", "get", "list"),
+			rbacv1.PolicyRule{
+				APIGroups:     []string{"deckhouse.io"},
+				Resources:     []string{"moduleconfigs"},
+				ResourceNames: []string{"observability"},
+				Verbs:         []string{"get", "list", "update"},
+			},
+		),
+	}
+
+	resolver := setupRoleAccessResolver(t, objs)
+
+	first, err := resolver.Report(context.Background(), RoleAccessRequest{})
+	require.NoError(t, err)
+
+	for range 20 {
+		again, err := resolver.Report(context.Background(), RoleAccessRequest{})
+		require.NoError(t, err)
+
+		assert.Equal(t, first.Roles, again.Roles, "the same cluster must produce the same rows in the same order")
+		assert.Equal(t, first.Snapshot.Digest, again.Snapshot.Digest)
+	}
+}
+
 // A document issued before the rename names the old role. Carrying the alias
 // lets a reader line the two up instead of guessing.
 func TestRoleReport_CarriesTheNameOfTheReplacedRole(t *testing.T) {

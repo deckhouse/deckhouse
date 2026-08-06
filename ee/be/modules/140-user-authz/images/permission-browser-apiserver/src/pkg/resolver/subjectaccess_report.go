@@ -488,11 +488,23 @@ func renderResources(scope *scopeAccumulator, keepBindingNamespace bool) []v1alp
 		})
 	}
 
+	// The rows come out of a map, and the sort is not stable, so the order has
+	// to be total or it is random. Group and resource do not make it total: a
+	// rule granting every moduleconfig and one granting a named moduleconfig
+	// are two rows with the same pair, and they would swap places between two
+	// reports of an unchanged cluster -- a diff of two exports would show a
+	// change that did not happen, and the digest, which exists to say the
+	// opposite, would differ too. resourceNames is the rest of the row's own
+	// identity: with it the order is the identity's order.
 	slices.SortFunc(rows, func(x, y v1alpha1.ResourceAccess) int {
 		if cmp := strings.Compare(x.Group, y.Group); cmp != 0 {
 			return cmp
 		}
-		return strings.Compare(x.Resource, y.Resource)
+		if cmp := strings.Compare(x.Resource, y.Resource); cmp != 0 {
+			return cmp
+		}
+
+		return slices.Compare(x.ResourceNames, y.ResourceNames)
 	})
 
 	return rows
