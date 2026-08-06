@@ -23,6 +23,7 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -30,13 +31,14 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module/status"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -44,8 +46,8 @@ const (
 	// controllerName is the name the controller is registered under in the manager.
 	controllerName = "d8-module-controller"
 
-	// maxConcurrentReconciles keeps a single worker: modules sharing a package write
-	// the same ModulePackage and ModulePackageVersion installed lists.
+	// maxConcurrentReconciles keeps a single worker: concurrent reconciles would race on
+	// the ModulePackageVersion used flag when a module bumps its version.
 	maxConcurrentReconciles = 1
 	// cacheSyncTimeout bounds the initial informer cache sync.
 	cacheSyncTimeout = 3 * time.Minute
@@ -68,6 +70,9 @@ func RegisterController(
 		logger:  logger.Named(controllerName),
 	}
 
+	r.status = status.NewService(r.client, r.manager.GetStatus, r.logger)
+	r.status.Start(context.Background(), r.manager.GetModuleStatusQueue())
+
 	if err := ctrl.NewControllerManagedBy(runtime).
 		Named(controllerName).
 		For(&v1alpha2.Module{}).
@@ -88,6 +93,7 @@ type reconciler struct {
 	init    *sync.WaitGroup
 	client  client.Client
 	manager packageManager
+	status  *status.Service
 	logger  *log.Logger
 }
 
@@ -96,6 +102,8 @@ type packageManager interface {
 	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
 	UpdateModule(repo registry.Remote, module packageruntime.Module, force bool)
 	RemoveModule(name string)
+	GetStatus(name string) packagestatus.Status
+	GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string]
 }
 
 // Reconcile dispatches the module to the delete or the create/update handler.
@@ -146,7 +154,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 	original := module.DeepCopy()
 
 	// The finalizer is claimed before the module reaches the runtime: it is what
-	// guarantees handleDelete gets to call RemoveModule and release the installed lists.
+	// guarantees handleDelete gets to call RemoveModule and release the version.
 	if !controllerutil.ContainsFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered) {
 		patch := client.MergeFrom(module.DeepCopy())
 		controllerutil.AddFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered)
@@ -160,13 +168,13 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 	}
 
 	pkg := new(v1alpha1.ModulePackage)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Spec.PackageName}, pkg); err != nil {
-		logger.Debug("module package not found", slog.String("package", module.Spec.PackageName), log.Err(err))
+	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Name}, pkg); err != nil {
+		logger.Debug("module package not found", slog.String("package", module.Name), log.Err(err))
 
-		return fmt.Errorf("get module package '%s': %w", module.Spec.PackageName, err)
+		return fmt.Errorf("get module package '%s': %w", module.Name, err)
 	}
 
-	versionName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Spec.PackageName, module.Spec.PackageVersion)
+	versionName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
 
 	mpv := new(v1alpha1.ModulePackageVersion)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: versionName}, mpv); err != nil {
@@ -182,15 +190,15 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 		return fmt.Errorf("module package version '%s' is draft", versionName)
 	}
 
-	// The repository is read before any installed list is touched, so a missing
-	// repository cannot leave the lists half-updated.
+	// The repository is read before any used flag is touched, so a missing repository
+	// cannot leave the versions half-updated.
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
 		logger.Error("get package repository", log.Err(err))
 		return fmt.Errorf("get package repository '%s': %w", module.Spec.PackageRepositoryName, err)
 	}
 
-	if err := r.relink(ctx, module, pkg, mpv); err != nil {
+	if err := r.relink(ctx, module, mpv); err != nil {
 		logger.Error("failed to relink the module", log.Err(err))
 		return err
 	}
@@ -198,7 +206,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 	r.manager.UpdateModule(registry.BuildRemote(repo), packageruntime.Module{
 		Name: module.Name,
 		Definition: modules.Definition{
-			Name:    module.Spec.PackageName,
+			Name:    module.Name,
 			Version: module.Spec.PackageVersion,
 		},
 		Settings:        module.Spec.Settings.GetMap(),
@@ -223,26 +231,19 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 	return nil
 }
 
-// handleDelete detaches the module from its package and version, unregisters it from
-// the package runtime and releases the finalizer.
+// handleDelete releases the module's package version, unregisters it from the package
+// runtime and releases the finalizer.
 func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) error {
 	logger := r.logger.With(slog.String("name", module.Name))
 
 	logger.Debug("handle delete module")
 	defer logger.Debug("handle delete module complete")
 
-	// Detach by owner reference, not by spec: the references name what the module was
+	// Detach by owner reference, not by spec: the reference names what the module was
 	// actually attached to, which a spec edit just before deletion would have changed.
 	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); name != "" {
-		if err := r.detachVersion(ctx, module, name); err != nil {
+		if err := r.detachVersion(ctx, name); err != nil {
 			logger.Error("failed to detach the module package version", slog.String("mpv", name), log.Err(err))
-			return err
-		}
-	}
-
-	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageKind); name != "" {
-		if err := r.detachPackage(ctx, module, name); err != nil {
-			logger.Error("failed to detach the module package", slog.String("package", name), log.Err(err))
 			return err
 		}
 	}
@@ -264,37 +265,26 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) 
 	return nil
 }
 
-// relink moves the module onto pkg and version, releasing the ones it switched away
-// from. Detaching first keeps the installed counts correct when only one of the two
-// changed, which is the common case of a version bump within the same package.
-func (r *reconciler) relink(ctx context.Context, module *v1alpha2.Module, pkg *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
+// relink marks mpv as used by the module, releasing the version it switched away from.
+// Releasing first keeps the flags correct across a version bump.
+func (r *reconciler) relink(ctx context.Context, module *v1alpha2.Module, mpv *v1alpha1.ModulePackageVersion) error {
 	if old := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); old != "" && old != mpv.Name {
-		if err := r.detachVersion(ctx, module, old); err != nil {
+		if err := r.detachVersion(ctx, old); err != nil {
 			return err
 		}
 	}
 
-	if old := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageKind); old != "" && old != pkg.Name {
-		if err := r.detachPackage(ctx, module, old); err != nil {
-			return err
-		}
-	}
-
-	if err := r.attachVersion(ctx, module, mpv); err != nil {
-		return err
-	}
-
-	return r.attachPackage(ctx, module, pkg)
+	return r.attachVersion(ctx, mpv)
 }
 
-// attachVersion adds the module to the version's installed list.
-func (r *reconciler) attachVersion(ctx context.Context, module *v1alpha2.Module, mpv *v1alpha1.ModulePackageVersion) error {
-	if mpv.IsModuleInstalled(app.NamespaceDeckhouse, module.Name) {
+// attachVersion marks the version as used, so it cannot be deleted under the module.
+func (r *reconciler) attachVersion(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
+	if mpv.Status.Used {
 		return nil
 	}
 
 	patch := client.MergeFrom(mpv.DeepCopy())
-	mpv = mpv.AddInstalledModule(app.NamespaceDeckhouse, module.Name)
+	mpv.Status.Used = true
 
 	if err := r.client.Status().Patch(ctx, mpv, patch); err != nil {
 		return fmt.Errorf("patch module package version status: %w", err)
@@ -303,32 +293,9 @@ func (r *reconciler) attachVersion(ctx context.Context, module *v1alpha2.Module,
 	return nil
 }
 
-// attachPackage adds the module to the package's installed list, or refreshes the
-// version recorded there when the module moved to another version of the same package.
-func (r *reconciler) attachPackage(ctx context.Context, module *v1alpha2.Module, pkg *v1alpha1.ModulePackage) error {
-	installed := pkg.IsModuleInstalled(app.NamespaceDeckhouse, module.Name)
-	if installed && pkg.GetModuleVersion(app.NamespaceDeckhouse, module.Name) == module.Spec.PackageVersion {
-		return nil
-	}
-
-	patch := client.MergeFrom(pkg.DeepCopy())
-
-	if installed {
-		pkg.UpdateModuleVersion(app.NamespaceDeckhouse, module.Name, module.Spec.PackageVersion)
-	} else {
-		pkg = pkg.AddInstalledModule(app.NamespaceDeckhouse, module.Name, module.Spec.PackageVersion)
-	}
-
-	if err := r.client.Status().Patch(ctx, pkg, patch); err != nil {
-		return fmt.Errorf("patch module package status: %w", err)
-	}
-
-	return nil
-}
-
-// detachVersion removes the module from the named version's installed list. A version
-// that is already gone needs no cleanup.
-func (r *reconciler) detachVersion(ctx context.Context, module *v1alpha2.Module, name string) error {
+// detachVersion clears the named version's used flag. A version that is already gone,
+// or was never marked, needs no cleanup.
+func (r *reconciler) detachVersion(ctx context.Context, name string) error {
 	version := new(v1alpha1.ModulePackageVersion)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, version); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -338,41 +305,15 @@ func (r *reconciler) detachVersion(ctx context.Context, module *v1alpha2.Module,
 		return fmt.Errorf("get module package version: %w", err)
 	}
 
-	if !version.IsModuleInstalled(app.NamespaceDeckhouse, module.Name) {
+	if !version.Status.Used {
 		return nil
 	}
 
 	patch := client.MergeFrom(version.DeepCopy())
-	version = version.RemoveInstalledModule(app.NamespaceDeckhouse, module.Name)
+	version.Status.Used = false
 
 	if err := r.client.Status().Patch(ctx, version, patch); err != nil {
 		return fmt.Errorf("patch module package version status: %w", err)
-	}
-
-	return nil
-}
-
-// detachPackage removes the module from the named package's installed list. A package
-// that is already gone needs no cleanup.
-func (r *reconciler) detachPackage(ctx context.Context, module *v1alpha2.Module, name string) error {
-	pkg := new(v1alpha1.ModulePackage)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, pkg); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-
-		return fmt.Errorf("get module package: %w", err)
-	}
-
-	if !pkg.IsModuleInstalled(app.NamespaceDeckhouse, module.Name) {
-		return nil
-	}
-
-	patch := client.MergeFrom(pkg.DeepCopy())
-	pkg = pkg.RemoveInstalledModule(app.NamespaceDeckhouse, module.Name)
-
-	if err := r.client.Status().Patch(ctx, pkg, patch); err != nil {
-		return fmt.Errorf("patch module package status: %w", err)
 	}
 
 	return nil

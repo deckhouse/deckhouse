@@ -341,12 +341,11 @@ func (r *reconciler) relink(ctx context.Context, app *v1alpha1.Application, pkg 
 
 // attachVersion adds the application to the version's installed list.
 func (r *reconciler) attachVersion(ctx context.Context, app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion) error {
-	if apv.IsAppInstalled(app.Namespace, app.Name) {
+	patch := client.MergeFrom(apv.DeepCopy())
+
+	if !apv.AddInstalledApp(app.Namespace, app.Name) {
 		return nil
 	}
-
-	patch := client.MergeFrom(apv.DeepCopy())
-	apv = apv.AddInstalledApp(app.Namespace, app.Name)
 
 	if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
 		return fmt.Errorf("patch application package version status '%s': %w", apv.Name, err)
@@ -358,17 +357,10 @@ func (r *reconciler) attachVersion(ctx context.Context, app *v1alpha1.Applicatio
 // attachPackage adds the application to the package's installed list, or refreshes the
 // version recorded there when the application moved to another version of the same package.
 func (r *reconciler) attachPackage(ctx context.Context, app *v1alpha1.Application, pkg *v1alpha1.ApplicationPackage) error {
-	installed := pkg.IsAppInstalled(app.Namespace, app.Name)
-	if installed && pkg.GetAppVersion(app.Namespace, app.Name) == app.Spec.PackageVersion {
-		return nil
-	}
-
 	patch := client.MergeFrom(pkg.DeepCopy())
 
-	if installed {
-		pkg.UpdateAppVersion(app.Namespace, app.Name, app.Spec.PackageVersion)
-	} else {
-		pkg = pkg.AddInstalledApp(app.Namespace, app.Name, app.Spec.PackageVersion)
+	if !pkg.AddInstalledApp(app.Namespace, app.Name, app.Spec.PackageVersion) {
+		return nil
 	}
 
 	if err := r.client.Status().Patch(ctx, pkg, patch); err != nil {
@@ -390,12 +382,11 @@ func (r *reconciler) detachVersion(ctx context.Context, app *v1alpha1.Applicatio
 		return fmt.Errorf("get application package version '%s': %w", name, err)
 	}
 
-	if !apv.IsAppInstalled(app.Namespace, app.Name) {
+	patch := client.MergeFrom(apv.DeepCopy())
+
+	if !apv.RemoveInstalledApp(app.Namespace, app.Name) {
 		return nil
 	}
-
-	patch := client.MergeFrom(apv.DeepCopy())
-	apv = apv.RemoveInstalledApp(app.Namespace, app.Name)
 
 	if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
 		return fmt.Errorf("patch application package version status '%s': %w", name, err)
@@ -416,12 +407,11 @@ func (r *reconciler) detachPackage(ctx context.Context, app *v1alpha1.Applicatio
 		return fmt.Errorf("get application package '%s': %w", name, err)
 	}
 
-	if !ap.IsAppInstalled(app.Namespace, app.Name) {
+	patch := client.MergeFrom(ap.DeepCopy())
+
+	if !ap.RemoveInstalledApp(app.Namespace, app.Name) {
 		return nil
 	}
-
-	patch := client.MergeFrom(ap.DeepCopy())
-	ap = ap.RemoveInstalledApp(app.Namespace, app.Name)
 
 	if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
 		return fmt.Errorf("patch application package status '%s': %w", name, err)
