@@ -5,9 +5,8 @@
   the right pods via component=/tier=control-plane. Container is not hardcoded —
   static pods have a single real container (exclude the POD sandbox).
 
-  DEBUG timings — restore production: lookback 7d, rate[5m], subquery [7d:5m].
-  Memory uses the same subquery form as cpu so short series after a pod restart
-  still resolve (plain avg_over_time[window] is flakier).
+  Lookback window = 7d. Memory uses the same subquery form as cpu so short
+  series after a pod restart still resolve (plain avg_over_time[window] is flakier).
 */}}
 ---
 apiVersion: deckhouse.io/v1beta1
@@ -21,8 +20,8 @@ spec:
     sum(
       avg_over_time(
         rate(
-          container_cpu_usage_seconds_total{<<.LabelMatchers>>,container!="POD",container!=""}[1m]
-        )[7m:1m]
+          container_cpu_usage_seconds_total{<<.LabelMatchers>>,container!="POD",container!=""}[5m]
+        )[7d:5m]
       )
     ) by (<<.GroupBy>>)
 ---
@@ -37,7 +36,7 @@ spec:
     round(
       sum(
         avg_over_time(
-          container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7m:1m]
+          container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7d:5m]
         )
       ) by (<<.GroupBy>>)
     )

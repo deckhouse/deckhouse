@@ -52,8 +52,7 @@ const (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: autotuneQueue,
 	Schedule: []go_hook.ScheduleConfig{
-		// DEBUG timings — restore production: "0 3 * * *"
-		{Name: autotuneScheduleName, Crontab: "*/5 * * * *"},
+		{Name: autotuneScheduleName, Crontab: "0 3 * * *"},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		controlPlaneNodesBinding(false, false),
@@ -600,9 +599,8 @@ func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric stri
 
 const (
 	// Anti-flap cooldowns — Go constants, not config-values.
-	// DEBUG timings — restore production: raise 24h, lower 72h.
-	raiseCooldown = 5 * time.Minute
-	lowerCooldown = 15 * time.Minute
+	raiseCooldown = 24 * time.Hour
+	lowerCooldown = 72 * time.Hour
 )
 
 type decideAction string
