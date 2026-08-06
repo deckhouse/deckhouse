@@ -989,7 +989,7 @@ spec:
 
 ### Example: intermediate CA issued by a Vault issuer
 
-If you already run a HashiCorp Vault PKI, you can have cert-manager issue the Istio CA as an **intermediate** signed by your Vault root/intermediate. The resulting Secret has exactly the same layout and is auto-detected the same way — the only requirement is `isCA: true`.
+If you already run a HashiCorp Vault PKI, you can have cert-manager issue the Istio CA as an intermediate signed by your Vault root/intermediate. The resulting Secret has exactly the same layout and is auto-detected the same way — the only requirement is `isCA: true`.
 
 ```yaml
 apiVersion: cert-manager.io/v1
@@ -1058,20 +1058,20 @@ If `namespace` is omitted, the Secret is looked up in the `d8-istio` namespace.
 {% endalert %}
 
 {% alert level="warning" %}
-If the referenced Secret is missing or malformed on the **first** resolution of this `secretRef`, the module will not proceed until the issue is fixed. It will not silently fall back to a self-signed CA — or to any CA that was in use before this `secretRef` was configured — to avoid unexpectedly running on an unrelated CA.
+If the referenced Secret is missing or malformed on the first resolution of this `secretRef`, the module will not proceed until the issue is fixed. It will not silently fall back to a self-signed CA — or to any CA that was in use before this `secretRef` was configured — to avoid unexpectedly running on an unrelated CA.
 
-If the **same** `secretRef` was already resolved successfully and later becomes unavailable or invalid (for example, it is briefly deleted during rotation, or its chain expires), the module keeps using that last successfully-resolved CA instead of hard-blocking. It never switches to a different CA on its own — it only reuses the exact material istiod is already running with — so an already-working mesh is not regressed while the source is fixed. Repointing `secretRef` to a **different** Secret counts as a first resolution: if that new Secret cannot be resolved, the module hard-blocks rather than keeping the previous CA.
+If the same `secretRef` was already resolved successfully and later becomes unavailable or invalid (for example, it is briefly deleted during rotation, or its chain expires), the module keeps using that last successfully-resolved CA instead of hard-blocking. It never switches to a different CA on its own — it only reuses the exact material istiod is already running with — so an already-working mesh is not regressed while the source is fixed. Repointing `secretRef` to a different Secret counts as a first resolution: if that new Secret cannot be resolved, the module hard-blocks rather than keeping the previous CA.
 {% endalert %}
 
 {% alert level="info" %}
-The referenced Secret is re-resolved on a 5-minute schedule, so changes to the source Secret can take up to 5 minutes to propagate to the mesh.
+The referenced Secret is re-resolved on a 5-minute schedule, so changes to the source Secret may propagate with a delay.
 
-When using an intermediate CA, keep the **root** stable across rotations: the module publishes `root-cert.pem` (the `ca.crt` trust anchor) as the webhook `caBundle` and as the workload trust root, while the signing (intermediate) certificate may change. Rotating the intermediate under a stable root is seamless; changing the root is a mesh-wide trust change and requires the old and new roots to overlap in the trust bundle during the transition.
+When using an intermediate CA, keep the root stable across rotations. The module publishes `root-cert.pem` (the `ca.crt` trust anchor) as the webhook `caBundle` and as the workload trust root, while the signing (intermediate) certificate may change. Rotating the intermediate under a stable root is seamless; changing the root is a mesh-wide trust change and requires the old and new roots to overlap in the trust bundle during the transition.
 {% endalert %}
 
 ### Reverting to a self-signed CA
 
-Removing `ca.secretRef` (or inline `ca.cert`) from the module configuration does **not** switch the mesh back to an auto-generated self-signed CA on its own. The module intentionally keeps the last-published CA — stored in the `d8-istio/cacerts` Secret — so an already-working mesh is never rotated implicitly: rotating the mesh root breaks mTLS cluster-wide until every workload re-trusts the new root.
+Removing `ca.secretRef` (or inline `ca.cert`) from the module configuration does not switch the mesh back to an auto-generated self-signed CA on its own. The module intentionally keeps the last-published CA — stored in the `d8-istio/cacerts` Secret — so an already-working mesh is never rotated implicitly: rotating the mesh root breaks mTLS cluster-wide until every workload re-trusts the new root.
 
 To deliberately return to a self-signed CA:
 
