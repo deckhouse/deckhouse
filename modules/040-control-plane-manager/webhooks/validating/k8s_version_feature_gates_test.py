@@ -465,20 +465,20 @@ class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
         )
         tests.assert_validation_deny(self, out, error_msg)
 
-    def test_mc_automatic_version_uses_deckhouse_default(self):
+    def test_mc_default_version_uses_deckhouse_default(self):
         ctx = _prepare_mc_validation_binding_context(
-            'Automatic', ['CPUManager'], cc_k8s_version='Automatic', cc_default_version='1.30.0',
+            'Default', ['CPUManager'], cc_k8s_version='Automatic', cc_default_version='1.30.0',
         )
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
 
-    def test_mc_automatic_ignores_pinned_cluster_configuration(self):
-        # Presence of the ModuleConfig setting decides: an explicit Automatic resolves to the
+    def test_mc_default_ignores_pinned_cluster_configuration(self):
+        # Presence of the ModuleConfig setting decides: an explicit Default resolves to the
         # Deckhouse default, so the deprecated ClusterConfiguration pin must not be consulted.
         # 'New123' is deprecated in 1.32 (the default here) but not in 1.31 (the CC pin), so the
         # deny below only happens if the default won.
         ctx = _prepare_mc_validation_binding_context(
-            'Automatic', ['New123'], cc_k8s_version='1.31.0', cc_default_version='1.32.0',
+            'Default', ['New123'], cc_k8s_version='1.31.0', cc_default_version='1.32.0',
         )
         out = hook.testrun(main, [ctx])
         error_msg = (
@@ -488,9 +488,9 @@ class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
         )
         tests.assert_validation_deny(self, out, error_msg)
 
-    def test_mc_automatic_with_cc_version_absent_uses_default(self):
+    def test_mc_default_with_cc_version_absent_uses_default(self):
         ctx = _prepare_mc_validation_binding_context(
-            'Automatic',
+            'Default',
             ['New123'],
             cc_default_version='1.32.0',
             cc_snapshot_present=True,
@@ -507,9 +507,9 @@ class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
     # replaces was only ever raised and so kept answering with a default the running build no
     # longer has. 'New123' is deprecated in 1.32 but not in 1.31, so this denies only if the
     # ConfigMap value won over the Secret one.
-    def test_mc_automatic_prefers_the_configmap_default_over_the_secret(self):
+    def test_mc_default_prefers_the_configmap_default_over_the_secret(self):
         ctx = _prepare_mc_validation_binding_context(
-            'Automatic', ['New123'], cc_snapshot_present=True,
+            'Default', ['New123'], cc_snapshot_present=True,
             cc_default_version='1.31.0', cm_automatic_version='1.32.0',
         )
         out = hook.testrun(main, [ctx])
@@ -521,9 +521,9 @@ class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
         tests.assert_validation_deny(self, out, error_msg)
 
     # The migration window: update-observer has not written the ConfigMap yet.
-    def test_mc_automatic_falls_back_to_the_secret_default_without_the_configmap(self):
+    def test_mc_default_falls_back_to_the_secret_default_without_the_configmap(self):
         ctx = _prepare_mc_validation_binding_context(
-            'Automatic', ['New123'], cc_snapshot_present=True, cc_default_version='1.32.0',
+            'Default', ['New123'], cc_snapshot_present=True, cc_default_version='1.32.0',
         )
         out = hook.testrun(main, [ctx])
         error_msg = (
@@ -534,9 +534,9 @@ class TestK8sVersionFeatureGatesModuleConfigTrigger(unittest.TestCase):
         tests.assert_validation_deny(self, out, error_msg)
 
     # A managed-style cluster with no ClusterConfiguration Secret at all still resolves Default.
-    def test_mc_automatic_uses_the_configmap_default_without_any_secret(self):
+    def test_mc_default_uses_the_configmap_default_without_any_secret(self):
         ctx = _prepare_mc_validation_binding_context(
-            'Automatic', ['New123'], cm_automatic_version='1.32.0',
+            'Default', ['New123'], cm_automatic_version='1.32.0',
         )
         out = hook.testrun(main, [ctx])
         error_msg = (

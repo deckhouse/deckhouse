@@ -217,15 +217,17 @@ func readYAML(t *testing.T, relPath string, out interface{}) bool {
 
 // TestKubernetesVersionEnumValidation keeps the kubernetesVersion pin lists in sync.
 //
-// ModuleConfig adds the Default sentinel (Automatic remains a deprecated alias). ClusterConfiguration
+// The two documents carry different sentinels: ModuleConfig takes Default, ClusterConfiguration
 // still only offers Automatic. Pin versions (numeric) must match across CC and MC for each edition,
 // and every pin must exist in that edition's version_map.
 //
 // TODO(kubernetesVersion-deprecation): T+1 rewrite — after CC field removal use ModuleConfig
-// enum as reference vs edition version_map; drop Automatic alias checks; do not delete this test.
+// enum as reference vs edition version_map; do not delete this test.
 func TestKubernetesVersionEnumValidation(t *testing.T) {
+	// The two documents accept different sentinels: ClusterConfiguration keeps Automatic, which
+	// predates Default there; ModuleConfig takes Default only.
 	sentinelsCC := map[string]struct{}{"Automatic": {}}
-	sentinelsMC := map[string]struct{}{"Automatic": {}, "Default": {}}
+	sentinelsMC := map[string]struct{}{"Default": {}}
 
 	// Guards against the test quietly becoming a no-op: it was inert for a while because its name
 	// did not match the CI -run filter, and skipping absent editions must not recreate that.
@@ -253,7 +255,10 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 
 				mcEnum := mc.Properties.KubernetesVersion.Enum
 				require.Contains(t, mcEnum, "Default", "%s must offer Default", mcPath)
-				require.Contains(t, mcEnum, "Automatic", "%s must keep Automatic alias", mcPath)
+				// Automatic stays legal in ClusterConfiguration (asserted above) but never reaches
+				// ModuleConfig: the setting is new in this release, so the alias was dropped before
+				// anyone could depend on it. Adding it back later would be the breaking change.
+				require.NotContains(t, mcEnum, "Automatic", "%s must not accept the Automatic alias", mcPath)
 				assert.Equal(t, ccPins, pinVersions(mcEnum, sentinelsMC),
 					"pinned kubernetesVersion values in %s differ from %s", mcPath, edition.clusterConfiguration)
 				checkedSchemas++

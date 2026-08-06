@@ -18,10 +18,8 @@ positive:
         memory: "500Mi"
     - kubernetesVersion: "1.32"
     - kubernetesVersion: "1.36"
-    # Default is the recommended way to track the Deckhouse default; Automatic is the deprecated
-    # alias kept for the ClusterConfiguration migration window.
+    # Default is the only sentinel this setting accepts.
     - kubernetesVersion: "Default"
-    - kubernetesVersion: "Automatic"
   values:
     - internal:
         effectiveKubernetesVersion: "1.32"
@@ -34,7 +32,9 @@ negative:
     # Outside the supported window for this edition.
     - kubernetesVersion: "1.31"
     - kubernetesVersion: "1.37"
-    # The sentinels are case-sensitive and must not accept free-form text.
+    # Automatic stays legal in ClusterConfiguration but never in ModuleConfig.
+    - kubernetesVersion: "Automatic"
+    # The sentinel is case-sensitive and must not accept free-form text.
     - kubernetesVersion: "automatic"
     - kubernetesVersion: "default"
     - kubernetesVersion: "latest"

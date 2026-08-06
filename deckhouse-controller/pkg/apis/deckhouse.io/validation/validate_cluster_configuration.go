@@ -565,7 +565,7 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 
 		k8sVersionValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 			// Not a pin: "Automatic" and an absent field both mean Deckhouse picks the version.
-			if !isPinnedKubernetesVersion(clusterConf.KubernetesVersion) {
+			if !isClusterConfigurationPinned(clusterConf.KubernetesVersion) {
 				return allowResult(nil)
 			}
 			// ModuleConfig supersedes this field; a leftover pin must not gate the write.

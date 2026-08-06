@@ -218,7 +218,7 @@
              d8 s module enable control-plane-manager
              ```
 
-          2. Set `kubernetesVersion` (pin a concrete version, or `Default` to track the Deckhouse default; `Automatic` is a deprecated alias). If ClusterConfiguration still pins a version, copy that value:
+          2. Set `kubernetesVersion` (pin a concrete version, or `Default` to track the Deckhouse default). If ClusterConfiguration still pins a version, copy that value:
 
              ```bash
              d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF

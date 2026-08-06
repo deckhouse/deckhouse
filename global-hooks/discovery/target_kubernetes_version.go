@@ -106,15 +106,12 @@ const (
 	defaultVersionDriftMetricGroup = "D8ControlPlaneDefaultVersionDrift"
 	defaultVersionDriftMetricName  = "d8_control_plane_default_version_drift"
 
-	// automaticKubernetesVersion is the ClusterConfiguration sentinel and a deprecated
-	// ModuleConfig alias of Default ("track Deckhouse default").
+	// automaticKubernetesVersion is the ClusterConfiguration sentinel for "track Deckhouse
+	// default". It is not accepted in ModuleConfig, where Default is the only sentinel.
 	//
-	// TODO(kubernetesVersion-deprecation): T+1 remove — drop the Automatic alias everywhere
-	// (MC enum, this constant, isTrackDefaultKubernetesVersion). After that only Default
-	// remains as the ModuleConfig track-default sentinel; CC field itself is also gone.
+	// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the ClusterConfiguration field.
 	automaticKubernetesVersion = "Automatic"
-	// defaultKubernetesVersionSentinel is the ModuleConfig-recommended name for "track Deckhouse default".
-	// Prefer this over Automatic in new configs and docs.
+	// defaultKubernetesVersionSentinel is the ModuleConfig sentinel for "track Deckhouse default".
 	defaultKubernetesVersionSentinel = "Default"
 )
 
@@ -311,43 +308,50 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 }
 
 // resolveTargetKubernetesVersion returns the operator-declared Kubernetes version and whether the
-// cluster is tracking the Deckhouse default (MC Default, or deprecated Automatic alias).
+// cluster is tracking the Deckhouse default.
 //
-// The ModuleConfig setting wins whenever it is present, including when it holds Default or
-// Automatic — presence of the field, not its value, decides which document owns the version.
-// Prefer Default in new ModuleConfigs; Automatic is accepted only as a deprecated alias.
+// The ModuleConfig setting wins whenever it is present, Default included — presence of the field,
+// not its value, decides which document owns the version. Its enum accepts Default or an explicit
+// version, never Automatic.
 //
 // Only when ModuleConfig says nothing at all does the deprecated ClusterConfiguration field apply;
 // "Automatic" / empty there is not a pin either and falls through to the Deckhouse default.
 //
 // TODO(kubernetesVersion-deprecation): T+1 remove — drop CC fallback branch
-// (isPinnedKubernetesVersion / ccVersion). After T+1 only MC → Default (no Automatic alias).
+// (isClusterConfigurationPinned / ccVersion). After T+1 only MC → Default.
 func resolveTargetKubernetesVersion(mcVersion, ccVersion, defaultVersion string) (string, bool) {
 	switch {
-	case isTrackDefaultKubernetesVersion(mcVersion):
+	case isModuleConfigTrackDefault(mcVersion):
 		return defaultVersion, true
 	case mcVersion != "":
 		return mcVersion, false
-	case isPinnedKubernetesVersion(ccVersion):
+	case isClusterConfigurationPinned(ccVersion):
 		return ccVersion, false
 	default:
 		return defaultVersion, true
 	}
 }
 
-// isTrackDefaultKubernetesVersion reports Default or its deprecated Automatic alias.
-//
-// TODO(kubernetesVersion-deprecation): T+1 remove — drop Automatic from this helper once the
-// MC enum alias and CC field are gone; keep only Default.
-func isTrackDefaultKubernetesVersion(version string) bool {
-	return version == defaultKubernetesVersionSentinel || version == automaticKubernetesVersion
+// The two documents no longer share one predicate, because they no longer accept the same words.
+// ModuleConfig takes Default only; ClusterConfiguration keeps Automatic, which predates Default
+// there and cannot be removed without breaking existing documents.
+
+// isModuleConfigTrackDefault reports the ModuleConfig sentinel for "track the Deckhouse default".
+func isModuleConfigTrackDefault(version string) bool {
+	return version == defaultKubernetesVersionSentinel
 }
 
-// isPinnedKubernetesVersion reports a concrete minor pin (not empty, not track-default).
+// isClusterConfigurationPinned reports a concrete minor pin in ClusterConfiguration.
+//
+// Default is treated as a sentinel here too even though the schema does not accept it: this
+// predicate decides whether to hand the value onward as a version, and a value that is obviously
+// not one must never get through, schema or no schema.
 //
 // TODO(kubernetesVersion-deprecation): T+1 remove — dies together with the ClusterConfiguration field.
-func isPinnedKubernetesVersion(version string) bool {
-	return version != "" && !isTrackDefaultKubernetesVersion(version)
+func isClusterConfigurationPinned(version string) bool {
+	return version != "" &&
+		version != automaticKubernetesVersion &&
+		version != defaultKubernetesVersionSentinel
 }
 
 // kubernetesVersionInMaxUsedWindow reports whether target is within the maxUsed−1 floor window

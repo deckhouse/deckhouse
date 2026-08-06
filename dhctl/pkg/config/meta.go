@@ -102,9 +102,10 @@ const (
 	defaultClusterMasterRPPServerPort          = 5444
 	defaultClusterMasterRPPBootstrapServerPort = 4282
 
-	// automaticKubernetesVersion is the ClusterConfiguration sentinel and a deprecated MC alias.
+	// automaticKubernetesVersion is the ClusterConfiguration sentinel for "track Deckhouse
+	// default". Not accepted in ModuleConfig, where Default is the only sentinel.
 	automaticKubernetesVersion = "Automatic"
-	// defaultKubernetesVersionSentinel is the ModuleConfig-recommended name for "track Deckhouse default".
+	// defaultKubernetesVersionSentinel is the ModuleConfig sentinel for "track Deckhouse default".
 	defaultKubernetesVersionSentinel = "Default"
 )
 
@@ -646,19 +647,34 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.StaticClusterConfig)
 }
 
+// resolveKubernetesVersion turns a raw kubernetesVersion into the concrete version to install.
+// Both sentinels are handled: kubernetesVersionRaw already collapses them to "", but this function
+// is also called on values that never went through it.
 func resolveKubernetesVersion(v string) string {
-	if v == "" || isTrackDefaultKubernetesVersion(v) {
+	if v == "" || isModuleConfigTrackDefault(v) || v == automaticKubernetesVersion {
 		return DefaultKubernetesVersion
 	}
 	return v
 }
 
-func isTrackDefaultKubernetesVersion(version string) bool {
-	return version == defaultKubernetesVersionSentinel || version == automaticKubernetesVersion
+// The two documents no longer share one predicate, because they no longer accept the same words.
+// ModuleConfig takes Default only; ClusterConfiguration keeps Automatic, which predates Default
+// there and cannot be removed without breaking existing documents.
+
+// isModuleConfigTrackDefault reports the ModuleConfig sentinel for "track the Deckhouse default".
+func isModuleConfigTrackDefault(version string) bool {
+	return version == defaultKubernetesVersionSentinel
 }
 
-func isPinnedKubernetesVersion(version string) bool {
-	return version != "" && !isTrackDefaultKubernetesVersion(version)
+// isClusterConfigurationPinned reports a concrete minor pin in ClusterConfiguration. Default is
+// rejected here too: the schema does not accept it there, and a value that is obviously not a
+// version must never be handed onward as one.
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — dies together with the ClusterConfiguration field.
+func isClusterConfigurationPinned(version string) bool {
+	return version != "" &&
+		version != automaticKubernetesVersion &&
+		version != defaultKubernetesVersionSentinel
 }
 
 // kubernetesVersionRaw returns the unresolved kubernetesVersion with the same preference as
@@ -678,7 +694,7 @@ func isPinnedKubernetesVersion(version string) bool {
 // deprecation.go, which reads "x-doc-deprecated" from the schema. Do not add a second warning here.
 //
 // TODO(kubernetesVersion-deprecation): T+1 remove — drop CC fallback branch
-// (isPinnedKubernetesVersion / ccVersion). After T+1 only MC → Default.
+// (isClusterConfigurationPinned / ccVersion). After T+1 only MC → Default.
 func (m *MetaConfig) kubernetesVersionRaw() string {
 	mcVersion := ""
 	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {
@@ -696,11 +712,11 @@ func (m *MetaConfig) kubernetesVersionRaw() string {
 	}
 
 	switch {
-	case isTrackDefaultKubernetesVersion(mcVersion):
+	case isModuleConfigTrackDefault(mcVersion):
 		return ""
 	case mcVersion != "":
 		return mcVersion
-	case isPinnedKubernetesVersion(ccVersion):
+	case isClusterConfigurationPinned(ccVersion):
 		return ccVersion
 	default:
 		return ""

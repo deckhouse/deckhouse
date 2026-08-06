@@ -261,14 +261,14 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
             "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied",
         )
 
-    def test_validate_automatic_module_config_ignores_pinned_cc_version(self):
-        # Presence of the ModuleConfig setting decides: an explicit Automatic resolves to the
+    def test_validate_default_module_config_ignores_pinned_cc_version(self):
+        # Presence of the ModuleConfig setting decides: an explicit Default resolves to the
         # Deckhouse default (1.33 here, where SomeProblematicFeature is forbidden), not to the
         # ClusterConfiguration pin (1.31, where it is merely unknown).
         ctx = _prepare_validation_binding_context(
             '1.31.0',
             ['SomeProblematicFeature'],
-            mc_k8s_version='Automatic',
+            mc_k8s_version='Default',
             default_version='1.33.0',
         )
         out = hook.testrun(main, [ctx])

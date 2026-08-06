@@ -566,12 +566,23 @@ func TestKubernetesVersionResolution(t *testing.T) {
 		require.Equal(t, "1.34", ccm["kubernetesVersion"])
 	})
 
-	t.Run("ModuleConfig Automatic overrides a pinned ClusterConfiguration", func(t *testing.T) {
-		// Presence of the setting decides which document owns the version: an explicit Automatic
-		// means Default, so bootstrap starts on the same version Deckhouse will target afterwards.
+	t.Run("ModuleConfig Automatic is not a sentinel and does not override ClusterConfiguration", func(t *testing.T) {
+		// Automatic is legal only in ClusterConfiguration. In ModuleConfig the enum rejects it, so
+		// this predicate must not quietly accept it either — a value the schema refuses must never
+		// take on meaning here.
 		m := &MetaConfig{
 			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
 			ModuleConfigs: []*ModuleConfig{cpm("Automatic")},
+		}
+		require.Equal(t, "Automatic", m.kubernetesVersionRaw())
+	})
+
+	t.Run("ModuleConfig Default overrides a pinned ClusterConfiguration and starts on the default", func(t *testing.T) {
+		// Presence of the setting decides which document owns the version: an explicit Default
+		// means bootstrap starts on the same version Deckhouse will target afterwards.
+		m := &MetaConfig{
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ModuleConfigs: []*ModuleConfig{cpm("Default")},
 		}
 		require.Equal(t, "", m.kubernetesVersionRaw())
 
@@ -611,10 +622,10 @@ func TestKubernetesVersionResolution(t *testing.T) {
 		require.Equal(t, DefaultKubernetesVersion, ccm["kubernetesVersion"])
 	})
 
-	t.Run("both Automatic falls back to DefaultKubernetesVersion", func(t *testing.T) {
+	t.Run("Automatic in ClusterConfiguration with Default in ModuleConfig falls back to DefaultKubernetesVersion", func(t *testing.T) {
 		m := &MetaConfig{
 			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("Automatic")},
-			ModuleConfigs: []*ModuleConfig{cpm("Automatic")},
+			ModuleConfigs: []*ModuleConfig{cpm("Default")},
 		}
 		require.Equal(t, "", m.kubernetesVersionRaw())
 

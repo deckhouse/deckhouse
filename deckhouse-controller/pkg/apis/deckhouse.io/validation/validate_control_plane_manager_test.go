@@ -134,18 +134,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	t.Run("HV-06: Automatic is allowed without membership check", func(t *testing.T) {
-		handler := withObjs(t, newClusterKubernetesConfigMap([]string{"1.34", "1.35"}))
-
-		newCfg := newControlPlaneManagerConfig("Automatic")
-		oldCfg := newControlPlaneManagerConfig("")
-		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
-
-		resp := callHandler(t, handler, review)
-		assert.True(t, resp.Allowed)
-	})
-
-	t.Run("HV-06b: Default is allowed without membership check", func(t *testing.T) {
+	t.Run("HV-06: Default is allowed without membership check", func(t *testing.T) {
 		handler := withObjs(t, newClusterKubernetesConfigMap([]string{"1.34", "1.35"}))
 
 		newCfg := newControlPlaneManagerConfig("Default")
@@ -250,15 +239,15 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	t.Run("switching a pin to Automatic is allowed and ignores a stale CC pin", func(t *testing.T) {
-		// Automatic hands the choice back to Deckhouse; the resolver no longer consults CC when
-		// the setting is present, and the Automatic path cannot drop below maxUsed-1 anyway.
+	t.Run("switching a pin to Default is allowed and ignores a stale CC pin", func(t *testing.T) {
+		// Default hands the choice back to Deckhouse; the resolver no longer consults CC when
+		// the setting is present, and the track-default path cannot drop below maxUsed-1 anyway.
 		handler := withObjs(t,
 			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
 			newClusterConfigurationSecret("1.32"),
 		)
 
-		newCfg := newControlPlaneManagerConfig("Automatic")
+		newCfg := newControlPlaneManagerConfig("Default")
 		oldCfg := newControlPlaneManagerConfig("1.35")
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
@@ -275,7 +264,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		)
 
 		newCfg := newControlPlaneManagerConfig("")
-		oldCfg := newControlPlaneManagerConfig("Automatic")
+		oldCfg := newControlPlaneManagerConfig("Default")
 		review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
 
 		resp := callHandler(t, handler, review)
@@ -706,7 +695,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 
 // TestModuleConfigOwnsKubernetesVersion covers the predicate that lets the ClusterConfiguration
 // webhook stand down. Presence of the setting — not its value — decides which document owns the
-// version, so an explicit "Automatic" counts as ownership just like a pin does.
+// version, so an explicit "Default" counts as ownership just like a pin does.
 //
 // Getting this wrong is not cosmetic: while the ModuleConfig owns the version, the leftover
 // ClusterConfiguration field describes nothing the cluster will actually run, and validating it
@@ -733,8 +722,8 @@ func TestModuleConfigOwnsKubernetesVersion(t *testing.T) {
 		assert.True(t, moduleConfigOwnsKubernetesVersion(context.Background(), newClient(cfg)))
 	})
 
-	t.Run("explicit Automatic owns the version too", func(t *testing.T) {
-		cfg := newControlPlaneManagerConfig("Automatic")
+	t.Run("explicit Default owns the version too", func(t *testing.T) {
+		cfg := newControlPlaneManagerConfig("Default")
 		assert.True(t, moduleConfigOwnsKubernetesVersion(context.Background(), newClient(cfg)))
 	})
 

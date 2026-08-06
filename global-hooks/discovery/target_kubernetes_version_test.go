@@ -57,17 +57,6 @@ var _ = Describe("Global hooks :: discovery/targetKubernetesVersion ::", func() 
 			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
 		})
 
-		It("ModuleConfig Automatic overrides a pinned ClusterConfiguration", func() {
-			// Presence of the ModuleConfig setting decides which document owns the version, so an
-			// explicit Automatic means "track the Deckhouse default" and the CC pin is ignored.
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("Automatic"), 1))
-			f.RunHook()
-
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
-			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
-		})
-
 		It("ModuleConfig Default overrides a pinned ClusterConfiguration", func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("Default"), 1))
 			f.RunHook()
@@ -174,7 +163,7 @@ data:
 		})
 	})
 
-	Context("Automatic soft-guard freeze", func() {
+	Context("Default soft-guard freeze", func() {
 		findDriftMetric := func() (float64, bool) {
 			for _, m := range f.MetricsCollector.CollectedMetrics() {
 				if m.Name == "d8_control_plane_default_version_drift" {
@@ -216,7 +205,7 @@ data:
     currentVersion: "1.38"
     phase: UpToDate
 `
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Automatic")+existing, 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Default")+existing, 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
@@ -260,7 +249,7 @@ data:
     updateMode: Automatic
     maxUsedKubernetesVersion: "1.36"
 `
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithStaleMaxUsed+moduleConfigYAML("Automatic")+existing, 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithStaleMaxUsed+moduleConfigYAML("Default")+existing, 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
@@ -288,7 +277,7 @@ data:
 			// Previous run published 1.38 and left it in Values; the ConfigMap is now gone.
 			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.38")
 
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Automatic"), 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Default"), 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
@@ -312,7 +301,7 @@ data:
 `
 			f.ValuesSet("global.discovery.targetKubernetesVersion", "")
 
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Automatic"), 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Default"), 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
@@ -339,7 +328,7 @@ data:
   status: |
     currentVersion: "1.36"
 `
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Automatic")+existing, 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Default")+existing, 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
@@ -350,7 +339,7 @@ data:
 		})
 
 		It("fail-opens when Automatic has no maxUsed baseline", func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Automatic"), 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Default"), 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
@@ -390,7 +379,7 @@ data:
     currentVersion: "1.38"
     phase: UpToDate
 `
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Automatic")+existing, 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Default")+existing, 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
@@ -432,7 +421,7 @@ data:
     currentVersion: "1.38"
     phase: UpToDate
 `
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Automatic")+existing, 1))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Default")+existing, 1))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())

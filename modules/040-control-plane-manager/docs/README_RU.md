@@ -108,7 +108,7 @@ spec:
 
 Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии DKP. Управлять обновлением patch-версий нельзя.
 
-Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`, в котором можно выбрать режим следования за версией по умолчанию Deckhouse (значение `Default`; `Automatic` — устаревший синоним) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Default`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`, в котором можно выбрать режим следования за версией по умолчанию Deckhouse (значение `Default`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Default`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 Пример закрепления версии Kubernetes:
 

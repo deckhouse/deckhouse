@@ -362,8 +362,10 @@ properties:
       - "ECDSA-P256"
     x-examples:
       - "ECDSA-P256"
-  # TODO(kubernetesVersion-deprecation): T+1 remove — drop Automatic alias from this enum after
-  # ClusterConfiguration.kubernetesVersion is gone and the fleet has moved to Default.
+  # NOTE(kubernetesVersion-deprecation): keep — Automatic is deliberately absent from this enum.
+  # It stays legal in ClusterConfiguration, where it predates this field, but this setting is new
+  # in this release: dropping the alias before anyone can depend on it costs nothing, while
+  # removing it later would be a breaking change.
   kubernetesVersion:
     type: string
     description: |
@@ -377,7 +379,7 @@ properties:
 
       If `Default` is specified, Deckhouse selects the version considered stable for the current release, and the deprecated `ClusterConfiguration.kubernetesVersion` is ignored. If the stable version is more than 1 minor version below the maximum version that has ever been used in the cluster, the version is not changed automatically.
 
-      `Automatic` is accepted as a deprecated alias of `Default` (same behaviour). Prefer `Default` in new configs.
+      Only `Default` or an explicit version is accepted here. The `Automatic` spelling remains valid in the deprecated `ClusterConfiguration.kubernetesVersion`, but not in this parameter.
 
       If the parameter is not set at all, the value from `ClusterConfiguration.kubernetesVersion` is used (deprecated); if that is not set either, the current Deckhouse release's default version is used.
 
@@ -389,7 +391,6 @@ properties:
       - "1.35"
       - "1.36"
       - "Default"
-      - "Automatic"
     x-examples:
       - "1.35"
       - "Default"

@@ -26,13 +26,24 @@ from feature_gates_generated import is_deprecated, is_feature_gate_deprecated_up
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
 MODULE_CONFIG_SNAPSHOT_NAME = "module-config-control-plane-manager"
 CLUSTER_KUBERNETES_SNAPSHOT_NAME = "d8-cluster-kubernetes"
-# Sentinel meaning "let Deckhouse pick the version".
+# Sentinels meaning "let Deckhouse pick the version". The two documents do not accept the same
+# word: ModuleConfig takes Default only, while ClusterConfiguration keeps Automatic, which predates
+# Default there and cannot be removed without breaking existing documents.
 AUTOMATIC_VERSION = "Automatic"
 DEFAULT_VERSION = "Default"
 
 
-def is_track_default_version(version) -> bool:
-    return version in (AUTOMATIC_VERSION, DEFAULT_VERSION)
+def is_module_config_track_default(version) -> bool:
+    return version == DEFAULT_VERSION
+
+
+def is_cluster_configuration_pinned(version) -> bool:
+    """A concrete minor pin in ClusterConfiguration.
+
+    Default is excluded here too: the schema does not accept it there, and a value that is
+    obviously not a version must never be handed onward as one.
+    """
+    return bool(version) and version not in (AUTOMATIC_VERSION, DEFAULT_VERSION)
 
 config = f"""
 configVersion: v1
@@ -264,7 +275,7 @@ def resolve_effective_version(
     # a present ModuleConfig setting decides on its own, Default/Automatic included (it then means the
     # Deckhouse default, and ClusterConfiguration is not consulted at all). Only an absent setting
     # falls back to ClusterConfiguration, where "Automatic" is not a pin either.
-    if mc_kubernetes_version and not is_track_default_version(mc_kubernetes_version):
+    if mc_kubernetes_version and not is_module_config_track_default(mc_kubernetes_version):
         # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-k8s-fg source=mc-pin version=%s", mc_kubernetes_version)
         return mc_kubernetes_version
@@ -283,7 +294,7 @@ def resolve_effective_version(
             return get_deckhouse_default_version_from_secret(secret_data)
         return None
 
-    if is_track_default_version(mc_kubernetes_version):
+    if is_module_config_track_default(mc_kubernetes_version):
         version = deckhouse_default()
         # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-k8s-fg source=mc-track-default version=%s mc=%s", version, mc_kubernetes_version)
@@ -291,7 +302,7 @@ def resolve_effective_version(
 
     if secret_data:
         cc_version = get_k8s_version_from_cluster_config(secret_data)
-        if cc_version and not is_track_default_version(cc_version):
+        if is_cluster_configuration_pinned(cc_version):
             # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
             logging.info("E2E-KV python-k8s-fg source=cc-pin version=%s", cc_version)
             return cc_version
