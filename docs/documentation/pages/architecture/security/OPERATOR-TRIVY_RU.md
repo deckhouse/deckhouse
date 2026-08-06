@@ -29,7 +29,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Kub
 - [RbacAssessmentReport](/modules/operator-trivy/cr.html#rbacassessmentreport) — хранит результаты проверки RBAC-настроек на предмет избыточных привилегий и других рисков;
 - [RegistryImageVulnerabilityReport](/modules/operator-trivy/cr.html#registryimagevulnerabilityreport) — хранит результаты CVE-сканирования конкретного тега образа из реестра;
 - [RegistryScanTarget](/modules/operator-trivy/cr.html#registryscantarget) — задаёт целевой реестр, репозитории и параметры периодического сканирования;
-- [SbomReport](/modules/operator-trivy/cr.html#sbomreport) — хранит SBOM, то есть состав ПО и зависимостей в образе контейнера;
+- [SbomReport](/modules/operator-trivy/cr.html#sbomreport) — хранит SBOM (Software Bill of Materials), то есть состав ПО и зависимостей в образе контейнера;
 - [VulnerabilityReport](/modules/operator-trivy/cr.html#vulnerabilityreport) — хранит результаты сканирования уязвимостей в образе контейнера.
 
 В API-группу `spdx.softwarecomposition.kubescape.io` входят следующие ресурсы:
