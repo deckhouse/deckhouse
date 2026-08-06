@@ -138,7 +138,7 @@ properties:
         default: {}
         x-examples:
         - certManager:
-            clusterIssuerName: letsencrypt
+            clusterIssuerName: selfsigned
           mode: CertManager
         - mode: Disabled
         - mode: OnlyInURI
@@ -168,8 +168,8 @@ properties:
             properties:
               clusterIssuerName:
                 type: string
-                default: 'letsencrypt'
-                x-doc-default: 'letsencrypt'
+                default: 'selfsigned'
+                x-doc-default: 'selfsigned'
                 description: |
                   ClusterIssuer name used by modules to obtain TLS certificates.
 
