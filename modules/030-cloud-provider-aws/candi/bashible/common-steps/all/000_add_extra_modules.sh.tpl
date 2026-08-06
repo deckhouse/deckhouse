@@ -24,4 +24,10 @@ if ! bb-is-distro-like? "ubuntu"; then
   exit 0
 fi
 
-bb-apt-install "linux-modules-extra-$(uname -r)"
+package="linux-modules-extra-$(uname -r)"
+
+# linux-modules-extra is not published for every kernel build for aws images
+# D8NodeContainerdV2NotSupported alert explains how to fix it.
+if ! (bb-apt-install "$package"); then
+  bb-log-warning "Failed to install '${package}': the erofs kernel module stays unavailable and containerd v2 cannot be used on this node. Switch the node group to an AMI whose kernel has a matching linux-modules-extra package."
+fi
