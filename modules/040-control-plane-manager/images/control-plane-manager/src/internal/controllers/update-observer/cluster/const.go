@@ -22,4 +22,12 @@ const (
 	ControlPlaneComponentsCount    = 3
 	automaticKubernetesVersionEnv  = "AUTOMATIC_KUBERNETES_VERSION"
 	supportedKubernetesVersionsEnv = "ALLOWED_KUBERNETES_VERSIONS"
+
+	// The declared configuration this controller writes into data.spec of the cluster ConfigMap.
+	// It arrives as environment rather than being read back from the API so that the resolution
+	// happens once, in the hooks, and every observer Pod sees the same answer.
+	// Rendered in modules/040-control-plane-manager/templates/daemonset.yaml.
+	desiredKubernetesVersionEnv = "DESIRED_KUBERNETES_VERSION"
+	kubernetesUpdateModeEnv     = "KUBERNETES_UPDATE_MODE"
+	maxUsedKubernetesVersionEnv = "MAX_USED_KUBERNETES_VERSION"
 )
