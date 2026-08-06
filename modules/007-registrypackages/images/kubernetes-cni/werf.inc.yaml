@@ -151,6 +151,7 @@ import:
   - install
   - uninstall
   before: install
+{{- include "olcedar sysext sign imports" $ }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/sysext
   to: /scripts
@@ -161,6 +162,7 @@ git:
     install:
     - extension-release.kubernetes-cni
     - sysext-kubernetes-cni.service
+{{- include "olcedar sysext sign secrets" . }}
 shell:
   beforeInstall:
   - pm install erofs-utils coreutils cryptsetup
@@ -169,8 +171,9 @@ shell:
   - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
   - cp -f /scripts/sysext-kubernetes-cni.service /sysext/usr/lib/systemd/system/kubernetes-cni.service
   - cp -f /scripts/extension-release.kubernetes-cni /sysext/usr/lib/extension-release.d/
-  - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 kubernetes-cni.erofs sysext/
-  - veritysetup format kubernetes-cni.erofs kubernetes-cni.verity > verity.txt
-  - export ROOTHASH=$(awk '/^Root hash:/ {print $3}' verity.txt)
-  - cat kubernetes-cni.erofs kubernetes-cni.verity > /out/kubernetes-cni.raw
-  - printf '%s\n' "$ROOTHASH" > /out/kubernetes-cni.raw.roothash
+  - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 /out/kubernetes-cni.raw sysext/
+  # Sidecar files, named the way systemd derives them — see olcedar-sysext.tmpl.
+  - veritysetup format /out/kubernetes-cni.raw /out/kubernetes-cni.verity --root-hash-file=roothash.txt
+  - tr -d ' \n' < roothash.txt > /out/kubernetes-cni.roothash
+  - veritysetup verify /out/kubernetes-cni.raw /out/kubernetes-cni.verity "$(cat /out/kubernetes-cni.roothash)"
+{{- include "olcedar sysext sign" "kubernetes-cni" }}
