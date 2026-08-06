@@ -33,6 +33,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 )
 
 const (
@@ -67,34 +69,26 @@ func replica(ordinal int, node, revision string, ready bool) *corev1.Pod {
 	}
 }
 
-// holder is the image-holder pod on a node: ready means kubelet pulled every image it names,
-// which is the only fact the replacement needs from it.
-func holder(node string, generation string, ready bool) *corev1.Pod {
-	condition := corev1.ConditionFalse
-	if ready {
-		condition = corev1.ConditionTrue
-	}
-	labels := map[string]string{"app": ImageHolderName}
-	if generation != "" {
-		labels["pod-template-generation"] = generation
-	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: Namespace,
-			Name:      ImageHolderName + "-" + node,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{NodeName: node},
-		Status: corev1.PodStatus{
-			Phase:      corev1.PodRunning,
-			Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: condition}},
+// storageWithUpstream is the cache as it looks when the cluster still has a registry outside it:
+// every node keeps that upstream as a fallback, which is what can serve a replica's new image
+// while the replica is away.
+func storageWithUpstream(host string) *registryv1alpha1.RegistryStorage {
+	return &registryv1alpha1.RegistryStorage{
+		ObjectMeta: metav1.ObjectMeta{Name: registryv1alpha1.SingletonName},
+		Spec: registryv1alpha1.RegistryStorageSpec{
+			Upstream: &registryv1alpha1.Upstream{
+				Endpoint: registryv1alpha1.Endpoint{
+					Scheme: registryv1alpha1.SchemeHTTPS, Host: host, Path: "/deckhouse/ee",
+				},
+			},
 		},
 	}
 }
 
-func holderSet(generation int64) *appsv1.DaemonSet {
-	return &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Namespace: Namespace, Name: ImageHolderName, Generation: generation},
+// airGappedStorage is the case with nothing to fall back to.
+func airGappedStorage() *registryv1alpha1.RegistryStorage {
+	return &registryv1alpha1.RegistryStorage{
+		ObjectMeta: metav1.ObjectMeta{Name: registryv1alpha1.SingletonName},
 	}
 }
 
@@ -110,6 +104,7 @@ func newReconciler(t *testing.T, objects ...client.Object) (*Reconciler, client.
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, clientgoscheme.AddToScheme(scheme))
+	require.NoError(t, registryv1alpha1.AddToScheme(scheme))
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
@@ -155,10 +150,7 @@ func TestFollowersGoBeforeTheLeader(t *testing.T) {
 		replica(1, "master-1", oldRevision, true),
 		replica(2, "master-2", oldRevision, true),
 		lease("master-0"),
-		holderSet(1),
-		holder("master-0", "1", true),
-		holder("master-1", "1", true),
-		holder("master-2", "1", true),
+		storageWithUpstream("registry.deckhouse.io"),
 	)
 
 	reconcile(t, r)
@@ -176,8 +168,7 @@ func TestTheLeaderGoesLast(t *testing.T) {
 		replica(1, "master-1", newRevision, true),
 		replica(2, "master-2", newRevision, true),
 		lease("master-0"),
-		holderSet(1),
-		holder("master-0", "1", true),
+		storageWithUpstream("registry.deckhouse.io"),
 	)
 
 	reconcile(t, r)
@@ -197,9 +188,7 @@ func TestOneAtATime(t *testing.T) {
 			replica(0, "master-0", oldRevision, true),
 			replica(1, "master-1", oldRevision, true),
 			lease("master-2"),
-			holderSet(1),
-			holder("master-0", "1", true),
-			holder("master-1", "1", true),
+			storageWithUpstream("registry.deckhouse.io"),
 		)
 
 		reconcile(t, r)
@@ -214,9 +203,7 @@ func TestOneAtATime(t *testing.T) {
 			replica(0, "master-0", oldRevision, true),
 			replica(1, "master-1", newRevision, false),
 			lease("master-0"),
-			holderSet(1),
-			holder("master-0", "1", true),
-			holder("master-1", "1", true),
+			storageWithUpstream("registry.deckhouse.io"),
 		)
 
 		reconcile(t, r)
@@ -226,69 +213,70 @@ func TestOneAtATime(t *testing.T) {
 	})
 }
 
-// TestTheImagesHaveToBeOnTheNodeFirst is the other half of the mechanism, and the half that only
-// matters when nothing else can help.
+// TestSomethingHasToBeAbleToServeMeanwhile is the half that only matters when nothing else helps.
 //
-// A replaced pod pulls after it is deleted, from a registry it is itself part of. With several
-// replicas the others cover it; with one replica and no upstream the pull has no source at all.
-func TestTheImagesHaveToBeOnTheNodeFirst(t *testing.T) {
-	t.Run("the holder is not ready", func(t *testing.T) {
+// A replaced pod pulls its new image AFTER it is deleted, from a registry that pod was part of.
+// Another replica covers that, and so does an upstream. With one replica and no upstream there is
+// nothing, and the only correct answer is to refuse: the way into such a cluster is `d8 mirror
+// pull` and `d8 mirror push`, and until the images are there the update has no business starting.
+func TestSomethingHasToBeAbleToServeMeanwhile(t *testing.T) {
+	t.Run("one replica, no upstream: refused", func(t *testing.T) {
 		r, c := newReconciler(t,
 			storageSet(1, newRevision),
 			replica(0, "master-0", oldRevision, true),
 			lease("master-0"),
-			holderSet(1),
-			holder("master-0", "1", false),
+			airGappedStorage(),
 		)
 
-		reconcile(t, r)
+		result := reconcile(t, r)
 
 		assert.False(t, deleted(t, c, StorageName+"-0"),
-			"the only replica must not be replaced before its node holds the new images")
+			"replacing the only replica of an air-gapped cache leaves nothing able to serve its new image")
+		assert.Equal(t, blockedInterval, result.RequeueAfter,
+			"a refusal that will not resolve itself should not be retried like a wait")
 	})
 
-	t.Run("the holder is still on the previous generation", func(t *testing.T) {
-		// Ready, but holding the images of the version being replaced — which is no help at
-		// all, and is indistinguishable from the right thing if only readiness is checked.
+	t.Run("one replica with an upstream: allowed", func(t *testing.T) {
+		// The node keeps the upstream as a fallback, which is exactly what it is for.
 		r, c := newReconciler(t,
 			storageSet(1, newRevision),
 			replica(0, "master-0", oldRevision, true),
 			lease("master-0"),
-			holderSet(2),
-			holder("master-0", "1", true),
-		)
-
-		reconcile(t, r)
-
-		assert.False(t, deleted(t, c, StorageName+"-0"))
-	})
-
-	t.Run("the holder has no pod on that node", func(t *testing.T) {
-		r, c := newReconciler(t,
-			storageSet(1, newRevision),
-			replica(0, "master-0", oldRevision, true),
-			lease("master-0"),
-			holderSet(1),
-			holder("master-1", "1", true),
-		)
-
-		reconcile(t, r)
-
-		assert.False(t, deleted(t, c, StorageName+"-0"))
-	})
-
-	t.Run("the holder is ready on the right generation", func(t *testing.T) {
-		r, c := newReconciler(t,
-			storageSet(1, newRevision),
-			replica(0, "master-0", oldRevision, true),
-			lease("master-0"),
-			holderSet(3),
-			holder("master-0", "3", true),
+			storageWithUpstream("registry.deckhouse.io"),
 		)
 
 		reconcile(t, r)
 
 		assert.True(t, deleted(t, c, StorageName+"-0"))
+	})
+
+	t.Run("air-gapped but with a sibling: allowed", func(t *testing.T) {
+		// Two replicas are mirrors of each other on every node, so one can go.
+		r, c := newReconciler(t,
+			storageSet(2, newRevision),
+			replica(0, "master-0", oldRevision, true),
+			replica(1, "master-1", oldRevision, true),
+			lease("master-0"),
+			airGappedStorage(),
+		)
+
+		reconcile(t, r)
+
+		assert.True(t, deleted(t, c, StorageName+"-1"), "a follower should have been replaced")
+		assert.False(t, deleted(t, c, StorageName+"-0"), "and not the leader")
+	})
+
+	t.Run("no RegistryStorage at all: refused", func(t *testing.T) {
+		r, c := newReconciler(t,
+			storageSet(1, newRevision),
+			replica(0, "master-0", oldRevision, true),
+			lease("master-0"),
+		)
+
+		reconcile(t, r)
+
+		assert.False(t, deleted(t, c, StorageName+"-0"),
+			"nothing is known about a fallback, so nothing may be taken down")
 	})
 }
 
@@ -300,9 +288,7 @@ func TestNothingToDo(t *testing.T) {
 			replica(0, "master-0", newRevision, true),
 			replica(1, "master-1", newRevision, true),
 			lease("master-0"),
-			holderSet(1),
-			holder("master-0", "1", true),
-			holder("master-1", "1", true),
+			storageWithUpstream("registry.deckhouse.io"),
 		)
 
 		result := reconcile(t, r)
@@ -317,8 +303,7 @@ func TestNothingToDo(t *testing.T) {
 			storageSet(1, ""),
 			replica(0, "master-0", oldRevision, true),
 			lease("master-0"),
-			holderSet(1),
-			holder("master-0", "1", true),
+			storageWithUpstream("registry.deckhouse.io"),
 		)
 
 		reconcile(t, r)
@@ -343,9 +328,7 @@ func TestNoKnownLeaderStillMakesProgress(t *testing.T) {
 		storageSet(2, newRevision),
 		replica(0, "master-0", oldRevision, true),
 		replica(1, "master-1", oldRevision, true),
-		holderSet(1),
-		holder("master-0", "1", true),
-		holder("master-1", "1", true),
+		storageWithUpstream("registry.deckhouse.io"),
 	)
 
 	reconcile(t, r)

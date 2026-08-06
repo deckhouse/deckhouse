@@ -25,11 +25,21 @@ limitations under the License.
 // Two conditions guard every replacement, and both exist because the cache serves the images it is
 // made of:
 //
-//   - the images of the new revision are already on the node, held there by the image-holder
-//     DaemonSet. A replaced pod pulls after it is deleted, from a registry it is itself part of;
-//     with one replica and no upstream, that pull has no source at all;
+//   - something else must be able to serve images while the replica is gone. A replaced pod pulls
+//     its new image AFTER it is deleted, from a registry that pod was part of. Another serving
+//     replica covers that — they are mirrors of each other in every node layout — and so does an
+//     upstream, which every node keeps as a fallback. With one replica and no upstream there is
+//     nothing, and the replacement is REFUSED rather than attempted: the way into such a cluster
+//     is `d8 mirror pull` and `d8 mirror push`, and until the images are there the update has no
+//     business starting;
 //   - every other replica is serving. Taking down two at once turns "a slower pull" into "no
 //     pull", and on a two-master cluster it would leave nothing behind at all.
+//
+// An earlier attempt held the new images on the masters with a DaemonSet of `/pause` containers,
+// the way the previous implementation did. It does not generalise: `/pause` exists in the images
+// Deckhouse packages around third-party binaries and not in the distroless ones its own Go
+// components are built on, so half the holder containers could not start at all — and the gate
+// that waited for them would have stopped the cache from ever being updated.
 //
 // The result is deliberately slow. An update of the thing that serves every image in the cluster
 // is the one place where being quick is worth nothing.
@@ -49,6 +59,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
+	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+
 	"github.com/deckhouse/registry-controller/internal/register"
 )
 
@@ -61,10 +73,6 @@ const (
 
 	// StorageName is the StatefulSet whose replicas this replaces.
 	StorageName = "registry-storage"
-
-	// ImageHolderName is the DaemonSet that brings the new images onto the masters before a
-	// replica is replaced.
-	ImageHolderName = "registry-storage-image-holder"
 
 	// StorageLeaseName is the election lease, and the only authority on which replica leads.
 	StorageLeaseName = "registry-storage"
@@ -81,6 +89,13 @@ const (
 	// A replaced pod has to be pulled, started and become ready, and none of that is worth
 	// polling tightly for: the next step cannot begin until it is done anyway.
 	settleInterval = 15 * time.Second
+
+	// blockedInterval is how often to look again at a cache that cannot be updated at all.
+	//
+	// Rare, because what would unblock it is an operator bringing images into the cluster, which
+	// happens on a human timescale — and because the refusal is already in an event and in the
+	// log, where it will be read.
+	blockedInterval = 5 * time.Minute
 )
 
 func init() {
@@ -104,7 +119,6 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 		}}
 	})
 	w.Watches(&corev1.Pod{}, toStorage)
-	w.Watches(&appsv1.DaemonSet{}, toStorage)
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -162,20 +176,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: settleInterval}, nil
 	}
 
-	// And the images have to be on that node already, because the replacement pulls them from a
-	// registry this pod is part of.
-	held, err := r.imagesHeldOn(ctx, next.Spec.NodeName)
+	// And something has to be able to serve images while this replica is away, because what it
+	// pulls when it comes back is its own new image.
+	source, err := r.imageSourceWhile(ctx, next, pods)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if !held {
-		log.Info("waiting for the new images to be held on the node before replacing its replica",
-			"pod", next.Name, "node", next.Spec.NodeName)
-		return ctrl.Result{RequeueAfter: settleInterval}, nil
+	if source == "" {
+		// Refused, not deferred: on a cluster with one replica and no upstream this will never
+		// become possible on its own, and saying so is the only useful thing to do. The way
+		// forward is `d8 mirror pull` then `d8 mirror push`, which puts the images in the
+		// cluster before anything is taken down.
+		log.Info("refusing to replace the only replica of an air-gapped cache: nothing else could serve its new image",
+			"pod", next.Name, "revision", target)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(storage, corev1.EventTypeWarning, "UpdateBlocked",
+				"Not replacing %s: with one replica and no upstream nothing can serve its new image. "+
+					"Bring the images into the cluster first (d8 mirror pull, then d8 mirror push).", next.Name)
+		}
+		return ctrl.Result{RequeueAfter: blockedInterval}, nil
 	}
 
 	log.Info("replacing a cache replica",
-		"pod", next.Name, "node", next.Spec.NodeName, "revision", target, "leader", leader)
+		"pod", next.Name, "node", next.Spec.NodeName, "revision", target, "leader", leader,
+		"servedMeanwhileBy", source)
 	if err := r.Client.Delete(ctx, next); err != nil && !apierrors.IsNotFound(err) {
 		return ctrl.Result{}, fmt.Errorf("deleting %s: %w", next.Name, err)
 	}
@@ -221,52 +245,33 @@ func (r *Reconciler) leaderNode(ctx context.Context) string {
 	return *lease.Spec.HolderIdentity
 }
 
-// imagesHeldOn reports whether the image holder is running the current revision on a node.
+// imageSourceWhile names what can serve images while a replica is away, or empty when nothing can.
 //
-// What is asked of the holder is only that its pod on that node is ready: its containers do
-// nothing but exist, so ready means kubelet pulled every image and started them. That is exactly
-// the fact the replacement needs.
-func (r *Reconciler) imagesHeldOn(ctx context.Context, node string) (bool, error) {
-	if node == "" {
-		return false, nil
+// Two things qualify, and they are the two the node layout actually contains: another replica of
+// the cache, which is a mirror of this one on every node, and the upstream, which every node keeps
+// as a fallback for exactly this reason. The name is returned rather than a bool so the decision
+// appears in the log next to the replacement it authorized.
+func (r *Reconciler) imageSourceWhile(
+	ctx context.Context, going *corev1.Pod, pods []*corev1.Pod,
+) (string, error) {
+	for _, pod := range pods {
+		if pod.Name != going.Name && podReady(pod) {
+			return "replica " + pod.Name, nil
+		}
 	}
 
-	holder := &appsv1.DaemonSet{}
-	key := types.NamespacedName{Namespace: Namespace, Name: ImageHolderName}
-	if err := r.Client.Get(ctx, key, holder); err != nil {
+	storage := &registryv1alpha1.RegistryStorage{}
+	key := types.NamespacedName{Name: registryv1alpha1.SingletonName}
+	if err := r.Client.Get(ctx, key, storage); err != nil {
 		if apierrors.IsNotFound(err) {
-			// No holder, so nothing can be said about what the node has. Refusing to
-			// replace anything is the conservative answer, and a missing holder is a
-			// rendering problem that will be fixed by the release that caused it.
-			return false, nil
+			return "", nil
 		}
-		return false, fmt.Errorf("reading the image holder: %w", err)
+		return "", fmt.Errorf("reading RegistryStorage: %w", err)
 	}
-
-	list := &corev1.PodList{}
-	err := r.Client.List(ctx, list,
-		client.InNamespace(Namespace),
-		client.MatchingLabels{"app": ImageHolderName})
-	if err != nil {
-		return false, fmt.Errorf("listing the image holder pods: %w", err)
+	if storage.Spec.Upstream != nil {
+		return "upstream " + storage.Spec.Upstream.Host, nil
 	}
-
-	for i := range list.Items {
-		pod := &list.Items[i]
-		if pod.Spec.NodeName != node || pod.DeletionTimestamp != nil {
-			continue
-		}
-		// The holder must be on the generation that carries the new images, not merely
-		// running: a holder still on the previous generation holds the previous images.
-		if pod.Labels["pod-template-generation"] != "" &&
-			pod.Labels["pod-template-generation"] != fmt.Sprint(holder.Generation) {
-			continue
-		}
-		if podReady(pod) {
-			return true, nil
-		}
-	}
-	return false, nil
+	return "", nil
 }
 
 func desiredReplicas(storage *appsv1.StatefulSet) int32 {

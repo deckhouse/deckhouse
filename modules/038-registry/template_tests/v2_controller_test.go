@@ -479,39 +479,25 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage", func() {
 			Expect(containers[0].Get("ports.0.hostPort").Exists()).To(BeFalse())
 		})
 
-		// The update path of the cache, which is two facts that only make sense together.
+		// The update path of the cache: the StatefulSet must not replace pods on its own.
 		//
-		// The images the cache will be replaced with have to be on the node BEFORE the replica is
-		// replaced, because a replaced replica pulls from the registry it is itself part of. And
-		// the replacement has to be driven by something that knows which replica holds the fill
-		// lease, because the leader must go last — which is why the StatefulSet is told to stop
-		// replacing pods on its own.
-		It("holds the new images on the masters and leaves the replacing to the controller", func() {
+		// Its RollingUpdate goes by ordinal and the fill lease has nothing to do with the ordinal,
+		// so the built-in order takes the leader down first about as often as not. What replaces
+		// the replicas instead is the registry-storage-update controller, which knows which one
+		// leads, keeps it for last, and refuses to touch the only replica of an air-gapped cache
+		// at all — nothing there could serve its new image.
+		It("leaves the replacing of its replicas to the controller", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			set := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
-			Expect(set.Field("spec.updateStrategy.type").String()).To(Equal("OnDelete"),
-				"a StatefulSet replacing pods by ordinal would take the leader down whenever the leader happens to be the highest one")
+			Expect(set.Field("spec.updateStrategy.type").String()).To(Equal("OnDelete"))
 
-			holder := f.KubernetesResource("DaemonSet", "d8-system", "registry-storage-image-holder")
-			Expect(holder.Exists()).To(BeTrue())
-			Expect(holder.Field("spec.template.spec.nodeSelector").String()).
-				To(ContainSubstring("node-role.deckhouse.io/control-plane"),
-					"holding the cache's images on every node in the cluster would occupy disk for nothing")
-
-			// Every image the StatefulSet runs is held, and by the same reference: a version that
-			// changes one and not the other would preload an image nobody is about to start.
-			var holderImages, storageImages []string
-			for _, container := range holder.Field("spec.template.spec.containers").Array() {
-				Expect(container.Get("command").Array()).To(HaveLen(1))
-				Expect(container.Get("command.0").String()).To(Equal("/pause"),
-					"a holder container that does anything can fail at doing it")
-				holderImages = append(holderImages, container.Get("image").String())
-			}
-			for _, container := range set.Field("spec.template.spec.containers").Array() {
-				storageImages = append(storageImages, container.Get("image").String())
-			}
-			Expect(holderImages).To(ConsistOf(storageImages))
+			// And no image holder: `/pause` exists in the images Deckhouse packages around
+			// third-party binaries and not in the distroless ones its own components are built
+			// on, so half of a holder's containers could never start — and a gate waiting for
+			// them would have stopped the cache from ever being updated.
+			Expect(f.KubernetesResource("DaemonSet", "d8-system", "registry-storage-image-holder").Exists()).
+				To(BeFalse())
 		})
 
 		It("keeps the blobs on the host at the fixed path", func() {

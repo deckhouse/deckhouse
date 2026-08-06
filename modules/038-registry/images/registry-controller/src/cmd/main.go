@@ -101,7 +101,6 @@ func cacheOptions() cache.Options {
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.Pod{}:         inModuleNamespace,
 			&appsv1.StatefulSet{}: inModuleNamespace,
-			&appsv1.DaemonSet{}:   inModuleNamespace,
 		},
 	}
 }

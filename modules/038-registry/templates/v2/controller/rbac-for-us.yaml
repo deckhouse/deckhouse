@@ -103,7 +103,7 @@ rules:
   # sufficient — the same confinement does nothing for an object granted by resourceNames, and that
   # difference has been got wrong before.
   - apiGroups: ["apps"]
-    resources: ["statefulsets", "daemonsets"]
+    resources: ["statefulsets"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["pods"]
