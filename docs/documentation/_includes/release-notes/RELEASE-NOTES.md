@@ -1,3 +1,330 @@
+## Version 1.77
+
+### Important
+
+- Support for Kubernetes 1.36 has been added, while support for Kubernetes 1.31 has been discontinued.
+  The default Kubernetes version (used when the [`kubernetesVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter is set to `Automatic`) has been changed to 1.34.
+
+- Control plane components will be restarted during the update.
+
+- All Ingress NGINX Controller pods will be restarted.
+
+- If the [`enableMultiTenancy`](https://deckhouse.io/modules/user-authz/v1.77/configuration.html#parameters-enablemultitenancy) setting of the `user-authz` module is enabled,
+  existing RoleBinding and ClusterRoleBinding objects that were previously ignored
+  because of ClusterAuthorizationRule limitations become effective after the update.
+  Before updating, review the RoleBinding and ClusterRoleBinding objects assigned to users,
+  and modify or remove those that should not grant access.
+
+- If the DKP cluster uses custom roles based on the legacy RBACv2 scheme,
+  the [`D8UserAuthzLegacyRBACv2CustomRoleFound`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#user-authz-d8userauthzlegacyrbacv2customrolefound) alert will fire after the update.
+  Such roles must be migrated to the new scheme before updating to DKP 1.78, otherwise the update will be blocked.
+  The migration procedure is described in the [`user-authz` module FAQ](https://deckhouse.io/modules/user-authz/v1.77/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178).
+
+- If the [`metallb`](https://deckhouse.io/modules/metallb/v1.77/) module configuration is managed through GitOps,
+  temporarily disable synchronization from your repository before the update.
+  After the update, replace the BGP configuration in your repository from ModuleConfig
+  with the [MetalLoadBalancerConfiguration](https://deckhouse.io/modules/metallb/v1.77/cr.html#metalloadbalancerconfiguration), [MetalLoadBalancerBGPPeer](https://deckhouse.io/modules/metallb/v1.77/cr.html#metalloadbalancerbgppeer), and [MetalLoadBalancerPool](https://deckhouse.io/modules/metallb/v1.77/cr.html#metalloadbalancerpool) custom resources,
+  and then re-enable synchronization.
+
+- If the cluster uses NetworkPolicy objects with the `ipBlock: 0.0.0.0/0` rule,
+  after the update they will also apply to intra-cluster traffic.
+  It is recommended that you review such policies before the update and adjust them if necessary.
+
+- In the AWS, Azure, and GCP providers, the default CNI has been changed to Cilium.
+  Before creating or updating a cluster, make sure that the Linux kernel version is 5.8 or later
+  and that network policies and firewalls do not block the UDP ports required for Cilium to operate in VXLAN mode.
+  Failure to meet these requirements may result in cluster creation or update failures,
+  or in loss of network connectivity between nodes.
+  For detailed requirements, refer to ["Network interaction"](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/reference/network_interaction.html).
+
+- The vSphere, Huawei Cloud, OpenStack, and VCD providers have been migrated from Terraform to OpenTofu.
+  The migration is performed automatically and requires no manual actions.
+
+- The Yandex Cloud and OpenStack providers have been migrated from MCM to Cluster API.
+  Existing clusters continue to use the legacy MCM-based mode and therefore continue to operate without changes.
+  In new clusters, ephemeral nodes are managed through Cluster API by default.
+
+- The following modules are now loaded from external sources
+  and are developed on an independent release cycle (no manual migration actions are required):
+
+  - Monitoring modules:
+
+    - `extended-monitoring`
+    - `log-shipper`
+    - `loki`
+    - `monitoring-custom`
+    - `monitoring-deckhouse`
+    - `monitoring-kubernetes`
+    - `monitoring-ping`
+    - `okmeter`
+    - `operator-prometheus`
+    - `prometheus`
+    - `prometheus-metrics-adapter`
+    - `prometheus-pushgateway`
+    - `upmeter`
+  
+  - The `ingress-nginx` module.
+
+- The `monitoring-kubernetes-control-plane` module has been merged into the `control-plane-manager` module.
+  Monitoring of control plane components is now performed by the `control-plane-manager` module.
+
+### Deckhouse subsystem
+
+- A policy has been added to the [`deckhouse`](https://deckhouse.io/modules/deckhouse/v1.77/) module that prevents non-system users from setting or modifying the `heritage` label.
+  This prevents accidental creation of resources that DKP may recognize as its own.
+
+- The reliability of updating clusters that use external modules (ModuleSource) has been improved.
+  The update starts only after the modules have been preloaded, preventing their temporary unavailability during the update.
+
+- Support has been added to the `registry` module for installing a cluster with the container registry operating in [`Local`](https://deckhouse.io/modules/deckhouse/v1.77/configuration.html#parameters-registry-mode) mode.
+  This makes it possible to deploy static clusters without access to an external registry, including in air-gapped environments.
+
+### Kubernetes & Scheduling subsystem
+
+- Changes in the [`descheduler`](https://deckhouse.io/modules/descheduler/v1.77/) module:
+
+  - Added the `descheduler_pod_evictions_total` metric with information about the workload to which the evicted pod belongs.
+
+  - Added the "Workload Happiness" Grafana dashboard, which displays the workload happiness score,
+    workload distribution across nodes, and the module activity history (evictions, strategy execution, and timeline).
+
+- Changes in the [`vertical-pod-autoscaler`](https://deckhouse.io/modules/vertical-pod-autoscaler/v1.77/) module:
+
+  - Added the [`VerticalPodAutoscalerDeprecatedUpdateModeAuto`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#vertical-pod-autoscaler-verticalpodautoscalerdeprecatedupdatemodeauto) alert and the "VPA Deprecated Update Mode" Grafana dashboard
+    to detect VerticalPodAutoscaler objects that use the deprecated `updateMode: Auto mode`.
+
+  - Improved the reliability of the `vertical-pod-autoscaler` webhook deployment.
+    Fixed a component startup ordering issue that could cause errors during updates.
+
+- Changes in the [`control-plane-manager`](https://deckhouse.io/modules/control-plane-manager/v1.77/) module:
+
+  - The module has been migrated to a new internal implementation for managing control plane components.
+    Added the new [ControlPlaneNode](https://deckhouse.io/modules/control-plane-manager/v1.77/cr.html#controlplanenode) and [ControlPlaneOperation](https://deckhouse.io/modules/control-plane-manager/v1.77/cr.html#controlplaneoperation) custom resources
+    to track node state and control plane component update operations.
+
+  - Added automatic etcd defragmentation,
+    which is enabled by default for multi-master clusters and runs when fragmentation exceeds 40%.
+    A defragmentation schedule can be configured in the [module settings](https://deckhouse.io/modules/control-plane-manager/v1.77/configuration.html#parameters-etcd-defrag).
+
+  - Several settings have been moved to the module ModuleConfig.
+    Automatic migration and alerts notifying about the need to update the configuration have also been added:
+
+    - Kubernetes API publishing settings ([`publishAPI`](https://deckhouse.io/modules/control-plane-manager/v1.77/configuration.html#parameters-apiserver-publishapi)) from the `user-authn` module.
+
+    - The [`encryptionAlgorithm`](https://deckhouse.io/modules/control-plane-manager/v1.77/configuration.html#parameters-encryptionalgorithm) parameter from ClusterConfiguration.
+
+    - The [`resourcesRequests`](https://deckhouse.io/modules/control-plane-manager/v1.77/configuration.html#parameters-resourcesrequests) parameter for control plane components from the `global` ModuleConfig.
+
+- Added a patch to `kube-scheduler` that prevents scheduling new pods onto nodes that are undergoing graceful shutdown.
+
+- Accelerated etcd updates in single-master clusters. Eliminated control plane component downtime that occurred during updates.
+
+- Reduced the risk of `kube-controller-manager` throttling under high controller load.
+
+- Accelerated pod startup by enabling parallel pulling of multiple container images.
+
+- Enabled the `KubeletEnsureSecretPulledImages` feature gate by default in the kubelet configuration
+  to comply with CIS Benchmark requirements.
+
+### IAM subsystem
+
+- Changes in the [`user-authn`](https://deckhouse.io/modules/user-authn/v1.77/) module:
+
+  - Authentication protection in Dex has been strengthened: [rate limiting](https://deckhouse.io/modules/user-authn/v1.77/configuration.html#parameters-ratelimit) has been added for authentication endpoints,
+    LDAP/Crowd accounts are now [automatically blocked](https://deckhouse.io/modules/user-authn/v1.77/configuration.html#parameters-passwordpolicy-lockout) after a series of failed sign-in attempts,
+    and external accounts can now be [blocked and unblocked manually](https://deckhouse.io/modules/user-authn/v1.77/cr.html#useroperation-v1-spec-target).
+
+  - The UserOperation resource now supports permanent user locking ([`spec.lock.for: permanent`](https://deckhouse.io/modules/user-authn/v1.77/cr.html#useroperation-v1-spec-lock-for)).
+    Audit logs for account operations have also been extended: they now include information about the operation initiator,
+    operation type, and target user.
+
+  - Added the [DexProviderCheck](https://deckhouse.io/modules/user-authn/v1.77/cr.html#dexprovidercheck) resource for verifying authentication providers (LDAP, OIDC, and others).
+    It allows connection and credential issues to be diagnosed before they affect user sign-in.
+
+  - Added the [`Custom`](https://deckhouse.io/modules/user-authn/v1.77/configuration.html#parameters-passwordpolicy-custom) complexity level to the password policy settings,
+    allowing password requirements to be configured flexibly according to corporate standards.
+
+  - Added support for specifying custom labels and annotations in the new [`spec.podMetadata`](https://deckhouse.io/modules/user-authn/v1.77/cr.html#dexauthenticator-v1-spec-podmetadata) field
+    of the DexAuthenticator custom resource, for example, annotations for managing the Istio sidecar container.
+
+  - DexAuthenticator now works correctly in namespaces with ResourceQuota
+    and policies that require resource limits for all containers.
+    Fixed an issue that could prevent the authenticator pod from starting.
+
+- Changes in the [`user-authz`](https://deckhouse.io/modules/user-authz/v1.77/) module:
+
+  - The RBACv2 role model aggregation label scheme changes in DKP 1.78.
+    Added the [`D8UserAuthzLegacyRBACv2CustomRoleFound`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#user-authz-d8userauthzlegacyrbacv2customrolefound) alert, which detects custom roles based on the legacy scheme.
+    Such roles must be migrated to the new scheme before updating to DKP 1.78;
+    otherwise, they will stop working and the update will be blocked.
+    The migration procedure is described in the [module FAQ](https://deckhouse.io/modules/user-authz/v1.77/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178).
+
+  - If the [`enableMultiTenancy`](https://deckhouse.io/modules/user-authz/v1.77/configuration.html#parameters-enablemultitenancy) setting is enabled, user permissions are now determined
+    by the combination of ClusterAuthorizationRule, AuthorizationRule, and standard RBAC rules (RoleBinding/ClusterRoleBinding).
+    After the update, existing RBAC bindings that were previously ignored
+    because of ClusterAuthorizationRule limitations may become effective.
+    It is recommended to review such bindings before the update.
+    For details, refer to ["Using ClusterAuthorizationRule and AuthorizationRule together with RBAC"](https://deckhouse.io/modules/user-authz/v1.77/#using-clusterauthorizationrule-and-authorizationrule-together-with-rbac).
+
+  - Added the [`D8UserAuthzPermissionBrowserUnavailable`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#user-authz-d8userauthzpermissionbrowserunavailable) alert,
+    which notifies about the unavailability of the user permissions browsing service (`permission-browser-apiserver`).
+
+### Security subsystem
+
+- Changes in the [`admission-policy-engine`](https://deckhouse.io/modules/admission-policy-engine/v1.77/) module:
+
+  - SecurityPolicy exceptions (SecurityPolicyException) can now be configured at the individual container level
+    instead of only for the entire pod.
+    This allows security requirements to be relaxed for a specific sidecar or init container
+    without removing restrictions from the entire pod.
+    For details, see the [module documentation](https://deckhouse.io/modules/admission-policy-engine/v1.77/#security-policy-exceptions).
+
+  - Added the built-in ValidatingAdmissionPolicy [`deny-deckhouse-finalizers.deckhouse.io`](https://deckhouse.io/modules/admission-policy-engine/v1.77/faq.html#built-in-policy-for-finalizers),
+    which prevents manual removal of `deckhouse.io` finalizers from resources.
+    This prevents incorrect object deletion and the creation of orphan resources.
+
+- Added a mechanism to the `multitenancy-manager` module for [granting cluster-wide resources to projects](https://deckhouse.io/modules/multitenancy-manager/v1.77/usage.html#granting-cluster-scoped-resources-to-projects).
+  DKP administrators can now define which cluster resources are available to each project and specify default values for them.
+  The mechanism can be used by any DKP module to publish its own cluster resources.
+
+- Added the ability to list resources across all accessible namespaces without cluster-wide permissions.
+  The `d8 k get <resource> -A --scope=<accessible|projects|system|project:NAME>` command returns only the objects
+  the user has access to instead of returning a `403 Forbidden` error.
+  For details, see ["Resource listing with access-based filtering"](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/admin/configuration/access/authorization/filtered-listing.html).
+
+- ACL filtering of the namespace list now supports `watch` requests.
+  The `d8 k get ns -w` command displays changes in real time without requiring the command to be re-run.
+
+- The cainjector component of the `cert-manager` module is now [enabled automatically](https://deckhouse.io/modules/cert-manager/v1.77/configuration.html#parameters-enablecainjector)
+  when resources using `cert-manager` CA injection are detected.
+  It no longer needs to be enabled manually or kept running at all times.
+
+### Cluster & Infrastructure subsystem
+
+- Changes in `dhctl` (CLI installer):
+
+  - Added a preflight check for disk name length in cloud providers.
+    If the name exceeds the allowed limit, the installation is aborted before infrastructure provisioning begins.
+
+  - Improved the interactive mode of `dhctl`: added a dedicated area for logs of current operations,
+    and made the output more compact by displaying progress instead of a stream of service messages.
+    Full logs are still available in debug mode and during non-interactive execution.
+
+  - Improved the preflight check for the `deckhouse` user.
+    Repeated bootstrap now correctly handles an existing user, and additional checks help prevent permission-related issues.
+
+  - Fixed issues with cleaning up temporary processes and SSH connections after running the `converge` and `destroy` commands.
+
+  - Fixed the `dhctl lock release` command in interactive mode.
+
+  - Fixed issues in the `dhctl converge-migration` command that could cause migration failures in certain scenarios.
+
+  - Improved the reliability of control plane `converge` operations.
+    Checks are now performed in a more appropriate order, and etcd status messages have become more informative.
+
+- Changes in the [`node-manager`](https://deckhouse.io/modules/node-manager/v1.77/) module:
+
+  - Added [Instance API v1alpha2](https://deckhouse.io/modules/node-manager/v1.77/cr.html#instance).
+    Instance status and error information is now consolidated into a single resource, simplifying diagnostics.
+
+  - Reduced the wait time for MachineDeployment creation for AWS Spot instances.
+    If AWS cannot allocate Spot instances because of insufficient capacity, retries begin sooner.
+
+  - Added the [`spec.kubelet.seccompDefault`](https://deckhouse.io/modules/node-manager/v1.77/cr.html#nodegroup-v1-spec-kubelet-seccompdefault) parameter to the NodeGroup resource,
+    allowing the RuntimeDefault seccomp profile to be enabled by default for all workloads without explicit seccomp settings.
+
+- Reduced the probability of false restarts of the CSI Controller in all cloud provider modules
+  during short delays by increasing the liveness probe timeout.
+
+- Changes in the [`cloud-provider-dvp`](https://deckhouse.io/modules/cloud-provider-dvp/v1.77/) module:
+
+  - Added support for live disk migration between StorageClass objects without stopping the virtual machine.
+    Migration is performed automatically when the StorageClass changes.
+
+  - The module configuration has been migrated to the unified ModuleConfig contract.
+    Permanent and Ephemeral nodes are now configured in the same way through InstanceClass and NodeGroup,
+    without a separate ProviderClusterConfiguration.
+    This simplifies cluster configuration, enables schema versioning and conversion without breaking compatibility,
+    and prepares cloud providers for an independent release cycle outside the DKP core.
+    For details, refer to ["Cluster and Infrastructure"](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/faq.html#subsystem-cluster-infrastructure) in the DKP FAQ.
+
+  - Fixed an issue that could leave LoadBalancer Services in the `Pending` state without creating the parent load balancer.
+    Improved conflict handling during ServiceWithHealthchecks updates and load balancer status synchronization.
+
+  - StorageClass objects created through Cluster API clusters now always use the `WaitForFirstConsumer` mode
+    regardless of the parent cluster configuration.
+    During updates, managed StorageClass objects with an incompatible `volumeBindingMode` are also recreated automatically.
+    This eliminates an issue that could block cluster updates and synchronization because of the immutable `volumeBindingMode` field.
+
+- The `cloud-provider-openstack`, `cloud-provider-huaweicloud`, `cloud-provider-vsphere`, and `cloud-provider-vcd` modules now
+  use OpenTofu instead of Terraform.
+  This makes it possible to use an open infrastructure platform compatible with Terraform,
+  reduces dependency on Terraform licensing changes, and aligns these providers
+  with other cloud provider modules that already use OpenTofu.
+
+- The OpenStack and Yandex Cloud providers now use Cluster API,
+  the industry-standard framework for machine management in Kubernetes.
+  To ensure a smooth transition, the legacy MCM-based mode remains supported:
+  existing clusters continue to operate without changes, while new clusters can use CAPI.
+
+- Improved virtual machine deletion handling in the [`cloud-provider-huaweicloud`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.77/) module,
+  increasing resource cleanup reliability and preventing false deletion errors.
+  Virtual machines that remain in the deleting state for more than 24 hours
+  are now marked with the corresponding status, simplifying diagnostics.
+
+- Updated the CSI plugin and CSI Syncer versions in the [`cloud-provider-vsphere`](https://deckhouse.io/modules/cloud-provider-vsphere/v1.77/) module,
+  and fixed known vulnerabilities in Cloud Controller Manager, the CSI plugin, and Terraform Manager.
+  This improves integration security and ensures the use of up-to-date component versions.
+
+- Added support for the `vcd.cpi.flant.com/load-balancer-ip` annotation for LoadBalancer Services in the [`cloud-provider-vcd`](https://deckhouse.io/modules/cloud-provider-vcd/v1.77/) module.
+  It allows assigning a predefined external IP address to the load balancer.
+  If both the annotation and the `spec.loadBalancerIP` field are specified, the annotation takes precedence.
+
+### Network subsystem
+
+- Changes in the [`istio`](https://deckhouse.io/modules/istio/v1.77/) module:
+
+  - Added support for Istio 1.27.
+    Users now have access to the new features of the latest Istio release using the Sail operator.
+
+  - Expanded ambient mesh support.
+    [New settings](https://deckhouse.io/modules/istio/v1.77/configuration.html#parameters-ambient) provide more explicit control over ambient mesh, allow using waypoint proxies for Layer 7 traffic processing,
+    and enable the HBONE protocol for encrypting traffic between pods without requiring a sidecar container to run in every pod.
+
+- Changes in the [`cni-cilium`](https://deckhouse.io/modules/cni-cilium/v1.77/) module:
+
+  - Changed the behavior of NetworkPolicy objects with the `ipBlock: 0.0.0.0/0` rule in the new module version.
+    The rule now also applies to intra-cluster traffic.
+
+  - Reduced CPU consumption by Cilium agents. The freed resources become available to user workloads.
+
+- Changes in the [`ingress-nginx`](https://deckhouse.io/modules/ingress-nginx/) module:
+
+  - Added support for IngressNginxController v1.15.
+
+  - Updated the load calculation formula for Ingress NGINX Controller pods used for horizontal scaling of LoadBalancer,
+    LoadBalancerWithProxyProtocol, and LoadBalancerWithSSLPassthrough inlets.
+    The controller now adds and removes replicas in a timely manner, resulting in more stable behavior under load.
+
+  - Updated the IngressNginxController API to v2.
+    The `spec.resourcesRequests` resource consumption settings have been replaced
+    with the extended [`spec.resourcesManagement`](https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-resourcesmanagement) settings, including support for resource limits.
+    Compatibility with the v1 API is preserved automatically.
+
+  - Implemented isolated configuration validation, making it possible
+    to restore full NGINX configuration validation without reducing the security level.
+
+- Added authorization for the Hubble web interface in the [`cilium-hubble`](https://deckhouse.io/modules/cilium-hubble/v1.77/) module.
+  Access to cluster network telemetry can now be restricted by user groups to improve security.
+
+- In the [`metallb`](https://deckhouse.io/modules/metallb/v1.77/) module, BGP mode configuration has been moved from ModuleConfig
+  to the dedicated [MetalLoadBalancerPool](https://deckhouse.io/modules/metallb/v1.77/cr.html#metalloadbalancerpool), [MetalLoadBalancerBGPPeer](https://deckhouse.io/modules/metallb/v1.77/cr.html#metalloadbalancerbgppeer), and [MetalLoadBalancerConfiguration](https://deckhouse.io/modules/metallb/v1.77/cr.html#metalloadbalancerconfiguration) custom resources.
+  The existing configuration will be migrated automatically, so no manual changes in the cluster are required.
+  All new BGP settings must be configured through these resources.
+
+The complete list of changes, including the updated components,
+is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.77.md) on GitHub.
+
 ## Version 1.76
 
 ### Important
