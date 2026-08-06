@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -45,4 +46,28 @@ func TestSecretsAreNotCached(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "secrets must be read uncached, or their name-scoped grant cannot work")
+}
+
+// TestLeasesAreNotCached is the same failure through a different door, and the third time this
+// cache has cost a cluster.
+//
+// The storage election lease is granted by a Role in one namespace. This cache is cluster-scoped,
+// so its informer lists leases at the cluster scope, and that is refused — the informer never
+// syncs, the read waiting on it never returns, and the reconciliation never finishes. The
+// symptom is not a permission error anywhere an operator would look: it is zero RegistryNode
+// objects on a cluster with the cache enabled, every node without a layout, and one
+// `Failed to watch` line in this controller's log.
+func TestLeasesAreNotCached(t *testing.T) {
+	opts := clientOptions()
+
+	require.NotNil(t, opts.Cache)
+
+	var found bool
+	for _, object := range opts.Cache.DisableFor {
+		if _, ok := object.(*coordinationv1.Lease); ok {
+			found = true
+		}
+	}
+	assert.True(t, found,
+		"the lease must be read uncached: a cluster-scoped informer cannot be authorized by a namespaced Role")
 }

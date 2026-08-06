@@ -21,6 +21,7 @@ import (
 	"os"
 	"strings"
 
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -61,10 +62,17 @@ func init() {
 //
 // Returned from a function so the decision is testable. It was already made once as
 // "confine the cache to one namespace", which is not the same thing and does not work.
+//
+// The election lease is here for a neighbouring reason. It is granted by a Role in one
+// namespace, while this cache is cluster-scoped, so its informer lists leases at the cluster
+// scope and is refused — and a refused informer never syncs, so the read that wanted it blocks
+// and the reconciliation that wanted the read never finishes. On a cluster with the cache
+// enabled that meant no RegistryNode objects at all: every node left without a layout, and the
+// only thing that said so was a `Failed to watch` line in this controller's log.
 func clientOptions() client.Options {
 	return client.Options{
 		Cache: &client.CacheOptions{
-			DisableFor: []client.Object{&corev1.Secret{}},
+			DisableFor: []client.Object{&corev1.Secret{}, &coordinationv1.Lease{}},
 		},
 	}
 }
