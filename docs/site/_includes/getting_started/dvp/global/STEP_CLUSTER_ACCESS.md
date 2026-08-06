@@ -29,6 +29,18 @@ Platform installation is complete. Verify the cluster and configure DNS to acces
 
    DVP components may take some time to start after installation.
 
+1. Make sure the platform is ready to run VMs:
+
+   ```shell
+   sudo -i d8 k get vmclass generic
+   ```
+
+   Wait until the status is `Ready`.
+
+   {% alert level="info" %}
+   On RHEL-based operating systems (AlmaLinux, Rocky Linux, CentOS), the initial node configuration downloads additional packages — while this is in progress, the `generic` class stays in the `Pending` phase.
+   {% endalert %}
+
 ## Configure DVP web interfaces
 
 Make sure the cluster is healthy and set up DNS so you can open DVP web interfaces from your workstation.
