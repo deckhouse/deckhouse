@@ -23,7 +23,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
@@ -37,18 +36,7 @@ var (
 	_ = sdk.RegisterFunc(&go_hook.HookConfig{
 		OnBeforeAll: &go_hook.OrderedConfig{Order: 20},
 		Kubernetes: []go_hook.KubernetesConfig{
-			{
-				Name:       "NodesResources",
-				ApiVersion: "v1",
-				Kind:       "Node",
-				LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "node-role.kubernetes.io/control-plane",
-						Operator: metav1.LabelSelectorOpExists,
-					},
-				}},
-				FilterFunc: applyNodesResourcesFilter,
-			},
+			controlPlaneNodesBinding(true, true),
 		},
 	}, calculateResourcesRequests)
 )
