@@ -251,7 +251,7 @@
       {{- end }}
 
         {{- /* external providers are downloaded by dhctl at runtime, not baked into the installer; keep in sync with tools/build.go */ -}}
-        {{- if has $providerModuleName (list "cloud-provider-dvp") }}
+        {{- if has $providerModuleName (list "cloud-provider-dvp" "cloud-provider-yandex") }}
           {{- continue }}
         {{- end }}
 

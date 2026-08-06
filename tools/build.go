@@ -53,7 +53,7 @@ var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`
 // into installer, candi or terraform-manager images. Keep in sync with the
 // external-provider list in .werf/defines/installer.tmpl.
 var externalCloudProviders = map[string]struct{}{
-	"dvp": {},
+	"dvp":    {},
 	"yandex": {},
 }
 
@@ -445,8 +445,32 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 
 		cloudProviderName := extractCloudProviderName(file)
 
-		// External providers are downloaded by dhctl at runtime, not baked.
+		// External providers are downloaded by dhctl at runtime, not baked —
+		// except for bashible.
+		//
+		// TODO(candi): drop this exception once bashible steps are read from the
+		// unpacked bundle. https://flant.kaiten.ru/space/667674/boards/card/68389405
+		//
+		// dhctl resolves a provider's node bootstrap steps only under
+		// <candi>/cloud-providers/<name>/bashible, with no bundle fallback:
+		// dhctl/pkg/template/{bundle.go,bootstrap.go} and the $.Files.Get in
+		// candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl. Both fail
+		// silently on a missing path, so an external provider whose candi carries
+		// bashible steps (yandex: bootstrap-networks.sh.tpl,
+		// 000_set_cloud_variables.sh.tpl) would boot nodes without them.
 		if _, external := externalCloudProviders[cloudProviderName]; external {
+			bashiblePath := filepath.Join(candiPath, "bashible")
+			if _, err := os.Stat(bashiblePath); err != nil {
+				return
+			}
+
+			addEntries = append(addEntries, addEntry{
+				Add:               strings.TrimPrefix(bashiblePath, workDir),
+				To:                filepath.Join("/deckhouse", "candi", "cloud-providers", cloudProviderName, "bashible"),
+				ExcludePaths:      settings.ExcludePaths,
+				StageDependencies: settings.StageDependencies,
+			})
+
 			return
 		}
 
