@@ -19,6 +19,8 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -31,6 +33,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
+
+// dexClientAllowAccessToKubernetesAnnotation puts the client into trustedPeers of the
+// kubernetes OAuth2Client, so its tokens are accepted by kube-apiserver.
+const dexClientAllowAccessToKubernetesAnnotation = "dexclient.deckhouse.io/allow-access-to-kubernetes"
 
 type DexClient struct {
 	ID        string `json:"id"`
@@ -51,6 +57,11 @@ type DexClient struct {
 	Annotations map[string]string `json:"annotations"`
 
 	AllowAccessToKubernetes bool `json:"allowAccessToKubernetes"`
+
+	// AllowAccessToKubernetesAnnotation carries the raw annotation value from the filter,
+	// which has no logger, to the hook body, which does. It is nil when the annotation is
+	// absent and is cleared before the client reaches the internal values.
+	AllowAccessToKubernetesAnnotation *string `json:"allowAccessToKubernetesAnnotation,omitempty"`
 }
 
 type DexClientSecret struct {
@@ -91,23 +102,23 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		annotations = make(map[string]string)
 	}
 
-	if value, exists := obj.GetAnnotations()["dexclient.deckhouse.io/allow-access-to-kubernetes"]; exists {
-		annotations["dexclient.deckhouse.io/allow-access-to-kubernetes"] = value
+	var allowAccessAnnotation *string
+	if value, exists := obj.GetAnnotations()[dexClientAllowAccessToKubernetesAnnotation]; exists {
+		annotations[dexClientAllowAccessToKubernetesAnnotation] = value
+		allowAccessAnnotation = &value
 	}
 
-	_, allowAccessToKubernetes := obj.GetAnnotations()["dexclient.deckhouse.io/allow-access-to-kubernetes"]
-
 	return DexClient{
-		ID:                      id,
-		LegacyID:                legacyID,
-		EncodedID:               encoding.ToFnvLikeDex(id),
-		LegacyEncodedID:         encoding.ToFnvLikeDex(legacyID),
-		Name:                    name,
-		Namespace:               namespace,
-		Spec:                    spec,
-		Labels:                  labels,
-		Annotations:             annotations,
-		AllowAccessToKubernetes: allowAccessToKubernetes,
+		ID:                                id,
+		LegacyID:                          legacyID,
+		EncodedID:                         encoding.ToFnvLikeDex(id),
+		LegacyEncodedID:                   encoding.ToFnvLikeDex(legacyID),
+		Name:                              name,
+		Namespace:                         namespace,
+		Spec:                              spec,
+		Labels:                            labels,
+		Annotations:                       annotations,
+		AllowAccessToKubernetesAnnotation: allowAccessAnnotation,
 	}, nil
 }
 
@@ -176,6 +187,23 @@ func getDexClient(_ context.Context, input *go_hook.HookInput) error {
 		existedSecret, ok := credentialsByID[dexClient.ID]
 		if !ok {
 			existedSecret = pwgen.AlphaNum(20)
+		}
+
+		if raw := dexClient.AllowAccessToKubernetesAnnotation; raw != nil {
+			allowed, err := strconv.ParseBool(*raw)
+			if err != nil {
+				// Fail closed: a value nobody can read as a boolean must not hand out
+				// tokens the kube-apiserver accepts.
+				allowed = false
+				input.Logger.Warn("Ignoring invalid allow-access-to-kubernetes annotation",
+					slog.String("dexclient", dexClient.Name),
+					slog.String("namespace", dexClient.Namespace),
+					slog.String("annotation", dexClientAllowAccessToKubernetesAnnotation),
+					slog.String("value", *raw))
+			}
+
+			dexClient.AllowAccessToKubernetes = allowed
+			dexClient.AllowAccessToKubernetesAnnotation = nil
 		}
 
 		dexClient.Secret = existedSecret

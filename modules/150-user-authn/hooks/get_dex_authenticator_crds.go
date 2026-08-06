@@ -21,7 +21,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -37,6 +39,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 
+// dexAuthenticatorAllowAccessToKubernetesAnnotation puts the authenticator into trustedPeers
+// of the kubernetes OAuth2Client, so its tokens are accepted by kube-apiserver.
+const dexAuthenticatorAllowAccessToKubernetesAnnotation = "dexauthenticator.deckhouse.io/allow-access-to-kubernetes"
+
 type DexAuthenticator struct {
 	ID          string                 `json:"uuid"`
 	EncodedName string                 `json:"encodedName"`
@@ -46,6 +52,11 @@ type DexAuthenticator struct {
 
 	AllowAccessToKubernetes bool        `json:"allowAccessToKubernetes"`
 	Credentials             Credentials `json:"credentials"`
+
+	// AllowAccessToKubernetesAnnotation carries the raw annotation value from the filter,
+	// which has no logger, to the hook body, which does. It is nil when the annotation is
+	// absent and is cleared before the authenticator reaches the internal values.
+	AllowAccessToKubernetesAnnotation *string `json:"allowAccessToKubernetesAnnotation,omitempty"`
 }
 
 type Credentials struct {
@@ -75,15 +86,18 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	id := fmt.Sprintf("%s@%s", name, namespace)
 	encodedName := encoding.ToFnvLikeDex(fmt.Sprintf("%s-%s-dex-authenticator", name, namespace))
 
-	_, allowAccessToKubernetes := obj.GetAnnotations()["dexauthenticator.deckhouse.io/allow-access-to-kubernetes"]
+	var allowAccessAnnotation *string
+	if value, exists := obj.GetAnnotations()[dexAuthenticatorAllowAccessToKubernetesAnnotation]; exists {
+		allowAccessAnnotation = &value
+	}
 
 	return DexAuthenticator{
-		ID:                      id,
-		EncodedName:             encodedName,
-		Name:                    name,
-		Namespace:               namespace,
-		Spec:                    spec,
-		AllowAccessToKubernetes: allowAccessToKubernetes,
+		ID:                                id,
+		EncodedName:                       encodedName,
+		Name:                              name,
+		Namespace:                         namespace,
+		Spec:                              spec,
+		AllowAccessToKubernetesAnnotation: allowAccessAnnotation,
 	}, nil
 }
 
@@ -167,6 +181,23 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 		// Migrate all cookie secret from 20 bytes length to 24 bytes
 		if len(existedCredentials.CookieSecret) < 24 {
 			existedCredentials.CookieSecret = pwgen.AlphaNum(24)
+		}
+
+		if raw := dexAuthenticator.AllowAccessToKubernetesAnnotation; raw != nil {
+			allowed, err := strconv.ParseBool(*raw)
+			if err != nil {
+				// Fail closed: a value nobody can read as a boolean must not hand out
+				// tokens the kube-apiserver accepts.
+				allowed = false
+				input.Logger.Warn("Ignoring invalid allow-access-to-kubernetes annotation",
+					slog.String("dexauthenticator", dexAuthenticator.Name),
+					slog.String("namespace", dexAuthenticator.Namespace),
+					slog.String("annotation", dexAuthenticatorAllowAccessToKubernetesAnnotation),
+					slog.String("value", *raw))
+			}
+
+			dexAuthenticator.AllowAccessToKubernetes = allowed
+			dexAuthenticator.AllowAccessToKubernetesAnnotation = nil
 		}
 
 		dexAuthenticator.Credentials = existedCredentials
