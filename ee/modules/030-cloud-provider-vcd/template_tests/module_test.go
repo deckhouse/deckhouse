@@ -1088,8 +1088,6 @@ podAntiAffinity:
   - labelSelector:
       matchLabels:
         app: infra-controller-manager
-    matchLabelKeys:
-    - pod-template-hash
     topologyKey: kubernetes.io/hostname
 `))
 		})
