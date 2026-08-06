@@ -17,6 +17,7 @@ config:
       - ACTIONS_ID_TOKEN_REQUEST_TOKEN
       - VAULT_KEY
       - WERF_SIGN_KEY
+      - WERF_OLCEDAR_SYSEXT_SIGN_ENABLED
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowEnvVariables:
@@ -31,6 +32,7 @@ config:
       - WERF_VAULT_AUTH_ROLE
       - WERF_VAULT_AUTH_JWT
       - WERF_SIGN_KEY
+      - WERF_OLCEDAR_VAULT_AUTH_ROLE
     allowValueIds:
       - SOURCE_REPO
       - GOPROXY

@@ -485,6 +485,11 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -920,6 +925,11 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1356,6 +1366,11 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1792,6 +1807,11 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2228,6 +2248,11 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2664,6 +2689,11 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
