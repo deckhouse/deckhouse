@@ -15,15 +15,15 @@
 package v1
 
 type YandexCloudDiscoveryData struct {
-	APIVersion                    string            `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
-	Kind                          string            `json:"kind,omitempty" yaml:"kind,omitempty"`
-	Region                        string            `json:"region,omitempty" yaml:"region,omitempty"`
-	RouteTableID                  string            `json:"routeTableID,omitempty" yaml:"routeTableID,omitempty"`
-	DefaultLbTargetGroupNetworkID string            `json:"defaultLbTargetGroupNetworkId,omitempty" yaml:"defaultLbTargetGroupNetworkId,omitempty"`
-	InternalNetworkIDs            []string          `json:"internalNetworkIDs,omitempty" yaml:"internalNetworkIDs,omitempty"`
-	Zones                         []string          `json:"zones,omitempty" yaml:"zones,omitempty"`
-	ZoneToSubnetIDMap             map[string]string `json:"zoneToSubnetIdMap,omitempty" yaml:"zoneToSubnetIdMap,omitempty"`
-	ShouldAssignPublicIPAddress   bool              `json:"shouldAssignPublicIPAddress,omitempty" yaml:"shouldAssignPublicIPAddress,omitempty"`
+	APIVersion                    string            `json:"apiVersion" yaml:"apiVersion"`
+	Kind                          string            `json:"kind" yaml:"kind"`
+	Region                        string            `json:"region" yaml:"region"`
+	RouteTableID                  string            `json:"routeTableID" yaml:"routeTableID"`
+	DefaultLbTargetGroupNetworkID string            `json:"defaultLbTargetGroupNetworkId" yaml:"defaultLbTargetGroupNetworkId"`
+	InternalNetworkIDs            []string          `json:"internalNetworkIDs" yaml:"internalNetworkIDs"`
+	Zones                         []string          `json:"zones" yaml:"zones,omitempty"`
+	ZoneToSubnetIDMap             map[string]string `json:"zoneToSubnetIdMap" yaml:"zoneToSubnetIdMap"`
+	ShouldAssignPublicIPAddress   bool              `json:"shouldAssignPublicIPAddress" yaml:"shouldAssignPublicIPAddress"`
 	NATInstanceName               string            `json:"natInstanceName,omitempty" yaml:"natInstanceName,omitempty"`
 	NATInstanceZone               string            `json:"natInstanceZone,omitempty" yaml:"natInstanceZone,omitempty"`
 	MonitoringAPIKey              string            `json:"monitoringAPIKey,omitempty" yaml:"monitoringAPIKey,omitempty"`
