@@ -46,13 +46,11 @@ const (
 	autotuneQueue        = "/modules/control-plane-manager/autotune"
 )
 
-// Schedule + OnBeforeHelm entrypoint: metrics → decide → commit.
-// Nodes/state snapshots are passive (no sync — that is resources_requests_autotune_sync.go).
-// OnBeforeHelm re-runs when controlPlaneManager values change (e.g. manual
-// resourcesRequests), so overrides do not wait for the daily cron.
+// Schedule entrypoint: metrics → decide → commit (daily cron only).
+// OnBeforeHelm / sync live in resources_requests_autotune_sync.go so ModuleRun
+// does not hit the metrics API.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        autotuneQueue,
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue: autotuneQueue,
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: autotuneScheduleName, Crontab: "0 3 * * *"},
 	},
@@ -66,9 +64,9 @@ func autotuneResourcesRequests(ctx context.Context, input *go_hook.HookInput, dc
 	return runAutotune(ctx, input, dc, true)
 }
 
-// runAutotune runs the autotune path. When evaluate is true (schedule /
-// OnBeforeHelm), it fetches metrics and may raise/lower. When false (sync),
-// it only repopulates values and rechecks capacityBlocked.
+// runAutotune runs the autotune path. When evaluate is true (schedule), it
+// fetches metrics and may raise/lower. When false (sync / OnBeforeHelm), it
+// only repopulates values and rechecks capacityBlocked.
 func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Container, evaluate bool) error {
 	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.Snapshots, "NodesResources")
 	if err != nil {
@@ -178,7 +176,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 			}
 		}
 	} else {
-		// Node resource changes (OnBeforeAll + node events): refresh the
+		// Node resource changes (node events / OnBeforeHelm): refresh the
 		// capacity-blocked alert against the current fit budget without calling
 		// the metrics API. Cron remains responsible for new raise decisions.
 		if !cpuOverridden {
