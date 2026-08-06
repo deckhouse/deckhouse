@@ -98,13 +98,6 @@ func BuildMasterPayload(ctx context.Context, in MasterPayloadInput) (string, err
 // also emits (hostname, users, ssh_authorized_keys) may appear here: a
 // duplicate key breaks the parsing of the whole user-data.
 func buildCloudConfig(nodeConfig *nodeConfig, controlPlaneConfig *controlPlaneConfig) (string, error) {
-	if nodeConfig == nil {
-		return "", errors.New("build cloud config: node config is nil")
-	}
-	if controlPlaneConfig == nil {
-		return "", errors.New("build cloud config: control-plane config is nil")
-	}
-
 	nodeConfigYAML, err := yaml.Marshal(nodeConfig)
 	if err != nil {
 		return "", fmt.Errorf("marshal nodeConfig: %w", err)
