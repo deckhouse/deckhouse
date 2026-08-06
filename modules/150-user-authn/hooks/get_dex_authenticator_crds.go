@@ -55,8 +55,8 @@ type DexAuthenticator struct {
 
 	// AllowAccessToKubernetesAnnotation carries the raw annotation value from the filter,
 	// which has no logger, to the hook body, which does. It is nil when the annotation is
-	// absent and is cleared before the authenticator reaches the internal values.
-	AllowAccessToKubernetesAnnotation *string `json:"allowAccessToKubernetesAnnotation,omitempty"`
+	// absent, and json:"-" keeps it out of the internal values the templates read.
+	AllowAccessToKubernetesAnnotation *string `json:"-"`
 }
 
 type Credentials struct {
@@ -197,7 +197,6 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 			}
 
 			dexAuthenticator.AllowAccessToKubernetes = allowed
-			dexAuthenticator.AllowAccessToKubernetesAnnotation = nil
 		}
 
 		dexAuthenticator.Credentials = existedCredentials

@@ -60,8 +60,8 @@ type DexClient struct {
 
 	// AllowAccessToKubernetesAnnotation carries the raw annotation value from the filter,
 	// which has no logger, to the hook body, which does. It is nil when the annotation is
-	// absent and is cleared before the client reaches the internal values.
-	AllowAccessToKubernetesAnnotation *string `json:"allowAccessToKubernetesAnnotation,omitempty"`
+	// absent, and json:"-" keeps it out of the internal values the templates read.
+	AllowAccessToKubernetesAnnotation *string `json:"-"`
 }
 
 type DexClientSecret struct {
@@ -203,7 +203,6 @@ func getDexClient(_ context.Context, input *go_hook.HookInput) error {
 			}
 
 			dexClient.AllowAccessToKubernetes = allowed
-			dexClient.AllowAccessToKubernetesAnnotation = nil
 		}
 
 		dexClient.Secret = existedSecret
