@@ -88,9 +88,13 @@ import:
   add: /opentofu/opentofu
   to: /dhctl-tests/bin/opentofu
   before: setup
-- image: {{ .TF.yandex.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-  add: /{{ .TF.yandex.artifactBinary }}
-  to: /dhctl-tests/plugins/registry.opentofu.org/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ $.TF.yandex.version }}/linux_amd64/{{ .TF.yandex.destinationBinary }}
+# yandex is an external provider: candi carries no yandex entry, so its
+# plugin coordinates come from the module's own terraform_versions.yml
+# fragment (the same file that ships inside the provider bundle).
+{{- $yandexTF := index (.Files.Get "modules/030-cloud-provider-yandex/candi/terraform_versions.yml" | fromYaml) "yandex" }}
+- image: {{ $yandexTF.artifact }} # from modules/030-cloud-provider-yandex/images/terraform-manager/werf.inc.yaml
+  add: /{{ $yandexTF.artifactBinary }}
+  to: /dhctl-tests/plugins/registry.opentofu.org/{{ $yandexTF.namespace }}/{{ $yandexTF.type }}/{{ $yandexTF.version }}/linux_amd64/{{ $yandexTF.destinationBinary }}
   before: setup
 - image: {{ .TF.gcp.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ .TF.gcp.artifactBinary }}
