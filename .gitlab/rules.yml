@@ -37,6 +37,10 @@ workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_CVE_SCANS_ENABLE == "true"
 
+.rules:on_schedule_secrets_scan:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_SECRETS_SCAN_ENABLE == "true"
+
 # Manual edition builds (MR / main). Release-branch editions are automatic.
 .rules:on_main_manual:
   rules:

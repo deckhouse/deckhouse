@@ -1,43 +1,76 @@
 # Source security scan (GitHub security-scan-src.yml subset). PR-only.
-# Diff mode; base config from internal modules-gitlab-ci repo.
+# Diff mode; diff_cmd; base config from internal modules-gitlab-ci repo.
+# Full mode; full_cmd
+
+# Secrets Scan job.
+include:
+  - '.gitlab/notify-failure.yml'
+
+.scripts:
+  gitleaks_config: |
+    curl -sSfL \
+      --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+      -o gitleaks.base.toml \
+      "${CI_API_V4_URL}/projects/${GITLEAKS_CONFIG_PROJECT}/repository/files/${GITLEAKS_CONFIG_FILE}/raw?ref=${GITLEAKS_CONFIG_REF}"
+
+  gitleaks_diff_cmd: |
+    if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
+      LOG_OPTS="${CI_MERGE_REQUEST_DIFF_BASE_SHA}..${CI_COMMIT_SHA}"
+    elif [[ -n "${CI_COMMIT_BEFORE_SHA:-}" && "${CI_COMMIT_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
+      LOG_OPTS="${CI_COMMIT_BEFORE_SHA}..${CI_COMMIT_SHA}"
+    else
+      LOG_OPTS="${CI_COMMIT_SHA}^..${CI_COMMIT_SHA}"
+    fi
+    echo "gitleaks diff range: ${LOG_OPTS}"
+    gitleaks detect \
+      --source "${CI_PROJECT_DIR}" \
+      --config "${CI_PROJECT_DIR}/.gitleaks.toml" \
+      --log-opts "${LOG_OPTS}" \
+      --no-banner \
+      --redact \
+      --report-format json \
+      --report-path gitleaks.json \
+      --exit-code 1
+
+  gitleaks_full_cmd: |
+    set -euo pipefail
+    gitleaks detect --no-banner --redact --log-level debug \
+      --report-format json --report-path gitleaks.json \
+      --config "${CI_PROJECT_DIR}/.gitleaks.toml" \
+      --platform gitlab
+      --source .
+
+
+.gitleaks-base-common:
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/gitleaks:${CI_IMAGES_TAG}
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: "0" # Search all commits
+    GITLEAKS_CONFIG_REF: "v15.0"
+    GITLEAKS_CONFIG_PROJECT: "deckhouse%2F3p%2Fdeckhouse%2Fmodules-gitlab-ci"
+    GITLEAKS_CONFIG_FILE: "gitleaks%2Fconfig%2Fgitleaks.base.toml"
+  before_script:
+    - !reference [.scripts, gitleaks_config]
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - gitleaks.json
+
+secrets-scan:
+  stage: validate
+  extends:
+    - .rules:on_schedule_secrets_scan
+    - .gitleaks-base-common
+    - .notify
+  script:
+    - !reference [.scripts, gitleaks_full_cmd]
 
 gitleaks_scan:
   stage: validate
   needs: []
   extends:
     - .rules:on_merge_request
-  variables:
-    GIT_DEPTH: "0"
-    GITLEAKS_CONFIG_REF: "v15.0"
-    GITLEAKS_CONFIG_PROJECT: "deckhouse%2F3p%2Fdeckhouse%2Fmodules-gitlab-ci"
-    GITLEAKS_CONFIG_FILE: "gitleaks%2Fconfig%2Fgitleaks.base.toml"
-  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/gitleaks:${CI_IMAGES_TAG}
+    - .gitleaks-base-common
   script:
-    - |
-      curl -sSfL \
-        --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
-        -o gitleaks.base.toml \
-        "${CI_API_V4_URL}/projects/${GITLEAKS_CONFIG_PROJECT}/repository/files/${GITLEAKS_CONFIG_FILE}/raw?ref=${GITLEAKS_CONFIG_REF}"
-    - |
-      if [[ -n "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}" ]]; then
-        LOG_OPTS="${CI_MERGE_REQUEST_DIFF_BASE_SHA}..${CI_COMMIT_SHA}"
-      elif [[ -n "${CI_COMMIT_BEFORE_SHA:-}" && "${CI_COMMIT_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
-        LOG_OPTS="${CI_COMMIT_BEFORE_SHA}..${CI_COMMIT_SHA}"
-      else
-        LOG_OPTS="${CI_COMMIT_SHA}^..${CI_COMMIT_SHA}"
-      fi
-      echo "gitleaks diff range: ${LOG_OPTS}"
-      gitleaks detect \
-        --source "${CI_PROJECT_DIR}" \
-        --config "${CI_PROJECT_DIR}/.gitleaks.toml" \
-        --log-opts "${LOG_OPTS}" \
-        --no-banner \
-        --redact \
-        --report-format json \
-        --report-path gitleaks.json \
-        --exit-code 1
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths:
-      - gitleaks.json
+    - !reference [.scripts, gitleaks_diff_cmd]
