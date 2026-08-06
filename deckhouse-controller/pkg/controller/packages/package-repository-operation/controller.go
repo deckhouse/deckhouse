@@ -60,7 +60,7 @@ func RegisterController(runtimeManager manager.Manager, dc dependency.Container,
 		client: runtimeManager.GetClient(),
 		dc:     dc,
 		psm:    registryService.NewPackageServiceManager(logger.Named("packages_manager")),
-		logger: logger,
+		logger: logger.Named(controllerName),
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).

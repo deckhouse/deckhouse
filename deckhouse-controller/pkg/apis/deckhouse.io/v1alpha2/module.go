@@ -31,6 +31,10 @@ const (
 	ModuleFinalizerStatisticRegistered = "module.deckhouse.io/statistic-registered"
 
 	ModuleAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
+
+	// ModuleAnnotationForce marks a module pinned to a mutable tag by a ModulePullOverride.
+	// The value is the resolved digest, so a repush under an unchanged tag still reads as a change.
+	ModuleAnnotationForce = "modules.deckhouse.io/force"
 )
 
 var (

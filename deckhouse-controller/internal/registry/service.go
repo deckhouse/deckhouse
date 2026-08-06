@@ -172,6 +172,21 @@ func (s *Service) GetImageRootHash(ctx context.Context, remote Remote, packageNa
 	return rootHash, nil
 }
 
+// ListTags lists all tags for a given path <registry>/<path>.
+func (s *Service) ListTags(ctx context.Context, remote Remote, path ...string) ([]string, error) {
+	cli, err := s.buildRegistryClient(remote, strings.Join(path, "/"))
+	if err != nil {
+		return nil, fmt.Errorf("build registry client: %w", err)
+	}
+
+	tags, err := cli.ListTags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list tags: %w", err)
+	}
+
+	return tags, nil
+}
+
 // Download downloads package on temp fs and returns path to it
 // <registry>/<package>:<tag>
 func (s *Service) Download(ctx context.Context, remote Remote, out, packageName, tag string) error {
