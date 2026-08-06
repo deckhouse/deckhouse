@@ -54,6 +54,7 @@ var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`
 // external-provider list in .werf/defines/installer.tmpl.
 var externalCloudProviders = map[string]struct{}{
 	"dvp": {},
+	"yandex": {},
 }
 
 var workDir = cwd()
