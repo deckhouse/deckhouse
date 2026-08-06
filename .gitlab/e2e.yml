@@ -10,11 +10,9 @@ include:
   - local: .gitlab/ci-templates/e2e-framework.yml
     inputs:
       runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
+      vault_role: deckhouse
 
 variables:
-  # Same JWT role as other GitLab jobs in this repo (.gitlab/*.yml → VAULT_AUTH_ROLE).
-  VAULT_ROLE: "deckhouse"
-
   E2E_PROVIDER:
     value: "Yandex"
     options:

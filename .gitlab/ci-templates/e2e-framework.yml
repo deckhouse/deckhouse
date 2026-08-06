@@ -4,9 +4,14 @@ spec:
       type: string
       default: werf-2-stable
       description: GitLab runner tag for e2e-framework jobs
+    vault_role:
+      type: string
+      default: dh-ssdlc-e2e-framework
+      description: Vault JWT role for e2e-framework jobs
 ---
 # Local copy of deckhouse/ssdlc-tools/e2e-framework ci-templates/e2e-framework.gitlab-ci.yml
-# Global variables moved to job level (.e2e-framework-vars). Runner tag via inputs.runner_tag.
+# Global variables moved to job level (.e2e-framework-vars).
+# runner_tag / vault_role via inputs.
 
 .e2e-framework-vars:
   variables:
@@ -14,7 +19,7 @@ spec:
     IMAGE_TAG: "main"
 
     VAULT_ADDR: "https://seguro.flant.com"
-    VAULT_ROLE: "dh-ssdlc-e2e-framework"
+    VAULT_ROLE: $[[ inputs.vault_role ]]
 
     KUBERNETES_VERSION: "Automatic"
     PYTHONUNBUFFERED: "1"
