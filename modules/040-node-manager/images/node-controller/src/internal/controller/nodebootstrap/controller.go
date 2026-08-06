@@ -61,7 +61,7 @@ type Reconciler struct {
 	reader client.Reader
 }
 
-func (r *Reconciler) Setup(mgr ctrl.Manager) error {
+func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.reader = mgr.GetAPIReader()
 	return nil
 }
