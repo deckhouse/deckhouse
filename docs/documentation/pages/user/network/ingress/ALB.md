@@ -22,14 +22,19 @@ This option is suitable for:
 
 ### Kubernetes Gateway API
 
-ALB is implemented using the [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) via the [`alb`](/modules/alb/) module. Gateways run on Envoy Proxy, and reception and routing are described using standard API objects (Gateway, ListenerSet, HTTPRoute, and, if necessary, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy). The controller deploys the necessary ingress infrastructure and validates the configuration to prevent conflicting handlers.
+ALB is implemented using the [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) via the [`alb`](/modules/alb/) module. Gateways run on Envoy Proxy, and reception and routing are described using standard API objects (Gateway, ListenerSet, HTTPRoute, and, if necessary, GRPCRoute, TLSRoute, TCPRoute, UDPRoute, BackendTLSPolicy). The controller deploys the necessary ingress infrastructure and validates the configuration to prevent conflicting handlers.
+
+The Gateway API model separates responsibilities between the cluster administrator (ClusterALBInstance), the namespace administrator (ALBInstance/ListenerSet), and the application team (routes), which simplifies multitenancy.
 
 You should choose this option if you need:
 
 - To publish applications using the Gateway API model instead of the classic Ingress.
 - A cluster-wide entry point or a separate gateway for an application or team within your namespace.
-- HTTP/HTTPS and gRPC routing, TLS termination or pass-through, as well as TCP after TLS termination at the gateway.
+- HTTP/HTTPS, gRPC, TCP, UDP, and TLS termination or passthrough.
+- Per-route WAF, GeoIP request enrichment, OpenTelemetry tracing, or an Istio sidecar on the gateway proxy.
 - Route parameters not included in the specification, via [`HTTPRoute` annotations](#supported-httproute-annotations).
+
+For a comparison with `ingress-nginx` and terminology notes, see [Incoming traffic balancing](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/).
 
 ### Istio
 
@@ -209,7 +214,7 @@ To publish an application using the ALBInstance object, follow these steps:
              port: 8080
    ```
 
-### Working with GRPCRoute, TLSRoute, and TCPRoute objects
+### Working with GRPCRoute, TLSRoute, TCPRoute, and UDPRoute objects {#grpcroute-tlsroute-tcproute-and-udproute-objects}
 
 The GRPCRoute object is intended for gRPC traffic. For it, create the ListenerSet object with an HTTPS listener, then add the GRPCRoute object:
 
@@ -255,9 +260,9 @@ spec:
           port: 9090
 ```
 
-For TLS passthrough, when traffic must be decrypted on the application side, either a TLS listener or an HTTPS listener can be used. The example below shows the TLS listener variant:
+For TLS passthrough, when traffic must be decrypted on the application side, either a TLS listener or an HTTPS listener can be used. The example below shows the TLS listener variant.
 
-To accept TCP traffic on an additional port, configure the `additionalPorts` parameter in the ALBInstance:
+Because the TLS listener in this example uses an additional port, first configure the `additionalPorts` parameter in the ALBInstance object:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -267,9 +272,9 @@ metadata:
   namespace: prod
 spec:
   gatewayName: app-gw
-   inlet:
-      type: LoadBalancer
-      additionalPorts:
+  inlet:
+    type: LoadBalancer
+    additionalPorts:
       - port: 8443    # An additional TCP port to accept TLS traffic.
         protocol: TCP
 ```
@@ -310,7 +315,7 @@ spec:
   hostnames:
     - pass.example.com
   rules:
-    - backendRefs:s
+    - backendRefs:
         - name: tls-pass-svc  # Reference to the internal load balancer of the application.
           port: 8443
 ```
@@ -396,6 +401,84 @@ spec:
     - backendRefs:
         - name: tcp-svc # Reference to the internal load balancer of the application.
           port: 8080
+```
+
+To publish a TCP service, first expose an additional TCP port in the ALBInstance:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: app-gw
+  namespace: prod
+spec:
+  gatewayName: app-gw
+  inlet:
+    type: LoadBalancer
+    additionalPorts:
+      - port: 9000
+        protocol: TCP
+```
+
+The ALB controller creates the TCP listener on the managed Gateway automatically from `spec.inlet.additionalPorts`. For TCP, attach the TCPRoute directly to that Gateway listener instead of creating a separate ListenerSet, otherwise the controller rejects the configuration because of overlapping handlers:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: tcp-route
+  namespace: prod
+spec:
+  parentRefs:
+    - name: app-gw # The name of the Gateway object from the ALBInstance status.
+      namespace: prod
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      sectionName: tcp-port-9000
+      port: 9000
+  rules:
+    - backendRefs:
+        - name: tcp-svc # Reference to the internal load balancer of the application.
+          port: 9000
+```
+
+To publish a UDP service, first expose an additional UDP port in the ALBInstance:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: app-gw
+  namespace: prod
+spec:
+  gatewayName: app-gw
+  inlet:
+    type: LoadBalancer
+    additionalPorts:
+      - port: 5353
+        protocol: UDP
+```
+
+The ALB controller creates the UDP listener on the managed Gateway automatically from `spec.inlet.additionalPorts`. For UDP, attach the UDPRoute directly to that Gateway listener instead of creating a separate ListenerSet, otherwise the controller rejects the configuration because of overlapping handlers:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: UDPRoute
+metadata:
+  name: udp-route
+  namespace: prod
+spec:
+  parentRefs:
+    - name: app-gw # The name of the Gateway object from the ALBInstance status.
+      namespace: prod
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      sectionName: udp-port-5353
+      port: 5353
+  rules:
+    - backendRefs:
+        - name: udp-svc # Reference to the internal load balancer of the application.
+          port: 5353
 ```
 
 ### Publishing the app via a different gateway
@@ -537,27 +620,341 @@ spec:
         name: app-backend-ca
 ```
 
+### Configuring OpenTelemetry tracing TLS
+
+If OpenTelemetry tracing must send data over TLS, create a Kubernetes Secret with the CA certificate and reference it from `spec.openTelemetry.tracing.tls.caSecretName`.
+
+For ClusterALBInstance and the default Deckhouse gateway, place the Secret in the `d8-alb` namespace. The Secret must contain the `cacert` key.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: otel-tracing-ca
+  namespace: d8-alb
+type: Opaque
+stringData:
+  cacert: |
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ClusterALBInstance
+metadata:
+  name: proxy-gw
+spec:
+  gatewayName: proxy-gw
+  openTelemetry:
+    tracing:
+      service:
+        name: otel-collector
+        namespace: monitoring
+      port: 4318
+      protocol: HTTP
+      path: /v1/traces
+      tls:
+        sni: otel-collector.monitoring.svc.cluster.local
+        caSecretName: otel-tracing-ca
+```
+
 ### Supported HTTPRoute annotations {#supported-httproute-annotations}
 
 Because the current Gateway API specification does not yet cover all features required for a Deckhouse cluster to operate properly, the module provides a gradually growing set of HTTPRoute object annotations that adds the missing configuration options. The controller reads these keys from `HTTPRoute.metadata.annotations`.
 
 | Annotation | Description |
 | :--- | :--- |
-| `alb.network.deckhouse.io/tls-disable-protocol` | Disables a TLS protocol version for the handler with the hostname of this route (for example value `http2`). This may be required in rare cases when a shared certificate with several DNS names is used together with request redirection. |
-| `alb.network.deckhouse.io/whitelist-source-range` | Expects a comma-separated list of subnets in CIDR format: an IP filter at route level; overrides the global whitelist (for example `10.1.1.10/32, 10.2.2.2/32`). |
-| `alb.network.deckhouse.io/response-headers-to-add` | JSON object with additional response headers (for example `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`). |
-| `alb.network.deckhouse.io/session-affinity` | JSON for cookie session affinity (`mode`, `path`, `cookieName`, `ttl`, etc.); not every field is required (for example `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`). |
-| `alb.network.deckhouse.io/hash-key` | For example `source-ip`: consistent hashing for Service backends of the HTTPRoute object. |
-| `alb.network.deckhouse.io/service-upstream` | `"true"`: traffic to the upstream goes through the corresponding Service object instead of directly to pods. |
-| `alb.network.deckhouse.io/basic-auth-secret` | `namespace/secret` with htpasswd data for HTTP basic auth on this route. |
-| `alb.network.deckhouse.io/satisfy` | `all` or `any`: defines whether both checks must be satisfied (whitelist and basic-auth) or only one of them (default `all`). |
-| `alb.network.deckhouse.io/auth-url` | Defines the URL of the external authentication service. |
-| `alb.network.deckhouse.io/auth-signin` | Defines the redirect URL for authentication when `401` is returned by external authentication. |
-| `alb.network.deckhouse.io/auth-response-headers` | Comma-separated list: additional headers from the auth response to pass upstream (on top of the standard allowlist). |
-| `alb.network.deckhouse.io/rewrite-target` | Allows rewriting paths for rules with `RegularExpression` type by using regex capture groups (for example `/my-path/\1`). |
-| `alb.network.deckhouse.io/buffer-max-request-bytes` | Defines the buffer size that may be used when requests are buffered (by default Envoy Proxy does not buffer requests). |
-| `alb.network.deckhouse.io/limit-rps` | RPS limit for a route. |
-| `alb.network.deckhouse.io/backend-tls-settings` | For example `{"mode": "SIMPLE", "insecureSkipVerify": true, "clientCertificate": "", "privateKey": "", "caCertificates": ""}`; allows explicit configuration of TLS connection parameters to the upstream. |
+| `alb.network.deckhouse.io/tls-disable-protocol` | Disables a TLS protocol version for the handler with the hostname of this route (for example, value `http2`). This may be required in rare cases when a shared certificate with several DNS names is used together with request redirection |
+| `alb.network.deckhouse.io/whitelist-source-range` | Expects a comma-separated list of subnets in CIDR format: an IP filter at route level; overrides the global whitelist (for example, `10.1.1.10/32, 10.2.2.2/32`) |
+| `alb.network.deckhouse.io/response-headers-to-add` | JSON object with additional response headers (for example, `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`) |
+| `alb.network.deckhouse.io/session-affinity` | JSON for cookie session affinity (`mode`, `path`, `cookieName`, `ttl`, etc.); not every field is required (for example, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
+| `alb.network.deckhouse.io/hash-key` | For example, `source-ip`: consistent hashing for Service backends of the HTTPRoute object |
+| `alb.network.deckhouse.io/service-upstream` | `"true"`: traffic to the upstream goes through the corresponding Service object instead of directly to pods |
+| `alb.network.deckhouse.io/basic-auth-secret` | `namespace/secret` with htpasswd data for HTTP basic auth on this route |
+| `alb.network.deckhouse.io/satisfy` | `all` or `any`: defines whether both checks must be satisfied (whitelist and basic-auth) or only one of them (default `all`) |
+| `alb.network.deckhouse.io/auth-url` | Defines the URL of the external authentication service |
+| `alb.network.deckhouse.io/auth-signin` | Defines the redirect URL for authentication when `401` is returned by external authentication |
+| `alb.network.deckhouse.io/auth-response-headers` | Comma-separated list: additional headers from the auth response to pass upstream (on top of the standard allowlist) |
+| `alb.network.deckhouse.io/mod-security` | JSON configuration for the per-route ModSecurity/Coraza WAF |
+| `alb.network.deckhouse.io/rewrite-target` | Allows rewriting paths for rules with `RegularExpression` type by using regex capture groups (for example, `/my-path/\1`) |
+| `alb.network.deckhouse.io/buffer-max-request-bytes` | Defines the buffer size that may be used when requests are buffered (by default Envoy Proxy does not buffer requests) |
+| `alb.network.deckhouse.io/limit-rps` | RPS limit for a route |
+| `alb.network.deckhouse.io/backend-tls-settings` | For example, `{"mode": "SIMPLE", "insecureSkipVerify": true, "clientCertificate": "", "privateKey": "", "caCertificates": "", "sni": "example.com", "secret": "<NAMESPACE>/<SECRET_NAME>"}`; allows explicit configuration of TLS connection parameters to the upstream. `<NAMESPACE>` — Secret namespace; `<SECRET_NAME>` — Secret name |
+| `alb.network.deckhouse.io/idle-timeout` | Sets the per-route Envoy `idle_timeout`, in seconds. Similar to `ingress-nginx` `proxy-read-timeout`/`proxy-send-timeout`; this is an inactivity timeout, not a total request timeout |
+| `alb.network.deckhouse.io/proxy-buffer-size` | Sets the maximum size of response headers when configured on an upstream cluster; if exceeded, Envoy returns `503`. Similar to `nginx.ingress.kubernetes.io/proxy-buffer-size` |
+
+### Publishing an application when the Istio sidecar is enabled {#publishing-with-istio-sidecar}
+
+When the Istio sidecar is enabled for the gateway proxy through the [`istioSidecar`](/modules/alb/cr.html#albinstance-v1alpha1-spec-istiosidecar) parameter of ALBInstance or [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-istiosidecar), traffic to the backend must reach the sidecar through the Service object and carry the Service FQDN in the `Host` header. Configure the HTTPRoute object as follows:
+
+- Add the `alb.network.deckhouse.io/service-upstream: "true"` annotation so that traffic goes through the Service object instead of directly to pods. This is the equivalent of the `ingress-nginx` `nginx.ingress.kubernetes.io/service-upstream: "true"` annotation.
+- Add a `URLRewrite` filter that sets `hostname` to the FQDN of the backend Service object. This replaces the `ingress-nginx` `nginx.ingress.kubernetes.io/upstream-vhost` annotation.
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: myservice
+  namespace: myns
+  annotations:
+    alb.network.deckhouse.io/service-upstream: "true" # Traffic goes through the Service object so the Istio sidecar can process it.
+spec:
+  parentRefs:
+    - name: app-listeners # ListenerSet name.
+      namespace: myns
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+  hostnames:
+    - myservice.example.com
+  rules:
+    - filters:
+        - type: URLRewrite
+          urlRewrite:
+            hostname: myservice.myns.svc # FQDN of the backend Service object, so the sidecar identifies the destination.
+      backendRefs:
+        - name: myservice
+          port: 80
+```
+
+### WAF on HTTPRoute {#waf-on-httproute}
+
+The `alb.network.deckhouse.io/mod-security` annotation enables the ModSecurity/Coraza WAF for a specific HTTPRoute. The WAF is configured per route and does not affect other routes unless the same annotation is added there.
+
+Supported annotation fields:
+
+| Field | Description |
+| :--- | :--- |
+| `mode` | WAF engine mode: `on`, `off`, or any other value for `DetectionOnly` |
+| `preset` | Optional ruleset. Currently only `owasp-crs` is supported. If the field is omitted, no ruleset is loaded |
+| `paranoiaLevel` | Optional CRS paranoia level from `1` to `4`. Applied only when `preset` is `owasp-crs` |
+| `configRef.namespace` | Optional namespace of the ConfigMap with custom rules. Defaults to the namespace of the HTTPRoute |
+| `configRef.name` | Name of the ConfigMap with custom rules |
+| `configRef.key` | Optional key in the ConfigMap. If omitted, all keys are read in sorted order |
+| `directives` | Optional inline list of ModSecurity/Coraza directives appended after the ruleset and ConfigMap rules |
+
+Directive order:
+
+1. Base directives shipped with the module (`@coraza.conf`, `SecRuleEngine`, `SecResponseBodyAccess Off`).
+1. Rules from the ruleset in `preset`.
+1. Rules from `configRef`.
+1. Inline `directives`.
+
+Inline directives are applied last, so they can override the ruleset or ConfigMap rules.
+
+Minimal example:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app
+  namespace: prod
+  annotations:
+    alb.network.deckhouse.io/mod-security: |
+      {
+        "mode": "on"
+      }
+spec:
+  hostnames:
+    - app.example.com
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: app-listeners
+      namespace: prod
+      sectionName: app-https
+      port: 443
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: app-svc
+          port: 8080
+```
+
+Example with the OWASP CRS ruleset:
+
+```yaml
+metadata:
+  annotations:
+    alb.network.deckhouse.io/mod-security: |
+      {
+        "mode": "on",
+        "preset": "owasp-crs",
+        "paranoiaLevel": 1
+      }
+```
+
+Example with custom rules from a ConfigMap:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: waf-rules
+  namespace: prod
+data:
+  rules.conf: |
+    SecRule ARGS:test "@streq block" \
+      "id:1000001,phase:2,deny,status:403,msg:'test waf block'"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app
+  namespace: prod
+  annotations:
+    alb.network.deckhouse.io/mod-security: |
+      {
+        "mode": "on",
+        "preset": "owasp-crs",
+        "paranoiaLevel": 1,
+        "configRef": {
+          "name": "waf-rules",
+          "key": "rules.conf"
+        },
+        "directives": [
+          "SecResponseBodyAccess Off"
+        ]
+      }
+```
+
+Rule syntax reference:
+
+- [Coraza syntax and `SecRule` format](https://www.coraza.io/docs/seclang/syntax/)
+- [ModSecurity variables reference](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29-Variables)
+- [ModSecurity operators reference](https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-%28v2.x%29-Operators)
+- [ModSecurity `SecRuleEngine` and related directives](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v2.x%29)
+
+Current notes and limitations:
+
+- only the `owasp-crs` ruleset is supported;
+- `paranoiaLevel` is ignored when `preset` is omitted or differs from `owasp-crs`;
+- valid `paranoiaLevel` values are `1`–`4`; in practice it is recommended to start with `1`;
+- the WAF currently inspects only incoming requests to the application and can block such requests when rules match; responses sent back to the client are not inspected;
+- rules from ConfigMap values may be multiline: lines ending with `\` are joined automatically.
+
+### Using GeoIP and GeoLite2 {#geoip}
+
+The `alb` module supports enriching incoming HTTP requests with headers based on [MaxMind GeoIP/GeoLite2](https://dev.maxmind.com/geoip/) databases.
+
+Currently, the following database editions can be used:
+
+- GeoIP2-Anonymous-IP;
+- GeoIP2-City;
+- GeoIP2-ISP;
+- GeoIP2-ASN;
+- GeoLite2-ASN;
+- GeoLite2-City.
+
+{% alert level="info" %}
+The current GeoIP integration supports using up to 4 databases simultaneously.
+{% endalert %}
+
+#### Downloading GeoIP Databases from MaxMind {#maxmind}
+
+To use GeoIP and download databases directly from MaxMind servers, first create a secret containing the license key, for example:
+
+```bash
+d8 k -n prod create secret generic geoip-license --from-literal=licenseKey='<MAXMIND_LICENSE_KEY>'
+```
+
+{% alert level="info" %}
+When configuring GeoIP for ClusterALBInstance, the secret can be placed in any namespace, but it is recommended to use `d8-alb`.
+
+For ALBInstance objects, the secret must reside in the same namespace as the ALBInstance object.
+{% endalert %}
+
+After creating the secret, reference it in a ClusterALBInstance or ALBInstance object, for example:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: main
+  namespace: prod
+spec:
+  envoyLogLevel: Warning
+  gatewayName: custom-gateway
+  geoIP:
+    licenseKeySecretRef:
+      name: geoip-license
+```
+
+#### Downloading GeoIP Databases from a Local Mirror {#local}
+
+To use GeoIP and download databases from a local mirror, specify the mirror URL, for example:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: main
+  namespace: prod
+spec:
+  envoyLogLevel: Warning
+  gatewayName: custom-gateway
+  geoIP:
+    maxmindMirror:
+      url: "https://local.geoip:8443"
+```
+
+You can also use a URL pointing to a local caching GeoIP server in another namespace, for example:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: main
+  namespace: prod
+spec:
+  envoyLogLevel: Warning
+  gatewayName: custom-gateway
+  geoIP:
+    maxmindMirror:
+      url: "http://geoproxy-cluster.d8-alb.svc:8080/download"
+```
+
+#### Using GeoIP Headers {#headers}
+
+Once GeoIP is configured in the namespace where the ClusterALBInstance or ALBInstance resides, a caching and update server for GeoIP databases will be started, and Envoy Proxy pods will be sequentially restarted with functionality to fetch GeoIP databases from the local GeoIP server.
+
+To enrich HTTP requests with GeoIP-based data, specify the names of the HTTP headers that will contain the corresponding information, for example:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ALBInstance
+metadata:
+  name: main
+  namespace: prod
+spec:
+  envoyLogLevel: Warning
+  gatewayName: custom-gateway
+  geoIP:
+    headers:
+      city: geoip_city
+      country: geoip_country
+    licenseKeySecretRef:
+      name: geoip-license
+    maxmindEditionIDs:
+      - GeoLite2-City
+```
+
+GeoIP databases are updated once per day, both on the caching server and in each individual Envoy Proxy pod using the caching server.
+
+For PVC settings used by GeoIP components, see the [`storageClass`](/modules/alb/configuration.html#parameters-storageclass) module parameter.
+
+### OpenTelemetry Tracing Configuration {#tracing}
+
+The `alb` module supports exporting OpenTelemetry traces from Envoy proxies.
+
+To enable export, specify the target OpenTelemetry Collector address as a [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url). Traces can be transmitted over OTLP/HTTP or OTLP/gRPC. [TLS](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls) can be optionally configured for secure connections.
+
+When using TLS, it is recommended to explicitly set the [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni) parameter if the OpenTelemetry Collector is behind a proxy or load balancer that selects upstreams based on Server Name Indication.
+
+Gateway infrastructure setup, inlet examples, and FAQ are covered in [ALB with Kubernetes Gateway API](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html). Module reference: [`alb` module FAQ](/modules/alb/faq.html), [`alb` module examples](/modules/alb/examples.html), [`alb` module configuration](/modules/alb/configuration.html), [`alb` Custom Resources](/modules/alb/cr.html).
 
 ## Publishing applications using Istio
 
