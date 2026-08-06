@@ -359,6 +359,13 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Whether the sysext images of the Olcedar node get their dm-verity roothash
+          # signed. It is signed with the Olcedar key the node kernel trusts, not with the
+          # Deckhouse key WERF_SIGN_KEY above, so the build logs in with its own Vault role
+          # (deckhouse-olcedar-signer) right before signing — a token there lives 180s.
+          # The list below mirrors the repositories that role is bound to; a build
+          # anywhere else cannot obtain a token and skips signing instead of failing.
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1075,6 +1082,13 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Whether the sysext images of the Olcedar node get their dm-verity roothash
+          # signed. It is signed with the Olcedar key the node kernel trusts, not with the
+          # Deckhouse key WERF_SIGN_KEY above, so the build logs in with its own Vault role
+          # (deckhouse-olcedar-signer) right before signing — a token there lives 180s.
+          # The list below mirrors the repositories that role is bound to; a build
+          # anywhere else cannot obtain a token and skips signing instead of failing.
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1478,6 +1492,13 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Whether the sysext images of the Olcedar node get their dm-verity roothash
+          # signed. It is signed with the Olcedar key the node kernel trusts, not with the
+          # Deckhouse key WERF_SIGN_KEY above, so the build logs in with its own Vault role
+          # (deckhouse-olcedar-signer) right before signing — a token there lives 180s.
+          # The list below mirrors the repositories that role is bound to; a build
+          # anywhere else cannot obtain a token and skips signing instead of failing.
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1881,6 +1902,13 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Whether the sysext images of the Olcedar node get their dm-verity roothash
+          # signed. It is signed with the Olcedar key the node kernel trusts, not with the
+          # Deckhouse key WERF_SIGN_KEY above, so the build logs in with its own Vault role
+          # (deckhouse-olcedar-signer) right before signing — a token there lives 180s.
+          # The list below mirrors the repositories that role is bound to; a build
+          # anywhere else cannot obtain a token and skips signing instead of failing.
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2284,6 +2312,13 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Whether the sysext images of the Olcedar node get their dm-verity roothash
+          # signed. It is signed with the Olcedar key the node kernel trusts, not with the
+          # Deckhouse key WERF_SIGN_KEY above, so the build logs in with its own Vault role
+          # (deckhouse-olcedar-signer) right before signing — a token there lives 180s.
+          # The list below mirrors the repositories that role is bound to; a build
+          # anywhere else cannot obtain a token and skips signing instead of failing.
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2687,6 +2722,13 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Whether the sysext images of the Olcedar node get their dm-verity roothash
+          # signed. It is signed with the Olcedar key the node kernel trusts, not with the
+          # Deckhouse key WERF_SIGN_KEY above, so the build logs in with its own Vault role
+          # (deckhouse-olcedar-signer) right before signing — a token there lives 180s.
+          # The list below mirrors the repositories that role is bound to; a build
+          # anywhere else cannot obtain a token and skips signing instead of failing.
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -3090,6 +3132,13 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Whether the sysext images of the Olcedar node get their dm-verity roothash
+          # signed. It is signed with the Olcedar key the node kernel trusts, not with the
+          # Deckhouse key WERF_SIGN_KEY above, so the build logs in with its own Vault role
+          # (deckhouse-olcedar-signer) right before signing — a token there lives 180s.
+          # The list below mirrors the repositories that role is bound to; a build
+          # anywhere else cannot obtain a token and skips signing instead of failing.
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
