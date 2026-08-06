@@ -8,13 +8,13 @@ lang: ru
 
 {% alert level="info" %}
 
-Чтобы посмотреть текущий тип container runtime, используемый на узлах кластера (в NodeGroup) по умолчанию, используйте команду:
+Чтобы посмотреть текущий тип container runtime, используемый по умолчанию в NodeGroup кластера, используйте команду:
 
 ```shell
 d8 system edit cluster-configuration
 ```
 
-Тип container runtime указывается в параметре `defaultCRI`.
+Тип container runtime указывается [в параметре `defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 
 {% endalert %}
 

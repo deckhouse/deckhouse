@@ -7,13 +7,13 @@ You can configure containerd v2 as the primary container runtime either at the c
 
 {% alert level="info" %}
 
-To view the current container runtime type used by default on the cluster nodes (in a NodeGroup), use the following command:
+To view the current container runtime type used by default in the cluster NodeGroups, use the following command:
 
 ```shell
 d8 system edit cluster-configuration
 ```
 
-The container runtime type is specified in the `defaultCRI` parameter.
+The container runtime type is specified in the [`defaultCRI`](../../../../reference/api/cr.html#clusterconfiguration-defaultcri) parameter.
 
 {% endalert %}
 

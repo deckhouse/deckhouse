@@ -8,7 +8,7 @@ This page applies only to Managed Kubernetes clusters. Registry management throu
 
 For clusters fully managed by Deckhouse Kubernetes Platform (DKP), registry settings are configured in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. For an example, see ["Managing the registry in DKP-managed clusters"](managing-interaction.html).
 
-The information on this page applies to clusters that use containerd v1 or containerd v2 as their primary container runtime. However, containerd v2 is considered the current standard for DKP. If you need to migrate to containerd v2, refer to the section ["Migrating container runtime to containerd v2"](../platform-scaling/node/migrating.html) to verify availability and perform the migration.
+The information on this page applies to clusters that use containerd v1 or containerd v2 as their primary container runtime. However, containerd v2 is the current standard for DKP. If you need to migrate to containerd v2, refer to the section ["Migrating container runtime to containerd v2"](../platform-scaling/node/migrating.html) to verify availability and perform the migration.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -16,7 +16,7 @@ Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` 
 {% endalert %}
 
 {% alert level="info" %}
-The methods for adding a configuration for an registry are described in the section ["Adding a configuration for an additional registry"](../platform-scaling/node/node-customization.html#adding-a-configuration-for-an-additional-registry).
+The methods for adding a configuration for a registry are described in the section ["Adding a configuration for an additional registry"](../platform-scaling/node/node-customization.html#adding-a-configuration-for-an-additional-registry).
 {% endalert %}
 
 To switch the cluster to use an external registry, follow these steps:
