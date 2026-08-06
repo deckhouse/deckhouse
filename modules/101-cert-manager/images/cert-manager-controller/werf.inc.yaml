@@ -28,6 +28,10 @@ shell:
   install:
   - git clone -b "v{{ $version }}" --single-branch --depth=1 $(cat /run/secrets/SOURCE_REPO)/jetstack/cert-manager.git /src
   - cd /src
+  # `--allow-empty` is intentional: the patch set may be empty after an upstream
+  # version bump that already ships the fixes, so we don't have to add/remove
+  # the patch file on every version bump. An empty patch MUST be documented in
+  # README.md (e.g. "CVEs are closed by upstream X.Y.Z").
   - git apply /patches/*.patch --verbose --allow-empty
   - git describe --tags --always --match='v*' --abbrev=14 --dirty > VERSION
   - git describe --tags --always --match='v*' --abbrev=0 | grep -q '-' && echo true || echo false > IS_PRERELEASE
