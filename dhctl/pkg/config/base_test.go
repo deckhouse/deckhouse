@@ -464,7 +464,8 @@ func TestParseConfigFromFiles(t *testing.T) {
 }
 
 func TestParseConfigFromCluster(t *testing.T) {
-	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
+	yandexCandiDir := tests.RequireProviderCandiDir(t, "yandex")
+
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
 		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, &options.GlobalOptions{}, "")
 
@@ -679,11 +680,10 @@ internalNetworkCIDRs:
 	t.Run("Cloud cluster", func(t *testing.T) {
 		// Yandex now ships its external validator inside the terraform-manager
 		// bundle (no longer an in-tree validator provider), so
-		// providerCandiPresent requires a downloaded bundle even though the
-		// candi schema is already baked in-tree. Stub the resolve+download
-		// vars instead of hitting the registry, copying the real schema so
-		// these tests keep exercising actual YandexClusterConfiguration
-		// validation.
+		// providerCandiPresent requires a downloaded bundle. Stub the
+		// resolve+download vars instead of hitting the registry, copying the
+		// real schema from the provider's candi so these tests keep exercising
+		// actual YandexClusterConfiguration validation.
 		origDigest := resolveProviderBundleDigest
 		resolveProviderBundleDigest = func(_ string) (string, error) {
 			return "sha256:test-yandex-digest", nil
@@ -692,7 +692,7 @@ internalNetworkCIDRs:
 
 		origDownload := downloadProviderBundle
 		downloadProviderBundle = func(_ context.Context, _, dest, _ string, _ image.RegistryConfig, _ bool) error {
-			schema, err := os.ReadFile(filepath.Join(options.DefaultCandiDir, "cloud-providers", "yandex", "openapi", "cluster_configuration.yaml"))
+			schema, err := os.ReadFile(filepath.Join(yandexCandiDir, "openapi", "cluster_configuration.yaml"))
 			if err != nil {
 				return err
 			}
