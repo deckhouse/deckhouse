@@ -54,6 +54,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/admission"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
@@ -102,6 +103,8 @@ type Runtime struct {
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
 	registry         *registry.Service  // Registry service for managing package digests
 
+	admissionServer *admission.Server
+
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
 	debugServer *debug.Server       // Unix socket debug API
@@ -143,7 +146,7 @@ type moduleManagerI interface {
 
 // Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -158,6 +161,11 @@ func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleMan
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
+
+	edition, err := edition.Parse(app.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse edition: %w", err)
+	}
 	r.edition = edition
 
 	r.registry = registry.NewService(dc, logger)
