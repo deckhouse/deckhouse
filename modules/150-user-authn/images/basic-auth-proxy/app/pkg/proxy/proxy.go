@@ -56,6 +56,11 @@ const (
 	// extraHeaderPrefix is the prefix kube-apiserver maps to user.Info.Extra
 	// (see --requestheader-extra-headers-prefix); must be stripped on ingress.
 	extraHeaderPrefix = "X-Remote-Extra-"
+
+	// reservedIdentityPrefix marks the identity namespace kube-apiserver keeps
+	// for itself, mirroring the userValidationRules the OIDC path enforces via
+	// AuthenticationConfiguration.
+	reservedIdentityPrefix = "system:"
 )
 
 var _ http.Handler = &Handler{}
@@ -427,10 +432,38 @@ func stripIdentityHeaders(h http.Header) {
 	}
 }
 
+// isReservedIdentity reports whether name lies in the identity namespace
+// kube-apiserver reserves for itself. An external directory holds no authority
+// over that namespace: system:masters is bound to cluster-admin by a default
+// ClusterRoleBinding, and the rest of the prefix carries kube-apiserver's own
+// synthetic groups such as system:authenticated.
+func isReservedIdentity(name string) bool {
+	return strings.HasPrefix(name, reservedIdentityPrefix)
+}
+
+// filterReservedGroups drops directory groups that claim a reserved name.
+func (h *Handler) filterReservedGroups(login string, groups []string) []string {
+	filtered := make([]string, 0, len(groups))
+	for _, group := range groups {
+		if isReservedIdentity(group) {
+			h.logger.Warningf("dropping group %q of user %s: the %q prefix is reserved by kube-apiserver", group, login, reservedIdentityPrefix)
+			continue
+		}
+		filtered = append(filtered, group)
+	}
+	return filtered
+}
+
 func (h *Handler) modifyRequest(w http.ResponseWriter, r *http.Request, login string, groups []string) {
+	if isReservedIdentity(login) {
+		h.logger.Errorf("403 Forbidden, user %s claims the reserved %q prefix", login, reservedIdentityPrefix)
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
 	stripIdentityHeaders(r.Header)
 	r.Header.Set("X-Remote-User", login)
-	for _, group := range groups {
+	for _, group := range h.filterReservedGroups(login, groups) {
 		r.Header.Add("X-Remote-Group", group)
 	}
 
