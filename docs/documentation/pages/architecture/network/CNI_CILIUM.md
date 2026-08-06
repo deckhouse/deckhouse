@@ -107,6 +107,7 @@ The module interacts with the following components:
    * Monitors status of pods running on the node, reads network policies.
    * Requests the IP ranges of cluster nodes via the `PodCidr`/`podCIDRs` attributes of the Node resource specification.
    * Authorizes requests for agent and operator metrics.
+
 The following external components interact with the module:
 
 1. **Prometheus-main**: Collects metrics from agent and operator.
