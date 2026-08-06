@@ -37,7 +37,7 @@ import (
 )
 
 func TestCheckClusterConfig(t *testing.T) {
-	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
+	tests.RequireProviderCandiDir(t, "yandex")
 	const (
 		k8sVersionOld    = "1.32"
 		k8sVersionNew    = "1.33"
@@ -612,10 +612,9 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	opts.Global.DownloadDir = t.TempDir()
 
 	// Yandex's external validator ships in the terraform-manager bundle, not
-	// in-tree, so parseConfigFromCluster requires a downloaded bundle even
-	// though the ClusterConfiguration schema is already baked into candi.
-	// Fake the delivery instead of hitting the registry.
-	tests.StubDeliveredProviderBundle(t, opts.Global.DownloadDir, opts.Global.CandiDir, "yandex")
+	// in-tree, so parseConfigFromCluster requires a downloaded bundle. Fake the
+	// delivery instead of hitting the registry.
+	tests.StubDeliveredProviderBundle(t, opts.Global.DownloadDir, "yandex")
 
 	return &testCheckClusterConfig{
 		testCheckClusterConfigBase: p.testCheckClusterConfigBase,

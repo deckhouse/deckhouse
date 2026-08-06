@@ -933,37 +933,58 @@ func TestTofuApplyWithCreatingWorkerFilesInRoot(t *testing.T) {
 	})
 }
 
-// prepareLocalRun
-// we need to prepare local env because cloud-providers dir migrated to modules
+// prepareLocalRun links every provider from cloudProviderModules that is not
+// already present under cloudProvidersDir. Providers land there either at build
+// time (candi-cloud-providers-*.yaml) or not at all: external providers such as
+// yandex are excluded from the image and ship their candi inside the module. So
+// the directory existing says nothing about a particular provider being in it —
+// each one is checked and linked separately, both on a developer machine (where
+// nothing is materialised) and in CI (where only external providers are absent).
 func prepareLocalRun(t *testing.T, logger *slog.Logger) {
 	stat, err := os.Stat(cloudProvidersDir)
-	if err == nil {
+	switch {
+	case err == nil:
 		require.True(t, stat.IsDir(), "should be directory %s", cloudProvidersDir)
-		return
-	}
+	case os.IsNotExist(err):
+		require.NoError(t, os.MkdirAll(cloudProvidersDir, 0o755),
+			"Could not create cloud-provider directory %s", cloudProvidersDir)
 
-	if !os.IsNotExist(err) {
+		t.Cleanup(func() {
+			if err := os.RemoveAll(cloudProvidersDir); err != nil {
+				logger.Error(fmt.Sprintf("Could not remove cloud-provider directory %s: %v\n", cloudProvidersDir, err))
+				return
+			}
+
+			logger.Info(fmt.Sprintf("cloud-provider directory %s in local run removed\n", cloudProvidersDir))
+		})
+	default:
 		require.NoError(t, err, "Could not stat cloud-provider directory %s", cloudProvidersDir)
 	}
 
-	err = os.MkdirAll(cloudProvidersDir, 0o755)
-	require.NoError(t, err, "Could not create cloud-provider directory %s", cloudProvidersDir)
-
-	t.Cleanup(func() {
-		if err := os.RemoveAll(cloudProvidersDir); err != nil {
-			logger.Error(fmt.Sprintf("Could not remove cloud-provider directory %s: %v\n", cloudProvidersDir, err))
-			return
-		}
-
-		logger.Info(fmt.Sprintf("cloud-provider directory %s in local run removed\n", cloudProvidersDir))
-	})
-
 	candiDirs := make([]string, 0, len(cloudProviderModules))
 	for moduleName, moduleDir := range cloudProviderModules {
-		dest := fmt.Sprintf("%s/%s", cloudProvidersDir, moduleName)
-		err := os.Symlink(moduleDir, dest)
-		require.NoError(t, err, "should create symlink %s to %s", moduleDir, dest)
+		dest := filepath.Join(cloudProvidersDir, moduleName)
+		if _, err := os.Lstat(dest); err == nil {
+			// Delivered with the image, nothing to link.
+			continue
+		}
+
+		require.NoError(t, os.Symlink(moduleDir, dest), "should create symlink %s to %s", moduleDir, dest)
+
+		t.Cleanup(func() {
+			if err := os.Remove(dest); err != nil && !os.IsNotExist(err) {
+				logger.Error(fmt.Sprintf("Could not remove cloud-provider symlink %s: %v\n", dest, err))
+				return
+			}
+
+			logger.Info(fmt.Sprintf("cloud-provider symlink %s removed\n", dest))
+		})
+
 		candiDirs = append(candiDirs, moduleDir)
+	}
+
+	if len(candiDirs) == 0 {
+		return
 	}
 
 	const schemasPathsEnv = "DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"
