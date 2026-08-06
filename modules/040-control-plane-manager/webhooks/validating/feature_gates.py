@@ -124,47 +124,35 @@ def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
 
 
 def get_k8s_version(ctx: DotMap) -> Optional[str]:
-    # Mirrors global-hooks/discovery/cluster_configuration.go resolveTargetKubernetesVersion:
-    # a present ModuleConfig setting decides on its own, Default/Automatic included (it then means the
+    # Mirrors global-hooks/discovery/target_kubernetes_version.go resolveTargetKubernetesVersion:
+    # a present ModuleConfig setting decides on its own, Default included (it then means the
     # Deckhouse default, and ClusterConfiguration is not consulted at all).
     settings = ctx.review.request.object.get('spec', {}).get('settings', {})
     mc_version = settings.get('kubernetesVersion')
     if mc_version and not is_module_config_track_default(mc_version):
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-feature-gates source=mc-pin version=%s", mc_version)
         return mc_version
 
     snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-feature-gates source=none reason=no-secret mc=%s", mc_version)
         return None
 
     secret = snapshot[0]
     if not secret or not hasattr(secret, 'object'):
-        logging.info("E2E-KV python-feature-gates source=none reason=bad-secret mc=%s", mc_version)
         return None
 
     data = secret.object.data
     if not data:
-        logging.info("E2E-KV python-feature-gates source=none reason=empty-secret mc=%s", mc_version)
         return None
 
     if is_module_config_track_default(mc_version):
         version = get_deckhouse_default_version_from_secret(data)
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-feature-gates source=mc-track-default version=%s mc=%s", version, mc_version)
         return version
 
     k8s_version = get_k8s_version_from_cluster_config(data)
     if is_cluster_configuration_pinned(k8s_version):
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-feature-gates source=cc-pin version=%s", k8s_version)
         return k8s_version
 
     version = get_deckhouse_default_version_from_secret(data)
-    # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-    logging.info("E2E-KV python-feature-gates source=deckhouse-default version=%s", version)
     return version
 
 

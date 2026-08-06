@@ -118,13 +118,6 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	switch {
 	case isModuleConfigTrackDefault(newVersion):
 		// Handing the choice back to Deckhouse — self-limiting, see the doc comment above.
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-		log.Info("E2E-KV admission",
-			"decision", "allow",
-			"reason", "track-default",
-			"newVersion", newVersion,
-			"oldVersion", oldVersion,
-		)
 		return nil, nil
 	case newVersion != "":
 		effective = newVersion
@@ -132,22 +125,9 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		// Clearing or deleting the setting: effective falls back to CC, then the Deckhouse default.
 		ccVersion, ok := v.readRawClusterConfigurationVersion(ctx)
 		if !ok {
-			// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-			log.Info("E2E-KV admission",
-				"decision", "allow",
-				"reason", "clear-fail-open-no-cc",
-				"oldVersion", oldVersion,
-			)
 			return nil, nil
 		}
 		if !isClusterConfigurationPinned(ccVersion) {
-			// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-			log.Info("E2E-KV admission",
-				"decision", "allow",
-				"reason", "clear-fail-open-cc-unpinned",
-				"oldVersion", oldVersion,
-				"ccVersion", ccVersion,
-			)
 			return nil, nil
 		}
 		effective = ccVersion
@@ -165,14 +145,6 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		return nil, err
 	}
 	if res != nil && !res.Valid {
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-		log.Info("E2E-KV admission",
-			"decision", "reject",
-			"reason", "module-compatibility",
-			"effective", effective,
-			"fromFallback", fromFallback,
-			"message", res.Message,
-		)
 		return res, nil
 	}
 
@@ -180,28 +152,11 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 	// Membership alone can miss deep downgrades before status is published or when Supported
 	// no longer encodes maxUsed-1 after a Deckhouse/edition change.
 	if res, err := v.rejectKubernetesVersionBelowMaxUsed(ctx, effective, fromFallback); res != nil || err != nil {
-		if res != nil && !res.Valid {
-			// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-			log.Info("E2E-KV admission",
-				"decision", "reject",
-				"reason", "below-maxUsed",
-				"effective", effective,
-				"fromFallback", fromFallback,
-				"message", res.Message,
-			)
-		}
 		return res, err
 	}
 
 	available, ok := v.readAvailableKubernetesVersions(ctx)
 	if !ok || len(available) == 0 {
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-		log.Info("E2E-KV admission",
-			"decision", "allow",
-			"reason", "fail-open-no-availableVersions",
-			"effective", effective,
-			"fromFallback", fromFallback,
-		)
 		return nil, nil
 	}
 
@@ -227,23 +182,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 				effective, available, reason,
 			)
 		}
-		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-		log.Info("E2E-KV admission",
-			"decision", "reject",
-			"reason", "not-in-availableVersions",
-			"effective", effective,
-			"fromFallback", fromFallback,
-			"message", msg,
-		)
 		return rejectResult(msg)
 	}
-	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-	log.Info("E2E-KV admission",
-		"decision", "allow",
-		"reason", "in-availableVersions",
-		"effective", effective,
-		"fromFallback", fromFallback,
-	)
 	return nil, nil
 }
 
