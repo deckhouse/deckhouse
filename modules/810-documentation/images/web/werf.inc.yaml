@@ -32,7 +32,9 @@ import:
   to: /app/embedded-modules
   before: setup
   includePaths:
+{{- if ne .Edition "CSE" }}
   - en
+{{- end }}
   - ru
 imageSpec:
   config:
