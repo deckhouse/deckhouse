@@ -79,26 +79,71 @@ var _ = Describe("Module hooks :: control-plane-manager :: calculate_resources_r
 		})
 	})
 
-	Context("Cluster with one master node (Capacity == Allocatable, kubelet not yet settled)", func() {
-		// Reservation floor is applied because Capacity == Allocatable signals
-		// kubelet has not yet subtracted its own reserved bucket.
+	Context("Cluster with one master node (auto mode, Capacity == Allocatable)", func() {
+		// Auto mode: the hook leaves the pool at zero and the static-pod templates
+		// size each component by cluster node count. The hook only validates that
+		// the master is big enough to host a control plane.
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
 			f.RunHook()
 		})
 
-		It(fmt.Sprintf("Hook should run, CP values = %d%% of (Capacity - kubelet reservation floor - configEveryNode*)", controlPlanePercent), func() {
+		It("Hook should run and keep the control-plane pool at zero (per-component sizing in templates)", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			expectCPU := int64((4000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
-			expectMem := int64((8*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(0)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(0)))
+		})
+
+		It("Hook should set the node safety cap to 75% of the master usable allocatable", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// Capacity 4 CPU / 8 GiB, Capacity==Allocatable so the kubelet floor
+			// (100m / 900Mi) applies: usable = (4000-100-300)m = 3600m and
+			// (8Gi-900Mi-512Mi) = 7109345280 bytes. Cap = 75% of usable.
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.maxMilliCpuControlPlane").Int()).To(Equal(int64(2700)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.maxMemoryControlPlane").Int()).To(Equal(int64(5332008960)))
+		})
+
+		It("Hook should not flag the master as undersized when the auto footprint fits", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			found := false
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == masterResourcesInsufficientMetricName {
+					found = true
+					break
+				}
+			}
+			Expect(found).To(BeFalse())
 		})
 	})
 
-	Context("Cluster with one master node, kubelet settled (Capacity > Allocatable, reservation > floor)", func() {
+	Context("Cluster with one undersized master node (auto mode)", func() {
+		// A 2 CPU / 4 GiB master is large enough to host a control plane, but the
+		// recommended auto footprint for the smallest tier (~4.25 GiB) does not fit
+		// into 75% of its usable allocatable, so the hook raises the advisory metric.
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "2", memory: "4Gi"}})))
+			f.RunHook()
+		})
+
+		It("Hook should run and raise the master-undersized advisory metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			found := false
+			value := 0.0
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == masterResourcesInsufficientMetricName {
+					found = true
+					value = *m.Value
+					break
+				}
+			}
+			Expect(found).To(BeTrue())
+			Expect(value).To(Equal(1.0))
+		})
+	})
+
+	Context("Cluster with one master node, kubelet settled (auto mode)", func() {
 		// Capacity=4 CPU/8 GiB, kubelet has reserved 200m CPU / 1 GiB memory.
-		// Both exceed the floor, so the hook uses the reported reservation as-is.
+		// The master is large enough, so the hook succeeds and stays in auto mode.
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{
 				{cpu: "3800m", memory: "7Gi", capCPU: "4", capMem: "8Gi"},
@@ -106,35 +151,10 @@ var _ = Describe("Module hooks :: control-plane-manager :: calculate_resources_r
 			f.RunHook()
 		})
 
-		It("Hook should run, CP values reflect the actual kubelet reservation (200m, 1 GiB)", func() {
+		It("Hook should run and keep the control-plane pool at zero", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			// effectiveCPU = Capacity(4000) - max(actualRes=200, floor=100) = 3800
-			// effectiveMem = 8 GiB - max(1 GiB, 900 MiB) = 7 GiB
-			expectCPU := int64((3800-configEveryNodeMilliCPU)*controlPlanePercent) / 100
-			expectMem := int64((7*1024*1024*1024-configEveryNodeMemory)*controlPlanePercent) / 100
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
-		})
-	})
-
-	Context("Cluster with one master node, kubelet settled but reservation under floor", func() {
-		// Capacity=4 CPU/8 GiB, kubelet reserved only 50m / 100 MiB. Floor wins
-		// — the hook treats the reservation as 100m / 900 MiB so the value is
-		// identical to the pre-settled state and a second hook run on a real
-		// cluster bootstrap doesn't re-render the CP manifests.
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{
-				{cpu: "3950m", memory: "8090Mi", capCPU: "4", capMem: "8Gi"},
-			})))
-			f.RunHook()
-		})
-
-		It("Hook should run, CP values reflect the reservation FLOOR not the smaller actual", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			expectCPU := int64((4000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
-			expectMem := int64((8*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(0)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(0)))
 		})
 	})
 
@@ -223,19 +243,32 @@ var _ = Describe("Module hooks :: control-plane-manager :: calculate_resources_r
 		})
 	})
 
-	Context("Cluster with two master nodes, with different resources, but without set global modules resourcesRequests for control-plane", func() {
+	Context("Cluster with one master node and only CPU override set (independent override)", func() {
+		// Only CPU is overridden: the CPU pool is set and the templates split it
+		// by the historical share, while memory stays at zero (auto/per-component).
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
+			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
+			f.RunHook()
+		})
+
+		It("Hook should set only the CPU pool and keep memory at zero", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(1500)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(0)))
+		})
+	})
+
+	Context("Cluster with two master nodes, with different resources, auto mode", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}, {cpu: "2000m", memory: "4Gi"}})))
 			f.RunHook()
 		})
 
-		It(fmt.Sprintf("Hook should run, control-plane resource values should be equal %d%% of (smaller master - resources for components working on every node)", controlPlanePercent), func() {
+		It("Hook should run and keep the control-plane pool at zero (per-component sizing in templates)", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			// Smaller master: Capacity=Allocatable=2000m/4 GiB → floor applies.
-			expectCPU := int64((2000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
-			expectMem := int64((4*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(0)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(0)))
 		})
 
 	})
