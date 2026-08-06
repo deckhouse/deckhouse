@@ -23,6 +23,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
 )
@@ -61,4 +63,50 @@ func TestDefaultSANs(t *testing.T) {
 		"conversion-webhook-handler.d8-system.svc",
 		"conversion-webhook-handler.d8-system.svc.example2.com",
 	}, res2)
+}
+
+func TestCACommonNameDefaultsToCN(t *testing.T) {
+	require.Equal(t, "module-name", GenSelfSignedTLSHookConf{CN: "module-name"}.caCommonName())
+	require.Equal(t, "module-name-ca",
+		GenSelfSignedTLSHookConf{CN: "module-name", CACN: "module-name-ca"}.caCommonName())
+}
+
+func TestGenerateNewSelfSignedTLSSignsWithNamedCA(t *testing.T) {
+	// A CA with a name of its own makes cfssl add the authority key identifier,
+	// which is what an OpenSSL client needs to build the chain.
+	input := &go_hook.HookInput{Logger: log.NewNop()}
+
+	cert, err := generateNewSelfSignedTLS(input, "module-name-ca", "module-name",
+		[]string{"127.0.0.1", "module.d8-module.svc"},
+		[]string{"signing", "key encipherment", "server auth"})
+	require.NoError(t, err)
+
+	ca, err := certificate.ParseCertificate(cert.CA)
+	require.NoError(t, err)
+	require.Equal(t, "module-name-ca", ca.Subject.CommonName)
+
+	leaf, err := certificate.ParseCertificate(cert.Cert)
+	require.NoError(t, err)
+	require.Equal(t, "module-name", leaf.Subject.CommonName)
+	require.NotEmpty(t, leaf.AuthorityKeyId, "an OpenSSL client cannot build the chain without it")
+}
+
+func TestIsCAWithOtherCommonName(t *testing.T) {
+	input := &go_hook.HookInput{Logger: log.NewNop()}
+
+	cert, err := generateNewSelfSignedTLS(input, "module-name-ca", "module-name",
+		[]string{"127.0.0.1"}, []string{"signing", "key encipherment", "server auth"})
+	require.NoError(t, err)
+
+	renamed, err := isCAWithOtherCommonName(cert.CA, "module-name-ca")
+	require.NoError(t, err)
+	require.False(t, renamed, "the configured name is unchanged")
+
+	renamed, err = isCAWithOtherCommonName(cert.CA, "module-name")
+	require.NoError(t, err)
+	require.True(t, renamed, "a CA named otherwise is replaced")
+
+	renamed, err = isCAWithOtherCommonName("", "module-name-ca")
+	require.NoError(t, err)
+	require.False(t, renamed, "an empty CA is already handled by isOutdatedCA")
 }

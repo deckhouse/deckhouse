@@ -53,7 +53,11 @@ func certValues(addresses string) string {
 // proxyCertFixture issues a certificate the same way the hook does, to seed the
 // secret the hook reads.
 func proxyCertFixture(sans ...string) certificate.Certificate {
-	ca, err := certificate.GenerateCA(log.NewNop(), proxyCertCN,
+	return proxyCertFixtureSignedBy(proxyCertCACN, sans...)
+}
+
+func proxyCertFixtureSignedBy(caCN string, sans ...string) certificate.Certificate {
+	ca, err := certificate.GenerateCA(log.NewNop(), caCN,
 		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
 		certificate.WithCAExpiry("87600h"))
@@ -124,12 +128,24 @@ var _ = Describe("Module :: registry-packages-proxy :: hooks :: generate proxy c
 			ca, err := certificate.ParseCertificate(f.ValuesGet(proxyCertValuesPath + ".ca").String())
 			Expect(err).To(BeNil())
 			Expect(ca.IsCA).To(BeTrue())
-			Expect(ca.Subject.CommonName).To(Equal(proxyCertCN))
+			Expect(ca.Subject.CommonName).To(Equal(proxyCertCACN))
 
 			cert := storedCert(f)
 			Expect(cert.IsCA).To(BeFalse())
 			Expect(cert.Subject.CommonName).To(Equal(proxyCertCN))
 			Expect(f.ValuesGet(proxyCertValuesPath + ".key").Exists()).To(BeTrue())
+		})
+
+		It("keeps the certificate verifiable by an OpenSSL client", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			cert := storedCert(f)
+
+			// The CA must not share the certificate's name: cfssl then treats the
+			// certificate as self-signed, omits the authority key identifier, and an
+			// OpenSSL client rejects the chain with "self-signed certificate".
+			Expect(cert.Issuer.CommonName).ToNot(Equal(cert.Subject.CommonName))
+			Expect(cert.AuthorityKeyId).ToNot(BeEmpty())
 		})
 
 		It("allows the certificate to be used for serving TLS", func() {
@@ -185,6 +201,32 @@ var _ = Describe("Module :: registry-packages-proxy :: hooks :: generate proxy c
 			Expect(f.ValuesGet(proxyCertValuesPath + ".ca").String()).To(Equal(existing.CA))
 			Expect(f.ValuesGet(proxyCertValuesPath + ".crt").String()).To(Equal(existing.Cert))
 			Expect(f.ValuesGet(proxyCertValuesPath + ".key").String()).To(Equal(existing.Key))
+		})
+	})
+
+	Context("Secret holds a certificate signed by a CA named after the module", func() {
+		f := HookExecutionConfigInit(certValues(fmt.Sprintf(`[%q]`, testFirstMasterAddr)), initConfigValuesString)
+
+		// The shape clusters got before the CA was given a name of its own.
+		existing := proxyCertFixtureSignedBy(proxyCertCN,
+			testLocalhostCertAddr, testServiceSAN, testServiceSVCSAN,
+			testServiceDomainSAN, testServiceSVCDomSAN, testFirstMasterAddr,
+		)
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(proxyCertSecret(existing)))
+			f.RunHook()
+		})
+
+		It("replaces it so the chain becomes verifiable", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet(proxyCertValuesPath + ".crt").String()).ToNot(Equal(existing.Cert))
+
+			ca, err := certificate.ParseCertificate(f.ValuesGet(proxyCertValuesPath + ".ca").String())
+			Expect(err).To(BeNil())
+			Expect(ca.Subject.CommonName).To(Equal(proxyCertCACN))
+			Expect(storedCert(f).AuthorityKeyId).ToNot(BeEmpty())
 		})
 	})
 

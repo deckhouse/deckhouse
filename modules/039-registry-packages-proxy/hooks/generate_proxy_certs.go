@@ -27,6 +27,7 @@ import (
 
 const (
 	proxyCertCN         = "registry-packages-proxy"
+	proxyCertCACN       = "registry-packages-proxy-ca"
 	proxyCertSecretName = "registry-packages-proxy-tls"
 	proxyCertValuesPath = "registryPackagesProxy.internal.proxyCert"
 )
@@ -38,9 +39,15 @@ const (
 // The SAN list carries the master addresses, which lets a client connect by IP.
 // The library reissues the certificate whenever that list changes.
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
-	SANs:          proxyCertSANs,
-	CN:            proxyCertCN,
-	Namespace:     proxyNamespace,
+	SANs:      proxyCertSANs,
+	CN:        proxyCertCN,
+	Namespace: proxyNamespace,
+
+	// The CA needs its own name. With one shared name the certificate looks
+	// self-signed to an OpenSSL client, which then rejects the chain even when it
+	// trusts the published CA - and the module docs tell operators to check access
+	// with curl.
+	CACN:          proxyCertCACN,
 	TLSSecretName: proxyCertSecretName,
 
 	// Declare "server auth" explicitly. The library's default usage set is meant
