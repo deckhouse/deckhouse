@@ -169,10 +169,12 @@
         Please check the requirements for containerd v2 and schedule your migration plan.
 
         The exact reason is listed in the `node.deckhouse.io/containerd-v2-err` annotation on the node.
+{{- if and (.Values.global.clusterConfiguration) (hasKey .Values.global.clusterConfiguration "cloud") (eq .Values.global.clusterConfiguration.cloud.provider "AWS") }}
 
-        If the reason is `erofs` and the node runs Ubuntu in AWS, the module is shipped in a separate
+         If the reason is `erofs` and the node runs Ubuntu in AWS, the module is shipped in a separate
         `linux-modules-extra` package. Deckhouse installs it automatically, but for some kernels, mostly
         outdated ones, the package is no longer published in the APT repository. In that case the installation
         is skipped with a warning in the node logs. The problem is confirmed, in particular, on the
         `5.15.0-1028-aws`, `6.8.0-1024-aws` and `6.8.0-1029-aws` kernels. Switch the node group to a newer AMI
         or kernel that provides erofs.
+{{- end }}
