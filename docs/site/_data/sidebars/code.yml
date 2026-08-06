@@ -12,6 +12,14 @@ entries:
           ru: Обзор
         url: /code/documentation/admin/
       - title:
+          en: Install
+          ru: Установка
+        url: /code/documentation/admin/install.html
+      - title:
+          en: Update
+          ru: Обновление
+        url: /code/documentation/admin/update.html
+      - title:
           en: Access configuration
           ru: Настройка доступа
         url: /code/documentation/admin/install/access.html
