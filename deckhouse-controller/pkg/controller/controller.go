@@ -291,7 +291,9 @@ func NewDeckhouseController(
 	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig
 	embeddedPolicy := helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-			Mode: "Auto",
+			// Match the documented AutoPatch default; syncDeckhouseSettings
+			// overwrites this from the deckhouse ModuleConfig on the first sync.
+			Mode: v1alpha2.UpdateModeAutoPatch.String(),
 		},
 		ReleaseChannel: defaultReleaseChannel,
 	})
