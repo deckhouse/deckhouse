@@ -30,11 +30,15 @@ variables:
     description: "Cloud provider for e2e-framework (providers without CSE)."
 
   E2E_EDITION:
-    value: "EE"
+    value: "FE"
     options:
+      # Same set as .github/scripts/js/constants.js knownEditions / e2e/use/edition/*
       - "FE"
       - "CE"
       - "EE"
+      - "BE"
+      - "SE"
+      - "SE-plus"
     description: "Deckhouse edition to install (maps to build_* job / image tag suffix)."
 
   KUBERNETES_VERSION:
