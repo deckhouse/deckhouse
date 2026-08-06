@@ -61,7 +61,7 @@ func (i *NodeIP) Name() string {
 	return i.InternalIP
 }
 
-func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
+func GetCloudConfig(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
@@ -77,8 +77,29 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 					case <-ctx.Done():
 						return
 					default:
+						kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+						if err != nil {
+							dhlog.FromContext(ctx).DebugContext(
+								ctx,
+								fmt.Sprintf("Could not get Kubernetes client for Deckhouse log printer: %v", err),
+							)
+
+							select {
+							case <-ctx.Done():
+								return
+							case <-time.After(time.Second):
+							}
+
+							continue
+						}
+
 						_, _ = deckhouse.NewLogPrinter(kubeCl).
-							WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
+							WithLeaderElectionAwarenessMode(
+								types.NamespacedName{
+									Namespace: "d8-system",
+									Name:      "deckhouse-leader-election",
+								},
+							).
 							Print(ctx)
 					}
 				}
@@ -94,6 +115,11 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 			if nodeGroupName == global.MasterNodeGroupName {
 				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Waiting while all API-server endpoints '%s' will be available in bootstrap secret", allPassedHosts))
 			}
+			kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+			if err != nil {
+				return err
+			}
+
 			secret, err := kubeCl.CoreV1().
 				Secrets("d8-cloud-instance-manager").
 				Get(ctx, "manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
