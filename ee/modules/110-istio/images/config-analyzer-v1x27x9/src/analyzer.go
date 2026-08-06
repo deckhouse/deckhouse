@@ -81,11 +81,18 @@ const (
 	sidecarInjectLabel             = "sidecar.istio.io/inject"
 )
 
+// mutedSystemNamespaces are Kubernetes/Deckhouse system namespaces where
+// IST0102 / IST0118 findings are noise (not mesh application workloads).
+var mutedSystemNamespaces = []string{
+	"kube-system",
+}
+
 // mutedCodesForDeckhouseSystem are Info-level findings that are noise for
-// Deckhouse system namespaces (d8-*), including d8-ingress-nginx / d8-ingress-istio:
+// Deckhouse system namespaces (d8-*), including d8-ingress-nginx / d8-ingress-istio,
+// and other system namespaces listed in mutedSystemNamespaces:
 // those namespaces are not meant for namespace-wide sidecar injection, and Service
 // ports there often do not follow Istio naming because the Services are not mesh
-// workloads (including operator-created ones like prometheus-operated).
+// workloads (including operator-created ones like prometheus-operated / vpa-webhook).
 //
 // Exception: resources explicitly opted into sidecar injection via
 // label/annotation sidecar.istio.io/inject=true (e.g. IngressNginxController
@@ -100,21 +107,21 @@ func shouldReportMessage(message diag.Message) bool {
 		return false
 	}
 	if _, muted := mutedCodesForDeckhouseSystem[message.Type.Code()]; muted &&
-		isDeckhouseSystemNamespaceResource(message) &&
+		isMutedSystemNamespaceResource(message) &&
 		!hasIstioSidecarInject(message) {
 		return false
 	}
 	return true
 }
 
-func isDeckhouseSystemNamespaceResource(message diag.Message) bool {
+func isMutedSystemNamespaceResource(message diag.Message) bool {
 	if message.Resource == nil {
 		return false
 	}
 	name := string(message.Resource.Metadata.FullName.Name)
 	ns := string(message.Resource.Metadata.FullName.Namespace)
 	// Namespace objects are cluster-scoped: name is the namespace itself.
-	return isDeckhouseSystemNamespace(ns) || isDeckhouseSystemNamespace(name)
+	return isMutedSystemNamespace(ns) || isMutedSystemNamespace(name)
 }
 
 func hasIstioSidecarInject(message diag.Message) bool {
@@ -127,8 +134,16 @@ func hasIstioSidecarInject(message diag.Message) bool {
 	return message.Resource.Metadata.Annotations[sidecarInjectLabel] == "true"
 }
 
-func isDeckhouseSystemNamespace(ns string) bool {
-	return strings.HasPrefix(ns, deckhouseSystemNamespacePrefix)
+func isMutedSystemNamespace(ns string) bool {
+	if strings.HasPrefix(ns, deckhouseSystemNamespacePrefix) {
+		return true
+	}
+	for _, systemNS := range mutedSystemNamespaces {
+		if ns == systemNS {
+			return true
+		}
+	}
+	return false
 }
 
 func messageLabels(message diag.Message, revision string) (messageType, namespace, resourceName, severity, code, messageText string) {
