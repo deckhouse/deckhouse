@@ -8,9 +8,9 @@ description: Архитектура модуля descheduler в Deckhouse Kubern
 
 Модуль [`descheduler`](/modules/descheduler/) обеспечивает работу [Descheduler](https://github.com/kubernetes-sigs/descheduler) в Deckhouse Kubernetes Platform (DKP).
 
-Модуль `descheduler` периодически анализирует состояние кластера и выполняет вытеснение подов, соответствующих условиям, описанным в активных [стратегиях](/modules/descheduler/#%D1%81%D1%82%D1%80%D0%B0%D1%82%D0%B5%D0%B3%D0%B8%D0%B8). Вытесненные поды вновь проходят процесс планирования с учетом текущего состояния кластера. Это позволяет перераспределить рабочие нагрузки в соответствии с выбранной стратегией.
+Модуль периодически анализирует состояние кластера и вытесняет поды, соответствующие условиям [активных стратегий](/modules/descheduler/#стратегии). Вытесненные поды вновь проходят процесс планирования с учётом текущего состояния кластера. Это позволяет перераспределить рабочие нагрузки в соответствии с выбранной стратегией.
 
-Модуль `descheduler` получает текущее потребление ресурсов через [Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md) в случае, если такой API-сервис зарегистрирован в кластере.
+Если в кластере зарегистрирован сервис [Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md), модуль использует его для получения информации о текущем потреблении ресурсов.
 
 Параметры стратегий задаются при помощи кастомного ресурса [Descheduler](/modules/descheduler/cr.html#descheduler). Хук модуля обрабатывает эти ресурсы и пересоздаёт конфигурацию для Descheduler.
 

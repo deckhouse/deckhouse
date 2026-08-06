@@ -5,11 +5,11 @@ search: descheduler, rescheduling, balancing
 description: Architecture of the descheduler module in Deckhouse Kubernetes Platform.
 ---
 
-The [`descheduler`](/modules/descheduler/) module provides [Descheduler](https://github.com/kubernetes-sigs/descheduler) in Deckhouse Kubernetes Platform (DKP).
+The [`descheduler`](/modules/descheduler/) module ensures operation of [Descheduler](https://github.com/kubernetes-sigs/descheduler) in Deckhouse Kubernetes Platform (DKP).
 
-The `descheduler` module periodically analyzes the cluster state and evicts pods that match conditions defined in active [strategies](/modules/descheduler/#strategies). Evicted pods are then scheduled again according to the current cluster state. This helps redistribute workloads in line with the selected strategy.
+The module analyzes the cluster state periodically and evicts pods that match conditions defined in [active strategies](/modules/descheduler/#strategies). Evicted pods are then scheduled again according to the current cluster state. This helps redistribute workloads in line with the selected strategy.
 
-The `descheduler` module retrieves current resource consumption through the [Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md) if such an API service is registered in the cluster.
+If the [Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md) service is registered in the cluster, the module uses it to obtain information about the current resource consumption.
 
 Strategy parameters are configured using the [Descheduler](/modules/descheduler/cr.html#descheduler) custom resource. A module hook processes these resources and recreates configuration for Descheduler.
 
