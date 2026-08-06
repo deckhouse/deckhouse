@@ -30,6 +30,8 @@
 
         Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
 
+        Note: the new `d8:namespace:user` no longer grants reading Secrets or `kubectl exec`/`kubectl attach` — these actions now require a `manager` role by design.
+
   # Bindings to a deprecated CAPABILITY name — capabilities are aggregation building blocks, were never
   # meant to be bound directly and have NO compat alias, so the binding already grants nothing. Higher
   # urgency than the aliased-role case.
