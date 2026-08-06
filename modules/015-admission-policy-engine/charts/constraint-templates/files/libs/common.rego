@@ -297,3 +297,25 @@ effective_metadata := meta if {
   kind != "Pod"
   meta := pod_template_metadata
 }
+
+# =============================================================================
+# Controller detection helper
+# =============================================================================
+# Returns true when the current review object is a pod-creating controller
+# (Deployment, StatefulSet, DaemonSet, ReplicaSet, ReplicationController, Job,
+# CronJob) — i.e. NOT a Pod. This lets constraint Rego code differentiate
+# between Pods (where Kubernetes mutations have already been applied) and
+# controllers (where the pod template is checked pre-mutation).
+#
+# Use case: when a mutation-sensitive field (resources, runAsUser, seccompProfile,
+# etc.) is ABSENT from a controller's pod template, Kubernetes admission
+# controllers (LimitRange, PodSecurity, ServiceAccount admission) may still
+# inject it at Pod creation time. Constraints can use `is_controller` to skip
+# violations for absent fields, avoiding false positives on controllers.
+# =============================================================================
+is_controller if {
+  obj := object.get(input.review, "object", {})
+  kind := object.get(obj, "kind", "")
+  kind != "Pod"
+  workload_kind(kind)
+}
