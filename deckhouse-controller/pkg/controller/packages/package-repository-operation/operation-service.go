@@ -236,7 +236,9 @@ func (s *OperationService) performIncrementalScan(ctx context.Context, packageNa
 		return nil, fmt.Errorf("list tags from version: %w", err)
 	}
 
-	return tags, nil
+	result := filterLatestTags(tags)
+
+	return result, nil
 }
 
 func extractOnlySemverTags(rawTags []string) []*semver.Version {
@@ -279,11 +281,9 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 		}
 	}
 
-	result := filterLatestTags(newTags)
-
 	// double check for registries that do not support filtering
 	// to warn user about it
-	if len(result) != len(rawTags) {
+	if len(newTags) != len(rawTags) {
 		s.logger.Info("looks like your registry does not support tag listing with filtering by last version",
 			slog.String("package", packageName),
 			slog.String("lastVersion", lastVersion),
@@ -291,7 +291,7 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 			slog.Int("newTagsCount", len(newTags)))
 	}
 
-	return result, nil
+	return newTags, nil
 }
 
 // filterLatestTags filters out the latest version for every major.minor version
