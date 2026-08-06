@@ -75,7 +75,7 @@ func (r *Reconciler) MaxConcurrentReconciles() int {
 
 // Setup wires an uncached reader: the secrets and config maps a NodeConfig is
 // rendered from live outside the manager's cache scope.
-func (r *Reconciler) Setup(mgr ctrl.Manager) error {
+func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.sources = &sourceReader{Client: r.Client, Reader: mgr.GetAPIReader()}
 	r.derived = &derived_status.Service{Client: r.Client, Reader: mgr.GetAPIReader()}
 	return nil
