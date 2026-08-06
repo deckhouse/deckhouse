@@ -1,5 +1,6 @@
 ---
 title: "Создание проекта"
+description: Как создать проект и задать его начальные настройки
 permalink: ru/code/documentation/user/project.html
 lang: ru
 ---

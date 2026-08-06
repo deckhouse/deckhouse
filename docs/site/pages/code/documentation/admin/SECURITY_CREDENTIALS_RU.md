@@ -1,8 +1,7 @@
 ---
 title: "Ключи доступа"
-menuTitle: Ключи доступа
 force_searchable: true
-description: Ключи доступа
+description: Обзор токенов и ключей SSH и GPG с возможностью фильтрации, отзыва и удаления
 permalink: ru/code/documentation/admin/security-credentials.html
 lang: ru
 weight: 50

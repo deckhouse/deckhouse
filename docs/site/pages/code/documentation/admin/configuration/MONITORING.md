@@ -1,5 +1,6 @@
 ---
 title: "Monitoring and control"
+description: How to set repository and artifact limits and tune instance performance
 permalink: en/code/documentation/admin/configuration/monitoring.html
 ---
 

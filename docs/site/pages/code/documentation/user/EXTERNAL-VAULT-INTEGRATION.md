@@ -322,7 +322,7 @@ At this point, the Vault configuration is complete.
    - Retrieves a secret from KV.
    - Outputs the secret value.
 
-   ```yml
+   ```yaml
    stages:
      - test
    

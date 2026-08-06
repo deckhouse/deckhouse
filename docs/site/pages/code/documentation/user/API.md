@@ -1,5 +1,6 @@
 ---
 title: "API"
+description: REST API and GraphQL interfaces for automating routine tasks
 permalink: en/code/documentation/user/api.html
 ---
 
