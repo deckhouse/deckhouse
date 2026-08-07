@@ -22,5 +22,5 @@ Deckhouse Kubernetes Platform тестируется на соответстви
 ## Запуск тестов
 
 {% alert level="info" %}
-Перевод инструкции пока недоступен. Ознакомьтесь с [инструкцией на английском языке]({{ site.canonical_url_prefix_documentation }}/en/reference/kubernetes-conformance.html#cncf-kubernetes-conformance-sonobuoy).
+Перевод инструкции пока недоступен. Ознакомьтесь [с инструкцией на английском языке]({{ site.canonical_url_prefix_documentation }}/en/reference/kubernetes-conformance.html#cncf-kubernetes-conformance-sonobuoy).
 {% endalert %}
