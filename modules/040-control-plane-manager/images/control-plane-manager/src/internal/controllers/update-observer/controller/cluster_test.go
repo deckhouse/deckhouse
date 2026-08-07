@@ -126,7 +126,7 @@ func TestDesiredConfiguration(t *testing.T) {
 // The whole data.spec block is authored here now, so a hand edit must be corrected rather than
 // preserved — the opposite of the byte-for-byte passthrough this controller used to do.
 func TestFillConfigMapRewritesSpec(t *testing.T) {
-	cm := makeCM(map[string]string{"spec": "desiredVersion: \"1.31\"\nupdateMode: Automatic\n"})
+	cm := makeCM(map[string]string{"spec": "desiredVersion: \"1.32\"\nupdateMode: Automatic\n"})
 
 	got, err := fillConfigMap(cm, &cluster.State{
 		Spec: cluster.Spec{

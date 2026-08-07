@@ -171,7 +171,7 @@ var _ = BeforeSuite(func() {
 	clusterKubernetesCM.Namespace = "kube-system"
 	clusterKubernetesCM.Name = "d8-cluster-kubernetes"
 	clusterKubernetesCM.Data = map[string]string{
-		"spec": "desiredVersion: \"1.31\"\nupdateMode: Manual\n",
+		"spec": "desiredVersion: \"1.32\"\nupdateMode: Manual\n",
 	}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, clusterKubernetesCM))).To(Succeed())
 

@@ -232,9 +232,12 @@ type clusterKubernetesSpec struct {
 	UpdateMode string `json:"updateMode"`
 }
 
-// initClusterKubernetesVersion reads updateMode from ConfigMap kube-system/d8-cluster-kubernetes
-// (written by the global discovery hook from global.discovery.kubernetesVersionIsDefault). Values
-// are not visible to deckhouse-controller.
+// initClusterKubernetesVersion reads updateMode from ConfigMap kube-system/d8-cluster-kubernetes.
+//
+// update-observer is the only writer of that object; it takes the mode from the
+// KUBERNETES_UPDATE_MODE environment variable of its own container, which the DaemonSet renders out
+// of global.discovery.kubernetesVersionIsDefault. Reading the ConfigMap rather than that value is
+// not a detour: Values belong to the addon-operator process and are not visible here.
 //
 // A missing ConfigMap or empty updateMode is treated as non-Automatic (fail-open), matching the
 // historical Secret-NotFound behaviour for managed clusters. Controllers that own the ConfigMap

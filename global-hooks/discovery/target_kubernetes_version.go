@@ -131,14 +131,41 @@ type configMapSpec struct {
 	MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
 }
 
+// moduleConfigKubernetesVersion carries the declared version out of the ModuleConfig snapshot.
+// Malformed separates "the operator wrote nothing" from "the operator wrote something this hook
+// refuses to interpret" — the two lead to the same target but only the second deserves a log line.
+type moduleConfigKubernetesVersion struct {
+	Version   string
+	Malformed bool
+}
+
 // applyControlPlaneManagerKubernetesVersionFilter returns the raw kubernetesVersion from
-// ModuleConfig/control-plane-manager settings, or "" when unset.
+// ModuleConfig/control-plane-manager settings, or the zero value when unset.
+//
+// Never returns an error, by analogy with applyClusterConfigurationYamlFilter: a FilterFunc error
+// discards the whole snapshot and takes the hook down with it, and this hook is the only publisher
+// of global.discovery.targetKubernetesVersion — nothing in the module converges without it. One
+// unreadable field must not cost the cluster its target version.
+//
+// A non-string value (spec.settings is x-kubernetes-preserve-unknown-fields, so an unquoted
+// `kubernetesVersion: 1.35` arrives as a float64) is reported as Malformed rather than coerced.
+// Coercion looks tempting and is a trap: a minor ending in zero loses it, so `kubernetesVersion:
+// 1.40` becomes the number 1.4 and would be formatted back as "1.4" — a minor that does not exist —
+// and published as the cluster's target. Refusing to guess is the only safe reading. Such a value
+// cannot be written anyway: the schema types the field as a string and admission rejects
+// non-strings.
 func applyControlPlaneManagerKubernetesVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	version, _, err := unstructured.NestedString(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
-	if err != nil {
-		return "", fmt.Errorf("nested string kubernetesVersion: %w", err)
+	raw, found, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
+	if err != nil || !found || raw == nil {
+		return moduleConfigKubernetesVersion{}, nil
 	}
-	return version, nil
+
+	version, isString := raw.(string)
+	if !isString {
+		return moduleConfigKubernetesVersion{Malformed: true}, nil
+	}
+
+	return moduleConfigKubernetesVersion{Version: strings.TrimSpace(version)}, nil
 }
 
 func applyClusterKubernetesConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -169,7 +196,7 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 	input.MetricsCollector.Expire(defaultVersionDriftMetricGroup)
 
 	mcVersion := ""
-	mcSnaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, controlPlaneManagerModuleConfigSnapshot)
+	mcSnaps, err := sdkobjectpatch.UnmarshalToStruct[moduleConfigKubernetesVersion](input.Snapshots, controlPlaneManagerModuleConfigSnapshot)
 	if err != nil {
 		input.Logger.Warn(
 			"failed to unmarshal snapshot",
@@ -177,8 +204,15 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 			dlog.Err(err),
 		)
 	} else if len(mcSnaps) > 0 {
-		mcVersion = mcSnaps[0]
+		if mcSnaps[0].Malformed {
+			input.Logger.Warn(
+				"ignoring ModuleConfig control-plane-manager kubernetesVersion: the value is not a string " +
+					"(an unquoted version is parsed as a number); falling back to ClusterConfiguration or the Deckhouse default",
+			)
+		}
+		mcVersion = mcSnaps[0].Version
 	}
+	mcVersion = usableDeclaredVersion(input, mcVersion, "ModuleConfig control-plane-manager", isModuleConfigPinned)
 
 	var cmSnap clusterKubernetesSnapshot
 	cmSnaps, err := sdkobjectpatch.UnmarshalToStruct[clusterKubernetesSnapshot](input.Snapshots, clusterKubernetesConfigMapSnapshot)
@@ -204,9 +238,10 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 			dlog.Err(err),
 		)
 	} else if len(ccSnaps) > 0 {
-		ccRawVersion = ccSnaps[0].KubernetesVersion
+		ccRawVersion = strings.TrimSpace(ccSnaps[0].KubernetesVersion)
 		secretMaxUsed = ccSnaps[0].MaxUsed
 	}
+	ccRawVersion = usableDeclaredVersion(input, ccRawVersion, "ClusterConfiguration", isClusterConfigurationPinned)
 
 	target, isDefault := resolveTargetKubernetesVersion(mcVersion, ccRawVersion, hooks.DefaultKubernetesVersion)
 
@@ -341,6 +376,13 @@ func isModuleConfigTrackDefault(version string) bool {
 	return version == defaultKubernetesVersionSentinel
 }
 
+// isModuleConfigPinned reports a concrete pin in ModuleConfig: anything set that is not the one
+// sentinel that document accepts. Deliberately not the mirror of isClusterConfigurationPinned —
+// "Automatic" is not exempt here, because ModuleConfig never accepted it.
+func isModuleConfigPinned(version string) bool {
+	return version != "" && !isModuleConfigTrackDefault(version)
+}
+
 // isClusterConfigurationPinned reports a concrete minor pin in ClusterConfiguration.
 //
 // Default is treated as a sentinel here too even though the schema does not accept it: this
@@ -352,6 +394,43 @@ func isClusterConfigurationPinned(version string) bool {
 	return version != "" &&
 		version != automaticKubernetesVersion &&
 		version != defaultKubernetesVersionSentinel
+}
+
+// usableDeclaredVersion drops a declared kubernetesVersion this hook cannot hand onward as a
+// version, and says so in the log. Returns the value unchanged in every other case.
+//
+// What it protects against: resolveTargetKubernetesVersion treats any non-sentinel value as a pin
+// and publishes it verbatim, and control-plane-manager's effective_kubernetes_version.go then feeds
+// it to semver.NewVersion. A value that is neither a sentinel nor a version therefore does not
+// degrade — it aborts that hook on every run, and the whole module stops converging until the
+// object is fixed by hand.
+//
+// Both schemas make such a value unwritable (both enums are closed), so this is defence in depth
+// for objects that predate the current schema — most concretely a ModuleConfig carrying the
+// "Automatic" alias, which this branch accepted before the alias was dropped from the ModuleConfig
+// enum. Ignoring the pin means the cluster falls through to the next source, which is the same
+// thing that happens when the field is absent; the warning is what keeps that from being silent.
+//
+// isPin is the caller's own "would the resolver hand this onward as a version" predicate, which is
+// why it is a parameter rather than a fixed list: the two documents recognise different sentinels.
+// "Automatic" is a legal word in ClusterConfiguration and plain garbage in ModuleConfig, so the
+// same string has to survive one call and be dropped by the other.
+func usableDeclaredVersion(input *go_hook.HookInput, version, source string, isPin func(string) bool) string {
+	if !isPin(version) {
+		// Empty or a sentinel of that document: resolveTargetKubernetesVersion handles it.
+		return version
+	}
+
+	if _, err := semver.NewVersion(version); err != nil {
+		input.Logger.Warn(
+			"ignoring the declared kubernetesVersion: not a version and not a sentinel this document accepts",
+			slog.String("source", source),
+			slog.String("value", version),
+		)
+		return ""
+	}
+
+	return version
 }
 
 // kubernetesVersionInMaxUsedWindow reports whether target is within the maxUsed−1 floor window

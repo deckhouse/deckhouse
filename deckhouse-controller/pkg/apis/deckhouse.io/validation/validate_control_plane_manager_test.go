@@ -255,7 +255,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		assert.True(t, resp.Allowed)
 	})
 
-	t.Run("dropping the setting from Automatic is checked against the CC fallback", func(t *testing.T) {
+	t.Run("dropping the setting from Default is checked against the CC fallback", func(t *testing.T) {
 		// Removing the field does change ownership back to ClusterConfiguration, so a stale pin
 		// there must not silently become the target.
 		handler := withObjs(t,

@@ -158,14 +158,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
 
-// filterModuleConfigTriggerOnly keeps the snapshot empty on purpose: the binding is a re-run
-// trigger and the resolved version comes from Values. Returning the object would make the hook
-// re-run on every unrelated ModuleConfig field change as well.
+// filterModuleConfigTriggerOnly narrows the snapshot to the one field this binding exists for.
+// Nothing reads the result — handleHelmReleases takes the resolved answer from Values — but the
+// snapshot still has to be narrow: returning the whole object would re-run a helm-release scan on
+// every unrelated ModuleConfig edit.
+//
+// Never returns an error. spec.settings is x-kubernetes-preserve-unknown-fields, so an unquoted
+// `kubernetesVersion: 1.35` arrives as a number; a FilterFunc error on that would take down a hook
+// that only needed a wake-up signal. The value itself is irrelevant here, so anything unreadable
+// simply becomes "".
 func filterModuleConfigTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	version, _, err := unstructured.NestedString(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
-	if err != nil {
-		return nil, fmt.Errorf("nested string kubernetesVersion: %w", err)
+	raw, found, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
+	if err != nil || !found {
+		return "", nil
 	}
+
+	version, _ := raw.(string)
 	return version, nil
 }
 

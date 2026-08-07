@@ -564,7 +564,9 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 		}
 
 		k8sVersionValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-			// Not a pin: "Automatic" and an absent field both mean Deckhouse picks the version.
+			// Not a pin: in *this* document the sentinel is "Automatic", and an absent field means
+			// the same thing — Deckhouse picks the version. ModuleConfig spells that "Default"
+			// and never accepts "Automatic"; the two dictionaries are not interchangeable.
 			if !isClusterConfigurationPinned(clusterConf.KubernetesVersion) {
 				return allowResult(nil)
 			}

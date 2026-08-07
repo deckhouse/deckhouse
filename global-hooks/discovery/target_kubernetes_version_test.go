@@ -84,6 +84,62 @@ var _ = Describe("Global hooks :: discovery/targetKubernetesVersion ::", func() 
 			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
 		})
 
+		// The ModuleConfig enum no longer accepts the Automatic alias, so such an object can only
+		// come from before that enum was closed. It must not be handed onward as a pin: the
+		// control-plane-manager hook would call semver.NewVersion("Automatic") on every run and
+		// stop the module from converging until someone edits the object by hand.
+		It("ignores a ModuleConfig value that is neither Default nor a version", func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+moduleConfigYAML("Automatic"), 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
+		})
+
+		// spec.settings is x-kubernetes-preserve-unknown-fields, so an unquoted version arrives as
+		// a number. The value is dropped rather than coerced back into a string — see the
+		// trailing-zero trap in applyControlPlaneManagerKubernetesVersionFilter.
+		It("ignores a non-string ModuleConfig kubernetesVersion instead of failing the hook", func() {
+			numericModuleConfig := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  enabled: true
+  version: 1
+  settings:
+    kubernetesVersion: 1.32
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA+numericModuleConfig, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.33"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeFalse())
+		})
+
+		It("falls through to Default when both documents carry an unusable value", func() {
+			brokenCC := clusterConfigurationSecret(`
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+podSubnetNodeCIDRPrefix: "24"
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "not-a-version"
+clusterDomain: "test.local"
+`)
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(brokenCC+moduleConfigYAML("Automatic"), 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal(hooks.DefaultKubernetesVersion))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
+		})
+
 		// The reason this hook is separate from cluster_configuration.go. That hook returns an
 		// error on a ClusterConfiguration missing podSubnetCIDR / serviceSubnetCIDR / clusterDomain,
 		// or on a pod-CIDR prefix that fails the node-mask check. While both concerns shared one
@@ -390,9 +446,14 @@ data:
 			Expect(value).To(Equal(1.0))
 		})
 
-		It("prefers Secret maxUsed over ConfigMap label when both disagree", func() {
-			// Label alone (1.36) would keep Default in-window; Secret (1.38) forces freeze.
-			// Secret must win so soft-guard matches admission's baseline.
+		It("falls back to the Secret when the ConfigMap spec carries no maxUsed", func() {
+			// The ConfigMap exists and its spec is readable, but predates the
+			// maxUsedKubernetesVersion key — the state of every cluster between a Deckhouse
+			// upgrade and the DaemonSet rollout that first writes it. The Secret (1.38) has to
+			// carry the floor through that window, or the freeze would not happen at all.
+			//
+			// The max-k8s-version label below is deliberately lower and deliberately ignored: it
+			// used to be a baseline source and is no longer read by anything.
 			secretWithMaxUsed := `
 apiVersion: v1
 kind: Secret

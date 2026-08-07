@@ -67,7 +67,7 @@ def _prepare_validation_binding_context(
     enabled_feature_gates: list,
     mc_k8s_version: str = None,
     include_snapshot: bool = None,
-    default_version: str = "1.30.0",
+    default_version: str = "1.32.0",
 ) -> DotMap:
     binding_context_json = """
 {
@@ -233,26 +233,9 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
 
-    def test_validate_default_module_config_ignores_pinned_cc_version(self):
-        # Same contract as the Automatic case below, stated for the canonical spelling: presence of
-        # the ModuleConfig setting decides, so Default resolves to the Deckhouse default (1.33, where
-        # SomeProblematicFeature is forbidden) rather than the ClusterConfiguration pin (1.31).
-        ctx = _prepare_validation_binding_context(
-            '1.31.0',
-            ['SomeProblematicFeature'],
-            mc_k8s_version='Default',
-            default_version='1.33.0',
-        )
-        out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(
-            self,
-            out,
-            "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied",
-        )
-
     def test_validate_prefers_pinned_module_config_version(self):
         ctx = _prepare_validation_binding_context(
-            '1.31.0', ['SomeProblematicFeature'], mc_k8s_version='1.33.0',
+            '1.32.0', ['SomeProblematicFeature'], mc_k8s_version='1.33.0',
         )
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(
@@ -264,9 +247,9 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
     def test_validate_default_module_config_ignores_pinned_cc_version(self):
         # Presence of the ModuleConfig setting decides: an explicit Default resolves to the
         # Deckhouse default (1.33 here, where SomeProblematicFeature is forbidden), not to the
-        # ClusterConfiguration pin (1.31, where it is merely unknown).
+        # ClusterConfiguration pin (1.32, where it is merely unknown).
         ctx = _prepare_validation_binding_context(
-            '1.31.0',
+            '1.32.0',
             ['SomeProblematicFeature'],
             mc_k8s_version='Default',
             default_version='1.33.0',
