@@ -29,6 +29,33 @@ Platform installation is complete. Verify the cluster and configure DNS to acces
 
    DVP components may take some time to start after installation.
 
+1. Wait until the platform finishes converging — the task queue must be empty:
+
+   ```shell
+   sudo -i d8 system queue list
+   ```
+
+   {% offtopic title="Example output" %}
+   <!-- markdownlint-disable MD031 -->
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 132 other queues (0 active, 132 empty): 0 tasks.
+   - no tasks to handle.
+   ```
+   <!-- markdownlint-enable MD031 -->
+   {% endofftopic %}
+
+   While the queue has tasks, platform components are still being deployed. This is normal right after installation and may take up to 15 minutes.
+
+1. Make sure every enabled module is running:
+
+   ```shell
+   sudo -i d8 k get module | grep -E "True[[:space:]]+False"
+   ```
+
+   The command lists modules that are enabled but not ready yet. Empty output means all of them are ready.
+
 1. Make sure the platform is ready to run VMs:
 
    ```shell
@@ -102,6 +129,7 @@ Make sure the cluster is healthy and set up DNS so you can open DVP web interfac
      prometheus.domain.my
      status.domain.my
      tools.domain.my
+     upmeter.domain.my
      ```
 
    If you do not manage DNS, add static mappings on your **workstation** (on Windows — `%SystemRoot%\system32\drivers\etc\hosts`):
@@ -125,6 +153,7 @@ Make sure the cluster is healthy and set up DNS so you can open DVP web interfac
    $PUBLIC_IP prometheus.domain.my
    $PUBLIC_IP status.domain.my
    $PUBLIC_IP tools.domain.my
+   $PUBLIC_IP upmeter.domain.my
    EOF
    "
    ```

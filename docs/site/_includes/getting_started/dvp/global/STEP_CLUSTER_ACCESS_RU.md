@@ -29,6 +29,33 @@
 
    Запуск компонентов DVP после установки может занять некоторое время.
 
+1. Дождитесь, пока платформа завершит настройку — очередь задач должна опустеть:
+
+   ```shell
+   sudo -i d8 system queue list
+   ```
+
+   {% offtopic title="Пример вывода" %}
+   <!-- markdownlint-disable MD031 -->
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 132 other queues (0 active, 132 empty): 0 tasks.
+   - no tasks to handle.
+   ```
+   <!-- markdownlint-enable MD031 -->
+   {% endofftopic %}
+
+   Пока в очереди есть задачи, компоненты платформы ещё разворачиваются. Сразу после установки это нормально и может занять до 15 минут.
+
+1. Убедитесь, что все включённые модули запущены:
+
+   ```shell
+   sudo -i d8 k get module | grep -E "True[[:space:]]+False"
+   ```
+
+   Команда выводит модули, которые включены, но ещё не готовы. Пустой вывод означает, что готовы все.
+
 1. Убедитесь, что платформа готова к запуску ВМ:
 
    ```shell
@@ -102,6 +129,7 @@
      prometheus.domain.my
      status.domain.my
      tools.domain.my
+     upmeter.domain.my
      ```
 
    Если DNS-сервера нет, добавьте записи на **рабочей станции** (в Windows — `%SystemRoot%\system32\drivers\etc\hosts`):
@@ -125,6 +153,7 @@
    $PUBLIC_IP prometheus.domain.my
    $PUBLIC_IP status.domain.my
    $PUBLIC_IP tools.domain.my
+   $PUBLIC_IP upmeter.domain.my
    EOF
    "
    ```
