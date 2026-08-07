@@ -34,7 +34,7 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 
 1. **Managed-postgres-operator** — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   * согласование состояния кастомных ресурсов [Postgres](/modules/managed-postgres/stable/cr.html#postgres) во всех пользовательских пространствах имён. Ресурс Postgres определяет настройки кластера PostgreSQL, включая топологию размещения и режим репликации, конфигурацию инстансов PostgreSQL и прочие параметры, такие как списки логических баз данных и внутренних пользователей;
+   * согласование состояния кастомных ресурсов [Postgres](/modules/managed-postgres/stable/cr.html#postgres) во всех пользовательских неймспейсах. Ресурс Postgres определяет настройки кластера PostgreSQL, включая топологию размещения и режим репликации, конфигурацию инстансов PostgreSQL и прочие параметры, такие как списки логических баз данных и внутренних пользователей;
 
    * согласование состояния кастомных ресурсов [PostgresSnapshot](/modules/managed-postgres/stable/cr.html#postgressnapshot). Ресурс PostgresSnapshot предназначен для [резервного копирования и восстановления инстансов PostgreSQL](/modules/managed-postgres/stable/snapshots.html);
 
