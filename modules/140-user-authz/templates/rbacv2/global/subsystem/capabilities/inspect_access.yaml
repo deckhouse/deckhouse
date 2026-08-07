@@ -5,8 +5,8 @@ metadata:
   annotations:
     en.meta.deckhouse.io/title: "Security: inspect access of any subject"
     ru.meta.deckhouse.io/title: "Безопасность: разбор прав любого субъекта"
-    en.meta.deckhouse.io/description: "Query the permission browser about other subjects: who can perform an action and what a user, group or ServiceAccount is allowed to do."
-    ru.meta.deckhouse.io/description: "Запросы к permission browser о чужих правах: кто может выполнить действие и что разрешено пользователю, группе или ServiceAccount'у."
+    en.meta.deckhouse.io/description: "Inspect the permissions of other subjects: who can perform an action, and what a user, group or ServiceAccount is allowed to do."
+    ru.meta.deckhouse.io/description: "Просмотр прав других субъектов: кто может выполнить действие и что разрешено пользователю, группе или ServiceAccount'у."
   labels:
     heritage: deckhouse
     module: user-authz

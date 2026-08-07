@@ -6,7 +6,7 @@ metadata:
     en.meta.deckhouse.io/title: "Kubernetes: Superadmin"
     ru.meta.deckhouse.io/title: "Суперадминистратор подсистемы Kubernetes"
     en.meta.deckhouse.io/description: "Full control over the Kubernetes subsystem, including its system resources."
-    ru.meta.deckhouse.io/description: "Полный контроль над подсистемы Kubernetes, включая её системные ресурсы."
+    ru.meta.deckhouse.io/description: "Полный контроль над подсистемой Kubernetes, включая её системные ресурсы."
   labels:
     heritage: deckhouse
     module: user-authz
