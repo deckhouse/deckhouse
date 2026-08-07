@@ -82,6 +82,15 @@ type GenSelfSignedTLSHookConf struct {
 	// often it is module name
 	CN string
 
+	// CACN - common name of the CA that signs the certificate. Defaults to CN.
+	//
+	// Set it to a different value for a certificate an OpenSSL client verifies:
+	// when the CA and the certificate share a common name, cfssl treats the
+	// certificate as self-signed and omits its authority key identifier, and
+	// OpenSSL then rejects the chain with "self-signed certificate" even when it
+	// trusts the CA. Go clients accept both shapes.
+	CACN string
+
 	// Namespace - namespace for TLS secret
 	Namespace string
 	// TLSSecretName - TLS secret name
@@ -116,6 +125,15 @@ type GenSelfSignedTLSHookConf struct {
 
 func (gss GenSelfSignedTLSHookConf) path() string {
 	return strings.TrimSuffix(gss.FullValuesPathPrefix, ".")
+}
+
+// caCommonName returns the common name of the signing CA.
+func (gss GenSelfSignedTLSHookConf) caCommonName() string {
+	if gss.CACN != "" {
+		return gss.CACN
+	}
+
+	return gss.CN
 }
 
 type certValues struct {
@@ -206,7 +224,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 		var cert certificate.Certificate
 		var err error
 
-		cn, sans := conf.CN, conf.SANs(ctx, input)
+		caCN, cn, sans := conf.caCommonName(), conf.CN, conf.SANs(ctx, input)
 
 		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, SnapshotKey)
 		if err != nil {
@@ -216,7 +234,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 		if len(certs) == 0 {
 			// No certificate in snapshot => generate a new one.
 			// Secret will be updated by Helm.
-			cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
+			cert, err = generateNewSelfSignedTLS(input, caCN, cn, sans, usages)
 			if err != nil {
 				return err
 			}
@@ -230,15 +248,26 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 				input.Logger.Error(err.Error())
 			}
 
+			// Only for a caller that names its CA explicitly. Without this guard a
+			// stored CA whose name differs for any historical reason would be
+			// replaced, rotating trust on clusters that never asked for it.
+			caRenamed := false
+			if conf.CACN != "" {
+				caRenamed, err = isCAWithOtherCommonName(cert.CA, caCN)
+				if err != nil {
+					input.Logger.Error(err.Error())
+				}
+			}
+
 			certOutdated, err := isIrrelevantCert(cert.Cert, sans)
 			if err != nil {
 				input.Logger.Error(err.Error())
 			}
 
-			// In case of errors, both these flags are false to avoid regeneration loop for the
+			// In case of errors, these flags are false to avoid regeneration loop for the
 			// certificate.
-			if caOutdated || certOutdated {
-				cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
+			if caOutdated || caRenamed || certOutdated {
+				cert, err = generateNewSelfSignedTLS(input, caCN, cn, sans, usages)
 				if err != nil {
 					return err
 				}
@@ -286,6 +315,22 @@ func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 	return false, nil
 }
 
+// isCAWithOtherCommonName reports whether the stored CA carries a different
+// common name than the configured one. Such a CA is replaced, otherwise a
+// cluster keeps the old certificate shape for the whole ten years of its life.
+func isCAWithOtherCommonName(ca, caCN string) (bool, error) {
+	if len(ca) == 0 {
+		return false, nil
+	}
+
+	cert, err := certificate.ParseCertificate(ca)
+	if err != nil {
+		return false, fmt.Errorf("parse certificate: %w", err)
+	}
+
+	return cert.Subject.CommonName != caCN, nil
+}
+
 func isOutdatedCA(ca string) (bool, error) {
 	// Issue a new certificate if there is no CA in the secret.
 	// Without CA it is not possible to validate the certificate.
@@ -305,9 +350,9 @@ func isOutdatedCA(ca string) (bool, error) {
 	return false, nil
 }
 
-func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages []string) (certificate.Certificate, error) {
+func generateNewSelfSignedTLS(input *go_hook.HookInput, caCN, cn string, sans, usages []string) (certificate.Certificate, error) {
 	ca, err := certificate.GenerateCA(input.Logger,
-		cn,
+		caCN,
 		certificate.WithKeyAlgo(keyAlgorithm),
 		certificate.WithKeySize(keySize),
 		certificate.WithCAExpiry(caExpiryDurationStr))

@@ -104,6 +104,20 @@ curl -fsS -H "Authorization: Bearer ${TOKEN}" \
   "https://registry-packages-proxy.example.com/v1/images/deckhouse-cli/tags"
 ```
 
+### Finding the proxy
+
+The module publishes the ConfigMap `registry-packages-proxy-config` in namespace `d8-cloud-instance-manager`. A client reads it to learn where the proxy is and which CA signs the certificate it serves, so it needs no other lookup:
+
+| Key | Description |
+|-----|-------------|
+| `endpoints` | JSON list of `<masterIP>:4219` addresses. Available on every cluster. |
+| `ca.crt` | CA that signs the certificate served on port `4219`. Use it to verify the connection. |
+| `publicEndpoint` | Base URL of the public Ingress. Present only when a public domain is configured. |
+
+Reading it is part of the `d8:registry-packages-proxy:cli-download` ClusterRole, so one binding covers both the lookup and the download.
+
+Addresses of master nodes work on any cluster, including one with no public domain, no ingress controller and no external certificate authority. The public endpoint stays useful for a client that cannot reach master nodes over the network.
+
 ### Internal `/package` endpoint
 
 The legacy `/package?digest=...` endpoint (used during bootstrap and by internal components) remains protected by RBAC (`deployments/http` subresource). It is not exposed through the public Ingress.
@@ -142,5 +156,5 @@ The module ensures high availability through:
 - The module runs exclusively on master nodes.
 - It requires `hostNetwork: true` to function during bootstrap phase.
 - Cache size is limited to 1 GB per pod.
-- Most HTTP endpoints require Kubernetes RBAC; only health checks (healthz) and package icons are anonymous. Package icons are additionally limited to in-cluster access (no public Ingress route).
+- Most HTTP endpoints require Kubernetes RBAC; only health checks (`/healthz`) and package icons are anonymous. Package icons are additionally limited to in-cluster access (no public Ingress route).
 - Package icons are read from fixed paths inside the package image (`docs/icon.svg`, `docs/icon.png`, `docs/icon.jpg`, `docs/icon.jpeg`) with SVG preferred. Maximum icon size is 4 MiB.

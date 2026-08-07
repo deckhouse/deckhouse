@@ -114,7 +114,13 @@ spec:
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4219"
-          - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+          # Serve the certificate issued by the module. Without these two flags
+          # kube-rbac-proxy generates its own on every start, and clients have
+          # nothing to verify it against.
+          - "--tls-cert-file=/etc/registry-packages-proxy/tls/tls.crt"
+          - "--tls-private-key-file=/etc/registry-packages-proxy/tls/tls.key"
+          # Two client issuers are accepted, see the client-ca ConfigMap.
+          - "--client-ca-file=/etc/registry-packages-proxy/client-ca/ca.crt"
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=5m"
@@ -198,13 +204,19 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
         volumeMounts:
-          - name: kube-rbac-proxy-ca
-            mountPath: /etc/kube-rbac-proxy
+          - name: serving-cert
+            mountPath: /etc/registry-packages-proxy/tls
+          - name: client-ca
+            mountPath: /etc/registry-packages-proxy/client-ca
       volumes:
-        - name: kube-rbac-proxy-ca
+        - name: serving-cert
+          secret:
+            defaultMode: 420
+            secretName: registry-packages-proxy-tls
+        - name: client-ca
           configMap:
             defaultMode: 420
-            name: kube-rbac-proxy-ca.crt
+            name: registry-packages-proxy-client-ca
         - name: cache
           emptyDir:
             sizeLimit: 1G
