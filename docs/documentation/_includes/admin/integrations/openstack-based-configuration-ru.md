@@ -394,7 +394,7 @@ d8 system edit provider-cluster-configuration
 {% alert level="info" %}
 Кластер в OpenStack разворачивается в одном регионе ([`provider.region`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-region)).
 Зоны других регионов использовать нельзя.
-Подробнее о настройке зон для узлов типов CloudPermanent и CloudEphemeral — в разделе [«Как создать NodeGroup в зонах доступности?»](/modules/cloud-provider-openstack/faq.html#как-создать-nodegroup-в-зонах-доступности).
+Подробнее о настройке зон для узлов типов CloudPermanent и CloudEphemeral — [в разделе «Как создать NodeGroup в зонах доступности?»](/modules/cloud-provider-openstack/faq.html#как-создать-nodegroup-в-зонах-доступности).
 {% endalert %}
 
 {% alert level="warning" %}
