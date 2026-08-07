@@ -483,88 +483,207 @@ d8 k get clusterroles -l rbac.deckhouse.io/kind=capability \
 
 > Собрать такую роль можно и без YAML — мастером выдачи доступа в веб-интерфейсе Deckhouse Console: он показывает доступные capabilities, собирает из них роль и сразу создаёт нужную привязку.
 
-## Как мигрировать кастомные роли на новую схему в DKP 1.78?
+## Как перевести кастомные роли на новую схему в DKP 1.78?
 
-В DKP 1.78 ролевая модель переименовала лейблы, по которым идёт агрегация, и объекты, которые их несут. Встроенные роли на один релиз прикрыты [ролями-алиасами](./#устаревшие-имена-ролей): привязка к `d8:use:role:admin` или `d8:manage:networking:manager` продолжает давать те же права. **Роли и capabilities, созданные вами, алиасов не получают**: после обновления их лейблы никто не читает, поэтому роль либо теряет права, либо — что хуже — отдаёт их другой, более широкой роли. Пока такие объекты не мигрированы, обновление удерживается требованием `legacyRBACv2CustomRolesCount`, а в кластере горит алерт `D8UserAuthzLegacyRBACv2CustomRoleFound`.
+{% alert level="warning" %}
+Кастомные роли и capabilities, в отличие от [встроенных ролей](./#устаревшие-имена-ролей), псевдонимов совместимости не получают. Пока не мигрирован каждый такой объект, обновление удерживается требованием релиза `legacyRBACv2CustomRolesCount`, а в кластере горит алерт `D8UserAuthzLegacyRBACv2CustomRoleFound`.
+{% endalert %}
 
-Список всего, что нужно мигрировать:
+Вместе с переименованием ролей ([соответствие имён](./#устаревшие-имена-ролей)) изменилась и схема лейблов, используемых для агрегации прав.
+
+Кастомные роли, созданные по старой схеме, после обновления **перестают собирать права**: встроенные capabilities получили новые лейблы, и старые селекторы агрегации (например, `rbac.deckhouse.io/kind: manage` + `rbac.deckhouse.io/aggregate-to-<подсистема>-as`) больше их не находят. Псевдонимы совместимости для кастомных ролей и capabilities не создаются — их нужно обновить вручную.
+
+Соответствие старой и новой схем:
+
+| Было (старая схема) | Стало (новая схема) |
+|---------------------|---------------------|
+| Произвольное имя роли (например, `custom:manage:mycustom:manager`) | Обязательный префикс `d8:custom:` (например, `d8:custom:mycustom:manager`) |
+| `rbac.deckhouse.io/kind: manage` или `use` на кастомной роли | `rbac.deckhouse.io/kind: custom-role` |
+| `rbac.deckhouse.io/kind: manage` или `use` на кастомной capability | `rbac.deckhouse.io/kind: custom-capability`, имя с префиксом `d8:custom:` |
+| `rbac.deckhouse.io/level: all \| subsystem \| module` | `rbac.deckhouse.io/scope: system \| subsystem \| namespace` |
+| `rbac.deckhouse.io/aggregate-to-all-as: <уровень>` | `rbac.deckhouse.io/aggregate-to-system-as: <уровень>` |
+| Селектор агрегации: `rbac.deckhouse.io/kind: manage` + `rbac.deckhouse.io/aggregate-to-<подсистема>-as: <уровень>` | Только `rbac.deckhouse.io/aggregate-to-<подсистема>-as: <уровень>` |
+| Селектор для use-прав: `rbac.deckhouse.io/kind: use` + `rbac.deckhouse.io/aggregate-to-kubernetes-as: <уровень>` | `rbac.deckhouse.io/aggregate-to-namespace-as: <уровень>` |
+| Селектор по модулю: `rbac.deckhouse.io/kind: manage` + `module: <модуль>` | `rbac.deckhouse.io/scope: system` + `module: <модуль>` |
+
+Имена встроенных capabilities также изменились (без псевдонимов):
+
+* `d8:manage:permission:module:<модуль>:view|edit` → `d8:system-capability:<модуль>:view|edit`;
+* `d8:use:capability:module:<модуль>:view|edit` → `d8:namespace-capability:<модуль>:view|edit`.
+
+Селекторы агрегации работают по лейблам, а не по именам, поэтому при миграции достаточно обновить селекторы. Прямые привязки к capabilities использовать не следует.
+
+Список всего, что ещё предстоит мигрировать:
 
 ```shell
 d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | startswith("custom:")) and ((.metadata.labels["rbac.deckhouse.io/kind"] // "" | IN("manage", "use")) or ([.aggregationRule.clusterRoleSelectors[]?.matchLabels["rbac.deckhouse.io/kind"] // ""] | any(IN("manage", "use"))))) | .metadata.name'
 ```
 
-### Что меняется в объекте
-
-| Прежняя схема | Новая схема |
-|---------------|-------------|
-| Имя `custom:manage:<имя>:<уровень>` (роль) | `d8:custom:<подсистема>:<имя>` при `scope: subsystem`, `d8:custom:system:<имя>` при `scope: system` |
-| Имя `custom:use:capability:<имя>:<ресурс>:<действие>` (права) | `d8:custom:namespace-capability:<имя>` |
-| Имя `custom:manage:permission:<имя>:<ресурс>:<действие>` (права) | `d8:custom:system-capability:<имя>` или `d8:custom:subsystem-capability:<имя>` |
-| `rbac.deckhouse.io/kind: manage` или `use` на объекте, который только агрегирует | `rbac.deckhouse.io/kind: custom-role` |
-| `rbac.deckhouse.io/kind: manage` или `use` на объекте с `rules` | `rbac.deckhouse.io/kind: custom-capability` |
-| Лейбла области нет | `rbac.deckhouse.io/scope: namespace`, `project`, `subsystem` (плюс `rbac.deckhouse.io/subsystem: <подсистема>`) или `system` — лейбл должен согласовываться с именем |
-| `rbac.deckhouse.io/aggregate-to-kubernetes-as: <уровень>` на **use**-capability | `rbac.deckhouse.io/aggregate-to-namespace-as: <уровень>` |
-| `rbac.deckhouse.io/aggregate-to-<подсистема>-as: <уровень>` на **manage**-правах | Остаётся как есть |
-| `rbac.deckhouse.io/level` | Больше не используется, удалите |
-| Селекторы `matchLabels` с `rbac.deckhouse.io/kind: use` или `manage` | Уберите `kind` из селектора: выбирайте либо целый уровень по `aggregate-to-<линейка>-as`, либо конкретную capability по её лейблу `rbac.deckhouse.io/capability` |
-| `rules` внутри агрегирующей роли | Перенесите в отдельную `custom-capability` — кастомная роль может только агрегировать |
-
-Две ошибки стоит назвать отдельно, потому что ни одна из них не выдаёт сообщения об ошибке:
-
-- **Namespace-права, оставленные с подсистемным лейблом.** В прежней схеме права внутри пространства имён агрегировались лейблом `aggregate-to-kubernetes-as`, в новой этот лейбл принадлежит кластерной подсистеме `kubernetes`. Такая capability больше не попадает в `d8:namespace:*` вовсе, а попадает в `d8:subsystem:kubernetes:*` — то есть её правила раздаются на весь кластер всем, у кого есть подсистемная роль. Замените лейбл на `aggregate-to-namespace-as`.
-- **Уровень, которого нет в целевой линейке.** В подсистемной и системной линейках существуют только уровни `viewer`, `manager` и `superadmin`. Capability, оставшаяся с `aggregate-to-kubernetes-as: user` (или `admin`), не совпадёт ни с одной ролью, и её права просто пропадут.
-
 ### Порядок миграции
 
-Поле `roleRef` изменить нельзя, поэтому перенаправить существующую привязку на новую роль не получится — привязку придётся создать заново. Чтобы не возникло промежутка, в котором доступа нет ни у кого, действуйте в таком порядке:
+Выполните следующее:
 
-1. Создайте новые capabilities и роли рядом со старыми (имена различаются, конфликта не будет).
-1. Создайте новые привязки: `RoleBinding` или `ProjectRoleBinding` для namespace- и проектных ролей, `ClusterRoleBinding` — для системных и подсистемных.
-1. Проверьте права от имени реального субъекта, например:
+1. Создайте новую версию кастомной роли с префиксом `d8:custom:`, лейблом `rbac.deckhouse.io/kind: custom-role` и новыми селекторами агрегации. Руководствуйтесь примерами «до и после» ниже.
+1. Пересоздайте кастомные capabilities с лейблом `rbac.deckhouse.io/kind: custom-capability` и префиксом имени `d8:custom:`.
+1. Пересоздайте объекты RoleBinding и ClusterRoleBinding, указывающие на старую роль, указав новые имена ролей в поле `roleRef`. Это поле является неизменяемым, поэтому существующие привязки необходимо удалить и создать заново.
+1. После проверки корректности новых привязок удалите старые роли и capabilities.
 
-   ```shell
-   d8 k auth can-i list pods --as=user@example.com -n my-namespace
-   ```
+### Примеры
 
-1. Удалите старые привязки, а затем старые роли и capabilities.
+#### Кастомная роль до и после
 
-Пример мигрированной пары — права внутри пространства имён. Было:
+Пример конфигурации роли, объединяющей права подсистем `deckhouse` и `kubernetes` и модуля `user-authn`.
 
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: custom:use:capability:mycustom:superresource:view
-  labels:
-    rbac.deckhouse.io/kind: use
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: user
-rules:
-  - apiGroups: ["mygroup.io"]
-    resources: ["mysuperresources"]
-    verbs: ["get", "list", "watch"]
-```
+* Было (старая схема):
 
-Стало:
+  ```yaml
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: custom:manage:mycustom:manager
+    labels:
+      rbac.deckhouse.io/use-role: admin
+      rbac.deckhouse.io/kind: manage
+      rbac.deckhouse.io/level: subsystem
+      rbac.deckhouse.io/subsystem: custom
+      rbac.deckhouse.io/aggregate-to-all-as: manager
+  aggregationRule:
+    clusterRoleSelectors:
+      - matchLabels:
+          rbac.deckhouse.io/kind: manage
+          rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+      - matchLabels:
+          rbac.deckhouse.io/kind: manage
+          rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+      - matchLabels:
+          rbac.deckhouse.io/kind: manage
+          module: user-authn
+  rules: []
+  ```
 
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: d8:custom:namespace-capability:mycustom:superresource-view
-  labels:
-    rbac.deckhouse.io/kind: custom-capability
-    rbac.deckhouse.io/scope: namespace
-    rbac.deckhouse.io/capability: "custom.namespace-capability.mycustom.superresource_view"
-    rbac.deckhouse.io/aggregate-to-namespace-as: user
-rules:
-  - apiGroups: ["mygroup.io"]
-    resources: ["mysuperresources"]
-    verbs: ["get", "list", "watch"]
-```
+* Стало (новая схема):
 
-Лейбл `rbac.deckhouse.io/capability` не обязателен, но именно он позволяет [собственной роли](#создание-собственной-namespace--или-проектной-роли) включить ровно эту capability и ничего лишнего, и именно его показывает мастер выдачи доступа в Deckhouse Console.
+  ```yaml
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: d8:custom:mycustom:manager
+    labels:
+      rbac.deckhouse.io/use-role: admin
+      rbac.deckhouse.io/kind: custom-role
+      rbac.deckhouse.io/scope: subsystem
+      rbac.deckhouse.io/subsystem: mycustom
+      rbac.deckhouse.io/aggregate-to-system-as: manager
+  aggregationRule:
+    clusterRoleSelectors:
+      - matchLabels:
+          rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+      - matchLabels:
+          rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+      - matchLabels:
+          rbac.deckhouse.io/scope: system
+          module: user-authn
+  rules: []
+  ```
 
-Когда исчезнет последний объект прежней схемы, алерт погаснет, а требование релиза перестанет удерживать обновление: проверка выполняется на каждой синхронизации, перезапускать ничего не нужно.
+Что изменилось:
+
+- имя получило обязательный префикс `d8:custom:`;
+- `rbac.deckhouse.io/kind: manage` → `rbac.deckhouse.io/kind: custom-role`;
+- `rbac.deckhouse.io/level: subsystem` → `rbac.deckhouse.io/scope: subsystem`;
+- `rbac.deckhouse.io/aggregate-to-all-as` → `rbac.deckhouse.io/aggregate-to-system-as`;
+- из селекторов агрегации убран лейбл `rbac.deckhouse.io/kind: manage`;
+- выборка всех системных прав модуля теперь выполняется по `rbac.deckhouse.io/scope: system` + `module: <модуль>`.
+
+#### Кастомная capability до и после
+
+Пример конфигурации capability, которая даёт права на просмотр ресурса MySuperResource и агрегируется в роль из примера выше (в её поле `aggregationRule` должен быть селектор `rbac.deckhouse.io/aggregate-to-mycustom-as: manager`).
+
+* Было (старая схема):
+
+  ```yaml
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: custom:manage:permission:mycustom:superresource:view
+    labels:
+      rbac.deckhouse.io/kind: manage
+      rbac.deckhouse.io/aggregate-to-custom-as: manager
+  rules:
+    - apiGroups:
+        - mygroup.io
+      resources:
+        - mysuperresources
+      verbs:
+        - get
+        - list
+        - watch
+  ```
+
+* Стало (новая схема):
+
+  ```yaml
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: d8:custom:capability:mycustom:superresource:view
+    labels:
+      rbac.deckhouse.io/kind: custom-capability
+      rbac.deckhouse.io/aggregate-to-mycustom-as: manager
+  rules:
+    - apiGroups:
+        - mygroup.io
+      resources:
+        - mysuperresources
+      verbs:
+        - get
+        - list
+        - watch
+  ```
+
+### Лейблы и аннотации: было и стало
+
+Лейблы на объектах ClusterRole:
+
+| Лейбл | Было | Стало | Назначение |
+|-------|------|-------|------------|
+| `rbac.deckhouse.io/kind` | `manage` или `use` | `custom-role` / `custom-capability` — для кастомных объектов; `role` / `capability` — у встроенных (зарезервированы) | Тип объекта ролевой модели. Обязателен: объекты без него не обрабатываются |
+| `rbac.deckhouse.io/level` | `all` \| `subsystem` \| `module` | Удалён | Старый уровень роли; заменён лейблом `scope` |
+| `rbac.deckhouse.io/scope` | — | `system` \| `subsystem` \| `namespace` | Область действия роли или capability |
+| `rbac.deckhouse.io/subsystem` | Имя подсистемы | Без изменений | Подсистема роли; используется при `scope: subsystem` |
+| `rbac.deckhouse.io/use-role` | Уровень use-роли | Уровень namespace-роли | Какая namespace-роль автоматически выдаётся обладателю системной/подсистемной роли в системных неймспейсах её модулей (через автоматически создаваемые объекты RoleBinding) |
+| `rbac.deckhouse.io/aggregate-to-all-as` | `<уровень>` | Переименован в `rbac.deckhouse.io/aggregate-to-system-as` | Агрегация объекта в общесистемную роль (`d8:system:<уровень>`) |
+| `rbac.deckhouse.io/aggregate-to-<подсистема>-as` | Использовался в селекторах вместе с `rbac.deckhouse.io/kind: manage` | Используется в селекторах сам по себе | Агрегация объекта в подсистемную роль указанного уровня |
+| `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<уровень>` (для use-прав) | Переименован в `rbac.deckhouse.io/aggregate-to-namespace-as` | Агрегация объекта в namespace-роль (`d8:namespace:<уровень>`) |
+| `rbac.deckhouse.io/namespace` | Неймспейс | Без изменений | Дополнительный неймспейс, в котором обладателям роли автоматически создаётся RoleBinding |
+| `rbac.deckhouse.io/capability` | — | Уникальное имя capability (например, `system-capability.deckhouse.view`) | Машиночитаемый идентификатор встроенной capability |
+| `rbac.deckhouse.io/deprecated` | — | `"true"` на ролях-псевдонимах | Роль устарела и будет удалена; переведите привязки на новую роль |
+| `module` | Имя модуля | Без изменений | Принадлежность встроенного объекта модулю DKP; удобен в селекторах агрегации вместе со `scope` |
+| `heritage: deckhouse` | Признак объекта платформы | Без изменений | Устанавливать на кастомные объекты нельзя |
+
+Аннотации на объектах ClusterRole (в старой схеме аннотации не использовались):
+
+| Аннотация | Назначение |
+|-----------|------------|
+| `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` | Отображаемые название и описание роли или capability на русском языке (платформа ставит их на встроенные объекты; на кастомных можно указать свои) |
+| `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` | То же на английском языке |
+| `rbac.deckhouse.io/deprecated-replaced-by` | Появится в DKP 1.78 вместе с новой схемой. Правила агрегации прежних ролей изменятся так, что роли продолжат давать те же права, что и соответствующие им новые — существующие привязки не сломаются. Однако сохраняются прежние роли только на один релиз DKP: за это время привязки нужно перевести на новые роли. Аннотация проставляется на каждой прежней роли и содержит имя новой роли, эквивалентной ей по правам, на которую следует мигрировать |
+
+### Добавление кастомной capability (в новой схеме)
+
+Capability — это обычный объект ClusterRole с правилами, который через лейбл агрегации автоматически включается в выбранную роль. В новой схеме кастомная capability создаётся следующим образом:
+
+1. Определите, какую роль нужно расширить: namespace-роль, подсистемную, системную или кастомную.
+1. Создайте ClusterRole с префиксом имени `d8:custom:` (для читаемости — `d8:custom:capability:<имя>:<ресурс>:<действие>`), лейблом `rbac.deckhouse.io/kind: custom-capability` и лейблом агрегации целевой роли:
+   - `rbac.deckhouse.io/aggregate-to-namespace-as: <viewer|user|manager|admin|superadmin>` — в namespace-роль `d8:namespace:<уровень>`;
+   - `rbac.deckhouse.io/aggregate-to-<подсистема>-as: <viewer|manager|superadmin>` — в подсистемную роль `d8:subsystem:<подсистема>:<уровень>`;
+   - `rbac.deckhouse.io/aggregate-to-system-as: <viewer|manager|superadmin>` — в системную роль `d8:system:<уровень>`;
+   - `rbac.deckhouse.io/aggregate-to-<имя своей подсистемы>-as: <уровень>` — в кастомную роль (такой селектор должен присутствовать в её поле `aggregationRule`).
+1. Опишите права в `rules`.
+
+Kubernetes агрегирует правила автоматически: сразу после создания capability её права появятся у всех обладателей целевой роли. Проверить результат можно командой `d8 k auth can-i --as <пользователь>` или посмотрев итоговые правила роли: `d8 k get clusterrole <роль> -o yaml`.
+
+Примеры конфигурации доступны выше в подразделах «[Кастомная роль до и после](#кастомная-роль-до-и-после)» и «[Кастомная capability до и после](#кастомная-capability-до-и-после)».
 
 ## Как переименовать встроенную роль?
 
