@@ -13,7 +13,5 @@ The `cloud-provider-openstack` module:
 - Registers with the [node-manager](/node-manager/) module so that [OpenStackInstanceClasses](cr.html#openstackinstanceclass) can be used when creating the [NodeGroup](/node-manager/cr.html#nodegroup).
 
 {% alert level="warning" %}
-This module is transitioning CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing NodeGroups continue to use MCM, while newly created NodeGroups use CAPI by default. To migrate an existing NodeGroup to CAPI, recreate it.
-
-For details, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi) section.
+This module is transitioning CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing NodeGroups continue to use MCM, while newly created NodeGroups use CAPI by default. For the migration procedure for existing groups, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
 {% endalert %}
