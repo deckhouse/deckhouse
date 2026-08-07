@@ -1,3 +1,4 @@
+{% unless site.d8Revision == 'CSE' %}
 {% comment %}This partial is included onto the module page in the custom_hooks.rb{% endcomment %}
 {%- assign moduleKebabName = page['module-kebab-name'] %}
 {%- assign editions = site.data['modules']['all'][moduleKebabName]['editions'] %}
@@ -74,4 +75,5 @@
   {%- endif %}
 </div>
 </div>
-{% endunless %}
+{%- endunless %}
+{%- endunless %}

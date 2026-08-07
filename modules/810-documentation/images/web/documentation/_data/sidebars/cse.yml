@@ -37,6 +37,10 @@ entries:
             ru: Сетевое взаимодействие
           url: /reference/network_interaction.html
         - title:
+            en: Alerts
+            ru: Алерты
+          url: /reference/alerts.html
+        - title:
             en: Sysctl parameters
             ru: Параметры sysctl
           url: /reference/sysctl.html
