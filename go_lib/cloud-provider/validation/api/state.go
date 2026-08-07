@@ -165,13 +165,17 @@ func (s State[IC, S, PCC]) ExistsCloudPermanentNodeGroup(name string) bool {
 
 // FindInstanceClass returns the provider InstanceClass with the given name.
 func (s State[IC, S, PCC]) FindInstanceClass(name string) (IC, bool) {
+	var absent IC
+
 	for _, class := range s.InstanceClasses {
+		if reflect.DeepEqual(class, absent) {
+			continue
+		}
 		if class.GetName() == name {
 			return class, true
 		}
 	}
 
-	var absent IC
 	return absent, false
 }
 

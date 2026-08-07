@@ -15,6 +15,8 @@
 package api
 
 import (
+	"reflect"
+
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
@@ -72,8 +74,12 @@ func IsNewResourcesComplete[
 		nodeGroups[nodeGroup.Name] = struct{}{}
 	}
 
+	var absent IC
 	instanceClasses := make(map[string]struct{}, len(state.InstanceClasses))
 	for _, class := range state.InstanceClasses {
+		if reflect.DeepEqual(class, absent) {
+			continue
+		}
 		instanceClasses[class.GetName()] = struct{}{}
 	}
 
