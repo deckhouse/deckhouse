@@ -44,6 +44,15 @@ shell:
   setup:
   - |
     mkdir -p /export
+
+    {{- if eq .Env "CSE" }}
+        echo > /rawdata/docs/editions-repo-data.yaml
+        echo '{"modules": {}}' > /export/embedded_modules_metadata.json
+        echo "{"entries": []}" > /export/embedded_modules_tmp.json
+        echo '{"entries": []}' > /export/embedded_modules.json
+        echo "Skipping embedded modules for CSE..."
+    {{- else }}
+
     MODULES_DIR="/rawdata/embedded-modules"
     for name in $(find ${MODULES_DIR} -regex '.\+/modules/[^/]\+/docs/\(README\|readme\).md'); do
       moduleName=$(echo $name | sed -E 's#^.+/modules/([^/]+)/docs/.+$#\1#; s#^[0-9]+-##')
@@ -93,6 +102,7 @@ shell:
     cd /rawdata/docs
     {{ .Files.Get (printf "%sdocs/documentation/werf-editions-convert-partials.inc.yaml" .ModulePath) | indent 4 }}
     cp /rawdata/docs/editions.json /export/editions.json
+    {{- end }}
 import:
 - from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq

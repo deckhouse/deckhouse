@@ -2,7 +2,7 @@
 
 {{- $_ := set . "Mode" "production" }}
 {{- $_ := set . "Edition" "EE" }}
-{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "SE-plus") (eq $.Env "EE") -}}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "SE-plus") (eq $.Env "EE") (eq $.Env "CSE") -}}
   {{- $_ := set . "Edition" $.Env }}
 {{- else if eq $.Env "FE"  }}
   {{- $_ := set . "Edition" "EE" }}
@@ -32,7 +32,9 @@ import:
   to: /app/embedded-modules
   before: setup
   includePaths:
+{{- if ne .Edition "CSE" }}
   - en
+{{- end }}
   - ru
 imageSpec:
   config:
@@ -40,3 +42,4 @@ imageSpec:
 ---
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-jekyll-base.inc.yaml" .ModulePath)) . }}

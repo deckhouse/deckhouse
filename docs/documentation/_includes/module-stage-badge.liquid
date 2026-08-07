@@ -1,3 +1,4 @@
+{%- unless site.d8Revision == 'CSE' %}
 {%- assign stage = include.stage %}
 {%- assign stage_long = stage | downcase | replace: " ", "_" | append: "_long" %}
 {%- assign moduleName = page['module-kebab-name'] %}
@@ -30,3 +31,4 @@
 {% endalert %}
   {%- endif %}
 {%- endif %}
+{%- endunless %}

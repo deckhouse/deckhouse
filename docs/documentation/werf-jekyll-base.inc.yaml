@@ -1,0 +1,28 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
+from: {{ index $.Images "builder/distroless" }}
+shell:
+  beforeInstall:
+  - pm install jq yq ruby ruby-devel gnu-gcc-devel
+  install:
+  - |
+      cd /srv/jekyll-data/documentation
+
+      gem update --system 4.0.16
+      bundle config set --global silence_root_warning true
+      bundle install
+      echo "Bundle: $(bundle --version)"
+      echo "Ruby: $(ruby --version)"
+      echo "Gem: $(gem --version)"
+      jekyll -version
+      yq -V
+      echo "jq: $(jq -V)"
+git:
+- add: /docs/documentation
+  to: /srv/jekyll-data/documentation
+  includePaths:
+    - Gemfile
+    - Gemfile.lock
+  stageDependencies:
+    install: '**/*'
+---

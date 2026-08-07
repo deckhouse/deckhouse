@@ -1,0 +1,74 @@
+# Next lines are for local build only
+entries:
+    - title:
+        ru: Введение в документацию
+      url: /
+    - title:
+        ru: Руководство по обновлению
+      url: /update.html
+    - title:
+        ru: Руководство администратора
+      url: /admin-guide.html
+    - title:
+        ru: Руководство пользователя
+      url: /user-guide.html
+    - title:
+        en: Reference
+        ru: Справка
+      folders:
+        - title:
+            en: API
+            ru: API
+          folders:
+            - title:
+                en: Global configuration
+                ru: Глобальные настройки
+              url: /reference/api/global.html
+            - title:
+                en: Custom Resources
+                ru: Custom Resources
+              url: /reference/api/cr.html
+        - title:
+            en: Container registry structure
+            ru: Структура хранилища образов контейнеров
+          url: /reference/container-registry-structure.html
+        - title:
+            en: Network interaction
+            ru: Сетевое взаимодействие
+          url: /reference/network_interaction.html
+        - title:
+            en: Alerts
+            ru: Алерты
+          url: /reference/alerts.html
+        - title:
+            en: Sysctl parameters
+            ru: Параметры sysctl
+          url: /reference/sysctl.html
+        - title:
+            en: Used directors
+            ru: Используемые директории
+          url: /reference/used_directories.html
+    - title:
+        en: Console utilities
+        ru: Консольные утилиты
+      folders:
+      - title:
+          en: Deckhouse CLI (d8)
+          ru: Deckhouse CLI (d8)
+        folders:
+        - title:
+            en: Overview and installation
+            ru: Описание и установка
+          url: /cli/d8/
+        - title:
+            en: Reference
+            ru: Справка
+          url: /cli/d8/reference/
+    - title:
+        en: FAQ
+        ru: FAQ
+      url: /faq.html
+    - title:
+        en: Release notes
+        ru: История изменений
+      url: /release-notes.html

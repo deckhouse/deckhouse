@@ -3,6 +3,7 @@ title: Как узнать версию DKP на каждом из канало�
 subsystems:
   - deckhouse
 lang: ru
+editionsNotAvailable: [cse]
 ---
 
 Актуальная информация о версиях DKP на разных каналах обновлений доступна на сайте [releases.deckhouse.ru](https://releases.deckhouse.ru).
