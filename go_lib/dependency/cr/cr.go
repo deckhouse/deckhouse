@@ -22,7 +22,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -405,7 +404,13 @@ func (r *completeReader) Read(p []byte) (int, error) {
 
 	for {
 		if r.err != nil {
-			if !errors.Is(r.err, io.EOF) {
+			// Only the io.EOF sentinel itself proves a clean end of stream: the
+			// flatten goroutine closes the pipe with exactly io.EOF on success. A
+			// wrapped io.EOF is a failure — e.g. net/http returns url.Error{Err:
+			// io.EOF} when the registry closes the connection before responding —
+			// so errors.Is would mistake the most common transient network failure
+			// for success and release the byte.
+			if r.err != io.EOF { //nolint:err113,errorlint // identity check is the point, see above
 				return 0, r.err
 			}
 			if !r.hasTail {
