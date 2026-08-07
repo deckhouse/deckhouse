@@ -1,0 +1,278 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vsphere
+    cluster.x-k8s.io/provider: vsphere
+    cluster.x-k8s.io/v1beta1: v1beta1
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: vsphereclustertemplates.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: VSphereClusterTemplate
+    listKind: VSphereClusterTemplateList
+    plural: vsphereclustertemplates
+    singular: vsphereclustertemplate
+  scope: Namespaced
+  versions:
+  - deprecated: true
+    name: v1alpha4
+    schema:
+      openAPIV3Schema:
+        description: |-
+          VSphereClusterTemplate is the Schema for the vsphereclustertemplates API
+
+          Deprecated: This type will be removed in one of the next releases.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereClusterTemplateSpec defines the desired state of VSphereClusterTemplate
+            properties:
+              template:
+                properties:
+                  spec:
+                    description: VSphereClusterSpec defines the desired state of VSphereCluster
+                    properties:
+                      controlPlaneEndpoint:
+                        description: ControlPlaneEndpoint represents the endpoint
+                          used to communicate with the control plane.
+                        properties:
+                          host:
+                            description: The hostname on which the API server is serving.
+                            type: string
+                          port:
+                            description: The port on which the API server is serving.
+                            format: int32
+                            type: integer
+                        required:
+                        - host
+                        - port
+                        type: object
+                      identityRef:
+                        description: |-
+                          IdentityRef is a reference to either a Secret or VSphereClusterIdentity that contains
+                          the identity to use when reconciling the cluster.
+                        properties:
+                          kind:
+                            description: Kind of the identity. Can either be VSphereClusterIdentity
+                              or Secret
+                            enum:
+                            - VSphereClusterIdentity
+                            - Secret
+                            type: string
+                          name:
+                            description: Name of the identity.
+                            minLength: 1
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      server:
+                        description: Server is the address of the vSphere endpoint.
+                        type: string
+                      thumbprint:
+                        description: Thumbprint is the colon-separated SHA-1 checksum
+                          of the given vCenter server's host certificate
+                        type: string
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
+            type: object
+        type: object
+    served: false
+    storage: false
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: VSphereClusterTemplate is the Schema for the vsphereclustertemplates
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VSphereClusterTemplateSpec defines the desired state of VSphereClusterTemplate.
+            properties:
+              template:
+                description: VSphereClusterTemplateResource describes the data for
+                  creating a VSphereCluster from a template.
+                properties:
+                  spec:
+                    description: VSphereClusterSpec defines the desired state of VSphereCluster.
+                    properties:
+                      clusterModules:
+                        description: |-
+                          ClusterModules hosts information regarding the anti-affinity vSphere constructs
+                          for each of the objects responsible for creation of VM objects belonging to the cluster.
+                        items:
+                          description: |-
+                            ClusterModule holds the anti affinity construct `ClusterModule` identifier
+                            in use by the VMs owned by the object referred by the TargetObjectName field.
+                          properties:
+                            controlPlane:
+                              description: |-
+                                ControlPlane indicates whether the referred object is responsible for control plane nodes.
+                                Currently, only the KubeadmControlPlane objects have this flag set to true.
+                                Only a single object in the slice can have this value set to true.
+                              type: boolean
+                            moduleUUID:
+                              description: ModuleUUID is the unique identifier of
+                                the `ClusterModule` used by the object.
+                              type: string
+                            targetObjectName:
+                              description: |-
+                                TargetObjectName points to the object that uses the Cluster Module information to enforce
+                                anti-affinity amongst its descendant VM objects.
+                              type: string
+                          required:
+                          - controlPlane
+                          - moduleUUID
+                          - targetObjectName
+                          type: object
+                        type: array
+                      controlPlaneEndpoint:
+                        description: ControlPlaneEndpoint represents the endpoint
+                          used to communicate with the control plane.
+                        properties:
+                          host:
+                            description: The hostname on which the API server is serving.
+                            type: string
+                          port:
+                            description: The port on which the API server is serving.
+                            format: int32
+                            type: integer
+                        type: object
+                      disableClusterModule:
+                        description: |-
+                          DisableClusterModule is used to explicitly turn off the ClusterModule feature.
+                          This should work along side NodeAntiAffinity feature flag.
+                          If the NodeAntiAffinity feature flag is turned off, this will be disregarded.
+                        type: boolean
+                      failureDomainSelector:
+                        description: |-
+                          FailureDomainSelector is the label selector to use for failure domain selection
+                          for the control plane nodes of the cluster.
+                          If not set (`nil`), selecting failure domains will be disabled.
+                          An empty value (`{}`) selects all existing failure domains.
+                          A valid selector will select all failure domains which match the selector.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      identityRef:
+                        description: |-
+                          IdentityRef is a reference to either a Secret or VSphereClusterIdentity that contains
+                          the identity to use when reconciling the cluster.
+                        properties:
+                          kind:
+                            description: Kind of the identity. Can either be VSphereClusterIdentity
+                              or Secret
+                            enum:
+                            - VSphereClusterIdentity
+                            - Secret
+                            type: string
+                          name:
+                            description: Name of the identity.
+                            minLength: 1
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      server:
+                        description: Server is the address of the vSphere endpoint.
+                        type: string
+                      thumbprint:
+                        description: Thumbprint is the colon-separated SHA-1 checksum
+                          of the given vCenter server's host certificate
+                        type: string
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
+            type: object
+        type: object
+    served: true
+    storage: true

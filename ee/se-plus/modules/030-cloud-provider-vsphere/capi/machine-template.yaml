@@ -1,0 +1,107 @@
+{{- $vsphere := .Values.nodeManager.internal.cloudProvider.vsphere }}
+{{- $ic := .nodeGroup.instanceClass }}
+{{- $icd := $vsphere.instanceClassDefaults | default dict }}
+{{- $memoryMiB := add $ic.memory (mod $ic.memory 4) }}
+{{- $runtime := $ic.runtimeOptions | default dict }}
+{{- $networks := list }}
+{{- if hasKey $ic "mainNetwork" }}
+  {{- $networks = append $networks $ic.mainNetwork }}
+{{- end }}
+{{- if hasKey $ic "additionalNetworks" }}
+  {{- range $n := $ic.additionalNetworks }}
+    {{- $networks = append $networks $n }}
+  {{- end }}
+{{- end }}
+{{- $customVMXKeys := dict }}
+{{- $disableTimesync := true }}
+{{- if hasKey $ic "disableTimesync" }}
+  {{- $disableTimesync = $ic.disableTimesync }}
+{{- else if hasKey $icd "disableTimesync" }}
+  {{- $disableTimesync = $icd.disableTimesync }}
+{{- end }}
+{{- if $disableTimesync }}
+  {{- $_ := set $customVMXKeys "tools.syncTime" "FALSE" }}
+{{- end }}
+{{- $nestedHV := true }}
+{{- if hasKey $runtime "nestedHardwareVirtualization" }}
+  {{- $nestedHV = $runtime.nestedHardwareVirtualization }}
+{{- end }}
+{{- if $nestedHV }}
+  {{- $_ := set $customVMXKeys "vhv.enable" "TRUE" }}
+{{- end }}
+{{- $resources := dict }}
+{{- $shares := dict }}
+{{- $limits := dict }}
+{{- $requests := dict }}
+{{- if hasKey $runtime "cpuShares" }}
+  {{- $_ := set $shares "cpu" (int $runtime.cpuShares) }}
+{{- end }}
+{{- if hasKey $runtime "memoryShares" }}
+  {{- $_ := set $shares "memory" (int $runtime.memoryShares) }}
+{{- end }}
+{{- if hasKey $runtime "cpuLimit" }}
+  {{- $_ := set $limits "cpu" (printf "%dM" (int $runtime.cpuLimit)) }}
+{{- end }}
+{{- if hasKey $runtime "memoryLimit" }}
+  {{- $_ := set $limits "memory" (printf "%dMi" (int $runtime.memoryLimit)) }}
+{{- end }}
+{{- if hasKey $runtime "cpuReservation" }}
+  {{- $_ := set $requests "cpu" (printf "%dM" (int $runtime.cpuReservation)) }}
+{{- end }}
+{{- $memoryReservationMiB := mul (div $memoryMiB 100) (int ($runtime.memoryReservation | default 80)) }}
+{{- $_ := set $requests "memory" (printf "%dMi" $memoryReservationMiB) }}
+{{- if gt (len $shares) 0 }}{{- $_ := set $resources "shares" $shares }}{{- end }}
+{{- if gt (len $limits) 0 }}{{- $_ := set $resources "limits" $limits }}{{- end }}
+{{- if gt (len $requests) 0 }}{{- $_ := set $resources "requests" $requests }}{{- end }}
+{{- /* CAPV runtime requires URN-format tag IDs (urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL).
+       Sourced from providerDiscoveryData.tagURNs, which cloud-data-discoverer populates.
+       Empty until discovery ships tag URNs — VM creation must not depend on tags. */ -}}
+{{- $tags := dig "providerDiscoveryData" "tagURNs" (list) $vsphere }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereMachineTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    # See https://github.com/kubernetes-sigs/cluster-api/issues/6588#issuecomment-1925433449 —
+    # VSphereMachineTemplate.spec is immutable, so templates are rotated by name and retained after rollout.
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  template:
+    spec:
+      template: {{ $ic.template | default $icd.template | quote }}
+      server: {{ $vsphere.server | quote }}
+      folder: {{ $vsphere.vmFolderPath | quote }}
+      datastore: {{ $ic.datastore | default $icd.datastore | quote }}
+      {{- if or $ic.resourcePool $icd.resourcePoolPath }}
+      resourcePool: {{ or $ic.resourcePool $icd.resourcePoolPath | quote }}
+      {{- end }}
+      numCPUs: {{ int $ic.numCPUs }}
+      memoryMiB: {{ $memoryMiB }}
+      diskGiB: {{ $ic.rootDiskSize | default 20 }}
+      cloneMode: linkedClone
+      network:
+        devices:
+        {{- range $networks }}
+        - networkName: {{ . | quote }}
+          dhcp4: true
+        {{- end }}
+      {{- if gt (len $customVMXKeys) 0 }}
+      customVMXKeys:
+        {{- range $k, $v := $customVMXKeys }}
+        {{ $k | quote }}: {{ $v | quote }}
+        {{- end }}
+      {{- end }}
+      {{- if gt (len $resources) 0 }}
+      resources:
+        {{- toYaml $resources | nindent 8 }}
+      {{- end }}
+      {{- if gt (len $tags) 0 }}
+      tagIDs:
+      {{- range $tags }}
+        - {{ . | quote }}
+      {{- end }}
+      {{- end }}

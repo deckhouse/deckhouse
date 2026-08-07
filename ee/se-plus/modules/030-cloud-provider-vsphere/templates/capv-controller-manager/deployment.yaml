@@ -1,0 +1,97 @@
+{{- define "capv_controller_manager_pod_annotations" -}}
+checksum/config: {{ include (print $.Template.BasePath "/capv-controller-manager/webhook-tls.yaml") . | sha256sum }}
+{{- end -}}
+
+{{- define "capv_controller_manager_pod_labels" -}}
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+security.deckhouse.io/security-policy-exception: capv-controller-manager
+{{- end }}
+{{- end -}}
+
+{{- define "capv_controller_manager_args" -}}
+- "--leader-elect"
+- "--health-addr=:4272"
+- "--webhook-port=4270"
+- "--diagnostics-address=:4271"
+- "--insecure-diagnostics=false"
+- "--v=4"
+{{- end -}}
+
+{{- define "capv_controller_manager_env" -}}
+- name: POD_NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+- name: POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+- name: POD_UID
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.uid
+{{- end -}}
+
+{{- define "capv_controller_manager_ports" -}}
+- name: webhook-server
+  containerPort: 4270
+  protocol: TCP
+- name: healthz
+  containerPort: 4272
+  protocol: TCP
+- name: metrics
+  containerPort: 4271
+  protocol: TCP
+{{- end -}}
+
+{{- define "capv_controller_manager_volume_mounts" -}}
+- name: cert
+  mountPath: "/tmp/k8s-webhook-server/serving-certs"
+  readOnly: true
+{{- end -}}
+
+{{- define "capv_controller_manager_volumes" -}}
+- name: cert
+  secret:
+    secretName: capv-controller-manager-webhook-tls
+    defaultMode: 420
+{{- end -}}
+
+{{- define "capv_controller_manager_liveness_probe" -}}
+httpGet:
+  path: "/healthz"
+  port: 4272
+initialDelaySeconds: 15
+periodSeconds: 20
+{{- end -}}
+
+{{- define "capv_controller_manager_readiness_probe" -}}
+httpGet:
+  path: "/readyz"
+  port: 4272
+initialDelaySeconds: 5
+periodSeconds: 10
+{{- end -}}
+
+{{- $capiConfig := dict -}}
+{{- $_ := set $capiConfig "fullname" "capv-controller-manager" -}}
+{{- $_ := set $capiConfig "namespace" "d8-cloud-provider-vsphere" -}}
+{{- $_ := set $capiConfig "image" (include "helm_lib_module_image" (list . "capvControllerManager")) -}}
+{{- $_ := set $capiConfig "capiProviderName" "infrastructure-vsphere" -}}
+{{- $_ := set $capiConfig "hostNetwork" true -}}
+{{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
+{{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
+{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "with-uninitialized" "with-no-csi" "with-cloud-provider-uninitialized") -}}
+{{- $_ := set $capiConfig "additionalArgs" (include "capv_controller_manager_args" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalEnv" (include "capv_controller_manager_env" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalPorts" (include "capv_controller_manager_ports" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumeMounts" (include "capv_controller_manager_volume_mounts" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumes" (include "capv_controller_manager_volumes" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalPodAnnotations" (include "capv_controller_manager_pod_annotations" . | fromYaml) -}}
+{{- $_ := set $capiConfig "additionalPodLabels" (include "capv_controller_manager_pod_labels" . | fromYaml) -}}
+{{- $_ := set $capiConfig "livenessProbe" (include "capv_controller_manager_liveness_probe" . | fromYaml) -}}
+{{- $_ := set $capiConfig "readinessProbe" (include "capv_controller_manager_readiness_probe" . | fromYaml) -}}
+{{- $_ := set $capiConfig "vpaEnabled" true -}}
+{{- $_ := set $capiConfig "securityPolicyExceptionEnabled" true -}}
+
+{{- include "helm_lib_capi_controller_manager_manifests" (list . $capiConfig) }}
