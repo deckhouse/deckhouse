@@ -1699,13 +1699,17 @@ entries:
                 ru: Модуль observability
               url: /architecture/observability/observability.html
             - title:
-                en: Upmeter module
-                ru: Модуль upmeter
-              url: /architecture/observability/upmeter.html
+                en: Extended-monitoring module
+                ru: Модуль extended-monitoring
+              url: /architecture/observability/extended-monitoring.html
             - title:
                 en: Logging modules
                 ru: Модули логирования
               url: /architecture/observability/logging.html
+            - title:
+                en: Upmeter module
+                ru: Модуль upmeter
+              url: /architecture/observability/upmeter.html
         - title:
             en: Virtualization subsystem
             ru: Подсистема Virtualization
