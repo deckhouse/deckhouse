@@ -37,7 +37,7 @@ description: Архитектура модуля managed-memcached в Deckhouse 
 
 1. **Managed-memcached-operator** — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   * согласование состояния кастомных ресурсов [Memcached](/modules/managed-memcached/stable/cr.html#memcached) во всех пользовательских пространствах имён. Ресурс Memcached определяет настройки инстанса Memcached, включая топологию размещения и тип развёртывания;
+   * согласование состояния кастомных ресурсов [Memcached](/modules/managed-memcached/stable/cr.html#memcached) во всех пользовательских неймспейсах. Ресурс Memcached определяет настройки инстанса Memcached, включая топологию размещения и тип развёртывания;
 
    * валидация кастомных ресурсов Memcached и MemcachedClass, мутация кастомных ресурсов Memcached с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
