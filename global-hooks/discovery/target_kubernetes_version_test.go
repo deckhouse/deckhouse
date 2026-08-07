@@ -493,6 +493,51 @@ data:
 			Expect(value).To(Equal(1.0))
 		})
 
+		It("falls through to the Secret when the ConfigMap maxUsed is not a version", func() {
+			// data.spec is hand-editable by design — update-observer rewrites edits on its next
+			// pass — so an unusable value there is reachable, and in the window before that pass the
+			// guard reads it. It must be discarded in favour of the next source, not allowed to
+			// shadow it: taking the ConfigMap value first and only then failing to parse it left the
+			// guard switched off with a good 1.38 sitting in the Secret.
+			secretWithMaxUsed := `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateCClusterConfiguration)) + `
+  "maxUsedControlPlaneKubernetesVersion": ` + base64.StdEncoding.EncodeToString([]byte("1.38"))
+			existing := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    k8s-version: "1.38"
+data:
+  spec: |
+    desiredVersion: "1.38"
+    updateMode: Automatic
+    maxUsedKubernetesVersion: "latest"
+  status: |
+    currentVersion: "1.38"
+    phase: UpToDate
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(secretWithMaxUsed+moduleConfigYAML("Default")+existing, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
+			value, found := findDriftMetric()
+			Expect(found).To(BeTrue())
+			Expect(value).To(Equal(1.0))
+		})
+
 		It("does not freeze an explicit Manual pin", func() {
 			existing := `
 ---

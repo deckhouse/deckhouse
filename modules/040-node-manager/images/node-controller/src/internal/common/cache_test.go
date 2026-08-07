@@ -42,27 +42,32 @@ func configMapByObject(t *testing.T, opts cache.Options) cache.ByObject {
 
 // TestCacheScopeCoversKubeSystemConfigMaps guards a failure mode that no behavioural test can see:
 // a cached Get for an object outside the configured scope does not error, it returns NotFound. The
-// caller then requeues forever waiting for a ConfigMap the informer will never see.
+// caller then requeues forever waiting for a ConfigMap the informer will never see. That bit the
+// derived-status service once, when kube-system ConfigMaps were pinned to d8-cluster-uuid and
+// d8-cluster-kubernetes — the source of the target Kubernetes version — was never found.
 //
-// This bit the derived-status service: kube-system ConfigMaps were pinned to d8-cluster-uuid by a
-// name FieldSelector, so d8-cluster-kubernetes — the source of the cluster's target Kubernetes
-// version — was never found and the ConfigMap watch never fired.
+// The scope is one object, not the whole namespace: kube-system is a namespace users write to, so an
+// unscoped informer would watch and hold arbitrary third-party ConfigMaps of unbounded size. A name
+// field selector matches exactly one object and field selectors have no OR, so the pin is spent on
+// the one ConfigMap that needs a *watch*, and d8-cluster-uuid — immutable, watch-free — is read
+// through the uncached reader by common.ClusterUUID instead.
 //
-// A name FieldSelector can only ever match one object, so as long as two different kube-system
-// ConfigMaps are read there must be no field or label filter on that namespace.
+// Anything that adds a second cached kube-system ConfigMap read has to fail here rather than
+// silently requeue in production: either route it through the uncached reader too, or change the
+// scope deliberately.
 func TestCacheScopeCoversKubeSystemConfigMaps(t *testing.T) {
 	opts, _ := CacheOptions()
 
 	configMaps := configMapByObject(t, opts)
 
 	kubeSystem, ok := configMaps.Namespaces["kube-system"]
-	require.True(t, ok, "kube-system must be in the ConfigMap cache scope: the derived-status "+
-		"service reads d8-cluster-uuid and d8-cluster-kubernetes from it")
+	require.True(t, ok, "kube-system must be in the ConfigMap cache scope: it is where "+
+		"d8-cluster-kubernetes lives and the nodegroup status controller watches it")
 
-	assert.Nil(t, kubeSystem.FieldSelector,
-		"kube-system ConfigMaps must not be filtered by name: d8-cluster-uuid and "+
-			"d8-cluster-kubernetes are both read, and a name FieldSelector matches only one")
-	assert.Nil(t, kubeSystem.LabelSelector,
-		"kube-system ConfigMaps must not be filtered by label: d8-cluster-uuid is created by "+
-			"dhctl without any labels")
+	require.NotNil(t, kubeSystem.FieldSelector,
+		"kube-system ConfigMaps must stay pinned to one object: users create ConfigMaps in this "+
+			"namespace and an unscoped informer would cache all of them")
+	assert.Equal(t, "metadata.name="+ClusterKubernetesConfigMapName, kubeSystem.FieldSelector.String(),
+		"the pin must name the ConfigMap that needs a watch; every other kube-system ConfigMap "+
+			"read in this binary must go through the uncached reader (see common.ClusterUUID)")
 }

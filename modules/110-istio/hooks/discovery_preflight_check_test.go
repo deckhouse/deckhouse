@@ -33,8 +33,23 @@ istio:
 `
 	f := HookExecutionConfigInit(initValues, "")
 
+	// Present in every context below except the managed-cluster one: this key is published from the
+	// d8-cluster-configuration Secret, so its presence is what tells the hook that Deckhouse owns the
+	// Kubernetes version at all.
+	setClusterConfiguration := func() {
+		f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+clusterDomain: cluster.local
+`))
+	}
+
 	Context("kubernetesVersionIsDefault is true", func() {
 		BeforeEach(func() {
+			setClusterConfiguration()
 			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.36")
 			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -58,6 +73,7 @@ istio:
 
 	Context("kubernetesVersionIsDefault is false", func() {
 		BeforeEach(func() {
+			setClusterConfiguration()
 			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")
 			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", false)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -79,6 +95,7 @@ istio:
 	// targetKubernetesVersion has no default, so its emptiness is what marks "not resolved yet".
 	Context("global discovery has not published a target version", func() {
 		BeforeEach(func() {
+			setClusterConfiguration()
 			f.ValuesSet("global.discovery.targetKubernetesVersion", "")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -87,6 +104,39 @@ istio:
 		It("Should fail instead of silently disabling the compatibility gate", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 			Expect(f.GoHookError.Error()).To(ContainSubstring("global.discovery.targetKubernetesVersion is empty"))
+		})
+	})
+
+	// Managed cluster: no ClusterConfiguration, so control-plane-manager is disabled and the provider
+	// owns the Kubernetes version. The gate fed by this key compares the coming Deckhouse release's
+	// default version against installed Istio versions, which would block Deckhouse updates over a
+	// version this cluster never runs. Reproduces the pre-move behaviour: with the
+	// d8-cluster-configuration Secret absent the hook fell through to the actual cluster version,
+	// which never equalled the literal "Automatic".
+	Context("managed cluster without ClusterConfiguration", func() {
+		f := HookExecutionConfigInit(initValues, "")
+
+		BeforeEach(func() {
+			// Deliberately set: in a managed cluster nothing is pinned anywhere, so the global hook
+			// publishes the Deckhouse default with isDefault=true. The gate must still be skipped.
+			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.36")
+			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should report the version as not automatic and still publish the compatibility map", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			isAutomatic, exists := requirements.GetValue(isK8sVersionAutomaticKey)
+			Expect(exists).To(BeTrue())
+			Expect(isAutomatic).To(BeEquivalentTo(false))
+
+			compatibilityMap, exists := requirements.GetValue(istioToK8sCompatibilityMapKey)
+			Expect(exists).To(BeTrue())
+			Expect(compatibilityMap).To(BeEquivalentTo(map[string][]string{
+				"1.27": {"1.32", "1.33", "1.34", "1.35", "1.36"},
+			}))
 		})
 	})
 })

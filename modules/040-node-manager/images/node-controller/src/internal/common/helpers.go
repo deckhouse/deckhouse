@@ -31,6 +31,44 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
+const (
+	ClusterUUIDConfigMapName      = "d8-cluster-uuid"
+	ClusterUUIDConfigMapNamespace = "kube-system"
+	clusterUUIDKey                = "cluster-uuid"
+
+	// ClusterKubernetesConfigMapName is the ConfigMap control-plane-manager owns; this binary reads
+	// spec.desiredVersion from it. Declared here because CacheOptions has to scope the kube-system
+	// ConfigMap informer to it, and the readers must name the same object the informer holds.
+	ClusterKubernetesConfigMapName      = "d8-cluster-kubernetes"
+	ClusterKubernetesConfigMapNamespace = "kube-system"
+)
+
+// ClusterUUID returns the cluster UUID from kube-system/d8-cluster-uuid, or "" when it cannot be
+// read.
+//
+// The reader must be uncached (the manager's APIReader). CacheOptions scopes the kube-system
+// ConfigMap informer to d8-cluster-kubernetes — the only ConfigMap in that namespace this binary
+// needs a *watch* on — and a name field selector can pin exactly one object, so this one has to be
+// fetched live. That trade is the right way round: the UUID is immutable, while the Kubernetes
+// version changes and must be watched.
+//
+// Deliberately not memoised in a package variable. It would be correct in production, where a
+// process sees one cluster, and wrong in tests, where several fake clients in one binary carry
+// different UUIDs and the first read would answer for all of them.
+func ClusterUUID(ctx context.Context, r client.Reader) string {
+	cm := &corev1.ConfigMap{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: ClusterUUIDConfigMapNamespace,
+		Name:      ClusterUUIDConfigMapName,
+	}, cm); err != nil {
+		log.FromContext(ctx).V(1).Info("cannot read the cluster UUID ConfigMap",
+			"namespace", ClusterUUIDConfigMapNamespace, "name", ClusterUUIDConfigMapName, "error", err)
+		return ""
+	}
+
+	return cm.Data[clusterUUIDKey]
+}
+
 func GetNodeGroup(ctx context.Context, r client.Reader, name string) (*v1.NodeGroup, error) {
 	ng := &v1.NodeGroup{}
 	if err := r.Get(ctx, types.NamespacedName{Name: name}, ng); err != nil {

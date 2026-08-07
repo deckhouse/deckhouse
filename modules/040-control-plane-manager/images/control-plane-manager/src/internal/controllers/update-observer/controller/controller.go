@@ -27,6 +27,7 @@ import (
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
@@ -39,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -67,11 +69,17 @@ var logger = log.NewLogger().Named("update-observer")
 
 type reconciler struct {
 	client client.Client
+
+	// bootstrap carries the first enqueue for a cluster where the ConfigMap does not exist yet.
+	// Buffered so bootstrapConfigMap never blocks: one pending wake-up is all that is ever useful,
+	// and the workqueue coalesces duplicates anyway.
+	bootstrap chan event.GenericEvent
 }
 
 func RegisterController(mgr manager.Manager) error {
 	r := &reconciler{
-		client: mgr.GetClient(),
+		client:    mgr.GetClient(),
+		bootstrap: make(chan event.GenericEvent, 1),
 	}
 
 	// The watch alone does not cover a cluster where the ConfigMap does not exist at the moment
@@ -117,6 +125,10 @@ func RegisterController(mgr manager.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(getNodeGroupPredicate()),
 		).
+		// bootstrapConfigMap feeds this instead of calling Reconcile itself, so its wake-up goes
+		// through the same workqueue as every other trigger and MaxConcurrentReconciles keeps
+		// meaning what it says.
+		WatchesRawSource(source.Channel(r.bootstrap, &handler.EnqueueRequestForObject{})).
 		Complete(r)
 }
 
@@ -125,7 +137,13 @@ func RegisterController(mgr manager.Manager) error {
 // It answers the one case the watch cannot: an informer replays Create events for objects that
 // already exist when it starts, but delivers nothing for an object that does not exist at all. If
 // the ConfigMap is present this returns on the first check and the watch takes over; if it is
-// absent this reconciles until it is there.
+// absent this asks for a reconcile until it is there.
+//
+// It *asks* rather than calls. Reconcile belongs to the workqueue: MaxConcurrentReconciles is 1, so
+// the controller relies on never running two passes at once, and a direct call from this goroutine
+// would break that — two passes could both find the object missing, both synthesize it and both
+// Create, leaving the loser to log a failed write on every Pod start. Going through the channel
+// source also lets the queue coalesce this wake-up with whatever else is pending.
 func (r *reconciler) bootstrapConfigMap(ctx context.Context) error {
 	err := wait.PollUntilContextCancel(ctx, requeueInterval, true, func(ctx context.Context) (bool, error) {
 		getErr := r.client.Get(ctx, client.ObjectKey{
@@ -142,12 +160,16 @@ func (r *reconciler) bootstrapConfigMap(ctx context.Context) error {
 			return false, nil
 		}
 
-		logger.Info("Cluster ConfigMap does not exist, creating it",
+		logger.Info("Cluster ConfigMap does not exist, requesting a reconcile to create it",
 			"namespace", common.KubeSystemNamespace, "name", common.ConfigMapName)
-		// Reconcile reports its own failures and never returns an error, so the next tick is what
-		// decides whether this worked: it re-checks existence rather than trusting the call.
-		if _, reconcileErr := r.Reconcile(ctx, reconcile.Request{}); reconcileErr != nil {
-			logger.Warn("Bootstrap reconcile failed, retrying", log.Err(reconcileErr))
+		// Non-blocking: a wake-up already waiting in the buffer does the same job, and the next tick
+		// re-checks existence rather than trusting that this one was delivered or succeeded.
+		select {
+		case r.bootstrap <- event.GenericEvent{Object: &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+			Name:      common.ConfigMapName,
+			Namespace: common.KubeSystemNamespace,
+		}}}:
+		default:
 		}
 
 		return false, nil

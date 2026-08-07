@@ -101,13 +101,21 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			&corev1.ConfigMap{}: {
 				Namespaces: map[string]cache.Config{
-					// Unfiltered on purpose, same reasoning as the kube-system Secrets above: a
-					// name FieldSelector can pin exactly one object, and the derived-status
-					// service now needs two of them — d8-cluster-uuid and d8-cluster-kubernetes,
-					// the latter on every pass as the source of the target Kubernetes version.
-					// With the selector still in place that read silently returned NotFound (and
-					// the ConfigMap watch never fired), so reconcile would requeue forever.
-					"kube-system": {},
+					// Scoped to the one ConfigMap in kube-system this binary needs a *watch* on:
+					// d8-cluster-kubernetes, the source of the target Kubernetes version. It is not
+					// the only kube-system ConfigMap read here — d8-cluster-uuid is too — but a name
+					// FieldSelector can pin exactly one object and field selectors have no OR, so the
+					// other reader has to be uncached. It can afford to be: the UUID is immutable, so
+					// common.ClusterUUID reads it once per process and memoises it, whereas the
+					// version changes and must be watched.
+					//
+					// Deliberately not unfiltered. kube-system is a namespace users write to, so an
+					// unscoped informer would watch and hold arbitrary third-party ConfigMaps of
+					// unbounded size — unlike the kube-system Secrets above, whose set is bounded by
+					// the platform.
+					"kube-system": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": ClusterKubernetesConfigMapName}),
+					},
 					"d8-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},

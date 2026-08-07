@@ -38,14 +38,14 @@ import (
 )
 
 const (
-	cloudProviderSecretName        = ngcommon.CloudProviderSecretName
-	cloudProviderSecretNamespace   = nodecommon.CloudProviderSecretNamespace
-	clusterConfigSecretName        = "d8-cluster-configuration"
-	clusterConfigSecretNamespace   = "kube-system"
-	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
-	clusterKubernetesConfigMapNS   = "kube-system"
-	clusterUUIDConfigMapName       = "d8-cluster-uuid"
-	clusterUUIDConfigMapNS         = "kube-system"
+	cloudProviderSecretName      = ngcommon.CloudProviderSecretName
+	cloudProviderSecretNamespace = nodecommon.CloudProviderSecretNamespace
+	clusterConfigSecretName      = "d8-cluster-configuration"
+	clusterConfigSecretNamespace = "kube-system"
+	// Aliased rather than re-declared: CacheOptions scopes the kube-system ConfigMap informer to this
+	// exact name, so the reader below and the informer must not be able to drift apart.
+	clusterKubernetesConfigMapName = nodecommon.ClusterKubernetesConfigMapName
+	clusterKubernetesConfigMapNS   = nodecommon.ClusterKubernetesConfigMapNamespace
 
 	instanceTypesCatalogName = "for-cluster-autoscaler"
 	instanceClassGroup       = "deckhouse.io"
@@ -79,12 +79,10 @@ func decodeSecretData(data map[string][]byte) map[string]interface{} {
 	return res
 }
 
+// readClusterUUID goes through the uncached reader: the kube-system ConfigMap informer is scoped to
+// d8-cluster-kubernetes, so a cached Get for this object would answer NotFound.
 func (s *Service) readClusterUUID(ctx context.Context) string {
-	cm := &corev1.ConfigMap{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: clusterUUIDConfigMapNS, Name: clusterUUIDConfigMapName}, cm); err != nil {
-		return ""
-	}
-	return cm.Data["cluster-uuid"]
+	return nodecommon.ClusterUUID(ctx, s.reader())
 }
 
 type clusterConfiguration struct {

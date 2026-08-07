@@ -266,13 +266,24 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 		// TODO(kubernetesVersion-deprecation): T+1 remove — the Secret key is a migration
 		// fallback, for the window between a Deckhouse upgrade and the DaemonSet rollout that
 		// first puts the value into the ConfigMap.
-		maxUsed := cmSnap.MaxUsed
-		if maxUsed == "" {
-			maxUsed = secretMaxUsed
-		}
+		maxUsed := usableMaxUsedBaseline(input,
+			maxUsedCandidate{source: "cluster ConfigMap spec.maxUsedKubernetesVersion", value: cmSnap.MaxUsed},
+			maxUsedCandidate{source: "ClusterConfiguration Secret maxUsedControlPlaneKubernetesVersion", value: secretMaxUsed},
+		)
 		froze := false
 		if maxUsed != "" {
+			// maxUsed parsed inside usableMaxUsedBaseline, so only target can fail here — and it is
+			// either a value usableDeclaredVersion accepted or the Deckhouse default. Still logged:
+			// this is the last branch in which the guard can switch itself off.
 			inWindow, err := kubernetesVersionInMaxUsedWindow(target, maxUsed)
+			if err != nil {
+				input.Logger.Warn(
+					"kubernetesVersion soft guard is disabled: cannot compare the target with the maxUsed baseline",
+					slog.String("target", target),
+					slog.String("maxUsed", maxUsed),
+					dlog.Err(err),
+				)
+			}
 			if err == nil && !inWindow {
 				// Freeze memory, most authoritative first. The first two live inside the same
 				// ConfigMap the floor came from, so `kubectl delete cm d8-cluster-kubernetes`
@@ -429,6 +440,49 @@ func usableDeclaredVersion(input *go_hook.HookInput, version, source string, isP
 	}
 
 	return version
+}
+
+// maxUsedCandidate is one source of the maxUsed floor, named for the log line it may produce.
+type maxUsedCandidate struct {
+	source string
+	value  string
+}
+
+// usableMaxUsedBaseline returns the first candidate that is actually a version, in priority order:
+// the cluster ConfigMap (what update-observer records) then the ClusterConfiguration Secret (the
+// migration seed). Empty when no candidate is usable.
+//
+// Parsing is part of choosing rather than a later step, because the two are not equivalent. Picking
+// first and parsing afterwards let a single unusable value in the higher-priority source shadow a
+// perfectly good lower-priority one and switch the guard off entirely — the ConfigMap block is
+// hand-editable by design (update-observer rewrites edits on its next pass), so one `kubectl edit`
+// in the window before that pass was enough. Discarding the value and falling through is what
+// "unusable" should have meant all along.
+//
+// Every discard is logged: a guard that turns itself off looks exactly like a guard that found
+// nothing wrong.
+//
+// NOTE(kubernetesVersion-deprecation): keep — the ordering survives the Secret candidate's removal.
+func usableMaxUsedBaseline(input *go_hook.HookInput, candidates ...maxUsedCandidate) string {
+	for _, candidate := range candidates {
+		if strings.TrimSpace(candidate.value) == "" {
+			continue
+		}
+
+		if _, err := semver.NewVersion(strings.TrimSpace(candidate.value)); err != nil {
+			input.Logger.Warn(
+				"ignoring an unusable maxUsedKubernetesVersion baseline, falling through to the next source",
+				slog.String("source", candidate.source),
+				slog.String("value", candidate.value),
+				dlog.Err(err),
+			)
+			continue
+		}
+
+		return candidate.value
+	}
+
+	return ""
 }
 
 // kubernetesVersionInMaxUsedWindow reports whether target is within the maxUsed−1 floor window
