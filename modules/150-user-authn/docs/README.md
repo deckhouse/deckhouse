@@ -20,6 +20,8 @@ Management of static users is performed using the [User](cr.html#user) and [Grou
 - The User object stores user information, including the email address and an encrypted password hash (the plain-text password is not stored);
 - The Group object defines a list of users grouped together for easier access management.
 
+User management operations — creating and deleting users, managing groups, resetting passwords, resetting 2FA, and locking/unlocking — can be performed via the [`d8 iam`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) CLI or via the [UserOperation](cr.html#useroperation) resource. The `UserOperation` resource is single-use and is automatically deleted 24 hours after completion.
+
 The following external authentication protocols/providers are supported:
 
 - GitHub;
