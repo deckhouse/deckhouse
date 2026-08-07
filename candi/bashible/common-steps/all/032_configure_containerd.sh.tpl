@@ -390,13 +390,14 @@ oom_score = 0
           {{- else }}
           auth = {{ (($mirror).auth).auth | default "" | quote }}
           {{- end }}
-      {{- if $mirror.ca }}
+      {{- if or $mirror.ca (eq $mirror.scheme "http") }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".tls]
+      {{- if $mirror.ca }}
           ca_file = "/opt/deckhouse/share/ca-certificates/registry-{{ $mirror.host | lower }}-ca.crt"
       {{- end }}
       {{- if eq $mirror.scheme "http" }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".tls]
           insecure_skip_verify = true
+      {{- end }}
       {{- end }}
     {{- end }}
   {{- end }}
