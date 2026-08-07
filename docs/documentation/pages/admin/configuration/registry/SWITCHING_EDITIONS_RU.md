@@ -328,6 +328,14 @@ d8 k patch ng <ИМЯ_NODEGROUP> --type=merge -p '{"spec":{"disruptions":{"appro
    d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
+1. **Только для узлов на ContainerdV2** — удалите ресурс NodeGroupConfiguration, который использовался для миграции состояния containerd:
+
+   ```shell
+   d8 k delete ngc zz-cse-containerd-integrity-migration.sh
+   ```
+
+   Удаляйте его сразу после завершения миграции всех узлов. Оставленный в кластере ресурс продолжает проверять состояние containerd при каждом запуске bashible и может повторно запросить disruptive-обновление узла (аннотация `update.node.deckhouse.io/disruption-required`), то есть очистку состояния containerd с перезагрузкой.
+
 ### Переключение без модуля registry
 
 1. Если модуль `registry` включен, отключите его с [помощью инструкции](/modules/registry/faq.html#как-мигрировать-обратно-с-модуля-registry).
@@ -608,10 +616,16 @@ d8 k patch ng <ИМЯ_NODEGROUP> --type=merge -p '{"spec":{"disruptions":{"appro
      rm /tmp/cse-deckhouse-registry.yaml
      ```
 
-   - Удалите ресурс NodeGroupConfiguration:
+   - Удалите ресурсы NodeGroupConfiguration:
 
      ```shell
      d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+     ```
+
+     Для узлов на ContainerdV2 удалите также ресурс, который использовался для миграции состояния containerd. Делайте это сразу после завершения миграции всех узлов: оставленный в кластере ресурс продолжает проверять состояние containerd при каждом запуске bashible и может повторно запросить disruptive-обновление узла (аннотация `update.node.deckhouse.io/disruption-required`), то есть очистку состояния containerd с перезагрузкой.
+
+     ```shell
+     d8 k delete ngc zz-cse-containerd-integrity-migration.sh
      ```
 
    - Удалите под:
