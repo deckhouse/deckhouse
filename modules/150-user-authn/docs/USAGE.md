@@ -508,7 +508,32 @@ The implementation complies with OWASP recommendations, ensuring reliable protec
 
 ### Creating a user
 
-Create a password and enter its hash encoded in base64 in the `password` field. The email address must be in lowercase.
+The recommended way to create a local user is the [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create) command. It supports interactive password entry, automatic password generation, group assignment, and time-to-live (TTL) for temporary users.
+
+```shell
+# Interactive password prompt (default when stdin is a terminal)
+d8 iam user create anton --email anton@abc.com
+
+# Automatically generate a password (shown once)
+d8 iam user create anton --email anton@abc.com --generate-password
+
+# Read the password from stdin (for CI/CD pipelines)
+echo "s3cret" | d8 iam user create anton --email anton@abc.com --password-stdin
+
+# Use a pre-computed bcrypt hash (e.g. from htpasswd)
+d8 iam user create anton --email anton@abc.com --password-hash '$2y$10$abcdef...'
+
+# Create the user and add to groups (auto-creating groups if missing)
+d8 iam user create anton --email anton@abc.com --generate-password --member-of admins --create-groups
+
+# Create a temporary user with a TTL
+d8 iam user create anton --email anton@abc.com --generate-password --ttl 24h
+
+# Preview the manifest without applying it
+d8 iam user create anton --email anton@abc.com --generate-password --dry-run -o yaml
+```
+
+As an alternative, you can create the [User](cr.html#user) resource manually. Create a password and enter its hash encoded in base64 in the `password` field. The email address must be in lowercase.
 
 Use the command below to calculate the password hash:
 
@@ -543,6 +568,18 @@ spec:
 ```
 
 {% endraw %}
+
+### Deleting a user
+
+To delete a local user, use the [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete) command. By default, it also removes the user from all [Group](cr.html#group) resources they belong to.
+
+```shell
+# Delete the user and remove them from all groups
+d8 iam user delete anton
+
+# Delete the user but keep their references in groups
+d8 iam user delete anton --keep-memberships
+```
 
 ### Local user operations
 
@@ -606,9 +643,154 @@ Self-service password reset is available only for local accounts (the built-in `
 
 When a user resets their password, the new password must comply with the password policy, and the user's active sessions are terminated — re-authentication is required.
 
+#### Creating UserOperation manually
+
+When the `d8 iam user` CLI is unavailable (e.g. in CI/CD, GitOps, or automation pipelines), you can create a [UserOperation](cr.html#useroperation) resource directly. Use `apiVersion: deckhouse.io/v1` and set `initiatorType: admin`.
+
+Example — reset a local user's password (the `newPasswordHash` contains a bcrypt hash without Base64 encoding; the hook encodes it automatically):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-password-admin
+spec:
+  user: admin
+  type: ResetPassword
+  initiatorType: admin
+  resetPassword:
+    newPasswordHash: "$2y$10$..."
+```
+
+Example — lock a local user for 1 hour:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-admin-1h
+spec:
+  user: admin
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "1h"
+```
+
+Example — permanent lock:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-admin-permanent
+spec:
+  user: admin
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "permanent"
+```
+
+Example — unlock:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: unlock-admin
+spec:
+  user: admin
+  type: Unlock
+  initiatorType: admin
+```
+
+Example — reset 2FA:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-2fa-admin
+spec:
+  user: admin
+  type: Reset2FA
+  initiatorType: admin
+```
+
+#### Operations on external users (LDAP/Crowd)
+
+For users authenticated through external providers (LDAP, Atlassian Crowd), use the `spec.target` field instead of `spec.user`. Only the `Lock` and `Unlock` operation types are supported for external users.
+
+Example — lock an external user by `connectorID` + email for 30 minutes:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-external-user
+spec:
+  target:
+    connectorID: my-ldap
+    email: jane.doe@example.org
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "30m"
+```
+
+#### UserOperation lifecycle and side effects
+
+- A UserOperation is a **single-use** object: after creation, the hook processes it and writes the result to `status.phase` (`Succeeded` or `Failed`).
+- Completed operations are **automatically deleted** after 24 hours.
+- A UserOperation is **immutable**: its specification cannot be changed after creation.
+- To perform a new action, create a new UserOperation.
+
+{% alert level="warning" %}
+The `ResetPassword`, `Reset2FA`, and `Lock` operations terminate all active sessions of the user (they delete the user's Dex OfflineSessions and RefreshToken objects). The user will be forced to re-authenticate.
+{% endalert %}
+
+#### Checking operation status
+
+```shell
+# List all operations
+d8 k get useroperations
+
+# Show the full status of an operation
+d8 k get useroperation <name> -o yaml
+
+# Print only the completion status
+d8 k get useroperation <name> -o jsonpath='{.status.phase}'
+```
+
+#### Automatic system operations
+
+The system automatically creates a UserOperation with `initiatorType: system` in the following case:
+
+- Automatic user lockout after the number of failed login attempts exceeds `passwordPolicy.lockout.maxAttempts`. The lockout lasts for `lockout.lockDuration`; afterwards the user is unlocked automatically. An administrator can also unlock the user manually with `d8 iam user unlock` or a UserOperation of type `Unlock`.
+
 ### Adding a user to a group
 
-Users can be grouped to manage access rights. Example manifest of the Group resource for a group:
+Users can be grouped to manage access rights. The recommended way to manage groups is the [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group) command:
+
+```shell
+# Create a group
+d8 iam group create admins
+
+# Add a user to a group
+d8 iam group add-member admins user anton
+
+# Add a nested group
+d8 iam group add-member admins group devops
+
+# Remove a member from a group
+d8 iam group remove-member admins user anton
+
+# Delete a group
+d8 iam group delete admins
+```
+
+As an alternative, you can create the [Group](cr.html#group) resource manually. Example manifest of the Group resource for a group:
 
 {% raw %}
 
@@ -627,6 +809,24 @@ spec:
 {% endraw %}
 
 Where `members` is a list of users belonging to the group.
+
+### Viewing users and groups
+
+Use the [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) and [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list) commands to view users, groups, and their effective access (groups, grants, and access level):
+
+```shell
+# List all users with effective access summary
+d8 iam list users
+
+# Show a single user's details (groups, grants, access level)
+d8 iam get user anton
+
+# List all groups
+d8 iam list groups
+
+# Show a single group's details (members, grants)
+d8 iam get group admins
+```
 
 ### Password policy
 

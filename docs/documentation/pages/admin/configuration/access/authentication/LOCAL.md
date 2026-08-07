@@ -16,7 +16,26 @@ Local authentication involves creating User and Group resources in the cluster f
 
 ## Creating a static user
 
-To create a static user, create a [User](/modules/user-authn/cr.html#user) resource.
+The recommended way to create a local user is the [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create) command. It supports interactive password entry, automatic password generation, group assignment, and TTL for temporary users:
+
+```shell
+# Interactive password prompt (default when stdin is a terminal)
+d8 iam user create anton --email anton@abc.com
+
+# Automatically generate a password (shown once)
+d8 iam user create anton --email anton@abc.com --generate-password
+
+# Read the password from stdin (for CI/CD pipelines)
+echo "s3cret" | d8 iam user create anton --email anton@abc.com --password-stdin
+
+# Create the user and add to groups (auto-creating groups if missing)
+d8 iam user create anton --email anton@abc.com --generate-password --member-of admins --create-groups
+
+# Create a temporary user with a TTL
+d8 iam user create anton --email anton@abc.com --generate-password --ttl 24h
+```
+
+As an alternative, you can create a [User](/modules/user-authn/cr.html#user) resource manually.
 
 Example resource definition (note that the example includes a [ttl](/modules/user-authn/cr.html#user-v1-spec-ttl)):
 
@@ -46,6 +65,18 @@ If the `htpasswd` command is not available, install the appropriate package:
 * `httpd-tools` — for CentOS-based distributions.
 * `apache2-htpasswd` — for ALT Linux.
 {% endalert %}
+
+## Deleting a user
+
+To delete a local user, use the [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete) command. By default, it also removes the user from all [Group](/modules/user-authn/cr.html#group) resources they belong to:
+
+```shell
+# Delete the user and remove them from all groups
+d8 iam user delete anton
+
+# Delete the user but keep their references in groups
+d8 iam user delete anton --keep-memberships
+```
 
 ## Local user operations
 
@@ -116,6 +147,46 @@ When a user resets their password:
 
 For user-facing password change and reset scenarios, see [Configuring authentication for applications](../../../../user/access/authentication.html#changing-and-resetting-a-local-users-password).
 
+### Creating UserOperation manually
+
+When the `d8 iam user` CLI is unavailable (e.g. in CI/CD, GitOps, or automation), you can create a [UserOperation](/modules/user-authn/cr.html#useroperation) resource directly. Example — reset a local user's password (the `newPasswordHash` contains a bcrypt hash without Base64 encoding; the hook encodes it automatically):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-password-admin
+spec:
+  user: admin
+  type: ResetPassword
+  initiatorType: admin
+  resetPassword:
+    newPasswordHash: "$2y$10$..."
+```
+
+For users authenticated through external providers (LDAP, Atlassian Crowd), use `spec.target` instead of `spec.user`. Only `Lock` and `Unlock` are supported for external users. Example — lock an external user for 30 minutes:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-external-user
+spec:
+  target:
+    connectorID: my-ldap
+    email: jane.doe@example.org
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "30m"
+```
+
+A UserOperation is a **single-use**, **immutable** object: after creation, the hook processes it and writes the result to `status.phase` (`Succeeded` or `Failed`). Completed operations are **automatically deleted** after 24 hours.
+
+{% alert level="warning" %}
+The `ResetPassword`, `Reset2FA`, and `Lock` operations terminate all active sessions of the user (they delete the user's Dex OfflineSessions and RefreshToken objects). The user will be forced to re-authenticate.
+{% endalert %}
+
 ## Adding a user to a group
 
 {% alert level="warning" %}
@@ -123,7 +194,23 @@ It is forbidden to use users and groups with the `system:` prefix.
 Authentication attempts by such users or members of such groups will be rejected, and a corresponding warning will appear in the `kube-apiserver` logs.
 {% endalert %}
 
-To group static users together, create a [Group](/modules/user-authn/cr.html#group) resource.
+The recommended way to manage groups is the [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group) command:
+
+```shell
+# Create a group
+d8 iam group create admins
+
+# Add a user to a group
+d8 iam group add-member admins user anton
+
+# Remove a member from a group
+d8 iam group remove-member admins user anton
+
+# Delete a group
+d8 iam group delete admins
+```
+
+As an alternative, you can create a [Group](/modules/user-authn/cr.html#group) resource manually.
 
 Example resource definition:
 

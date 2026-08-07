@@ -511,7 +511,32 @@ data:
 
 ### Создание пользователя
 
-Придумайте пароль и укажите его хеш-сумму, закодированную в base64, в поле `password`. Email-адрес должен быть в нижнем регистре.
+Рекомендуемый способ создания локального пользователя — команда [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create). Она поддерживает интерактивный ввод пароля, автоматическую генерацию пароля, добавление в группы и TTL для временных пользователей.
+
+```shell
+# Интерактивный ввод пароля (по умолчанию если stdin — терминал)
+d8 iam user create anton --email anton@abc.com
+
+# Автогенерация пароля (показывается один раз)
+d8 iam user create anton --email anton@abc.com --generate-password
+
+# Пароль из stdin (для CI/CD пайплайнов)
+echo "s3cret" | d8 iam user create anton --email anton@abc.com --password-stdin
+
+# Готовый bcrypt-хеш (например от htpasswd)
+d8 iam user create anton --email anton@abc.com --password-hash '$2y$10$abcdef...'
+
+# Создать пользователя и добавить в группы (с автосозданием групп)
+d8 iam user create anton --email anton@abc.com --generate-password --member-of admins --create-groups
+
+# Создать временного пользователя с TTL
+d8 iam user create anton --email anton@abc.com --generate-password --ttl 24h
+
+# Превью манифеста без применения
+d8 iam user create anton --email anton@abc.com --generate-password --dry-run -o yaml
+```
+
+В качестве альтернативы можно создать ресурс [User](cr.html#user) вручную. Придумайте пароль и укажите его хеш-сумму, закодированную в base64, в поле `password`. Email-адрес должен быть в нижнем регистре.
 
 Для вычисления хеш-суммы пароля воспользуйтесь командой:
 
@@ -546,6 +571,18 @@ spec:
 ```
 
 {% endraw %}
+
+### Удаление пользователя
+
+Для удаления локального пользователя используйте команду [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete). По умолчанию команда также удаляет пользователя из всех ресурсов [Group](cr.html#group), в которых он состоит.
+
+```shell
+# Удалить пользователя (+ автоматически удалить из всех групп)
+d8 iam user delete anton
+
+# Удалить пользователя, оставив ссылки в группах
+d8 iam user delete anton --keep-memberships
+```
 
 ### Операции над локальным пользователем
 
@@ -609,9 +646,154 @@ d8 iam user unlock admin
 
 При сбросе пароля новый пароль должен соответствовать парольной политике, а активные сессии пользователя завершаются — требуется повторная аутентификация.
 
+#### Ручное создание UserOperation
+
+Когда CLI `d8 iam user` недоступен (например, в CI/CD, GitOps или скриптах автоматизации), ресурс [UserOperation](cr.html#useroperation) можно создать напрямую. Используйте `apiVersion: deckhouse.io/v1` и укажите `initiatorType: admin`.
+
+Пример — сброс пароля локального пользователя (в `newPasswordHash` указывается bcrypt-хеш без кодирования в Base64; хук кодирует его автоматически):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-password-admin
+spec:
+  user: admin
+  type: ResetPassword
+  initiatorType: admin
+  resetPassword:
+    newPasswordHash: "$2y$10$..."
+```
+
+Пример — блокировка локального пользователя на 1 час:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-admin-1h
+spec:
+  user: admin
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "1h"
+```
+
+Пример — бессрочная блокировка:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-admin-permanent
+spec:
+  user: admin
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "permanent"
+```
+
+Пример — разблокировка:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: unlock-admin
+spec:
+  user: admin
+  type: Unlock
+  initiatorType: admin
+```
+
+Пример — сброс 2FA:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-2fa-admin
+spec:
+  user: admin
+  type: Reset2FA
+  initiatorType: admin
+```
+
+#### Операции над внешними пользователями (LDAP/Crowd)
+
+Для пользователей, аутентифицируемых через внешние провайдеры (LDAP, Atlassian Crowd), вместо `spec.user` используется поле `spec.target`. Для внешних пользователей поддерживаются только операции `Lock` и `Unlock`.
+
+Пример — блокировка внешнего пользователя по `connectorID` + email на 30 минут:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-external-user
+spec:
+  target:
+    connectorID: my-ldap
+    email: jane.doe@example.org
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "30m"
+```
+
+#### Жизненный цикл и побочные эффекты UserOperation
+
+- UserOperation — **одноразовый** объект: после создания хук обрабатывает его и записывает результат в `status.phase` (`Succeeded` или `Failed`).
+- Завершённые операции **автоматически удаляются** через 24 часа.
+- UserOperation — **immutable**: после создания спецификация не изменяется.
+- Для нового действия нужно создать новый UserOperation.
+
+{% alert level="warning" %}
+Операции `ResetPassword`, `Reset2FA` и `Lock` завершают все активные сессии пользователя (удаляют объекты Dex OfflineSessions и RefreshToken). Пользователь будет вынужден пройти повторную аутентификацию.
+{% endalert %}
+
+#### Проверка статуса операции
+
+```shell
+# Список всех операций
+d8 k get useroperations
+
+# Полный статус операции
+d8 k get useroperation <имя> -o yaml
+
+# Вывести только статус завершения
+d8 k get useroperation <имя> -o jsonpath='{.status.phase}'
+```
+
+#### Автоматические операции системы
+
+Система автоматически создаёт UserOperation с `initiatorType: system` в следующем случае:
+
+- Автоблокировка пользователя при превышении `passwordPolicy.lockout.maxAttempts` неудачных попыток входа. Блокировка длится `lockout.lockDuration`, после чего пользователь разблокируется автоматически. Администратор может также разблокировать пользователя вручную командой `d8 iam user unlock` или создав UserOperation с типом `Unlock`.
+
 ### Добавление пользователя в группу
 
-Пользователи могут быть объединены в группы для управления правами доступа. Пример манифеста ресурса Group для группы:
+Пользователи могут быть объединены в группы для управления правами доступа. Рекомендуемый способ управления группами — команда [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group):
+
+```shell
+# Создать группу
+d8 iam group create admins
+
+# Добавить пользователя в группу
+d8 iam group add-member admins user anton
+
+# Добавить вложенную группу
+d8 iam group add-member admins group devops
+
+# Удалить участника из группы
+d8 iam group remove-member admins user anton
+
+# Удалить группу
+d8 iam group delete admins
+```
+
+В качестве альтернативы можно создать ресурс [Group](cr.html#group) вручную. Пример манифеста ресурса Group для группы:
 
 {% raw %}
 
@@ -630,6 +812,24 @@ spec:
 {% endraw %}
 
 Здесь `members` — список пользователей, которые входят в группу.
+
+### Просмотр пользователей и групп
+
+Для просмотра пользователей, групп и их эффективных прав (группы, гранты, уровень доступа) используйте команды [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) и [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list):
+
+```shell
+# Список всех пользователей с effective access
+d8 iam list users
+
+# Детали конкретного пользователя (группы, гранты, уровень доступа)
+d8 iam get user anton
+
+# Список всех групп
+d8 iam list groups
+
+# Детали конкретной группы (участники, гранты)
+d8 iam get group admins
+```
 
 ### Парольная политика
 
