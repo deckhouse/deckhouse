@@ -110,12 +110,12 @@ spec:
                   properties:
                     probeInterval:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         How often peer nodes are actively probed. Shorter interval means faster detection but linearly higher probe traffic.
                     probeTimeout:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         How long to wait for a probe response. Must be less than `probeInterval` and above the p99 network RTT.
                     suspicionMult:
@@ -144,7 +144,7 @@ spec:
                         Maximum slowdown of the probe interval for a locally degraded agent (Lifeguard awareness).
                     gossipInterval:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         Interval at which gossip events are disseminated.
                     retransmitMult:
@@ -155,7 +155,7 @@ spec:
                         Retransmit multiplier for gossip broadcasts: `retransmitMult * ceil(log10(N + 1))`.
                     gossipToTheDeadTime:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         How long a dead node still receives gossip, giving it a chance to refute after recovery.
                 fallback:
@@ -169,17 +169,17 @@ spec:
                   properties:
                     heartbeat:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         How often an isolated node that still sees the Kubernetes API writes a fallback heartbeat. Must be noticeably less than `ttl`.
                     ttl:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         Freshness window of a fallback heartbeat. While the last heartbeat is newer than this TTL, evacuation is not allowed.
                     kubernetesAPITimeout:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         Timeout of the Kubernetes API probe on the fallback path. Must be less than `ttl` so the API check does not block the decision.
                 rejoin:
@@ -192,12 +192,12 @@ spec:
                   properties:
                     interval:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         Initial interval between rejoin attempts. Backoff resets to this value after a successful rejoin.
                     maxInterval:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         Upper bound of the exponential backoff between rejoin attempts. Must be greater than or equal to `interval`.
                 evacuation:
@@ -209,7 +209,7 @@ spec:
                   properties:
                     delay:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         Delay before pods are deleted after a fast-path failure, counted from `status.failed.detectedAt`.
                 watchdog:
@@ -222,11 +222,11 @@ spec:
                   properties:
                     feedInterval:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         How often the watchdog is fed and quorum/fallback is re-checked. Must be less than `timeout`, usually one quarter to one tenth of it.
                     timeout:
                       type: string
-                      pattern: '^[0-9]+(\.[0-9]+)?(ms|s|m)$'
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
                         Time until the watchdog panics the node after feeding stops.

@@ -17,6 +17,7 @@ limitations under the License.
 package memberlist
 
 import (
+	"errors"
 	"fmt"
 	stdlog "log"
 	"time"
@@ -24,6 +25,8 @@ import (
 	hcml "github.com/hashicorp/memberlist"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 const (
@@ -42,6 +45,9 @@ type Config struct {
 	// the hostPort on the Node, so the auto-detected pod IP is unreachable.
 	AdvertiseAddr string
 	Port          int
+	// Tuning carries the SLA profile timings; it is required, the zero value
+	// would disable probing entirely.
+	Tuning v1alpha1.FencingSLAProfileMemberlist
 }
 
 type Cluster struct {
@@ -51,6 +57,12 @@ type Cluster struct {
 }
 
 func New(cfg Config, logger *log.Logger) (*Cluster, error) {
+	// A zero ProbeInterval silently disables probing in memberlist — an agent
+	// that joins gossip but can never detect a failure. Refuse to start instead.
+	if cfg.Tuning.ProbeInterval.Duration <= 0 {
+		return nil, errors.New("memberlist tuning is not set: ProbeInterval must be positive")
+	}
+
 	events := newEventDelegate(logger)
 
 	list, err := hcml.Create(buildConfig(cfg, logger, events))
@@ -75,6 +87,15 @@ func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcm
 	// Label keeps each NodeGroup a separate gossip network; foreign packets are dropped.
 	mlCfg.Label = cfg.NodeGroup
 	mlCfg.DeadNodeReclaimTime = deadNodeReclaimTime
+	mlCfg.ProbeInterval = cfg.Tuning.ProbeInterval.Duration
+	mlCfg.ProbeTimeout = cfg.Tuning.ProbeTimeout.Duration
+	mlCfg.SuspicionMult = int(cfg.Tuning.SuspicionMult)
+	mlCfg.SuspicionMaxTimeoutMult = int(cfg.Tuning.SuspicionMaxTimeoutMult)
+	mlCfg.IndirectChecks = int(cfg.Tuning.IndirectChecks)
+	mlCfg.AwarenessMaxMultiplier = int(cfg.Tuning.AwarenessMaxMultiplier)
+	mlCfg.GossipInterval = cfg.Tuning.GossipInterval.Duration
+	mlCfg.RetransmitMult = int(cfg.Tuning.RetransmitMult)
+	mlCfg.GossipToTheDeadTime = cfg.Tuning.GossipToTheDeadTime.Duration
 	mlCfg.Logger = stdlog.New(newLogWriter(logger), "", 0)
 	mlCfg.Events = events
 

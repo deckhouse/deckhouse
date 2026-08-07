@@ -2333,6 +2333,17 @@ spec:
                         - For static nodes (`Static`, `CloudStatic`), the controller only evicts workloads while keeping the Node object in the cluster.
 
                         For details on how fencing handles different node types, see [FAQ](faq.html#how-the-fencing-mechanism-handles-different-node-types).
+                    profile:
+                      type: string
+                      enum:
+                        - "Critical"
+                        - "Medium"
+                        - "Moderate"
+                        - "Slow"
+                      default: Medium
+                      x-doc-default: Medium
+                      description: |
+                        Name of the built-in FencingSLAProfile that defines the fencing reaction timings (failure detection, fallback, rejoin, and watchdog) for the fencing agents of the node group.
                     watchdog:
                       type: object
                       properties:

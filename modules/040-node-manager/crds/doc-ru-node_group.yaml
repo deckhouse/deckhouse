@@ -1143,6 +1143,17 @@ spec:
                         - для статических узлов (`Static`, `CloudStatic`) контроллер только вытесняет нагрузку, оставляя объект Node в кластере.
 
                         Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов).
+                    profile:
+                      type: string
+                      enum:
+                        - "Critical"
+                        - "Medium"
+                        - "Moderate"
+                        - "Slow"
+                      default: Medium
+                      x-doc-default: Medium
+                      description: |
+                        Имя встроенного профиля FencingSLAProfile, задающего тайминги реакции fencing (обнаружение отказа, fallback, rejoin и watchdog) для fencing-агентов группы узлов.
                     watchdog:
                       type: object
                       properties:
