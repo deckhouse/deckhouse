@@ -346,6 +346,45 @@ Expected HTTP response code [202] when accessing
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
 
+## How to order preemptible (interruptible) nodes, for example in Selectel?
+
+Some OpenStack providers (Selectel among them) mark an instance as preemptible when a specific raw Nova tag is attached to it — for example `preemptible`. The `additionalTags` field of `OpenStackInstanceClass` cannot express this because it always renders tags as `key=value`. Use the `tags` field instead — its items are passed to Nova verbatim.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: OpenStackInstanceClass
+metadata:
+  name: worker-preempt
+spec:
+  flavorName: SL1.4-8192
+  imageName: Ubuntu 24.04 LTS 64-bit
+  rootDiskSize: 30
+  tags:
+    - preemptible
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-preempt
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: worker-preempt
+    minPerZone: 2
+    maxPerZone: 4
+    zones: [ru-3a]
+```
+
+Important caveats:
+
+- `tags` is supported only for CloudEphemeral NodeGroups running on the CAPI engine. The legacy MCM engine rejects the field at render time with a clear error.
+- Adding, changing, or removing `tags` on an existing NodeGroup changes the `OpenStackInstanceClass` checksum, which renames the underlying immutable `OpenStackMachineTemplate` and recreates every node in the group. Plan such edits accordingly.
+- Only the exact tag name your provider looks for triggers preemption behaviour. Confirm the tag name in your provider's docs before rolling out.
+- After a hard preemption (VM disappears without a graceful shutdown), the recovery loop is: kubelet stops sending status → node goes NotReady → CAPO notices the missing instance on its next reconcile → the built-in MachineHealthCheck marks the Machine unhealthy → the replacement Machine and VM are created. End-to-end this takes approximately 15–20 minutes on default settings, during which pods on the lost node remain `Running` in the apiserver but are actually unreachable. This does not block PodDisruptionBudgets, because a hard preemption does not go through the eviction API.
+- For faster failover, install a node-termination-handler that reads the preemption notification your provider exposes (usually 30–120 seconds before the actual kill) and drains the node before it disappears.
+
 ## What to do if switching to nodes in lower-priority groups takes a long time?
 
 If switching to nodes in lower-priority groups takes a long time, follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).

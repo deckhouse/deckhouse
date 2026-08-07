@@ -353,6 +353,45 @@ Expected HTTP response code [202] when accessing
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
 
+## Как заказать прерываемые (preemptible) узлы, например в Selectel?
+
+Некоторые OpenStack-провайдеры (в частности, Selectel) помечают инстанс как прерываемый по наличию конкретного «сырого» Nova-тега — например, `preemptible`. Поле `additionalTags` для этого не подходит: оно всегда рендерит теги как `key=value`. Используйте поле `tags` — его значения передаются в Nova как есть.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: OpenStackInstanceClass
+metadata:
+  name: worker-preempt
+spec:
+  flavorName: SL1.4-8192
+  imageName: Ubuntu 24.04 LTS 64-bit
+  rootDiskSize: 30
+  tags:
+    - preemptible
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-preempt
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: worker-preempt
+    minPerZone: 2
+    maxPerZone: 4
+    zones: [ru-3a]
+```
+
+Важные ограничения:
+
+* Поле `tags` поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI. Устаревший движок MCM отклоняет это поле на этапе рендера шаблона с понятной ошибкой.
+* Добавление, изменение или удаление `tags` на существующей NodeGroup меняет чек-сумму `OpenStackInstanceClass`, а значит переименовывает неизменяемый `OpenStackMachineTemplate` и пересоздаёт все узлы в этой NodeGroup. Планируйте такие правки соответственно.
+* Только точное имя тега, которое ожидает ваш провайдер, включает поведение preemption. Уточняйте имя в документации провайдера перед раскаткой.
+* После жёсткого preemption (ВМ исчезает без graceful shutdown) цикл восстановления такой: kubelet перестаёт отправлять статус → нода уходит в NotReady → CAPO замечает пропажу инстанса на следующей итерации reconcile → встроенный MachineHealthCheck помечает Machine как unhealthy → создаётся replacement Machine и ВМ. Полный цикл занимает примерно 15–20 минут при настройках по умолчанию; всё это время pods на потерянной ноде остаются `Running` в apiserver, но фактически недоступны. PodDisruptionBudget при этом не блокирует восстановление, потому что жёсткое preemption идёт мимо eviction API.
+* Для более быстрого фейловера установите node-termination-handler, читающий preemption-уведомление, которое ваш провайдер отдаёт заранее (обычно за 30–120 секунд до реального kill), и корректно дренящий ноду до её исчезновения.
+
 ## Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
 
 Если переключение на заказ узлов в менее приоритетных группах занимает много времени, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных).
