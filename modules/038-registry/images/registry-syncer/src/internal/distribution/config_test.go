@@ -248,6 +248,32 @@ func TestDecodeBasic(t *testing.T) {
 	}
 }
 
+// TestPublicationStopsTheProxy is the circle this closes.
+//
+// A registry configured as a pull-through cache is read-only: docker distribution answers every
+// write with UNSUPPORTED. The publication endpoint appears the moment air-gap is requested, while
+// the upstream is still held until the cache is complete — so with the proxy left on, the only way
+// to fill the cache is refused because the registry proxies, and the proxy stays because the cache
+// is not full. Measured on a cluster: `d8 mirror push` failed on POST /v2/.../blobs/uploads/.
+func TestPublicationStopsTheProxy(t *testing.T) {
+	upstream := &registryv1alpha1.Upstream{
+		Endpoint: registryv1alpha1.Endpoint{
+			Scheme: registryv1alpha1.SchemeHTTPS, Host: "registry.deckhouse.io", Path: "/deckhouse/ee",
+		},
+	}
+
+	// While the cluster merely caches, the proxy is what makes a miss slower rather than fatal.
+	caching := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{Upstream: upstream})
+	assert.Contains(t, caching, "proxy", "a cache with an upstream must serve misses from it")
+
+	// Once air-gap is asked for, the same upstream is still held — and the registry must accept
+	// writes anyway. The node keeps its own fallback to that upstream in its layout, so nothing
+	// about a miss changes for it.
+	publishing := renderToMap(t, &registryv1alpha1.RegistryStorageSpec{Upstream: upstream, Publish: true})
+	assert.NotContains(t, publishing, "proxy",
+		"a registry that proxies cannot be pushed to, and the push is the only way into an air-gapped cluster")
+}
+
 // TestRenderPublicationRequiresAClientCertificate covers the write path. It is the
 // one path that can replace an image, and it is reachable from outside the cluster,
 // so credentials alone must not be enough to use it.

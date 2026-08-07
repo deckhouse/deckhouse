@@ -193,8 +193,25 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 	// only what it already holds, which is exactly what an air-gapped cluster
 	// needs, and is also why completeness has to be decided before the upstream is
 	// removed.
-	if proxy := renderProxy(spec.Upstream); proxy != nil {
-		config["proxy"] = proxy
+	//
+	// And absent as soon as the cluster asks to become air-gapped, even while the
+	// upstream is still held. A registry configured as a pull-through cache is
+	// read-only by construction: docker distribution answers every write with
+	// `UNSUPPORTED`. Since the publication endpoint appears at the moment air-gap is
+	// requested, and the upstream is held until the cache is complete, keeping the
+	// proxy on would close a circle with no way out of it — `d8 mirror push` is the
+	// only way to fill the cache, the push is refused because the registry proxies,
+	// and the proxy stays because the cache is not full. Measured on a cluster: the
+	// push failed on `POST /v2/.../blobs/uploads/` with exactly that error.
+	//
+	// Nothing is lost by dropping it here. What a pass-through cache gives a node is
+	// a miss served from the upstream; the node keeps that anyway, because its own
+	// layout carries the upstream as a fallback backend until the transition
+	// completes. And filling does not need it either: the syncer fills by writing.
+	if !spec.Publish {
+		if proxy := renderProxy(spec.Upstream); proxy != nil {
+			config["proxy"] = proxy
+		}
 	}
 
 	if spec.Publish {
