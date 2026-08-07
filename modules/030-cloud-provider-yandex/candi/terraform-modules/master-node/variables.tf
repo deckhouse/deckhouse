@@ -109,11 +109,19 @@ locals {
   node_group_zones               = try(local._node_group.spec.cloudInstances.zones, null)
   existing_zone_to_subnet_id_map = try(tomap(local._node_params.existingZoneToSubnetIDMap), {})
 
-  platform          = try(local.master_instance_class.platformID, "standard-v2")
+  # The fallbacks mirror the YandexInstanceClass v1 CRD defaults, not the
+  # pre-migration terraform ones. An instance class read back from the cluster
+  # always carries the CRD defaults, while the copy dhctl parses out of the
+  # bootstrap resources YAML does not go through the apiserver and therefore
+  # arrives without them. Falling back to anything else makes bootstrap and the
+  # first converge disagree and replaces the master node and its etcd disk.
+  # On the PCC path the migration module fills platformID and diskType with the
+  # pre-migration terraform values explicitly, so these fallbacks never apply there.
+  platform          = try(local.master_instance_class.platformID, "standard-v3")
   cores             = try(local.master_instance_class.cores, 0)
   memory            = try(local.master_instance_class.memory, 0) / 1024
   disk_size_gb      = try(local.master_instance_class.diskSizeGB, 50)
-  disk_type         = try(local.master_instance_class.diskType, "network-ssd")
+  disk_type         = try(local.master_instance_class.diskType, "network-hdd")
   etcd_disk_size_gb = try(local.master_instance_class.etcdDiskSizeGB, 10)
   image_id          = try(local.master_instance_class.imageID, "")
 

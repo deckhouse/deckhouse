@@ -365,6 +365,20 @@ run "state_b_with_external_addressing_from_module_config" {
     target = data.yandex_vpc_subnet.kube_d
     values = { id = "subnet-d", zone = "ru-central1-d" }
   }
+
+  # The instance class above omits platformID and diskType, exactly like the copy
+  # dhctl parses out of the bootstrap resources YAML before the apiserver applies
+  # the CRD defaults. The fallbacks must be the CRD defaults, otherwise the first
+  # converge after bootstrap replaces the node.
+  assert {
+    condition     = yandex_compute_instance.static.platform_id == "standard-v3"
+    error_message = "expected an omitted platformID to fall back to the CRD default standard-v3"
+  }
+
+  assert {
+    condition     = yandex_compute_instance.static.boot_disk[0].initialize_params[0].type == "network-hdd"
+    error_message = "expected an omitted diskType to fall back to the CRD default network-hdd"
+  }
 }
 
 # A v1alpha1 YandexInstanceClass reaches this module unconverted when dhctl parses
