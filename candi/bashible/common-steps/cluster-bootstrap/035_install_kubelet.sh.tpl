@@ -14,7 +14,7 @@
 # bashible: parallel-group=pkg-batch
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesMajorVersion := .kubernetesVersion | toString | replace "." "" }}
-{{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
+{{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 __step_start=$(date +%s.%N)
 __sec() {
