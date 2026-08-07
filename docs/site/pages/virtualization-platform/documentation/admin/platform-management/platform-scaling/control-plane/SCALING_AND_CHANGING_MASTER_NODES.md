@@ -113,7 +113,17 @@ After completing these steps, the node will no longer be considered a master nod
    d8 system queue list
    ```
 
-1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (adjust the container registry address if necessary):
+1. **On your local machine**, login to the registry (change the container registry address if necessary):
+
+   ```shell
+   docker login registry.deckhouse.io
+   ```
+
+   During the login process, you will need to enter your `Username` and `Password`.
+
+   > When logging in to the registry.deckhouse.io registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Virtualization Platform license key.
+
+1. **On your local machine**, run the Deckhouse installer container for the corresponding edition and version (change the container registry address if necessary):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
