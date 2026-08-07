@@ -35,7 +35,7 @@ The Level 2 C4 architecture of the [`adaptive-resource-management`](/modules/ada
 
 ## Module components
 
-The `adaptive-resource-management` module module consists of a single **autovpa-controller** component that includes the following container:
+The `adaptive-resource-management` module consists of a single **autovpa-controller** component that includes the following container:
 
 * **autovpa**: Main container.
 
