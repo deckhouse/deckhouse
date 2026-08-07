@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,13 +69,83 @@ func runAnalysis(ctx context.Context, istioNamespace, revision string, allNamesp
 
 	messages := make([]diag.Message, 0, len(result.Messages))
 	for _, message := range result.Messages {
-		if message.Type.Level().IsWorseThanOrEqualTo(outputThreshold) {
+		if shouldReportMessage(message) {
 			messages = append(messages, message)
 		}
 	}
 
 	log.Infof("analysis completed: revision=%s messages=%d", revision, len(messages))
 	return messages, nil
+}
+
+const (
+	deckhouseSystemNamespacePrefix = "d8-"
+	sidecarInjectLabel             = "sidecar.istio.io/inject"
+)
+
+// mutedSystemNamespaces are Kubernetes/Deckhouse system namespaces where
+// IST0102 / IST0118 findings are noise (not mesh application workloads).
+var mutedSystemNamespaces = []string{
+	"kube-system",
+}
+
+// mutedCodesForDeckhouseSystem are Info-level findings that are noise for
+// Deckhouse system namespaces (d8-*), including d8-ingress-nginx / d8-ingress-istio,
+// and other system namespaces listed in mutedSystemNamespaces:
+// those namespaces are not meant for namespace-wide sidecar injection, and Service
+// ports there often do not follow Istio naming because the Services are not mesh
+// workloads (including operator-created ones like prometheus-operated / vpa-webhook).
+//
+// Exception: resources explicitly opted into sidecar injection via
+// label/annotation sidecar.istio.io/inject=true (e.g. IngressNginxController
+// with enableIstioSidecar) keep all findings — they are real mesh workloads.
+var mutedCodesForDeckhouseSystem = map[string]struct{}{
+	"IST0102": {}, // NamespaceNotInjected
+	"IST0118": {}, // PortNameIsNotUnderNamingConvention
+}
+
+func shouldReportMessage(message diag.Message) bool {
+	if !message.Type.Level().IsWorseThanOrEqualTo(outputThreshold) {
+		return false
+	}
+	if _, muted := mutedCodesForDeckhouseSystem[message.Type.Code()]; muted &&
+		isMutedSystemNamespaceResource(message) &&
+		!hasIstioSidecarInject(message) {
+		return false
+	}
+	return true
+}
+
+func isMutedSystemNamespaceResource(message diag.Message) bool {
+	if message.Resource == nil {
+		return false
+	}
+	name := string(message.Resource.Metadata.FullName.Name)
+	ns := string(message.Resource.Metadata.FullName.Namespace)
+	// Namespace objects are cluster-scoped: name is the namespace itself.
+	return isMutedSystemNamespace(ns) || isMutedSystemNamespace(name)
+}
+
+func hasIstioSidecarInject(message diag.Message) bool {
+	if message.Resource == nil {
+		return false
+	}
+	if message.Resource.Metadata.Labels[sidecarInjectLabel] == "true" {
+		return true
+	}
+	return message.Resource.Metadata.Annotations[sidecarInjectLabel] == "true"
+}
+
+func isMutedSystemNamespace(ns string) bool {
+	if strings.HasPrefix(ns, deckhouseSystemNamespacePrefix) {
+		return true
+	}
+	for _, systemNS := range mutedSystemNamespaces {
+		if ns == systemNS {
+			return true
+		}
+	}
+	return false
 }
 
 func messageLabels(message diag.Message, revision string) (messageType, namespace, resourceName, severity, code, messageText string) {

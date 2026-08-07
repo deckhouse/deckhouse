@@ -1,6 +1,5 @@
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{- if not (get $versionInfo "supportsOperator") }}
   {{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: v1
@@ -15,21 +14,20 @@ spec:
   - name: grpc-xds
     port: 15010
     protocol: TCP
-    targetPort: 15010
+    targetPort: grpc-xds
   - name: https-dns
     port: 15012
     protocol: TCP
-    targetPort: 15012
+    targetPort: tls-xds
   - name: https-webhook
     port: 443
     protocol: TCP
-    targetPort: 15017
+    targetPort: https-webhooks
   - name: http-monitoring
     port: 15014
     protocol: TCP
-    targetPort: 15014
+    targetPort: http-monitoring
   selector:
     app: istiod
     istio.io/rev: {{ $revision }}
-  {{- end }}
 {{- end }}
