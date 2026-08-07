@@ -15,7 +15,7 @@ Features of the `cloud-provider-yandex` module:
 - Automatic CNI enablement for new clusters. Starting with DKP 1.76, [`cni-cilium`](/modules/cni-cilium/) is used by default in `VXLAN` mode with source IP address translation performed using [BPF](/products/kubernetes-platform/documentation/v1/admin/configuration/network/other/bpflb.html).
 
 {% alert level="warning" %}
-The module is in the process of migrating CloudEphemeral node management from MCM to Cluster API (CAPI). Existing NodeGroups remain on MCM; new ones use CAPI by default. Migration of existing groups requires recreating the NodeGroup.
+This module is transitioning CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing NodeGroups continue to use MCM, while newly created NodeGroups use CAPI by default. To migrate an existing NodeGroup to CAPI, recreate it.
 
-See: [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
+For details, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi) section.
 {% endalert %}
