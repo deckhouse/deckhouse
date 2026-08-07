@@ -100,6 +100,9 @@ spec:
 
 The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests.
 
+When a measurement (`cpu` / `memory`) is **not** set here, Deckhouse automatically tunes per-component requests once a day from 7-day average usage. Setting a value for a measurement disables autotune for that measurement on all four control-plane components and applies the fixed percentage split of this combined budget.
+
+
 {% alert level="info" %}
 These settings do not apply if the cluster control plane is managed by a cloud provider, for example in GKE, AKS, or EKS.
 {% endalert %}

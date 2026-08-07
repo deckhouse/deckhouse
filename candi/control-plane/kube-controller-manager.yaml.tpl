@@ -2,8 +2,8 @@
 {{- if and $.settings $.settings.resourcesRequests -}}
   {{- $resourcesRequests = $.settings.resourcesRequests -}}
 {{- end -}}
-{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
+{{- $millicpu := 512 -}}
+{{- $memory := 536870912 }}
 {{- $nodesCount := .nodesCount | default 0 | int }}
 {{- $gcThresholdCount := 1000 }}
 {{- if lt $nodesCount 100 }}
@@ -108,8 +108,9 @@ spec:
         scheme: HTTPS
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 20) 100 }}m"
-        memory: "{{ div (mul $memory 20) 100 }}"
+        {{- $c := (($resourcesRequests.components | default dict).kubeControllerManager) | default dict }}
+        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 10) 100) }}m"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 10) 100) }}"
     securityContext:
       capabilities:
         drop:

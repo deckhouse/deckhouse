@@ -104,6 +104,36 @@
         ```
 
 
+  - alert: D8ControlPlaneComponentsResourcesInsufficientCapacity
+    for: 30m
+    expr: max by (resource) (d8_control_plane_manager_resources_autotune_insufficient_capacity) > 0
+    labels:
+      d8_component: control-plane-manager
+      d8_module: control-plane-manager
+      severity_level: "5"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Control-plane resources autotune cannot raise `{{ $labels.resource }}` requests — not enough free capacity on master nodes.
+      description: |-
+        The control-plane resources autotune wants to increase `{{ $labels.resource }}` requests for one or more
+        control-plane components (kube-apiserver, etcd, kube-controller-manager, kube-scheduler), but the
+        proposed total would not fit on the weakest master node after accounting for the kubelet reservation
+        and requests of other (non-control-plane) pods already scheduled there.
+
+        {{- if eq $labels.resource "memory" }}
+        Missing capacity: `{{ humanize $value }}B`.
+        {{- else }}
+        Missing capacity: `{{ $value }}m` CPU.
+        {{- end }}
+
+        Free up resources on master nodes (move or shrink other workloads) or increase CPU/RAM so the new
+        control-plane requests can fit without exceeding allocatable capacity.
+
+        To disable autotune for this measurement and manage requests manually, set
+        `spec.settings.resourcesRequests.{{ $labels.resource }}` in ModuleConfig `control-plane-manager`.
+
   - alert: D8ProblematicFeatureGateInUse
     for: 5m
     expr: |

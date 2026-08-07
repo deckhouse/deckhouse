@@ -1,0 +1,32 @@
+{{- if (.Values.global.enabledModules | has "prometheus-metrics-adapter") }}
+---
+# Grant the deckhouse SA (hooks run under it) access to custom metrics exposed
+# by prometheus-metrics-adapter for control-plane resources autotune.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:control-plane-manager:autotune-metrics
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+rules:
+- apiGroups:
+  - custom.metrics.k8s.io
+  resources:
+  - "*"
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:control-plane-manager:autotune-metrics
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: deckhouse
+  namespace: d8-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:control-plane-manager:autotune-metrics
+{{- end }}

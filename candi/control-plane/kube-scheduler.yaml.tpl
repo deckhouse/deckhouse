@@ -31,8 +31,8 @@
 {{- if and $.settings $.settings.resourcesRequests -}}
   {{- $resourcesRequests = $.settings.resourcesRequests -}}
 {{- end -}}
-{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
+{{- $millicpu := 512 -}}
+{{- $memory := 536870912 }}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -89,8 +89,9 @@ spec:
       timeoutSeconds: 15
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 10) 100 }}m"
-        memory: "{{ div (mul $memory 10) 100 }}"
+        {{- $c := (($resourcesRequests.components | default dict).kubeScheduler) | default dict }}
+        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 10) 100) }}m"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 10) 100) }}"
     securityContext:
       capabilities:
         drop:
