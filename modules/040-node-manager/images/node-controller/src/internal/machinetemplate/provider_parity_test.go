@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	sigsyaml "sigs.k8s.io/yaml"
 
@@ -390,6 +391,31 @@ func TestProviderConfigFixtureCoversTheAxis(t *testing.T) {
 				"the v1 checksum reads .Values=%v and the v2 template reads .provider=%v, so this provider "+
 					"depends on the cloud-provider config: the fixture must carry one for the parity harness to mutate",
 				v1ReadsConfig, v2ReadsConfig)
+		})
+	}
+}
+
+// TestProviderRolloutFieldsResolveInTheConfig pins providerRolloutFields to the shape of the
+// provider subtree of d8-node-manager-cloud-provider — which is the contract, not the
+// ProviderClusterConfiguration or the ModuleConfig behind it. registration.yaml is free to move to
+// an mc-driven source (dvp already did) as long as it keeps publishing the same keys.
+//
+// Renaming a key is what breaks: the declared path stops resolving, so the current value compares
+// as absent against a snapshot that still holds it, and every machine of the provider rolls. A
+// provider reshaping its subtree must update this fixture, and then this test says whether
+// providerRolloutFields moved with it.
+func TestProviderRolloutFieldsResolveInTheConfig(t *testing.T) {
+	for _, fixture := range providerFixtures() {
+		t.Run(fixture.name, func(t *testing.T) {
+			contract := loadContract(t, fixture.contractPath)
+
+			for _, field := range contract.ProviderRolloutFields {
+				_, found, err := unstructured.NestedFieldNoCopy(fixture.providerConfig, strings.Split(field, ".")...)
+				require.NoError(t, err, "providerRolloutFields %s runs through a non-map in the provider config", field)
+				assert.True(t, found,
+					"providerRolloutFields names %s, but the provider config publishes no such key — "+
+						"either the subtree was reshaped and the list was not, or the fixture is stale", field)
+			}
 		})
 	}
 }

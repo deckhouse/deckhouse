@@ -345,6 +345,80 @@ rolloutFields:
 		// vcd's password and apiToken, yandex's serviceAccountJSON, huaweicloud's accessKey and
 		// secretKey, openstack's connection.password. The MachineTemplate is read far more widely
 		// than that Secret, so only the fields the provider declared may be recorded on it.
+		// The migration promise, restated for this axis: the adoption spec above runs on a contract
+		// with no providerRolloutFields, so it cannot show what a vcd-shaped cluster does. Adoption
+		// must record the declared provider fields, or the very next reconcile would compare the
+		// current config against an empty snapshot and roll every machine in the cluster.
+		It("adopts a v1-era template without rolling when providerRolloutFields are declared", func() {
+			setProviderConfig(map[string]any{"datacenter": "dc-1", "password": "s3cret"})
+			DeferCleanup(clearProviderConfig)
+
+			publishContract(v2ProviderContract([]string{"vmClassName"}, []string{"datacenter"}))
+			DeferCleanup(withdrawContract)
+
+			icName := testenv.UniqueName("v2-provider-adopt-ic")
+			Expect(k8sClient.Create(suiteCtx, newInstanceClass(icName, map[string]any{"vmClassName": "generic"}))).To(Succeed())
+			DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, newInstanceClass(icName, nil)) })
+
+			ngName := testenv.UniqueName("v2-provider-adopt")
+			legacyName := ngName + "-8ad9c341"
+
+			legacy := newTemplateObject(legacyName)
+			legacy.SetLabels(map[string]string{"heritage": "deckhouse", "module": "node-manager", "node-group": ngName})
+			Expect(unstructured.SetNestedField(legacy.Object, "generic", "spec", "template", "spec", "vmClassName")).To(Succeed())
+			Expect(k8sClient.Create(suiteCtx, legacy)).To(Succeed())
+
+			md := &unstructured.Unstructured{}
+			md.SetAPIVersion("cluster.x-k8s.io/v1beta2")
+			md.SetKind("MachineDeployment")
+			md.SetName(fmt.Sprintf("%s-%s", ngName, sha256Hash(clusterUUID+zone)))
+			md.SetNamespace(common.MachineNamespace)
+			md.SetLabels(map[string]string{"heritage": "deckhouse", "module": "node-manager", "node-group": ngName})
+			Expect(unstructured.SetNestedMap(md.Object, map[string]any{
+				"clusterName": "dvp",
+				"replicas":    int64(1),
+				"selector":    map[string]any{"matchLabels": map[string]any{"node-group": ngName}},
+				"template": map[string]any{
+					"metadata": map[string]any{"labels": map[string]any{"node-group": ngName}},
+					"spec": map[string]any{
+						"clusterName": "dvp",
+						"bootstrap":   map[string]any{"dataSecretName": ngName + "-legacy-bootstrap"},
+						"infrastructureRef": map[string]any{
+							"apiGroup": "infrastructure.cluster.x-k8s.io",
+							"kind":     "DeckhouseMachineTemplate",
+							"name":     legacyName,
+						},
+					},
+				},
+			}, "spec")).To(Succeed())
+			Expect(k8sClient.Create(suiteCtx, md)).To(Succeed())
+
+			ng := newNodeGroup(ngName, icName)
+			Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+			DeferCleanup(func() {
+				_ = k8sClient.Delete(suiteCtx, ng)
+				Eventually(func(g Gomega) int { return len(machineTemplates(g, ng.Name)) },
+					eventually, poll).Should(BeZero())
+			})
+
+			By("the adopted object records the declared provider field, and only it")
+			Eventually(func(g Gomega) map[string]any {
+				adopted := newTemplateObject(legacyName)
+				g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
+					Name: legacyName, Namespace: common.MachineNamespace,
+				}, adopted)).To(Succeed())
+				raw, ok := adopted.GetAnnotations()[machinetemplate.AppliedProviderConfigAnnotation]
+				g.Expect(ok).To(BeTrue())
+				snapshot := map[string]any{}
+				g.Expect(json.Unmarshal([]byte(raw), &snapshot)).To(Succeed())
+				return snapshot
+			}, eventually, poll).Should(Equal(map[string]any{"datacenter": "dc-1"}))
+
+			By("the MachineDeployment still points at the v1 name: no generation, no rollout")
+			Consistently(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+				5*time.Second, poll).Should(Equal(legacyName))
+		})
+
 		It("keeps provider credentials out of the snapshot annotation", func() {
 			ng := setUpWithProvider("v2-provider-secret",
 				v2ProviderContract([]string{"vmClassName"}, []string{"datacenter"}),
