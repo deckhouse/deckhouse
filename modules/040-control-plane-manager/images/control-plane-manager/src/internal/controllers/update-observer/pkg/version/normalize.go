@@ -18,11 +18,16 @@ package version
 
 import (
 	"fmt"
+	"strings"
 
 	semver "github.com/Masterminds/semver/v3"
 )
 
 func Normalize(version string) (string, error) {
+	// Trim first: desiredVersion now arrives from a hand-editable ConfigMap field instead of a
+	// base64-encoded Secret, so a stray newline is easy to introduce. The global hook trims the
+	// same values on its side; without this the two components disagree on the same byte.
+	version = strings.TrimSpace(version)
 	if version == "" {
 		return "", nil
 	}

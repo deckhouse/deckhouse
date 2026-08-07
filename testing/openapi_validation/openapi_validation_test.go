@@ -21,12 +21,15 @@ package openapi_validation
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 var ignoredEnum = []string{
@@ -132,4 +135,173 @@ func TestModulesVersionsValidation(t *testing.T) {
 			v.conversionsVersion, v.specVersion, m)
 		assert.Equal(t, true, v.conversionsVersion == v.specVersion, message)
 	}
+}
+
+// kubernetesVersionEditions ties every schema that offers a kubernetesVersion choice to the
+// edition it belongs to. ee/ ships no candi of its own and reuses the default one.
+var kubernetesVersionEditions = []struct {
+	name                 string
+	versionMap           string
+	clusterConfiguration string
+	moduleConfigs        []string
+}{
+	{
+		name:                 "default",
+		versionMap:           "candi/version_map.yml",
+		clusterConfiguration: "candi/openapi/cluster_configuration.yaml",
+		moduleConfigs: []string{
+			"modules/040-control-plane-manager/openapi/config-values.yaml",
+			"ee/modules/040-control-plane-manager/openapi/config-values.yaml",
+		},
+	},
+	{
+		name:                 "cse",
+		versionMap:           "ee/cse/candi/version_map.yml",
+		clusterConfiguration: "ee/cse/candi/openapi/cluster_configuration.yaml",
+		moduleConfigs: []string{
+			"ee/cse/modules/040-control-plane-manager/openapi/config-values.yaml",
+		},
+	},
+}
+
+type kubernetesVersionEnum struct {
+	Enum []string `yaml:"enum"`
+}
+
+type clusterConfigurationSchema struct {
+	APIVersions []struct {
+		OpenAPISpec struct {
+			Properties struct {
+				KubernetesVersion kubernetesVersionEnum `yaml:"kubernetesVersion"`
+			} `yaml:"properties"`
+		} `yaml:"openAPISpec"`
+	} `yaml:"apiVersions"`
+}
+
+type moduleConfigValuesSchema struct {
+	Properties struct {
+		KubernetesVersion kubernetesVersionEnum `yaml:"kubernetesVersion"`
+	} `yaml:"properties"`
+}
+
+type k8sVersionMap struct {
+	K8s map[string]interface{} `yaml:"k8s"`
+}
+
+// readYAML loads relPath if it is present in this checkout, reporting whether it was found.
+//
+// Absence is not a failure: the CE test image ships no ee/ directory at all, so the EE and CSE
+// schemas simply do not exist there. Failing on that would make the test un-runnable in CE — and
+// it is the caller's job (see requireAnythingChecked) to ensure the whole test does not silently
+// degrade into checking nothing.
+func readYAML(t *testing.T, relPath string, out interface{}) bool {
+	t.Helper()
+
+	roots := []string{deckhousePath}
+	if wd, err := os.Getwd(); err == nil {
+		// go test runs with cwd = this package dir (testing/openapi_validation).
+		roots = append(roots, filepath.Clean(filepath.Join(wd, "../..")), wd)
+	}
+
+	for _, root := range roots {
+		path := filepath.Join(root, relPath)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		require.NoError(t, yaml.Unmarshal(data, out), "unmarshal %s", path)
+		return true
+	}
+	return false
+}
+
+// TestKubernetesVersionEnumValidation keeps the kubernetesVersion pin lists in sync.
+//
+// The two documents carry different sentinels: ModuleConfig takes Default, ClusterConfiguration
+// still only offers Automatic. Pin versions (numeric) must match across CC and MC for each edition,
+// and every pin must exist in that edition's version_map.
+//
+// TODO(kubernetesVersion-deprecation): T+1 rewrite — after CC field removal use ModuleConfig
+// enum as reference vs edition version_map; do not delete this test.
+func TestKubernetesVersionEnumValidation(t *testing.T) {
+	// The two documents accept different sentinels: ClusterConfiguration keeps Automatic, which
+	// predates Default there; ModuleConfig takes Default only.
+	sentinelsCC := map[string]struct{}{"Automatic": {}}
+	sentinelsMC := map[string]struct{}{"Default": {}}
+
+	// Guards against the test quietly becoming a no-op: it was inert for a while because its name
+	// did not match the CI -run filter, and skipping absent editions must not recreate that.
+	//
+	// Counted per edition, not per schema: a global "at least one schema was checked" is satisfied by
+	// the CE edition alone, so a ModuleConfig schema that went missing under ee/ would skip silently
+	// while the assertion below still passed. Each edition present in the checkout must contribute.
+	checkedEditions := 0
+	expectedEditions := 0
+
+	for _, edition := range kubernetesVersionEditions {
+		edition := edition
+		t.Run(edition.name, func(t *testing.T) {
+			var cc clusterConfigurationSchema
+			if !readYAML(t, edition.clusterConfiguration, &cc) {
+				t.Skipf("%s is absent in this checkout (edition not shipped here)", edition.clusterConfiguration)
+			}
+			// The edition is shipped here, so every ModuleConfig schema it lists has to be checked.
+			expectedEditions++
+			require.NotEmpty(t, cc.APIVersions, "%s has no apiVersions", edition.clusterConfiguration)
+
+			ccEnum := cc.APIVersions[0].OpenAPISpec.Properties.KubernetesVersion.Enum
+			require.NotEmpty(t, ccEnum, "%s: kubernetesVersion has no enum", edition.clusterConfiguration)
+			require.Contains(t, ccEnum, "Automatic")
+
+			ccPins := pinVersions(ccEnum, sentinelsCC)
+
+			checked := 0
+			for _, mcPath := range edition.moduleConfigs {
+				var mc moduleConfigValuesSchema
+				// A ClusterConfiguration that is present with a ModuleConfig schema that is not is
+				// not a "not shipped here" checkout — it is the enum guard losing its subject.
+				require.True(t, readYAML(t, mcPath, &mc),
+					"%s exists but %s does not: the kubernetesVersion enum guard has nothing to compare against",
+					edition.clusterConfiguration, mcPath)
+
+				mcEnum := mc.Properties.KubernetesVersion.Enum
+				require.Contains(t, mcEnum, "Default", "%s must offer Default", mcPath)
+				// Automatic stays legal in ClusterConfiguration (asserted above) but never reaches
+				// ModuleConfig: the setting is new in this release, so the alias was dropped before
+				// anyone could depend on it. Adding it back later would be the breaking change.
+				require.NotContains(t, mcEnum, "Automatic", "%s must not accept the Automatic alias", mcPath)
+				assert.Equal(t, ccPins, pinVersions(mcEnum, sentinelsMC),
+					"pinned kubernetesVersion values in %s differ from %s", mcPath, edition.clusterConfiguration)
+				checked++
+			}
+			require.Positive(t, checked, "edition %q lists no ModuleConfig schema to check", edition.name)
+
+			var vm k8sVersionMap
+			if readYAML(t, edition.versionMap, &vm) {
+				require.NotEmpty(t, vm.K8s, "%s has no k8s section", edition.versionMap)
+				for _, version := range ccPins {
+					assert.Contains(t, vm.K8s, version,
+						"version %q is offered by %s but absent from %s", version, edition.clusterConfiguration, edition.versionMap)
+				}
+			}
+
+			checkedEditions++
+		})
+	}
+
+	require.Positive(t, checkedEditions,
+		"no edition's kubernetesVersion schemas were checked in this checkout — the enum guard is inert")
+	require.Equal(t, expectedEditions, checkedEditions,
+		"an edition was found in this checkout but its kubernetesVersion enums were not fully checked")
+}
+
+func pinVersions(enum []string, sentinels map[string]struct{}) []string {
+	out := make([]string, 0, len(enum))
+	for _, v := range enum {
+		if _, skip := sentinels[v]; skip {
+			continue
+		}
+		out = append(out, v)
+	}
+	return out
 }

@@ -11,7 +11,9 @@ apiVersions:
     description: |
       General parameters of a cluster.
 
-      Defines, for example, network and CRI parameters, control plane version, etc. Some parameters can be changed after the cluster is bootstrapped, during its operation.
+      Defines, for example, network and CRI parameters. Some parameters can be changed after the cluster is bootstrapped, during its operation.
+
+      The Kubernetes control plane version is managed via the [`kubernetesVersion`](https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) setting of ModuleConfig `control-plane-manager`, not via this resource.
 
       To change the `ClusterConfiguration` resource in a running cluster, run the following command:
 
@@ -19,14 +21,13 @@ apiVersions:
       d8 system edit cluster-configuration
       ```
     additionalProperties: false
-    required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
+    required: [apiVersion, kind, clusterType, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
     x-examples:
     - apiVersion: deckhouse.io/v1
       kind: ClusterConfiguration
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.32"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
@@ -148,12 +149,18 @@ apiVersions:
         - "ContainerdV2"
         - "NotManaged"
         default: "Containerd"
+      # TODO(kubernetesVersion-deprecation): T+1 remove — drop CC kubernetesVersion after migrate-to-MC and Secret strip
       kubernetesVersion:
         type: string
+        x-doc-deprecated: true
         description: |
-          Kubernetes version (control plane components of the cluster).
+          **Deprecated.** Use [`kubernetesVersion`](https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) in the `control-plane-manager` ModuleConfig instead (`d8 k edit mc control-plane-manager`).
 
-          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/modules/control-plane-manager/#version-control) the cluster's control plane version.
+          When the ModuleConfig field is set, it takes precedence over this field.
+          The field is optional: if omitted here and unset in ModuleConfig, Deckhouse uses the current release default.
+          While `kubernetesVersion` is unset in ModuleConfig — whether or not it is pinned here — Deckhouse raises the `D8UnsetKubernetesVersionInModuleConfig` alert.
+
+          Do not change this field in a running cluster to upgrade or downgrade Kubernetes — change ModuleConfig instead.
 
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).

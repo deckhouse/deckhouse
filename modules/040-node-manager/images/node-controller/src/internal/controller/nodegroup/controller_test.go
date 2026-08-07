@@ -42,6 +42,12 @@ func newReconciler(t *testing.T, objs ...runtime.Object) (*Status, *record.FakeR
 	if err := v1.AddToScheme(scheme); err != nil {
 		t.Fatalf("add v1 scheme: %v", err)
 	}
+	// derived_status reads the target Kubernetes version from d8-cluster-kubernetes only;
+	// without it every reconcile errors and requeues. Tests that assert a specific version
+	// pass their own ConfigMap; everyone else gets a default.
+	if !hasClusterKubernetesConfigMap(objs) {
+		objs = append([]runtime.Object{clusterKubernetesConfigMap("1.32")}, objs...)
+	}
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithRuntimeObjects(objs...).
@@ -51,6 +57,25 @@ func newReconciler(t *testing.T, objs ...runtime.Object) (*Status, *record.FakeR
 	return &Status{
 		Base: register.Base{Client: cl, Recorder: rec},
 	}, rec
+}
+
+func clusterKubernetesConfigMap(desiredVersion string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-kubernetes", Namespace: "kube-system"},
+		Data: map[string]string{
+			"spec": "desiredVersion: \"" + desiredVersion + "\"\nupdateMode: Manual\n",
+		},
+	}
+}
+
+func hasClusterKubernetesConfigMap(objs []runtime.Object) bool {
+	for _, obj := range objs {
+		cm, ok := obj.(*corev1.ConfigMap)
+		if ok && cm.Name == "d8-cluster-kubernetes" && cm.Namespace == "kube-system" {
+			return true
+		}
+	}
+	return false
 }
 
 func doReconcile(t *testing.T, r *Status, name string) ctrl.Result {
@@ -270,19 +295,13 @@ func TestReconcile_StatusKubernetesVersionUpdated(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
-	clusterConfig := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: "kube-system"},
-		Data: map[string][]byte{
-			"cluster-configuration.yaml": []byte("kubernetesVersion: \"1.29\"\n"),
-		},
-	}
 
-	r, _ := newReconciler(t, ng, clusterConfig)
+	r, _ := newReconciler(t, ng, clusterKubernetesConfigMap("1.32"))
 	doReconcile(t, r, "worker")
 
 	updated := getNodeGroup(t, r, "worker")
-	if updated.Status.KubernetesVersion != "1.29" {
-		t.Fatalf("expected KubernetesVersion=1.29, got %q", updated.Status.KubernetesVersion)
+	if updated.Status.KubernetesVersion != "1.32" {
+		t.Fatalf("expected KubernetesVersion=1.32, got %q", updated.Status.KubernetesVersion)
 	}
 }
 

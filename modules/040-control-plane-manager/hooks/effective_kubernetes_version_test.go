@@ -37,11 +37,17 @@ import (
 )
 
 type input struct {
-	nodeVersions               []string
-	maxUsedControlPlaneVersion string
-	configVersion              string
-	controlPlaneVersions       []string
-	defaultVersionInSecret     string
+	nodeVersions         []string
+	configVersion        string
+	controlPlaneVersions []string
+
+	// The three interchangeable sources of the maxUsed floor, in descending freshness. An empty
+	// string means "this source has nothing", which is a supported state for each of them.
+	maxUsedInValues            string
+	maxUsedInConfigMap         string
+	maxUsedControlPlaneVersion string // the d8-cluster-configuration Secret key (migration seed)
+
+	defaultVersionInSecret string
 }
 
 type output struct {
@@ -112,8 +118,22 @@ metadata:
   name: d8-cluster-configuration
   namespace: kube-system
 data:
-  maxUsedControlPlaneKubernetesVersion: "<<PLACEHOLDER_B64>>"
+  <<PLACEHOLDER_MAX_USED>>
   <<PLACEHOLDER_DEFAULT>>
+`
+
+	const clusterKubernetesConfigMapTemplate = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+data:
+  spec: |
+    desiredVersion: "<<PLACEHOLDER_DESIRED>>"
+    updateMode: Manual
+    maxUsedKubernetesVersion: "<<PLACEHOLDER_MAX_USED>>"
 `
 
 	var b strings.Builder
@@ -139,12 +159,25 @@ data:
 		b.WriteString(kubeSchedulerManifest)
 	}
 
-	secretContent := strings.ReplaceAll(d8ConfigurationSecretTemplate, "<<PLACEHOLDER_B64>>", base64.StdEncoding.EncodeToString([]byte(caseInput.maxUsedControlPlaneVersion)))
+	// Both Secret keys are omitted rather than emitted empty when unset: an empty value is not the
+	// same state as an absent key, and only the absent one models a cluster that has never
+	// recorded the version.
+	maxUsedInSecret := ""
+	if caseInput.maxUsedControlPlaneVersion != "" {
+		maxUsedInSecret = fmt.Sprintf("maxUsedControlPlaneKubernetesVersion: %s", base64.StdEncoding.EncodeToString([]byte(caseInput.maxUsedControlPlaneVersion)))
+	}
+	secretContent := strings.ReplaceAll(d8ConfigurationSecretTemplate, "<<PLACEHOLDER_MAX_USED>>", maxUsedInSecret)
 	deckhouseDefaultKubernetesVersion := ""
 	if caseInput.defaultVersionInSecret != "" {
 		deckhouseDefaultKubernetesVersion = fmt.Sprintf("deckhouseDefaultKubernetesVersion: %s", base64.StdEncoding.EncodeToString([]byte(caseInput.defaultVersionInSecret)))
 	}
 	b.WriteString(strings.ReplaceAll(secretContent, "<<PLACEHOLDER_DEFAULT>>", deckhouseDefaultKubernetesVersion))
+
+	if caseInput.maxUsedInConfigMap != "" {
+		configMap := strings.ReplaceAll(clusterKubernetesConfigMapTemplate, "<<PLACEHOLDER_MAX_USED>>", caseInput.maxUsedInConfigMap)
+		configMap = strings.ReplaceAll(configMap, "<<PLACEHOLDER_DESIRED>>", caseInput.configVersion)
+		b.WriteString(configMap)
+	}
 
 	clusterConf := fmt.Sprintf(`
 apiVersion: deckhouse.io/v1
@@ -161,6 +194,10 @@ podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
 `, caseInput.configVersion)
 	hec.ValuesSetFromYaml("global.clusterConfiguration", []byte(clusterConf))
+	hec.ValuesSet("global.discovery.targetKubernetesVersion", caseInput.configVersion)
+	if caseInput.maxUsedInValues != "" {
+		hec.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", caseInput.maxUsedInValues)
+	}
 	hec.BindingContexts.Set(hec.KubeStateSet(b.String()))
 }
 
@@ -178,7 +215,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: effective_kuberne
 
 		It("Hook must fail", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
-			Expect(f.GoHookError.Error()).To(BeEquivalentTo("global.clusterConfiguration.kubernetesVersion required"))
+			Expect(f.GoHookError.Error()).To(BeEquivalentTo("kubernetesVersion required (global.discovery.targetKubernetesVersion is empty)"))
 		})
 	})
 
@@ -192,10 +229,16 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: effective_kuberne
 
 				Expect(f).To(ExecuteSuccessfully())
 
+				// maxUsed now travels through values (and from there into the DaemonSet env and
+				// the ConfigMap), not through the Secret.
+				Expect(f.ValuesGet("controlPlaneManager.internal.maxUsedKubernetesVersion").String()).To(Equal(out.maxUsedControlPlaneVersion))
+
 				d8ClusterConfigSecret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
+				// The Secret key is read as a migration seed and never written back: whatever the
+				// fixture put there must survive the hook untouched.
 				decodedMaxUsedKubernetesVersion, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.maxUsedControlPlaneKubernetesVersion").String())
 				Expect(err).To(BeNil())
-				Expect(string(decodedMaxUsedKubernetesVersion)).To(Equal(out.maxUsedControlPlaneVersion))
+				Expect(string(decodedMaxUsedKubernetesVersion)).To(Equal(in.maxUsedControlPlaneVersion))
 
 				defaultKubernetesVersion, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.deckhouseDefaultKubernetesVersion").String())
 				Expect(err).To(BeNil())
@@ -324,6 +367,115 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: effective_kuberne
 					minUsedVersion:             "1.32.2",
 				},
 			),
+			// The floor is never seeded from the declared version. Declaring 1.36 on a 1.32
+			// cluster must record 1.33 (the version the cluster is actually moving onto) —
+			// recording 1.36 would raise the downgrade floor to 1.35 forever on a typo.
+			Entry("no history anywhere: maxUsed follows the effective version, not the declared one",
+				input{
+					nodeVersions:         []string{"v1.32.4", "v1.32.3", "v1.32.5", "v1.32.2"},
+					configVersion:        "1.36",
+					controlPlaneVersions: []string{"1.32", "1.32", "1.32"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.33",
+					effectiveVersion:           "1.33",
+					minUsedVersion:             "1.32.2",
+				},
+			),
+			// Upgrade from a release that only ever wrote the Secret: the ConfigMap key and values
+			// are both empty, and the floor must still come out at the historical maximum instead
+			// of collapsing onto the version the cluster happens to sit on today.
+			Entry("upgrade from the previous release: the Secret alone carries the floor",
+				input{
+					nodeVersions:               []string{"v1.33.4", "v1.33.3", "v1.33.5", "v1.33.2"},
+					maxUsedControlPlaneVersion: "1.35",
+					configVersion:              "1.33",
+					controlPlaneVersions:       []string{"1.33", "1.33", "1.33"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.35",
+					effectiveVersion:           "1.33",
+					minUsedVersion:             "1.33.2",
+				},
+			),
+			Entry("the ConfigMap outranks a stale Secret",
+				input{
+					nodeVersions:               []string{"v1.33.4", "v1.33.3", "v1.33.5", "v1.33.2"},
+					maxUsedControlPlaneVersion: "1.33",
+					maxUsedInConfigMap:         "1.35",
+					configVersion:              "1.33",
+					controlPlaneVersions:       []string{"1.33", "1.33", "1.33"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.35",
+					effectiveVersion:           "1.33",
+					minUsedVersion:             "1.33.2",
+				},
+			),
+			// values hold what this hook published on its previous run, before the DaemonSet
+			// rolled out and update-observer could write it down. Without this source the floor
+			// would drop back for the duration of the rollout.
+			Entry("values outrank a ConfigMap that has not caught up yet",
+				input{
+					nodeVersions:               []string{"v1.33.4", "v1.33.3", "v1.33.5", "v1.33.2"},
+					maxUsedControlPlaneVersion: "1.33",
+					maxUsedInConfigMap:         "1.34",
+					maxUsedInValues:            "1.35",
+					configVersion:              "1.33",
+					controlPlaneVersions:       []string{"1.33", "1.33", "1.33"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.35",
+					effectiveVersion:           "1.33",
+					minUsedVersion:             "1.33.2",
+				},
+			),
+			// The floor gates the downgrade step: standing exactly on it means the downgrade has
+			// not started yet, so one minor down is allowed.
+			Entry("the ConfigMap floor gates the downgrade step",
+				input{
+					nodeVersions:         []string{"v1.33.10", "v1.33.3", "v1.33.5", "v1.33.2"},
+					maxUsedInConfigMap:   "1.34",
+					configVersion:        "1.32",
+					controlPlaneVersions: []string{"1.34", "1.34", "1.34"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.34",
+					effectiveVersion:           "1.33",
+					minUsedVersion:             "1.33.2",
+				},
+			),
 		)
+	})
+
+	Context("ModuleConfig kubernetesVersion override", func() {
+		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
+
+		It("MC kubernetesVersion takes precedence over ClusterConfiguration", func() {
+			// Global discovery already resolved MC-over-CC into targetKubernetesVersion.
+			setStateFromTestCase(f, input{
+				nodeVersions:               []string{"v1.34.3", "v1.34.1", "v1.34.5", "v1.34.2"},
+				maxUsedControlPlaneVersion: "1.34",
+				configVersion:              "1.35",
+				controlPlaneVersions:       []string{"1.34", "1.34", "1.34"},
+			})
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal("1.35"))
+		})
+
+		It("Automatic target follows the resolved ClusterConfiguration version", func() {
+			setStateFromTestCase(f, input{
+				nodeVersions:               []string{"v1.34.3", "v1.34.1", "v1.34.5", "v1.34.2"},
+				maxUsedControlPlaneVersion: "1.34",
+				configVersion:              "1.34",
+				controlPlaneVersions:       []string{"1.34", "1.34", "1.34"},
+			})
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal("1.34"))
+		})
 	})
 })

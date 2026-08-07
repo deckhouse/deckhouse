@@ -16,6 +16,10 @@ positive:
     - resourcesRequests:
         cpu: "1000m"
         memory: "500Mi"
+    - kubernetesVersion: "1.32"
+    - kubernetesVersion: "1.36"
+    # Default is the only sentinel this setting accepts.
+    - kubernetesVersion: "Default"
   values:
     - internal:
         effectiveKubernetesVersion: "1.32"
@@ -23,3 +27,14 @@ positive:
         - 1.2.3.4
         - 4.3.2.1
         kubeSchedulerExtenders: []
+negative:
+  configValues:
+    # Outside the supported window for this edition.
+    - kubernetesVersion: "1.31"
+    - kubernetesVersion: "1.37"
+    # Automatic stays legal in ClusterConfiguration but never in ModuleConfig.
+    - kubernetesVersion: "Automatic"
+    # The sentinel is case-sensitive and must not accept free-form text.
+    - kubernetesVersion: "automatic"
+    - kubernetesVersion: "default"
+    - kubernetesVersion: "latest"

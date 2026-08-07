@@ -41,6 +41,17 @@ type ConfigMapData struct {
 type Spec struct {
 	DesiredVersion string `yaml:"desiredVersion"`
 	UpdateMode     string `yaml:"updateMode"`
+	// MaxUsedVersion is the highest Kubernetes minor this cluster has ever converged onto. It is
+	// monotonic and derived from the throttled effective version, never from DesiredVersion: an
+	// operator may declare a version several minors ahead, and seeding the historical maximum from
+	// a declared value would raise the downgrade floor to a version the cluster never approached.
+	//
+	// "Converged onto", not "ran": the effective version leads the running control plane by one
+	// minor for the duration of a rollout, so during an upgrade this value names the minor the
+	// cluster is moving to rather than the one its apiservers are serving. This is the canonical
+	// definition — other readers of the field describe it as "ever run", which is the operator's
+	// view of the same number and accurate everywhere except inside that window.
+	MaxUsedVersion string `yaml:"maxUsedKubernetesVersion,omitempty"`
 }
 
 type Status struct {
@@ -77,15 +88,20 @@ func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error
 		return nil, err
 	}
 
+	// NotFound is a real bootstrap path, not a failure: this controller authors every key of the
+	// object, so it can synthesize the whole thing in memory and let touchConfigMap create it.
+	// dhctl seeds the ConfigMap during bootstrap so that node-controller finds it from the moment
+	// Deckhouse starts, but that seeding can be missed (dhctl deckhouse ... applies only the
+	// Deployment) and the object can be deleted, and neither must leave the cluster without it.
+	//
+	// The empty ResourceVersion is what touchConfigMap keys off to Create rather than Update.
 	if err != nil {
 		cm = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        common.ConfigMapName,
 				Namespace:   common.KubeSystemNamespace,
 				Annotations: map[string]string{},
-				Labels: map[string]string{
-					common.HeritageLabelKey: common.DeckhouseLabel,
-				},
+				Labels:      identifyingLabels(),
 			},
 		}
 	}
@@ -93,10 +109,26 @@ func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error
 	return cm, nil
 }
 
+// identifyingLabels returns the labels that make the object recognizable to things that select it
+// rather than name it. The name label is not decoration: the ValidatingWebhookConfiguration that
+// forbids deleting this ConfigMap picks it out by objectSelector, and heritage: deckhouse sits on
+// hundreds of objects so it cannot serve as that selector. Without the name label the delete
+// protection either misses this object or, if widened, intercepts every ConfigMap in kube-system.
+func identifyingLabels() map[string]string {
+	return map[string]string{
+		common.HeritageLabelKey: common.DeckhouseLabel,
+		common.NameLabelKey:     common.ConfigMapName,
+	}
+}
+
 func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, reconcileTrigger ReconcileTrigger) (*corev1.ConfigMap, error) {
 	configMapData := renderConfigMapData(clusterState)
 	configMap.Data = map[string]string{}
 
+	// data.spec is rendered, not preserved. Copying the previous bytes through was what kept this
+	// controller from colliding with a second writer; now that it is the only writer, the block is
+	// simply authored from the container environment on every pass — which is also what lets a
+	// hand edit of data.spec be corrected instead of pinned.
 	if configMapData.Spec != nil {
 		specBytes, err := yaml.Marshal(configMapData.Spec)
 		if err != nil {
@@ -113,8 +145,24 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 		configMap.Data["status"] = string(statusBytes)
 	}
 
+	// GetAnnotations/GetLabels can return nil for a ConfigMap this controller didn't create itself
+	// (e.g. one seeded by dhctl during bootstrap, or a ConfigMap that came back from the API
+	// server with an empty map omitted via `omitempty`) — guard against assigning into a nil map
+	// below.
 	annotations := configMap.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
 	labels := configMap.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	// Re-asserted on every pass, not only at creation: an object that lost the name label — an
+	// older ConfigMap from before this release, or one edited by hand — would otherwise stay
+	// outside the delete-protection webhook's objectSelector forever.
+	for key, value := range identifyingLabels() {
+		labels[key] = value
+	}
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	annotations[common.LastReconciliationTime] = now
@@ -177,6 +225,7 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 		Spec: &Spec{
 			DesiredVersion: clusterState.Spec.DesiredVersion,
 			UpdateMode:     string(clusterState.Spec.UpdateMode),
+			MaxUsedVersion: clusterState.Spec.MaxUsedVersion,
 		},
 		Status: &Status{
 			CurrentVersion:    clusterState.CurrentVersion,
@@ -194,15 +243,20 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 	}
 }
 
+// touchConfigMap writes the reconciled object back. An empty ResourceVersion means getConfigMap
+// synthesized the object because it did not exist, so this is a create; anything else came from a
+// successful Get and its ResourceVersion also makes the write optimistically concurrent.
 func (r *reconciler) touchConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
 	if configMap.ResourceVersion == "" {
 		if err := r.client.Create(ctx, configMap); err != nil {
 			return fmt.Errorf("failed to create configMap: %w", err)
 		}
-	} else {
-		if err := r.client.Update(ctx, configMap); err != nil {
-			return fmt.Errorf("failed to update configMap: %w", err)
-		}
+
+		return nil
+	}
+
+	if err := r.client.Update(ctx, configMap); err != nil {
+		return fmt.Errorf("failed to update configMap: %w", err)
 	}
 
 	return nil

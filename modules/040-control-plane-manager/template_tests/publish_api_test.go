@@ -98,6 +98,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		hec.ValuesSet("global.discovery.kubernetesCA", "plainstring")
 		hec.ValuesSet("global.discovery.clusterDomain", "cluster.local")
 		hec.ValuesSet("controlPlaneManager.internal.effectiveKubernetesVersion", "1.32")
+		hec.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.32")
 		hec.ValuesSet("controlPlaneManager.internal.authn.enableBasicAuth", true)
 		hec.ValuesSet("controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA", "publishedapica")
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.cert", "test")

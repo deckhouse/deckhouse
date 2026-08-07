@@ -40,6 +40,14 @@ memory: 10Mi
 {{- $_ := set $tpl_context "images" (dict "controlPlaneManager" $images) }}
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
+{{- /*
+  NOTE(kubernetesVersion-deprecation): keep — this line is why candi/control-plane/*.tpl and the
+  _authorization_config / _authentication_configuration templates may keep reading
+  .clusterConfiguration.kubernetesVersion after the field is removed from ClusterConfiguration — there it is a render-context key holding
+  the throttled effective version, not the deprecated document field. Do not "clean up" those
+  templates along with the deprecation, and do not let a ModuleConfig pin reach them directly:
+  that would bypass the one-minor-at-a-time throttling, including image tag selection.
+*/ -}}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "controlPlaneTemplatesDir" "control-plane-templates" -}}
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
@@ -336,12 +344,47 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: KUBERNETES_VERSION
-          value: {{ $.Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
         - name: AUTOMATIC_KUBERNETES_VERSION
           value: {{ $automaticVersion | quote }}
+        {{- /*
+          The three variables below are the whole input update-observer needs to author data.spec
+          of ConfigMap kube-system/d8-cluster-kubernetes; it is the single writer of that object
+          and reads nothing else to build the block.
+
+          They deliberately live in the pod template rather than being read from the API: routing
+          them through values means the resolved version, the mode and the historical maximum are
+          decided in exactly one place (the hooks) and reach every observer identically.
+
+          The cost is extra rolling restarts — three inputs that used to be invisible to the
+          DaemonSet now change its pod template. Most of the time the restart happens anyway,
+          because effectiveKubernetesVersion is baked into the image tags above; the additions
+          only matter when the target moves without the effective version moving, when updateMode
+          flips, or when maxUsed rises. That is acceptable: on start the container runs
+          SyncManifests, and when the static pod manifests come out unchanged apiserver and etcd
+          are not restarted.
+
+          The block sits outside the `if eq $profile "etcd-arbiter"` branch on purpose: both
+          DaemonSets render from the same values in one loop, so both observers see identical
+          values and cannot disagree about what to write.
+
+          The closing marker must not right-trim: that variant swallows the newline separating
+          this comment from the list item below, splices it onto the previous value line and
+          makes the whole manifest unparsable.
+        */}}
+        - name: DESIRED_KUBERNETES_VERSION
+          value: {{ $.Values.global.discovery.targetKubernetesVersion | quote }}
+        {{- /*
+          if/else and not `ternary`, which takes a typed bool and dies on anything else. The
+          global values schema defaults this key to false, so it is always a bool in a real
+          cluster — but a values set that predates the key (or any test fixture that omits it)
+          yields an untyped nil and would take the whole chart down. Truthiness is enough here.
+        */}}
+        - name: KUBERNETES_UPDATE_MODE
+          value: {{ if $.Values.global.discovery.kubernetesVersionIsDefault }}"Automatic"{{ else }}"Manual"{{ end }}
+        - name: MAX_USED_KUBERNETES_VERSION
+          value: {{ $.Values.controlPlaneManager.internal.maxUsedKubernetesVersion | quote }}
         - name: NODE_NAME
           valueFrom:
             fieldRef:

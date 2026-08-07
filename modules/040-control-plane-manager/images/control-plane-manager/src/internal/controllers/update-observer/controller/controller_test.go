@@ -39,6 +39,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 )
@@ -75,7 +76,10 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 		suite.T().Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
 		suite.T().Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
 
+		// The ConfigMap is absent from this case's fixture on purpose: the controller has to
+		// create it from nothing but the environment, which is the bootstrap path.
 		suite.Run("When cluster is up to date", func() {
+			suite.setVersionEnv("1.35", "Automatic", "1.35")
 			suite.setupController(suite.fetchTestFileData("init-up-to-date.yaml"))
 
 			_, err := suite.controller.Reconcile(
@@ -86,6 +90,7 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("When control plane component was failed", func() {
+			suite.setVersionEnv("1.35", "Automatic", "1.35")
 			suite.setupController(suite.fetchTestFileData("pods-failed.yaml"))
 
 			_, err := suite.controller.Reconcile(
@@ -96,7 +101,7 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("When supported and automatic versions are set via env", func() {
-
+			suite.setVersionEnv("1.33", "Automatic", "1.34")
 			suite.setupController(suite.fetchTestFileData("versions-with-env.yaml"))
 
 			_, err := suite.controller.Reconcile(
@@ -107,6 +112,7 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("When upgrade is in progress across multiple versions", func() {
+			suite.setVersionEnv("1.35", "Automatic", "1.32")
 			suite.setupController(suite.fetchTestFileData("upgrade-three-hops.yaml"))
 
 			_, err := suite.controller.Reconcile(
@@ -117,6 +123,15 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 			require.NoError(suite.T(), err)
 		})
 	})
+}
+
+// setVersionEnv provides the declared configuration the controller writes into data.spec. It comes
+// from the container environment in production (daemonset.yaml renders it out of values), so a
+// test that omits it is testing a Pod that could not have started.
+func (suite *ControllerTestSuite) setVersionEnv(desiredVersion, updateMode, maxUsedVersion string) {
+	suite.T().Setenv("DESIRED_KUBERNETES_VERSION", desiredVersion)
+	suite.T().Setenv("KUBERNETES_UPDATE_MODE", updateMode)
+	suite.T().Setenv("MAX_USED_KUBERNETES_VERSION", maxUsedVersion)
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {
@@ -175,38 +190,152 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 }
 
 func (suite *ControllerTestSuite) assembleInitObject(strObj string) client.Object {
+	return assembleInitObject(suite.T(), strObj)
+}
+
+func assembleInitObject(t *testing.T, strObj string) client.Object {
+	t.Helper()
+
 	var res client.Object
 	metaType := new(runtime.TypeMeta)
 
 	err := yaml.Unmarshal([]byte(strObj), &metaType)
-	require.NoError(suite.T(), err)
+	require.NoError(t, err)
 
 	switch metaType.Kind {
 	case "Secret":
 		secret := new(corev1.Secret)
 		err = yaml.Unmarshal([]byte(strObj), secret)
-		require.NoError(suite.T(), err)
+		require.NoError(t, err)
 		res = secret
 	case "ConfigMap":
 		cm := new(corev1.ConfigMap)
 		err = yaml.Unmarshal([]byte(strObj), cm)
-		require.NoError(suite.T(), err)
+		require.NoError(t, err)
 		res = cm
 	case "Node":
 		node := new(corev1.Node)
 		err = yaml.Unmarshal([]byte(strObj), node)
-		require.NoError(suite.T(), err)
+		require.NoError(t, err)
 		res = node
 	case "Pod":
 		pod := new(corev1.Pod)
 		err = yaml.Unmarshal([]byte(strObj), pod)
-		require.NoError(suite.T(), err)
+		require.NoError(t, err)
 		res = pod
 	default:
-		suite.T().Fatalf("unsupported kind: %s", metaType.Kind)
+		t.Fatalf("unsupported kind: %s", metaType.Kind)
 	}
 
 	return res
+}
+
+// newTestReconciler builds a reconciler over the objects of a testdata case, optionally with the
+// case's own ConfigMap dropped so the bootstrap path can be exercised.
+func newTestReconciler(t *testing.T, filename string, withConfigMap bool) (*reconciler, client.Client) {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join("./testdata/cases", filename))
+	require.NoError(t, err)
+
+	manifests := helmreleaseutil.SplitManifests(string(data))
+	objects := make([]client.Object, 0, len(manifests))
+	for _, manifest := range manifests {
+		obj := assembleInitObject(t, manifest)
+		if _, isConfigMap := obj.(*corev1.ConfigMap); isConfigMap && !withConfigMap {
+			continue
+		}
+		objects = append(objects, obj)
+	}
+
+	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+	return &reconciler{client: k8sClient}, k8sClient
+}
+
+func readClusterConfigMap(t *testing.T, ctx context.Context, c client.Client) *corev1.ConfigMap {
+	t.Helper()
+
+	cm := new(corev1.ConfigMap)
+	err := c.Get(ctx, client.ObjectKey{Name: "d8-cluster-kubernetes", Namespace: "kube-system"}, cm)
+	require.NoError(t, err)
+
+	return cm
+}
+
+// A Pod that cannot read its own configuration must leave the ConfigMap alone. Writing a guessed
+// value would be indistinguishable from a declared one to node-controller, the release
+// requirements check and both admission webhooks.
+func TestReconcileWritesNothingOnBrokenEnvironment(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
+		t.Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
+		t.Setenv("DESIRED_KUBERNETES_VERSION", "")
+		t.Setenv("KUBERNETES_UPDATE_MODE", "Automatic")
+		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.35")
+
+		rec, k8sClient := newTestReconciler(t, "pods-failed.yaml", true)
+		before := readClusterConfigMap(t, context.Background(), k8sClient)
+
+		result, err := rec.Reconcile(context.Background(), reconcile.Request{})
+		require.NoError(t, err)
+		assert.Equal(t, requeueInterval, result.RequeueAfter, "a broken environment must requeue")
+
+		after := readClusterConfigMap(t, context.Background(), k8sClient)
+		assert.Equal(t, before.Data, after.Data)
+		assert.Equal(t, before.ResourceVersion, after.ResourceVersion, "nothing may be written at all")
+	})
+}
+
+// This controller writes data.spec and also watches it, so its own write produces one more event.
+// That pass must reach the same answer and stop — a loop here would rewrite the object forever.
+func TestReconcileSelfTriggerConverges(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
+		t.Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
+		t.Setenv("DESIRED_KUBERNETES_VERSION", "1.35")
+		t.Setenv("KUBERNETES_UPDATE_MODE", "Automatic")
+		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.35")
+
+		ctx := context.Background()
+		rec, k8sClient := newTestReconciler(t, "init-up-to-date.yaml", false)
+
+		_, err := rec.Reconcile(ctx, reconcile.Request{})
+		require.NoError(t, err)
+		first := readClusterConfigMap(t, ctx, k8sClient)
+
+		_, err = rec.Reconcile(ctx, reconcile.Request{})
+		require.NoError(t, err)
+		second := readClusterConfigMap(t, ctx, k8sClient)
+
+		require.Equal(t, first.Data["spec"], second.Data["spec"])
+		assert.False(t, getConfigMapSpecPredicate().Update(event.UpdateEvent{ObjectOld: first, ObjectNew: second}),
+			"the second write must not enqueue a third reconcile")
+	})
+}
+
+// availableVersions is derived from the maxUsed of this pass, not from the max-k8s-version label,
+// which only moves once the cluster reaches UpToDate. Deriving it from the label would publish a
+// list one reconcile behind the floor the ModuleConfig webhook enforces from the same quantity.
+func TestAvailableVersionsFollowTheComputedMaxUsed(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		t.Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
+		t.Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
+		t.Setenv("DESIRED_KUBERNETES_VERSION", "1.35")
+		t.Setenv("KUBERNETES_UPDATE_MODE", "Automatic")
+		t.Setenv("MAX_USED_KUBERNETES_VERSION", "1.35")
+
+		ctx := context.Background()
+		// The fixture's label still says 1.32 — the cluster has not finished the hop yet.
+		rec, k8sClient := newTestReconciler(t, "upgrade-three-hops.yaml", true)
+
+		_, err := rec.Reconcile(ctx, reconcile.Request{})
+		require.NoError(t, err)
+
+		cm := readClusterConfigMap(t, ctx, k8sClient)
+		assert.Equal(t, "1.32", cm.Labels["max-k8s-version"])
+		assert.Contains(t, cm.Data["status"], "availableVersions:\n- \"1.34\"\n- \"1.35\"\n- \"1.36\"\n")
+	})
 }
 
 func (suite *ControllerTestSuite) fetchTestFileData(filename string) string {

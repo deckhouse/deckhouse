@@ -101,6 +101,12 @@ const (
 	defaultClusterMasterAddress                = "127.0.0.1"
 	defaultClusterMasterRPPServerPort          = 5444
 	defaultClusterMasterRPPBootstrapServerPort = 4282
+
+	// automaticKubernetesVersion is the ClusterConfiguration sentinel for "track Deckhouse
+	// default". Not accepted in ModuleConfig, where Default is the only sentinel.
+	automaticKubernetesVersion = "Automatic"
+	// defaultKubernetesVersionSentinel is the ModuleConfig sentinel for "track Deckhouse default".
+	defaultKubernetesVersionSentinel = "Default"
 )
 
 func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigValidatorProvider, m *MetaConfig) (*MetaConfig, error) {
@@ -641,11 +647,91 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.StaticClusterConfig)
 }
 
+// resolveKubernetesVersion turns a raw kubernetesVersion into the concrete version to install.
+// Both sentinels are handled: kubernetesVersionRaw already collapses them to "", but this function
+// is also called on values that never went through it.
 func resolveKubernetesVersion(v string) string {
-	if v == "Automatic" {
+	if v == "" || isModuleConfigTrackDefault(v) || v == automaticKubernetesVersion {
 		return DefaultKubernetesVersion
 	}
 	return v
+}
+
+// The two documents no longer share one predicate, because they no longer accept the same words.
+// ModuleConfig takes Default only; ClusterConfiguration keeps Automatic, which predates Default
+// there and cannot be removed without breaking existing documents.
+
+// isModuleConfigTrackDefault reports the ModuleConfig sentinel for "track the Deckhouse default".
+func isModuleConfigTrackDefault(version string) bool {
+	return version == defaultKubernetesVersionSentinel
+}
+
+// isClusterConfigurationPinned reports a concrete minor pin in ClusterConfiguration. Default is
+// rejected here too: the schema does not accept it there, and a value that is obviously not a
+// version must never be handed onward as one.
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — dies together with the ClusterConfiguration field.
+func isClusterConfigurationPinned(version string) bool {
+	return version != "" &&
+		version != automaticKubernetesVersion &&
+		version != defaultKubernetesVersionSentinel
+}
+
+// kubernetesVersionRaw returns the unresolved kubernetesVersion with the same preference as
+// global-hooks resolveTargetKubernetesVersion: a present ModuleConfig setting → pinned
+// ClusterConfiguration → empty (resolveKubernetesVersion turns empty into Default).
+//
+// The ModuleConfig setting wins whenever it is present, Default/Automatic included: there it means
+// "let Deckhouse choose", so it returns empty here and bootstrap starts on Default — which is
+// exactly what the running Deckhouse will target afterwards. A leftover ClusterConfiguration pin
+// is deliberately ignored in that case.
+//
+// An install config that pins the version only in ModuleConfig must still set
+// ModuleConfig.spec.enabled and ModuleConfig.spec.version — dhctl rejects ModuleConfigs
+// without them (see load.go ModuleConfig validation).
+//
+// NOTE(kubernetesVersion-deprecation): keep — dhctl already warns about the deprecated field via
+// deprecation.go, which reads "x-doc-deprecated" from the schema. Do not add a second warning here.
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — drop CC fallback branch
+// (isClusterConfigurationPinned / ccVersion). After T+1 only MC → Default.
+func (m *MetaConfig) kubernetesVersionRaw() string {
+	mcVersion := ""
+	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {
+		// Read straight off spec.settings, without running the settings-version conversions: this
+		// runs at bootstrap, where the conversion chain is not wired up. Safe only while no
+		// conversion moves or renames this key — control-plane-manager has none today, and the
+		// setting is new in this release, so there is no older shape it could be stored in. A
+		// future conversion that touches kubernetesVersion has to be reflected here, otherwise
+		// dhctl and the on-cluster admission webhook (which validates the *converted* settings)
+		// would silently disagree about what the operator declared.
+		//
+		// A non-string value (an unquoted `kubernetesVersion: 1.35`) is dropped rather than
+		// coerced, for the reason spelled out in global-hooks/discovery/target_kubernetes_version.go:
+		// a minor ending in zero loses it, so 1.40 would come back as "1.4".
+		if v, ok := mc.Spec.Settings["kubernetesVersion"].(string); ok {
+			mcVersion = v
+		}
+	}
+
+	ccVersion := ""
+	if raw, ok := m.ClusterConfig["kubernetesVersion"]; ok {
+		var v string
+		if err := json.Unmarshal(raw, &v); err == nil {
+			ccVersion = v
+		}
+	}
+
+	switch {
+	case isModuleConfigTrackDefault(mcVersion):
+		return ""
+	case mcVersion != "":
+		return mcVersion
+	case isClusterConfigurationPinned(ccVersion):
+		return ccVersion
+	default:
+		return ""
+	}
 }
 
 func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
@@ -658,9 +744,10 @@ func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
 		}
 		out[k] = a
 	}
-	if v, _ := out["kubernetesVersion"].(string); v != "" {
-		out["kubernetesVersion"] = resolveKubernetesVersion(v)
-	}
+	// Always publish the effective concrete version (pinned MC → pinned CC → Default) so
+	// control-plane templates and bashible see one resolved value even when the field is
+	// absent from CC.
+	out["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
 	return out, nil
 }
 
@@ -676,9 +763,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 		data[key] = t
 	}
 
-	if data["kubernetesVersion"] == "Automatic" {
-		data["kubernetesVersion"] = DefaultKubernetesVersion
-	}
+	data["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
 
 	clusterBootstrap := map[string]any{
 		"clusterDomain":     data["clusterDomain"],

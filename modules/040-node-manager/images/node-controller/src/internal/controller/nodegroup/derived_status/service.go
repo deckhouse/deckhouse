@@ -90,11 +90,24 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	clusterUUID := s.readClusterUUID(ctx)
 	result.UpdateEpoch = calculateUpdateEpoch(epochTimestampAccessor(), clusterUUID, ng.Name)
 
-	targetVersion, defaultCRI := s.readClusterConfiguration(ctx)
+	targetVersion, err := s.readTargetKubernetesVersion(ctx)
+	if err != nil {
+		// TODO(E2E-KV): KEEP this line — only strip the "E2E-KV " prefix before the final PR.
+		// This is the intended diagnostic for an unreadable/absent ConfigMap, not a stand-only log.
+		logger.Error(err, "E2E-KV node-controller cannot read target kubernetesVersion from ConfigMap; requeue",
+			"configMap", "kube-system/d8-cluster-kubernetes")
+		return result, err
+	}
+	defaultCRI := s.readClusterConfiguration(ctx)
 	controlPlaneMinVersion := s.readControlPlaneMinVersion(ctx)
 	effectiveKubeVer := effectiveKubernetesVersion(targetVersion, controlPlaneMinVersion)
 	result.KubernetesVersion = semverMajMin(effectiveKubeVer)
 
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	logger.Info("E2E-KV node-controller target",
+		"desired", versionString(targetVersion),
+		"effective", result.KubernetesVersion,
+	)
 	criType, err := resolveCRIType(ng, effectiveKubeVer, defaultCRI)
 	if err != nil {
 		return result, err

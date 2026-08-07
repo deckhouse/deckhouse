@@ -163,6 +163,18 @@ var _ = BeforeSuite(func() {
 	uuidCM.Data = map[string]string{"cluster-uuid": "11111111-2222-3333-4444-555555555555"}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, uuidCM))).To(Succeed())
 
+	By("publishing the cluster-kubernetes configmap")
+	// capi_cloud.go builds a derived_status.Service, which now resolves the target Kubernetes
+	// version from this ConfigMap instead of ClusterConfiguration.kubernetesVersion and returns an
+	// error when it is missing. Without the fixture every spec in this suite times out.
+	clusterKubernetesCM := &corev1.ConfigMap{}
+	clusterKubernetesCM.Namespace = "kube-system"
+	clusterKubernetesCM.Name = "d8-cluster-kubernetes"
+	clusterKubernetesCM.Data = map[string]string{
+		"spec": "desiredVersion: \"1.32\"\nupdateMode: Manual\n",
+	}
+	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, clusterKubernetesCM))).To(Succeed())
+
 	By("starting the manager with the capi controllers")
 	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())

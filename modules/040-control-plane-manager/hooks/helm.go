@@ -22,7 +22,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -42,8 +41,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -129,6 +126,25 @@ func init() {
 	}
 }
 
+// The Kubernetes bindings below are triggers only — the hook reads the resolved answer from
+// global.discovery.kubernetesVersionIsDefault, not from the snapshots (nothing here reads
+// input.Snapshots at all, hence the nil FilterFunc results). They exist because Values are not an
+// event source: without them the K8sVersionsWithDeprecations requirement, which gates
+// DeckhouseRelease installation, would keep a stale answer until the next hourly tick after an
+// operator switches the version between Default and a pin.
+//
+// Both documents are watched, and that is not redundancy. ModuleConfig owns the version now, and
+// patching it does not touch the Secret — so the Secret binding alone stopped firing on the very
+// change it was added to catch. But while the deprecated ClusterConfiguration field is still
+// honoured (it decides whenever ModuleConfig says nothing), editing *it* also flips the resolved
+// answer, and the ModuleConfig binding cannot see that. Neither object changes often, so two
+// bindings cost no extra helm-release scans in practice.
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — drop the clusterConfiguration binding together
+// with the ClusterConfiguration field; the ModuleConfig one is the permanent trigger.
+//
+// OnStartup must not be combined with Kubernetes bindings (addon-operator panics); Synchronization
+// of these bindings already fires the hook at startup.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/helm-releases-scan",
 	Schedule: []go_hook.ScheduleConfig{
@@ -139,50 +155,65 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:              "kubernetesVersion",
+			Name:         "kubernetesVersion",
+			ApiVersion:   "deckhouse.io/v1alpha1",
+			Kind:         "ModuleConfig",
+			NameSelector: &types.NameSelector{MatchNames: []string{"control-plane-manager"}},
+			FilterFunc:   filterModuleConfigTriggerOnly,
+		},
+		{
+			Name:              "clusterConfiguration",
 			ApiVersion:        "v1",
 			Kind:              "Secret",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
 			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
-			FilterFunc:        applyClusterConfigurationYamlFilter,
+			FilterFunc:        filterClusterConfigurationVersionTriggerOnly,
 		},
 	},
-	// we don't need the startup hook, because this hook will start on synchronization
 }, dependency.WithExternalDependencies(handleHelmReleases))
 
-func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+// filterClusterConfigurationVersionTriggerOnly narrows the Secret snapshot to the deprecated
+// kubernetesVersion field, for the same reason filterModuleConfigTriggerOnly narrows its object:
+// the whole Secret changes for reasons that have nothing to do with the version (defaultCRI, the
+// CIDRs, Deckhouse's own bookkeeping keys), and each change would cost a full helm-release scan.
+//
+// Never returns an error: a FilterFunc error discards the snapshot and takes the hook down, and this
+// binding only needs to deliver a wake-up. An unreadable document becomes "".
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the binding above.
+func filterClusterConfigurationVersionTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, err
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return "", nil
 	}
 
-	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
+	var cfg struct {
+		KubernetesVersion string `json:"kubernetesVersion"`
+	}
+	if err := yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], &cfg); err != nil {
+		return "", nil
 	}
 
-	kubernetesVersion, err := getKubernetesVersion(ccYaml)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetesVersion, err
+	return cfg.KubernetesVersion, nil
 }
 
-func getKubernetesVersion(data []byte) (string, error) {
-	if err := validation.ValidateData([]string{}, &data); err != nil {
-		if !errors.Is(err, validation.ErrSchemaNotFound) {
-			return "", err
-		}
+// filterModuleConfigTriggerOnly narrows the snapshot to the one field this binding exists for.
+// Nothing reads the result — handleHelmReleases takes the resolved answer from Values — but the
+// snapshot still has to be narrow: returning the whole object would re-run a helm-release scan on
+// every unrelated ModuleConfig edit.
+//
+// Never returns an error. spec.settings is x-kubernetes-preserve-unknown-fields, so an unquoted
+// `kubernetesVersion: 1.35` arrives as a number; a FilterFunc error on that would take down a hook
+// that only needed a wake-up signal. The value itself is irrelevant here, so anything unreadable
+// simply becomes "".
+func filterModuleConfigTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	raw, found, err := unstructured.NestedFieldNoCopy(obj.UnstructuredContent(), "spec", "settings", "kubernetesVersion")
+	if err != nil || !found {
+		return "", nil
 	}
-	var cfg struct {
-		KubernetesVersion string `yaml:"kubernetesVersion"`
-	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return "", fmt.Errorf("unmarshal YAML: %w", err)
-	}
-	return cfg.KubernetesVersion, nil
+
+	version, _ := raw.(string)
+	return version, nil
 }
 
 func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -195,18 +226,14 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
-	var isAutomaticK8s bool
-	var kubernetesVersion string
-	kubernetesVersionSnapshots := input.Snapshots.Get("kubernetesVersion")
-	if len(kubernetesVersionSnapshots) > 0 {
-		err := kubernetesVersionSnapshots[0].UnmarshalTo(&kubernetesVersion)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal 'kubernetesVersion': %w", err)
-		}
-	}
-
-	if kubernetesVersion == "Automatic" {
-		isAutomaticK8s = true
+	isDefaultK8s := input.Values.Get("global.discovery.kubernetesVersionIsDefault").Bool()
+	// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+	input.Logger.Info("E2E-KV helm-deprecations",
+		"source", "global.discovery.kubernetesVersionIsDefault",
+		"isDefault", isDefaultK8s,
+		"clusterKubernetesVersion", k8sCurrentVersion.String(),
+	)
+	if isDefaultK8s {
 		requirements.SaveValue(K8sVersionsWithDeprecations, "initial")
 	}
 
@@ -236,7 +263,7 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 		return err
 	}
 
-	if isAutomaticK8s {
+	if isDefaultK8s {
 		if deprecations != "" {
 			requirements.SaveValue(K8sVersionsWithDeprecations, deprecations)
 		} else {

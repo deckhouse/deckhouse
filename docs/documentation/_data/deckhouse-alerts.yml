@@ -577,6 +577,35 @@ alerts:
         The parameters specified in ModuleConfig of {{ $labels.cni }} do not match the ones that are actually being used in the cluster.
       severity: "5"
       markupFormat: markdown
+    - name: D8ControlPlaneDefaultVersionDrift
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The cluster tracks the Deckhouse default Kubernetes version (`kubernetesVersion: Default` in ModuleConfig `control-plane-manager`, or unset ModuleConfig with no ClusterConfiguration pin). That default is now more than 1 minor below the highest version this cluster has ever run (`maxUsed`).
+
+        **Rollback blocked:** Deckhouse freezes the published target (keeps the previous desired version, or the current control-plane version) and does not roll Default down toward the lower default. Control plane and kubelet stay on the frozen target until the Deckhouse default catches up within the `maxUsed−1` window.
+
+        Check the `frozen` label on the metric: `frozen="true"` means the digit is held as described above. `frozen="false"` means the window is violated but nothing was left to hold the digit at (for example the `d8-cluster-kubernetes` ConfigMap was deleted), so the published target **has** moved down to the Deckhouse default — pin the intended version explicitly.
+
+        **To resolve this alert:**
+
+        - To keep the current (higher) version, pin it explicitly:
+
+          ```bash
+          d8 k patch mc control-plane-manager --type merge -p '{"spec":{"settings":{"kubernetesVersion":"<current version>"}}}'
+          ```
+
+        - To downgrade deliberately, pin one minor at a time (more than 1 minor below `maxUsed` is rejected):
+
+          ```bash
+          d8 k patch mc control-plane-manager --type merge -p '{"spec":{"settings":{"kubernetesVersion":"<current version - 1 minor>"}}}'
+          ```
+      summary: |
+        Control plane Kubernetes version rollback is blocked (Default soft-guard freeze).
+      severity: "5"
+      markupFormat: markdown
     - name: D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager
@@ -3171,6 +3200,47 @@ alerts:
       summary: |
         Prometheus can't scrape terraform-state-exporter.
       severity: "8"
+      markupFormat: markdown
+    - name: D8UnsetKubernetesVersionInModuleConfig
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        `settings.kubernetesVersion` is unset in ModuleConfig `control-plane-manager`.
+
+        Until it is set, Deckhouse may still fall back to the deprecated `ClusterConfiguration.kubernetesVersion`, then to the release default. Set the ModuleConfig value explicitly.
+
+        **To resolve this alert:**
+
+        1. If ModuleConfig `control-plane-manager` does not exist, create it:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+        2. Check whether ClusterConfiguration still pins a version:
+
+           ```bash
+           d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep '^kubernetesVersion:' || echo 'not pinned'
+           ```
+
+        3. If the previous step printed `not pinned`, or it printed `Automatic`, or you want Deckhouse to keep choosing the version, set `Default`:
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"kubernetesVersion":"Default"}}}'
+           ```
+
+           If it printed a concrete version, set that same value so the cluster keeps the version it runs today (replace `1.34` with what you saw):
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"kubernetesVersion":"1.34"}}}'
+           ```
+
+        Once ModuleConfig has the setting, this alert clears.
+      summary: |
+        ModuleConfig control-plane-manager has no kubernetesVersion setting.
+      severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml

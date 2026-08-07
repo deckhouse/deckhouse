@@ -16,16 +16,6 @@ limitations under the License.
 
 package cluster
 
-import (
-	"fmt"
-	"strings"
-
-	"github.com/stretchr/testify/assert/yaml"
-	corev1 "k8s.io/api/core/v1"
-
-	"control-plane-manager/internal/controllers/update-observer/pkg/version"
-)
-
 type UpdateMode string
 
 const (
@@ -33,48 +23,18 @@ const (
 	UpdateModeManual    UpdateMode = "Manual"
 )
 
+// Configuration is the operator-declared desired state for the cluster's Kubernetes version:
+// spec.desiredVersion/spec.updateMode of the ConfigMap this controller owns. It is *resolved* by
+// the global discovery hook (ModuleConfig control-plane-manager kubernetesVersion, falling back to
+// the deprecated ClusterConfiguration field) and reaches this controller as container environment.
+// This controller is the only *writer* of the block; it treats the value purely as external input
+// and never computes it itself.
 type Configuration struct {
-	KubernetesVersion string `yaml:"kubernetesVersion"`
-	DesiredVersion    string `yaml:"desiredVersion"`
-	UpdateMode        UpdateMode
-}
-
-func GetConfiguration(secret *corev1.Secret) (*Configuration, error) {
-	rawCfg, ok := secret.Data[clusterConfigurationYAML]
-	if !ok {
-		return nil, fmt.Errorf("'%s' is not found", clusterConfigurationYAML)
-	}
-
-	var cfg *Configuration
-	if err := yaml.Unmarshal(rawCfg, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal '%s': %w", clusterConfigurationYAML, err)
-	}
-
-	var err error
-	if cfg.KubernetesVersion == string(UpdateModeAutomatic) {
-		cfg.UpdateMode = UpdateModeAutomatic
-
-		rawDefault, ok := secret.Data[defaultKubernetesVersion]
-		if !ok {
-			return nil, fmt.Errorf("'%s' is not found", defaultKubernetesVersion)
-		}
-
-		desiredVersion := strings.TrimSpace(string(rawDefault))
-		if desiredVersion == "" {
-			return nil, fmt.Errorf("'%s' is empty", defaultKubernetesVersion)
-		}
-
-		cfg.DesiredVersion, err = version.Normalize(desiredVersion)
-		if err != nil {
-			return nil, fmt.Errorf("'%s' is not valid: %w", defaultKubernetesVersion, err)
-		}
-	} else {
-		cfg.UpdateMode = UpdateModeManual
-		cfg.DesiredVersion, err = version.Normalize(cfg.KubernetesVersion)
-		if err != nil {
-			return nil, fmt.Errorf("kubernetesVersion is not valid: %w", err)
-		}
-	}
-
-	return cfg, nil
+	DesiredVersion string
+	UpdateMode     UpdateMode
+	// MaxUsedVersion is the highest Kubernetes minor the cluster has ever converged onto, mirrored
+	// into spec.maxUsedKubernetesVersion (controller.Spec carries the exact definition). Unlike the
+	// other two it is a fact about the past rather than a declaration, and it is monotonic: readers
+	// use it as the floor a downgrade may not cross.
+	MaxUsedVersion string
 }
