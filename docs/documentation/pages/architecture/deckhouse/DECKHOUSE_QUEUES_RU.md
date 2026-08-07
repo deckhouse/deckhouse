@@ -94,7 +94,7 @@ description: Описание работы очередей контроллер
 
 ## Очереди Marketplace
 
-**Очереди Marketplace** — реализация очереди для работы функционала [Marketplace](../marketplace).
+**Очереди Marketplace** — реализация очереди для работы функционала [Marketplace](../marketplace/).
 
 Каждая очередь, которую обслуживает контроллер Deckhouse для Marketplace, обладает следующими свойствами:
 
