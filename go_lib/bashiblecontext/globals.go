@@ -25,20 +25,22 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext/names"
 )
 
 const (
-	versionInfoCMName = "d8-deckhouse-version-info"
-	versionInfoCMNS   = "d8-system"
+	versionInfoCMName = names.VersionInfoCMName
+	versionInfoCMNS   = names.VersionInfoCMNS
 
-	clusterConfigSecretName = "d8-cluster-configuration"
-	clusterConfigKey        = "cluster-configuration.yaml"
+	clusterConfigSecretName = names.ClusterConfigSecretName
+	clusterConfigKey        = names.ClusterConfigKey
 
 	// clusterUUIDConfigMap holds the cluster UUID (global.discovery.clusterUUID).
-	clusterUUIDConfigMapName = "d8-cluster-uuid"
-	clusterUUIDKey           = "cluster-uuid"
+	clusterUUIDConfigMapName = names.ClusterUUIDConfigMapName
+	clusterUUIDKey           = names.ClusterUUIDKey
 
-	dnsAppLabel = "k8s-app"
+	dnsAppLabel = names.DNSAppLabel
 )
 
 func (s *Service) ReadGlobals(ctx context.Context) Globals {

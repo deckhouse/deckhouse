@@ -227,6 +227,8 @@ subjects:
   name: {{ $serviceAccountName }}
   namespace: d8-cloud-instance-manager
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if include "cluster_autoscaler_enabled" . }}
   {{- if not (include "cluster_autoscaler_split_mode" .) }}
@@ -238,3 +240,5 @@ subjects:
 {{ include "cluster_autoscaler_rbac" (list . "cluster-autoscaler" "cluster-autoscaler" true) }}
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

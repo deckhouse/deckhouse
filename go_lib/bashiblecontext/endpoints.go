@@ -29,6 +29,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext/names"
 )
 
 const (
@@ -36,8 +38,8 @@ const (
 	packagesProxyPort          = 4219
 	packagesProxyBootstrapPort = 4282
 
-	kubernetesEndpointSliceNS   = "default"
-	kubernetesEndpointSliceName = "kubernetes"
+	kubernetesEndpointSliceNS   = names.KubernetesEndpointSliceNS
+	kubernetesEndpointSliceName = names.KubernetesEndpointSliceName
 )
 
 type endpoints struct {

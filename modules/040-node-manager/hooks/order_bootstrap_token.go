@@ -140,6 +140,10 @@ type bootstrapTokenSecret struct {
 }
 
 func handleOrderBootstrapToken(_ context.Context, input *go_hook.HookInput) error {
+	if nestedControlPlane(input) {
+		return nil
+	}
+
 	tokensByNg := make(map[string]bootstrapTokenSecret)
 	expiredTokens := make([]bootstrapTokenSecret, 0)
 

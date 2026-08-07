@@ -54,6 +54,7 @@ require (
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/bashiblecontext v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
@@ -381,6 +382,8 @@ replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.
 replace github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy => ./go_lib/registry-packages-proxy
 
 replace github.com/deckhouse/deckhouse/go_lib/configtools/conversion => ./go_lib/configtools/conversion
+
+replace github.com/deckhouse/deckhouse/go_lib/bashiblecontext => ./go_lib/bashiblecontext
 
 replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ./go_lib/dependency/k8s/drain
 

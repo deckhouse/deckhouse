@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if include "capi_controller_manager_enabled" . }}
 ---
 apiVersion: v1
@@ -399,3 +401,5 @@ subjects:
   - kind: User
     name: capi-controller-manager
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

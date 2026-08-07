@@ -42,9 +42,7 @@ roleRef:
   kind: Role
   name: bashible-apiserver-readconfig
 subjects:
-  - kind: ServiceAccount
-    name: bashible-apiserver
-    namespace: d8-cloud-instance-manager
+  {{- include "node_manager_bashible_apiserver_subjects" . | nindent 2 }}
 ---
 # To read secrets in d8-system
 kind: RoleBinding
@@ -58,9 +56,7 @@ roleRef:
   kind: Role
   name: node-manager:bashible-apiserver-readregsecret
 subjects:
-  - kind: ServiceAccount
-    name: bashible-apiserver
-    namespace: d8-cloud-instance-manager
+  {{- include "node_manager_bashible_apiserver_subjects" . | nindent 2 }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -111,9 +107,7 @@ roleRef:
   kind: ClusterRole
   name: d8:node-manager:bashible-apiserver:auth
 subjects:
-- kind: ServiceAccount
-  name: bashible-apiserver
-  namespace: d8-cloud-instance-manager
+  {{- include "node_manager_bashible_apiserver_subjects" . | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -125,9 +119,7 @@ roleRef:
   kind: ClusterRole
   name: d8:node-manager:bashible-apiserver:nodeconfigurations
 subjects:
-  - kind: ServiceAccount
-    name: bashible-apiserver
-    namespace: d8-cloud-instance-manager
+  {{- include "node_manager_bashible_apiserver_subjects" . | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -139,9 +131,7 @@ roleRef:
   kind: ClusterRole
   name: d8:node-manager:bashible-apiserver:nodeusers
 subjects:
-- kind: ServiceAccount
-  name: bashible-apiserver
-  namespace: d8-cloud-instance-manager
+  {{- include "node_manager_bashible_apiserver_subjects" . | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -153,9 +143,7 @@ roleRef:
   kind: ClusterRole
   name: system:auth-delegator
 subjects:
-  - kind: ServiceAccount
-    name: bashible-apiserver
-    namespace: d8-cloud-instance-manager
+  {{- include "node_manager_bashible_apiserver_subjects" . | nindent 2 }}
 ---
 # To read configmaps in kube-system
 apiVersion: rbac.authorization.k8s.io/v1
@@ -169,6 +157,4 @@ roleRef:
   kind: Role
   name: extension-apiserver-authentication-reader
 subjects:
-  - kind: ServiceAccount
-    name: bashible-apiserver
-    namespace: d8-cloud-instance-manager
+  {{- include "node_manager_bashible_apiserver_subjects" . | nindent 2 }}

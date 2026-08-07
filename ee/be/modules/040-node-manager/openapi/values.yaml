@@ -212,6 +212,14 @@ properties:
         description: |
           Private key for API server used by bashible.
 
+      bashibleContext:
+        type: string
+        description: |
+          Rendered bashible input.yaml. Only set in a nested (virtual control plane)
+          cluster, where no node-controller Pod exists to write the Secret itself.
+        x-examples:
+          - "clusterDomain: cluster.virtual\n"
+
       nodeStatusUpdateFrequency:
         type: [integer, string]
         description: |

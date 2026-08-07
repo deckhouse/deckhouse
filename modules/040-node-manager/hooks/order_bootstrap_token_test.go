@@ -131,7 +131,9 @@ data:
 }
 
 var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", func() {
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
+	// deckhouseSelfHosted is the default of the global schema. Without it the hook takes itself
+	// for a nested cluster, where the join token is issued by the virtual control plane.
+	f := HookExecutionConfigInit(`{"global":{"deckhouseSelfHosted":true},"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Cluster is empty", func() {

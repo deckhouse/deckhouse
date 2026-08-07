@@ -33,6 +33,9 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
 deckhouseVersion: test
+# The default of the global schema, which the test harness does not apply. Without it the
+# Deployment and the admission webhook render nothing and the suite tests an empty chart.
+deckhouseSelfHosted: true
 enabledModules: ["vertical-pod-autoscaler", "prometheus", "operator-prometheus"]
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
@@ -55,6 +58,7 @@ modules:
 
 	globalValues2 = `
 deckhouseVersion: test
+deckhouseSelfHosted: true
 enabledModules: ["vertical-pod-autoscaler", "prometheus", "operator-prometheus", "control-plane-manager"]
 clusterConfiguration:
   apiVersion: deckhouse.io/v1

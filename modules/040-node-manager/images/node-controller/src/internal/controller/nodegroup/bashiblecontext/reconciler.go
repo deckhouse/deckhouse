@@ -27,13 +27,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext"
+
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
 type Reconciler struct {
 	Client        client.Client
-	Context       *Service
+	Context       *bashiblecontext.Service
 	DerivedStatus *derived_status.Service
 }
 

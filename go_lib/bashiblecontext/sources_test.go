@@ -62,6 +62,17 @@ func configMap(ns, name string, data map[string]string) *corev1.ConfigMap {
 	}
 }
 
+func kubeDNSService(clusterIP string) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kube-dns",
+			Namespace: kubeSystemNS,
+			Labels:    map[string]string{dnsAppLabel: "kube-dns"},
+		},
+		Spec: corev1.ServiceSpec{ClusterIP: clusterIP},
+	}
+}
+
 func TestReadPackagesProxyToken(t *testing.T) {
 	s := newService(t, secret(cloudInstanceManagerNS, packagesProxyTokenSecretName, map[string][]byte{
 		"token": []byte("tok-123"),

@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 ---
 apiVersion: v1
@@ -217,3 +219,5 @@ subjects:
   name: caps-controller-manager
   namespace: d8-cloud-instance-manager
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}
