@@ -107,16 +107,6 @@ vcd:
   destinationBinary: terraform-provider-vcd
   vmResourceType: vcd_vapp_vm
   useOpentofu: true
-yandex:
-  namespace: yandex-cloud
-  cloudName: Yandex
-  type: yandex
-  version: "0.174.0"
-  artifact: terraform-provider-yandex
-  artifactBinary: terraform-provider-yandex
-  destinationBinary: terraform-provider-yandex
-  vmResourceType: yandex_compute_instance
-  useOpentofu: true
 decort:
   namespace: terraform-provider-decort
   cloudName: Dynamix

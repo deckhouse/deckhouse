@@ -54,4 +54,7 @@ var storageClassesConfig = []storage_class.StorageClass{
 	},
 }
 
-var _ = storage_class.RegisterHook("cloudProviderFake", storageClassesConfig)
+var _ = storage_class.RegisterHook(storage_class.Config{
+	ModuleName:     "cloudProviderFake",
+	StorageClasses: storageClassesConfig,
+})

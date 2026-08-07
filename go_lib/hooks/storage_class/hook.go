@@ -26,6 +26,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/regexpset"
 )
 
+const (
+	defaultExcludePaths = "storageClass.exclude"
+)
+
 type StorageClass interface {
 	GetName() string
 }
@@ -39,14 +43,28 @@ func (sc *SimpleStorageClass) GetName() string {
 	return sc.Name
 }
 
-func storageClasses(input *go_hook.HookInput, pathFunc func(path string) string, storageClassesConfig []StorageClass) error {
-	excludes, err := regexpset.NewFromValues(input.Values, pathFunc("storageClass.exclude"))
+type Config struct {
+	StorageClasses []StorageClass
+	ModuleName     string
+	ExcludePath    string
+}
+
+func storageClasses(input *go_hook.HookInput, config Config) error {
+	if config.ExcludePath == "" {
+		config.ExcludePath = defaultExcludePaths
+	}
+
+	pathFunc := func(path string) string {
+		return fmt.Sprintf("%s.%s", config.ModuleName, path)
+	}
+
+	excludes, err := regexpset.NewFromValues(input.Values, pathFunc(config.ExcludePath))
 	if err != nil {
 		return fmt.Errorf("storageClass.exclude set creation error: %v", err)
 	}
 
 	var storageClassesFiltered []StorageClass
-	for _, storageClass := range storageClassesConfig {
+	for _, storageClass := range config.StorageClasses {
 		needExclude := excludes.Match(storageClass.GetName())
 		if !needExclude {
 			storageClassesFiltered = append(storageClassesFiltered, storageClass)
@@ -58,13 +76,13 @@ func storageClasses(input *go_hook.HookInput, pathFunc func(path string) string,
 	return nil
 }
 
-func RegisterHook(moduleName string, storageClassesConfig []StorageClass) bool {
-	valuePath := func(path string) string {
-		return fmt.Sprintf("%s.%s", moduleName, path)
+func RegisterHook(config Config) bool {
+	if config.ModuleName == "" {
+		return false
 	}
 
 	handler := func(_ context.Context, input *go_hook.HookInput) error {
-		return storageClasses(input, valuePath, storageClassesConfig)
+		return storageClasses(input, config)
 	}
 
 	return sdk.RegisterFunc(&go_hook.HookConfig{

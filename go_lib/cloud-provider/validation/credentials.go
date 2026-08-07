@@ -17,162 +17,200 @@ package validation
 import (
 	"encoding/base64"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"k8s.io/client-go/tools/clientcmd"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+)
+
+// Validation violation codes for credential Secrets.
+const (
+	CodeCredentialSecretRequired       = "credential_secret_required"
+	CodeAuthSchemeRequired             = "auth_scheme_required"
+	CodeUnsupportedAuthScheme          = "unsupported_auth_scheme"
+	CodeCredentialIdentityRequired     = "credential_identity_required"
+	CodeCredentialSecretKeyRequired    = "credential_secret_key_required"
+	CodeCredentialFieldRequired        = "credential_field_required"
+	CodeCredentialIdentityUnsupported  = "credential_identity_unsupported"
+	CodeCredentialSecretKeyUnsupported = "credential_secret_key_unsupported"
+	CodeCredentialFieldUnsupported     = "credential_field_unsupported"
+	CodeInvalidKubeconfigSecret        = "invalid_kubeconfig_secret"
+	CodeInvalidServiceAccountSecret    = "invalid_service_account_secret"
 )
 
 // ValidateCredentialSecretPresence checks that primary credential Secret exists (before bootstrap or converge).
-func ValidateCredentialSecretPresence(state *State) Result {
+func ValidateCredentialSecretPresence[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *cpvalapi.State[IC, S, PCC], name string) cpvalapi.Result {
 	if state == nil {
-		return ResultForNilState()
+		return cpvalapi.ResultForNilState()
 	}
 
-	result := Result{}
+	result := cpvalapi.Result{}
 
-	secret, ok := findCredentialSecret(state, cpapi.CredentialSecretName)
-	if !ok {
+	if !state.ExistsCredentialSecret(name) {
 		result.AddError(
-			"Secret/"+cpapi.CredentialSecretName,
-			"credential_secret_required",
+			fmt.Sprintf("Secret/%s", name),
+			CodeCredentialSecretRequired,
 			nil,
-			fmt.Sprintf(`credential Secret %q is required`, cpapi.CredentialSecretName),
+			fmt.Sprintf(`credential Secret %q is required`, name),
 		)
 
 		return result
 	}
 
-	if secret.Type != cpapi.CredentialsSecretType {
-		result.AddError(
-			fmt.Sprintf("Secret/%s.type", secret.Name),
-			"invalid_credential_secret_type",
-			secret.Type,
-			fmt.Sprintf("credential Secret type must be %q", cpapi.CredentialsSecretType),
-		)
-	}
-
 	return result
 }
 
-// ValidateCredentialSecretContent checks secret type and compliance of the structure with the given auth schemes
-// of managed credential Secrets.
-func ValidateCredentialSecretContent(state *State, allowedAuthSchemes []cpapi.AuthScheme) Result {
+// ValidateCredentialSecretContent checks secret type and compliance of the structure with the given credential validator.
+func ValidateCredentialSecretContent[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](state *cpvalapi.State[IC, S, PCC], name string, validator CredentialsValidator) cpvalapi.Result {
 	if state == nil {
-		return ResultForNilState()
+		return cpvalapi.ResultForNilState()
 	}
 
-	result := Result{}
+	result := cpvalapi.Result{}
 
-	secrets := getManagedCredentialSecrets(state)
-	for _, secret := range secrets {
-		if secret.Type != cpapi.CredentialsSecretType {
-			result.AddError(
-				fmt.Sprintf("Secret/%s.type", secret.Name),
-				"invalid_credential_secret_type",
-				secret.Type,
-				fmt.Sprintf("credential Secret type must be %q", cpapi.CredentialsSecretType),
-			)
-		}
+	secret, ok := state.FindCredentialSecret(name)
+	if !ok {
+		return result
 	}
 
-	result.Merge(
-		validateCredentialSecrets(secrets, allowedAuthSchemes),
-	)
+	path := getNamedResourcePath("Secret", secret.Name)
+	data := secret.NormalizedData()
+	result.Merge(validator.Validate(path, data))
 
 	return result
 }
 
-func validateCredentialSecrets(secrets []cpapi.CredentialSecret, allowedAuthSchemes []cpapi.AuthScheme) Result {
-	result := Result{}
+// CredentialsValidator validates credential Secret data for a specific auth scheme.
+type CredentialsValidator interface {
+	Validate(path string, data map[string]string) cpvalapi.Result
+}
 
-	allowed := make(map[cpapi.AuthScheme]struct{}, len(allowedAuthSchemes))
-	for _, scheme := range allowedAuthSchemes {
-		allowed[scheme] = struct{}{}
+// AccessKeyPairValidator validates credentials with AccessKeyPair auth scheme.
+type AccessKeyPairValidator struct {
+}
+
+// Validate checks that identity and secret keys are present.
+func (v *AccessKeyPairValidator) Validate(path string, data map[string]string) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
+
+	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeAccessKeyPair, &result); !ok {
+		return result
 	}
 
-	for _, secret := range secrets {
-		path := getNamedResourcePath("Secret", secret.Name)
-		data := secret.NormalizedData()
-		authScheme := cpapi.AuthScheme(strings.TrimSpace(data["authScheme"]))
-
-		if authScheme == "" {
-			result.AddError(path+".data.authScheme", "auth_scheme_required", nil, "authScheme is required")
-			continue
-		}
-
-		if _, ok := allowed[authScheme]; !ok {
-			result.AddError(
-				path+".data.authScheme",
-				"unsupported_auth_scheme",
-				string(authScheme),
-				fmt.Sprintf("authScheme %q is not allowed", authScheme),
-			)
-			continue
-		}
-
-		validateAuthSchemeKeys(path, data, authScheme, &result)
-	}
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
 
 	return result
 }
 
-func validateAuthSchemeKeys(path string, data map[string]string, authScheme cpapi.AuthScheme, result *Result) {
-	switch authScheme {
-	case cpapi.AuthSchemeAccessKeyPair, cpapi.AuthSchemeUserPassword, cpapi.AuthSchemeClientSecret, cpapi.AuthSchemeAppSecret:
-		validateRequiredCredentialKey(path, data, "identity", authScheme, result)
-		validateRequiredCredentialKey(path, data, "secret", authScheme, result)
-	case cpapi.AuthSchemeAPIToken, cpapi.AuthSchemeServiceAccount:
-		validateRequiredCredentialKey(path, data, "secret", authScheme, result)
-	case cpapi.AuthSchemeKubeconfig:
-		validateRequiredCredentialKey(path, data, "secret", authScheme, result)
+// APITokenValidator validates credentials with APIToken auth scheme.
+type APITokenValidator struct {
+}
 
-		secret := strings.TrimSpace(data["secret"])
-		if secret == "" {
-			return
-		}
+// Validate checks that secret key is present and identity is absent.
+func (v *APITokenValidator) Validate(path string, data map[string]string) cpvalapi.Result {
+	result := cpvalapi.Result{}
 
-		if err := validateKubeconfigBase64(secret); err != nil {
-			result.AddError(
-				path+".data.secret",
-				"invalid_kubeconfig_secret",
-				secret,
-				"secret must contain base64-encoded kubeconfig",
-			)
-		}
-	default:
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
+
+	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeAPIToken, &result); !ok {
+		return result
+	}
+
+	_ = validateUnsupportedCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
+
+	return result
+}
+
+// AppSecretValidator validates credentials with AppSecret auth scheme.
+type AppSecretValidator struct {
+}
+
+// Validate checks that secret key is present and identity is absent.
+func (v *AppSecretValidator) Validate(path string, data map[string]string) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
+
+	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeAppSecret, &result); !ok {
+		return result
+	}
+
+	_ = validateUnsupportedCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
+
+	return result
+}
+
+// ClientSecretValidator validates credentials with ClientSecret auth scheme.
+type ClientSecretValidator struct {
+}
+
+// Validate checks that identity and secret keys are present.
+func (v *ClientSecretValidator) Validate(path string, data map[string]string) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
+
+	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeClientSecret, &result); !ok {
+		return result
+	}
+
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
+
+	return result
+}
+
+// KubeconfigValidator validates credentials with Kubeconfig auth scheme.
+type KubeconfigValidator struct{}
+
+// Validate checks that secret key is present (valid base64 kubeconfig), identity is absent.
+func (v *KubeconfigValidator) Validate(path string, data map[string]string) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
+
+	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeKubeconfig, &result); !ok {
+		return result
+	}
+
+	_ = validateUnsupportedCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+
+	if ok := validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result); !ok {
+		return result
+	}
+
+	kubeconfigB64 := strings.TrimSpace(data[cpapi.CredentialSecretSecretKey])
+	if err := ValidateKubeconfigBase64(kubeconfigB64); err != nil {
 		result.AddError(
-			path+".data.authScheme",
-			"unsupported_auth_scheme",
-			string(authScheme),
-			fmt.Sprintf("authScheme %q is not allowed", authScheme),
+			fmt.Sprintf("%s.data.%s", path, cpapi.CredentialSecretSecretKey),
+			CodeInvalidKubeconfigSecret,
+			"masked",
+			fmt.Sprintf("invalid kubeconfig: %v", err),
 		)
 	}
+
+	return result
 }
 
-func validateRequiredCredentialKey(path string, data map[string]string, key string, authScheme cpapi.AuthScheme, result *Result) {
-	if strings.TrimSpace(data[key]) != "" {
-		return
-	}
-
-	var code, message string
-	switch key {
-	case "identity":
-		code = "credential_identity_required"
-		message = fmt.Sprintf("identity is required for authScheme %q", authScheme)
-	case "secret":
-		code = "credential_secret_key_required"
-		message = fmt.Sprintf("secret is required for authScheme %q", authScheme)
-	default:
-		code = "credential_field_required"
-		message = fmt.Sprintf("%s is required for authScheme %q", key, authScheme)
-	}
-
-	result.AddError(path+".data."+key, code, nil, message)
-}
-
-func validateKubeconfigBase64(kubeconfigB64 string) error {
+// ValidateKubeconfigBase64 decodes and validates a base64-encoded kubeconfig.
+func ValidateKubeconfigBase64(kubeconfigB64 string) error {
 	kubeconfigBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(kubeconfigB64))
 	if err != nil {
 		return fmt.Errorf("decode kubeconfig: %w", err)
@@ -190,43 +228,154 @@ func validateKubeconfigBase64(kubeconfigB64 string) error {
 	return nil
 }
 
-func getNamedResourcePath(kind, name string) string {
-	if name == "" {
-		return kind
-	}
-
-	return fmt.Sprintf("%s/%s", kind, name)
+// ServiceAccountValidator validates credentials with ServiceAccount auth scheme.
+type ServiceAccountValidator struct {
+	// ValidateContentFunc validates the service account JSON content.
+	// When nil, only schema checks are performed.
+	ValidateContentFunc func(string) error
 }
 
-func getManagedCredentialSecrets(state *State) []cpapi.CredentialSecret {
-	secrets := make([]cpapi.CredentialSecret, 0, len(state.CredentialSecrets))
-	for _, secret := range state.CredentialSecrets {
-		if secret.Namespace != "" && secret.Namespace != state.NamespaceName {
-			continue
-		}
+// Validate checks that secret key is present, identity is absent, and optionally validates content.
+func (v *ServiceAccountValidator) Validate(path string, data map[string]string) cpvalapi.Result {
+	result := cpvalapi.Result{}
 
-		if !secret.IsManaged() {
-			continue
-		}
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
 
-		secrets = append(secrets, secret)
+	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeServiceAccount, &result); !ok {
+		return result
 	}
 
-	return secrets
+	_ = validateUnsupportedCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+
+	if ok := validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result); !ok {
+		return result
+	}
+
+	if v.ValidateContentFunc == nil {
+		return result
+	}
+
+	serviceAccount := strings.TrimSpace(data[cpapi.CredentialSecretSecretKey])
+	if err := v.ValidateContentFunc(serviceAccount); err != nil {
+		result.AddError(
+			fmt.Sprintf("%s.data.%s", path, cpapi.CredentialSecretSecretKey),
+			CodeInvalidServiceAccountSecret,
+			"masked",
+			fmt.Sprintf("invalid service account: %v", err),
+		)
+	}
+
+	return result
 }
 
-func findCredentialSecret(state *State, name string) (cpapi.CredentialSecret, bool) {
-	for _, secret := range state.CredentialSecrets {
-		if secret.Name != name {
-			continue
-		}
+// UserPasswordValidator validates credentials with UserPassword auth scheme.
+type UserPasswordValidator struct {
+}
 
-		if secret.Namespace != "" && secret.Namespace != state.NamespaceName {
-			continue
-		}
+// Validate checks that identity and secret keys are present.
+func (v *UserPasswordValidator) Validate(path string, data map[string]string) cpvalapi.Result {
+	result := cpvalapi.Result{}
 
-		return secret, true
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
+
+	if ok := validateAuthScheme(path, authScheme, cpapi.AuthSchemeUserPassword, &result); !ok {
+		return result
 	}
 
-	return cpapi.CredentialSecret{}, false
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretIdentityKey, authScheme, &result)
+	_ = validateRequiredCredentialKey(path, data, cpapi.CredentialSecretSecretKey, authScheme, &result)
+
+	return result
+}
+
+// CombinedCredentialValidator dispatches validation to a specific validator based on authScheme.
+type CombinedCredentialValidator struct {
+	ValidatorMap map[cpapi.AuthScheme]CredentialsValidator
+}
+
+// Validate selects a validator from ValidatorMap by authScheme or reports an unsupported scheme error.
+func (v *CombinedCredentialValidator) Validate(path string, data map[string]string) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	authScheme := cpapi.AuthScheme(strings.TrimSpace(data[cpapi.CredentialSecretAuthSchemeKey]))
+
+	validator, ok := v.ValidatorMap[authScheme]
+	if !ok {
+		// Sorted: the list of allowed values must not change between runs.
+		expectedAuthSchemes := slices.Sorted(maps.Keys(v.ValidatorMap))
+		result.AddError(
+			path+".data.authScheme",
+			CodeUnsupportedAuthScheme,
+			string(authScheme),
+			fmt.Sprintf("authScheme %q is not allowed, expected %v", authScheme, expectedAuthSchemes),
+		)
+		return result
+	}
+
+	result.Merge(validator.Validate(path, data))
+
+	return result
+}
+
+func validateAuthScheme(path string, actualAuthScheme, expectedAuthScheme cpapi.AuthScheme, result *cpvalapi.Result) bool {
+	if actualAuthScheme == "" {
+		result.AddError(path+".data.authScheme", CodeAuthSchemeRequired, nil, "authScheme is required")
+		return false
+	}
+
+	if actualAuthScheme != expectedAuthScheme {
+		result.AddError(
+			path+".data.authScheme",
+			CodeUnsupportedAuthScheme,
+			string(actualAuthScheme),
+			fmt.Sprintf("authScheme %q is not allowed, expected %q", actualAuthScheme, expectedAuthScheme),
+		)
+		return false
+	}
+
+	return true
+}
+
+func validateRequiredCredentialKey(path string, data map[string]string, key string, authScheme cpapi.AuthScheme, result *cpvalapi.Result) bool {
+	if strings.TrimSpace(data[key]) != "" {
+		return true
+	}
+
+	var code, message string
+	switch key {
+	case cpapi.CredentialSecretIdentityKey:
+		code = CodeCredentialIdentityRequired
+		message = fmt.Sprintf("identity is required for authScheme %q", authScheme)
+	case cpapi.CredentialSecretSecretKey:
+		code = CodeCredentialSecretKeyRequired
+		message = fmt.Sprintf("secret is required for authScheme %q", authScheme)
+	default:
+		code = CodeCredentialFieldRequired
+		message = fmt.Sprintf("%s is required for authScheme %q", key, authScheme)
+	}
+
+	result.AddError(fmt.Sprintf("%s.data.%s", path, key), code, nil, message)
+	return false
+}
+
+func validateUnsupportedCredentialKey(path string, data map[string]string, key string, authScheme cpapi.AuthScheme, result *cpvalapi.Result) bool { //nolint:unparam
+	if strings.TrimSpace(data[key]) == "" {
+		return true
+	}
+
+	var code, message string
+	switch key {
+	case cpapi.CredentialSecretIdentityKey:
+		code = CodeCredentialIdentityUnsupported
+		message = fmt.Sprintf("identity is unsupported for authScheme %q", authScheme)
+	case cpapi.CredentialSecretSecretKey:
+		code = CodeCredentialSecretKeyUnsupported
+		message = fmt.Sprintf("secret is unsupported for authScheme %q", authScheme)
+	default:
+		code = CodeCredentialFieldUnsupported
+		message = fmt.Sprintf("%s is unsupported for authScheme %q", key, authScheme)
+	}
+
+	result.AddError(fmt.Sprintf("%s.data.%s", path, key), code, nil, message)
+	return false
 }

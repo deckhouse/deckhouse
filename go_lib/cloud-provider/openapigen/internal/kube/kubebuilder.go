@@ -17,9 +17,12 @@ limitations under the License.
 package kube
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
+	"golang.org/x/tools/go/packages"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-tools/pkg/crd"
 	crdmarkers "sigs.k8s.io/controller-tools/pkg/crd/markers"
@@ -88,8 +91,53 @@ func GetCRDFromRoots(roots []any, maxDescLen *int) (*apiextensionsv1.CustomResou
 		parser.NeedCRDFor(gk, maxDescLen)
 	}
 
+	if err := checkPackageErrors(allPkgs); err != nil {
+		return nil, err
+	}
+
 	crdVal := parser.CustomResourceDefinitions[groupKinds[0]]
 	return &crdVal, nil
+}
+
+const (
+	// compensatedMarkerError marks the one class of controller-tools failure that openapigen
+	// repairs itself: a validation marker on a field whose type is a named type. At that point
+	// the field schema is a bare $ref with an empty type, so controller-tools refuses the marker
+	// and reports `found type ""`. The deckhouse marker pass re-applies such markers after $ref
+	// resolution, see the compensating markers in the markers package.
+	compensatedMarkerError = `found type ""`
+)
+
+// checkPackageErrors turns controller-tools marker failures into generation failures.
+//
+// Without this, a marker controller-tools refuses is dropped silently and the constraint
+// simply disappears from the generated CRD or config-values schema: a real loss of
+// in-cluster validation that looks like a successful generation.
+func checkPackageErrors(pkgs []*loader.Package) error {
+	var reported []error
+	for _, pkg := range pkgs {
+		for _, pkgErr := range pkg.Errors {
+			// Marker and schema failures are recorded as UnknownError (loader.PositionedError).
+			// Parse and type-check errors are a different matter: controller-tools type-checks
+			// the target package in isolation, so imports from other Go modules routinely come
+			// out as "undefined: <pkg>" without affecting the generated schema.
+			if pkgErr.Kind != packages.UnknownError {
+				continue
+			}
+
+			if strings.Contains(pkgErr.Error(), compensatedMarkerError) {
+				continue
+			}
+
+			reported = append(reported, pkgErr)
+		}
+	}
+
+	if len(reported) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("controller-tools rejected markers, constraints would be lost silently: %w", errors.Join(reported...))
 }
 
 func GetJSONSchemaPropsFromDefaultMarkers(root any) (*apiextensionsv1.JSONSchemaProps, error) {
@@ -132,6 +180,11 @@ func getJSONSchemaProps(root any, reg *markers.Registry) (*apiextensionsv1.JSONS
 	ident := crd.TypeIdent{Package: rtPkg[0], Name: rt.Name()}
 
 	parser.NeedFlattenedSchemaFor(ident)
+
+	if err := checkPackageErrors(rtPkg); err != nil {
+		return nil, err
+	}
+
 	flat := parser.FlattenedSchemata[ident]
 
 	return &flat, nil

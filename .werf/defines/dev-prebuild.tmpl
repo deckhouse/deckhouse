@@ -145,9 +145,11 @@ shell:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- /* cloud-provider-dvp is external: it carries no terraform_versions.yml
-       entry, but it ships the capi templates node-manager links here. */}}
+{{- /* cloud-provider-dvp and cloud-provider-yandex are external: they carry no
+       terraform_versions.yml entry, but they ship the capi and
+       cloud-instance-manager templates node-manager links here. */}}
 {{- $providers = append $providers "dvp" }}
+{{- $providers = append $providers "yandex" }}
 rm /deckhouse/modules/040-node-manager/capi/* /deckhouse/modules/040-node-manager/cloud-providers/*
 for item in {{ join " " $providers }}; do
   if [ -d /deckhouse/modules/030-cloud-provider-${item}/capi ]; then

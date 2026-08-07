@@ -1,30 +1,980 @@
 positive:
   configValues:
-    # empty configuration is valid
-    - {}
+    # ==========================================
+    # Required fields only (minimal valid configs)
+    # ==========================================
 
-    # empty storage class is valid
-    - "storageClass": {}
+    # layout: Standard
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
 
-    # only exclude
-    - storageClass:
-        exclude: ["disk-type", "ssd-.*"]
+    # layout: WithoutNAT
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: WithoutNAT
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
 
-    # only default
-    - storageClass:
-        default: "ssd"
+    # layout: WithNATInstance (requires withNATInstance section)
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: WithNATInstance
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          withNATInstance:
+            natInstanceExternalAddress: 198.51.100.1
 
-    # all in
-    - storageClass:
-        default: "ssd"
-        exclude: ["disk-type", "ssd-.*"]
+    # ==========================================
+    # zones
+    # ==========================================
+
+    # single zone
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          zones:
+            - ru-central1-a
+
+    # all available zones
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          zones:
+            - ru-central1-a
+            - ru-central1-b
+            - ru-central1-d
+            - ru-central1-e
+
+    # ==========================================
+    # dhcpOptions
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          dhcpOptions:
+            domainName: example.com
+            domainNameServers:
+              - 8.8.8.8
+              - 8.8.4.4
+
+    # ==========================================
+    # existing network and subnet maps
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          existingNetworkID: enp1234567890abcdef
+          existingZoneToSubnetIDMap:
+            ru-central1-a: e2lu8r1tbbtryhdpa9ro
+            ru-central1-b: e2lu8r1tbbtryhdpa9rb
+
+    # ==========================================
+    # external IP addresses (per node group)
+    # ==========================================
+
+    # Auto-assigned
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          externalIPAddresses:
+            master:
+              - Auto
+            worker:
+              - Auto
+              - Auto
+
+    # Static IPs
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          externalIPAddresses:
+            system:
+              - 198.51.100.5
+              - 203.0.113.10
+
+    # Mixed Auto and static
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          externalIPAddresses:
+            front:
+              - 198.51.100.1
+              - Auto
+
+    # ==========================================
+    # external subnet IDs (per node group)
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          externalSubnetIDs:
+            system:
+              - e9bnc7g9mu9mper9clk4
+              - e2lgddi5svochh5fbq96
+            worker:
+              - b0csh41c1or82vuch89v
+
+    # ==========================================
+    # labels
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          labels:
+            env: production
+            team: platform
+
+    # ==========================================
+    # storage
+    # ==========================================
+
+    # empty parameters (valid)
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters: {}
+
+    # only excludedStorageClasses
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          excludedStorageClasses:
+            - slow-disk
+            - legacy-hdd
+
+    # both storage fields
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          excludedStorageClasses:
+            - slow-disk
+
+    # storage disabled
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        disabled: true
+        parameters: {}
+
+    # ==========================================
+    # ccm (Cloud Controller Manager)
+    # ==========================================
+
+    # enabled with empty parameters
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      ccm:
+        parameters: {}
+
+    # enabled with additional external networks
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      ccm:
+        parameters:
+          additionalExternalNetworkIDs:
+            - enp-ext-net-1
+            - enp-ext-net-2
+
+    # disabled
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      ccm:
+        disabled: true
+        parameters: {}
+
+    # ==========================================
+    # WithNATInstance — full configuration
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: WithNATInstance
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          withNATInstance:
+            externalSubnetID: ext-subnet-id
+            internalSubnetCIDR: 192.168.1.0/24
+            internalSubnetID: int-subnet-id
+            natInstanceExternalAddress: 198.51.100.1
+            natInstanceInternalAddress: 10.0.0.1
+            natInstanceResources:
+              cores: 4
+              memory: 4096
+              platform: high-freq-v3
+
+    # ==========================================
+    # Combined: all features together
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          dhcpOptions:
+            domainName: internal.example.com
+          existingNetworkID: enp-existing
+          existingZoneToSubnetIDMap:
+            ru-central1-a: subnet-a-id
+          externalIPAddresses:
+            worker:
+              - Auto
+          externalSubnetIDs:
+            worker:
+              - e9bnc7g9mu9mper9clk4
+              - e2lgddi5svochh5fbq96
+          labels:
+            env: prod
+          zones:
+            - ru-central1-a
+            - ru-central1-b
+      ccm:
+        parameters:
+          additionalExternalNetworkIDs:
+            - enp-ext-1
+      storage:
+        parameters:
+          excludedStorageClasses:
+            - slow-hdd
+
+  values:
+    # ==========================================
+    # Internal: minimal providerClusterConfiguration
+    # (Standard layout)
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'
+
+    # ==========================================
+    # Internal: providerClusterConfiguration with
+    # master zones, labels, existing network
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          labels:
+            environment: production
+          existingNetworkID: enp-existing
+          masterNodeGroup:
+            replicas: 3
+            zones:
+              - ru-central1-a
+              - ru-central1-b
+              - ru-central1-d
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+              platform: standard-v3
+              diskSizeGB: 50
+              diskType: network-ssd
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'
+
+    # ==========================================
+    # Internal: providerClusterConfiguration
+    # with nodeGroups, DHCP, external IPs
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          dhcpOptions:
+            domainName: example.com
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+          nodeGroups:
+            - name: worker
+              replicas: 3
+              zones:
+                - ru-central1-a
+                - ru-central1-b
+              instanceClass:
+                cores: 8
+                memory: 16384
+                imageID: fd85m9q2qspfnsv055rh
+                coreFraction: 50
+                externalIPAddresses:
+                  - Auto
+                additionalLabels:
+                  node-type: worker
+            - name: front
+              replicas: 2
+              instanceClass:
+                cores: 2
+                memory: 4096
+                imageID: fd85m9q2qspfnsv055rh
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'
+
+    # ==========================================
+    # Internal: providerClusterConfiguration
+    # WithNATInstance layout
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: WithNATInstance
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          layout: WithNATInstance
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+          withNATInstance:
+            natInstanceExternalAddress: 198.51.100.1
+            natInstanceResources:
+              cores: 2
+              memory: 2048
+              platform: standard-v2
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'
+
+    # ==========================================
+    # Internal: providerDiscoveryData
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: eu-central-1
+          routeTableID: rt-12345
+          defaultLbTargetGroupNetworkId: lb-network-id
+          internalNetworkIDs:
+            - net-1
+            - net-2
+          zones:
+            - ru-central1-a
+            - ru-central1-b
+          zoneToSubnetIdMap:
+            ru-central1-a: subnet-a
+            ru-central1-b: subnet-b
+          shouldAssignPublicIPAddress: true
+
+    # ==========================================
+    # Internal: providerDiscoveryData
+    # with NAT instance fields
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: eu-central-1
+          routeTableID: rt-12345
+          defaultLbTargetGroupNetworkId: lb-network-id
+          internalNetworkIDs:
+            - net-1
+          zones:
+            - ru-central1-a
+          zoneToSubnetIdMap:
+            ru-central1-a: subnet-a
+          shouldAssignPublicIPAddress: true
+          natInstanceName: cluster-nat-instance
+          natInstanceZone: ru-central1-a
+          monitoringAPIKey: test-api-key
+
+    # ==========================================
+    # Internal: storageClasses and webhook cert
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        storageClasses:
+          - name: fast
+            type: network-ssd
+          - name: slow
+            type: network-hdd
+        capyControllerManagerWebhookCert:
+          crt: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
+          key: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
+          ca: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
+
+    # ==========================================
+    # Internal: cniSecretData
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        cniSecretData: "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV3b2dJQ0p0YjJSbElqb2dJbFpZVEVGT0lpd0tJQ0FpYldGemNYVmxjbUZrWlUxdlpHVWlPaUFpUWxCR0lncDkK" # gitleaks:allow
+
 negative:
   configValues:
-    - storageClass:
-        exclude: "must be array"
-    - storageClass:
-        exclude: {"key": "must be array"}
-    - storageClass:
-        default: ["must be string"]
-    - storageClass:
-        default: {"key": "must be string"}
+    # ==========================================
+    # Missing required top-level fields
+    # ==========================================
+
+    # missing provider
+    - nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+
+    # missing nodes
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+
+    # empty config
+    - {}
+
+    # ==========================================
+    # Missing required nested fields
+    # ==========================================
+
+    # missing provider.parameters
+    - provider: {}
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+
+    # missing cloudID in provider
+    - provider:
+        parameters:
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+
+    # missing folderID in provider
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+
+    # missing nodes.parameters
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes: {}
+
+    # missing layout in nodes
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+
+    # missing nodeNetworkCIDR in nodes
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          sshPublicKey: ssh-rsa AAAA...
+
+    # missing sshPublicKey in nodes
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+
+    # ==========================================
+    # Invalid enum values
+    # ==========================================
+
+    # invalid layout
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: UnknownLayout
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+
+    # invalid zone
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          zones:
+            - us-west-1
+
+    # ==========================================
+    # Invalid value types
+    # ==========================================
+
+    # zones must be array
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          zones: not-an-array
+
+    # excludedStorageClasses must be array
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          excludedStorageClasses: not-an-array
+
+    # excludedStorageClasses as object
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage:
+        parameters:
+          excludedStorageClasses:
+            key: not-an-array
+
+    # ==========================================
+    # Missing nested required 'parameters'
+    # ==========================================
+
+    # ccm missing required 'parameters'
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      ccm: {}
+
+    # storage missing required 'parameters'
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      storage: {}
+
+    # ==========================================
+    # externalSubnetIDs items type
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          externalSubnetIDs:
+            system:
+              - 123
+              - 456
+
+    # ==========================================
+    # additionalExternalNetworkIDs items type
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      ccm:
+        parameters:
+          additionalExternalNetworkIDs:
+            - 123
+            - 456
+
+  values:
+    # ==========================================
+    # Internal: providerClusterConfiguration
+    # missing layout
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'
+
+    # ==========================================
+    # Internal: providerClusterConfiguration
+    # missing masterNodeGroup
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'
+
+    # ==========================================
+    # Internal: providerClusterConfiguration
+    # WithNATInstance layout without withNATInstance
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: WithNATInstance
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: YandexClusterConfiguration
+          layout: WithNATInstance
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+          provider:
+            cloudID: test-cloud-id
+            folderID: test-folder-id
+            serviceAccountJSON: '{"id": "id"}'
+
+    # ==========================================
+    # Internal: providerDiscoveryData
+    # missing required fields
+    # ==========================================
+
+    - provider:
+        parameters:
+          cloudID: test-cloud-id
+          folderID: test-folder-id
+      nodes:
+        parameters:
+          layout: Standard
+          nodeNetworkCIDR: 10.0.0.0/16
+          sshPublicKey: ssh-rsa AAAA...
+      internal:
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: YandexCloudDiscoveryData
+          region: test

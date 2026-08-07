@@ -18,14 +18,15 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
+	testprovider "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 )
 
 const testInstanceClassKind = "DVPInstanceClass"
 
-func masterNodeGroupState(nodeGroups []cpapi.NodeGroup) *State {
-	return &State{
-		InstanceClassKind: testInstanceClassKind,
-		NodeGroups:        nodeGroups,
+func masterNodeGroupState(nodeGroups []cpapi.NodeGroup) *testState {
+	return &testState{
+		NodeGroups: nodeGroups,
 	}
 }
 
@@ -47,9 +48,9 @@ func validMasterNodeGroup() cpapi.NodeGroup {
 func TestValidateNodeGroupsClassReferenceNilState(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateNodeGroupsClassReference(nil, true)
-	if !hasViolationCode(result, CodeInternalStateNil) {
-		t.Fatalf("ValidateNodeGroupsClassReference(nil) = %q, want %s", result.Error(), CodeInternalStateNil)
+	result := ValidateNodeGroupsClassReference[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig](nil, true)
+	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
+		t.Fatalf("ValidateNodeGroupsClassReference(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
 }
 
@@ -62,18 +63,6 @@ func TestValidateNodeGroupsClassReferenceSkipsNilCloudInstancesOnMaster(t *testi
 	result := ValidateNodeGroupsClassReference(masterNodeGroupState([]cpapi.NodeGroup{master}), true)
 	if result.HasErrors() {
 		t.Fatalf("ValidateNodeGroupsClassReference() unexpected errors for NodeGroup without CloudInstances: %s", result.Error())
-	}
-}
-
-func TestValidateNodeGroupsClassReferenceRejectsInvalidInstanceClassKind(t *testing.T) {
-	t.Parallel()
-
-	master := validMasterNodeGroup()
-	master.Spec.CloudInstances.ClassReference.Kind = "WrongKind"
-
-	result := ValidateNodeGroupsClassReference(masterNodeGroupState([]cpapi.NodeGroup{master}), true)
-	if !hasViolationCode(result, "node_group_invalid_instance_class_kind") {
-		t.Fatalf("ValidateNodeGroupsClassReference() = %q", result.Error())
 	}
 }
 
@@ -97,8 +86,8 @@ func TestValidateNodeGroupsClassReferenceReportsKindAndNameErrors(t *testing.T) 
 	master.Spec.CloudInstances.ClassReference.Name = ""
 
 	result := ValidateNodeGroupsClassReference(masterNodeGroupState([]cpapi.NodeGroup{master}), true)
-	if !hasViolationCode(result, "node_group_invalid_instance_class_kind") {
-		t.Fatalf("ValidateNodeGroupsClassReference() = %q, want invalid kind", result.Error())
+	if hasViolationCode(result, "node_group_invalid_instance_class_kind") {
+		t.Fatalf("ValidateNodeGroupsClassReference() unexpected kind validation error: %q", result.Error())
 	}
 	if !hasViolationCode(result, "node_group_class_reference_name_required") {
 		t.Fatalf("ValidateNodeGroupsClassReference() = %q, want missing name", result.Error())
@@ -109,7 +98,7 @@ func TestValidateNodeGroupsClassReferenceSuccess(t *testing.T) {
 	t.Parallel()
 
 	state := masterNodeGroupState([]cpapi.NodeGroup{validMasterNodeGroup()})
-	state.InstanceClasses = []cpapi.InstanceClass{{ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"}}}
+	state.InstanceClasses = []*testprovider.InstanceClass{testInstanceClass(testInstanceClassKind, "master-dvp", false)}
 
 	result := ValidateNodeGroupsClassReference(state, true)
 	if result.HasErrors() {
@@ -127,7 +116,7 @@ func TestValidateNodeGroupsClassReferenceSkipsNilCloudInstancesOnWorker(t *testi
 			Spec:       cpapi.NodeGroupSpec{NodeType: cpapi.NodeTypeCloudPermanent},
 		},
 	})
-	state.InstanceClasses = []cpapi.InstanceClass{{ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"}}}
+	state.InstanceClasses = []*testprovider.InstanceClass{testInstanceClass(testInstanceClassKind, "master-dvp", false)}
 
 	result := ValidateNodeGroupsClassReference(state, true)
 	if result.HasErrors() {
@@ -145,7 +134,7 @@ func TestValidateNodeGroupsClassReferenceSkipsNonCloudPermanentNodeGroups(t *tes
 			Spec:       cpapi.NodeGroupSpec{}, // NodeType not set (not CloudPermanent)
 		},
 	})
-	state.InstanceClasses = []cpapi.InstanceClass{{ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"}}}
+	state.InstanceClasses = []*testprovider.InstanceClass{testInstanceClass(testInstanceClassKind, "master-dvp", false)}
 
 	result := ValidateNodeGroupsClassReference(state, true)
 	if result.HasErrors() {
@@ -204,7 +193,7 @@ func TestValidateNodeGroupsClassReferenceIteratesAllNodeGroups(t *testing.T) {
 			},
 		},
 	})
-	state.InstanceClasses = []cpapi.InstanceClass{{ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"}}}
+	state.InstanceClasses = []*testprovider.InstanceClass{testInstanceClass(testInstanceClassKind, "master-dvp", false)}
 
 	result := ValidateNodeGroupsClassReference(state, true)
 	if !hasViolationCode(result, "instance_class_not_found") {
@@ -234,7 +223,7 @@ func TestValidateNodeGroupsClassReferenceAllowsNonCloudPermanentWithoutCloudInst
 			Spec:       cpapi.NodeGroupSpec{}, // NodeType not set (not CloudPermanent)
 		},
 	})
-	state.InstanceClasses = []cpapi.InstanceClass{{ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"}}}
+	state.InstanceClasses = []*testprovider.InstanceClass{testInstanceClass(testInstanceClassKind, "master-dvp", false)}
 
 	result := ValidateNodeGroupsClassReference(state, true)
 	if result.HasErrors() {
@@ -245,9 +234,9 @@ func TestValidateNodeGroupsClassReferenceAllowsNonCloudPermanentWithoutCloudInst
 func TestValidateMasterNodeGroupPresenceNilState(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateMasterNodeGroupPresence(nil)
-	if !hasViolationCode(result, CodeInternalStateNil) {
-		t.Fatalf("ValidateMasterNodeGroupPresence(nil) = %q, want %s", result.Error(), CodeInternalStateNil)
+	result := ValidateMasterNodeGroupPresence[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig](nil)
+	if !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
+		t.Fatalf("ValidateMasterNodeGroupPresence(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
 }
 

@@ -2,9 +2,9 @@
 
 dhctl works with two kinds of cloud providers:
 
-- **In-tree** (`aws`, `azure`, `gcp`, `yandex`, …): their schemas, `terraform_versions.yml`
+- **In-tree** (`aws`, `azure`, `gcp`, `vcd`, …): their schemas, `terraform_versions.yml`
   and validators are baked into the deckhouse/candi image. Nothing is downloaded at runtime.
-- **External** (`dvp`, …): everything they need — schemas, the terraform/opentofu plugin,
+- **External** (`dvp`, `yandex`, …): everything they need — schemas, the terraform/opentofu plugin,
   the settings files and the validator binary — ships in a per-provider **OCI bundle**
   (`cloud-provider-<name>/terraform-manager`) that dhctl downloads and unpacks at runtime.
 
@@ -105,7 +105,7 @@ on disk from the bundle.
 Provider selection is in `meta_config_validator_provider.go` (`selectValidator`):
 
 - `""` → no validation;
-- `yandex`, `vcd` → their in-tree validators (`NewMetaConfigValidator`);
+- `vcd` → its in-tree validator (`NewMetaConfigValidator`);
 - otherwise → if `<download-root>/<provider>/validator` exists, the **external binary validator**
   (`external.NewBinaryValidator`); if the provider's schema is in candi, a default prefix check;
   otherwise an error.

@@ -424,6 +424,28 @@ alerts:
         The cloud-provider-dvp module is waiting for migration resources to be applied.
       severity: "6"
       markupFormat: markdown
+    - name: D8CloudProviderYandexCloudMigrationPending
+      sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 030-cloud-provider-yandex
+      module: cloud-provider-yandex
+      edition: ce
+      description: |-
+        The `cloud-provider-yandex` module has detected the legacy `YandexProviderClusterConfiguration` secret in the cluster
+        and is waiting for the new migration resources (ModuleConfig v2, CredentialSecret, NodeGroups, InstanceClasses)
+        to be applied before completing the migration.
+
+        To complete the migration, apply the resources from the `d8-migration-resources` Secret:
+
+        ```bash
+        d8 k -n d8-cloud-provider-yandex get secret d8-migration-resources -o jsonpath='{.data.resources\.yaml}' | base64 -d | d8 k apply -f -
+        ```
+
+        After applying the resources, the alert will disappear automatically once the module
+        detects that all required resources are in place.
+      summary: |
+        The cloud-provider-yandex module is waiting for migration resources to be applied.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ClusterAutoscalerManagerPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cluster-autoscaler.tpl
       moduleUrl: 040-node-manager

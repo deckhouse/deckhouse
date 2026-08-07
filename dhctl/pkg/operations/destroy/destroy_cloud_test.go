@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
@@ -56,7 +57,12 @@ import (
 var rootTmpDirCloud = path.Join(os.TempDir(), "dhctl-test-cloud-destroy")
 
 func TestCloudDestroy(t *testing.T) {
-	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
+	// Params.Options is nil in these tests, so ParseConfigFromCluster resolves
+	// to the fixed default download dir (withDownloadDir(nil)). Yandex's
+	// external validator ships in the terraform-manager bundle, not in-tree,
+	// so fake the delivery there instead of hitting the registry.
+	tests.StubDeliveredProviderBundle(t, options.DefaultTmpDir(), "yandex")
+
 	defer func() {
 		logger := dhlog.Discard()
 		if err := os.RemoveAll(rootTmpDirCloud); err != nil {

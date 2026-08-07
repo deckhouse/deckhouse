@@ -4,38 +4,34 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package webhooks
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
-	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
+	cpadmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
+	dvpicv1aplha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	dvpadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/admission"
 )
 
 type NodeGroupValidator struct {
-	builder *cpvaladmission.StateBuilder
+	factory *dvpval.AdmissionStateBuilderFactory
 	object  runtime.Object
 }
 
@@ -46,9 +42,9 @@ var (
 	nodeGroupLog = logf.Log.WithName("node-group")
 )
 
-func NewNodeGroupValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *NodeGroupValidator {
+func NewNodeGroupValidator(factory *dvpval.AdmissionStateBuilderFactory, object runtime.Object) *NodeGroupValidator {
 	return &NodeGroupValidator{
-		builder: builder,
+		factory: factory,
 		object:  object,
 	}
 }
@@ -61,7 +57,7 @@ func (v *NodeGroupValidator) Register(manager ctrl.Manager) error {
 }
 
 func (v *NodeGroupValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	if !shouldValidateNodeGroup(obj) {
+	if !v.shouldValidateNodeGroup(obj) {
 		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup", "name", objectName(obj))
 		return nil, nil
 	}
@@ -70,7 +66,7 @@ func (v *NodeGroupValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 }
 
 func (v *NodeGroupValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	if !shouldValidateNodeGroupUpdate(oldObj, newObj) {
+	if !v.shouldValidateNodeGroupUpdate(oldObj, newObj) {
 		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup update", "name", objectName(newObj))
 		return nil, nil
 	}
@@ -79,7 +75,7 @@ func (v *NodeGroupValidator) ValidateUpdate(ctx context.Context, oldObj, newObj 
 }
 
 func (v *NodeGroupValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	if !shouldValidateNodeGroup(obj) {
+	if !v.shouldValidateNodeGroup(obj) {
 		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup delete", "name", objectName(obj))
 		return nil, nil
 	}
@@ -101,7 +97,14 @@ func (v *NodeGroupValidator) validate(
 		"namespace", objectNamespace(obj),
 	)
 
-	state, err := v.builder.BuildForNodeGroup(ctx, operation, obj)
+	builder := v.factory.CreateBuilder()
+	if operation != admissionv1.Delete {
+		builder = builder.
+			SetNodeGroup(ctx, obj).
+			AddAssociatedInstanceClasses(ctx, name)
+	}
+
+	state, err := builder.Build(ctx)
 	if err != nil {
 		nodeGroupLog.Error(err, "failed to build validation state", "name", name)
 		return nil, internalBuildError(err)
@@ -136,28 +139,28 @@ func (v *NodeGroupValidator) validate(
 	return warnings, nil
 }
 
-func shouldValidateNodeGroup(obj runtime.Object) bool {
-	nodeGroup, err := decodeNodeGroup(obj)
+func (v *NodeGroupValidator) shouldValidateNodeGroup(obj runtime.Object) bool {
+	nodeGroup, err := cpadmission.DecodeNodeGroupObject(obj)
 	if err != nil {
 		return true
 	}
 
-	return isDVPRelevantNodeGroup(nodeGroup)
+	return v.isDVPRelevantNodeGroup(nodeGroup)
 }
 
-func shouldValidateNodeGroupUpdate(oldObj, newObj runtime.Object) bool {
-	if shouldValidateNodeGroup(newObj) {
+func (v *NodeGroupValidator) shouldValidateNodeGroupUpdate(oldObj, newObj runtime.Object) bool {
+	if v.shouldValidateNodeGroup(newObj) {
 		return true
 	}
 
-	if oldObj != nil && shouldValidateNodeGroup(oldObj) {
+	if oldObj != nil && v.shouldValidateNodeGroup(oldObj) {
 		return true
 	}
 
 	return false
 }
 
-func isDVPRelevantNodeGroup(nodeGroup cpapi.NodeGroup) bool {
+func (v *NodeGroupValidator) isDVPRelevantNodeGroup(nodeGroup *cpapi.NodeGroup) bool {
 	if nodeGroup.Spec.NodeType == cpapi.NodeTypeCloudPermanent {
 		return true
 	}
@@ -166,36 +169,5 @@ func isDVPRelevantNodeGroup(nodeGroup cpapi.NodeGroup) bool {
 		return false
 	}
 
-	return nodeGroup.Spec.CloudInstances.ClassReference.Kind == dvpmeta.InstanceClassKind
-}
-
-func decodeNodeGroup(obj runtime.Object) (cpapi.NodeGroup, error) {
-	object, err := runtimeObjectToMap(obj)
-	if err != nil {
-		return cpapi.NodeGroup{}, err
-	}
-
-	return cpval.DecodeJSONValue[cpapi.NodeGroup](object)
-}
-
-func runtimeObjectToMap(obj runtime.Object) (map[string]any, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("runtime object is nil")
-	}
-
-	if unstructuredObj, ok := obj.(*unstructured.Unstructured); ok {
-		return unstructuredObj.Object, nil
-	}
-
-	raw, err := json.Marshal(obj)
-	if err != nil {
-		return nil, fmt.Errorf("marshal runtime object: %w", err)
-	}
-
-	var object map[string]any
-	if err := json.Unmarshal(raw, &object); err != nil {
-		return nil, fmt.Errorf("unmarshal runtime object: %w", err)
-	}
-
-	return object, nil
+	return nodeGroup.Spec.CloudInstances.ClassReference.Kind == dvpicv1aplha1.GroupVersionKind.Kind
 }

@@ -15,7 +15,9 @@
 package config
 
 import (
+	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -33,6 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -461,7 +464,8 @@ func TestParseConfigFromFiles(t *testing.T) {
 }
 
 func TestParseConfigFromCluster(t *testing.T) {
-	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
+	yandexCandiDir := tests.RequireProviderCandiDir(t, "yandex")
+
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
 		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, &options.GlobalOptions{}, "")
 
@@ -674,6 +678,31 @@ internalNetworkCIDRs:
 	})
 
 	t.Run("Cloud cluster", func(t *testing.T) {
+		// Yandex now ships its external validator inside the terraform-manager
+		// bundle (no longer an in-tree validator provider), so
+		// providerCandiPresent requires a downloaded bundle. Stub the
+		// resolve+download vars instead of hitting the registry, copying the
+		// real schema from the provider's candi so these tests keep exercising
+		// actual YandexClusterConfiguration validation.
+		origDigest := resolveProviderBundleDigest
+		resolveProviderBundleDigest = func(_ string) (string, error) {
+			return "sha256:test-yandex-digest", nil
+		}
+		t.Cleanup(func() { resolveProviderBundleDigest = origDigest })
+
+		origDownload := downloadProviderBundle
+		downloadProviderBundle = func(_ context.Context, _, dest, _ string, _ image.RegistryConfig, _ bool) error {
+			schema, err := os.ReadFile(filepath.Join(yandexCandiDir, "openapi", "cluster_configuration.yaml"))
+			if err != nil {
+				return err
+			}
+			if err := os.MkdirAll(filepath.Join(dest, "openapi"), 0o755); err != nil {
+				return err
+			}
+			return os.WriteFile(filepath.Join(dest, "openapi", "cluster_configuration.yaml"), schema, 0o644)
+		}
+		t.Cleanup(func() { downloadProviderBundle = origDownload })
+
 		clusterGenericConfig := `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration

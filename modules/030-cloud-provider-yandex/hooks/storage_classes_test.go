@@ -37,10 +37,11 @@ global:
   discovery: {}
 cloudProviderYandex:
   internal: {}
-  storageClass:
-    exclude:
-    - .*-hdd
-    - bar
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - .*-hdd
+      - bar
 `
 	)
 

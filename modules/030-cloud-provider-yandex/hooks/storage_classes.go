@@ -39,4 +39,8 @@ var storageClassesConfig = []storage_class.StorageClass{
 	},
 }
 
-var _ = storage_class.RegisterHook("cloudProviderYandex", storageClassesConfig)
+var _ = storage_class.RegisterHook(storage_class.Config{
+	ModuleName:     "cloudProviderYandex",
+	StorageClasses: storageClassesConfig,
+	ExcludePath:    "storage.parameters.excludedStorageClasses",
+})
