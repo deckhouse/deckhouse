@@ -255,6 +255,43 @@ spec:
         team: frontend
 ```
 
+## Назначение прав через CLI
+
+Команда [`d8 iam access`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-access) позволяет управлять правилами авторизации без написания YAML-манифестов. Она создаёт и удаляет ресурсы [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) и [AuthorizationRule](cr.html#authorizationrule).
+
+Доступные уровни доступа: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
+
+```shell
+# Назначить роль Admin пользователю в неймспейсе dev
+d8 iam access grant user anton --access-level Admin -n dev
+
+# Назначить роль Admin в нескольких неймспейсах
+d8 iam access grant user anton --access-level Admin -n dev -n stage
+
+# Кластерная роль (без системных неймспейсов)
+d8 iam access grant user anton --access-level ClusterAdmin --scope cluster
+
+# Кластерная роль (включая системные неймспейсы)
+d8 iam access grant user anton --access-level ClusterAdmin --scope all-namespaces
+
+# Роль по label-селектору неймспейсов
+d8 iam access grant group admins --access-level Editor --scope labels=team=platform,tier=prod
+
+# С дополнительными возможностями
+d8 iam access grant group admins --access-level Editor -n dev --port-forwarding --allow-scale
+
+# Превью манифеста без применения
+d8 iam access grant user anton --access-level Admin -n dev --dry-run -o yaml
+
+# Отозвать права
+d8 iam access revoke user anton -n dev
+d8 iam access revoke user anton --scope cluster
+
+# Просмотр правил
+d8 iam list rules
+d8 iam get rule <имя>
+```
+
 ## Пример выдачи прав на все неймспейсы
 
 {% alert level="info" %}

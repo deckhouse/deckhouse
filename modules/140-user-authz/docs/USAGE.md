@@ -255,6 +255,43 @@ spec:
         team: frontend
 ```
 
+## Assigning permissions via CLI
+
+The [`d8 iam access`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-access) command provides a convenient way to manage authorization rules without writing YAML manifests. It creates and deletes [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) and [AuthorizationRule](cr.html#authorizationrule) resources.
+
+Available access levels: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
+
+```shell
+# Grant the Admin role to a user in the dev namespace
+d8 iam access grant user anton --access-level Admin -n dev
+
+# Grant the Admin role in multiple namespaces
+d8 iam access grant user anton --access-level Admin -n dev -n stage
+
+# Cluster-wide role (excluding system namespaces)
+d8 iam access grant user anton --access-level ClusterAdmin --scope cluster
+
+# Cluster-wide role (including system namespaces)
+d8 iam access grant user anton --access-level ClusterAdmin --scope all-namespaces
+
+# Role scoped by namespace label selector
+d8 iam access grant group admins --access-level Editor --scope labels=team=platform,tier=prod
+
+# With additional capabilities
+d8 iam access grant group admins --access-level Editor -n dev --port-forwarding --allow-scale
+
+# Preview the manifest without applying it
+d8 iam access grant user anton --access-level Admin -n dev --dry-run -o yaml
+
+# Revoke permissions
+d8 iam access revoke user anton -n dev
+d8 iam access revoke user anton --scope cluster
+
+# View authorization rules
+d8 iam list rules
+d8 iam get rule <name>
+```
+
 ## Example of granting access to all namespaces
 
 {% alert level="info" %}

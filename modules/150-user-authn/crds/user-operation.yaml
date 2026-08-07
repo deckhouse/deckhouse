@@ -132,7 +132,12 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+            Describes a single-use operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+
+            A UserOperation is immutable — its specification cannot be changed after creation.
+            After creation, the hook processes the operation and writes the result to `status.phase`
+            (`Succeeded` or `Failed`). Completed operations are automatically deleted after 24 hours.
+            To perform a new action, create a new UserOperation.
 
             For local users, the `ResetPassword`, `Reset2FA`, and `Lock` operations also delete
             the user's Dex OfflineSessions and RefreshToken objects. This terminates active
@@ -201,25 +206,29 @@ spec:
                   description: |
                     Type of the user operation. Possible values:
                     
-                    * `ResetPassword`: Password reset.
-                    * `Reset2FA`: Two-factor authentication reset.
-                    * `Lock`: User lock.
-                    * `Unlock`: User unlock.
+                    * `ResetPassword`: Password reset. Applies to local users (`spec.user`) only.
+                    * `Reset2FA`: Two-factor authentication reset. Applies to local users (`spec.user`) only.
+                    * `Lock`: User lock. Supports both local users (`spec.user`) and external users (`spec.target`).
+                    * `Unlock`: User unlock. Supports both local users (`spec.user`) and external users (`spec.target`).
                 initiatorType:
                   type: string
                   description: |
                     Indicates who initiated the operation. Possible values:
- 
-                    * `admin`: By an administrator.
-                    * `system`: Automatically by the system.
-                    * `self`: By the user.
+    
+                    * `admin`: By an administrator (e.g. via `d8 iam user` CLI or a manual UserOperation).
+                    * `system`: Automatically by the system (e.g. automatic lockout after exceeding `passwordPolicy.lockout.maxAttempts`).
+                    * `self`: By the user (self-service password reset in the DKP authentication interface).
                 resetPassword:
                   type: object
                   description: "Parameters for password reset."
                   properties:
                     newPasswordHash:
                       type: string
-                      description: "Bcrypt hash of the new password."
+                      description: |
+                        Bcrypt hash of the new password.
+
+                        Pass the raw bcrypt hash **without** Base64 encoding — the hook encodes it
+                        automatically before storing it in the User resource.
                 lock:
                   type: object
                   description: "Parameters for locking the user."
@@ -260,8 +269,10 @@ spec:
                   description: "Optional message about the result or failure of the operation."
                 completedAt:
                   type: string
-                  description: "Time when the operation was completed."
-      subresources: *subresources
-      additionalPrinterColumns: *additionalPrinterColumns
+                  description: |
+                    Time when the operation was completed, in RFC 3339 format (e.g. `2025-01-15T10:30:00Z`).
+                    Empty until the operation finishes processing.
+            subresources: *subresources
+            additionalPrinterColumns: *additionalPrinterColumns
 
 

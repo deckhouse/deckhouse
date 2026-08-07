@@ -202,3 +202,31 @@ A detailed example is described in the [Usage](/modules/user-authn/usage.html#co
 ## How is Dex protected against credential brute-forcing?
 
 Each user is allowed no more than 20 login attempts. After the limit is exhausted, one additional attempt is added every 6 seconds.
+
+## A UserOperation is in the Failed status — what should I do?
+
+Check the `status.message` field of the UserOperation resource for the error description:
+
+```shell
+d8 k get useroperation <name> -o jsonpath='{.status.message}'
+```
+
+Fix the cause (for example, an invalid password hash or a non-existent user), then create a new UserOperation. A UserOperation is immutable — its specification cannot be updated after creation.
+
+## How do I unlock a user?
+
+Use the command:
+
+```shell
+d8 iam user unlock <username>
+```
+
+Alternatively, create a new UserOperation resource with `type: Unlock`. Note that `ResetPassword`, `Reset2FA`, and `Lock` operations terminate all active sessions of the user.
+
+## A user was locked automatically — why?
+
+The number of failed login attempts exceeded `passwordPolicy.lockout.maxAttempts`. The user is locked for the duration specified in `passwordPolicy.lockout.lockDuration` and is unlocked automatically afterwards. An administrator can also unlock the user manually with `d8 iam user unlock <username>` or by creating a UserOperation with `type: Unlock`.
+
+## Can I cancel a UserOperation?
+
+No. A UserOperation is a single-use, immutable object. To reverse its effect, create an opposite operation — for example, create a UserOperation with `type: Unlock` after a `Lock` operation.
