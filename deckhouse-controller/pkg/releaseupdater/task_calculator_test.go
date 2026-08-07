@@ -620,8 +620,8 @@ func TestTaskCalculator_CalculatePendingReleaseTask(t *testing.T) {
 			},
 		},
 		{
-			// The immediate neighbour of any non-Pending/Deployed phase (here
-			// Skipped) still drives minor classification.
+			// Last-resort fallback: no Deployed and no Superseded release at all,
+			// so the immediate neighbour is the only reference available.
 			name:           "minor bump is minor when previous is skipped and none deployed",
 			releaseChannel: "stable",
 			releases: []v1alpha1.Release{
@@ -634,6 +634,71 @@ func TestTaskCalculator_CalculatePendingReleaseTask(t *testing.T) {
 				IsPatch:    false,
 				IsLatest:   true,
 				QueueDepth: &ReleaseQueueDepthDelta{},
+			},
+		},
+		{
+			// A Skipped sibling in the target minor must not make the bump look like
+			// a patch: v1.76.7 never ran, it was skipped when v1.76.8 appeared. The
+			// last version known to have run is the highest Superseded one, v1.75.13,
+			// so this is a minor bump and needs approval.
+			name:           "minor bump is minor when the neighbour is a skipped release of the target minor",
+			releaseChannel: "stable",
+			releases: []v1alpha1.Release{
+				&mockRelease{name: "v1.75.13", version: "1.75.13", phase: v1alpha1.DeckhouseReleasePhaseSuperseded},
+				&mockRelease{name: "v1.76.7", version: "1.76.7", phase: v1alpha1.DeckhouseReleasePhaseSkipped},
+				&mockRelease{name: "v1.76.8", version: "1.76.8", phase: v1alpha1.DeckhouseReleasePhasePending},
+			},
+			pendingRelease: &mockRelease{name: "v1.76.8", version: "1.76.8", phase: v1alpha1.DeckhouseReleasePhasePending},
+			expectedTask: &Task{
+				TaskType:   Process,
+				IsPatch:    false,
+				IsLatest:   true,
+				QueueDepth: &ReleaseQueueDepthDelta{},
+			},
+		},
+		{
+			// Interrupted deploy: v1.76.5 was marked Superseded before the new
+			// release could be marked Deployed. The Superseded trace shows the
+			// cluster already ran v1.76.5, so v1.76.8 is a genuine patch and must
+			// keep deploying automatically despite the older v1.75.14 below it.
+			name:           "patch stays patch when the highest superseded is in the same minor and none deployed",
+			releaseChannel: "stable",
+			releases: []v1alpha1.Release{
+				&mockRelease{name: "v1.75.14", version: "1.75.14", phase: v1alpha1.DeckhouseReleasePhaseSuperseded},
+				&mockRelease{name: "v1.76.5", version: "1.76.5", phase: v1alpha1.DeckhouseReleasePhaseSuperseded},
+				&mockRelease{name: "v1.76.7", version: "1.76.7", phase: v1alpha1.DeckhouseReleasePhaseSkipped},
+				&mockRelease{name: "v1.76.8", version: "1.76.8", phase: v1alpha1.DeckhouseReleasePhasePending},
+			},
+			pendingRelease: &mockRelease{name: "v1.76.8", version: "1.76.8", phase: v1alpha1.DeckhouseReleasePhasePending},
+			expectedTask: &Task{
+				TaskType:   Process,
+				IsPatch:    true,
+				IsLatest:   true,
+				QueueDepth: &ReleaseQueueDepthDelta{},
+			},
+		},
+		{
+			// The Deployed release wins over an older Superseded one: the cluster
+			// runs v1.76.7, so v1.76.8 is a patch even though the highest Superseded
+			// release, v1.75.14, is a minor behind. This is the steady state right
+			// after any minor upgrade.
+			name:           "patch stays patch when deployed is in the target minor and superseded is a minor behind",
+			releaseChannel: "stable",
+			releases: []v1alpha1.Release{
+				&mockRelease{name: "v1.75.14", version: "1.75.14", phase: v1alpha1.DeckhouseReleasePhaseSuperseded},
+				&mockRelease{name: "v1.76.7", version: "1.76.7", phase: v1alpha1.DeckhouseReleasePhaseDeployed},
+				&mockRelease{name: "v1.76.8", version: "1.76.8", phase: v1alpha1.DeckhouseReleasePhasePending},
+			},
+			pendingRelease: &mockRelease{name: "v1.76.8", version: "1.76.8", phase: v1alpha1.DeckhouseReleasePhasePending},
+			expectedTask: &Task{
+				TaskType: Process,
+				IsPatch:  true,
+				IsLatest: true,
+				DeployedReleaseInfo: &ReleaseInfo{
+					Name:    "v1.76.7",
+					Version: semver.MustParse("1.76.7"),
+				},
+				QueueDepth: &ReleaseQueueDepthDelta{Major: 0, Minor: 0, Patch: 1},
 			},
 		},
 	}
