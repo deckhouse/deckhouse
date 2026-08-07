@@ -406,6 +406,20 @@ run "state_b_with_external_ip_addresses_from_module_config" {
     condition     = output.kubernetes_data_device_path == "/dev/disk/by-id/virtio-kubernetes-data"
     error_message = "expected a stable device path for the kubernetes-data disk"
   }
+
+  # The instance class above omits platformID and diskType, exactly like the copy
+  # dhctl parses out of the bootstrap resources YAML before the apiserver applies
+  # the CRD defaults. The fallbacks must be the CRD defaults, otherwise the first
+  # converge after bootstrap replaces the master node and its etcd disk.
+  assert {
+    condition     = yandex_compute_instance.master.platform_id == "standard-v3"
+    error_message = "expected an omitted platformID to fall back to the CRD default standard-v3"
+  }
+
+  assert {
+    condition     = yandex_compute_disk.kubernetes_data.type == "network-hdd"
+    error_message = "expected an omitted diskType to fall back to the CRD default network-hdd"
+  }
 }
 
 # A v1alpha1 YandexInstanceClass reaches this module unconverted when dhctl parses
