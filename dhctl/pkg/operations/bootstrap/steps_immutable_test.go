@@ -223,11 +223,37 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 	stateCache, err := cache.NewStateCache(t.TempDir())
 	require.NoError(t, err)
 
-	b := &ClusterBootstrapper{Params: &Params{Options: options.New()}}
+	opts := options.New()
+	// The default CandiDir points into a temporary directory the installer image
+	// populates at runtime, which a test machine has no reason to have. Left at
+	// the default, this renders from an empty directory and the test only passes
+	// where a previous dhctl run happened to leave one behind.
+	opts.Global.CandiDir = repoCandiDir(t)
+
+	b := &ClusterBootstrapper{Params: &Params{Options: opts}}
 
 	return b, &bootstrapContext{
 		metaConfig: immutableTestMetaConfig(t),
 		stateCache: stateCache,
+	}
+}
+
+// repoCandiDir finds the checkout's own candi directory by walking up from the
+// test's working directory.
+func repoCandiDir(t *testing.T) string {
+	t.Helper()
+
+	dir, err := os.Getwd()
+	require.NoError(t, err)
+
+	for {
+		candidate := filepath.Join(dir, "candi")
+		if _, err := os.Stat(filepath.Join(candidate, "control-plane")); err == nil {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		require.NotEqual(t, parent, dir, "candi/control-plane not found above %s", dir)
+		dir = parent
 	}
 }
 
