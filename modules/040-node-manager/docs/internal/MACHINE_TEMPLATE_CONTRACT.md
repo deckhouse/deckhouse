@@ -79,6 +79,24 @@ The file travels in the provider's CAPI secret, the same channel as before:
 Put the file in your module's `capi/` directory; the helm template that builds the secret picks
 it up by basename.
 
+### Where the provider config comes from
+
+node-controller reads one thing for `.provider`: your subtree of the
+`d8-node-manager-cloud-provider` secret. It does not read your `ProviderClusterConfiguration`, and
+it does not read your ModuleConfig — those are inputs to your `registration.yaml`, which runs as a
+helm template in the Deckhouse addon-operator, well before node-controller sees anything.
+
+Two things follow:
+
+- **Where your module keeps its source of truth is invisible here.** `ProviderClusterConfiguration`,
+  ModuleConfig, or both during a migration with ModuleConfig winning — `registration.yaml` resolves
+  that and publishes the result. dvp already moved its `sshPublicKey` to ModuleConfig and
+  node-controller never noticed.
+- **The keys you publish are the contract surface.** Renaming one breaks the template
+  (`.provider.<oldKey>` renders empty) and, if it is a `providerRolloutFields` entry, the rollout
+  comparison too — the declared field reads as absent, which recreates every machine of the
+  provider. Treat reshaping the subtree as a migration, not a refactor.
+
 ## Render context — five roots, nothing else
 
 | Root | Type | What it is |
@@ -91,6 +109,35 @@ it up by basename.
 
 There is no `.Values`, no `.Chart`, no `.Files`, no `.Release`. node-manager is not helm; the v1
 engine emulated a values tree only so that migrated templates would not need rewriting.
+
+### `.provider`, concretely
+
+It is the value of your own key in the registration secret, decoded from JSON. node-controller
+picks the key by the value of `type` in the same secret.
+
+```console
+$ kubectl -n kube-system get secret d8-node-manager-cloud-provider -o yaml
+data:
+  type: ZHZw        # "dvp"
+  dvp:  e30=        # "{}"
+```
+
+For dvp that makes `.provider` an empty map — the module publishes no configuration of its own, and
+its template reads nothing from it. Reaching into it (`.provider.anything`) is a render error, as
+for any absent key.
+
+The same secret on a vcd cluster, with the `vcd` value decoded:
+
+```json
+{"sshPublicKey":"ssh-ed25519 AAAA…","organization":"org","virtualDataCenter":"vdc",
+ "server":"https://vcd.example.com","username":"admin","password":"…","apiToken":"…",
+ "metadata":{"owner":"platform"}}
+```
+
+so `.provider.metadata` is `{"owner":"platform"}` — the value the vcd template merges with the
+InstanceClass `additionalMetadata`. Note what else is in there: the subtree carries credentials, so
+never render `.provider` wholesale (`toYaml`, `range` over the whole map) — name the fields you
+need.
 
 ## Rules
 
