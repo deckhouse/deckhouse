@@ -1,0 +1,1438 @@
+From 5d877f16a71906fe6eb7bce8da4d538aab4e9d77 Mon Sep 17 00:00:00 2001
+From: yshch <8925723+yshch@users.noreply.github.com>
+Date: Mon, 13 Jul 2026 19:20:17 +0500
+Subject: [PATCH] Implement sidecar to waypoint routing
+
+---
+ pilot/pkg/features/ambient.go                 |   3 +
+ pilot/pkg/model/context.go                    |  18 ++-
+ pilot/pkg/model/context_test.go               |  70 +++++++++
+ pilot/pkg/model/push_context.go               |  18 ++-
+ pilot/pkg/model/service.go                    |   7 +-
+ pilot/pkg/networking/core/cluster.go          |  29 +++-
+ pilot/pkg/networking/core/cluster_builder.go  |   2 +-
+ pilot/pkg/networking/core/cluster_cache.go    |   5 +
+ pilot/pkg/networking/core/httproute.go        |   4 +-
+ pilot/pkg/networking/core/listener.go         |  82 +++++++++--
+ pilot/pkg/networking/core/listener_test.go    | 133 ++++++++++++++++++
+ pilot/pkg/networking/core/route/route.go      |  21 +++
+ .../pkg/networking/core/route/route_cache.go  |   8 ++
+ pilot/pkg/networking/core/route/route_test.go |  94 ++++++++++++-
+ .../serviceregistry/aggregate/controller.go   |  10 +-
+ .../aggregate/controller_test.go              |  18 +++
+ .../kube/controller/ambient/ambientindex.go   |   3 +-
+ .../controller/ambient/ambientindex_test.go   |   9 +-
+ .../controller/ambient/sidecar_interop.go     |  98 ++++++++++---
+ .../ambient/sidecar_interop_test.go           | 101 ++++++++++++-
+ pilot/pkg/serviceregistry/memory/discovery.go |   5 +-
+ pilot/pkg/xds/endpoints/endpoint_builder.go   |  43 ++++--
+ 22 files changed, 716 insertions(+), 65 deletions(-)
+
+diff --git a/pilot/pkg/features/ambient.go b/pilot/pkg/features/ambient.go
+index b0cfdb74d6..f5c5bc0fc7 100644
+--- a/pilot/pkg/features/ambient.go
++++ b/pilot/pkg/features/ambient.go
+@@ -60,6 +60,9 @@ var (
+ 	EnableIngressWaypointRouting = registerAmbient("ENABLE_INGRESS_WAYPOINT_ROUTING", true, false,
+ 		"If true, Gateways will call service waypoints if the 'istio.io/ingress-use-waypoint' label set on the Service.")
+ 
++	EnableSidecarWaypointRouting = registerAmbient("ENABLE_SIDECAR_WAYPOINT_ROUTING", true, false,
++		"If true, sidecars will route eligible service-addressed traffic through the Service's local waypoint.")
++
+ 	EnableAmbientMultiNetwork = registerAmbient("AMBIENT_ENABLE_MULTI_NETWORK", false, false,
+ 		"If true, the multi-network functionality will be enabled.")
+ 
+diff --git a/pilot/pkg/model/context.go b/pilot/pkg/model/context.go
+index 6cecc57338..d60383f8de 100644
+--- a/pilot/pkg/model/context.go
++++ b/pilot/pkg/model/context.go
+@@ -904,7 +904,23 @@ func (node *Proxy) FuzzValidate() bool {
+ }
+ 
+ func (node *Proxy) EnableHBONEListen() bool {
+-	return node.IsAmbient() || (features.EnableSidecarHBONEListening && bool(node.Metadata.EnableHBONE))
++	if node == nil {
++		return false
++	}
++	return node.IsAmbient() || (features.EnableSidecarHBONEListening && node.Metadata != nil && bool(node.Metadata.EnableHBONE))
++}
++
++func (node *Proxy) EnableHBONESend() bool {
++	if node == nil {
++		return false
++	}
++	return node.IsAmbient() || (features.EnableHBONESend && node.Metadata != nil && !bool(node.Metadata.DisableHBONESend))
++}
++
++// EnableSidecarWaypointRouting reports whether this sidecar should delegate
++// eligible service-addressed traffic to service waypoints.
++func (node *Proxy) EnableSidecarWaypointRouting() bool {
++	return node != nil && node.Type == SidecarProxy && features.EnableSidecarWaypointRouting && node.EnableHBONESend()
+ }
+ 
+ func (node *Proxy) SetWorkloadEntry(name string, create bool) {
+diff --git a/pilot/pkg/model/context_test.go b/pilot/pkg/model/context_test.go
+index 349d7683b1..5738bc6272 100644
+--- a/pilot/pkg/model/context_test.go
++++ b/pilot/pkg/model/context_test.go
+@@ -22,14 +22,84 @@ import (
+ 
+ 	structpb "google.golang.org/protobuf/types/known/structpb"
+ 
++	"istio.io/istio/pilot/pkg/features"
+ 	"istio.io/istio/pilot/pkg/model"
+ 	"istio.io/istio/pilot/pkg/serviceregistry/memory"
+ 	"istio.io/istio/pilot/pkg/serviceregistry/mock"
+ 	"istio.io/istio/pkg/config/host"
++	"istio.io/istio/pkg/test"
+ 	"istio.io/istio/pkg/test/util/assert"
+ 	"istio.io/istio/pkg/util/protomarshal"
+ )
+ 
++func TestEnableHBONESend(t *testing.T) {
++	cases := []struct {
++		name           string
++		proxy          *model.Proxy
++		globallyEnable bool
++		want           bool
++	}{
++		{"globally enabled", &model.Proxy{Metadata: &model.NodeMetadata{}}, true, true},
++		{"globally disabled", &model.Proxy{Metadata: &model.NodeMetadata{}}, false, false},
++		{"disabled for proxy", &model.Proxy{Metadata: &model.NodeMetadata{DisableHBONESend: true}}, true, false},
++		{"waypoint always enabled", &model.Proxy{Type: model.Waypoint, Metadata: &model.NodeMetadata{DisableHBONESend: true}}, false, true},
++		{"ztunnel always enabled", &model.Proxy{Type: model.Ztunnel}, false, true},
++		{"missing metadata", &model.Proxy{}, true, false},
++		{"nil proxy", nil, true, false},
++	}
++	for _, tt := range cases {
++		t.Run(tt.name, func(t *testing.T) {
++			test.SetForTest(t, &features.EnableHBONESend, tt.globallyEnable)
++			if got := tt.proxy.EnableHBONESend(); got != tt.want {
++				t.Fatalf("EnableHBONESend() = %v, want %v", got, tt.want)
++			}
++		})
++	}
++}
++
++func TestEnableSidecarWaypointRouting(t *testing.T) {
++	cases := []struct {
++		name    string
++		proxy   *model.Proxy
++		feature bool
++		hbone   bool
++		want    bool
++	}{
++		{"feature off, HBONE on", &model.Proxy{Type: model.SidecarProxy, Metadata: &model.NodeMetadata{}}, false, true, false},
++		{"feature on, HBONE off", &model.Proxy{Type: model.SidecarProxy, Metadata: &model.NodeMetadata{}}, true, false, false},
++		{"feature and HBONE on", &model.Proxy{Type: model.SidecarProxy, Metadata: &model.NodeMetadata{}}, true, true, true},
++		{"HBONE disabled for proxy", &model.Proxy{Type: model.SidecarProxy, Metadata: &model.NodeMetadata{DisableHBONESend: true}}, true, true, false},
++		{"missing metadata", &model.Proxy{Type: model.SidecarProxy}, true, true, false},
++		{"nil proxy", nil, true, true, false},
++		{"waypoint", &model.Proxy{Type: model.Waypoint, Metadata: &model.NodeMetadata{}}, true, true, false},
++		{"ztunnel", &model.Proxy{Type: model.Ztunnel, Metadata: &model.NodeMetadata{}}, true, true, false},
++		{"router", &model.Proxy{Type: model.Router, Metadata: &model.NodeMetadata{}}, true, true, false},
++	}
++	for _, tt := range cases {
++		t.Run(tt.name, func(t *testing.T) {
++			test.SetForTest(t, &features.EnableSidecarWaypointRouting, tt.feature)
++			test.SetForTest(t, &features.EnableHBONESend, tt.hbone)
++			if got := tt.proxy.EnableSidecarWaypointRouting(); got != tt.want {
++				t.Fatalf("EnableSidecarWaypointRouting() = %v, want %v", got, tt.want)
++			}
++		})
++	}
++}
++
++func TestEnableHBONEListenHandlesIncompleteProxy(t *testing.T) {
++	test.SetForTest(t, &features.EnableSidecarHBONEListening, true)
++	for name, proxy := range map[string]*model.Proxy{
++		"nil proxy":        nil,
++		"missing metadata": {},
++	} {
++		t.Run(name, func(t *testing.T) {
++			if proxy.EnableHBONEListen() {
++				t.Fatal("expected HBONE listening to be disabled")
++			}
++		})
++	}
++}
++
+ func TestServiceNode(t *testing.T) {
+ 	cases := []struct {
+ 		in  *model.Proxy
+diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
+index 0649831f07..38e10954c8 100644
+--- a/pilot/pkg/model/push_context.go
++++ b/pilot/pkg/model/push_context.go
+@@ -656,6 +656,13 @@ var (
+ 		"Number of conflicting tcp listeners with current tcp listener.",
+ 	)
+ 
++	// ProxyStatusConflictOutboundListenerWaypoint tracks ambiguous shared TCP/TLS
++	// listeners where direct and waypoint-owned services have identical filter-chain matches.
++	ProxyStatusConflictOutboundListenerWaypoint = monitoring.NewGauge(
++		"pilot_conflict_outbound_listener_waypoint",
++		"Number of direct and waypoint-owned services with conflicting outbound listener filter chains.",
++	)
++
+ 	// ProxyStatusConflictInboundListener tracks cases of multiple inbound
+ 	// listeners - 2 services selecting the same port of the pod.
+ 	ProxyStatusConflictInboundListener = monitoring.NewGauge(
+@@ -714,6 +721,7 @@ var (
+ 		ProxyStatusNoService,
+ 		ProxyStatusEndpointNotReady,
+ 		ProxyStatusConflictOutboundListenerTCPOverTCP,
++		ProxyStatusConflictOutboundListenerWaypoint,
+ 		ProxyStatusConflictInboundListener,
+ 		DuplicatedClusters,
+ 		ProxyStatusClusterNoInstances,
+@@ -2556,8 +2564,10 @@ func (ps *PushContext) ServicesForWaypoint(key WaypointKey) []ServiceInfo {
+ 	return ps.ambientIndex.ServicesForWaypoint(key)
+ }
+ 
+-// ServicesWithWaypoint returns all services associated with any waypoint.
+-// Key can optionally be provided in the form 'namespace/hostname'. If unset, all are returned
+-func (ps *PushContext) ServicesWithWaypoint(key string) []ServiceWaypointInfo {
+-	return ps.ambientIndex.ServicesWithWaypoint(key)
++// ServicesWithWaypoint returns services associated with a waypoint in
++// clusterID.  Key can optionally be provided in the form 'namespace/hostname'.
++// If unset, all are returned.  An empty clusterID preserves the aggregate
++// lookup used outside sidecar interoperability.
++func (ps *PushContext) ServicesWithWaypoint(key string, clusterID cluster.ID) []ServiceWaypointInfo {
++	return ps.ambientIndex.ServicesWithWaypoint(key, clusterID)
+ }
+diff --git a/pilot/pkg/model/service.go b/pilot/pkg/model/service.go
+index ec11744e47..1e7781b52f 100644
+--- a/pilot/pkg/model/service.go
++++ b/pilot/pkg/model/service.go
+@@ -911,7 +911,10 @@ type ServiceDiscovery interface {
+ }
+ 
+ type AmbientIndexes interface {
+-	ServicesWithWaypoint(key string) []ServiceWaypointInfo
++	// ServicesWithWaypoint returns waypoint-bound services from clusterID. An
++	// empty clusterID preserves the aggregate, cross-cluster lookup used by
++	// waypoint and ingress code.
++	ServicesWithWaypoint(key string, clusterID cluster.ID) []ServiceWaypointInfo
+ 	AddressInformation(addresses sets.String) ([]AddressInfo, sets.String)
+ 	AdditionalPodSubscriptions(
+ 		proxy *Proxy,
+@@ -993,7 +996,7 @@ func (u NoopAmbientIndexes) WorkloadsForWaypoint(WaypointKey) []WorkloadInfo {
+ 	return nil
+ }
+ 
+-func (u NoopAmbientIndexes) ServicesWithWaypoint(string) []ServiceWaypointInfo {
++func (u NoopAmbientIndexes) ServicesWithWaypoint(string, cluster.ID) []ServiceWaypointInfo {
+ 	return nil
+ }
+ 
+diff --git a/pilot/pkg/networking/core/cluster.go b/pilot/pkg/networking/core/cluster.go
+index 814c8b6d31..940ac479a9 100644
+--- a/pilot/pkg/networking/core/cluster.go
++++ b/pilot/pkg/networking/core/cluster.go
+@@ -49,6 +49,23 @@ import (
+ // in this map, then delta calculation is triggered.
+ var deltaConfigTypes = sets.New(kind.ServiceEntry.String(), kind.DestinationRule.String())
+ 
++// serviceWaypointKeys returns namespace-qualified keys of concrete services
++// whose service-addressed traffic should be delegated to a waypoint. Callers
++// use a set because route/listener/cluster generation repeatedly checks the
++// same snapshot of services.
++func serviceWaypointKeys(node *model.Proxy, push *model.PushContext) sets.Set[string] {
++	res := sets.New[string]()
++	if !node.EnableSidecarWaypointRouting() {
++		return res
++	}
++	for _, info := range push.ServicesWithWaypoint("", node.GetClusterID()) {
++		if info.Service != nil {
++			res.Insert(info.Service.Namespace + "/" + info.Service.Hostname)
++		}
++	}
++	return res
++}
++
+ // BuildClusters returns the list of clusters for the given proxy. This is the CDS output
+ // For outbound: Cluster for each service/subset hostname or cidr with SNI set to service hostname
+ // Cluster type based on resolution
+@@ -262,8 +279,8 @@ func (configgen *ConfigGeneratorImpl) buildClusters(proxy *model.Proxy, req *mod
+ 		clusters = append(clusters, patcher.insertedClusters()...)
+ 	}
+ 
+-	// OutboundTunnel cluster is needed for sidecar and gateway.
+-	if features.EnableHBONESend && proxy.Type != model.Waypoint && bool(!proxy.Metadata.DisableHBONESend) {
++	// OutboundTunnel cluster is needed for HBONE senders other than waypoints.
++	if proxy.EnableHBONESend() && !proxy.IsWaypointProxy() {
+ 		clusters = append(clusters, cb.buildConnectOriginate(proxy, req.Push, nil))
+ 	}
+ 
+@@ -302,6 +319,7 @@ func (configgen *ConfigGeneratorImpl) buildOutboundClusters(cb *ClusterBuilder,
+ ) ([]*discovery.Resource, cacheStats) {
+ 	resources := make([]*discovery.Resource, 0)
+ 	efKeys := cp.efw.KeysApplyingTo(networking.EnvoyFilter_CLUSTER)
++	waypointServiceKeys := serviceWaypointKeys(proxy, cb.req.Push)
+ 	hit, miss := 0, 0
+ 	for _, service := range services {
+ 		if service.Resolution == model.Alias {
+@@ -328,6 +346,13 @@ func (configgen *ConfigGeneratorImpl) buildOutboundClusters(cb *ClusterBuilder,
+ 
+ 			// create default cluster
+ 			discoveryType := convertResolution(cb.proxyType, service)
++			// Waypoint endpoint substitution happens through EDS. Convert DNS
++			// clusters for waypoint-bound, VIP-addressed services so the
++			// sidecar can receive waypoint endpoints.
++			if clusterKey.waypoint && waypointServiceKeys.Contains(service.Key()) &&
++				(discoveryType == cluster.Cluster_STRICT_DNS || discoveryType == cluster.Cluster_LOGICAL_DNS) {
++				discoveryType = cluster.Cluster_EDS
++			}
+ 			defaultCluster := cb.buildCluster(clusterKey.clusterName, discoveryType, lbEndpoints, model.TrafficDirectionOutbound, port, service, nil, "")
+ 			if defaultCluster == nil {
+ 				continue
+diff --git a/pilot/pkg/networking/core/cluster_builder.go b/pilot/pkg/networking/core/cluster_builder.go
+index 85a400a03c..1ef1196c32 100644
+--- a/pilot/pkg/networking/core/cluster_builder.go
++++ b/pilot/pkg/networking/core/cluster_builder.go
+@@ -134,7 +134,7 @@ func NewClusterBuilder(proxy *model.Proxy, req *model.PushRequest, cache model.X
+ 		passThroughBindIPs: getPassthroughBindIPs(proxy.GetIPMode()),
+ 		supportsIPv4:       proxy.SupportsIPv4(),
+ 		supportsIPv6:       proxy.SupportsIPv6(),
+-		sendHbone:          features.EnableHBONESend || proxy.IsWaypointProxy(),
++		sendHbone:          proxy.EnableHBONESend(),
+ 		locality:           proxy.Locality,
+ 		proxyLabels:        proxy.Labels,
+ 		proxyView:          proxy.GetView(),
+diff --git a/pilot/pkg/networking/core/cluster_cache.go b/pilot/pkg/networking/core/cluster_cache.go
+index 5509c721de..eeb5718527 100644
+--- a/pilot/pkg/networking/core/cluster_cache.go
++++ b/pilot/pkg/networking/core/cluster_cache.go
+@@ -23,6 +23,7 @@ import (
+ 	"istio.io/istio/pilot/pkg/model"
+ 	"istio.io/istio/pilot/pkg/networking/util"
+ 	"istio.io/istio/pilot/pkg/xds/endpoints"
++	"istio.io/istio/pkg/config/constants"
+ 	"istio.io/istio/pkg/config/schema/kind"
+ 	"istio.io/istio/pkg/util/hash"
+ )
+@@ -59,6 +60,7 @@ type clusterCache struct {
+ 	envoyFilterKeys []string
+ 	peerAuthVersion string   // identifies the versions of all peer authentications
+ 	serviceAccounts []string // contains all the service accounts associated with the service
++	waypoint        bool     // whether sidecar service traffic is delegated to a waypoint
+ }
+ 
+ func (t *clusterCache) Type() string {
+@@ -129,6 +131,8 @@ func (t *clusterCache) Key() any {
+ 
+ 	h.WriteString(strconv.FormatBool(t.preserveHTTP1HeaderCase))
+ 	h.Write(Separator)
++	h.WriteString(strconv.FormatBool(t.waypoint))
++	h.Write(Separator)
+ 
+ 	if t.endpointBuilder != nil {
+ 		t.endpointBuilder.WriteHash(h)
+@@ -211,5 +215,6 @@ func buildClusterKey(service *model.Service, port *model.Port, cb *ClusterBuilde
+ 		peerAuthVersion:         cb.req.Push.AuthnPolicies.GetVersion(),
+ 		serviceAccounts:         cb.req.Push.ServiceAccounts(service.Hostname, service.Attributes.Namespace),
+ 		endpointBuilder:         eb,
++		waypoint:                proxy.EnableSidecarWaypointRouting() && service.GetAddressForProxy(proxy) != constants.UnspecifiedIP && len(cb.req.Push.ServicesWithWaypoint(service.Key(), proxy.GetClusterID())) > 0,
+ 	}
+ }
+diff --git a/pilot/pkg/networking/core/httproute.go b/pilot/pkg/networking/core/httproute.go
+index 7be634628b..87b63804b2 100644
+--- a/pilot/pkg/networking/core/httproute.go
++++ b/pilot/pkg/networking/core/httproute.go
+@@ -410,6 +410,7 @@ func BuildSidecarOutboundVirtualHosts(node *model.Proxy, push *model.PushContext
+ 		}
+ 	}
+ 
++	waypointServiceKeys := serviceWaypointKeys(node, push)
+ 	var routeCache *istio_route.Cache
+ 	if listenerPort > 0 && features.EnableRDSCaching {
+ 		// sort services, ensure that routeCache calculation result is stable
+@@ -433,6 +434,7 @@ func BuildSidecarOutboundVirtualHosts(node *model.Proxy, push *model.PushContext
+ 			VirtualServices:         virtualServices,
+ 			DelegateVirtualServices: push.DelegateVirtualServices(virtualServices),
+ 			EnvoyFilterKeys:         efKeys,
++			WaypointServiceKeys:     waypointServiceKeys,
+ 		}
+ 	}
+ 
+@@ -445,7 +447,7 @@ func BuildSidecarOutboundVirtualHosts(node *model.Proxy, push *model.PushContext
+ 	mostSpecificWildcardVsIndex := egressListener.MostSpecificWildcardVirtualServiceIndex()
+ 	// Get list of virtual services bound to the mesh gateway
+ 	virtualHostWrappers := istio_route.BuildSidecarVirtualHostWrapper(routeCache, node, push,
+-		servicesByName, virtualServices, listenerPort, mostSpecificWildcardVsIndex,
++		servicesByName, virtualServices, listenerPort, mostSpecificWildcardVsIndex, waypointServiceKeys,
+ 	)
+ 
+ 	if features.EnableRDSCaching {
+diff --git a/pilot/pkg/networking/core/listener.go b/pilot/pkg/networking/core/listener.go
+index 4528f74ba6..33eb12aa8f 100644
+--- a/pilot/pkg/networking/core/listener.go
++++ b/pilot/pkg/networking/core/listener.go
+@@ -113,7 +113,7 @@ func (configgen *ConfigGeneratorImpl) BuildListeners(node *model.Proxy,
+ 
+ 	builder.patchListeners()
+ 	l := builder.getListeners()
+-	if features.EnableHBONESend && !builder.node.IsWaypointProxy() {
++	if builder.node.EnableHBONESend() && !builder.node.IsWaypointProxy() {
+ 		class := istionetworking.ListenerClassSidecarOutbound
+ 		if node.Type == model.Router {
+ 			class = istionetworking.ListenerClassGateway
+@@ -329,6 +329,7 @@ func (lb *ListenerBuilder) buildSidecarOutboundListeners(node *model.Proxy,
+ 
+ 	// For conflict resolution
+ 	listenerMap := make(map[listenerKey]*outboundListenerEntry)
++	waypointServiceKeys := serviceWaypointKeys(node, push)
+ 
+ 	// The sidecarConfig if provided could filter the list of
+ 	// services/virtual services that we need to process. It could also
+@@ -420,11 +421,12 @@ func (lb *ListenerBuilder) buildSidecarOutboundListeners(node *model.Proxy,
+ 			// TODO: dualstack wildcards
+ 			for _, service := range services {
+ 				listenerOpts := outboundListenerOpts{
+-					push:    push,
+-					proxy:   node,
+-					bind:    bind,
+-					port:    listenPort,
+-					service: service,
++					push:            push,
++					proxy:           node,
++					bind:            bind,
++					port:            listenPort,
++					service:         service,
++					serviceWaypoint: service.GetAddressForProxy(node) != constants.UnspecifiedIP && waypointServiceKeys.Contains(service.Key()),
+ 				}
+ 				// Set service specific attributes here.
+ 				lb.buildSidecarOutboundListener(listenerOpts, listenerMap, virtualServices, actualWildcards)
+@@ -471,19 +473,21 @@ func (lb *ListenerBuilder) buildSidecarOutboundListeners(node *model.Proxy,
+ 						continue
+ 					}
+ 					listenerOpts := outboundListenerOpts{
+-						push:    push,
+-						proxy:   node,
+-						bind:    bind,
+-						port:    servicePort,
+-						service: service,
++						push:            push,
++						proxy:           node,
++						bind:            bind,
++						port:            servicePort,
++						service:         service,
++						serviceWaypoint: saddress != constants.UnspecifiedIP && waypointServiceKeys.Contains(service.Key()),
+ 					}
+ 
+ 					// Support statefulsets/headless services with TCP ports, and empty service address field.
+ 					// Instead of generating a single 0.0.0.0:Port listener, generate a listener
+ 					// for each instance. HTTP services can happily reside on 0.0.0.0:PORT and use the
+ 					// wildcard route match to get to the appropriate IP through original dst clusters.
+-					if bind.Primary() == "" && service.Resolution == model.Passthrough &&
+-						saddress == constants.UnspecifiedIP && (servicePort.Protocol.IsTCP() || servicePort.Protocol.IsUnsupported()) {
++					if bind.Primary() == "" && !listenerOpts.serviceWaypoint &&
++						service.Resolution == model.Passthrough && saddress == constants.UnspecifiedIP &&
++						(servicePort.Protocol.IsTCP() || servicePort.Protocol.IsUnsupported()) {
+ 						instances := push.ServiceEndpointsByPort(service, servicePort.Port, nil)
+ 						if service.Attributes.ServiceRegistry != provider.Kubernetes && len(instances) == 0 && service.Attributes.LabelSelectors == nil {
+ 							// A Kubernetes service with no endpoints means there are no endpoints at
+@@ -914,6 +918,9 @@ func (lb *ListenerBuilder) buildSidecarOutboundListener(listenerOpts outboundLis
+ 			}
+ 
+ 		case istionetworking.ListenerProtocolTCP:
++			if listenerOpts.serviceWaypoint {
++				virtualServices = nil
++			}
+ 			opts = buildSidecarOutboundTCPListenerOpts(listenerOpts, virtualServices)
+ 
+ 			// Check if conflict happens
+@@ -941,6 +948,11 @@ func (lb *ListenerBuilder) buildSidecarOutboundListener(listenerOpts outboundLis
+ 				}
+ 			}
+ 			// Add tcp filter chain, build TCP filter chain first.
++			// For waypoint-bound services, the waypoint applies service-level
++			// TCP/TLS routes after delegation.
++			if listenerOpts.serviceWaypoint {
++				virtualServices = nil
++			}
+ 			tcpOpts := buildSidecarOutboundTCPListenerOpts(listenerOpts, virtualServices)
+ 
+ 			// Add http filter chain and tcp filter chain to the listener opts
+@@ -971,6 +983,10 @@ func (lb *ListenerBuilder) buildSidecarOutboundListener(listenerOpts outboundLis
+ 		return
+ 	}
+ 
++	// Retain the source service on TCP/TLS chains so collisions between direct
++	// and waypoint-owned services can produce actionable diagnostics.
++	setTCPFilterChainService(opts, listenerOpts)
++
+ 	// In general, for handling conflicts we:
+ 	// * Turn on sniffing if its HTTP and TCP mixed
+ 	// * Merge filter chains
+@@ -1039,6 +1055,11 @@ type filterChainOpts struct {
+ 	applicationProtocols []string
+ 	transportProtocol    string
+ 
++	// Source service information is retained for actionable diagnostics when
++	// otherwise identical chains for direct and waypoint-owned services collide.
++	serviceKey      string
++	serviceWaypoint bool
++
+ 	// Arbitrary metadata to attach to the filter
+ 	metadata *core.Metadata
+ 
+@@ -1075,6 +1096,9 @@ type outboundListenerOpts struct {
+ 
+ 	port    *model.Port
+ 	service *model.Service
++	// serviceWaypoint suppresses sidecar TCP/TLS VirtualService routing.
++	// The waypoint applies the service-level routes after delegation.
++	serviceWaypoint bool
+ }
+ 
+ // buildGatewayListener builds and initializes a Listener proto based on the provided opts. It does not set any filters.
+@@ -1275,6 +1299,18 @@ func (chain *filterChainOpts) toFilterChainMatch() *listener.FilterChainMatch {
+ 	return match
+ }
+ 
++func setTCPFilterChainService(chains []*filterChainOpts, opts outboundListenerOpts) {
++	if opts.service == nil {
++		return
++	}
++	for _, chain := range chains {
++		if chain.networkFilters != nil {
++			chain.serviceKey = opts.service.Key()
++			chain.serviceWaypoint = opts.serviceWaypoint
++		}
++	}
++}
++
+ func mergeTCPFilterChains(current *outboundListenerEntry, incoming []*filterChainOpts, opts outboundListenerOpts) {
+ 	// TODO(rshriram) merge multiple identical filter chains with just a single destination CIDR based
+ 	// filter chain match, into a single filter chain and array of destinationcidr matches
+@@ -1309,14 +1345,32 @@ func mergeTCPFilterChains(current *outboundListenerEntry, incoming []*filterChai
+ 					newHostname = "sidecar-config-egress-tcp-listener"
+ 				}
+ 
++				listenerName := getListenerName(opts.bind.Primary(), opts.port.Port, istionetworking.TransportProtocolTCP)
+ 				outboundListenerConflict{
+ 					metric:          model.ProxyStatusConflictOutboundListenerTCPOverTCP,
+ 					node:            opts.proxy,
+-					listenerName:    getListenerName(opts.bind.Primary(), opts.port.Port, istionetworking.TransportProtocolTCP),
++					listenerName:    listenerName,
+ 					currentProtocol: current.servicePort.Protocol,
+ 					newHostname:     newHostname,
+ 					newProtocol:     opts.port.Protocol,
+ 				}.addMetric(opts.push)
++				if existing.serviceKey != "" && incoming.serviceKey != "" &&
++					existing.serviceWaypoint != incoming.serviceWaypoint {
++					msg := fmt.Sprintf(
++						"Listener=%s has identical TCP/TLS filter-chain matches for direct and waypoint-owned services; "+
++							"retaining service %s and discarding service %s",
++						listenerName, existing.serviceKey, incoming.serviceKey)
++					directService, waypointService := incoming.serviceKey, existing.serviceKey
++					if incoming.serviceWaypoint {
++						directService, waypointService = existing.serviceKey, incoming.serviceKey
++					}
++					// Include both services in the key so multiple collisions on one
++					// shared listener remain visible in proxy status.
++					metricKey := listenerName + "/" + directService + "/" + waypointService
++					opts.push.AddMetric(model.ProxyStatusConflictOutboundListenerWaypoint,
++						metricKey, opts.proxy.ID, msg)
++					log.Warnf("%s for proxy %s", msg, opts.proxy.ID)
++				}
+ 				break
+ 			}
+ 		}
+diff --git a/pilot/pkg/networking/core/listener_test.go b/pilot/pkg/networking/core/listener_test.go
+index 659f0f536e..b4da7ec638 100644
+--- a/pilot/pkg/networking/core/listener_test.go
++++ b/pilot/pkg/networking/core/listener_test.go
+@@ -59,6 +59,7 @@ import (
+ 	"istio.io/istio/pkg/test/util/assert"
+ 	"istio.io/istio/pkg/util/protomarshal"
+ 	"istio.io/istio/pkg/wellknown"
++	"istio.io/istio/pkg/workloadapi"
+ )
+ 
+ const (
+@@ -490,6 +491,138 @@ func TestOutboundListenerConfig_WithSidecar(t *testing.T) {
+ 	testOutboundListenerConfigWithSidecar(t, services...)
+ }
+ 
++// TestWaypointInteropSharedTCPListenerCharacterization documents a known limitation:
++// direct and waypoint-owned services cannot safely share an outbound raw-TCP
++// listener when their filter-chain matches overlap. The chain built first wins
++// the merge conflict, so reversing service creation order changes the selected
++// cluster. This test intentionally characterizes current behavior; it does not
++// assert that the behavior is desirable.
++func TestWaypointInteropSharedTCPListenerCharacterization(t *testing.T) {
++	test.SetForTest(t, &features.EnableAmbient, true)
++	test.SetForTest(t, &features.EnableHBONESend, true)
++	test.SetForTest(t, &features.EnableSidecarWaypointRouting, true)
++
++	const (
++		namespace        = "not-default"
++		port             = 9000
++		directHostname   = "direct.example.org"
++		waypointHostname = "waypoint.example.org"
++		alternateHost    = "alternate.example.org"
++	)
++	service := func(hostname, address string, created time.Time) *model.Service {
++		return &model.Service{
++			CreationTime:   created,
++			Hostname:       host.Name(hostname),
++			DefaultAddress: address,
++			Ports: model.PortList{&model.Port{
++				Name:     "tcp",
++				Port:     port,
++				Protocol: protocol.TCP,
++			}},
++			Resolution: model.ClientSideLB,
++			Attributes: model.ServiceAttributes{
++				Name:      strings.Split(hostname, ".")[0],
++				Namespace: namespace,
++			},
++		}
++	}
++	sidecarConfig := &config.Config{
++		Meta: config.Meta{Name: "shared-tcp", Namespace: namespace, GroupVersionKind: gvk.Sidecar},
++		Spec: &networking.Sidecar{Egress: []*networking.IstioEgressListener{{
++			Bind: "0.0.0.0",
++			Port: &networking.SidecarPort{
++				Number:   port,
++				Name:     "shared-tcp",
++				Protocol: "TCP",
++			},
++			Hosts: []string{"*/*"},
++		}}},
++	}
++	virtualService := &config.Config{
++		Meta: config.Meta{Name: "direct-policy", Namespace: namespace, GroupVersionKind: gvk.VirtualService},
++		Spec: &networking.VirtualService{
++			Hosts:    []string{directHostname},
++			Gateways: []string{constants.IstioMeshGateway},
++			Tcp: []*networking.TCPRoute{{
++				Route: []*networking.RouteDestination{{Destination: &networking.Destination{
++					Host: alternateHost,
++					Port: &networking.PortSelector{Number: port},
++				}}},
++			}},
++		},
++	}
++
++	for _, tt := range []struct {
++		name                 string
++		directCreationTime   time.Time
++		waypointCreationTime time.Time
++		wantCluster          string
++		wantRetained         string
++		wantDiscarded        string
++	}{
++		{
++			name:                 "direct service chain is built first",
++			directCreationTime:   tnow,
++			waypointCreationTime: tnow.Add(time.Second),
++			wantCluster:          model.BuildSubsetKey(model.TrafficDirectionOutbound, "", alternateHost, port),
++			wantRetained:         namespace + "/" + directHostname,
++			wantDiscarded:        namespace + "/" + waypointHostname,
++		},
++		{
++			name:                 "waypoint service chain is built first",
++			directCreationTime:   tnow.Add(time.Second),
++			waypointCreationTime: tnow,
++			wantCluster:          model.BuildSubsetKey(model.TrafficDirectionOutbound, "", waypointHostname, port),
++			wantRetained:         namespace + "/" + waypointHostname,
++			wantDiscarded:        namespace + "/" + directHostname,
++		},
++	} {
++		t.Run(tt.name, func(t *testing.T) {
++			direct := service(directHostname, "10.0.0.1", tt.directCreationTime)
++			waypointOwned := service(waypointHostname, "10.0.0.2", tt.waypointCreationTime)
++			alternate := service(alternateHost, "10.0.0.3", tnow.Add(2*time.Second))
++			cg := NewConfigGenTest(t, TestOptions{
++				Services:       []*model.Service{direct, waypointOwned, alternate},
++				ConfigPointers: []*config.Config{sidecarConfig, virtualService},
++			})
++			cg.MemRegistry.WantServicesWithWaypoint = []model.ServiceWaypointInfo{{
++				Service:          &workloadapi.Service{Namespace: namespace, Hostname: waypointHostname},
++				WaypointHostname: "waypoint-gateway." + namespace + ".svc.cluster.local",
++			}}
++
++			proxy := cg.SetupProxy(getProxy())
++			listeners := NewListenerBuilder(proxy, cg.env.PushContext()).buildSidecarOutboundListeners(proxy, cg.env.PushContext())
++			xdstest.ValidateListeners(t, listeners)
++			l := findListenerByPort(listeners, port)
++			if l == nil {
++				t.Fatalf("listener on port %d not found", port)
++			}
++			fc := getTCPFilterChain(t, l)
++			tcpProxy := &tcp.TcpProxy{}
++			if err := getFilterConfig(getTCPFilter(fc), tcpProxy); err != nil {
++				t.Fatalf("failed to decode TCP proxy: %v", err)
++			}
++			if got := tcpProxy.GetCluster(); got != tt.wantCluster {
++				t.Fatalf("selected cluster = %q, want %q", got, tt.wantCluster)
++			}
++
++			conflicts := cg.env.PushContext().GetMetric(model.ProxyStatusConflictOutboundListenerWaypoint.Name())
++			found := false
++			for _, conflict := range conflicts {
++				if strings.Contains(conflict.Message, "retaining service "+tt.wantRetained) &&
++					strings.Contains(conflict.Message, "discarding service "+tt.wantDiscarded) {
++					found = true
++					break
++				}
++			}
++			if !found {
++				t.Fatalf("waypoint listener conflicts = %v, want retained service %s and discarded service %s",
++					conflicts, tt.wantRetained, tt.wantDiscarded)
++			}
++		})
++	}
++}
++
+ func TestOutboundListenerConflictWithReservedListener(t *testing.T) {
+ 	// Add a service and verify it's config
+ 	servicesConflictWithStaticListener := []*model.Service{
+diff --git a/pilot/pkg/networking/core/route/route.go b/pilot/pkg/networking/core/route/route.go
+index 0065bcce05..4b5320f973 100644
+--- a/pilot/pkg/networking/core/route/route.go
++++ b/pilot/pkg/networking/core/route/route.go
+@@ -50,6 +50,7 @@ import (
+ 	"istio.io/istio/pkg/config/protocol"
+ 	"istio.io/istio/pkg/jwt"
+ 	"istio.io/istio/pkg/log"
++	"istio.io/istio/pkg/slices"
+ 	"istio.io/istio/pkg/util/grpc"
+ 	"istio.io/istio/pkg/util/sets"
+ 	"istio.io/istio/pkg/wellknown"
+@@ -100,6 +101,7 @@ type VirtualHostWrapper struct {
+ // The list of Services is also passed to allow maintaining consistent ordering.
+ func BuildSidecarVirtualHostWrapper(routeCache *Cache, node *model.Proxy, push *model.PushContext, serviceRegistry map[host.Name]*model.Service,
+ 	virtualServices []config.Config, listenPort int, mostSpecificWildcardVsIndex map[host.Name]types.NamespacedName,
++	waypointServiceKeys sets.Set[string],
+ ) []VirtualHostWrapper {
+ 	out := make([]VirtualHostWrapper, 0)
+ 
+@@ -113,6 +115,7 @@ func BuildSidecarVirtualHostWrapper(routeCache *Cache, node *model.Proxy, push *
+ 		dependentDestinationRules = append(dependentDestinationRules, destinationRules...)
+ 		wrappers := buildSidecarVirtualHostsForVirtualService(
+ 			node, virtualService, serviceRegistry, hashByDestination, listenPort, push.Mesh, mostSpecificWildcardVsIndex,
++			waypointServiceKeys,
+ 		)
+ 		out = append(out, wrappers...)
+ 	}
+@@ -243,6 +246,7 @@ func buildSidecarVirtualHostsForVirtualService(
+ 	listenPort int,
+ 	mesh *meshconfig.MeshConfig,
+ 	mostSpecificWildcardVsIndex map[host.Name]types.NamespacedName,
++	waypointServiceKeys sets.Set[string],
+ ) []VirtualHostWrapper {
+ 	meshGateway := sets.New(constants.IstioMeshGateway)
+ 	opts := RouteOptions{
+@@ -260,6 +264,23 @@ func buildSidecarVirtualHostsForVirtualService(
+ 
+ 	hosts, matchingRegistryServices := separateVSHostsAndServices(virtualService, serviceRegistry, mostSpecificWildcardVsIndex)
+ 
++	// Service-level VirtualService routing for waypoint-bound services is
++	// handled by the waypoint.  Remove concrete services from the
++	// VirtualService-backed wrapper so they remain in serviceRegistry and get
++	// an ordinary default route later. Filtering after wildcard expansion
++	// preserves the policy for direct services selected by the same wildcard.
++	// Headless/no-VIP services cannot be reliably identified as
++	// service-addressed traffic and retain normal sidecar processing.
++	matchingRegistryServices = slices.FilterInPlace(matchingRegistryServices, func(svc *model.Service) bool {
++		if svc.GetAddressForProxy(node) == constants.UnspecifiedIP {
++			return true
++		}
++		return !waypointServiceKeys.Contains(svc.Key())
++	})
++	if len(hosts) == 0 && len(matchingRegistryServices) == 0 {
++		return nil
++	}
++
+ 	// Gateway allows only routes from the namespace of the proxy, or namespace of the destination.
+ 	if model.UseGatewaySemantics(virtualService) {
+ 		res := make([]*model.Service, 0, len(matchingRegistryServices))
+diff --git a/pilot/pkg/networking/core/route/route_cache.go b/pilot/pkg/networking/core/route/route_cache.go
+index b4e78ca99f..6af46c82ff 100644
+--- a/pilot/pkg/networking/core/route/route_cache.go
++++ b/pilot/pkg/networking/core/route/route_cache.go
+@@ -24,6 +24,7 @@ import (
+ 	"istio.io/istio/pkg/config"
+ 	"istio.io/istio/pkg/config/schema/kind"
+ 	"istio.io/istio/pkg/util/hash"
++	"istio.io/istio/pkg/util/sets"
+ )
+ 
+ var (
+@@ -56,6 +57,11 @@ type Cache struct {
+ 	DelegateVirtualServices []model.ConfigHash
+ 	DestinationRules        []*model.ConsolidatedDestRule
+ 	EnvoyFilterKeys         []string
++	// WaypointServiceKeys affects whether a concrete service receives
++	// VirtualService routes or a default route. It must be part of the cache
++	// key so waypoint binding changes cannot reuse a route configuration
++	// generated for the opposite ownership state.
++	WaypointServiceKeys sets.Set[string]
+ }
+ 
+ func (r *Cache) Type() string {
+@@ -146,6 +152,8 @@ func (r *Cache) Key() any {
+ 		h.WriteString(string(svc.Hostname))
+ 		h.Write(Slash)
+ 		h.WriteString(svc.Attributes.Namespace)
++		h.Write(Slash)
++		h.WriteString(strconv.FormatBool(r.WaypointServiceKeys.Contains(svc.Key())))
+ 		h.Write(Separator)
+ 		for _, alias := range svc.Attributes.Aliases {
+ 			h.WriteString(string(alias.Hostname))
+diff --git a/pilot/pkg/networking/core/route/route_test.go b/pilot/pkg/networking/core/route/route_test.go
+index b3f43c8051..f69ff2b99d 100644
+--- a/pilot/pkg/networking/core/route/route_test.go
++++ b/pilot/pkg/networking/core/route/route_test.go
+@@ -1187,7 +1187,7 @@ func TestBuildHTTPRoutes(t *testing.T) {
+ 			Services: exampleService,
+ 		})
+ 		vhosts := route.BuildSidecarVirtualHostWrapper(nil, node(cg), cg.PushContext(), serviceRegistry,
+-			[]config.Config{}, 8080, map[host.Name]types.NamespacedName{},
++			[]config.Config{}, 8080, map[host.Name]types.NamespacedName{}, nil,
+ 		)
+ 		g.Expect(vhosts[0].Routes[0].Action.(*envoyroute.Route_Route).Route.HashPolicy).NotTo(BeNil())
+ 	})
+@@ -1207,7 +1207,7 @@ func TestBuildHTTPRoutes(t *testing.T) {
+ 			Services: exampleService,
+ 		})
+ 		vhosts := route.BuildSidecarVirtualHostWrapper(nil, node(cg), cg.PushContext(), serviceRegistry,
+-			[]config.Config{}, 8080, map[host.Name]types.NamespacedName{},
++			[]config.Config{}, 8080, map[host.Name]types.NamespacedName{}, nil,
+ 		)
+ 
+ 		hashPolicy := &envoyroute.RouteAction_HashPolicy{
+@@ -1248,7 +1248,7 @@ func TestBuildHTTPRoutes(t *testing.T) {
+ 				virtualServiceWithNestedWildcardHost,
+ 				virtualServiceWithGoogleWildcardHost,
+ 			}, 8080,
+-			wildcardIndex,
++			wildcardIndex, nil,
+ 		)
+ 		log.Printf("%#v", vhosts)
+ 		// *.example.org, *.hello.example.org. The *.google.com VS is missing from virtualHosts because
+@@ -1260,6 +1260,92 @@ func TestBuildHTTPRoutes(t *testing.T) {
+ 		}
+ 	})
+ 
++	t.Run("waypoint filtering partitions wildcard services", func(t *testing.T) {
++		g := NewWithT(t)
++		direct := &model.Service{
++			Hostname:       "direct.example.org",
++			DefaultAddress: "10.0.0.1",
++			Ports:          model.PortList{&model.Port{Name: "http", Port: 8080, Protocol: protocol.HTTP}},
++		}
++		waypoint := &model.Service{
++			Hostname:       "waypoint.example.org",
++			DefaultAddress: "10.0.0.2",
++			Ports:          model.PortList{&model.Port{Name: "http", Port: 8080, Protocol: protocol.HTTP}},
++		}
++		serviceRegistry := map[host.Name]*model.Service{
++			direct.Hostname:   direct,
++			waypoint.Hostname: waypoint,
++		}
++		wildcardIndex := map[host.Name]types.NamespacedName{
++			direct.Hostname:   virtualServiceWithWildcardHost.NamespacedName(),
++			waypoint.Hostname: virtualServiceWithWildcardHost.NamespacedName(),
++		}
++		cg := core.NewConfigGenTest(t, core.TestOptions{Services: []*model.Service{direct, waypoint}})
++
++		vhosts := route.BuildSidecarVirtualHostWrapper(nil, node(cg), cg.PushContext(), serviceRegistry,
++			[]config.Config{virtualServiceWithWildcardHost}, 8080, wildcardIndex, sets.New(waypoint.Key()),
++		)
++
++		g.Expect(vhosts).To(HaveLen(2))
++		byService := map[host.Name]route.VirtualHostWrapper{}
++		for _, vhost := range vhosts {
++			for _, svc := range vhost.Services {
++				byService[svc.Hostname] = vhost
++			}
++		}
++		g.Expect(byService[direct.Hostname].Routes[0].Name).NotTo(Equal(route.DefaultRouteName))
++		g.Expect(byService[waypoint.Hostname].Routes[0].Name).To(Equal(route.DefaultRouteName))
++	})
++
++	t.Run("headless waypoint service retains virtual service routes", func(t *testing.T) {
++		g := NewWithT(t)
++		headless := &model.Service{
++			Hostname:       "headless.example.org",
++			DefaultAddress: constants.UnspecifiedIP,
++			Ports:          model.PortList{&model.Port{Name: "http", Port: 8080, Protocol: protocol.HTTP}},
++		}
++		serviceRegistry := map[host.Name]*model.Service{headless.Hostname: headless}
++		wildcardIndex := map[host.Name]types.NamespacedName{
++			headless.Hostname: virtualServiceWithWildcardHost.NamespacedName(),
++		}
++		cg := core.NewConfigGenTest(t, core.TestOptions{Services: []*model.Service{headless}})
++
++		vhosts := route.BuildSidecarVirtualHostWrapper(nil, node(cg), cg.PushContext(), serviceRegistry,
++			[]config.Config{virtualServiceWithWildcardHost}, 8080, wildcardIndex, sets.New(headless.Key()),
++		)
++
++		g.Expect(vhosts).To(HaveLen(1))
++		g.Expect(vhosts[0].Services).To(ConsistOf(headless))
++		g.Expect(vhosts[0].Routes[0].Name).NotTo(Equal(route.DefaultRouteName))
++	})
++
++	t.Run("waypoint ownership is namespace qualified", func(t *testing.T) {
++		g := NewWithT(t)
++		direct := &model.Service{
++			Hostname:       "shared.example.org",
++			DefaultAddress: "10.0.0.1",
++			Ports:          model.PortList{&model.Port{Name: "http", Port: 8080, Protocol: protocol.HTTP}},
++			Attributes:     model.ServiceAttributes{Namespace: "direct-ns"},
++		}
++		waypointOwned := &model.Service{
++			Hostname:   direct.Hostname,
++			Attributes: model.ServiceAttributes{Namespace: "waypoint-ns"},
++		}
++		serviceRegistry := map[host.Name]*model.Service{direct.Hostname: direct}
++		wildcardIndex := map[host.Name]types.NamespacedName{
++			direct.Hostname: virtualServiceWithWildcardHost.NamespacedName(),
++		}
++		cg := core.NewConfigGenTest(t, core.TestOptions{Services: []*model.Service{direct}})
++
++		vhosts := route.BuildSidecarVirtualHostWrapper(nil, node(cg), cg.PushContext(), serviceRegistry,
++			[]config.Config{virtualServiceWithWildcardHost}, 8080, wildcardIndex, sets.New(waypointOwned.Key()),
++		)
++
++		g.Expect(vhosts).To(HaveLen(1))
++		g.Expect(vhosts[0].Services).To(ConsistOf(direct))
++		g.Expect(vhosts[0].Routes[0].Name).NotTo(Equal(route.DefaultRouteName))
++	})
++
+ 	t.Run("for virtualservices with with wildcard hosts outside of the serviceregistry (on port 80)", func(t *testing.T) {
+ 		g := NewWithT(t)
+ 		cg := core.NewConfigGenTest(t, core.TestOptions{
+@@ -1284,7 +1370,7 @@ func TestBuildHTTPRoutes(t *testing.T) {
+ 		}
+ 
+ 		vhosts := route.BuildSidecarVirtualHostWrapper(nil, node(cg), cg.PushContext(), serviceRegistry,
+-			[]config.Config{virtualServiceWithGoogleWildcardHost}, 80, wildcardIndex,
++			[]config.Config{virtualServiceWithGoogleWildcardHost}, 80, wildcardIndex, nil,
+ 		)
+ 		// The service hosts (*.example.org and goodbye.hello.example.org) and the unattached VS host (*.google.com)
+ 		g.Expect(vhosts).To(HaveLen(3))
+diff --git a/pilot/pkg/serviceregistry/aggregate/controller.go b/pilot/pkg/serviceregistry/aggregate/controller.go
+index 4e17e2e460..33db9e4f0a 100644
+--- a/pilot/pkg/serviceregistry/aggregate/controller.go
++++ b/pilot/pkg/serviceregistry/aggregate/controller.go
+@@ -65,13 +65,19 @@ func (c *Controller) ServicesForWaypoint(key model.WaypointKey) []model.ServiceI
+ 	return res
+ }
+ 
+-func (c *Controller) ServicesWithWaypoint(key string) []model.ServiceWaypointInfo {
++func (c *Controller) ServicesWithWaypoint(key string, clusterID cluster.ID) []model.ServiceWaypointInfo {
+ 	if !features.EnableAmbient {
+ 		return nil
+ 	}
+ 	var res []model.ServiceWaypointInfo
+ 	for _, p := range c.GetRegistries() {
+-		res = append(res, p.ServicesWithWaypoint(key)...)
++		// Sidecar interoperability is deliberately local-cluster only. Without
++		// this filter, replicated services can yield multiple waypoint
++		// bindings and callers may select one according to registry order.
++		if clusterID != "" && p.Cluster() != clusterID {
++			continue
++		}
++		res = append(res, p.ServicesWithWaypoint(key, clusterID)...)
+ 	}
+ 	return res
+ }
+diff --git a/pilot/pkg/serviceregistry/aggregate/controller_test.go b/pilot/pkg/serviceregistry/aggregate/controller_test.go
+index 74d4999a4b..691923d992 100644
+--- a/pilot/pkg/serviceregistry/aggregate/controller_test.go
++++ b/pilot/pkg/serviceregistry/aggregate/controller_test.go
+@@ -23,6 +23,7 @@ import (
+ 	"go.uber.org/atomic"
+ 
+ 	meshconfig "istio.io/api/mesh/v1alpha1"
++	"istio.io/istio/pilot/pkg/features"
+ 	"istio.io/istio/pilot/pkg/model"
+ 	"istio.io/istio/pilot/pkg/serviceregistry"
+ 	"istio.io/istio/pilot/pkg/serviceregistry/memory"
+@@ -30,6 +31,7 @@ import (
+ 	"istio.io/istio/pilot/pkg/serviceregistry/provider"
+ 	"istio.io/istio/pkg/cluster"
+ 	"istio.io/istio/pkg/config/host"
++	"istio.io/istio/pkg/test"
+ 	"istio.io/istio/pkg/test/util/retry"
+ )
+ 
+@@ -108,6 +110,22 @@ func buildMockControllerForMultiCluster() (*Controller, *memory.ServiceDiscovery
+ 	return ctls, discovery1, discovery2
+ }
+ 
++func TestServicesWithWaypointForCluster(t *testing.T) {
++	test.SetForTest(t, &features.EnableAmbient, true)
++	aggregateCtl, registry1, registry2 := buildMockControllerForMultiCluster()
++	registry1.WantServicesWithWaypoint = []model.ServiceWaypointInfo{{WaypointHostname: "waypoint.cluster-1"}}
++	registry2.WantServicesWithWaypoint = []model.ServiceWaypointInfo{{WaypointHostname: "waypoint.cluster-2"}}
++
++	got := aggregateCtl.ServicesWithWaypoint("ns/service.example.com", "cluster-1")
++	if len(got) != 1 || got[0].WaypointHostname != "waypoint.cluster-1" {
++		t.Fatalf("local cluster lookup got %v, want cluster-1 waypoint", got)
++	}
++	got = aggregateCtl.ServicesWithWaypoint("ns/service.example.com", "")
++	if len(got) != 2 {
++		t.Fatalf("aggregate lookup got %v, want both cluster waypoints", got)
++	}
++}
++
+ func TestServicesForMultiCluster(t *testing.T) {
+ 	originalHelloService := mock.HelloService.DeepCopy()
+ 	aggregateCtl, _, registry2 := buildMockControllerForMultiCluster()
+diff --git a/pilot/pkg/serviceregistry/kube/controller/ambient/ambientindex.go b/pilot/pkg/serviceregistry/kube/controller/ambient/ambientindex.go
+index 20b4a94c33..4942b59919 100644
+--- a/pilot/pkg/serviceregistry/kube/controller/ambient/ambientindex.go
++++ b/pilot/pkg/serviceregistry/kube/controller/ambient/ambientindex.go
+@@ -371,9 +371,10 @@ func New(options Options) Index {
+ 		PushXdsAddress(a.XDSUpdater, model.WorkloadInfo.ResourceName),
+ 	), false)
+ 
+-	if features.EnableIngressWaypointRouting {
++	if features.EnableIngressWaypointRouting || features.EnableSidecarWaypointRouting {
+ 		RegisterEdsShim(
+ 			a.XDSUpdater,
++			features.EnableSidecarWaypointRouting,
+ 			Workloads,
+ 			NamespacesInfo,
+ 			WorkloadServiceIndex,
+diff --git a/pilot/pkg/serviceregistry/kube/controller/ambient/ambientindex_test.go b/pilot/pkg/serviceregistry/kube/controller/ambient/ambientindex_test.go
+index 0d5739c823..3310a01f67 100644
+--- a/pilot/pkg/serviceregistry/kube/controller/ambient/ambientindex_test.go
++++ b/pilot/pkg/serviceregistry/kube/controller/ambient/ambientindex_test.go
+@@ -78,6 +78,7 @@ func init() {
+ 	features.EnableAmbientWaypoints = true
+ 	features.EnableAmbient = true
+ 	features.EnableIngressWaypointRouting = true
++	features.EnableSidecarWaypointRouting = true
+ }
+ 
+ var validTrafficTypes = sets.New(constants.ServiceTraffic, constants.WorkloadTraffic, constants.AllTraffic, constants.NoTraffic)
+@@ -272,7 +273,13 @@ func TestAmbientIndex_ServiceAttachedWaypoints(t *testing.T) {
+ 	s.assertEvent(t, s.podXdsName("pod1"), s.svcXdsName("svc1"))
+ 
+ 	s.labelService(t, "svc1", testNS, map[string]string{label.IoIstioUseWaypoint.Name: "test-wp"})
+-	s.assertEvent(t, s.svcXdsName("svc1"))
++	// The address update changes the ambient service, while the EDS
++	// update refreshes sidecar clusters that now resolve this service
++	// through the waypoint.
++	s.fx.MatchOrFail(t,
++		xdsfake.Event{Type: "xds", ID: s.svcXdsName("svc1")},
++		xdsfake.Event{Type: "xds full", ID: s.hostnameForService("svc1")},
++	)
+ 	s.assertNoEvent(t)
+ 
+ 	// We should now see the waypoint service IP when we look up the annotated svc
+diff --git a/pilot/pkg/serviceregistry/kube/controller/ambient/sidecar_interop.go b/pilot/pkg/serviceregistry/kube/controller/ambient/sidecar_interop.go
+index 9a64fbf20b..1e55ca7f76 100644
+--- a/pilot/pkg/serviceregistry/kube/controller/ambient/sidecar_interop.go
++++ b/pilot/pkg/serviceregistry/kube/controller/ambient/sidecar_interop.go
+@@ -20,10 +20,12 @@ import (
+ 	"strings"
+ 
+ 	"istio.io/istio/pilot/pkg/model"
++	"istio.io/istio/pkg/cluster"
+ 	"istio.io/istio/pkg/config/schema/kind"
+ 	"istio.io/istio/pkg/kube/krt"
+ 	"istio.io/istio/pkg/ptr"
+ 	"istio.io/istio/pkg/slices"
++	"istio.io/istio/pkg/util/sets"
+ 	"istio.io/istio/pkg/workloadapi"
+ )
+ 
+@@ -31,13 +33,72 @@ import (
+ // For example, we may have ServiceKey=httpbin.org and WaypointInstance=[list of *waypoint workloads* attached].
+ // This is to map to the eventual EDS structure.
+ type serviceEDS struct {
+-	ServiceKey       string
+-	WaypointInstance []*workloadapi.Workload
+-	UseWaypoint      bool
++	ServiceKey         string
++	WaypointServiceKey string
++	WaypointInstance   []model.WorkloadInfo
++	UseWaypoint        bool
+ }
+ 
+-func (w serviceEDS) ResourceName() string {
+-	return w.ServiceKey
++func (s serviceEDS) ResourceName() string {
++	return s.ServiceKey
++}
++
++func (s serviceEDS) Equals(other serviceEDS) bool {
++	if s.ServiceKey != other.ServiceKey || s.WaypointServiceKey != other.WaypointServiceKey {
++		return false
++	}
++	if s.UseWaypoint != other.UseWaypoint {
++		return false
++	}
++	if len(s.WaypointInstance) != len(other.WaypointInstance) {
++		return false
++	}
++	// The builder sorts both slices by workload UID.
++	for i := range s.WaypointInstance {
++		if !s.WaypointInstance[i].Equals(other.WaypointInstance[i]) {
++			return false
++		}
++	}
++	return true
++}
++
++func (s serviceEDS) sameWaypointBinding(other serviceEDS) bool {
++	return s.ServiceKey == other.ServiceKey &&
++		s.WaypointServiceKey == other.WaypointServiceKey &&
++		s.UseWaypoint == other.UseWaypoint
++}
++
++// registerEdsShimPushes requests a full push when waypoint ownership changes,
++// since sidecar interop changes EDS, RDS, CDS, and LDS in that case. Changes to
++// replicas of the same waypoint remain incremental EDS updates.
++func registerEdsShimPushes(serviceEds krt.Collection[serviceEDS], xdsUpdater model.XDSUpdater) {
++	serviceEds.RegisterBatch(func(events []krt.Event[serviceEDS], _ bool) {
++		if req := serviceEDSPushRequest(events); req != nil {
++			xdsUpdater.ConfigUpdate(req)
++		}
++	}, false)
++}
++
++func serviceEDSPushRequest(events []krt.Event[serviceEDS]) *model.PushRequest {
++	configs := sets.New[model.ConfigKey]()
++	full := false
++	for _, event := range events {
++		if event.Old == nil || event.New == nil || !event.Old.sameWaypointBinding(*event.New) {
++			full = true
++		}
++		for _, svc := range event.Items() {
++			ns, hostname, _ := strings.Cut(svc.ServiceKey, "/")
++			configs.Insert(model.ConfigKey{Kind: kind.ServiceEntry, Name: hostname, Namespace: ns})
++		}
++	}
++	if configs.IsEmpty() {
++		return nil
++	}
++	return &model.PushRequest{
++		Full:           full,
++		ConfigsUpdated: configs,
++		Reason:         model.NewReasonStats(model.AmbientUpdate),
++	}
+ }
+ 
+ // RegisterEdsShim handles triggering xDS events when Envoy EDS needs to change.
+@@ -48,6 +109,7 @@ func (w serviceEDS) ResourceName() string {
+ // Ideally, the information we are using in Envoy and the event trigger are using the same data directly.
+ func RegisterEdsShim(
+ 	xdsUpdater model.XDSUpdater,
++	includeAllServiceWaypoints bool,
+ 	Workloads krt.Collection[model.WorkloadInfo],
+ 	Namespaces krt.Collection[model.NamespaceInfo],
+ 	WorkloadsByServiceKey krt.Index[string, model.WorkloadInfo],
+@@ -59,9 +121,7 @@ func RegisterEdsShim(
+ 		Services,
+ 		func(ctx krt.HandlerContext, svc model.ServiceInfo) *serviceEDS {
+ 			useWaypoint := ingressUseWaypoint(svc, krt.FetchOne(ctx, Namespaces, krt.FilterKey(svc.Service.Namespace)))
+-			if !useWaypoint {
+-				// Currently, we only need this for ingres -> waypoint usage
+-				// If we extend this to sidecars, etc we can drop this.
++			if !includeAllServiceWaypoints && !useWaypoint {
+ 				return nil
+ 			}
+ 			wp := svc.Service.Waypoint
+@@ -88,23 +148,23 @@ func RegisterEdsShim(
+ 				waypointServiceKey = waypointSvc.ResourceName()
+ 			}
+ 			workloads := krt.Fetch(ctx, Workloads, krt.FilterIndex(WorkloadsByServiceKey, waypointServiceKey))
++			// serviceEDS.Equals compares workloads positionally, so normalize the
++			// non-deterministic index result before constructing the value.
++			workloads = slices.SortBy(workloads, func(i model.WorkloadInfo) string {
++				return i.Workload.Uid
++			})
+ 			return &serviceEDS{
+-				ServiceKey:  svc.ResourceName(),
+-				UseWaypoint: useWaypoint,
+-				WaypointInstance: slices.Map(workloads, func(e model.WorkloadInfo) *workloadapi.Workload {
+-					return e.Workload
+-				}),
++				ServiceKey:         svc.ResourceName(),
++				WaypointServiceKey: waypointServiceKey,
++				UseWaypoint:        useWaypoint,
++				WaypointInstance:   workloads,
+ 			}
+ 		},
+ 		opts.WithName("ServiceEds")...)
+-	ServiceEds.RegisterBatch(
+-		PushXds(xdsUpdater, func(svc serviceEDS) model.ConfigKey {
+-			ns, hostname, _ := strings.Cut(svc.ServiceKey, "/")
+-			return model.ConfigKey{Kind: kind.ServiceEntry, Name: hostname, Namespace: ns}
+-		}), false)
++	registerEdsShimPushes(ServiceEds, xdsUpdater)
+ }
+ 
+-func (a *index) ServicesWithWaypoint(key string) []model.ServiceWaypointInfo {
++func (a *index) ServicesWithWaypoint(key string, _ cluster.ID) []model.ServiceWaypointInfo {
+ 	res := []model.ServiceWaypointInfo{}
+ 	var svcs []model.ServiceInfo
+ 	if key == "" {
+diff --git a/pilot/pkg/serviceregistry/kube/controller/ambient/sidecar_interop_test.go b/pilot/pkg/serviceregistry/kube/controller/ambient/sidecar_interop_test.go
+index 9788aa0321..20ea6769d6 100644
+--- a/pilot/pkg/serviceregistry/kube/controller/ambient/sidecar_interop_test.go
++++ b/pilot/pkg/serviceregistry/kube/controller/ambient/sidecar_interop_test.go
+@@ -21,11 +21,101 @@ import (
+ 
+ 	"istio.io/api/label"
+ 	"istio.io/istio/pilot/pkg/model"
++	"istio.io/istio/pilot/pkg/serviceregistry/util/xdsfake"
+ 	"istio.io/istio/pkg/config/constants"
++	"istio.io/istio/pkg/config/schema/kind"
++	"istio.io/istio/pkg/kube/krt"
+ 	"istio.io/istio/pkg/slices"
+ 	"istio.io/istio/pkg/test/util/assert"
++	"istio.io/istio/pkg/workloadapi"
+ )
+ 
++func TestServiceEDSEquals(t *testing.T) {
++	workload := func(uid string, labels map[string]string) model.WorkloadInfo {
++		return model.WorkloadInfo{
++			Workload: &workloadapi.Workload{Uid: uid},
++			Labels:   labels,
++		}
++	}
++	sorted := func(workloads ...model.WorkloadInfo) []model.WorkloadInfo {
++		return slices.SortBy(workloads, func(w model.WorkloadInfo) string {
++			return w.Workload.Uid
++		})
++	}
++
++	base := serviceEDS{
++		ServiceKey:         "ns/service.example.com",
++		WaypointServiceKey: "ns/waypoint-a.example.com",
++		WaypointInstance: sorted(
++			workload("waypoint-b", map[string]string{"version": "v1"}),
++			workload("waypoint-a", map[string]string{"version": "v1"}),
++		),
++		UseWaypoint: true,
++	}
++	reordered := serviceEDS{
++		ServiceKey:         "ns/service.example.com",
++		WaypointServiceKey: "ns/waypoint-a.example.com",
++		WaypointInstance: sorted(
++			workload("waypoint-a", map[string]string{"version": "v1"}),
++			workload("waypoint-b", map[string]string{"version": "v1"}),
++		),
++		UseWaypoint: true,
++	}
++	if !base.Equals(reordered) {
++		t.Fatal("workload fetch order should not affect equality after UID sorting")
++	}
++
++	metadataChanged := reordered
++	metadataChanged.WaypointInstance = sorted(
++		workload("waypoint-a", map[string]string{"version": "v2"}),
++		workload("waypoint-b", map[string]string{"version": "v1"}),
++	)
++	if base.Equals(metadataChanged) {
++		t.Fatal("metadata-only workload changes must affect equality")
++	}
++
++	waypointChanged := reordered
++	waypointChanged.WaypointServiceKey = "ns/waypoint-b.example.com"
++	if base.Equals(waypointChanged) {
++		t.Fatal("waypoint identity changes must affect equality")
++	}
++}
++
++func TestServiceEDSPushRequest(t *testing.T) {
++	base := serviceEDS{
++		ServiceKey:         "ns/service.example.com",
++		WaypointServiceKey: "ns/waypoint-a.example.com",
++		UseWaypoint:        true,
++	}
++	withReplica := base
++	withReplica.WaypointInstance = []model.WorkloadInfo{{Workload: &workloadapi.Workload{Uid: "waypoint-a"}}}
++	otherWaypoint := base
++	otherWaypoint.WaypointServiceKey = "ns/waypoint-b.example.com"
++
++	cases := []struct {
++		name  string
++		event krt.Event[serviceEDS]
++		full  bool
++	}{
++		{"ownership added", krt.Event[serviceEDS]{New: &base}, true},
++		{"ownership removed", krt.Event[serviceEDS]{Old: &base}, true},
++		{"selected waypoint changed", krt.Event[serviceEDS]{Old: &base, New: &otherWaypoint}, true},
++		{"same waypoint replicas changed", krt.Event[serviceEDS]{Old: &base, New: &withReplica}, false},
++	}
++	for _, tt := range cases {
++		t.Run(tt.name, func(t *testing.T) {
++			req := serviceEDSPushRequest([]krt.Event[serviceEDS]{tt.event})
++			if req == nil || req.Full != tt.full {
++				t.Fatalf("request = %#v, want Full=%v", req, tt.full)
++			}
++			want := model.ConfigKey{Kind: kind.ServiceEntry, Name: "service.example.com", Namespace: "ns"}
++			if !req.ConfigsUpdated.Contains(want) {
++				t.Fatalf("configs = %v, want %v", req.ConfigsUpdated, want)
++			}
++		})
++	}
++}
++
+ func TestIngressInterop(t *testing.T) {
+ 	// Test that we can get updates for EDS when we have service bound waypoints.
+ 	s := newAmbientTestServer(t, testC, testNW)
+@@ -34,7 +124,7 @@ func TestIngressInterop(t *testing.T) {
+ 	edsUpdate := s.hostnameForService
+ 	assertServicesWithWaypoint := func(want ...string) {
+ 		t.Helper()
+-		got := s.ServicesWithWaypoint(s.svcXdsName("svc1"))
++		got := s.ServicesWithWaypoint(s.svcXdsName("svc1"), s.clusterID)
+ 		gots := slices.Map(got, func(e model.ServiceWaypointInfo) string {
+ 			return e.Service.Hostname + "/" + e.WaypointHostname
+ 		})
+@@ -56,7 +146,7 @@ func TestIngressInterop(t *testing.T) {
+ 		map[string]string{},
+ 		map[string]string{},
+ 		[]int32{80}, map[string]string{"app": "waypoint"}, "10.0.0.1")
+-	s.assertEvent(t, edsUpdate("svc1"))
++	s.fx.MatchOrFail(t, xdsfake.Event{Type: "xds full", ID: edsUpdate("svc1")})
+ 	assertServicesWithWaypoint(s.hostnameForService("svc1") + "/" + s.hostnameForService("wp-svc"))
+ 
+ 	// add a waypoint instance... we should get an EDS update
+@@ -66,11 +156,16 @@ func TestIngressInterop(t *testing.T) {
+ 	s.assertEvent(t, edsUpdate("svc1"))
+ 	assertServicesWithWaypoint(s.hostnameForService("svc1") + "/" + s.hostnameForService("wp-svc"))
+ 
++	// A metadata-only change to an existing waypoint workload must also
++	// invalidate the destination service's EDS without changing replica count.
++	s.labelPod(t, "wp-pod1", testNS, map[string]string{"app": "waypoint", "version": "v2"})
++	s.assertEvent(t, edsUpdate("svc1"))
++
+ 	// now we are going to change to a different waypoint, this will be hostname based
+ 	s.addService(t, "svc1",
+ 		map[string]string{label.IoIstioUseWaypoint.Name: "wp-svc-host"},
+ 		map[string]string{},
+ 		[]int32{80}, map[string]string{"app": "a"}, "10.0.0.2")
+ 	s.addWaypointSpecificAddress(t, "", "example.com", "wp-svc-host", constants.AllTraffic, true)
+-	s.assertEvent(t, edsUpdate("svc1"))
++	s.fx.MatchOrFail(t, xdsfake.Event{Type: "xds full", ID: edsUpdate("svc1")})
+ }
+diff --git a/pilot/pkg/serviceregistry/memory/discovery.go b/pilot/pkg/serviceregistry/memory/discovery.go
+index 10b707685d..9bc8a0dacb 100644
+--- a/pilot/pkg/serviceregistry/memory/discovery.go
++++ b/pilot/pkg/serviceregistry/memory/discovery.go
+@@ -52,6 +52,7 @@ type ServiceDiscovery struct {
+ 	InstancesError             error
+ 	Controller                 model.Controller
+ 	ClusterID                  cluster.ID
++	WantServicesWithWaypoint   []model.ServiceWaypointInfo
+ 
+ 	// Used by GetProxyWorkloadLabels
+ 	ip2workloadLabels map[string]labels.Instance
+@@ -376,8 +377,8 @@ func (sd *ServiceDiscovery) ServicesForWaypoint(model.WaypointKey) []model.Servi
+ 	return nil
+ }
+ 
+-func (sd *ServiceDiscovery) ServicesWithWaypoint(string) []model.ServiceWaypointInfo {
+-	return nil
++func (sd *ServiceDiscovery) ServicesWithWaypoint(string, cluster.ID) []model.ServiceWaypointInfo {
++	return sd.WantServicesWithWaypoint
+ }
+ 
+ func (sd *ServiceDiscovery) Waypoint(string, string) []netip.Addr {
+diff --git a/pilot/pkg/xds/endpoints/endpoint_builder.go b/pilot/pkg/xds/endpoints/endpoint_builder.go
+index 770b2dc143..e8a3064327 100644
+--- a/pilot/pkg/xds/endpoints/endpoint_builder.go
++++ b/pilot/pkg/xds/endpoints/endpoint_builder.go
+@@ -247,6 +247,12 @@ func (b *EndpointBuilder) WriteHash(h hash.Hash) {
+ 		h.WriteString(string(b.service.Hostname))
+ 		h.Write(Slash)
+ 		h.WriteString(b.service.Attributes.Namespace)
++		h.Write(Slash)
++		waypoint := false
++		if b.push != nil && b.proxy.EnableSidecarWaypointRouting() && b.service.HasAddressOrAssigned(b.clusterID) {
++			waypoint = len(b.push.ServicesWithWaypoint(b.service.Key(), b.clusterID)) > 0
++		}
++		h.WriteString(strconv.FormatBool(waypoint))
+ 	}
+ 	h.Write(Separator)
+ 
+@@ -336,7 +342,10 @@ func (b *EndpointBuilder) BuildClusterLoadAssignment(endpointIndex *model.Endpoi
+ 		return buildEmptyClusterLoadAssignment(b.clusterName)
+ 	}
+ 
+-	if features.EnableIngressWaypointRouting {
++	// For waypoint-bound services, replace workload endpoints with waypoint
++	// endpoints.
++	// Sidecars follow the service binding. Ingress requires explicit opt-in.
++	if b.proxy.EnableSidecarWaypointRouting() || (b.nodeType == model.Router && features.EnableIngressWaypointRouting) {
+ 		if waypointEps, f := b.findServiceWaypoint(endpointIndex); f {
+ 			// endpoints are from waypoint service but the envoy endpoint is different envoy cluster
+ 			locLbEps := b.generate(waypointEps, true)
+@@ -843,9 +852,7 @@ func getSubSetLabels(dr *v1alpha3.DestinationRule, subsetName string) labels.Ins
+ // For services that have a waypoint, we want to send to the waypoints rather than the service endpoints.
+ // Lookup the service, find its waypoint, then find the waypoint's endpoints.
+ func (b *EndpointBuilder) findServiceWaypoint(endpointIndex *model.EndpointIndex) ([]*model.IstioEndpoint, bool) {
+-	// Currently we only support routers (gateways)
+-	if b.nodeType != model.Router {
+-		// Currently only ingress will call waypoints
++	if b.nodeType != model.SidecarProxy && b.nodeType != model.Router {
+ 		return nil, false
+ 	}
+ 	if !b.service.HasAddressOrAssigned(b.proxy.Metadata.ClusterID) {
+@@ -853,17 +860,29 @@ func (b *EndpointBuilder) findServiceWaypoint(endpointIndex *model.EndpointIndex
+ 		return nil, false
+ 	}
+ 
+-	svcs := b.push.ServicesWithWaypoint(b.service.Attributes.Namespace + "/" + string(b.hostname))
++	waypointClusterID := cluster.ID("")
++	if b.nodeType == model.SidecarProxy {
++		waypointClusterID = b.clusterID
++	}
++	svcs := b.push.ServicesWithWaypoint(b.service.Attributes.Namespace+"/"+string(b.hostname), waypointClusterID)
+ 	if len(svcs) == 0 {
+-		// Service isn't captured by a waypoint
++		// Service isn't captured by a waypoint in the applicable scope.
+ 		return nil, false
+ 	}
+ 	if len(svcs) > 1 {
++		if b.nodeType == model.SidecarProxy {
++			// Do not select a waypoint according to registry order.
++			// A conflicting local binding is a control-plane error and must
++			// fail closed.
++			log.Errorf("unexpected multiple local waypoint services for %v in cluster %v", b.clusterName, b.clusterID)
++			return nil, true
++		}
+ 		log.Warnf("unexpected multiple waypoint services for %v", b.clusterName)
+ 	}
+ 	svc := svcs[0]
+-	// They need to explicitly opt-in on the service to send from ingress -> waypoint
+-	if !svc.IngressUseWaypoint {
++	// Sidecars follow the ordinary use-waypoint binding.
++	// Ingress needs an additional explicit opt-in.
++	if b.nodeType == model.Router && !svc.IngressUseWaypoint {
+ 		return nil, false
+ 	}
+ 	waypointClusterName := model.BuildSubsetKey(
+@@ -874,6 +893,14 @@ func (b *EndpointBuilder) findServiceWaypoint(endpointIndex *model.EndpointIndex
+ 	)
+ 	endpointBuilder := NewEndpointBuilder(waypointClusterName, b.proxy, b.push)
+ 	waypointEndpoints, _ := endpointBuilder.snapshotEndpointsForPort(endpointIndex)
++	// Sidecar interoperability is local-cluster only. Do not let a replicated
++	// waypoint Service contribute remote waypoint pods, which split-horizon
++	// EDS could otherwise replace with east-west gateways.
++	if b.nodeType == model.SidecarProxy {
++		waypointEndpoints = slices.FilterInPlace(waypointEndpoints, func(ep *model.IstioEndpoint) bool {
++			return ep.Locality.ClusterID == b.clusterID
++		})
++	}
+ 	return waypointEndpoints, true
+ }
+ 
+-- 
+2.47.3
+

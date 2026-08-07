@@ -403,7 +403,7 @@ In case of issues when working with a multi-cluster, it is necessary to check in
 ## Ambient mesh
 
 {% alert level="warning" %}
-Available in Enterprise Edition only. Ambient mesh support is experimental and not recommended for production use.
+Available in Enterprise Edition and Certified Security Edition Pro only.
 {% endalert %}
 
 Besides the classic sidecar mode, Istio can run the data plane in *ambient* mode. In this mode, the mesh functionality is split into two layers, and application pods no longer get a per-pod `istio-proxy` sidecar container:

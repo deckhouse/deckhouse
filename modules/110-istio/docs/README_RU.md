@@ -405,7 +405,7 @@ Istio работает в режиме [multi-network](https://istio.io/latest/d
 ## Ambient mesh
 
 {% alert level="warning" %}
-Доступно только в Enterprise Edition и Certified Security Edition Pro. Поддержка ambient mesh является экспериментальной и не рекомендуется для использования в production-окружении.
+Доступно только в Enterprise Edition и Certified Security Edition Pro.
 {% endalert %}
 
 Помимо классического режима с сайдкарами, Istio может запускать data plane в режиме *ambient*. В этом режиме функциональность сети разделена на два уровня, и в поды приложений больше не добавляется сайдкар-контейнер `istio-proxy`:
