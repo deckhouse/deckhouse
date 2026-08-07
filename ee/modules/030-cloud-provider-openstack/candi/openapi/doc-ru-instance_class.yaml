@@ -69,6 +69,12 @@ spec:
                 additionalTags:
                   description: |
                     Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации cloud-провайдера.
+                tags:
+                  description: |
+                    Список «сырых» тегов OpenStack (Nova), которые будут прикреплены к инстансам.
+
+                    В отличие от `additionalTags`, которые рендерятся как `key=value`, эти теги передаются как есть.
+                    Поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI.
     - name: v1
       served: true
       storage: false

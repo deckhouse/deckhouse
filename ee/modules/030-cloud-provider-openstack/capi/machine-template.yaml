@@ -98,6 +98,9 @@ spec:
       {{- range $k, $v := $tags }}
        - {{ (printf "%s=%s" $k $v) | quote }}
       {{- end }}
+      {{- range .nodeGroup.instanceClass.tags | default list | uniq }}
+       - {{ . | quote }}
+      {{- end }}
         # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
        - "deckhouse-{{ .Values.global.discovery.clusterUUID }}=1"
        - "role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}=1"

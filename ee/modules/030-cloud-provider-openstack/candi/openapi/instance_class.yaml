@@ -124,6 +124,19 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
+                tags:
+                  description: |
+                    Raw OpenStack (Nova) server tags attached to the instances.
+
+                    Unlike `additionalTags`, which are rendered as `key=value`, these tags are passed verbatim.
+                    Supported only for CloudEphemeral NodeGroups running on the CAPI engine.
+                  x-doc-examples:
+                    - ["preemptible"]
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 60
+                    pattern: '^[^,/]+$'
             status:
               type: object
               properties:

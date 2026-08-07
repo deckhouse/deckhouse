@@ -18,6 +18,9 @@
 {{- if .nodeGroup.instanceClass.additionalTags -}}
   {{- $_ := set $options "additionalTags" .nodeGroup.instanceClass.additionalTags -}}
 {{- end }}
+{{- if .nodeGroup.instanceClass.tags -}}
+  {{- $_ := set $options "tags" .nodeGroup.instanceClass.tags -}}
+{{- end }}
 {{- if (index .nodeGroup "manualRolloutID") -}}
   {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}

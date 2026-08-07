@@ -137,6 +137,20 @@ func TestRenderChecksum_CAPIProviderParity(t *testing.T) {
 			},
 		},
 		{
+			name: "openstack: raw tags propagate to options",
+			path: openstackCAPIChecksumPath,
+			blob: map[string]interface{}{
+				"instanceClass": map[string]interface{}{
+					"flavorName": "m1.large",
+					"tags":       []interface{}{"preemptible", "spot"},
+				},
+			},
+			wantOptions: map[string]interface{}{
+				"flavorName": "m1.large",
+				"tags":       []interface{}{"preemptible", "spot"},
+			},
+		},
+		{
 			name: "zvirt: vnicProfileID/rootDiskSizeGb nil when absent",
 			path: zvirtCAPIChecksumPath,
 			blob: map[string]interface{}{

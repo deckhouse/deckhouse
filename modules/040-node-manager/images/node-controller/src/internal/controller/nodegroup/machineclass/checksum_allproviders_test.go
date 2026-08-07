@@ -61,6 +61,7 @@ func everyProviderField() map[string]interface{} {
 		"additionalSecurityGroups": []interface{}{"sg2"},
 		"additionalTags":           map[string]interface{}{"k": "v"},
 		"additionalLabels":         map[string]interface{}{"k": "v"},
+		"tags":                     []interface{}{"preemptible"},
 		"assignPublicIPAddress":    true, "networkType": "standard",
 		"serverGroupID": "sg-1", "vipAddress": "10.0.0.1", "vnicProfileID": "vnic-1",
 		"sizingPolicy": "policy", "storageProfile": "profile", "placementPolicy": "pp",
