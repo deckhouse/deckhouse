@@ -3198,8 +3198,6 @@ alerts:
         ```
 
         Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
-
-        Note: the new `d8:namespace:user` no longer grants reading Secrets or `kubectl exec`/`kubectl attach` — these actions now require a `manager` role by design.
       summary: |
         A binding still references a deprecated RBACv2 role.
       severity: "7"

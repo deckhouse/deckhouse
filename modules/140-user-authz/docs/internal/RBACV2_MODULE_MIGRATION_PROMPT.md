@@ -61,10 +61,10 @@ For every file under `templates/rbacv2/**`:
 
 ## The judgement calls — report each one you make
 
-4. **Check the tier of every rule.** A namespace capability now aggregates into namespace roles, where
+1. **Check the tier of every rule.** A namespace capability now aggregates into namespace roles, where
    a rule on a cluster-scoped resource grants nothing. If a file under `use/` grants a cluster-scoped
    resource, move that rule into the matching file under `manage/`. Say which rules you moved and why.
-5. **Check the level.** Most modules used `viewer` for `view` and `manager` for `edit`; keep what you
+2. **Check the level.** Most modules used `viewer` for `view` and `manager` for `edit`; keep what you
    find unless the module clearly means otherwise. The namespace lineage also has `user` — the level of
    a tenant who merely works in the namespace. If a namespace capability is dropped from a second
    lineage (a legacy `use` file sometimes carried `kubernetes` and `networking` together), say so.
