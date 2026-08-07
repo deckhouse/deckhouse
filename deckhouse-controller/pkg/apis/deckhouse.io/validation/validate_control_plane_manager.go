@@ -481,36 +481,6 @@ func (v *moduleConfigValidator) readClusterKubernetesSpec(ctx context.Context) (
 	return spec, true
 }
 
-// readClusterKubernetesAutomaticVersion returns status.automaticVersion — the version "Default"
-// resolves to for the running Deckhouse build. ok=false means it is not published yet.
-//
-// Note the difference from the deckhouseDefaultKubernetesVersion Secret key it replaces: that key
-// was written monotonically (only ever raised), so after a Deckhouse downgrade it kept answering
-// with a default that no longer exists. This one always describes the build that is actually
-// running, which is what every caller of it actually wants.
-func (v *moduleConfigValidator) readClusterKubernetesAutomaticVersion(ctx context.Context) (string, bool) {
-	cm := &v1.ConfigMap{}
-	if err := v.client.Get(ctx, client.ObjectKey{
-		Name:      clusterKubernetesConfigMapName,
-		Namespace: kubeSystemNamespace,
-	}, cm); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Warn("cannot read the d8-cluster-kubernetes ConfigMap", log.Err(err))
-		}
-		return "", false
-	}
-
-	status := new(clusterKubernetesStatus)
-	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesStatusDataKey]), status); err != nil {
-		log.Warn("cannot parse d8-cluster-kubernetes data.status", log.Err(err))
-		return "", false
-	}
-
-	automaticVersion := strings.TrimSpace(status.AutomaticVersion)
-
-	return automaticVersion, automaticVersion != ""
-}
-
 // readKubernetesVersionBaseline returns the version bookkeeping control-plane-manager keeps in the
 // d8-cluster-configuration Secret. ok=false means fail-open (missing/unreadable).
 func (v *moduleConfigValidator) readKubernetesVersionBaseline(ctx context.Context) (kubernetesVersionBaseline, bool) {

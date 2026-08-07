@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"go.yaml.in/yaml/v2"
@@ -137,7 +138,7 @@ func (r *reconciler) bootstrapConfigMap(ctx context.Context) error {
 
 		if !apierrors.IsNotFound(getErr) {
 			logger.Warn("Cannot check whether the cluster ConfigMap exists, retrying",
-				"namespace", common.KubeSystemNamespace, "name", common.ConfigMapName, log.Err(getErr))
+				slog.String("namespace", common.KubeSystemNamespace), slog.String("name", common.ConfigMapName), log.Err(getErr))
 			return false, nil
 		}
 
