@@ -9,8 +9,8 @@ Deckhouse Kubernetes Platform is migrating CloudEphemeral node management from M
 
 At the moment, CAPI is supported for the following cloud providers:
 
-- [Yandex Cloud](/modules/cloud-provider-yandex/);
-- [OpenStack](/modules/cloud-provider-openstack/).
+- [Yandex Cloud](/modules/cloud-provider-yandex/)
+- [OpenStack](/modules/cloud-provider-openstack/)
 
 After CAPI support becomes available, existing [CloudEphemeral](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudephemeral-nodes-in-a-cloud-cluster) node groups continue to use MCM (`status.engine: MCM`). Newly created node groups use CAPI by default (`status.engine: CAPI`).
 
