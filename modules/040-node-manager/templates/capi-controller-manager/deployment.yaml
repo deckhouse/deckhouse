@@ -2,6 +2,8 @@
 cpu: 10m
 memory: 50Mi
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if include "capi_controller_manager_enabled" . }}
   {{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
@@ -203,3 +205,5 @@ spec:
         secret:
           secretName: capi-webhook-tls
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -19,3 +21,5 @@ spec:
         metadata:
           description: HTTPS listener for the Bashible API server
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

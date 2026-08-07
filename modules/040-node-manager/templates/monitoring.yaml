@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- $prometheusRules := list
   "monitoring/prometheus-rules/caps-nodes.tpl"
   "monitoring/prometheus-rules/cloud-data-discovery.tpl"
@@ -22,3 +24,5 @@
 {{- include "helm_lib_prometheus_rules" (list . "d8-cloud-instance-manager" $prometheusRules) }}
 
 {{ include "helm_lib_grafana_dashboard_definitions" . }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

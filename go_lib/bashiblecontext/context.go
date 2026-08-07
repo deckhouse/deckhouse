@@ -25,12 +25,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext/names"
 )
 
 const (
-	secretName      = "bashible-apiserver-context"
-	secretNamespace = "d8-cloud-instance-manager"
-	secretInputKey  = "input.yaml"
+	secretName      = names.SecretName
+	secretNamespace = names.SecretNamespace
+	secretInputKey  = names.SecretInputKey
 )
 
 type Globals struct {

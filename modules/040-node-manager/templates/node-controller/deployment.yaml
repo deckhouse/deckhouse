@@ -2,6 +2,8 @@
 cpu: 10m
 memory: 50Mi
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
@@ -183,3 +185,5 @@ spec:
       - name: cert
         secret:
           secretName: node-controller-webhook-tls
+{{- end }}
+{{- /* /vcp-gate */ -}}

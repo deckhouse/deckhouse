@@ -16,7 +16,7 @@ apiserverProxyCerts:
   crt: PROXY-CERT
   key: PROXY-KEY
 bootstrapTokens:
-  cloud-worker: abcdef.0123456789abcdef
+  cloud-worker: golden.fixture-not-a-token
 cloudProvider:
   instanceClassKind: D8TestInstanceClass
   machineClassKind: YandexMachineClass

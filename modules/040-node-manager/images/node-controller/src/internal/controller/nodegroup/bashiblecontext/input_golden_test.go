@@ -35,6 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext"
+
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
@@ -151,7 +153,10 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 				Labels:    map[string]string{bootstrapTokenNGLabel: "cloud-worker"},
 			},
 			Type: corev1.SecretTypeBootstrapToken,
-			Data: map[string][]byte{"token-id": []byte("abcdef"), "token-secret": []byte("0123456789abcdef")},
+			// Deliberately not the [a-z0-9]{6}.[a-z0-9]{16} shape of a real bootstrap token:
+			// the golden below carries the assembled value verbatim and gitleaks fails the
+			// build on anything that looks like one.
+			Data: map[string][]byte{"token-id": []byte("golden"), "token-secret": []byte("fixture-not-a-token")},
 		},
 		goldenInstanceClass("worker"),
 	}
@@ -162,7 +167,7 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 	c := fake.NewClientBuilder().WithScheme(goldenScheme(t)).WithRuntimeObjects(objs...).Build()
 	return &Reconciler{
 		Client:        c,
-		Context:       &Service{Client: c, RootCAFile: filepath.Join("testdata", "ca.crt")},
+		Context:       &bashiblecontext.Service{Client: c, RootCAFile: filepath.Join("testdata", "ca.crt")},
 		DerivedStatus: &derived_status.Service{Client: c},
 	}
 }

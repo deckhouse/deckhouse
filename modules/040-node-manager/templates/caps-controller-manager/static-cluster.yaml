@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- $prefix := "static" }}
 {{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 ---
@@ -15,3 +17,5 @@ metadata:
   name: {{ $prefix }}-control-plane
   {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

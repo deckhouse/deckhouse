@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- $manual_ngs := list }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- if and (ne $ng.nodeType "CloudEphemeral") (ne $ng.nodeType "Cloud") }}
@@ -40,3 +42,5 @@ subjects:
   name: node-group
   namespace: d8-cloud-instance-manager
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}
