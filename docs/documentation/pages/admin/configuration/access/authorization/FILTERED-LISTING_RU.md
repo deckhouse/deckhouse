@@ -18,7 +18,7 @@ Deckhouse Kubernetes Platform (DKP) расширяет возможности ku
 
 ## Использование через ⁠Deckhouse CLI
 
-В DKP для работы с механизмом листинга с фильтрацией используется  [утилита ⁠Deckhouse CLI](../../cli/d8/).
+В DKP для работы с механизмом листинга с фильтрацией используется  [утилита ⁠Deckhouse CLI](../../../../cli/d8/).
 
 ### Области фильтрации ресурсов
 
@@ -181,7 +181,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 | Компонент | Роль |
 |---|---|
-| [Deckhouse CLI](../../cli/d8/) | Поддержка флага `--scope` и преобразование его значений в заголовки |
+| [Deckhouse CLI](../../../../cli/d8/) | Поддержка флага `--scope` и преобразование его значений в заголовки |
 | kube-apiserver (патч DKP) | Перехват `403 Forbidden` и фильтрация на слое хранилища |
 | Модуль [`user-authz`](/modules/user-authz/) (`permission-browser`) | Определение границы доступа через `AccessibleNamespaces` и `BulkSubjectAccessReview` |
 | Модуль [`multitenancy-manager`](/modules/multitenancy-manager/) | Классификация неймспейсов по лейблу `projects.deckhouse.io/project` |
