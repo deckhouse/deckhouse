@@ -220,6 +220,24 @@ func TestValidateReleaseWithMissingDependency(t *testing.T) {
 	assert.Contains(t, err.Error(), "could not get", "Error should mention the get failure")
 }
 
+// TestValidateReleaseWithOptionalMissingDependency tests that an optional dependency
+// resolves without error when its Module resource does not exist (NotFound)
+func TestValidateReleaseWithOptionalMissingDependency(t *testing.T) {
+	extender := moduledependency.Instance()
+
+	// Set up version helper that returns not found error, simulating an absent Module resource
+	extender.SetModulesVersionHelper(func(moduleName string) (string, error) {
+		return "", apierrors.NewNotFound(schema.GroupResource{Group: "modules", Resource: "module"}, moduleName)
+	})
+
+	version, _ := semver.NewVersion("1.0.0")
+	err := extender.ValidateRelease("moduleWithOptionalMissingDep", "v1.0.0", version, map[string]string{
+		"missingOptionalDep": ">= 1.0.0 !optional",
+	})
+
+	assert.NoError(t, err, "ValidateRelease should not fail on optional missing dependency")
+}
+
 // TestValidateReleaseWithUnparsableVersion tests validation with an unparsable parent version
 func TestValidateReleaseWithUnparsableVersion(t *testing.T) {
 	extender := moduledependency.Instance()
