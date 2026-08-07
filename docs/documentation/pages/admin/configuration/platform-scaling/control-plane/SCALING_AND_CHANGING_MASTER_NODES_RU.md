@@ -139,7 +139,17 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
    d8 system queue list
    ```
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
+1. **На локальной машине** авторизуйтесь в хранилище образов контейнеров (измените адрес хранилища образов при необходимости):
+
+   ```shell
+   docker login registry.deckhouse.ru
+   ```
+
+   В процессе авторизации необходимо будет ввести `Username` и `Password`.
+
+   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — должно содержать ключ лицензии Deckhouse Kubernetes Platform.
+
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -290,7 +300,17 @@ spec:
    d8 system queue list
    ```
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
+1. **На локальной машине** авторизуйтесь в хранилище образов контейнеров (измените адрес хранилища образов при необходимости):
+
+   ```shell
+   docker login registry.deckhouse.ru
+   ```
+
+   В процессе авторизации необходимо будет ввести `Username` и `Password`.
+
+   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — должно содержать ключ лицензии Deckhouse Kubernetes Platform.
+
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -358,7 +378,17 @@ spec:
    d8 system queue list
    ```
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
+1. **На локальной машине** авторизуйтесь в хранилище образов контейнеров (измените адрес хранилища образов при необходимости):
+
+   ```shell
+   docker login registry.deckhouse.ru
+   ```
+
+   В процессе авторизации необходимо будет ввести `Username` и `Password`.
+
+   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
