@@ -57,6 +57,37 @@ import (
 	"github.com/deckhouse/registry-syncer/internal/run"
 )
 
+// loopbackRegistry is the sentinel meaning "nobody asked for a particular address".
+//
+// A value rather than an empty string so that `--local-address=127.0.0.1:5001` stays a thing
+// somebody can ask for on purpose, and only the untouched default is replaced.
+const loopbackRegistry = "127.0.0.1:5001"
+
+// resolveLocalAddress decides where this replica's own registry is to be found.
+//
+// It is the address the replica SERVES on, not the loopback, and the difference is not academic.
+// The pod runs with host networking, so the loopback it shares is the node's — and on every node
+// of a Managed cluster something else already answers there: the registry agent, on the very same
+// port. A syncer dialling 127.0.0.1:5001 therefore reaches the agent rather than the registry
+// beside it, is served a certificate from the agent's authority, and rejects it:
+//
+//	listing the repositories: Get "https://127.0.0.1:5001/v2/": tls: failed to verify
+//	certificate: x509: certificate signed by unknown authority
+//
+// Measured on a cluster. It stayed invisible for a reason worth remembering: while an upstream is
+// configured every node falls back to it, so a leader that can neither read nor write its own
+// store breaks nothing anybody would notice. The air-gap transition is where it surfaces, because
+// there the count of what the store holds is the only evidence there is.
+//
+// An address given explicitly is left alone, including the loopback itself: a deployment that is
+// not host-networked would rightly ask for it.
+func resolveLocalAddress(localAddress, listenAddress string) string {
+	if localAddress != loopbackRegistry || listenAddress == "" {
+		return localAddress
+	}
+	return fmt.Sprintf("%s:%d", listenAddress, constant.Port)
+}
+
 // leadership tracks whether this replica holds the lease.
 //
 // Only the leader is filled from the upstream, so that several replicas do not
@@ -119,8 +150,10 @@ func main() {
 		"Where to serve metrics. Loopback, because a kube-rbac-proxy beside it is what the cluster scrapes.")
 	flag.StringVar(&listenAddress, "listen-address", "",
 		"The address the registry serves on. Defaults to the node address from the environment.")
-	flag.StringVar(&localAddress, "local-address", "127.0.0.1:"+fmt.Sprint(constant.Port),
-		"Where this replica's own registry answers, used as the destination of a fill.")
+	flag.StringVar(&localAddress, "local-address", loopbackRegistry,
+		"Where this replica's own registry answers, used to read its catalogue and as the "+
+			"destination of a fill. Defaults to the address this replica serves on, because the "+
+			"pod is host-networked and the node's loopback belongs to the registry agent.")
 	flag.StringVar(&nodeName, "node-name", os.Getenv("NODE_NAME"),
 		"The node this replica runs on, and the key of its status entry.")
 	flag.StringVar(&namespace, "namespace", os.Getenv("POD_NAMESPACE"),
@@ -147,6 +180,8 @@ func main() {
 		log.Error("no listen address; set --listen-address or NODE_IP")
 		os.Exit(1)
 	}
+
+	localAddress = resolveLocalAddress(localAddress, listenAddress)
 
 	ctx := signalContext()
 
