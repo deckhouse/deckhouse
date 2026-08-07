@@ -13,3 +13,9 @@ Features of the `cloud-provider-yandex` module:
 - Provisioning disks in Yandex Cloud using the `CSI storage` component.
 - Registration in the [node-manager](/modules/node-manager/) module, so that [YandexInstanceClasses](cr.html#yandexinstanceclass) can be used when creating the [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Automatic CNI enablement for new clusters. Starting with DKP 1.76, [`cni-cilium`](/modules/cni-cilium/) is used by default in `VXLAN` mode with source IP address translation performed using [BPF](/products/kubernetes-platform/documentation/v1/admin/configuration/network/other/bpflb.html).
+
+{% alert level="warning" %}
+The module is in the process of migrating CloudEphemeral node management from MCM to Cluster API (CAPI). Existing NodeGroups remain on MCM; new ones use CAPI by default. Migration of existing groups requires recreating the NodeGroup.
+
+See: [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
+{% endalert %}
