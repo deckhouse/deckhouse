@@ -844,7 +844,7 @@ annotations:
 
 ## Telemetry API for mesh metrics and access logs
 
-[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) is the recommended way to configure the collection of data on the operation of services (metrics, access logs, tracing providers) together with `meshConfig`.
+[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) is the recommended way to configure the collection of data on the operation of services (metrics, access logs, tracing providers) in the mesh (a group of data plane services that share a TrustDomain and authenticate each other using trusted root certificates) together with `meshConfig`.
 
 The module can run in two modes, controlled by [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled):
 
