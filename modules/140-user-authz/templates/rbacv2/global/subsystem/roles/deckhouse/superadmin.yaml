@@ -6,7 +6,7 @@ metadata:
     en.meta.deckhouse.io/title: "Deckhouse: Superadmin"
     ru.meta.deckhouse.io/title: "Суперадминистратор подсистемы Deckhouse"
     en.meta.deckhouse.io/description: "Full control over the Deckhouse subsystem, including its system resources."
-    ru.meta.deckhouse.io/description: "Полный контроль над подсистемы Deckhouse, включая её системные ресурсы."
+    ru.meta.deckhouse.io/description: "Полный контроль над подсистемой Deckhouse, включая её системные ресурсы."
   labels:
     heritage: deckhouse
     module: user-authz

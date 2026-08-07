@@ -6,7 +6,7 @@ metadata:
     en.meta.deckhouse.io/title: "Networking: Superadmin"
     ru.meta.deckhouse.io/title: "Суперадминистратор подсистемы сети"
     en.meta.deckhouse.io/description: "Full control over the Networking subsystem, including its system resources."
-    ru.meta.deckhouse.io/description: "Полный контроль над подсистемы сети, включая её системные ресурсы."
+    ru.meta.deckhouse.io/description: "Полный контроль над подсистемой сети, включая её системные ресурсы."
   labels:
     heritage: deckhouse
     module: user-authz
