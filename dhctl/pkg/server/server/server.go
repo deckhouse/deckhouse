@@ -40,6 +40,11 @@ import (
 
 const SinglethreadedMethodsPrefix = "/dhctl.DHCTL" // full method example: /dhctl.DHCTL/Check
 
+// MaxMessageSize is 2x gRPC's default 4MB message limit: a check on an
+// out-of-sync cluster with many changed nodes can still get close to the
+// default limit even after dhctl trims what it sends.
+const MaxMessageSize = 8 * 1024 * 1024
+
 // Serve starts GRPC server
 func Serve(ctx context.Context, params settings.ServerParams) error {
 	if err := params.Validate(); err != nil {
@@ -96,6 +101,8 @@ func Serve(ctx context.Context, params settings.ServerParams) error {
 			interceptors.StreamRequestsCounter(requestsCounter),
 		),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(dhctlProxy.Director())),
+		grpc.MaxRecvMsgSize(MaxMessageSize),
+		grpc.MaxSendMsgSize(MaxMessageSize),
 	)
 
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe
