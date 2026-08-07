@@ -39,10 +39,11 @@ import (
 var nondeterministicFuncs = []string{
 	// clock
 	"now", "date", "dateInZone", "date_in_zone", "dateModify", "date_modify",
-	"mustDateModify", "htmlDate", "htmlDateInZone", "ago", "toDate", "mustToDate",
-	"unixEpoch", "duration", "durationRound", "dateAgo",
+	"mustDateModify", "must_date_modify", "htmlDate", "htmlDateInZone", "ago", "toDate",
+	"mustToDate", "unixEpoch", "duration", "durationRound", "dateAgo",
 	// randomness
-	"randAlphaNum", "randAlpha", "randAscii", "randNumeric", "randBytes", "shuffle", "uuidv4",
+	"randAlphaNum", "randAlpha", "randAscii", "randNumeric", "randBytes", "randInt",
+	"shuffle", "uuidv4",
 	// crypto and secrets
 	"genPrivateKey", "derivePassword", "buildCustomCert", "genCA", "genCAWithKey",
 	"genSelfSignedCert", "genSelfSignedCertWithKey", "genSignedCert", "genSignedCertWithKey",

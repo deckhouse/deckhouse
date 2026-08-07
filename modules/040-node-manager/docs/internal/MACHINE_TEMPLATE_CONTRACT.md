@@ -19,10 +19,12 @@ Design for three consequences:
 
 - **Your template is rendered once per generation.** The rendered object is frozen for that
   generation's lifetime; node-controller never re-renders or patches it.
-- **New template text or a new provider config does not reach existing machines by itself.**
-  The next generation picks it up. Three things create one: a user changes a rolloutField, an
-  operator sets the `manual-rollout-id` annotation on the NodeGroup, or a provider release adds
-  to `rolloutFields` a field the user had already edited (see below).
+- **New template text does not reach existing machines by itself, and neither does a provider
+  config change you did not declare.** The next generation picks it up. Four things create one: a
+  user changes a `rolloutFields` field, a cluster-wide config field listed in
+  `providerRolloutFields` changes, an operator sets the `manual-rollout-id` annotation on the
+  NodeGroup, or a provider release adds to either list a field that had already been edited
+  (see below).
 - **The rendered object must depend on nothing but the context.** The template cannot reach the
   clock, random numbers, the network or the environment. If it could, "did anything change?"
   would have no answer — every render would produce something new.
@@ -37,6 +39,11 @@ version: v2
 rolloutFields:
   - flavorName
   - rootDisk.size
+
+# Optional, and almost always absent. Fields of your subtree of the cloud-provider
+# config whose change must recreate the machines, as dot-paths.
+providerRolloutFields:
+  - metadata
 
 # Optional. Extra fields node-controller writes into the MachineDeployment it builds
 # (the MachineDeployment is generic — your template does not render it).
@@ -160,6 +167,24 @@ Choosing the list:
   whole fleet.
 - When a cloud gains a live-change capability (hotplug memory, mutable tags), dropping the field
   from the list is a one-line release that rolls nobody.
+
+## providerRolloutFields — the same question for the cluster-wide config
+
+Your template renders from two inputs, so the rollout decision reads two. `providerRolloutFields`
+names the fields of *your* subtree of the cloud-provider config whose change must recreate
+machines. It behaves exactly like `rolloutFields`: the whole subtree is snapshotted
+(`node.deckhouse.io/applied-provider-config`), the list filters the comparison rather than the
+snapshot, and values are compared after normalization.
+
+Leave it out unless you mean it. A cloud-provider config field applies to every NodeGroup in the
+cluster, so listing one turns a single edit into a fleet-wide rollout. Six of the seven migrated
+providers declare nothing here: their config feeds the machine, but changing it was never a reason
+to recreate one.
+
+List a field when a user-visible promise depends on it. The one in-tree example is vcd's
+`metadata`, which `VCDClusterConfiguration` documents as recreating CloudEphemeral nodes: the v1
+checksum hashed it, and leaving it out would have turned that promise into silence while the
+template kept rendering the new value into every machine created later.
 
 ## machineDeployment.additionalFields
 

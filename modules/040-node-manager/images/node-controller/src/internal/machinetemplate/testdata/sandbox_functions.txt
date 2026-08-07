@@ -96,7 +96,6 @@ mustToPrettyJson
 mustToRawJson
 mustUniq
 mustWithout
-must_date_modify
 nindent
 nospace
 omit
@@ -111,7 +110,6 @@ plural
 prepend
 push
 quote
-randInt
 regexFind
 regexFindAll
 regexMatch

@@ -1,12 +1,6 @@
 version: v2
 
 # InstanceClass fields whose change requires recreating the machines.
-#
-# Note the deliberate difference from the v1 checksum: v1 hashed the *merged* metadata, so editing
-# the provider-wide `metadata` in the cloud-provider config rolled every machine. Under v2 the
-# provider config is not part of the rollout decision for any provider — a config change is frozen
-# into the current generation and reaches machines with the next rollout (or immediately via the
-# `manual-rollout-id` annotation). Only the InstanceClass side of the metadata is listed here.
 rolloutFields:
   - storageProfile
   - template
@@ -14,6 +8,14 @@ rolloutFields:
   - sizingPolicy
   - placementPolicy
   - additionalMetadata
+
+# vcd is the only provider whose rollout decision reaches outside the InstanceClass: the v1
+# checksum hashed the metadata *merged* from the cloud-provider config and the class, and
+# VCDClusterConfiguration tells the user that changing `metadata` recreates CloudEphemeral nodes.
+# Dropping it here would turn that promise into silence — the template below still renders the new
+# value, so machines created later would quietly disagree with the ones already running.
+providerRolloutFields:
+  - metadata
 
 template: |
   {{- $metadata := dict -}}

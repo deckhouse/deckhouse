@@ -184,15 +184,13 @@ func (r *MachineDeploymentReconciler) ensureMachineTemplateGeneration(ctx contex
 			return in.currentName, nil
 		}
 
-		changes, err := machinetemplate.Changes(snapshot.InstanceClass, in.render.InstanceClass, in.contract.RolloutFields)
+		reason, err = rolloutReasonFor(snapshot, in)
 		if err != nil {
-			return "", fmt.Errorf("compare InstanceClass for NodeGroup %s: %w", in.ng.Name, err)
+			return "", err
 		}
-		if len(changes) == 0 && snapshot.RolloutID == in.rolloutID {
+		if reason == "" {
 			return in.currentName, nil
 		}
-
-		reason = rolloutReason(changes, snapshot.RolloutID, in.rolloutID)
 		nextGeneration = snapshot.Generation + 1
 	}
 
@@ -216,10 +214,32 @@ func (r *MachineDeploymentReconciler) ensureMachineTemplateGeneration(ctx contex
 	return name, nil
 }
 
-func rolloutReason(changes []machinetemplate.Change, storedRolloutID, rolloutID string) string {
-	parts := make([]string, 0, 2)
+// rolloutReasonFor returns why the snapshotted generation must be replaced, empty when nothing the
+// contract watches moved. It is the single definition of "the generation is stale", so deciding and
+// explaining cannot drift apart.
+//
+// Both inputs the template renders from are compared. The provider config is the second one: most
+// providers declare no providerRolloutFields, but vcd's cluster-wide `metadata` is documented to
+// recreate CloudEphemeral nodes.
+func rolloutReasonFor(snapshot machinetemplate.Snapshot, in machineTemplateGeneration) (string, error) {
+	changes, err := machinetemplate.Changes(snapshot.InstanceClass, in.render.InstanceClass, in.contract.RolloutFields)
+	if err != nil {
+		return "", fmt.Errorf("compare InstanceClass for NodeGroup %s: %w", in.ng.Name, err)
+	}
+	providerChanges, err := machinetemplate.Changes(snapshot.Provider, in.render.Provider, in.contract.ProviderRolloutFields)
+	if err != nil {
+		return "", fmt.Errorf("compare provider config for NodeGroup %s: %w", in.ng.Name, err)
+	}
+	return rolloutReason(changes, providerChanges, snapshot.RolloutID, in.rolloutID), nil
+}
+
+func rolloutReason(changes, providerChanges []machinetemplate.Change, storedRolloutID, rolloutID string) string {
+	parts := make([]string, 0, 3)
 	if len(changes) > 0 {
 		parts = append(parts, "instanceClass "+machinetemplate.FormatChanges(changes))
+	}
+	if len(providerChanges) > 0 {
+		parts = append(parts, "providerConfig "+machinetemplate.FormatChanges(providerChanges))
 	}
 	if storedRolloutID != rolloutID {
 		parts = append(parts, fmt.Sprintf("manualRolloutID %q → %q", storedRolloutID, rolloutID))
@@ -271,11 +291,11 @@ func (r *MachineDeploymentReconciler) holdsDesiredSnapshot(ctx context.Context, 
 	if !hasSnapshot {
 		return false, nil
 	}
-	changes, err := machinetemplate.Changes(snapshot.InstanceClass, in.render.InstanceClass, in.contract.RolloutFields)
+	reason, err := rolloutReasonFor(snapshot, in)
 	if err != nil {
 		return false, err
 	}
-	return len(changes) == 0 && snapshot.RolloutID == in.rolloutID, nil
+	return reason == "", nil
 }
 
 // buildMachineTemplate renders the provider template and stamps everything node-controller owns:
@@ -297,6 +317,7 @@ func (r *MachineDeploymentReconciler) buildMachineTemplate(in machineTemplateGen
 
 	annotations, err := machinetemplate.EncodeSnapshot(machinetemplate.Snapshot{
 		InstanceClass: in.render.InstanceClass,
+		Provider:      in.render.Provider,
 		RolloutID:     in.rolloutID,
 		Generation:    generation,
 	})
@@ -318,6 +339,7 @@ func (r *MachineDeploymentReconciler) buildMachineTemplate(in machineTemplateGen
 func (r *MachineDeploymentReconciler) adoptMachineTemplate(ctx context.Context, current *unstructured.Unstructured, in machineTemplateGeneration) error {
 	snapshot, err := machinetemplate.EncodeSnapshot(machinetemplate.Snapshot{
 		InstanceClass: in.render.InstanceClass,
+		Provider:      in.render.Provider,
 		RolloutID:     in.rolloutID,
 		Generation:    generationOf(current.GetName()),
 	})

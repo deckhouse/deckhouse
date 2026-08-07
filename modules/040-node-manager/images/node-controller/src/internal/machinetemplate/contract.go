@@ -49,6 +49,12 @@ type Contract struct {
 	// itself, so shipping a new list never rolls machines on its own.
 	RolloutFields []string `json:"rolloutFields"`
 
+	// ProviderRolloutFields is the same list for the cloud-provider config — the second input the
+	// template renders from. Most providers leave it empty: their config feeds the machine but its
+	// change was never a reason to recreate one. vcd is the exception, and its
+	// VCDClusterConfiguration schema tells the user so.
+	ProviderRolloutFields []string `json:"providerRolloutFields"`
+
 	MachineDeployment MachineDeploymentContract `json:"machineDeployment"`
 
 	// Template is the go-template of the infrastructure MachineTemplate. It renders
@@ -99,15 +105,11 @@ func ParseContract(data []byte) (*Contract, error) {
 		return nil, fmt.Errorf("machine-template contract has no rolloutFields: the provider must state which InstanceClass fields recreate machines")
 	}
 
-	seen := make(map[string]struct{}, len(c.RolloutFields))
-	for _, field := range c.RolloutFields {
-		if err := validateFieldPath(field); err != nil {
-			return nil, fmt.Errorf("rolloutFields: %w", err)
-		}
-		if _, dup := seen[field]; dup {
-			return nil, fmt.Errorf("rolloutFields: duplicate field %q", field)
-		}
-		seen[field] = struct{}{}
+	if err := validateRolloutFields("rolloutFields", c.RolloutFields); err != nil {
+		return nil, err
+	}
+	if err := validateRolloutFields("providerRolloutFields", c.ProviderRolloutFields); err != nil {
+		return nil, err
 	}
 
 	c.MachineDeployment.parsedFields = make(map[string]*template.Template, len(c.MachineDeployment.AdditionalFields))
@@ -133,6 +135,22 @@ func ParseContract(data []byte) (*Contract, error) {
 	c.parsed = parsed
 
 	return c, nil
+}
+
+// validateRolloutFields checks one of the two rollout lists. contractKey names it in the error, so
+// the provider reads which of the two it got wrong.
+func validateRolloutFields(contractKey string, fields []string) error {
+	seen := make(map[string]struct{}, len(fields))
+	for _, field := range fields {
+		if err := validateFieldPath(field); err != nil {
+			return fmt.Errorf("%s: %w", contractKey, err)
+		}
+		if _, dup := seen[field]; dup {
+			return fmt.Errorf("%s: duplicate field %q", contractKey, field)
+		}
+		seen[field] = struct{}{}
+	}
+	return nil
 }
 
 // validateFieldPath rejects a path with an empty segment, which also covers the empty path itself

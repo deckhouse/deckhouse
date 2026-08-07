@@ -26,9 +26,10 @@ import (
 // contract — the spec documents them — so their names and their encoding live here, next to the
 // comparison that reads them, rather than in the controller.
 const (
-	AppliedInstanceClassAnnotation = "node.deckhouse.io/applied-instance-class"
-	AppliedRolloutIDAnnotation     = "node.deckhouse.io/applied-rollout-id"
-	AppliedGenerationAnnotation    = "node.deckhouse.io/applied-generation"
+	AppliedInstanceClassAnnotation  = "node.deckhouse.io/applied-instance-class"
+	AppliedProviderConfigAnnotation = "node.deckhouse.io/applied-provider-config"
+	AppliedRolloutIDAnnotation      = "node.deckhouse.io/applied-rollout-id"
+	AppliedGenerationAnnotation     = "node.deckhouse.io/applied-generation"
 )
 
 // Snapshot is what a generation object was built from.
@@ -38,7 +39,10 @@ const (
 // rolloutField in a release without rolling anybody's machines.
 type Snapshot struct {
 	InstanceClass map[string]any
-	RolloutID     string
+	// Provider is the cloud-provider config the object was rendered from, kept whole for the same
+	// reason as InstanceClass: the facts, not the policy that reads them.
+	Provider  map[string]any
+	RolloutID string
 	// Generation is the counter in the object's name. Zero means the object predates v2 (it was
 	// named by the v1 checksum and adopted), so the next generation created after it is 1.
 	Generation int
@@ -49,10 +53,15 @@ func EncodeSnapshot(s Snapshot) (map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("serialize InstanceClass snapshot: %w", err)
 	}
+	provider, err := json.Marshal(s.Provider)
+	if err != nil {
+		return nil, fmt.Errorf("serialize provider config snapshot: %w", err)
+	}
 	return map[string]string{
-		AppliedInstanceClassAnnotation: string(instanceClass),
-		AppliedRolloutIDAnnotation:     s.RolloutID,
-		AppliedGenerationAnnotation:    strconv.Itoa(s.Generation),
+		AppliedInstanceClassAnnotation:  string(instanceClass),
+		AppliedProviderConfigAnnotation: string(provider),
+		AppliedRolloutIDAnnotation:      s.RolloutID,
+		AppliedGenerationAnnotation:     strconv.Itoa(s.Generation),
 	}, nil
 }
 
@@ -69,6 +78,15 @@ func DecodeSnapshot(annotations map[string]string) (Snapshot, bool) {
 		return Snapshot{}, false
 	}
 
+	// The provider config is read on the same terms: unreadable means re-adoption with the current
+	// values, never a rollout.
+	provider := map[string]any{}
+	if rawProvider, ok := annotations[AppliedProviderConfigAnnotation]; ok {
+		if err := json.Unmarshal([]byte(rawProvider), &provider); err != nil {
+			return Snapshot{}, false
+		}
+	}
+
 	// A missing or malformed generation counts as 0: an object adopted before this annotation
 	// existed still names its successor gen1.
 	generation, _ := strconv.Atoi(annotations[AppliedGenerationAnnotation])
@@ -78,6 +96,7 @@ func DecodeSnapshot(annotations map[string]string) (Snapshot, bool) {
 
 	return Snapshot{
 		InstanceClass: instanceClass,
+		Provider:      provider,
 		RolloutID:     annotations[AppliedRolloutIDAnnotation],
 		Generation:    generation,
 	}, true

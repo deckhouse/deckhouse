@@ -306,6 +306,94 @@ func TestProviderRolloutParity(t *testing.T) {
 	}
 }
 
+// TestProviderConfigRolloutParity is the second axis of the v1 checksum context: the cloud-provider
+// config. TestProviderRolloutParity mutates the InstanceClass only, and rolloutFields can name
+// nothing else, so nothing in the v2 contract hints that a provider config change ever recreated
+// machines — yet the v1 vcd checksum merged the provider-wide `metadata` into the hash, and the
+// VCDClusterConfiguration schema promises that recreation to the user in so many words.
+func TestProviderConfigRolloutParity(t *testing.T) {
+	for _, fixture := range providerFixtures() {
+		t.Run(fixture.name, func(t *testing.T) {
+			contract := loadContract(t, fixture.contractPath)
+			checksumTemplate, err := os.ReadFile(fixture.legacyPath("instance-class.checksum"))
+			require.NoError(t, err)
+
+			baseChecksum := renderLegacyChecksum(t, fixture, checksumTemplate, fixture.instanceClass, "")
+
+			for _, path := range providerMutationPaths(fixture, contract) {
+				t.Run(path, func(t *testing.T) {
+					mutated := mutateSpec(t, fixture.providerConfig, path)
+
+					mutatedChecksum := renderLegacyChecksumWithProvider(t, fixture, checksumTemplate, fixture.instanceClass, mutated, "")
+					v1Rolls := mutatedChecksum != baseChecksum
+
+					changes, err := Changes(fixture.providerConfig, mutated, contract.ProviderRolloutFields)
+					require.NoError(t, err)
+					v2Rolls := len(changes) > 0
+
+					assert.Equal(t, v1Rolls, v2Rolls,
+						"changing provider config %s: v1 checksum rolls=%v, v2 providerRolloutFields rolls=%v — "+
+							"either fix providerRolloutFields or document the difference in rolloutExceptions",
+						path, v1Rolls, v2Rolls)
+				})
+			}
+		})
+	}
+}
+
+// TestProviderConfigRenderParity is the other half of the same question: the rollout decision lost
+// the provider config, but did the template itself? TestProviderRenderParity compares one render on
+// one fixture, so a v2 template that stopped reading an input renders identically to v1 as long as
+// nobody changes that input. Mutating it is what tells the two apart.
+func TestProviderConfigRenderParity(t *testing.T) {
+	for _, fixture := range providerFixtures() {
+		t.Run(fixture.name, func(t *testing.T) {
+			contract := loadContract(t, fixture.contractPath)
+
+			for _, path := range providerMutationPaths(fixture, contract) {
+				t.Run(path, func(t *testing.T) {
+					mutated := fixture
+					mutated.providerConfig = mutateSpec(t, fixture.providerConfig, path)
+
+					v1Object, err := renderLegacySpec(t, mutated, fixture.instanceClass)
+					require.NoError(t, err, "v1 template must still render")
+					v2Object, err := renderV2Spec(mutated, contract, fixture.instanceClass)
+					require.NoError(t, err, "v2 template must still render")
+
+					assert.Equal(t, v1Object, v2Object,
+						"changing provider config %s renders differently under v2: the migrated template "+
+							"reads a different set of provider inputs than the v1 one", path)
+				})
+			}
+		})
+	}
+}
+
+// TestProviderConfigFixtureCoversTheAxis keeps TestProviderConfigRolloutParity from passing by
+// having nothing to mutate. A provider whose v1 checksum read the helm values, or whose v2 template
+// reads .provider, depends on the cloud-provider config — and an empty fixture would silently drop
+// exactly the axis that hid the vcd regression.
+func TestProviderConfigFixtureCoversTheAxis(t *testing.T) {
+	for _, fixture := range providerFixtures() {
+		t.Run(fixture.name, func(t *testing.T) {
+			contract := loadContract(t, fixture.contractPath)
+			checksumTemplate, err := os.ReadFile(fixture.legacyPath("instance-class.checksum"))
+			require.NoError(t, err)
+
+			v1ReadsConfig := strings.Contains(string(checksumTemplate), ".Values")
+			v2ReadsConfig := strings.Contains(contract.Template, ".provider")
+			if !v1ReadsConfig && !v2ReadsConfig {
+				return
+			}
+
+			assert.NotEmpty(t, fixture.providerConfig,
+				"the v1 checksum reads .Values=%v and the v2 template reads .provider=%v, so this provider "+
+					"depends on the cloud-provider config: the fixture must carry one for the parity harness to mutate",
+				v1ReadsConfig, v2ReadsConfig)
+		})
+	}
+}
+
 // TestProviderManualRolloutIDParity checks the operator's explicit lever separately: it does not
 // live in the InstanceClass, so the field-mutation loop cannot reach it.
 func TestProviderManualRolloutIDParity(t *testing.T) {
@@ -444,7 +532,12 @@ func renderV2Spec(fixture providerFixture, contract *Contract, instanceClass map
 
 func renderLegacyChecksum(t *testing.T, fixture providerFixture, template []byte, instanceClass map[string]any, rolloutID string) string {
 	t.Helper()
-	cloudProvider := map[string]any{fixture.name: fixture.providerConfig}
+	return renderLegacyChecksumWithProvider(t, fixture, template, instanceClass, fixture.providerConfig, rolloutID)
+}
+
+func renderLegacyChecksumWithProvider(t *testing.T, fixture providerFixture, template []byte, instanceClass, providerConfig map[string]any, rolloutID string) string {
+	t.Helper()
+	cloudProvider := map[string]any{fixture.name: providerConfig}
 	checksum, err := machineclass.RenderChecksum(template, legacyNodeGroupValues(instanceClass, rolloutID), cloudProvider)
 	require.NoError(t, err)
 	return checksum
@@ -467,6 +560,22 @@ func mutationPaths(fixture providerFixture, contract *Contract) []string {
 	paths := map[string]struct{}{}
 	collectLeafPaths(fixture.instanceClass, "", paths)
 	for _, field := range contract.RolloutFields {
+		paths[field] = struct{}{}
+	}
+
+	out := make([]string, 0, len(paths))
+	for path := range paths {
+		out = append(out, path)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// providerMutationPaths is the same idea as mutationPaths, over the cloud-provider config.
+func providerMutationPaths(fixture providerFixture, contract *Contract) []string {
+	paths := map[string]struct{}{}
+	collectLeafPaths(fixture.providerConfig, "", paths)
+	for _, field := range contract.ProviderRolloutFields {
 		paths[field] = struct{}{}
 	}
 

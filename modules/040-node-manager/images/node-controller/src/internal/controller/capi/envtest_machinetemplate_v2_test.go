@@ -231,6 +231,135 @@ template: |
 		}, eventually, poll).Should(Equal(zone))
 	})
 
+	// The cloud-provider config is the second input the template renders from, and for one provider
+	// (vcd) it is also part of the rollout decision — its VCDClusterConfiguration schema promises
+	// the user that changing `metadata` recreates CloudEphemeral nodes. A contract that can only
+	// name InstanceClass fields turns that promise into silence: the template keeps rendering the
+	// new value, so machines created later disagree with the ones already running.
+	Describe("the provider-config axis", func() {
+		v2ProviderContract := func(rolloutFields, providerRolloutFields []string) string {
+			list := func(fields []string) string {
+				out := ""
+				for _, field := range fields {
+					out += "  - " + field + "\n"
+				}
+				return out
+			}
+			return `version: v2
+rolloutFields:
+` + list(rolloutFields) + `providerRolloutFields:
+` + list(providerRolloutFields) + `template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: DeckhouseMachineTemplate
+  spec:
+    template:
+      spec:
+        vmClassName: {{ .instanceClass.vmClassName }}
+        {{- if get .provider "datacenter" }}
+        datacenter: {{ .provider.datacenter | quote }}
+        {{- end }}
+`
+		}
+
+		setProviderConfig := func(config map[string]any) {
+			secret := &corev1.Secret{}
+			Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
+				Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
+			}, secret)).To(Succeed())
+			raw, err := json.Marshal(config)
+			Expect(err).NotTo(HaveOccurred())
+			secret.Data["dvp"] = raw
+			Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
+		}
+
+		clearProviderConfig := func() {
+			secret := &corev1.Secret{}
+			Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
+				Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
+			}, secret)).To(Succeed())
+			delete(secret.Data, "dvp")
+			Expect(k8sClient.Update(suiteCtx, secret)).To(Succeed())
+		}
+
+		// setUpWithProvider mirrors setUp, with the provider config published before the contract.
+		setUpWithProvider := func(namePrefix string, contract string, config map[string]any) *deckhousev1.NodeGroup {
+			setProviderConfig(config)
+			DeferCleanup(clearProviderConfig)
+
+			publishContract(contract)
+			DeferCleanup(withdrawContract)
+
+			icName := testenv.UniqueName(namePrefix + "-ic")
+			Expect(k8sClient.Create(suiteCtx, newInstanceClass(icName, map[string]any{"vmClassName": "generic"}))).To(Succeed())
+			DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, newInstanceClass(icName, nil)) })
+
+			ng := newNodeGroup(testenv.UniqueName(namePrefix), icName)
+			Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+			DeferCleanup(func() {
+				_ = k8sClient.Delete(suiteCtx, ng)
+				Eventually(func(g Gomega) int { return len(machineTemplates(g, ng.Name)) },
+					eventually, poll).Should(BeZero())
+			})
+
+			Eventually(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+				eventually, poll).Should(HaveSuffix("-gen1"))
+			return ng
+		}
+
+		It("creates a new generation when a declared provider-config field changes", func() {
+			ng := setUpWithProvider("v2-provider-roll",
+				v2ProviderContract([]string{"vmClassName"}, []string{"datacenter"}),
+				map[string]any{"datacenter": "dc-1"})
+
+			By("the snapshot records the provider config the object was rendered from")
+			Eventually(func(g Gomega) map[string]any {
+				templates := machineTemplates(g, ng.Name)
+				g.Expect(templates).To(HaveLen(1))
+				snapshot := map[string]any{}
+				g.Expect(json.Unmarshal(
+					[]byte(templates[0].GetAnnotations()[machinetemplate.AppliedProviderConfigAnnotation]),
+					&snapshot)).To(Succeed())
+				return snapshot
+			}, eventually, poll).Should(Equal(map[string]any{"datacenter": "dc-1"}))
+
+			setProviderConfig(map[string]any{"datacenter": "dc-2"})
+			nudge(ng)
+
+			Eventually(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+				eventually, poll).Should(HaveSuffix("-gen2"))
+
+			By("the reason on the NodeGroup names the provider config, not the InstanceClass")
+			Eventually(func(g Gomega) string {
+				events := &corev1.EventList{}
+				g.Expect(k8sClient.List(suiteCtx, events, client.InNamespace(""))).To(Succeed())
+				for _, event := range events.Items {
+					if event.InvolvedObject.Name == ng.Name && event.Reason == "MachinesRollout" {
+						return event.Message
+					}
+				}
+				return ""
+			}, eventually, poll).Should(ContainSubstring(`providerConfig datacenter "dc-1" → "dc-2"`))
+		})
+
+		It("leaves the generation alone when an undeclared provider-config field changes", func() {
+			ng := setUpWithProvider("v2-provider-quiet",
+				v2ProviderContract([]string{"vmClassName"}, []string{"datacenter"}),
+				map[string]any{"datacenter": "dc-1", "sshKey": "ssh-ed25519 AAAA"})
+
+			current := ""
+			Eventually(func(g Gomega) string {
+				current = referencedTemplateName(g, ng.Name)
+				return current
+			}, eventually, poll).Should(HaveSuffix("-gen1"))
+
+			setProviderConfig(map[string]any{"datacenter": "dc-1", "sshKey": "ssh-ed25519 BBBB"})
+			nudge(ng)
+
+			Consistently(func(g Gomega) string { return referencedTemplateName(g, ng.Name) },
+				5*time.Second, poll).Should(Equal(current))
+		})
+	})
+
 	// The migration promise: switching a live cluster to v2 must not touch a single machine.
 	It("adopts a checksum-named template from the v1 era instead of creating a generation", func() {
 		publishContract(v2Contract([]string{"vmClassName"}))
