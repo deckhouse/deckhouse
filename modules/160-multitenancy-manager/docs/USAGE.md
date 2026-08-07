@@ -718,7 +718,7 @@ Enforcement notes:
 - A grant that matches no project, or a project with no matching grant, imposes no
   restriction.
 
-#### When a project has no default
+### When a project has no default
 
 `AvailableClusterResource` reports the project default in `status.default`, and flags it among the
 names in `status.available` with `default: true`. Both may be absent, which is a normal state rather
