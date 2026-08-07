@@ -86,6 +86,32 @@ spec:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "registry") }}
     secretName: {{ include "helm_lib_module_https_secret_name" (list . "registry-ingress-tls") }}
+{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+# The certificate for the publish endpoint, which nothing else would ask for.
+#
+# An Ingress naming a TLS secret does not cause the secret to exist: in CertManager mode a module
+# requests its own Certificate, and cert-manager fills the secret in. Without this the endpoint
+# still serves HTTPS — with the ingress controller's own self-signed certificate — and it does so
+# silently, on a cluster where every other name got a real one. That is the worst shape for it to
+# be wrong in: this is the write endpoint of an air-gapped registry, reachable from outside, and
+# the client that has to trust it is `d8 mirror push`.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: registry-push
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-storage")) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "registry-ingress-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "registry") | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "registry") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+{{- end }}
   {{- end }}
 {{- end }}
 {{- end }}
