@@ -112,6 +112,25 @@ func Decide(spec *registryv1alpha1.RegistryStorageSpec, isLeader bool, leader *L
 	return ActionFill
 }
 
+// StoreIsAuthority reports whether completeness must be judged by reading the
+// store rather than by counting what a copy wrote.
+//
+// True for the leader while the write endpoint is open, which is the transition
+// window of История 3: air-gap has been asked for, the upstream is still HELD so
+// the cluster keeps working, and the images arrive through `d8 mirror push` — a
+// write the syncer never sees and therefore cannot count. Without this the push
+// contributes nothing, the leader never reads as complete, and the upstream is
+// held forever; measured on a cluster before it was fixed.
+//
+// Reading the catalogue is honest here, and for a reason the design already
+// provides rather than an assumption: publishing turns pull-through off, so
+// nothing but a deliberate write can put anything in the store. That is also why
+// this is the leader's business alone — a follower's store is a copy, and what it
+// holds authorizes nothing.
+func StoreIsAuthority(spec *registryv1alpha1.RegistryStorageSpec, isLeader bool) bool {
+	return spec != nil && isLeader && spec.Publish
+}
+
 // ExpectedDigests is how many digests the storage is supposed to hold, or zero
 // when nothing said. Zero never counts as complete.
 func ExpectedDigests(spec *registryv1alpha1.RegistryStorageSpec) int32 {

@@ -30,12 +30,13 @@ import (
 
 // CountCatalogue counts the distinct tags the registry actually holds.
 //
-// Only sound when the registry has no upstream to fall back on. With a
-// pass-through cache this would count what the registry can FETCH rather than
-// what it holds, which is precisely the mistake that would authorize dropping the
-// upstream on an empty store. In an air-gapped cluster self-filling is impossible,
-// so reading the catalogue is honest — and it is the only way to account for
-// content that arrived out of band through `d8 mirror push`.
+// Only sound when the registry cannot fetch on a miss. With pull-through
+// configured this would count what the registry can FETCH rather than what it
+// holds, which is precisely the mistake that would authorize dropping the upstream
+// on an empty store. Two arrangements satisfy that: an air-gapped storage, which
+// has no upstream at all, and a publishing one, where pull-through is switched off
+// exactly so the write endpoint can work. Both are cases where content arrives out
+// of band through `d8 mirror push` and counting is the only way to see it.
 func CountCatalogue(ctx context.Context, registry Registry) (int32, error) {
 	puller, err := remote.NewPuller(registry.Options...)
 	if err != nil {

@@ -618,3 +618,74 @@ func mustCount(t *testing.T, address string) int32 {
 	require.NoError(t, err)
 	return count
 }
+
+// TestOnceCountsAPushedBundleWhileTheUpstreamIsStillHeld is the transition window of
+// История 3, and the shape of a defect measured on a live cluster.
+//
+// Air-gap has been asked for, so the write endpoint is open and `d8 mirror push` has
+// put the whole set in the store. The upstream is still HELD, deliberately: the
+// cluster has to keep working until the leader is complete. Before this was fixed the
+// leader in exactly this state reported nothing at all — the count came from what the
+// fill copied, the fill could not even start, and the push it was pushed by went
+// unseen. The upstream was then held forever, which is the one outcome the transition
+// exists to avoid.
+//
+// The cluster here has no DeckhouseRelease, which is not a contrivance: install from a
+// tag rather than a release channel and there is no release object to enumerate, so
+// the fill fails on every pass with "no release is deployed".
+func TestOnceCountsAPushedBundleWhileTheUpstreamIsStillHeld(t *testing.T) {
+	local := startRegistry(t)
+	for _, reference := range []string{"one:v1", "two:v1", "three:v1"} {
+		pushImage(t, local, "system/deckhouse/"+reference)
+	}
+
+	loop, c, _ := newLoop(t, true, storageWith(registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP,
+				Host:   "held.example.invalid",
+				Path:   "/deckhouse/ee",
+			},
+		},
+		Source:   &registryv1alpha1.StorageSource{ExpectedDigests: 3},
+		Publish:  true,
+		NeedSync: true,
+	}))
+	loop.LocalAddress = local
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.EqualValues(t, 3, replica.VerifiedDigests,
+		"the count must come from the store, which is where the push wrote")
+	assert.True(t, replica.Full,
+		"the store holds the whole expected set, so the leader is complete")
+	assert.Empty(t, replica.Error,
+		"a fill that could not run must not veto a transition whose evidence it no longer is")
+}
+
+// TestOnceWhilePublishingWithAnUnreadableStore is the other half of the same rule:
+// the fill's complaint is dropped because the store answers instead, so a store that
+// does NOT answer leaves no evidence — and no evidence is not permission.
+func TestOnceWhilePublishingWithAnUnreadableStore(t *testing.T) {
+	loop, c, _ := newLoop(t, true, storageWith(registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP,
+				Host:   "held.example.invalid",
+				Path:   "/deckhouse/ee",
+			},
+		},
+		Source:   &registryv1alpha1.StorageSource{ExpectedDigests: 3},
+		Publish:  true,
+		NeedSync: true,
+	}))
+	// Nothing listens here, so the catalogue cannot be read.
+	loop.LocalAddress = "127.0.0.1:1"
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.False(t, replica.Full)
+	assert.NotEmpty(t, replica.Error, "an unreadable store must be reported, not silently treated as empty")
+}

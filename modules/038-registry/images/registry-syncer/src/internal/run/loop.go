@@ -253,7 +253,37 @@ func (l *Loop) once(ctx context.Context) error {
 		}
 	}
 
+	// While the write endpoint is open, the store has the last word on how much it
+	// holds — whatever the pass above managed to do.
+	if StoreIsAuthority(spec, isLeader) {
+		l.recountFromStore(ctx, expected, &state)
+	}
+
 	return l.Publisher.Publish(ctx, state)
+}
+
+// recountFromStore replaces this pass's accounting with what the storage actually
+// holds.
+//
+// The fill's complaint is logged rather than reported, and that is the point of
+// the exercise: it travels in the same field the transition is vetoed by — see
+// LeaderFull — so a fill that could not run at all would block a transition whose
+// evidence no longer depends on it. A cluster installed from a tag rather than a
+// release channel has no DeckhouseRelease to enumerate, and reported exactly
+// that: "no release is deployed, so there is nothing to judge the store against",
+// every thirty seconds, while the pushed bundle sat in the store unaccounted for.
+//
+// Failing to read the store is a different matter and does reach the status:
+// then there is no evidence, and no evidence is not permission.
+func (l *Loop) recountFromStore(ctx context.Context, expected int32, state *report.State) {
+	if state.Error != "" {
+		l.Log.Warn("the fill did not finish and the write endpoint is open, "+
+			"so completeness is judged by what the store holds",
+			"error", state.Error)
+		state.Error = ""
+	}
+
+	l.applyCatalogue(ctx, expected, state)
 }
 
 func (l *Loop) applyFill(

@@ -190,3 +190,56 @@ func TestLeaderUsable(t *testing.T) {
 		})
 	}
 }
+
+// TestStoreIsAuthority pins who gets to say how much the storage holds.
+//
+// The transition window is the case that matters: air-gap asked for, the write
+// endpoint open, and the upstream still held so nothing stops working. There the
+// count has to come from the store, because `d8 mirror push` writes straight into
+// it and the syncer never sees those writes.
+func TestStoreIsAuthority(t *testing.T) {
+	publishing := &registryv1alpha1.RegistryStorageSpec{
+		Publish: true,
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{Host: "registry.example.com"},
+		},
+		NeedSync: true,
+	}
+
+	tests := []struct {
+		name     string
+		spec     *registryv1alpha1.RegistryStorageSpec
+		isLeader bool
+		want     bool
+	}{
+		{
+			name: "the leader in the transition window, upstream still held",
+			spec: publishing, isLeader: true, want: true,
+		},
+		{
+			// A follower's store is a copy of the leader's, so what it holds
+			// authorizes nothing and must not be mistaken for evidence.
+			name: "a follower while the endpoint is open",
+			spec: publishing, isLeader: false, want: false,
+		},
+		{
+			// An ordinary cache: pull-through is on, so the catalogue counts what
+			// the storage can fetch rather than what it holds.
+			name: "the leader of a cache that is not publishing",
+			spec: &registryv1alpha1.RegistryStorageSpec{
+				Upstream: &registryv1alpha1.Upstream{
+					Endpoint: registryv1alpha1.Endpoint{Host: "registry.example.com"},
+				},
+				NeedSync: true,
+			},
+			isLeader: true, want: false,
+		},
+		{name: "no storage at all", spec: nil, isLeader: true, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, StoreIsAuthority(tt.spec, tt.isLeader))
+		})
+	}
+}
