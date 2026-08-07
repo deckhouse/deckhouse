@@ -77,12 +77,13 @@ func runAnalysis(ctx context.Context, istioNamespace, revision string, allNamesp
 	return messages, nil
 }
 
-func messageLabels(message diag.Message, revision string) (messageType, namespace, resourceName, severity, code string) {
+func messageLabels(message diag.Message, revision string) (messageType, namespace, resourceName, severity, code, messageText string) {
 	code = message.Type.Code()
 	messageType = messageTypeName(message.Type)
 	severity = message.Type.Level().String()
 	namespace = "_cluster"
 	resourceName = "_none"
+	messageText = truncateLabelValue(fmt.Sprintf(message.Type.Template(), message.Parameters...))
 
 	if message.Resource != nil {
 		if ns := string(message.Resource.Metadata.FullName.Namespace); ns != "" {
@@ -96,7 +97,16 @@ func messageLabels(message diag.Message, revision string) (messageType, namespac
 		}
 	}
 
-	return messageType, namespace, resourceName, severity, code
+	return messageType, namespace, resourceName, severity, code, messageText
+}
+
+const maxMessageLabelLen = 256
+
+func truncateLabelValue(value string) string {
+	if len(value) <= maxMessageLabelLen {
+		return value
+	}
+	return value[:maxMessageLabelLen-3] + "..."
 }
 
 func waitForNextRun(ctx context.Context, interval time.Duration) error {

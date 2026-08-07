@@ -303,7 +303,8 @@ func writeSections(settings writeSettings) {
 		// istio config-analyzer is not shipped in CSE (FE inherits EE overlays)
 		if settings.Edition == "CSE" &&
 			(strings.Contains(file, "/ee/modules/110-istio/templates/config-analyzer") ||
-				strings.Contains(file, "/ee/modules/110-istio/monitoring/prometheus-rules/config-analysis")) {
+				strings.Contains(file, "/ee/modules/110-istio/monitoring/prometheus-rules/config-analysis") ||
+				strings.Contains(file, "/ee/modules/110-istio/monitoring/grafana-dashboards/istio/config-health")) {
 			return
 		}
 
