@@ -1309,3 +1309,8 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/global-hooks/openapi/config-values.yaml
+  to: /deckhouse/global-hooks/openapi/config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'

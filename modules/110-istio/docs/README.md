@@ -95,6 +95,7 @@ The standard module bundle includes the following additional dashboards:
 
 - Dashboard for evaluating the throughput and success of requests/responses between applications.
 - Dashboard for evaluating control plane performance and load.
+- **Istio Configuration Health** (EE) — periodic configuration analysis findings: issue counts by type/severity/namespace, trends over time, and the current issue list (filterable by revision and namespace). Requires [`configAnalysis.enabled`](configuration.html#parameters-configanalysis-enabled).
 
 ### Kiali
 

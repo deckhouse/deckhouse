@@ -1,0 +1,86 @@
+# Signing of the dm-verity roothash of an Olcedar sysext image.
+#
+# systemd names the verity sidecars after <name>.raw with the .raw suffix stripped
+# — <name>.verity, <name>.roothash, <name>.roothash.p7s — see
+# build_auxiliary_path() in src/shared/dissect-image.c. The signature is detached,
+# so the kernel supplies the content itself: the hex roothash straight out of the
+# verity table, which is why the file carries no trailing newline.
+#
+# Signing runs only where WERF_OLCEDAR_SYSEXT_SIGN_ENABLED is "true"; the Vault
+# role is bound to deckhouse/deckhouse, so a build elsewhere ships an unsigned
+# image rather than failing.
+
+# d8 talks to Vault. systemd-keyutil builds the PKCS#7 from the signer certificate
+# and the raw signature Vault returns; the package index the builder pins carries
+# systemd 260.3, which does not ship it, so take the two files from 260.4 instead.
+# Drop that part once the index carries 260.4 and `pm install systemd` is enough.
+{{- define "olcedar sysext sign imports" }}
+- image: {{ .ModuleName }}/d8
+  add: /d8
+  to: /usr/bin/d8
+  before: install
+- from: {{ index .Images "systemd-260.4" }}
+  add: /usr/lib/systemd
+  to: /usr/lib/systemd
+  includePaths:
+  - systemd-keyutil
+  - libsystemd-shared-260.so
+  before: install
+{{- end }}
+
+# The OIDC token is minted inside the build rather than passed in: a GitHub
+# Actions JWT is short lived while a build is not, and ACTIONS_ID_TOKEN_REQUEST_*
+# stay valid for the whole job.
+{{- define "olcedar sysext sign secrets" }}
+  {{- if eq (env "WERF_OLCEDAR_SYSEXT_SIGN_ENABLED" "") "true" }}
+secrets:
+- id: VAULT_ADDR
+  env: VAULT_ADDR
+- id: WERF_OLCEDAR_VAULT_AUTH_ROLE
+  env: WERF_OLCEDAR_VAULT_AUTH_ROLE
+- id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+  env: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+- id: ACTIONS_ID_TOKEN_REQUEST_URL
+  env: ACTIONS_ID_TOKEN_REQUEST_URL
+  {{- end }}
+{{- end }}
+
+{{- define "olcedar sysext sign" }}
+  {{- $name := . }}
+  {{- if eq (env "WERF_OLCEDAR_SYSEXT_SIGN_ENABLED" "") "true" }}
+  - pm install openssl curl jq
+  - |
+    set -eo pipefail
+
+    # The Transit key and its leaf certificate, pinned by serial. They rotate
+    # together: the leaf must match the key, so both lines change at once. The
+    # policy also allows listing olcedar-root-pki/certs to find a new serial.
+    SIGN_KEY_PATH="olcedar-signer/sign/olcedar-2026-july/sha2-256"
+    SIGNER_CERT_PATH="olcedar-root-pki/cert/0f:17:29:75:b0:43:15:cf:56:01:62:10:47:26:ed:79:51:64:fe:96"
+
+    export VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)"
+    export VAULT_TOKEN="$(d8 stronghold write -field=token auth/github/login role="$(cat /run/secrets/WERF_OLCEDAR_VAULT_AUTH_ROLE)" \
+      jwt="$(curl -fsS -H "Authorization: bearer $(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)" "$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)&audience=github-access-aud" | jq -r .value)")"
+
+    d8 stronghold read -field=certificate "${SIGNER_CERT_PATH}" > /tmp/olcedar-signer.pem
+    openssl x509 -in /tmp/olcedar-signer.pem -noout -subject -issuer
+
+    SIGNATURE="$(d8 stronghold write -field=signature "${SIGN_KEY_PATH}" prehashed=true signature_algorithm=pkcs1v15 \
+      input="$(openssl dgst -sha256 -binary /out/{{ $name }}.roothash | base64 | tr -d '\n')")"
+    printf '%s' "${SIGNATURE#vault:v*:}" | base64 -d > /tmp/roothash.sig
+
+    /usr/lib/systemd/systemd-keyutil pkcs7 \
+      --certificate=/tmp/olcedar-signer.pem \
+      --signature=/tmp/roothash.sig \
+      --hash-algorithm=sha256 \
+      --output=/out/{{ $name }}.roothash.p7s
+
+    # Nothing downstream enforces this file yet — systemd-sysext merges an extension
+    # unprotected when verity cannot be set up — so an unchecked signature would go
+    # unnoticed until it matters.
+    openssl smime -verify -inform der -in /out/{{ $name }}.roothash.p7s -content /out/{{ $name }}.roothash -noverify -out /dev/null
+    echo "signed roothash - $(cat /out/{{ $name }}.roothash)"
+  {{- else }}
+  - echo "WERF_OLCEDAR_SYSEXT_SIGN_ENABLED is not true - shipping {{ $name }} without a roothash signature"
+  {{- end }}
+{{- end }}
