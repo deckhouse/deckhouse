@@ -69,7 +69,7 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 func proxyCertSANs(ctx context.Context, input *go_hook.HookInput) []string {
 	service := proxyAppLabel + "." + proxyNamespace
 
-	sans := []string{
+	base := []string{
 		"127.0.0.1",
 		service,
 		service + ".svc",
@@ -77,7 +77,12 @@ func proxyCertSANs(ctx context.Context, input *go_hook.HookInput) []string {
 		tls_certificate.ClusterDomainSAN(service + ".svc"),
 	}
 
-	for _, address := range input.Values.Get(proxyAddressesValuesPath).Array() {
+	masters := input.Values.Get(proxyAddressesValuesPath).Array()
+
+	sans := make([]string, 0, len(base)+len(masters))
+	sans = append(sans, base...)
+
+	for _, address := range masters {
 		sans = append(sans, address.String())
 	}
 
