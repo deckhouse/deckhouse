@@ -49,6 +49,7 @@ normalize_version() {
     1.21|1.21.*|v1.21|v1.21.*|v1x21*) echo "1.21" ;;
     1.25|1.25.*|v1.25|v1.25.*|v1x25*) echo "1.25" ;;
     1.27|1.27.*|v1.27|v1.27.*|v1x27*) echo "1.27" ;;
+    1.29|1.29.*|v1.29|v1.29.*|v1x29*) echo "1.29" ;;
     *) return 1 ;;
   esac
 }
@@ -102,8 +103,8 @@ EOF
 }
 
 if ! istioctl_minor="$(normalize_version "${ISTIOCTL_VERSION:-}")"; then
-  echo "Set ISTIOCTL_VERSION to one of: 1.21, 1.25, 1.27." >&2
-  echo "Alternatively, run a versioned binary directly: istioctl-1.21, istioctl-1.25, or istioctl-1.27." >&2
+  echo "Set ISTIOCTL_VERSION to one of: 1.21, 1.25, 1.27, 1.29." >&2
+  echo "Alternatively, run a versioned binary directly: istioctl-1.21, istioctl-1.25, istioctl-1.27 or istioctl-1.29." >&2
   exit 1
 fi
 

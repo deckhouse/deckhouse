@@ -1111,7 +1111,7 @@ Select the minor version of Istio used by the target control plane:
 export ISTIOCTL_VERSION=1.21
 ```
 
-Available values are `1.21`, `1.25`, and `1.27`. You can also run a specific binary directly: `istioctl-1.21`, `istioctl-1.25`, or `istioctl-1.27`.
+Available values are `1.21`, `1.25`, `1.27` and `1.29`. You can also run a specific binary directly: `istioctl-1.21`, `istioctl-1.25`, `istioctl-1.27` or `istioctl-1.29`.
 
 Example:
 
