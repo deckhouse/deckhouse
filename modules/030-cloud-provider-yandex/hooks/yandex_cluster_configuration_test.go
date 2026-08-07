@@ -516,10 +516,22 @@ var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: yandex_cluster_co
 			Expect(cred.Get("secret").String()).To(Equal(`{"id":"sa-full"}`))
 		})
 
-		It("storage and ccm sections exist (empty params from MC v1)", func() {
+		It("storage and ccm sections exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderYandex.storage.parameters").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("cloudProviderYandex.ccm.parameters").Exists()).To(BeTrue())
+		})
+
+		// The v1 storageClass section must reach values only through its v2
+		// counterpart. Mirroring the v1 key made the whole values patch fail with
+		// "cloudProviderYandex.storageClass in body is a forbidden property",
+		// because the generated config-values schema is v2-only with
+		// additionalProperties: false. storage_classes.go reads the v2 path.
+		It("MC v1 storageClass.exclude is projected onto the v2 path only", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderYandex.storage.parameters.excludedStorageClasses").String()).
+				To(MatchJSON(`["network-hdd", "network-ssd-nonreplicated"]`))
+			Expect(f.ValuesGet("cloudProviderYandex.storageClass").Exists()).To(BeFalse())
 		})
 	})
 

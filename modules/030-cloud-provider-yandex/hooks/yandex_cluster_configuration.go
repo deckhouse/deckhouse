@@ -225,10 +225,6 @@ func setPCCAndMCtoRootValues(input *go_hook.HookInput, pcc ycpccv1.YandexProvide
 		return err
 	}
 
-	// Backward compatibility: storage_classes.go and the CCM template still read the
-	// ModuleConfig v1 paths, so the v1 settings are mirrored as they are.
-	input.Values.Set("cloudProviderYandex.storageClass", mcSettings.StorageClass)
-
 	return nil
 }
 
