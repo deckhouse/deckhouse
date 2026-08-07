@@ -25,6 +25,7 @@ from dotmap import DotMap
 from feature_gates_generated import exists_in_component, is_forbidden, is_deprecated
 
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
+CLUSTER_KUBERNETES_SNAPSHOT_NAME = "d8-cluster-kubernetes"
 # A declared version this webhook is willing to hand onward as a version.
 VERSION_RE = re.compile(r'^v?\d+\.\d+(\.\d+)?$')
 # Sentinels meaning "let Deckhouse pick the version". The two documents do not accept the same
@@ -75,7 +76,7 @@ configVersion: v1
 kubernetesValidating:
 - name: cpm-moduleconfig-feature-gates.deckhouse.io
   group: main
-  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}"]
+  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{CLUSTER_KUBERNETES_SNAPSHOT_NAME}"]
   matchConditions:
   - name: "only-control-plane-manager-module"
     expression: 'request.name == "control-plane-manager"'
@@ -97,6 +98,25 @@ kubernetes:
   nameSelector:
     matchNames:
     - d8-cluster-configuration
+  executeHookOnEvent: []
+  executeHookOnSynchronization: true
+  keepFullObjectsInMemory: true
+
+# status.automaticVersion of this ConfigMap is what "Default" resolves to for the running Deckhouse
+# build. It replaces deckhouseDefaultKubernetesVersion in the Secret above, which was only ever
+# raised and therefore kept answering with a default that no longer exists after a Deckhouse
+# downgrade. The Secret key stays as a fallback for the window before update-observer first writes
+# this object. Kept in step with the same snapshot in k8s_version_feature_gates.py.
+- name: {CLUSTER_KUBERNETES_SNAPSHOT_NAME}
+  apiVersion: v1
+  kind: ConfigMap
+  namespace:
+    nameSelector:
+      matchNames:
+      - kube-system
+  nameSelector:
+    matchNames:
+    - d8-cluster-kubernetes
   executeHookOnEvent: []
   executeHookOnSynchronization: true
   keepFullObjectsInMemory: true
@@ -150,6 +170,55 @@ def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
     return None
 
 
+def get_deckhouse_default_version_from_configmap(ctx: DotMap) -> Optional[str]:
+    """Read status.automaticVersion from kube-system/d8-cluster-kubernetes.
+
+    update-observer owns that ConfigMap and writes automaticVersion from the version_map entry
+    marked default in the running build, so it always describes the Deckhouse that is actually
+    installed. Missing or unparsable means "not published yet" and the caller falls back to the
+    Secret key. Kept in step with the same helper in k8s_version_feature_gates.py.
+    """
+    snapshot = ctx.snapshots.get(CLUSTER_KUBERNETES_SNAPSHOT_NAME, [])
+    if not snapshot or len(snapshot) == 0:
+        return None
+
+    config_map = snapshot[0]
+    if not config_map or not hasattr(config_map, 'object'):
+        return None
+
+    raw_status = config_map.object.get('data', {}).get('status')
+    if not raw_status:
+        return None
+
+    try:
+        status = yaml.safe_load(raw_status)
+    except Exception as e:
+        logging.error(f"Failed to parse d8-cluster-kubernetes data.status: {e}")
+        return None
+
+    if not isinstance(status, dict):
+        return None
+
+    automatic_version = status.get('automaticVersion')
+    if isinstance(automatic_version, str) and automatic_version.strip():
+        return automatic_version.strip()
+
+    return None
+
+
+def get_cluster_configuration_secret_data(ctx: DotMap):
+    """Return data of the d8-cluster-configuration Secret, or None when it is absent or empty."""
+    snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
+    if not snapshot or len(snapshot) == 0:
+        return None
+
+    secret = snapshot[0]
+    if not secret or not hasattr(secret, 'object'):
+        return None
+
+    return secret.object.data or None
+
+
 def get_k8s_version(ctx: DotMap) -> Optional[str]:
     # Mirrors global-hooks/discovery/target_kubernetes_version.go resolveTargetKubernetesVersion:
     # a present ModuleConfig setting decides on its own, Default/Automatic included (it then means the
@@ -163,41 +232,38 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
             logging.info("E2E-KV python-feature-gates source=mc-pin version=%s", mc_pin)
             return mc_pin
 
-    snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
-    if not snapshot or len(snapshot) == 0:
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-feature-gates source=none reason=no-secret mc=%s", mc_version)
-        return None
+    secret_data = get_cluster_configuration_secret_data(ctx)
 
-    secret = snapshot[0]
-    if not secret or not hasattr(secret, 'object'):
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-feature-gates source=none reason=bad-secret mc=%s", mc_version)
-        return None
-
-    data = secret.object.data
-    if not data:
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-feature-gates source=none reason=empty-secret mc=%s", mc_version)
+    # The Deckhouse default now comes from status.automaticVersion of the cluster ConfigMap, with
+    # the Secret key kept only until update-observer has written that object at least once.
+    # TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret fallback.
+    def deckhouse_default() -> Optional[str]:
+        version = get_deckhouse_default_version_from_configmap(ctx)
+        if version:
+            return version
+        if secret_data:
+            return get_deckhouse_default_version_from_secret(secret_data)
         return None
 
     if is_module_config_track_default(mc_version):
-        version = get_deckhouse_default_version_from_secret(data)
+        version = deckhouse_default()
         # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-feature-gates source=mc-track-default version=%s mc=%s", version, mc_version)
         return version
 
-    k8s_version = get_k8s_version_from_cluster_config(data)
-    if is_cluster_configuration_pinned(k8s_version):
-        cc_pin = usable_declared_version(k8s_version, "ClusterConfiguration")
-        if cc_pin:
-            # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-            logging.info("E2E-KV python-feature-gates source=cc-pin version=%s", cc_pin)
-            return cc_pin
+    if secret_data:
+        k8s_version = get_k8s_version_from_cluster_config(secret_data)
+        if is_cluster_configuration_pinned(k8s_version):
+            cc_pin = usable_declared_version(k8s_version, "ClusterConfiguration")
+            if cc_pin:
+                # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+                logging.info("E2E-KV python-feature-gates source=cc-pin version=%s", cc_pin)
+                return cc_pin
 
-    version = get_deckhouse_default_version_from_secret(data)
+    version = deckhouse_default()
     # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-    logging.info("E2E-KV python-feature-gates source=deckhouse-default version=%s", version)
+    logging.info("E2E-KV python-feature-gates source=%s version=%s mc=%s",
+                 "deckhouse-default" if version else "none", version, mc_version)
     return version
 
 

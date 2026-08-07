@@ -20,7 +20,12 @@ import base64
 import yaml
 
 import feature_gates_generated
-from feature_gates import main, validate, CLUSTER_CONFIG_SNAPSHOT_NAME
+from feature_gates import (
+    main,
+    validate,
+    CLUSTER_CONFIG_SNAPSHOT_NAME,
+    CLUSTER_KUBERNETES_SNAPSHOT_NAME,
+)
 from deckhouse import hook, tests
 from dotmap import DotMap
 
@@ -68,6 +73,7 @@ def _prepare_validation_binding_context(
     mc_k8s_version: str = None,
     include_snapshot: bool = None,
     default_version: str = "1.32.0",
+    cm_automatic_version: str = None,
 ) -> DotMap:
     binding_context_json = """
 {
@@ -162,7 +168,20 @@ def _prepare_validation_binding_context(
         ctx.snapshots[CLUSTER_CONFIG_SNAPSHOT_NAME] = secret_snapshot
     else:
         ctx.snapshots[CLUSTER_CONFIG_SNAPSHOT_NAME] = []
-    
+
+    # status.automaticVersion of the cluster ConfigMap: what "Default" resolves to for the running
+    # build. Absent snapshot means update-observer has not written the object yet.
+    if cm_automatic_version is not None:
+        ctx.snapshots[CLUSTER_KUBERNETES_SNAPSHOT_NAME] = [DotMap({
+            "object": {
+                "data": {
+                    "status": yaml.dump({"automaticVersion": cm_automatic_version}),
+                }
+            }
+        })]
+    else:
+        ctx.snapshots[CLUSTER_KUBERNETES_SNAPSHOT_NAME] = []
+
     return ctx
 
 
@@ -265,6 +284,58 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
         ctx = _prepare_validation_binding_context(
             None,
             ['SomeProblematicFeature'],
+            include_snapshot=True,
+            default_version='1.33.0',
+        )
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(
+            self,
+            out,
+            "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied",
+        )
+
+    def test_mc_default_prefers_the_configmap_default_over_the_secret(self):
+        # The Secret key is written monotonically, so after a Deckhouse downgrade it keeps naming a
+        # default this build no longer has. status.automaticVersion always describes the running
+        # build, so it has to win. 'SomeProblematicFeature' is forbidden in 1.33 but merely unknown
+        # in 1.32, which makes the two sources tell apart.
+        ctx = _prepare_validation_binding_context(
+            None,
+            ['SomeProblematicFeature'],
+            mc_k8s_version='Default',
+            include_snapshot=True,
+            default_version='1.32.0',
+            cm_automatic_version='1.33.0',
+        )
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(
+            self,
+            out,
+            "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied",
+        )
+
+    def test_mc_default_uses_the_configmap_default_without_any_secret(self):
+        # After T+1 the Secret keys are gone; the ConfigMap alone must still resolve Default.
+        ctx = _prepare_validation_binding_context(
+            None,
+            ['SomeProblematicFeature'],
+            mc_k8s_version='Default',
+            include_snapshot=False,
+            cm_automatic_version='1.33.0',
+        )
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(
+            self,
+            out,
+            "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied",
+        )
+
+    def test_mc_default_falls_back_to_the_secret_without_the_configmap(self):
+        # The window between a Deckhouse upgrade and the first update-observer write.
+        ctx = _prepare_validation_binding_context(
+            None,
+            ['SomeProblematicFeature'],
+            mc_k8s_version='Default',
             include_snapshot=True,
             default_version='1.33.0',
         )
