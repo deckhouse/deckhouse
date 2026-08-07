@@ -125,6 +125,14 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 				return fmt.Errorf("load embedded conf: %w", err)
 			}
 
+			// Record the name before any skip: a module can ship embedded without this
+			// runtime loading it, and IsEmbedded answers "is a copy on disk", not
+			// "did we load it". The directory name is not the module name, so this can
+			// only be recorded once the config is parsed.
+			r.mu.Lock()
+			r.embedded[conf.Definition.Name] = struct{}{}
+			r.mu.Unlock()
+
 			// skip node-manager for now
 			if conf.Definition.Name == "node-manager" {
 				return nil

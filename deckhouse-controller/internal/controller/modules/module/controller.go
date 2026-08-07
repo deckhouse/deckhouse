@@ -31,6 +31,7 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/module/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
@@ -38,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module/status"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -58,6 +58,7 @@ const (
 
 // RegisterController registers the Module controller with the manager.
 func RegisterController(
+	ctx context.Context,
 	sync *sync.WaitGroup,
 	runtime ctrlmanager.Manager,
 	manager packageManager,
@@ -71,7 +72,7 @@ func RegisterController(
 	}
 
 	r.status = status.NewService(r.client, r.manager.GetStatus, r.logger)
-	r.status.Start(context.Background(), r.manager.GetModuleStatusQueue())
+	r.status.Start(ctx, r.manager.GetModuleStatusQueue())
 
 	if err := ctrl.NewControllerManagedBy(runtime).
 		Named(controllerName).

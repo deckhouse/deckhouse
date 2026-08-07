@@ -109,6 +109,10 @@ type Runtime struct {
 	edition *edition.Edition
 	global  *global.Module
 
+	// embedded names the modules shipped inside the controller image, recorded by
+	// loadEmbedded. Guarded by r.mu.
+	embedded map[string]struct{}
+
 	grantResolver grants.Resolver // Resolves cluster resource grants for x-deckhouse-grantable-resource fields
 
 	mu       sync.RWMutex
@@ -130,11 +134,12 @@ type deployerI interface {
 
 // Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func Build(cli kclient.Client, edition *edition.Edition, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
 	r.modules = make(map[string]*modules.Module)
+	r.embedded = make(map[string]struct{})
 	r.packages = lifecycle.NewStore()
 
 	// Initialize foundational services
@@ -144,6 +149,13 @@ func Build(cli kclient.Client, edition *edition.Edition, dc dependency.Container
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
+
+	// Parse edition
+	edition, err := edition.Parse(app.Version)
+	if err != nil {
+		return nil, fmt.Errorf("parse edition: %w", err)
+	}
+
 	r.edition = edition
 
 	r.registry = registry.NewService(dc, logger)
@@ -805,6 +817,12 @@ func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 // GetStatus returns package status.
 func (r *Runtime) GetStatus(name string) status.Status {
 	return r.status.GetStatus(name)
+}
+
+// Edition returns the running Deckhouse edition, parsed once at build time. Callers
+// use it to resolve a package's accessibility for this edition and bundle.
+func (r *Runtime) Edition() *edition.Edition {
+	return r.edition
 }
 
 // GetAppStatusQueue returns the application status queue for external access

@@ -65,8 +65,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
-	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -302,7 +300,7 @@ func NewDeckhouseController(
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
-	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), edition, dc, operator.MetricStorage, logger)
+	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), dc, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -386,21 +384,6 @@ func NewDeckhouseController(
 		}
 	}
 
-	// Module package controllers (feature flag)
-	if app.ModulePackagesEnabled() {
-		logger.Info("Module package controllers are enabled")
-
-		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
-		if err != nil {
-			return nil, fmt.Errorf("register module package version controller: %w", err)
-		}
-
-		err = module.RegisterController(preflightCountDown, runtimeManager, pkgRuntime, logger)
-		if err != nil {
-			return nil, fmt.Errorf("register module v2 controller: %w", err)
-		}
-	}
-
 	validation.RegisterAdmissionHandlers(
 		operator.AdmissionServer,
 		runtimeManager.GetClient(),
@@ -446,11 +429,6 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 		return fmt.Errorf("wait for cache sync")
 	}
 
-	// load initial configuration from cluster state
-	if err := c.loadInitialConfiguration(ctx); err != nil {
-		return fmt.Errorf("load initial configuration: %w", err)
-	}
-
 	// sync fs with cluster state, restore or delete modules
 	if err := c.moduleLoader.Sync(ctx); err != nil {
 		return fmt.Errorf("init module loader: %w", err)
@@ -463,29 +441,6 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
 	go c.syncDeckhouseSettings()
-
-	return nil
-}
-
-// loadInitialConfiguration seeds the runtime with the ModuleConfig state already
-// present in the cluster, before the module loader starts syncing packages. At
-// this point no package is tracked yet, so UpdateModulesSettings records only the
-// enabled/disabled intent (it lives in the global module and is read by the
-// scheduler's config rule the moment a package registers); the per-package
-// settings are dropped here and supplied later by the loader via UpdateModule.
-func (c *DeckhouseController) loadInitialConfiguration(ctx context.Context) error {
-	configs := new(v1alpha1.ModuleConfigList)
-	if err := c.runtimeManager.GetClient().List(ctx, configs); err != nil {
-		return fmt.Errorf("list module configs: %w", err)
-	}
-
-	for _, conf := range configs.Items {
-		if conf.DeletionTimestamp != nil {
-			continue
-		}
-
-		c.packageRuntime.UpdateModulesSettings(conf.Name, conf.Spec.Version, conf.Spec.Settings.GetMap(), conf.Spec.Maintenance, conf.Spec.Enabled)
-	}
 
 	return nil
 }
