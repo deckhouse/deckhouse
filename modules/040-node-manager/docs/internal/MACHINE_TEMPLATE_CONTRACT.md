@@ -172,9 +172,16 @@ Choosing the list:
 
 Your template renders from two inputs, so the rollout decision reads two. `providerRolloutFields`
 names the fields of *your* subtree of the cloud-provider config whose change must recreate
-machines. It behaves exactly like `rolloutFields`: the whole subtree is snapshotted
-(`node.deckhouse.io/applied-provider-config`), the list filters the comparison rather than the
-snapshot, and values are compared after normalization.
+machines. Values are compared exactly as for `rolloutFields`, but the snapshot is not the same:
+**only the declared fields are recorded** on the object
+(`node.deckhouse.io/applied-provider-config`). The provider subtree of
+`d8-node-manager-cloud-provider` carries the cloud credentials — vcd's `password` and `apiToken`,
+yandex's `serviceAccountJSON`, huaweicloud's `accessKey`, openstack's `connection.password` — and a
+MachineTemplate is read far more widely than that Secret.
+
+That reduction has one consequence `rolloutFields` does not: **adding an entry can roll machines**,
+because a field the old snapshot never recorded compares as absent against its current value. Check
+the value in the cluster before widening the list, or pair the change with a release note.
 
 Leave it out unless you mean it. A cloud-provider config field applies to every NodeGroup in the
 cluster, so listing one turns a single edit into a fleet-wide rollout. Six of the seven migrated

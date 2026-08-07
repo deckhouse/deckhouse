@@ -341,6 +341,26 @@ rolloutFields:
 			}, eventually, poll).Should(ContainSubstring(`providerConfig datacenter "dc-1" → "dc-2"`))
 		})
 
+		// The provider subtree of d8-node-manager-cloud-provider carries the cloud credentials:
+		// vcd's password and apiToken, yandex's serviceAccountJSON, huaweicloud's accessKey and
+		// secretKey, openstack's connection.password. The MachineTemplate is read far more widely
+		// than that Secret, so only the fields the provider declared may be recorded on it.
+		It("keeps provider credentials out of the snapshot annotation", func() {
+			ng := setUpWithProvider("v2-provider-secret",
+				v2ProviderContract([]string{"vmClassName"}, []string{"datacenter"}),
+				map[string]any{"datacenter": "dc-1", "password": "s3cret"})
+
+			Eventually(func(g Gomega) map[string]any {
+				templates := machineTemplates(g, ng.Name)
+				g.Expect(templates).To(HaveLen(1))
+				snapshot := map[string]any{}
+				g.Expect(json.Unmarshal(
+					[]byte(templates[0].GetAnnotations()[machinetemplate.AppliedProviderConfigAnnotation]),
+					&snapshot)).To(Succeed())
+				return snapshot
+			}, eventually, poll).Should(Equal(map[string]any{"datacenter": "dc-1"}))
+		})
+
 		It("leaves the generation alone when an undeclared provider-config field changes", func() {
 			ng := setUpWithProvider("v2-provider-quiet",
 				v2ProviderContract([]string{"vmClassName"}, []string{"datacenter"}),

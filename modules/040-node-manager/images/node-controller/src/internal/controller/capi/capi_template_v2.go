@@ -298,6 +298,21 @@ func (r *MachineDeploymentReconciler) holdsDesiredSnapshot(ctx context.Context, 
 	return reason == "", nil
 }
 
+// newSnapshot records what a generation was built from. Both callers go through it so that an
+// adopted object and a created one carry the same shape — they are later compared by one rule.
+func newSnapshot(in machineTemplateGeneration, generation int) (machinetemplate.Snapshot, error) {
+	provider, err := machinetemplate.PickFields(in.render.Provider, in.contract.ProviderRolloutFields)
+	if err != nil {
+		return machinetemplate.Snapshot{}, fmt.Errorf("snapshot provider config for NodeGroup %s: %w", in.ng.Name, err)
+	}
+	return machinetemplate.Snapshot{
+		InstanceClass: in.render.InstanceClass,
+		Provider:      provider,
+		RolloutID:     in.rolloutID,
+		Generation:    generation,
+	}, nil
+}
+
 // buildMachineTemplate renders the provider template and stamps everything node-controller owns:
 // the name, the namespace, the labels every prune and cleanup selects on, and the snapshot.
 //
@@ -315,12 +330,11 @@ func (r *MachineDeploymentReconciler) buildMachineTemplate(in machineTemplateGen
 			in.ng.Name, obj.GroupVersionKind(), in.gvk)
 	}
 
-	annotations, err := machinetemplate.EncodeSnapshot(machinetemplate.Snapshot{
-		InstanceClass: in.render.InstanceClass,
-		Provider:      in.render.Provider,
-		RolloutID:     in.rolloutID,
-		Generation:    generation,
-	})
+	snapshot, err := newSnapshot(in, generation)
+	if err != nil {
+		return nil, err
+	}
+	annotations, err := machinetemplate.EncodeSnapshot(snapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -337,12 +351,11 @@ func (r *MachineDeploymentReconciler) buildMachineTemplate(in machineTemplateGen
 }
 
 func (r *MachineDeploymentReconciler) adoptMachineTemplate(ctx context.Context, current *unstructured.Unstructured, in machineTemplateGeneration) error {
-	snapshot, err := machinetemplate.EncodeSnapshot(machinetemplate.Snapshot{
-		InstanceClass: in.render.InstanceClass,
-		Provider:      in.render.Provider,
-		RolloutID:     in.rolloutID,
-		Generation:    generationOf(current.GetName()),
-	})
+	snapshot, err := newSnapshot(in, generationOf(current.GetName()))
+	if err != nil {
+		return err
+	}
+	snapshotAnnotations, err := machinetemplate.EncodeSnapshot(snapshot)
 	if err != nil {
 		return err
 	}
@@ -352,7 +365,7 @@ func (r *MachineDeploymentReconciler) adoptMachineTemplate(ctx context.Context, 
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
-	maps.Copy(annotations, snapshot)
+	maps.Copy(annotations, snapshotAnnotations)
 	patched.SetAnnotations(annotations)
 
 	if err := r.Client.Patch(ctx, patched, client.MergeFrom(current)); err != nil {
