@@ -38,8 +38,10 @@ import (
 // on every reconcile, so a manual edit would silently be overwritten.
 //
 // Deletion is forbidden as it always has been for the v1alpha1 version of the
-// resource: deleting a module uninstalls it, and the module config is what a user
-// removes to get rid of a module.
+// resource: deleting the Module is what unregisters it from the package runtime and
+// undeploys it. A user turns a module off by setting spec.enabled to false in its
+// module config; removing the config only drops the config-level intent and leaves
+// the module at its bundle default.
 func moduleV1alpha2ValidationHandler(cli client.Client) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		// the deckhouse controller owns the resource, it both creates modules and
@@ -55,13 +57,13 @@ func moduleV1alpha2ValidationHandler(cli client.Client) http.Handler {
 
 		switch review.Operation {
 		case model.OperationCreate:
-			return rejectResult("manual Module creation is forbidden")
+			return rejectResult("manual Module creation is forbidden, Deckhouse creates a Module itself once its ModuleSource is synchronized")
 
 		case model.OperationUpdate:
 			return validateModuleUpdate(ctx, cli, module.Name)
 
 		case model.OperationDelete:
-			return rejectResult("manual Module deletion is forbidden")
+			return rejectResult("manual Module deletion is forbidden, to turn the module off set spec.enabled to false in its ModuleConfig")
 
 		default:
 			return allowResult(nil)
@@ -97,5 +99,5 @@ func validateModuleUpdate(ctx context.Context, cli client.Client, moduleName str
 		return allowResult(nil)
 	}
 
-	return rejectResult(fmt.Sprintf("manual Module change is forbidden, the '%s' module is managed by its module config", moduleName))
+	return rejectResult(fmt.Sprintf("manual Module change is forbidden, the '%s' module is managed by its ModuleConfig, change it there instead", moduleName))
 }

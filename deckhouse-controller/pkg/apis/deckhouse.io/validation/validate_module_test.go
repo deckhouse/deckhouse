@@ -174,7 +174,7 @@ func TestModuleV1alpha2ValidationHandler(t *testing.T) {
 			username:    "kubernetes-admin",
 			withConfig:  true,
 			wantAllowed: false,
-			wantMessage: "the 'test-module' module is managed by its module config",
+			wantMessage: "the 'test-module' module is managed by its ModuleConfig",
 		},
 		{
 			name:        "user is allowed to edit a module without a module config",

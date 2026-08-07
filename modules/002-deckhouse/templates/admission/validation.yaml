@@ -69,9 +69,9 @@ webhooks:
         namespace: d8-system
         port: 4223
         path: /validate/v1alpha1/modules
-{{/* DELETE is listed although neither rule below is about deletion: kubectl resolves */}}
-{{/*   `module` to v1alpha2, so leaving it out would let `kubectl delete module X` */}}
-{{/*   uninstall a module that the v1alpha1 webhook above still refuses to delete. */}}
+{{/* DELETE is listed because matchPolicy is Exact: the v1alpha1 webhook above never */}}
+{{/*   sees a v1alpha2 request, and kubectl resolves `module` to v1alpha2, so without */}}
+{{/*   it `kubectl delete module X` would uninstall a module with nothing refusing it. */}}
   - name: modules-v1alpha2.deckhouse-webhook.deckhouse.io
     rules:
       - apiGroups:
