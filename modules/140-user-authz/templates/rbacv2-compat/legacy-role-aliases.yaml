@@ -17,11 +17,6 @@
   to superadmin. The d8:use:role:admin -> d8:namespace:admin alias therefore no longer grants those two
   disaster-grade primitives. This is called out in the migration alert/docs.
 
-  NOTE (intentional, not a bug): the role model moved secrets:read and pods/exec+pods/attach from user to
-  manager. The d8:use:role:user and d8:use:role:user:kubernetes -> d8:namespace:user aliases therefore no
-  longer grant reading Secrets or executing inside containers. This is called out in the migration
-  alert/docs.
-
   They live under templates/rbacv2-compat/ (NOT templates/rbacv2/) so the RBACv2 template-contract CI
   invariant — which requires the new naming — does not scan them. Remove this whole directory (and the
   deprecation hook/alert) in the next release.

@@ -48,22 +48,22 @@ func TestRBACv2SensitiveCapabilityLevelsValidation(t *testing.T) {
 		{
 			marker: "namespace-capability.kubernetes.view_secrets",
 			expected: map[string][]string{
-				"d8:namespace:": {"d8:namespace:admin", "d8:namespace:manager", "d8:namespace:superadmin"},
-				"d8:project:":   {"d8:project:admin", "d8:project:manager", "d8:project:superadmin"},
+				"d8:namespace:": {"d8:namespace:admin", "d8:namespace:manager", "d8:namespace:superadmin", "d8:namespace:user"},
+				"d8:project:":   {"d8:project:admin", "d8:project:manager", "d8:project:superadmin", "d8:project:user"},
 			},
 		},
 		{
 			marker: "namespace-capability.kubernetes.access_terminal",
 			expected: map[string][]string{
-				"d8:namespace:": {"d8:namespace:admin", "d8:namespace:manager", "d8:namespace:superadmin"},
-				"d8:project:":   {"d8:project:admin", "d8:project:manager", "d8:project:superadmin"},
+				"d8:namespace:": {"d8:namespace:admin", "d8:namespace:manager", "d8:namespace:superadmin", "d8:namespace:user"},
+				"d8:project:":   {"d8:project:admin", "d8:project:manager", "d8:project:superadmin", "d8:project:user"},
 			},
 		},
 	} {
 		t.Run(tc.marker, func(t *testing.T) {
 			capability := capabilityByMarker(t, objects, tc.marker)
-			if level := capability.labels[labelPrefix+"aggregate-to-namespace-as"]; level != "manager" {
-				t.Errorf("capability %q must aggregate into the namespace lineage as %q, got %q", capability.name, "manager", level)
+			if level := capability.labels[labelPrefix+"aggregate-to-namespace-as"]; level != "user" {
+				t.Errorf("capability %q must aggregate into the namespace lineage as %q, got %q", capability.name, "user", level)
 			}
 
 			holders := rolesHolding(t, objects, capability.name)
