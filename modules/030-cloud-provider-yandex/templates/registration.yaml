@@ -5,6 +5,9 @@
 type: {{ b64enc "yandex" | quote }}
 region: {{ $context.Values.cloudProviderYandex.internal.providerDiscoveryData.region | b64enc | quote }}
 zones: {{ $context.Values.cloudProviderYandex.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+# Storage version of the InstanceClass CRD (spec.versions with storage: true). Not any served
+# version: node-controller hashes what it reads into a checksum that names an immutable template.
+instanceClassAPIVersion: {{ b64enc "v1" | quote }}
 instanceClassKind: {{ b64enc "YandexInstanceClass" | quote }}
 machineClassKind: {{ b64enc "YandexMachineClass" | quote }}
 capiClusterKind: {{ b64enc "YandexCluster" | quote }}

@@ -18,16 +18,15 @@ package bashiblecontext
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,7 +35,6 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
-	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -55,23 +53,18 @@ type Controller struct {
 	// the secondary watches map to the fixed "assemble" key), so sequential access relies
 	// on the controller running with a single worker — enforced via
 	// --max-concurrent-reconciles=...,bashible-context=1 in the deployment.
-	lastAssemble       time.Time
-	instanceClassKinds []schema.GroupVersionKind
+	lastAssemble time.Time
+	cache        cache.Cache
 }
 
-func (c *Controller) Setup(mgr ctrl.Manager) error {
+func (c *Controller) Setup(_ context.Context, mgr ctrl.Manager) error {
 	c.apiReader = mgr.GetAPIReader()
 	cs, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return err
 	}
 	c.clientset = cs
-
-	kinds, err := nodecommon.ServedInstanceClassKinds(mgr.GetConfig())
-	if err != nil {
-		return fmt.Errorf("discover InstanceClass kinds: %w", err)
-	}
-	c.instanceClassKinds = kinds
+	c.cache = mgr.GetCache()
 	return nil
 }
 
@@ -112,9 +105,9 @@ func (c *Controller) SetupWatches(w register.Watcher) {
 	// The published context carries each NodeGroup's instanceClass, so an edit changes the
 	// configuration checksum the nodes compare against. Waiting for the resync would leave the
 	// nodes running the previous configuration for up to ten minutes with nothing to show why.
-	for _, gvk := range c.instanceClassKinds {
-		w.Watches(ngcommon.NewUnstructured(gvk), enqueue, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
-	}
+	// The source is deferred: the kind and version come from the provider registration Secret,
+	// which may appear only after this pod started.
+	w.WatchesRawSource(nodecommon.LazyInstanceClassSource(c.cache, enqueue, predicate.GenerationChangedPredicate{}))
 }
 
 func inNamespaces(namespaces ...string) predicate.Predicate {

@@ -17,6 +17,7 @@ limitations under the License.
 package register
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -36,7 +37,7 @@ func RegisterController(name string, obj client.Object, r Reconciler) {
 	entries = append(entries, entry{name: name, obj: obj, reconciler: r})
 }
 
-func SetupAll(mgr ctrl.Manager, c client.Client, disabledControllers string, defaultMaxConcurrent int, perControllerMaxConcurrent map[string]int) error {
+func SetupAll(ctx context.Context, mgr ctrl.Manager, c client.Client, disabledControllers string, defaultMaxConcurrent int, perControllerMaxConcurrent map[string]int) error {
 	setupLog := ctrl.Log.WithName("setup")
 
 	disabled := make(map[string]bool)
@@ -70,7 +71,7 @@ func SetupAll(mgr ctrl.Manager, c client.Client, disabledControllers string, def
 			maxConcurrent = v
 		}
 
-		if err := setupController(mgr, c, e.name, e.obj, e.reconciler, maxConcurrent); err != nil {
+		if err := setupController(ctx, mgr, c, e.name, e.obj, e.reconciler, maxConcurrent); err != nil {
 			return fmt.Errorf("setting up controller %s: %w", e.name, err)
 		}
 		setupLog.Info("controller enabled", "controller", e.name, "maxConcurrentReconciles", maxConcurrent)

@@ -19,8 +19,10 @@ package derived_status
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/Masterminds/semver/v3"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -100,7 +102,9 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	result.CRIType = criType
 
 	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
-		s.computeCloudFields(ctx, ng, cloudProvider, &result)
+		if err := s.computeCloudFields(ctx, ng, cloudProvider, &result); err != nil {
+			return result, err
+		}
 	}
 
 	logger.Info("derived status computed",
@@ -116,27 +120,42 @@ func (s *Service) compute(ctx context.Context, ng *v1.NodeGroup, cloudProvider m
 	return result, nil
 }
 
-func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}, result *Result) {
+func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}, result *Result) error {
 	logger := log.FromContext(ctx)
 
 	defaultZones := s.readDefaultZones(ctx, cloudProvider)
 	result.Zones = resolveZones(ng, defaultZones)
 
 	if ng.Spec.CloudInstances == nil {
-		return
+		return nil
 	}
 	kind := ng.Spec.CloudInstances.ClassReference.Kind
 	name := ng.Spec.CloudInstances.ClassReference.Name
 	if kind == "" || name == "" {
-		return
+		return nil
 	}
 
-	instanceClassSpec, err := s.readInstanceClassSpec(ctx, kind, name)
-	if err != nil || instanceClassSpec == nil {
-		if err != nil {
-			logger.V(1).Info("instance class not found, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name, "error", err.Error())
+	// Without a published version there is no version to read the InstanceClass at, and guessing
+	// one is what this whole mechanism exists to prevent. Describing the NodeGroup survives it —
+	// rendering does not, and runCloudChecks reports it as a validation error.
+	version := instanceClassAPIVersion(cloudProvider)
+	if version == "" {
+		logger.V(1).Info("cloud provider published no instanceClassAPIVersion, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name)
+		return nil
+	}
+
+	instanceClassSpec, err := s.readInstanceClassSpec(ctx, version, kind, name)
+	if err != nil {
+		// A deleted InstanceClass is not a failure: RunCloudChecks already reports it as a
+		// NodeGroup validation error, and instanceClass stays unset rather than guessed.
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("read instance class of %s: %w", ng.Name, err)
 		}
-		return
+		logger.V(1).Info("instance class not found, skipping capacity/instanceClass", "nodeGroup", ng.Name, "kind", kind, "name", name)
+		return nil
+	}
+	if instanceClassSpec == nil {
+		return nil
 	}
 
 	// nodeCapacity is only needed for scale-from-zero (min==0 && max>0).
@@ -155,9 +174,10 @@ func (s *Service) computeCloudFields(ctx context.Context, ng *v1.NodeGroup, clou
 	resolvedSpec, err := applyCloudSpecificDefaults(cloudProvider, instanceClassSpec)
 	if err != nil {
 		logger.Error(err, "failed to apply cloud specific defaults", "nodeGroup", ng.Name)
-		return
+		return nil
 	}
 	if raw, err := json.Marshal(resolvedSpec); err == nil {
 		result.InstanceClass = &runtime.RawExtension{Raw: raw}
 	}
+	return nil
 }

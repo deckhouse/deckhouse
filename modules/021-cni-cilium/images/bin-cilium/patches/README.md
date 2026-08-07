@@ -40,6 +40,11 @@ Upstream issue <https://github.com/cilium/cilium/issues/23711>
 
 Added DHCP server for pods (ebpf implementation).
 
+The interface MTU (option 26) is taken from the `DHCP_INTERFACE_MTU` define, which
+the agent fills with `RouteMTU` — the same value the CNI plugin sets on both ends of
+the pod veth pair (see `003-mtu.patch`). Only the `veth` datapath mode is covered:
+the `netkit` branch of the CNI plugin still creates devices with `DeviceMTU`.
+
 ## 006-add-pod-prioroty-management.patch
 
 Added a `network.deckhouse.io/pod-common-ip-priority` label allows you to share a single IP between  several Pods and to switch the actual owner.

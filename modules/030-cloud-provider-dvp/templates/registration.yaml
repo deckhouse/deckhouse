@@ -11,6 +11,9 @@ zones: {{ $zones | toJson | b64enc | quote }}
 {{- else }}
 zones: {{ list "default" | toJson | b64enc | quote }}
 {{- end }}
+# Storage version of the InstanceClass CRD (spec.versions with storage: true). Not any served
+# version: node-controller hashes what it reads into a checksum that names an immutable template.
+instanceClassAPIVersion: {{ b64enc "v1alpha1" | quote }}
 instanceClassKind: {{ b64enc "DVPInstanceClass" | quote }}
 machineClassKind: {{ b64enc "" | quote }}
 capiClusterKind: {{ b64enc "DeckhouseCluster" | quote }}

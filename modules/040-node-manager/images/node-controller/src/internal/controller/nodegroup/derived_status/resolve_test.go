@@ -23,15 +23,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -57,31 +56,62 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func TestResolveInstanceClassVersion(t *testing.T) {
-	t.Run("nil mapper falls back to default version", func(t *testing.T) {
-		assert.Equal(t, instanceClassVersion, resolveInstanceClassVersion(nil, "VCDInstanceClass"))
+func TestInstanceClassAPIVersion(t *testing.T) {
+	tests := []struct {
+		name          string
+		cloudProvider map[string]interface{}
+		expVersion    string
+	}{
+		{
+			name:          "published version is used verbatim",
+			cloudProvider: map[string]interface{}{nodecommon.InstanceClassAPIVersionKey: "v1"},
+			expVersion:    "v1",
+		},
+		{
+			name:          "a provider serving only v1alpha1 is honoured",
+			cloudProvider: map[string]interface{}{nodecommon.InstanceClassAPIVersionKey: "v1alpha1"},
+			expVersion:    "v1alpha1",
+		},
+		{
+			// No guessing: a version picked here would feed the instance-class checksum, and a
+			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
+			name:          "provider registered without the key yields no version",
+			cloudProvider: map[string]interface{}{"instanceClassKind": "YandexInstanceClass"},
+		},
+		{
+			name: "no provider secret at all yields no version",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expVersion, instanceClassAPIVersion(tc.cloudProvider))
+		})
+	}
+}
+
+// An unpublished version must reach the operator as a NodeGroup validation error rather than as a
+// reconcile error: every consumer already handles a validation error (rendering is skipped, the
+// bashible context keeps its previous entry), whereas a reconcile error stops the whole pass and
+// freezes the status of every NodeGroup, Static ones included.
+func TestRunCloudChecks_UnpublishedAPIVersionIsAValidationError(t *testing.T) {
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: v1.NodeGroupSpec{
+			NodeType: v1.NodeTypeCloudEphemeral,
+			CloudInstances: &v1.CloudInstancesSpec{
+				ClassReference: v1.ClassReference{Kind: "YandexInstanceClass", Name: "worker"},
+			},
+		},
+	}
+
+	check, err := newTestService(t).runCloudChecks(t.Context(), ng, map[string]interface{}{
+		"instanceClassKind": "YandexInstanceClass",
 	})
 
-	t.Run("unknown kind falls back to default version", func(t *testing.T) {
-		mapper := meta.NewDefaultRESTMapper(nil)
-		assert.Equal(t, instanceClassVersion, resolveInstanceClassVersion(mapper, "UnknownInstanceClass"))
-	})
-
-	t.Run("v1-only kind resolves to v1", func(t *testing.T) {
-		gv := schema.GroupVersion{Group: instanceClassGroup, Version: "v1"}
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{gv})
-		mapper.Add(gv.WithKind("VCDInstanceClass"), meta.RESTScopeRoot)
-		assert.Equal(t, "v1", resolveInstanceClassVersion(mapper, "VCDInstanceClass"))
-	})
-
-	t.Run("multi-version kind resolves to preferred v1", func(t *testing.T) {
-		v1gv := schema.GroupVersion{Group: instanceClassGroup, Version: "v1"}
-		alphaGV := schema.GroupVersion{Group: instanceClassGroup, Version: "v1alpha1"}
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{v1gv, alphaGV})
-		mapper.Add(v1gv.WithKind("YandexInstanceClass"), meta.RESTScopeRoot)
-		mapper.Add(alphaGV.WithKind("YandexInstanceClass"), meta.RESTScopeRoot)
-		assert.Equal(t, "v1", resolveInstanceClassVersion(mapper, "YandexInstanceClass"))
-	})
+	require.NoError(t, err)
+	assert.Contains(t, check.Error, "has not published instanceClassAPIVersion")
+	assert.False(t, check.Processed)
 }
 
 func TestReadStatic_ParsesInternalNetworkCIDRs(t *testing.T) {
@@ -140,7 +170,8 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
-		"instanceClassKind": []byte(`"YandexInstanceClass"`),
+		"instanceClassKind":       []byte(`"YandexInstanceClass"`),
+		"instanceClassAPIVersion": []byte("v1alpha1"),
 	}))
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},

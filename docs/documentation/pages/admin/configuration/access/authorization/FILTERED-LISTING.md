@@ -20,7 +20,7 @@ For a client who does not request filtering, the behavior remains identical to t
 
 ## Using via Deckhouse CLI
 
-In DKP, you can use the [Deckhouse CLI tool](../../cli/d8/) to work with the filtered listing mechanism.
+In DKP, you can use the [Deckhouse CLI tool](../../../../cli/d8/) to work with the filtered listing mechanism.
 
 ### Resource filtering scopes
 
@@ -185,7 +185,7 @@ enabled explicitly.
 
 | Component | Role |
 |---|---|
-| [Deckhouse CLI](../../cli/d8/)| Supports the `--scope` flag and transforms its values into headers |
+| [Deckhouse CLI](../../../../cli/d8/)| Supports the `--scope` flag and transforms its values into headers |
 | kube-apiserver (DKP patch) | Bypasses `403 Forbidden` and provides filtering at the storage layer |
 | [`user-authz`](/modules/user-authz/) (`permission-browser`) | Defines the access boundary via `AccessibleNamespaces` and `BulkSubjectAccessReview` |
 | [`multitenancy-manager`](/modules/multitenancy-manager/) | Provides namespace classification based on the `projects.deckhouse.io/project` label |
