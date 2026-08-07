@@ -187,7 +187,7 @@ A `Project` is cluster-scoped, but its visibility follows the same namespace
 boundary: a user sees a project when they can see any of its namespaces — the
 main one or an additional one. Filtering applies unconditionally here as well,
 so `d8 k get projects` returns the accessible subset instead of
-`403 Forbidden`, and a `get` of an invisible project answers `NotFound`.
+`403 Forbidden`, and a `get` of a project unavailable for the user answers `NotFound`.
 
 Because of that, access levels granted through a `ClusterAuthorizationRule` no
 longer carry a cluster-wide read of `projects`: the grant would let RBAC allow
