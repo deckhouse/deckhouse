@@ -21,10 +21,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// FencingSLAProfileSpec mirrors crds/fencingslaprofiles.yaml. Durations stay
-// strings, as on the wire: the CRD pattern validates the format only, so the
-// agent parses and fully re-validates them when building its runtime
-// configuration (fail closed).
+// FencingSLAProfileSpec mirrors crds/fencingslaprofiles.yaml. Durations are
+// metav1.Duration: the wire format stays the string the CRD pattern validates,
+// while consumers get time.Duration without reparsing. The CRD schema and its
+// CEL rules guard admission only, so an object may predate them — Validate
+// re-checks every value before the agent runs (fail closed).
 type FencingSLAProfileSpec struct {
 	// ReactionGoal is documentation-only and is not parsed as a duration.
 	ReactionGoal string `json:"reactionGoal"`
@@ -40,8 +41,8 @@ type FencingSLAProfileSpec struct {
 
 // FencingSLAProfileMemberlist controls peer probing, suspicion and gossip.
 type FencingSLAProfileMemberlist struct {
-	ProbeInterval string `json:"probeInterval"`
-	ProbeTimeout  string `json:"probeTimeout"`
+	ProbeInterval metav1.Duration `json:"probeInterval"`
+	ProbeTimeout  metav1.Duration `json:"probeTimeout"`
 	// +kubebuilder:validation:Minimum=1
 	SuspicionMult int32 `json:"suspicionMult"`
 	// +kubebuilder:validation:Minimum=1
@@ -49,37 +50,37 @@ type FencingSLAProfileMemberlist struct {
 	// +kubebuilder:validation:Minimum=1
 	IndirectChecks int32 `json:"indirectChecks"`
 	// +kubebuilder:validation:Minimum=1
-	AwarenessMaxMultiplier int32  `json:"awarenessMaxMultiplier"`
-	GossipInterval         string `json:"gossipInterval"`
+	AwarenessMaxMultiplier int32           `json:"awarenessMaxMultiplier"`
+	GossipInterval         metav1.Duration `json:"gossipInterval"`
 	// +kubebuilder:validation:Minimum=1
-	RetransmitMult      int32  `json:"retransmitMult"`
-	GossipToTheDeadTime string `json:"gossipToTheDeadTime"`
+	RetransmitMult      int32           `json:"retransmitMult"`
+	GossipToTheDeadTime metav1.Duration `json:"gossipToTheDeadTime"`
 }
 
 // FencingSLAProfileFallback tunes the heartbeat of a node that lost gossip
 // quorum but still reaches the Kubernetes API. TTL is consumed by the
 // controller, not by the agent.
 type FencingSLAProfileFallback struct {
-	Heartbeat            string `json:"heartbeat"`
-	TTL                  string `json:"ttl"`
-	KubernetesAPITimeout string `json:"kubernetesAPITimeout"`
+	Heartbeat            metav1.Duration `json:"heartbeat"`
+	TTL                  metav1.Duration `json:"ttl"`
+	KubernetesAPITimeout metav1.Duration `json:"kubernetesAPITimeout"`
 }
 
 // FencingSLAProfileRejoin paces the rejoin loop after quorum loss.
 type FencingSLAProfileRejoin struct {
-	Interval    string `json:"interval"`
-	MaxInterval string `json:"maxInterval"`
+	Interval    metav1.Duration `json:"interval"`
+	MaxInterval metav1.Duration `json:"maxInterval"`
 }
 
 // FencingSLAProfileEvacuation is consumed by the controller, not by the agent.
 type FencingSLAProfileEvacuation struct {
-	Delay string `json:"delay"`
+	Delay metav1.Duration `json:"delay"`
 }
 
 // FencingSLAProfileWatchdog tunes the watchdog safety net on the node.
 type FencingSLAProfileWatchdog struct {
-	FeedInterval string `json:"feedInterval"`
-	Timeout      string `json:"timeout"`
+	FeedInterval metav1.Duration `json:"feedInterval"`
+	Timeout      metav1.Duration `json:"timeout"`
 }
 
 // FencingSLAProfile is a cluster-scoped, state-less set of fencing timings.

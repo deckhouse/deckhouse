@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/adapters/memberlist"
 	"fencing-agent/internal/config"
@@ -38,17 +39,39 @@ type Agent struct {
 	cfg      *config.Config
 	deps     Deps
 	identity domain.NodeIdentity
-	sla      domain.SLA
+	sla      v1alpha1.FencingSLAProfileSpec
 	logger   *log.Logger
 }
 
-func New(cfg *config.Config, deps Deps, identity domain.NodeIdentity, sla domain.SLA, logger *log.Logger) *Agent {
+func New(cfg *config.Config, deps Deps, identity domain.NodeIdentity, sla v1alpha1.FencingSLAProfileSpec, logger *log.Logger) *Agent {
 	return &Agent{
 		cfg:      cfg,
 		deps:     deps,
 		identity: identity,
 		sla:      sla,
 		logger:   logger,
+	}
+}
+
+func (a *Agent) memberlistConfig() memberlist.Config {
+	return memberlist.Config{
+		NodeName:      a.identity.Name,
+		NodeGroup:     a.cfg.NodeGroup,
+		AdvertiseAddr: a.identity.IP,
+		Port:          a.cfg.MemberlistPort,
+		Tuning:        a.sla.Memberlist,
+	}
+}
+
+func (a *Agent) joinParams() join.Params {
+	return join.Params{
+		NodeName:         a.identity.Name,
+		NodeIP:           a.identity.IP,
+		NodeGroup:        a.cfg.NodeGroup,
+		MemberlistPort:   a.cfg.MemberlistPort,
+		APITimeout:       a.sla.Fallback.KubernetesAPITimeout.Duration,
+		RetryInterval:    a.sla.Rejoin.Interval.Duration,
+		MaxRetryInterval: a.sla.Rejoin.MaxInterval.Duration,
 	}
 }
 
@@ -63,19 +86,13 @@ func (a *Agent) Run(ctx context.Context) error {
 		"node_ip", a.identity.IP,
 		"node_group", a.cfg.NodeGroup,
 		"profile", a.cfg.ProfileRefName,
-		"probe_interval", a.sla.Memberlist.ProbeInterval.String(),
+		"probe_interval", a.sla.Memberlist.ProbeInterval.Duration.String(),
 		"memberlist_port", a.cfg.MemberlistPort,
 		"watchdog_device", a.cfg.WatchdogDevice,
 		"api_socket_path", a.cfg.APISocketPath,
 	)
 
-	cluster, err := memberlist.New(memberlist.Config{
-		NodeName:      a.identity.Name,
-		NodeGroup:     a.cfg.NodeGroup,
-		AdvertiseAddr: a.identity.IP,
-		Port:          a.cfg.MemberlistPort,
-		Tuning:        a.sla.Memberlist,
-	}, a.logger)
+	cluster, err := memberlist.New(a.memberlistConfig(), a.logger)
 	if err != nil {
 		return fmt.Errorf("create gossip network: %w", err)
 	}
@@ -96,15 +113,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		return fmt.Errorf("create node watcher: %w", err)
 	}
 
-	joiner := join.New(members, cluster, join.Params{
-		NodeName:         a.identity.Name,
-		NodeIP:           a.identity.IP,
-		NodeGroup:        a.cfg.NodeGroup,
-		MemberlistPort:   a.cfg.MemberlistPort,
-		APITimeout:       a.sla.Fallback.APITimeout,
-		RetryInterval:    a.sla.Rejoin.Interval,
-		MaxRetryInterval: a.sla.Rejoin.MaxInterval,
-	}, a.logger)
+	joiner := join.New(members, cluster, a.joinParams(), a.logger)
 
 	g, gctx := errgroup.WithContext(ctx)
 

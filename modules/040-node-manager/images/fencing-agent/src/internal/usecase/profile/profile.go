@@ -18,7 +18,9 @@ package profile
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
-	"fencing-agent/internal/domain"
 )
 
 // retryInterval paces retries of transient API failures inside the caller's
@@ -37,13 +38,13 @@ type Getter interface {
 	GetSLAProfile(ctx context.Context, name string) (*v1alpha1.FencingSLAProfile, error)
 }
 
-// Load fetches the profile by ProfileName.ObjectName and converts it,
+// Load fetches the profile by ProfileName.ObjectName and validates it,
 // retrying only transient API errors until ctx expires.
-func Load(ctx context.Context, getter Getter, name v1alpha1.ProfileName, logger *log.Logger) (domain.SLA, error) {
+func Load(ctx context.Context, getter Getter, name v1alpha1.ProfileName, logger *log.Logger) (v1alpha1.FencingSLAProfileSpec, error) {
 	return load(ctx, getter, name, logger, retryInterval)
 }
 
-func load(ctx context.Context, getter Getter, name v1alpha1.ProfileName, logger *log.Logger, retryIn time.Duration) (domain.SLA, error) {
+func load(ctx context.Context, getter Getter, name v1alpha1.ProfileName, logger *log.Logger, retryIn time.Duration) (v1alpha1.FencingSLAProfileSpec, error) {
 	objectName := name.ObjectName()
 
 	for {
@@ -51,14 +52,15 @@ func load(ctx context.Context, getter Getter, name v1alpha1.ProfileName, logger 
 
 		switch {
 		case err == nil:
-			sla, convErr := Convert(p)
-			if convErr != nil {
-				return domain.SLA{}, fmt.Errorf("SLA profile %q is invalid: %w", objectName, convErr)
+			if validateErr := Validate(p); validateErr != nil {
+				return v1alpha1.FencingSLAProfileSpec{}, fmt.Errorf("SLA profile %q is invalid: %w", objectName, validateErr)
 			}
 
-			return sla, nil
+			return p.Spec, nil
 		case apierrors.IsNotFound(err):
-			return domain.SLA{}, fmt.Errorf("SLA profile %q not found: %w", objectName, err)
+			return v1alpha1.FencingSLAProfileSpec{}, fmt.Errorf("SLA profile %q not found: %w", objectName, err)
+		case !isTransient(err):
+			return v1alpha1.FencingSLAProfileSpec{}, fmt.Errorf("SLA profile %q is invalid: %w", objectName, err)
 		}
 
 		logger.Warn("get SLA profile failed, retrying",
@@ -69,8 +71,23 @@ func load(ctx context.Context, getter Getter, name v1alpha1.ProfileName, logger 
 
 		select {
 		case <-ctx.Done():
-			return domain.SLA{}, fmt.Errorf("get SLA profile %q: %w", objectName, err)
+			return v1alpha1.FencingSLAProfileSpec{}, fmt.Errorf("get SLA profile %q: %w", objectName, err)
 		case <-time.After(retryIn):
 		}
 	}
+}
+
+func isTransient(err error) bool {
+	if apierrors.IsUnauthorized(err) || apierrors.IsForbidden(err) {
+		return false
+	}
+
+	var status apierrors.APIStatus
+	if errors.As(err, &status) {
+		return true
+	}
+
+	var netErr net.Error
+
+	return errors.As(err, &netErr)
 }

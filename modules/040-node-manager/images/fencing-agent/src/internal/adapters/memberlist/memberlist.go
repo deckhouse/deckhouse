@@ -26,7 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"fencing-agent/internal/domain"
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 const (
@@ -47,7 +47,7 @@ type Config struct {
 	Port          int
 	// Tuning carries the SLA profile timings; it is required, the zero value
 	// would disable probing entirely.
-	Tuning domain.MemberlistTuning
+	Tuning v1alpha1.FencingSLAProfileMemberlist
 }
 
 type Cluster struct {
@@ -59,7 +59,7 @@ type Cluster struct {
 func New(cfg Config, logger *log.Logger) (*Cluster, error) {
 	// A zero ProbeInterval silently disables probing in memberlist — an agent
 	// that joins gossip but can never detect a failure. Refuse to start instead.
-	if cfg.Tuning.ProbeInterval <= 0 {
+	if cfg.Tuning.ProbeInterval.Duration <= 0 {
 		return nil, errors.New("memberlist tuning is not set: ProbeInterval must be positive")
 	}
 
@@ -87,15 +87,15 @@ func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcm
 	// Label keeps each NodeGroup a separate gossip network; foreign packets are dropped.
 	mlCfg.Label = cfg.NodeGroup
 	mlCfg.DeadNodeReclaimTime = deadNodeReclaimTime
-	mlCfg.ProbeInterval = cfg.Tuning.ProbeInterval
-	mlCfg.ProbeTimeout = cfg.Tuning.ProbeTimeout
-	mlCfg.SuspicionMult = cfg.Tuning.SuspicionMult
-	mlCfg.SuspicionMaxTimeoutMult = cfg.Tuning.SuspicionMaxTimeoutMult
-	mlCfg.IndirectChecks = cfg.Tuning.IndirectChecks
-	mlCfg.AwarenessMaxMultiplier = cfg.Tuning.AwarenessMaxMultiplier
-	mlCfg.GossipInterval = cfg.Tuning.GossipInterval
-	mlCfg.RetransmitMult = cfg.Tuning.RetransmitMult
-	mlCfg.GossipToTheDeadTime = cfg.Tuning.GossipToTheDeadTime
+	mlCfg.ProbeInterval = cfg.Tuning.ProbeInterval.Duration
+	mlCfg.ProbeTimeout = cfg.Tuning.ProbeTimeout.Duration
+	mlCfg.SuspicionMult = int(cfg.Tuning.SuspicionMult)
+	mlCfg.SuspicionMaxTimeoutMult = int(cfg.Tuning.SuspicionMaxTimeoutMult)
+	mlCfg.IndirectChecks = int(cfg.Tuning.IndirectChecks)
+	mlCfg.AwarenessMaxMultiplier = int(cfg.Tuning.AwarenessMaxMultiplier)
+	mlCfg.GossipInterval = cfg.Tuning.GossipInterval.Duration
+	mlCfg.RetransmitMult = int(cfg.Tuning.RetransmitMult)
+	mlCfg.GossipToTheDeadTime = cfg.Tuning.GossipToTheDeadTime.Duration
 	mlCfg.Logger = stdlog.New(newLogWriter(logger), "", 0)
 	mlCfg.Events = events
 

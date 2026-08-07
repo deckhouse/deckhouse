@@ -19,6 +19,8 @@ package profile
 import (
 	"context"
 	"errors"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -50,7 +52,7 @@ func notFound() error {
 	return apierrors.NewNotFound(schema.GroupResource{Group: "node-manager.deckhouse.io", Resource: "fencingslaprofiles"}, "medium")
 }
 
-func TestLoadReturnsConvertedProfile(t *testing.T) {
+func TestLoadReturnsValidatedProfile(t *testing.T) {
 	g := &getterStub{results: []func() (*v1alpha1.FencingSLAProfile, error){
 		func() (*v1alpha1.FencingSLAProfile, error) { return validProfile(), nil },
 	}}
@@ -60,7 +62,7 @@ func TestLoadReturnsConvertedProfile(t *testing.T) {
 		t.Fatalf("load: %v", err)
 	}
 
-	if sla.Rejoin.Interval != time.Second {
+	if sla.Rejoin.Interval.Duration != time.Second {
 		t.Errorf("unexpected SLA %+v", sla)
 	}
 }
@@ -83,7 +85,7 @@ func TestLoadDoesNotRetryNotFound(t *testing.T) {
 
 func TestLoadDoesNotRetryInvalidProfile(t *testing.T) {
 	broken := validProfile()
-	broken.Spec.Memberlist.ProbeInterval = "0ms"
+	broken.Spec.Memberlist.ProbeInterval = dur(0)
 
 	g := &getterStub{results: []func() (*v1alpha1.FencingSLAProfile, error){
 		func() (*v1alpha1.FencingSLAProfile, error) { return broken, nil },
@@ -98,24 +100,82 @@ func TestLoadDoesNotRetryInvalidProfile(t *testing.T) {
 	}
 }
 
-func TestLoadRetriesTransientErrors(t *testing.T) {
+// A malformed duration fails while the response is being decoded, so the error
+// carries no API status. Retrying would re-read the same unparseable object,
+// and the agent must say the profile is invalid instead of blaming the API.
+func TestLoadDoesNotRetryDecodeFailure(t *testing.T) {
+	decodeErr := errors.New(`get fencingslaprofile "medium": error unmarshaling JSON: time: invalid duration "soon"`)
+
 	g := &getterStub{results: []func() (*v1alpha1.FencingSLAProfile, error){
-		func() (*v1alpha1.FencingSLAProfile, error) { return nil, errors.New("connection refused") },
-		func() (*v1alpha1.FencingSLAProfile, error) { return validProfile(), nil },
+		func() (*v1alpha1.FencingSLAProfile, error) { return nil, decodeErr },
 	}}
 
-	if _, err := load(t.Context(), g, v1alpha1.ProfileMedium, log.NewNop(), time.Millisecond); err != nil {
-		t.Fatalf("load after a transient error: %v", err)
+	_, err := load(t.Context(), g, v1alpha1.ProfileMedium, log.NewNop(), time.Millisecond)
+	if err == nil {
+		t.Fatal("expected an error")
 	}
 
-	if g.calls != 2 {
-		t.Errorf("expected exactly 2 calls, got %d", g.calls)
+	if g.calls != 1 {
+		t.Errorf("a decode failure must not be retried, got %d calls", g.calls)
+	}
+
+	if !strings.Contains(err.Error(), "is invalid") {
+		t.Errorf("error %q must report the profile as invalid", err)
+	}
+}
+
+// Denied access is deterministic: RBAC will not change while the process waits.
+func TestLoadDoesNotRetryForbidden(t *testing.T) {
+	forbidden := apierrors.NewForbidden(
+		schema.GroupResource{Group: "node-manager.deckhouse.io", Resource: "fencingslaprofiles"},
+		"medium", errors.New("no rule"),
+	)
+
+	g := &getterStub{results: []func() (*v1alpha1.FencingSLAProfile, error){
+		func() (*v1alpha1.FencingSLAProfile, error) { return nil, forbidden },
+	}}
+
+	if _, err := load(t.Context(), g, v1alpha1.ProfileMedium, log.NewNop(), time.Millisecond); err == nil {
+		t.Fatal("expected an error")
+	}
+
+	if g.calls != 1 {
+		t.Errorf("Forbidden must not be retried, got %d calls", g.calls)
+	}
+}
+
+func TestLoadRetriesTransientErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{name: "server unavailable", err: apierrors.NewServiceUnavailable("try later")},
+		{name: "connection refused", err: &url.Error{Op: "Get", URL: "https://api", Err: errors.New("connection refused")}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := &getterStub{results: []func() (*v1alpha1.FencingSLAProfile, error){
+				func() (*v1alpha1.FencingSLAProfile, error) { return nil, tt.err },
+				func() (*v1alpha1.FencingSLAProfile, error) { return validProfile(), nil },
+			}}
+
+			if _, err := load(t.Context(), g, v1alpha1.ProfileMedium, log.NewNop(), time.Millisecond); err != nil {
+				t.Fatalf("load after a transient error: %v", err)
+			}
+
+			if g.calls != 2 {
+				t.Errorf("expected exactly 2 calls, got %d", g.calls)
+			}
+		})
 	}
 }
 
 func TestLoadStopsOnContextExpiry(t *testing.T) {
 	g := &getterStub{results: []func() (*v1alpha1.FencingSLAProfile, error){
-		func() (*v1alpha1.FencingSLAProfile, error) { return nil, errors.New("connection refused") },
+		func() (*v1alpha1.FencingSLAProfile, error) {
+			return nil, apierrors.NewServiceUnavailable("try later")
+		},
 	}}
 
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)

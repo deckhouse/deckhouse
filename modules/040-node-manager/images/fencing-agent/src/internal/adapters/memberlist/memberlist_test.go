@@ -21,23 +21,25 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"fencing-agent/internal/domain"
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 // testTuning returns a valid tuning fixture shared by the buildConfig tests.
-func testTuning() domain.MemberlistTuning {
-	return domain.MemberlistTuning{
-		ProbeInterval:           100 * time.Millisecond,
-		ProbeTimeout:            50 * time.Millisecond,
+func testTuning() v1alpha1.FencingSLAProfileMemberlist {
+	return v1alpha1.FencingSLAProfileMemberlist{
+		ProbeInterval:           metav1.Duration{Duration: 100 * time.Millisecond},
+		ProbeTimeout:            metav1.Duration{Duration: 50 * time.Millisecond},
 		SuspicionMult:           2,
 		SuspicionMaxTimeoutMult: 6,
 		IndirectChecks:          4,
 		AwarenessMaxMultiplier:  8,
-		GossipInterval:          100 * time.Millisecond,
+		GossipInterval:          metav1.Duration{Duration: 100 * time.Millisecond},
 		RetransmitMult:          4,
-		GossipToTheDeadTime:     2 * time.Second,
+		GossipToTheDeadTime:     metav1.Duration{Duration: 2 * time.Second},
 	}
 }
 
@@ -52,7 +54,7 @@ func TestBuildConfigAppliesProfileTuning(t *testing.T) {
 		Tuning:        tuning,
 	}, log.NewNop(), newEventDelegate(log.NewNop()))
 
-	if cfg.ProbeInterval != tuning.ProbeInterval || cfg.ProbeTimeout != tuning.ProbeTimeout {
+	if cfg.ProbeInterval != tuning.ProbeInterval.Duration || cfg.ProbeTimeout != tuning.ProbeTimeout.Duration {
 		t.Errorf("probe timings not applied: interval=%s timeout=%s", cfg.ProbeInterval, cfg.ProbeTimeout)
 	}
 
@@ -64,7 +66,7 @@ func TestBuildConfigAppliesProfileTuning(t *testing.T) {
 		t.Errorf("lifeguard tuning not applied: indirect=%d awareness=%d", cfg.IndirectChecks, cfg.AwarenessMaxMultiplier)
 	}
 
-	if cfg.GossipInterval != tuning.GossipInterval || cfg.RetransmitMult != 4 || cfg.GossipToTheDeadTime != tuning.GossipToTheDeadTime {
+	if cfg.GossipInterval != tuning.GossipInterval.Duration || cfg.RetransmitMult != 4 || cfg.GossipToTheDeadTime != tuning.GossipToTheDeadTime.Duration {
 		t.Errorf("gossip tuning not applied: interval=%s retransmit=%d deadTime=%s",
 			cfg.GossipInterval, cfg.RetransmitMult, cfg.GossipToTheDeadTime)
 	}

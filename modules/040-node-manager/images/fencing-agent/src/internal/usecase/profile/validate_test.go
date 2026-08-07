@@ -22,10 +22,15 @@ import (
 	"testing"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
+
+func dur(d time.Duration) metav1.Duration {
+	return metav1.Duration{Duration: d}
+}
 
 func validProfile() *v1alpha1.FencingSLAProfile {
 	return &v1alpha1.FencingSLAProfile{
@@ -33,58 +38,82 @@ func validProfile() *v1alpha1.FencingSLAProfile {
 			ReactionGoal:          "10s",
 			DetectionWindowTarget: "3s",
 			Memberlist: v1alpha1.FencingSLAProfileMemberlist{
-				ProbeInterval:           "300ms",
-				ProbeTimeout:            "120ms",
+				ProbeInterval:           dur(300 * time.Millisecond),
+				ProbeTimeout:            dur(120 * time.Millisecond),
 				SuspicionMult:           3,
 				SuspicionMaxTimeoutMult: 6,
 				IndirectChecks:          3,
 				AwarenessMaxMultiplier:  8,
-				GossipInterval:          "200ms",
+				GossipInterval:          dur(200 * time.Millisecond),
 				RetransmitMult:          4,
-				GossipToTheDeadTime:     "5s",
+				GossipToTheDeadTime:     dur(5 * time.Second),
 			},
 			Fallback: v1alpha1.FencingSLAProfileFallback{
-				Heartbeat:            "1s",
-				TTL:                  "4s",
-				KubernetesAPITimeout: "2s",
+				Heartbeat:            dur(time.Second),
+				TTL:                  dur(4 * time.Second),
+				KubernetesAPITimeout: dur(2 * time.Second),
 			},
-			Rejoin:     v1alpha1.FencingSLAProfileRejoin{Interval: "1s", MaxInterval: "10s"},
-			Evacuation: v1alpha1.FencingSLAProfileEvacuation{Delay: "6s"},
-			Watchdog:   v1alpha1.FencingSLAProfileWatchdog{FeedInterval: "1s", Timeout: "10s"},
+			Rejoin:     v1alpha1.FencingSLAProfileRejoin{Interval: dur(time.Second), MaxInterval: dur(10 * time.Second)},
+			Evacuation: v1alpha1.FencingSLAProfileEvacuation{Delay: dur(6 * time.Second)},
+			Watchdog:   v1alpha1.FencingSLAProfileWatchdog{FeedInterval: dur(time.Second), Timeout: dur(10 * time.Second)},
 		},
 	}
 }
 
-func TestConvertMapsEveryConsumedField(t *testing.T) {
-	sla, err := Convert(validProfile())
-	if err != nil {
-		t.Fatalf("convert valid profile: %v", err)
+func TestValidateAcceptsValidProfile(t *testing.T) {
+	if err := Validate(validProfile()); err != nil {
+		t.Fatalf("validate a valid profile: %v", err)
+	}
+}
+
+// The wire format stays the string the CRD validates; metav1.Duration is what
+// decodes it, so this pins the contract the CRD pattern and the agent share.
+func TestSpecDecodesDurationsFromWireStrings(t *testing.T) {
+	const doc = `
+spec:
+  memberlist:
+    probeInterval: 300ms
+    gossipToTheDeadTime: 5s
+  watchdog:
+    timeout: 1m
+`
+
+	var p v1alpha1.FencingSLAProfile
+	if err := yaml.Unmarshal([]byte(doc), &p); err != nil {
+		t.Fatalf("unmarshal: %v", err)
 	}
 
-	ml := sla.Memberlist
-	if ml.ProbeInterval != 300*time.Millisecond || ml.ProbeTimeout != 120*time.Millisecond ||
-		ml.SuspicionMult != 3 || ml.SuspicionMaxTimeoutMult != 6 || ml.IndirectChecks != 3 ||
-		ml.AwarenessMaxMultiplier != 8 || ml.GossipInterval != 200*time.Millisecond ||
-		ml.RetransmitMult != 4 || ml.GossipToTheDeadTime != 5*time.Second {
-		t.Errorf("memberlist tuning mismatch: %+v", ml)
+	if p.Spec.Memberlist.ProbeInterval.Duration != 300*time.Millisecond {
+		t.Errorf("probeInterval is %s, want 300ms", p.Spec.Memberlist.ProbeInterval.Duration)
 	}
 
-	if sla.Fallback.Heartbeat != time.Second || sla.Fallback.APITimeout != 2*time.Second {
-		t.Errorf("fallback tuning mismatch: %+v", sla.Fallback)
+	if p.Spec.Memberlist.GossipToTheDeadTime.Duration != 5*time.Second {
+		t.Errorf("gossipToTheDeadTime is %s, want 5s", p.Spec.Memberlist.GossipToTheDeadTime.Duration)
 	}
 
-	if sla.Rejoin.Interval != time.Second || sla.Rejoin.MaxInterval != 10*time.Second {
-		t.Errorf("rejoin tuning mismatch: %+v", sla.Rejoin)
+	if p.Spec.Watchdog.Timeout.Duration != time.Minute {
+		t.Errorf("watchdog.timeout is %s, want 1m", p.Spec.Watchdog.Timeout.Duration)
 	}
+}
 
-	if sla.Watchdog.FeedInterval != time.Second || sla.Watchdog.Timeout != 10*time.Second {
-		t.Errorf("watchdog tuning mismatch: %+v", sla.Watchdog)
+// A malformed duration can no longer reach Validate: it is rejected while the
+// object is decoded, which is where the agent must fail on it.
+func TestSpecRejectsMalformedDuration(t *testing.T) {
+	const doc = `
+spec:
+  watchdog:
+    timeout: soon
+`
+
+	var p v1alpha1.FencingSLAProfile
+	if err := yaml.Unmarshal([]byte(doc), &p); err == nil {
+		t.Fatal("expected a decode error for a malformed duration")
 	}
 }
 
 // The CRD pattern admits zero durations and an object may predate the CEL
 // rules, so the agent must reject them itself.
-func TestConvertRejectsInvalidValues(t *testing.T) {
+func TestValidateRejectsInvalidValues(t *testing.T) {
 	tests := []struct {
 		name    string
 		mutate  func(p *v1alpha1.FencingSLAProfile)
@@ -92,12 +121,12 @@ func TestConvertRejectsInvalidValues(t *testing.T) {
 	}{
 		{
 			name:    "zero duration",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Memberlist.ProbeInterval = "0ms" },
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Memberlist.ProbeInterval = dur(0) },
 			wantSub: "memberlist.probeInterval",
 		},
 		{
-			name:    "garbage duration",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Watchdog.Timeout = "soon" },
+			name:    "negative duration",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Watchdog.Timeout = dur(-time.Second) },
 			wantSub: "watchdog.timeout",
 		},
 		{
@@ -107,27 +136,27 @@ func TestConvertRejectsInvalidValues(t *testing.T) {
 		},
 		{
 			name:    "probe timeout not below probe interval",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Memberlist.ProbeTimeout = "300ms" },
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Memberlist.ProbeTimeout = dur(300 * time.Millisecond) },
 			wantSub: "probeTimeout",
 		},
 		{
 			name:    "heartbeat not below ttl",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.Heartbeat = "4s" },
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.Heartbeat = dur(4 * time.Second) },
 			wantSub: "heartbeat",
 		},
 		{
 			name:    "api timeout not below ttl",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.KubernetesAPITimeout = "4s" },
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.KubernetesAPITimeout = dur(4 * time.Second) },
 			wantSub: "kubernetesAPITimeout",
 		},
 		{
 			name:    "rejoin interval above max",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Rejoin.Interval = "20s" },
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Rejoin.Interval = dur(20 * time.Second) },
 			wantSub: "rejoin.interval",
 		},
 		{
 			name:    "feed interval not below watchdog timeout",
-			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Watchdog.FeedInterval = "10s" },
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Watchdog.FeedInterval = dur(10 * time.Second) },
 			wantSub: "feedInterval",
 		},
 	}
@@ -137,7 +166,7 @@ func TestConvertRejectsInvalidValues(t *testing.T) {
 			p := validProfile()
 			tt.mutate(p)
 
-			_, err := Convert(p)
+			err := Validate(p)
 			if err == nil {
 				t.Fatal("expected an error, the agent must fail closed on an invalid profile")
 			}
@@ -149,22 +178,21 @@ func TestConvertRejectsInvalidValues(t *testing.T) {
 	}
 }
 
-func TestConvertRejectsNilProfile(t *testing.T) {
-	_, err := Convert(nil)
-	if err == nil {
+func TestValidateRejectsNilProfile(t *testing.T) {
+	if err := Validate(nil); err == nil {
 		t.Fatal("expected an error for a nil profile")
 	}
 }
 
-// TestConvertAccumulatesAllViolations pins the accumulate-then-errors.Join
+// TestValidateAccumulatesAllViolations pins the accumulate-then-errors.Join
 // behavior: an operator fixes a broken profile in one pass, not one field per
 // CrashLoop restart.
-func TestConvertAccumulatesAllViolations(t *testing.T) {
+func TestValidateAccumulatesAllViolations(t *testing.T) {
 	p := validProfile()
-	p.Spec.Memberlist.ProbeInterval = "0ms"
-	p.Spec.Watchdog.Timeout = "soon"
+	p.Spec.Memberlist.ProbeInterval = dur(0)
+	p.Spec.Watchdog.Timeout = dur(0)
 
-	_, err := Convert(p)
+	err := Validate(p)
 	if err == nil {
 		t.Fatal("expected an error, the agent must fail closed on an invalid profile")
 	}
@@ -178,9 +206,9 @@ func TestConvertAccumulatesAllViolations(t *testing.T) {
 	}
 }
 
-// TestShippedPresetsConvert guards the built-in profiles in module templates
+// TestShippedPresetsAreValid guards the built-in profiles in module templates
 // against values the agent would reject at startup (e.g. a zero duration).
-func TestShippedPresetsConvert(t *testing.T) {
+func TestShippedPresetsAreValid(t *testing.T) {
 	const presets = "../../../../../../templates/fencing-agent/sla-profiles.yaml"
 
 	raw, err := os.ReadFile(presets)
@@ -198,7 +226,7 @@ func TestShippedPresetsConvert(t *testing.T) {
 
 	docs := strings.Split(strings.Join(clean, "\n"), "\n---\n")
 
-	converted := 0
+	validated := 0
 	for _, doc := range docs {
 		if !strings.Contains(doc, "kind: FencingSLAProfile") {
 			continue
@@ -209,14 +237,14 @@ func TestShippedPresetsConvert(t *testing.T) {
 			t.Fatalf("unmarshal preset: %v\n%s", err, doc)
 		}
 
-		if _, err := Convert(&p); err != nil {
+		if err := Validate(&p); err != nil {
 			t.Errorf("shipped preset %q is rejected by the agent: %v", p.Name, err)
 		}
 
-		converted++
+		validated++
 	}
 
-	if converted != 4 {
-		t.Errorf("expected 4 built-in presets, converted %d", converted)
+	if validated != 4 {
+		t.Errorf("expected 4 built-in presets, validated %d", validated)
 	}
 }
