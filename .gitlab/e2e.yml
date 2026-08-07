@@ -63,10 +63,6 @@ variables:
     value: ""
     description: "Target image tag for deckhouse update (used when E2E_UPDATE_DECKHOUSE=true)."
 
-  TASKFILE_COMMAND:
-    value: "task -t testing/e2e-framework/Taskfile.yml smoke"
-    description: "task command for e2e-tests job."
-
 # ---------------------------------------------------------------------------
 # Find edition build on existing branch/tag pipeline and play/wait if needed
 # ---------------------------------------------------------------------------
@@ -152,21 +148,6 @@ e2e-yandex-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-yandex-tests:
-  extends:
-    - .e2e-yandex-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-yandex-create
-    - job: e2e-yandex-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex"
-
 e2e-yandex-delete:
   extends:
     - .e2e-yandex-delete-cluster
@@ -185,7 +166,9 @@ e2e-yandex-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-yandex-tests
+    - job: e2e-yandex-create
+    - job: e2e-yandex-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Yandex"
 
@@ -208,21 +191,6 @@ e2e-aws-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-aws-tests:
-  extends:
-    - .e2e-aws-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-aws-create
-    - job: e2e-aws-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS"
-
 e2e-aws-delete:
   extends:
     - .e2e-aws-delete-cluster
@@ -241,7 +209,9 @@ e2e-aws-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-aws-tests
+    - job: e2e-aws-create
+    - job: e2e-aws-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "AWS"
 
@@ -264,21 +234,6 @@ e2e-azure-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-azure-tests:
-  extends:
-    - .e2e-azure-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-azure-create
-    - job: e2e-azure-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure"
-
 e2e-azure-delete:
   extends:
     - .e2e-azure-delete-cluster
@@ -297,7 +252,9 @@ e2e-azure-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-azure-tests
+    - job: e2e-azure-create
+    - job: e2e-azure-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Azure"
 
@@ -320,21 +277,6 @@ e2e-gcp-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-gcp-tests:
-  extends:
-    - .e2e-gcp-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-gcp-create
-    - job: e2e-gcp-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP"
-
 e2e-gcp-delete:
   extends:
     - .e2e-gcp-delete-cluster
@@ -353,7 +295,9 @@ e2e-gcp-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-gcp-tests
+    - job: e2e-gcp-create
+    - job: e2e-gcp-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "GCP"
 
@@ -376,21 +320,6 @@ e2e-openstack-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-openstack-tests:
-  extends:
-    - .e2e-openstack-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-openstack-create
-    - job: e2e-openstack-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack"
-
 e2e-openstack-delete:
   extends:
     - .e2e-openstack-delete-cluster
@@ -409,7 +338,9 @@ e2e-openstack-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-openstack-tests
+    - job: e2e-openstack-create
+    - job: e2e-openstack-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "OpenStack"
 
@@ -432,21 +363,6 @@ e2e-vsphere-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-vsphere-tests:
-  extends:
-    - .e2e-vsphere-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-vsphere-create
-    - job: e2e-vsphere-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere"
-
 e2e-vsphere-delete:
   extends:
     - .e2e-vsphere-delete-cluster
@@ -465,7 +381,9 @@ e2e-vsphere-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-vsphere-tests
+    - job: e2e-vsphere-create
+    - job: e2e-vsphere-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Vsphere"
 
@@ -488,21 +406,6 @@ e2e-dvp-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-dvp-tests:
-  extends:
-    - .e2e-dvp-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-dvp-create
-    - job: e2e-dvp-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP"
-
 e2e-dvp-delete:
   extends:
     - .e2e-dvp-delete-cluster
@@ -521,7 +424,9 @@ e2e-dvp-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-dvp-tests
+    - job: e2e-dvp-create
+    - job: e2e-dvp-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVP"
 
@@ -544,21 +449,6 @@ e2e-zvirt-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-zvirt-tests:
-  extends:
-    - .e2e-zvirt-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-zvirt-create
-    - job: e2e-zvirt-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt"
-
 e2e-zvirt-delete:
   extends:
     - .e2e-zvirt-delete-cluster
@@ -577,7 +467,9 @@ e2e-zvirt-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-zvirt-tests
+    - job: e2e-zvirt-create
+    - job: e2e-zvirt-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Zvirt"
 
@@ -600,21 +492,6 @@ e2e-vcd-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-vcd-tests:
-  extends:
-    - .e2e-vcd-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-vcd-create
-    - job: e2e-vcd-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD"
-
 e2e-vcd-delete:
   extends:
     - .e2e-vcd-delete-cluster
@@ -633,7 +510,9 @@ e2e-vcd-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-vcd-tests
+    - job: e2e-vcd-create
+    - job: e2e-vcd-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "VCD"
 
@@ -656,21 +535,6 @@ e2e-huawei-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-huawei-tests:
-  extends:
-    - .e2e-huawei-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-huawei-create
-    - job: e2e-huawei-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei"
-
 e2e-huawei-delete:
   extends:
     - .e2e-huawei-delete-cluster
@@ -689,7 +553,9 @@ e2e-huawei-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-huawei-tests
+    - job: e2e-huawei-create
+    - job: e2e-huawei-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Huawei"
 
@@ -712,21 +578,6 @@ e2e-static-private-update:
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate" && $E2E_UPDATE_DECKHOUSE == "true"
 
-e2e-static-private-tests:
-  extends:
-    - .e2e-static-private-run-tests
-  stage: e2e-tests
-  variables:
-    TASKFILE_COMMAND: $TASKFILE_COMMAND
-  needs:
-    - job: e2e-prestart
-      artifacts: true
-    - job: e2e-static-private-create
-    - job: e2e-static-private-update
-      optional: true
-  rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate"
-
 e2e-static-private-delete:
   extends:
     - .e2e-static-private-delete-cluster
@@ -745,6 +596,8 @@ e2e-static-private-delete-auto:
   needs:
     - job: e2e-prestart
       artifacts: true
-    - job: e2e-static-private-tests
+    - job: e2e-static-private-create
+    - job: e2e-static-private-update
+      optional: true
   rules:
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate"
