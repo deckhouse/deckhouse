@@ -5,8 +5,6 @@
     setup: ['**/*']
 - add: /modules/000-common/images/kubernetes/conformance
   to: /srv/jekyll-data/documentation/assets/conformance
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /editions.yaml
@@ -29,8 +27,6 @@
   - 'doc-ru-config-values.yaml'
 - add: /ee/cse/global-hooks/openapi
   to: /src/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths:
