@@ -236,22 +236,35 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 		})
 	})
 
-	Context("Schedule: PMA off writes legacy discovery split", func() {
+	Context("Schedule: PMA off replaces previous metric-based applied with discovery split", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
-			f.KubeStateSet(masterNodeYAML() + cpmResourcesRequestsMC("", ""))
+			st := autotuneState{
+				resourceCPU: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(900)), LastChange: "2026-07-01T00:00:00Z"},
+						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(800)), LastChange: "2026-07-01T00:00:00Z"},
+						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(100)), LastChange: "2026-07-01T00:00:00Z"},
+						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: "2026-07-01T00:00:00Z"},
+					},
+					PendingRaiseSum: 5000,
+				},
+			}
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st) + cpmResourcesRequestsMC("", ""))
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 			f.RunHook()
 		})
 
-		It("always creates ConfigMap with full components", func() {
+		It("overwrites applied* with discovery %-split and clears pendingRaiseSum", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			// 8-CPU master is capped by hardLimitMilliCPU before the 40%/35% carve-out.
+			expectCPU := int64(hardLimitMilliCPU-configEveryNodeMilliCPU) * controlPlanePercent / 100
 			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
-			Expect(ops.Exists()).To(BeTrue())
 			var st autotuneState
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(st[resourceCPU].Components).To(HaveLen(4))
-			Expect(st[resourceMemory].Components).To(HaveLen(4))
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 45)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 35)))
+			Expect(st[resourceCPU].PendingRaiseSum).To(Equal(int64(0)))
 		})
 	})
 

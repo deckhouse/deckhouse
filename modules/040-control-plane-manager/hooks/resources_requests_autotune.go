@@ -166,12 +166,14 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 
 	for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
 		if overridden[kind] {
+			// Manual ModuleConfig (or global) budget → fixed %-split, no metrics.
 			applyPercentSplit(state, kind, combined[kind], now)
 			clearPendingRaise(state, kind)
 			continue
 		}
 
 		if pmaActive {
+			// prometheus + PMA: base requests on PodMetrics (raise/lower under deadband).
 			recs, usageOK := fetchRecs(ctx, dc, fetchComponentUsage, kind, false, fit[kind], func(comp string, ferr error) {
 				input.Logger.Warn("autotune: metrics API fetch failed", "resource", kind, "component", comp, "error", ferr)
 			})
@@ -180,18 +182,16 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 					deficits[kind] = d
 				}
 			} else if !measurementHasAnyApplied(state[kind], kind) {
+				// Cold start before series exist — seed discovery split until metrics arrive.
 				applyPercentSplit(state, kind, combined[kind], now)
 			}
 			continue
 		}
 
-		// No PMA: keep previous applied*, else legacy %-split of discovery budget.
-		if !measurementHasAnyApplied(state[kind], kind) {
-			applyPercentSplit(state, kind, combined[kind], now)
-		}
-		if d := refreshPendingRaiseDeficit(state, kind, fit[kind]); d > 0 {
-			deficits[kind] = d
-		}
+		// PMA/prometheus off: always use allocatable discovery %-split (replace any
+		// previous metric-based applied* on the next cron after PMA is disabled).
+		applyPercentSplit(state, kind, combined[kind], now)
+		clearPendingRaise(state, kind)
 	}
 
 	ensureFullComponents(state, combined, now)
