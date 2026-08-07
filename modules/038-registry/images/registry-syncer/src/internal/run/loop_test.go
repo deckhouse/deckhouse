@@ -620,7 +620,7 @@ func mustCount(t *testing.T, address string) int32 {
 }
 
 // TestOnceCountsAPushedBundleWhileTheUpstreamIsStillHeld is the transition window of
-// История 3, and the shape of a defect measured on a live cluster.
+// the air-gap story, and the shape of a defect measured on a live cluster.
 //
 // Air-gap has been asked for, so the write endpoint is open and `d8 mirror push` has
 // put the whole set in the store. The upstream is still HELD, deliberately: the

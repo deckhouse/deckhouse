@@ -116,8 +116,8 @@ func Decide(spec *registryv1alpha1.RegistryStorageSpec, isLeader bool, leader *L
 // store rather than by counting what a copy wrote.
 //
 // True for the leader while the write endpoint is open, which is the transition
-// window of История 3: air-gap has been asked for, the upstream is still HELD so
-// the cluster keeps working, and the images arrive through `d8 mirror push` — a
+// window of the air-gap story: air-gap has been asked for, the upstream is still
+// HELD so the cluster keeps working, and images arrive through `d8 mirror push` — a
 // write the syncer never sees and therefore cannot count. Without this the push
 // contributes nothing, the leader never reads as complete, and the upstream is
 // held forever; measured on a cluster before it was fixed.

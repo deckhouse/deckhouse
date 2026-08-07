@@ -336,3 +336,60 @@ func TestNoKnownLeaderStillMakesProgress(t *testing.T) {
 	someoneGone := deleted(t, c, StorageName+"-0") || deleted(t, c, StorageName+"-1")
 	assert.True(t, someoneGone, "an unreadable lease must not stop the cache from being updated")
 }
+
+// publishingStorage is the cache during the air-gap transition: the write endpoint is open, so
+// `d8 mirror push` is how the content arrives, and the upstream is still held meanwhile.
+func publishingStorage(complete bool) *registryv1alpha1.RegistryStorage {
+	storage := storageWithUpstream("registry.deckhouse.io")
+	storage.Spec.Publish = true
+	storage.Status.SafeToDropUpstream = complete
+	return storage
+}
+
+// TestLoadingTheCacheDefersTheUpdate covers an update that lands while the operator is still
+// pushing, which is a thing that happens: `d8 mirror push` takes the best part of an hour.
+//
+// Replacing the replica the push is writing to aborts it — and confusingly, with `UNSUPPORTED`
+// from a half-started registry rather than anything that suggests retrying. On a cluster heading
+// for air-gap that transfer is the only way images ever get in, so an update that keeps
+// interrupting it could leave the platform moving towards images that never arrived. Measured
+// before this gate existed: a push killed at image 350 of 474.
+func TestLoadingTheCacheDefersTheUpdate(t *testing.T) {
+	r, c := newReconciler(t,
+		storageSet(3, newRevision),
+		replica(0, "master-0", oldRevision, true),
+		replica(1, "master-1", oldRevision, true),
+		replica(2, "master-2", oldRevision, true),
+		lease("master-0"),
+		publishingStorage(false),
+	)
+
+	result := reconcile(t, r)
+
+	for _, ordinal := range []string{"-0", "-1", "-2"} {
+		assert.False(t, deleted(t, c, StorageName+ordinal),
+			"no replica may be replaced while the cache is still being loaded")
+	}
+	assert.Equal(t, blockedInterval, result.RequeueAfter,
+		"deferred rather than refused: the push finishes and the update proceeds by itself")
+}
+
+// TestACompleteCacheIsUpdatedNormally is the other side of the same gate: the deferral lasts
+// exactly as long as the loading does. Without this the air-gapped cluster could never be
+// updated at all, which is a worse failure than the one the gate prevents.
+func TestACompleteCacheIsUpdatedNormally(t *testing.T) {
+	r, c := newReconciler(t,
+		storageSet(3, newRevision),
+		replica(0, "master-0", oldRevision, true),
+		replica(1, "master-1", oldRevision, true),
+		replica(2, "master-2", oldRevision, true),
+		lease("master-0"),
+		publishingStorage(true),
+	)
+
+	reconcile(t, r)
+
+	assert.False(t, deleted(t, c, StorageName+"-0"), "the leader still goes last")
+	assert.True(t, deleted(t, c, StorageName+"-1") || deleted(t, c, StorageName+"-2"),
+		"a follower should have been replaced once the cache holds its set")
+}

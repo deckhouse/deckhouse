@@ -176,6 +176,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: settleInterval}, nil
 	}
 
+	// A cache that is still being loaded is not taken apart while it loads.
+	//
+	// What this protects is the transfer, not the pulls — those are covered below.
+	// `d8 mirror push` writes the whole set into one replica over the best part of an hour,
+	// and replacing that replica aborts it: the client fails on a `PUT .../manifests/` with
+	// `UNSUPPORTED`, which reads as a misconfiguration rather than as "come back later". A
+	// cluster on its way to air-gap has no other way in, so an update landing mid-transfer
+	// would send the operator back to the beginning of it, every time, and could leave the
+	// platform partly updated towards images that never arrived. Measured on a cluster: a
+	// push aborted at image 350 of 474 by this very controller.
+	//
+	// Deferred and not refused: the push finishes, the leader reads complete, and the
+	// update then proceeds by itself.
+	filling, err := r.cacheStillFilling(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if filling {
+		log.Info("not replacing a cache replica while the cache is still being loaded",
+			"pod", next.Name, "revision", target)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(storage, corev1.EventTypeNormal, "UpdateDeferred",
+				"Not replacing %s yet: the cache is still being loaded and is about to be this "+
+					"cluster's only source of images. The update proceeds once the leader holds "+
+					"the whole expected set.", next.Name)
+		}
+		return ctrl.Result{RequeueAfter: blockedInterval}, nil
+	}
+
 	// And something has to be able to serve images while this replica is away, because what it
 	// pulls when it comes back is its own new image.
 	source, err := r.imageSourceWhile(ctx, next, pods)
@@ -243,6 +272,27 @@ func (r *Reconciler) leaderNode(ctx context.Context) string {
 		return ""
 	}
 	return *lease.Spec.HolderIdentity
+}
+
+// cacheStillFilling reports whether the cache is being loaded and must be left alone until it is.
+//
+// True while the write endpoint is open and the leader does not yet hold the expected set. That
+// pair is the loading window and nothing else: the endpoint exists only once air-gap has been
+// asked for, so `d8 mirror push` is how the content arrives, and until the leader is complete
+// that transfer is all that stands between this cluster and having no images at all.
+//
+// Read from SafeToDropUpstream, which is the very predicate the transition is gated on, so this
+// decision cannot come to a different conclusion about the same cache than the transition does.
+func (r *Reconciler) cacheStillFilling(ctx context.Context) (bool, error) {
+	storage := &registryv1alpha1.RegistryStorage{}
+	key := types.NamespacedName{Name: registryv1alpha1.SingletonName}
+	if err := r.Client.Get(ctx, key, storage); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("reading RegistryStorage: %w", err)
+	}
+	return storage.Spec.Publish && !storage.Status.SafeToDropUpstream, nil
 }
 
 // imageSourceWhile names what can serve images while a replica is away, or empty when nothing can.
