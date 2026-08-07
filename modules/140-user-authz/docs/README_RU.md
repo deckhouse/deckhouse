@@ -652,6 +652,7 @@ write:
 ```text
 create:
     - authorization.deckhouse.io/bulksubjectaccessreviews
+    - authorization.deckhouse.io/roleaccessreports
     - authorization.deckhouse.io/subjectaccessreports
 delete,deletecollection,get,list,patch,update,watch:
     - machine.sapcloud.io/alicloudmachineclasses
