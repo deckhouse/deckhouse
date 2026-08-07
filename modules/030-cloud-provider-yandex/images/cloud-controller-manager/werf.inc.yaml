@@ -1,4 +1,10 @@
 {{- $version := include "get_oss_version_by_id" (list "ccm-yandex" $) }}
+{{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+{{- $src_version := toString $version | replace "/" "-" }}
+{{- $patch := false }}
+{{- range $path, $_ := $.Files.Glob (printf "%s/patches/%s/*.patch" $patches $src_version) }}
+  {{- $patch = true }}
+{{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -14,6 +20,14 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+{{- if $patch }}
+git:
+  - add: {{ $patches }}/patches/{{ $src_version }}
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+{{- end }}
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -21,6 +35,9 @@ shell:
   install:
     - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-cloud-controller-manager.git /src
     - cd /src
+    {{- if $patch }}
+    - git apply /patches/*.patch --verbose
+    {{- end }}
     - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
