@@ -9,8 +9,8 @@
 {{- if and .settings .settings.resourcesRequests -}}
   {{- $resourcesRequests = .settings.resourcesRequests -}}
 {{- end -}}
-{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
+{{- $millicpu := 512 -}}
+{{- $memory := 536870912 }}
 {{- /* etcd */ -}}
 apiVersion: v1
 kind: Pod
@@ -92,8 +92,8 @@ spec:
     resources:
       requests:
         {{- $c := (($resourcesRequests.components | default dict).etcd) | default dict }}
-        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 30) 100) }}m"
-        memory: "{{ $c.memoryBytes | default (div (mul $memory 30) 100) }}"
+        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 35) 100) }}m"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 35) 100) }}"
     securityContext:
       capabilities:
         drop:

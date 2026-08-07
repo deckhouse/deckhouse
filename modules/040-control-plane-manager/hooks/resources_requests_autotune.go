@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"strconv"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -37,6 +36,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
@@ -44,11 +44,22 @@ import (
 const (
 	autotuneScheduleName = "autotune"
 	autotuneQueue        = "/modules/control-plane-manager/autotune"
+
+	autotuneStateCMName = "d8-control-plane-manager-resources-autotune-state"
+	autotuneStateKey    = "state"
+
+	autotuneMetricName  = "d8_control_plane_manager_resources_autotune_insufficient_capacity"
+	autotuneMetricGroup = "D8ControlPlaneResourcesAutotuneInsufficientCapacity"
+
+	snapshotCPMMC    = "CPMResourcesRequests"
+	snapshotGlobalMC = "GlobalResourcesRequests"
+	snapshotAutotune = "AutotuneState"
+	snapshotNodes    = "NodesResources"
 )
 
-// Schedule entrypoint: metrics → decide → commit (daily cron only).
-// OnBeforeHelm / sync live in resources_requests_autotune_sync.go so ModuleRun
-// does not hit the metrics API.
+// Hook A (calculator): always writes per-component requests into the ConfigMap.
+// Schedule evaluates PodMetrics; ModuleConfig/node sync applies MC split or legacy.
+// Hook B (resources_requests_autotune_sync.go) only projects that CM into values.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: autotuneQueue,
 	Schedule: []go_hook.ScheduleConfig{
@@ -56,51 +67,99 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		controlPlaneNodesBinding(false, false),
-		autotuneStateBinding(false),
+		resourcesRequestsMCBinding(snapshotCPMMC, "control-plane-manager", applyCPMResourcesRequestsFilter, false, false),
+		resourcesRequestsMCBinding(snapshotGlobalMC, "global", applyGlobalResourcesRequestsFilter, false, false),
+		autotuneStateBinding(false, false),
 	},
 }, dependency.WithExternalDependencies(func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	return runAutotune(ctx, input, dc, true)
 }))
 
-// runAutotune runs the autotune path. When evaluate is true (schedule), it
-// fetches metrics and may raise/lower. When false (sync / OnBeforeHelm), it
-// only repopulates values and rechecks capacityBlocked.
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: autotuneQueue,
+	Kubernetes: []go_hook.KubernetesConfig{
+		controlPlaneNodesBinding(true, true),
+		resourcesRequestsMCBinding(snapshotCPMMC, "control-plane-manager", applyCPMResourcesRequestsFilter, true, true),
+		resourcesRequestsMCBinding(snapshotGlobalMC, "global", applyGlobalResourcesRequestsFilter, true, true),
+		// Read previous applied* for deadband/cooldown; events=false so our own
+		// CreateOrUpdate does not re-enter Hook A.
+		autotuneStateBinding(true, false),
+	},
+}, dependency.WithExternalDependencies(func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	return runAutotune(ctx, input, dc, false)
+}))
+
+func resourcesRequestsMCBinding(
+	name, mcName string,
+	filter go_hook.FilterFunc,
+	onSync, onEvents bool,
+) go_hook.KubernetesConfig {
+	return go_hook.KubernetesConfig{
+		Name:       name,
+		ApiVersion: "deckhouse.io/v1alpha1",
+		Kind:       "ModuleConfig",
+		NameSelector: &types.NameSelector{
+			MatchNames: []string{mcName},
+		},
+		FilterFunc:                   filter,
+		ExecuteHookOnEvents:          ptr.To(onEvents),
+		ExecuteHookOnSynchronization: ptr.To(onSync),
+	}
+}
+
+// runAutotune calculates per-component requests and always persists them to the CM.
+// evaluate=true (cron): may raise/lower from PodMetrics.
+// evaluate=false (MC/node sync): MC split, keep previous, or legacy discovery split.
 func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Container, evaluate bool) error {
-	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.Snapshots, "NodesResources")
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.Snapshots, snapshotNodes)
 	if err != nil {
 		return fmt.Errorf("unmarshal NodesResources snapshots: %w", err)
 	}
-	// Managed cloud — no master Nodes visible; leave combined-budget hook alone.
+	// Managed cloud — no master Nodes; leave CM/values alone.
 	if len(nodes) == 0 {
 		return nil
-	}
-
-	// Without prometheus + PMA there are no PodMetric series. Do not keep frozen
-	// per-component applied* values — fall back to the legacy combined-budget
-	// split from resources_requests_calculate.go.
-	if !controlPlaneAutotuneActive(input) {
-		return discardAutotuneForLegacy(input)
 	}
 
 	state, err := readAutotuneState(input)
 	if err != nil {
 		return err
 	}
-	stateDirty := false
-
-	overridden := map[resourceKind]bool{
-		resourceCPU:    isMeasurementOverridden(input, resourceCPU),
-		resourceMemory: isMeasurementOverridden(input, resourceMemory),
+	if state == nil {
+		state = make(autotuneState)
 	}
-	for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
-		if !overridden[kind] {
-			continue
-		}
-		input.Logger.Info("autotune: measurement overridden by config, skipping", "resource", kind)
-		if state[kind] != nil {
-			delete(state, kind)
-			stateDirty = true
-		}
+
+	overrides, usedGlobal, err := readResourcesRequestsOverrides(input)
+	if err != nil {
+		return err
+	}
+
+	discoveryMilliCPU, discoveryMemory, ok := minMasterNodeBudget(nodes)
+	if !ok {
+		return nil
+	}
+	discoveryMilliCPU = discoveryMilliCPU * controlPlanePercent / 100
+	discoveryMemory = discoveryMemory * controlPlanePercent / 100
+	if discoveryMilliCPU <= 0 {
+		return fmt.Errorf("cpu resources for allocating on master nodes must be greater than %dm", configEveryNodeMilliCPU)
+	}
+	if discoveryMemory <= 0 {
+		return fmt.Errorf("memory resources for allocating on master nodes must be greater than %dMi", configEveryNodeMemory/1024/1024)
+	}
+
+	resolved, err := resolveCombinedBudgetFromOverrides(overrides, discoveryMilliCPU, discoveryMemory)
+	if err != nil {
+		return err
+	}
+	if usedGlobal {
+		input.MetricsCollector.Expire(obsoleteGlobalResourcesRequestsMetricGroup)
+		input.MetricsCollector.Set(
+			obsoleteGlobalResourcesRequestsMetricName,
+			1,
+			map[string]string{},
+			metrics.WithGroup(obsoleteGlobalResourcesRequestsMetricGroup),
+		)
+	} else {
+		input.MetricsCollector.Expire(obsoleteGlobalResourcesRequestsMetricGroup)
 	}
 
 	otherByNode, err := fetchOtherRequestsByMasterNodes(ctx, dc, nodes)
@@ -110,83 +169,187 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	fitCPU, fitMemBytes, _ := minMasterFitBudget(nodes, otherByNode)
 	fit := map[resourceKind]int64{resourceCPU: fitCPU, resourceMemory: fitMemBytes}
 	combined := map[resourceKind]int64{
-		resourceCPU:    input.Values.Get(pathMilliCPUControlPlane).Int(),
-		resourceMemory: input.Values.Get(pathMemoryControlPlane).Int(),
+		resourceCPU:    resolved.MilliCPU,
+		resourceMemory: resolved.MemoryBytes,
+	}
+	overridden := map[resourceKind]bool{
+		resourceCPU:    resolved.CPUFromConfig,
+		resourceMemory: resolved.MemoryFromConfig,
 	}
 	now := dc.GetClock().Now().UTC()
+	pmaActive := controlPlaneAutotuneActive(input)
 
-	// Evaluate path: recommendations from metrics. Repopulate values exactly
-	// once at the end — a second Remove of `components` fails merge when Exists
-	// still sees the pre-patch snapshot.
-	if evaluate {
-		recs := map[resourceKind]map[string]int64{}
-		usageOK := true
-		for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
-			r, ok := fetchRecs(ctx, dc, fetchComponentUsage, kind, overridden[kind], fit[kind], func(comp string, ferr error) {
+	deficits := map[resourceKind]int64{}
+
+	for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
+		if overridden[kind] {
+			applyPercentSplit(state, kind, combined[kind], now)
+			clearPendingRaise(state, kind)
+			continue
+		}
+
+		if evaluate && pmaActive {
+			recs, usageOK := fetchRecs(ctx, dc, fetchComponentUsage, kind, false, fit[kind], func(comp string, ferr error) {
 				input.Logger.Warn("autotune: metrics API fetch failed", "resource", kind, "component", comp, "error", ferr)
 			})
-			recs[kind] = r
-			usageOK = usageOK && ok
+			if usageOK || len(recs) > 0 {
+				if d := applyMetricsRecommendations(input, state, kind, recs, fit[kind], combined[kind], now); d > 0 {
+					deficits[kind] = d
+				}
+			} else if !measurementHasAnyApplied(state[kind], kind) {
+				applyPercentSplit(state, kind, combined[kind], now)
+			}
+			continue
 		}
 
-		plan := planInitialSnapshot(state, overridden[resourceCPU], overridden[resourceMemory], recs[resourceCPU], recs[resourceMemory])
-		ready := map[resourceKind]bool{resourceCPU: plan.CPUReady, resourceMemory: plan.MemReady}
-		initial := map[resourceKind]bool{resourceCPU: plan.InitialCPU, resourceMemory: plan.InitialMem}
-		for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
-			if !initial[kind] || ready[kind] {
-				continue
-			}
-			input.Logger.Info("autotune: waiting for complete recommendations before initial snapshot",
-				"resource", kind, "have", len(recs[kind]), "need", len(controlPlaneComponents))
+		// Sync / no PMA: keep previous applied*, else legacy %-split of discovery/override budget.
+		if !measurementHasAnyApplied(state[kind], kind) {
+			applyPercentSplit(state, kind, combined[kind], now)
 		}
-
-		// Missing/failed metrics: do not mutate applied*; keep capacityBlocked as-is.
-		// Evaluate each measurement independently — do NOT use `stateDirty || evaluate...`
-		// or a successful cpu commit short-circuits and skips memory entirely.
-		if usageOK || len(recs[resourceCPU]) > 0 || len(recs[resourceMemory]) > 0 {
-			for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
-				if overridden[kind] || !ready[kind] {
-					continue
-				}
-				if evaluateMeasurement(input, state, kind, recs[kind], fit[kind], combined[kind], now) {
-					stateDirty = true
-				}
-				if initial[kind] && fillMissingAppliedFromFallback(state, kind, combined[kind]) {
-					stateDirty = true
-				}
-			}
-		}
-	} else {
-		// Node resource changes (node events / OnBeforeHelm): refresh the
-		// capacity-blocked alert against the current fit budget without calling
-		// the metrics API. Cron remains responsible for new raise decisions.
-		for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
-			if overridden[kind] {
-				continue
-			}
-			if recheckCapacityBlocked(state, kind, fit[kind], combined[kind], now) {
-				stateDirty = true
-			}
+		if d := refreshPendingRaiseDeficit(state, kind, fit[kind]); d > 0 {
+			deficits[kind] = d
 		}
 	}
+
+	ensureFullComponents(state, combined, now)
 
 	input.MetricsCollector.Expire(autotuneMetricGroup)
-	emitCapacityBlockedMetrics(input, state)
-	repopulateComponents(input, state, overridden[resourceCPU], overridden[resourceMemory])
-
-	if stateDirty {
-		return persistAutotuneState(input, state)
+	for kind, deficit := range deficits {
+		if deficit <= 0 {
+			continue
+		}
+		input.MetricsCollector.Set(
+			autotuneMetricName,
+			float64(deficit),
+			map[string]string{"resource": string(kind)},
+			metrics.WithGroup(autotuneMetricGroup),
+		)
 	}
-	return nil
+
+	return persistAutotuneState(input, state)
 }
 
-const (
-	autotuneStateCMName = "d8-control-plane-manager-resources-autotune-state"
-	autotuneStateKey    = "state"
+type resourcesRequestsOverride struct {
+	CPU    string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
+}
 
-	autotuneMetricName  = "d8_control_plane_manager_resources_autotune_insufficient_capacity"
-	autotuneMetricGroup = "D8ControlPlaneResourcesAutotuneInsufficientCapacity"
-)
+func applyCPMResourcesRequestsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	mc := &v1alpha1.ModuleConfig{}
+	if err := sdk.FromUnstructured(obj, mc); err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
+	}
+	if mc.Spec.Settings == nil {
+		return resourcesRequestsOverride{}, nil
+	}
+	settings := mc.Spec.Settings.GetMap()
+	rr, _ := settings["resourcesRequests"].(map[string]any)
+	return resourcesRequestsOverride{
+		CPU:    quantityString(rr["cpu"]),
+		Memory: quantityString(rr["memory"]),
+	}, nil
+}
+
+func applyGlobalResourcesRequestsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	mc := &v1alpha1.ModuleConfig{}
+	if err := sdk.FromUnstructured(obj, mc); err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
+	}
+	if mc.Spec.Settings == nil {
+		return resourcesRequestsOverride{}, nil
+	}
+	settings := mc.Spec.Settings.GetMap()
+	modules, _ := settings["modules"].(map[string]any)
+	rr, _ := modules["resourcesRequests"].(map[string]any)
+	cp, _ := rr["controlPlane"].(map[string]any)
+	return resourcesRequestsOverride{
+		CPU:    quantityString(cp["cpu"]),
+		Memory: quantityString(cp["memory"]),
+	}, nil
+}
+
+func quantityString(v any) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case json.Number:
+		return t.String()
+	case float64:
+		return fmt.Sprintf("%.0f", t)
+	case int64:
+		return fmt.Sprintf("%d", t)
+	case int:
+		return fmt.Sprintf("%d", t)
+	default:
+		return ""
+	}
+}
+
+func readResourcesRequestsOverrides(input *go_hook.HookInput) (resourcesRequestsOverride, bool, error) {
+	cpm, err := unmarshalOverrideSnapshot(input, snapshotCPMMC)
+	if err != nil {
+		return resourcesRequestsOverride{}, false, err
+	}
+	global, err := unmarshalOverrideSnapshot(input, snapshotGlobalMC)
+	if err != nil {
+		return resourcesRequestsOverride{}, false, err
+	}
+
+	out := resourcesRequestsOverride{}
+	usedGlobal := false
+	if cpm.CPU != "" {
+		out.CPU = cpm.CPU
+	} else if global.CPU != "" {
+		out.CPU = global.CPU
+		usedGlobal = true
+	}
+	if cpm.Memory != "" {
+		out.Memory = cpm.Memory
+	} else if global.Memory != "" {
+		out.Memory = global.Memory
+		usedGlobal = true
+	}
+	return out, usedGlobal, nil
+}
+
+func unmarshalOverrideSnapshot(input *go_hook.HookInput, name string) (resourcesRequestsOverride, error) {
+	snaps := input.Snapshots.Get(name)
+	if len(snaps) == 0 {
+		return resourcesRequestsOverride{}, nil
+	}
+	var out resourcesRequestsOverride
+	if err := snaps[0].UnmarshalTo(&out); err != nil {
+		return out, fmt.Errorf("unmarshal %s snapshot: %w", name, err)
+	}
+	return out, nil
+}
+
+func resolveCombinedBudgetFromOverrides(
+	overrides resourcesRequestsOverride,
+	discoveryMilliCPU, discoveryMemory int64,
+) (resolvedCombinedBudget, error) {
+	out := resolvedCombinedBudget{
+		MilliCPU:    discoveryMilliCPU,
+		MemoryBytes: discoveryMemory,
+	}
+	if overrides.CPU != "" {
+		q, err := resource.ParseQuantity(overrides.CPU)
+		if err != nil {
+			return out, fmt.Errorf("cannot parse cpu %q: %w", overrides.CPU, err)
+		}
+		out.MilliCPU = q.MilliValue()
+		out.CPUFromConfig = true
+	}
+	if overrides.Memory != "" {
+		q, err := resource.ParseQuantity(overrides.Memory)
+		if err != nil {
+			return out, fmt.Errorf("cannot parse memory %q: %w", overrides.Memory, err)
+		}
+		out.MemoryBytes = q.Value()
+		out.MemoryFromConfig = true
+	}
+	return out, nil
+}
 
 type autotuneComponentState struct {
 	AppliedMilliCPU *int64 `json:"appliedMilliCPU,omitempty"`
@@ -194,19 +357,13 @@ type autotuneComponentState struct {
 	LastChange      string `json:"lastChange,omitempty"`
 }
 
-type capacityBlocked struct {
-	Since       string `json:"since"`
-	Deficit     int64  `json:"deficit"`
-	ProposedSum int64  `json:"proposedSum,omitempty"`
-}
-
+// PendingRaiseSum is the last raise total that failed the fit gate (no since/deficit
+// in CM — deficit is emitted as a metric only).
 type autotuneMeasurementState struct {
 	Components      map[string]autotuneComponentState `json:"components,omitempty"`
-	CapacityBlocked *capacityBlocked                  `json:"capacityBlocked,omitempty"`
+	PendingRaiseSum int64                             `json:"pendingRaiseSum,omitempty"`
 }
 
-// autotuneState nests by measurement (cpu/memory) so a manual override can delete
-// a whole measurement branch for all four components in one patch.
 type autotuneState map[resourceKind]*autotuneMeasurementState
 
 func applyAutotuneStateFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -229,7 +386,7 @@ func applyAutotuneStateFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func readAutotuneState(input *go_hook.HookInput) (autotuneState, error) {
-	snapshots := input.Snapshots.Get("AutotuneState")
+	snapshots := input.Snapshots.Get(snapshotAutotune)
 	if len(snapshots) == 0 {
 		return make(autotuneState), nil
 	}
@@ -271,9 +428,9 @@ func persistAutotuneState(input *go_hook.HookInput, state autotuneState) error {
 	return nil
 }
 
-func autotuneStateBinding(onSync bool) go_hook.KubernetesConfig {
+func autotuneStateBinding(onSync, onEvents bool) go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
-		Name:       "AutotuneState",
+		Name:       snapshotAutotune,
 		ApiVersion: "v1",
 		Kind:       "ConfigMap",
 		NamespaceSelector: &types.NamespaceSelector{
@@ -283,7 +440,7 @@ func autotuneStateBinding(onSync bool) go_hook.KubernetesConfig {
 			MatchNames: []string{autotuneStateCMName},
 		},
 		FilterFunc:                   applyAutotuneStateFilter,
-		ExecuteHookOnEvents:          ptr.To(false),
+		ExecuteHookOnEvents:          ptr.To(onEvents),
 		ExecuteHookOnSynchronization: ptr.To(onSync),
 	}
 }
@@ -309,9 +466,6 @@ func listPodsOnNodeFromAPI(ctx context.Context, dc dependency.Container, nodeNam
 	return list.Items, nil
 }
 
-// fetchOtherRequestsByMasterNodes lists pods once per master (fieldSelector
-// spec.nodeName) and sums requests of pods that are not autotuned control-plane
-// static pods — O(masters) API calls instead of a cluster-wide pod informer.
 func fetchOtherRequestsByMasterNodes(ctx context.Context, dc dependency.Container, nodes []Node) (map[string]nodeOtherRequests, error) {
 	out := make(map[string]nodeOtherRequests, len(nodes))
 	for i := range nodes {
@@ -371,89 +525,56 @@ func setApplied(cs *autotuneComponentState, resourceName resourceKind, val int64
 	}
 }
 
-// fillMissingAppliedFromFallback writes %-split baselines into empty applied*
-// slots so the first values snapshot covers every component in one ModuleRun.
-func fillMissingAppliedFromFallback(state autotuneState, resourceName resourceKind, combinedBudget int64) bool {
-	if combinedBudget <= 0 {
-		return false
+func clearPendingRaise(state autotuneState, resourceName resourceKind) {
+	if m := state[resourceName]; m != nil {
+		m.PendingRaiseSum = 0
 	}
-	m := ensureMeasurement(state, resourceName)
-	changed := false
-	for _, comp := range controlPlaneComponents {
-		if appliedValue(m.Components[comp], resourceName) > 0 {
-			continue
-		}
-		cs := m.Components[comp]
-		setApplied(&cs, resourceName, fallbackSplit(combinedBudget, componentFallbackPercent[comp]))
-		m.Components[comp] = cs
-		changed = true
-	}
-	return changed
 }
 
-func repopulateComponents(input *go_hook.HookInput, state autotuneState, cpuOverridden, memoryOverridden bool) {
-	components := map[string]any{}
-	for _, comp := range controlPlaneComponents {
-		entry := map[string]any{}
-		if !cpuOverridden {
-			if m := state[resourceCPU]; m != nil {
-				if cs, ok := m.Components[comp]; ok && cs.AppliedMilliCPU != nil {
-					entry["milliCPU"] = *cs.AppliedMilliCPU
-				}
-			}
-		}
-		if !memoryOverridden {
-			if m := state[resourceMemory]; m != nil {
-				if cs, ok := m.Components[comp]; ok && cs.AppliedBytes != nil {
-					// Decimal string — Helm renders large float64 values in scientific notation.
-					entry["memoryBytes"] = strconv.FormatInt(*cs.AppliedBytes, 10)
-				}
-			}
-		}
-		if len(entry) > 0 {
-			components[comp] = entry
-		}
-	}
-	if len(components) == 0 {
-		if input.Values.Exists(pathComponents) {
-			input.Values.Remove(pathComponents)
-		}
+func applyPercentSplit(state autotuneState, resourceName resourceKind, combinedBudget int64, now time.Time) {
+	if combinedBudget <= 0 {
 		return
 	}
-	// Set the whole map so JSON-patch does not need intermediate parents.
-	input.Values.Set(pathComponents, components)
+	m := ensureMeasurement(state, resourceName)
+	ts := now.Format(time.RFC3339)
+	for _, comp := range controlPlaneComponents {
+		cs := m.Components[comp]
+		setApplied(&cs, resourceName, fallbackSplit(combinedBudget, componentFallbackPercent[comp]))
+		cs.LastChange = ts
+		m.Components[comp] = cs
+	}
 }
 
-func emitCapacityBlockedMetrics(input *go_hook.HookInput, state autotuneState) {
-	for _, res := range []resourceKind{resourceCPU, resourceMemory} {
-		m := state[res]
-		if m == nil || m.CapacityBlocked == nil {
-			continue
+// ensureFullComponents fills any missing applied* slots from the %-split so the
+// CM always carries a complete components map for Hook B.
+func ensureFullComponents(state autotuneState, combined map[resourceKind]int64, now time.Time) {
+	ts := now.Format(time.RFC3339)
+	for _, kind := range []resourceKind{resourceCPU, resourceMemory} {
+		m := ensureMeasurement(state, kind)
+		for _, comp := range controlPlaneComponents {
+			if appliedValue(m.Components[comp], kind) > 0 {
+				continue
+			}
+			cs := m.Components[comp]
+			setApplied(&cs, kind, fallbackSplit(combined[kind], componentFallbackPercent[comp]))
+			if cs.LastChange == "" {
+				cs.LastChange = ts
+			}
+			m.Components[comp] = cs
 		}
-		input.MetricsCollector.Set(
-			autotuneMetricName,
-			float64(m.CapacityBlocked.Deficit),
-			map[string]string{"resource": string(res)},
-			metrics.WithGroup(autotuneMetricGroup),
-		)
 	}
 }
 
-// discardAutotuneForLegacy clears per-component internal values and persistent
-// autotune state so templates use the fixed %-split of milliCpuControlPlane /
-// memoryControlPlane from the legacy calculate hook.
-func discardAutotuneForLegacy(input *go_hook.HookInput) error {
-	input.MetricsCollector.Expire(autotuneMetricGroup)
-	if input.Values.Exists(pathComponents) {
-		input.Values.Remove(pathComponents)
+func refreshPendingRaiseDeficit(state autotuneState, resourceName resourceKind, fitBudget int64) int64 {
+	m := state[resourceName]
+	if m == nil || m.PendingRaiseSum <= 0 {
+		return 0
 	}
-	// Only delete when the CM is in snapshots — otherwise every OnBeforeHelm /
-	// schedule tick on clusters without PMA would spam Delete for a missing object.
-	if len(input.Snapshots.Get("AutotuneState")) > 0 {
-		input.Logger.Info("autotune: prometheus or prometheus-metrics-adapter disabled, discarding autotune and falling back to legacy combined budget")
-		input.PatchCollector.Delete("v1", "ConfigMap", kubeSystemNS, autotuneStateCMName)
+	if m.PendingRaiseSum <= fitBudget {
+		m.PendingRaiseSum = 0
+		return 0
 	}
-	return nil
+	return m.PendingRaiseSum - fitBudget
 }
 
 const (
@@ -461,20 +582,17 @@ const (
 	autotuneMinMemoryBytes = int64(15 * 1000 * 1000) // 15M
 )
 
-// fetchComponentUsage is the production metrics client; overridable in unit tests.
 var fetchComponentUsage = fetchComponentUsageFromMetricsAPI
 
 func clampRecommendation(raw float64, resourceName resourceKind, nodeBudget int64) int64 {
 	var v int64
 	switch resourceName {
 	case resourceCPU:
-		// PromQL returns cores; convert to millicpu.
 		v = int64(math.Ceil(raw * 1000))
 		if v < autotuneMinMilliCPU {
 			v = autotuneMinMilliCPU
 		}
 	case resourceMemory:
-		// PodMetric returns plain bytes (rounded in PromQL).
 		v = int64(math.Round(raw))
 		if v < autotuneMinMemoryBytes {
 			v = autotuneMinMemoryBytes
@@ -486,9 +604,6 @@ func clampRecommendation(raw float64, resourceName resourceKind, nodeBudget int6
 	return v
 }
 
-// fetchRecs collects clamped recommendations for one measurement.
-// On per-component fetch errors it sets usageOK=false and continues; missing
-// series (ok=false, err=nil) simply omit that component from the map.
 func fetchRecs(
 	ctx context.Context,
 	dc dependency.Container,
@@ -519,7 +634,6 @@ func fetchRecs(
 	return recs, usageOK
 }
 
-// customMetricValueList is the subset of custom.metrics.k8s.io MetricValueList we need.
 type customMetricValueList struct {
 	Items []struct {
 		Value resource.Quantity `json:"value"`
@@ -583,13 +697,9 @@ func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric stri
 		return 0, false, fmt.Errorf("decode metrics response for %s: %w; body=%.256s", podName, err, body)
 	}
 	if len(list.Items) == 0 {
-		// Empty list is a real miss (PromQL returned no series). Surface it so
-		// schedule logs show why memory/cpu was skipped instead of failing silently.
 		return 0, false, fmt.Errorf("GET %s: empty MetricValueList", path)
 	}
 
-	// custom.metrics encodes samples as milli-quantities; AsApproximateFloat64
-	// yields the natural unit (cores for cpu, bytes for memory — see PodMetric PromQL).
 	v := list.Items[0].Value.AsApproximateFloat64()
 	if math.IsNaN(v) || math.IsInf(v, 0) || v <= 0 {
 		return 0, false, fmt.Errorf("GET %s: non-positive metric value %q", path, list.Items[0].Value.String())
@@ -598,7 +708,6 @@ func fetchPodMetric(ctx context.Context, client k8s.Client, podName, metric stri
 }
 
 const (
-	// Anti-flap cooldowns — Go constants, not config-values.
 	raiseCooldown = 24 * time.Hour
 	lowerCooldown = 72 * time.Hour
 )
@@ -611,11 +720,8 @@ const (
 	decideLower decideAction = "lower"
 )
 
-// decide returns whether a recommendation should be committed given asymmetric
-// deadband and cooldown. Pure function — covered by table tests.
 func decide(rec, applied int64, lastChange, now time.Time) decideAction {
 	if applied <= 0 {
-		// First commit: treat as raise with no cooldown.
 		if rec > 0 {
 			return decideRaise
 		}
@@ -649,8 +755,6 @@ func appliedValue(cs autotuneComponentState, resourceName resourceKind) int64 {
 	return 0
 }
 
-// effectiveApplied is the request currently rendered for a component: persisted
-// applied* when present, otherwise the %-split of the combined budget.
 func effectiveApplied(cs autotuneComponentState, resourceName resourceKind, combined int64, comp string) int64 {
 	if v := appliedValue(cs, resourceName); v > 0 {
 		return v
@@ -658,35 +762,9 @@ func effectiveApplied(cs autotuneComponentState, resourceName resourceKind, comb
 	return fallbackSplit(combined, componentFallbackPercent[comp])
 }
 
-type initialSnapshotPlan struct {
-	InitialCPU bool
-	InitialMem bool
-	CPUReady   bool
-	MemReady   bool
-}
-
-// planInitialSnapshot decides whether each measurement may evaluate on this run.
-// When both measurements need a first commit, both must have complete recs so
-// cpu+memory land in one values write.
-func planInitialSnapshot(
-	state autotuneState,
-	cpuOverridden, memoryOverridden bool,
-	recsCPU, recsMem map[string]int64,
-) initialSnapshotPlan {
-	p := initialSnapshotPlan{
-		InitialCPU: !cpuOverridden && !measurementHasAnyApplied(state[resourceCPU], resourceCPU),
-		InitialMem: !memoryOverridden && !measurementHasAnyApplied(state[resourceMemory], resourceMemory),
-	}
-	p.CPUReady = !p.InitialCPU || len(recsCPU) == len(controlPlaneComponents)
-	p.MemReady = !p.InitialMem || len(recsMem) == len(controlPlaneComponents)
-	if p.InitialCPU && p.InitialMem && (!p.CPUReady || !p.MemReady) {
-		p.CPUReady = false
-		p.MemReady = false
-	}
-	return p
-}
-
-func evaluateMeasurement(
+// applyMetricsRecommendations applies raise/lower under deadband+cooldown.
+// Returns deficit > 0 when a raise is blocked by the fit budget.
+func applyMetricsRecommendations(
 	input *go_hook.HookInput,
 	state autotuneState,
 	resourceName resourceKind,
@@ -694,14 +772,13 @@ func evaluateMeasurement(
 	nodeBudget int64,
 	combinedBudget int64,
 	now time.Time,
-) bool {
+) int64 {
 	if len(recs) == 0 {
 		input.Logger.Warn("autotune: no usage datapoints from metrics API, leaving state unchanged", "resource", resourceName)
-		return false
+		return refreshPendingRaiseDeficit(state, resourceName, nodeBudget)
 	}
 
 	m := ensureMeasurement(state, resourceName)
-
 	proposed := make(map[string]int64, len(controlPlaneComponents))
 	actions := make(map[string]decideAction, len(controlPlaneComponents))
 	anyRaise := false
@@ -722,9 +799,6 @@ func evaluateMeasurement(
 				lastChange = t
 			}
 		}
-		// Compare against the currently rendered request (applied* or %-split
-		// fallback) so the first snapshot after clearing a manual override does
-		// not unconditionally rewrite every component.
 		action := decide(rec, eff, lastChange, now)
 		actions[comp] = action
 		if action == decideRaise || action == decideLower {
@@ -735,43 +809,31 @@ func evaluateMeasurement(
 		}
 	}
 
-	changed := false
-
+	var deficit int64
 	if anyRaise {
 		var sum int64
 		for _, comp := range controlPlaneComponents {
 			sum += proposed[comp]
 		}
 		if sum > nodeBudget {
-			deficit := sum - nodeBudget
+			deficit = sum - nodeBudget
 			for _, comp := range controlPlaneComponents {
 				if actions[comp] == decideRaise {
 					proposed[comp] = effectiveApplied(m.Components[comp], resourceName, combinedBudget, comp)
 					actions[comp] = decideSkip
 				}
 			}
-			if m.CapacityBlocked == nil {
-				m.CapacityBlocked = &capacityBlocked{
-					Since:       now.Format(time.RFC3339),
-					Deficit:     deficit,
-					ProposedSum: sum,
-				}
-			} else {
-				m.CapacityBlocked.Deficit = deficit
-				m.CapacityBlocked.ProposedSum = sum
-			}
-			changed = true
+			m.PendingRaiseSum = sum
 			input.Logger.Info("autotune: raise blocked by capacity gate",
 				"resource", resourceName, "deficit", deficit, "budget", nodeBudget, "proposedSum", sum)
-		} else if m.CapacityBlocked != nil {
-			m.CapacityBlocked = nil
-			changed = true
+		} else {
+			m.PendingRaiseSum = 0
 		}
-	} else if m.CapacityBlocked != nil {
-		m.CapacityBlocked = nil
-		changed = true
+	} else if m.PendingRaiseSum > 0 {
+		deficit = refreshPendingRaiseDeficit(state, resourceName, nodeBudget)
 	}
 
+	ts := now.Format(time.RFC3339)
 	for _, comp := range controlPlaneComponents {
 		action := actions[comp]
 		if action == decideSkip {
@@ -779,59 +841,11 @@ func evaluateMeasurement(
 		}
 		cs := m.Components[comp]
 		setApplied(&cs, resourceName, proposed[comp])
-		cs.LastChange = now.Format(time.RFC3339)
+		cs.LastChange = ts
 		m.Components[comp] = cs
-		changed = true
 		input.Logger.Info("autotune: committed recommendation",
 			"component", comp, "resource", resourceName, "action", action, "value", proposed[comp])
 	}
 
-	return changed
-}
-
-// recheckCapacityBlocked updates or clears capacityBlocked using the current fit
-// budget (no metrics). Uses the last blocked ProposedSum when present so a node
-// resize can expire the alert once the previously rejected total would fit.
-func recheckCapacityBlocked(
-	state autotuneState,
-	resourceName resourceKind,
-	fitBudget, combinedBudget int64,
-	now time.Time,
-) bool {
-	m := state[resourceName]
-	if m == nil {
-		return false
-	}
-	var sumApplied int64
-	for _, comp := range controlPlaneComponents {
-		sumApplied += effectiveApplied(m.Components[comp], resourceName, combinedBudget, comp)
-	}
-
-	proposedSum := sumApplied
-	if m.CapacityBlocked != nil && m.CapacityBlocked.ProposedSum > 0 {
-		proposedSum = m.CapacityBlocked.ProposedSum
-	}
-
-	if proposedSum > fitBudget {
-		deficit := proposedSum - fitBudget
-		if m.CapacityBlocked == nil {
-			m.CapacityBlocked = &capacityBlocked{
-				Since:       now.Format(time.RFC3339),
-				Deficit:     deficit,
-				ProposedSum: proposedSum,
-			}
-			return true
-		}
-		if m.CapacityBlocked.Deficit == deficit && m.CapacityBlocked.ProposedSum == proposedSum {
-			return false
-		}
-		m.CapacityBlocked.Deficit = deficit
-		m.CapacityBlocked.ProposedSum = proposedSum
-		return true
-	}
-	if m.CapacityBlocked != nil {
-		m.CapacityBlocked = nil
-		return true
-	}
-	return false
+	return deficit
 }

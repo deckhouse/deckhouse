@@ -25,26 +25,15 @@ properties:
         default: {}
         additionalProperties: false
         properties:
-          milliCpuControlPlane:
-            type: integer
-            format: int64
-            minimum: 0
-            x-examples: [1024]
-            default: 0
-          memoryControlPlane:
-            type: integer
-            format: int64
-            minimum: 0
-            x-examples: [536870912]
-            default: 0
           components:
             type: object
             default: {}
             additionalProperties: false
             description: |
-              Per-component resource requests written by the autotune hook.
-              Absent keys fall back to the fixed %-split of milliCpuControlPlane /
-              memoryControlPlane in control-plane templates.
+              Per-component resource requests written by the sync hook from
+              ConfigMap d8-control-plane-manager-resources-autotune-state.
+              Absent keys fall back to the fixed %-split of 512m / 512Mi
+              (45/35/10/10) in control-plane templates.
             properties:
               kubeApiserver:
                 type: object
