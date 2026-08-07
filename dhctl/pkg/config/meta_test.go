@@ -685,8 +685,10 @@ func TestPrepareKeepsProviderClusterConfigNodeGroups(t *testing.T) {
 }
 
 // An explicitly empty nodeGroups list in the provider cluster configuration is
-// indistinguishable from an absent one, so the cluster node groups are still
-// derived. Documents the current behaviour rather than guaranteeing it.
+// not distinguished from an absent one: the guard in
+// applyNodeGroupReplicasFromCloudProviderVars checks len(), not nil, so the
+// cluster node groups are still derived. That is a choice of the guard, not a
+// property of the data — this documents the behaviour, it does not bless it.
 func TestPrepareDerivesOnEmptyProviderClusterConfigNodeGroups(t *testing.T) {
 	m := cloudMetaConfig(mcFlowResources)
 	m.ProviderClusterConfig = map[string]json.RawMessage{
