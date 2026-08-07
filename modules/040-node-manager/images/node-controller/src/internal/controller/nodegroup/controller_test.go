@@ -305,7 +305,8 @@ func TestReconcile_CloudValidationErrorPublished(t *testing.T) {
 	cloudProvider := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "d8-node-manager-cloud-provider", Namespace: "kube-system"},
 		Data: map[string][]byte{
-			"instanceClassKind": []byte("AWSInstanceClass"),
+			"instanceClassKind":       []byte("AWSInstanceClass"),
+			"instanceClassAPIVersion": []byte("v1alpha1"),
 		},
 	}
 

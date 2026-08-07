@@ -167,8 +167,12 @@ func buildPackageURL(endpoint, digest, repository, path string) string {
 		values.Set("path", path)
 	}
 
-	endpoint = strings.TrimPrefix(endpoint, "https://")
-	endpoint = strings.TrimPrefix(endpoint, "http://")
+	endpoint = strings.TrimRight(endpoint, "/")
 
-	return "https://" + endpoint + "/package?" + values.Encode()
+	if !strings.HasPrefix(endpoint, "https://") &&
+		!strings.HasPrefix(endpoint, "http://") {
+		endpoint = "https://" + endpoint
+	}
+
+	return endpoint + "/package?" + values.Encode()
 }

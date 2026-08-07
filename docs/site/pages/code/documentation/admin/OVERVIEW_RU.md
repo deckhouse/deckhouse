@@ -1,5 +1,6 @@
 ---
 title: "Руководство администратора Deckhouse Code"
+description: Руководство администратора по настройке доступа, обслуживанию и правилам одобрения merge request
 permalink: ru/code/documentation/admin/
 lang: ru
 ---

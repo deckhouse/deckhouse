@@ -40,7 +40,8 @@ func NewStore() *Store {
 // NeedUpdate reports whether the package needs processing: true if the package
 // is new, the version changed, the settings checksum differs, the settings
 // schema version changed, or the maintenance mode changed.
-// Used as a fast-path check before the more expensive Update call.
+// Used as a fast-path check before the more expensive Update call. It cannot see content
+// changes behind a mutable tag: those callers skip it and pass force to Update.
 func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, maintenance string) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
@@ -71,6 +72,8 @@ func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, 
 // Returns a new root context (EventUpdate) when:
 //  1. Package not in store → creates entry, returns root context
 //  2. Version differs → cancels all in-flight tasks, returns new root context
+//  3. force is set → same as a version change, for callers that know the content behind
+//     an unchanged version is stale (a mutable tag re-pushed under the same version)
 //
 // Returns nil when only settings, settingsVersion or maintenance changed (no new
 // context needed — the new values are stored and will be picked up by the scheduler
@@ -79,7 +82,7 @@ func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, 
 //
 // Callers should check for nil: a nil return with a settings- or maintenance-only
 // change means the caller should trigger Reschedule to re-apply them.
-func (s *Store) Update(name, version string, settingsVersion int, settings addonutils.Values, maintenance string) context.Context {
+func (s *Store) Update(name, version string, settingsVersion int, settings addonutils.Values, maintenance string, force bool) context.Context {
 	pkg, ok := s.packages[name]
 	if !ok {
 		s.packages[name] = &Package{
@@ -94,7 +97,7 @@ func (s *Store) Update(name, version string, settingsVersion int, settings addon
 		return ctx
 	}
 
-	if pkg.version != version {
+	if force || pkg.version != version {
 		pkg.version = version
 		pkg.settingsVersion = settingsVersion
 		pkg.settings = settings

@@ -370,7 +370,7 @@ spec:
 ```
 
 **RemovePodsHavingTooManyRestarts** — вытесняет с узлов поды со слишком большим количеством перезапусков.
-Кандидатами на вытеснение становятся поды, у которых суммарное число перезапусков всех контейнеров, включая init-контейнеры, превышает порог [`podRestartThreshold`](cr.html#descheduler-v1alpha2-spec-strategies-removepodshavingtoomanyrestarts-podrestartthreshold).
+Кандидатами на вытеснение становятся поды, у которых суммарное число перезапусков всех контейнеров, включая init-контейнеры, превышает порог [`podRestartThreshold`](/modules/descheduler/cr.html#descheduler-v1alpha2-spec-strategies-removepodshavingtoomanyrestarts-podrestartthreshold).
 Полезна для вытеснения подов в состоянии `CrashLoopBackOff` или с постоянными сбоями,
 а также для освобождения ресурсов и возможности планирования новых подов на потенциально более здоровых узлах.
 

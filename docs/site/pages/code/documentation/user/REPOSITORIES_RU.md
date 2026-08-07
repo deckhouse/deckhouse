@@ -1,5 +1,6 @@
 ---
 title: "Управление репозиториями Git"
+description: Как управлять репозиториями Git, ветками и файлами в проекте
 permalink: ru/code/documentation/user/repositories.html
 lang: ru
 ---

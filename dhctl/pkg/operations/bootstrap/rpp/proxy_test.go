@@ -19,18 +19,32 @@ import "testing"
 func TestReverseTunnelCheckURL(t *testing.T) {
 	cases := []struct {
 		name string
-		kind tunnelCheckKind
 		port string
 		want string
 	}{
-		{"https healthz for tls proxy", checkHTTPSHealthz, "5444", "https://127.0.0.1:5444/healthz"},
-		{"plain http reachable for rpp-get", checkReachable, "4282", "http://127.0.0.1:4282/healthz"},
+		{
+			name: "http healthz for registry packages proxy",
+			port: "5444",
+			want: "http://127.0.0.1:5444/healthz",
+		},
+		{
+			name: "http reachable for rpp-get",
+			port: "4282",
+			want: "http://127.0.0.1:4282/healthz",
+		},
 	}
+
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := reverseTunnelCheckURL(c.kind, localhost, c.port)
+			got := reverseTunnelCheckURL(localhost, c.port)
 			if got != c.want {
-				t.Fatalf("reverseTunnelCheckURL(%v, %q, %q) = %q, want %q", c.kind, localhost, c.port, got, c.want)
+				t.Fatalf(
+					"reverseTunnelCheckURL(%q, %q) = %q, want %q",
+					localhost,
+					c.port,
+					got,
+					c.want,
+				)
 			}
 		})
 	}

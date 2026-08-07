@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /global-hooks/openapi/config-values.yaml
+# /ee/cse/global-hooks/openapi/config-values.yaml
 x-config-version: 2
 type: object
 default: {}

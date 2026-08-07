@@ -93,7 +93,7 @@ To view addon-operator queues, use the `d8 system queue list` command.
 
 ## Marketplace queues
 
-The **Marketplace queues** are a queue implementation used by [Marketplace](../marketplace) functionality.
+The **Marketplace queues** are a queue implementation used by [Marketplace](../marketplace/) functionality.
 
 Each queue served by the Deckhouse controller for Marketplace has the following properties:
 

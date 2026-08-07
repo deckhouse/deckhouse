@@ -20,12 +20,12 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,23 +33,26 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/capacity"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
 const (
 	cloudProviderSecretName       = ngcommon.CloudProviderSecretName
-	cloudProviderSecretNamespace  = "kube-system"
+	cloudProviderSecretNamespace  = nodecommon.CloudProviderSecretNamespace
 	clusterConfigSecretName       = "d8-cluster-configuration"
 	clusterConfigSecretNamespace  = "kube-system"
 	automaticKubernetesVersion    = "Automatic"
 	deckhouseDefaultK8sVersionKey = "deckhouseDefaultKubernetesVersion"
 	clusterUUIDConfigMapName      = "d8-cluster-uuid"
 	clusterUUIDConfigMapNS        = "kube-system"
-	nodeManagerModuleConfigName   = "node-manager"
 
 	instanceTypesCatalogName = "for-cluster-autoscaler"
 	instanceClassGroup       = "deckhouse.io"
-	instanceClassVersion     = "v1alpha1"
+
+	// InstanceTypesCatalog serves v1alpha1 only, so this one is safe to compile in. The
+	// InstanceClass version is not — see common.InstanceClassAPIVersionKey.
+	instanceTypesCatalogVersion = "v1alpha1"
 
 	apiserverPodNamespace  = "kube-system"
 	apiserverVersionAnnKey = "control-plane-manager.deckhouse.io/kubernetes-version"
@@ -134,24 +137,6 @@ func (s *Service) readClusterConfiguration(ctx context.Context) (*semver.Version
 	return target, cfg.DefaultCRI
 }
 
-// readDefaultCRIFromModuleConfig returns spec.settings.defaultCRI from the
-// node-manager ModuleConfig, or an empty string when the ModuleConfig or the
-// field is absent. Because the raw object is read (not an addon-operator value
-// with a default), an empty result unambiguously means "not set", so the caller
-// treats any non-empty value as an explicit choice that wins over the deprecated
-// ClusterConfiguration.defaultCRI. The ModuleConfig is optional, so a missing
-// object, CRD/kind, or read error falls back to an empty string. This mirrors
-// the webhook's loadDefaultCRIFromModuleConfig so validation and rendering agree.
-func (s *Service) readDefaultCRIFromModuleConfig(ctx context.Context) string {
-	mc := &unstructured.Unstructured{}
-	mc.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"})
-	if err := s.Client.Get(ctx, types.NamespacedName{Name: nodeManagerModuleConfigName}, mc); err != nil {
-		return ""
-	}
-	cri, _, _ := unstructured.NestedString(mc.Object, "spec", "settings", "defaultCRI")
-	return cri
-}
-
 // readControlPlaneMinVersion returns the lowest version among the running kube-apiservers,
 // taken from the annotation control-plane-manager stamps on their static pod manifests
 // (candi/control-plane/kube-apiserver.yaml.tpl) and reads back itself
@@ -233,34 +218,26 @@ func (s *Service) readDefaultZones(ctx context.Context, cloudProvider map[string
 	return zones
 }
 
-// resolveInstanceClassVersion returns the served API version for a cloud InstanceClass
-// kind via the RESTMapper's preferred mapping. Providers publish different versions
-// (VCD/Dynamix/HuaweiCloud serve only deckhouse.io/v1), so the version must not be
-// hardcoded. Falls back to instanceClassVersion when the kind is unknown to the mapper.
-func resolveInstanceClassVersion(mapper meta.RESTMapper, kind string) string {
-	if mapper == nil {
-		return instanceClassVersion
-	}
-	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: instanceClassGroup, Kind: kind})
-	if err != nil {
-		return instanceClassVersion
-	}
-	return mapping.GroupVersionKind.Version
+// instanceClassAPIVersion returns the version InstanceClass objects are read at. An empty result
+// means the provider has not published it yet; see common.InstanceClassAPIVersionKey for why the
+// version is data.
+func instanceClassAPIVersion(cloudProvider map[string]interface{}) string {
+	version, _ := cloudProvider[nodecommon.InstanceClassAPIVersionKey].(string)
+	return version
 }
 
-func (s *Service) readInstanceClassSpec(ctx context.Context, kind, name string) (interface{}, error) {
+func (s *Service) readInstanceClassSpec(ctx context.Context, version, kind, name string) (interface{}, error) {
 	obj := &unstructured.Unstructured{}
-	version := resolveInstanceClassVersion(s.Client.RESTMapper(), kind)
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: version, Kind: kind})
 	if err := s.Client.Get(ctx, types.NamespacedName{Name: name}, obj); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get %s %q at %s: %w", kind, name, version, err)
 	}
 	return obj.Object["spec"], nil
 }
 
 func (s *Service) readInstanceTypesCatalog(ctx context.Context) *capacity.InstanceTypesCatalog {
 	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceClassVersion, Kind: "InstanceTypesCatalog"})
+	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: instanceClassGroup, Version: instanceTypesCatalogVersion, Kind: "InstanceTypesCatalog"})
 	if err := s.Client.Get(ctx, types.NamespacedName{Name: instanceTypesCatalogName}, obj); err != nil {
 		return capacity.NewInstanceTypesCatalog(nil)
 	}

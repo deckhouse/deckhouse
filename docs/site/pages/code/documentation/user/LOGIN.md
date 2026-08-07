@@ -1,5 +1,6 @@
 ---
 title: "Login"
+description: How to sign in to the Deckhouse Code web interface
 permalink: en/code/documentation/user/login.html
 ---
 

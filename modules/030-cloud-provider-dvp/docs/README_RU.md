@@ -10,3 +10,10 @@ description: "Интеграция Deckhouse Kubernetes Platform с платфо
 - управление ресурсами DVP через модуль `cloud-controller-manager`;
 - заказ дисков с использованием компонента `CSI storage`;
 - интеграция с [модулем `node-manager`](/modules/node-manager/) для поддержки [DVPInstanceClass](cr.html#dvpinstanceclass) при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+
+{% alert level="warning" %}
+Если кластер был установлен со схемой DVPClusterConfiguration, необходима миграция на конфигурацию через ModuleConfig.
+Пока миграция не выполнена, может срабатывать алерт `D8CloudProviderDVPMigrationPending`, а обновление Deckhouse — блокироваться.
+
+Инструкция: [Как мигрировать облачный провайдер на конфигурацию через ModuleConfig](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
+{% endalert %}

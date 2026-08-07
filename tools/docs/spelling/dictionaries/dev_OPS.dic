@@ -1,4 +1,4 @@
-2794
+2810
 1GB
 2GB
 5XX
@@ -470,6 +470,7 @@ dst
 DVCR
 dvp
 DVP
+DVPClusterConfiguration
 Dynamix
 DynamiX
 dynDNS
@@ -552,6 +553,8 @@ FileManagement
 filesystem
 FileSystem
 filesystems
+finalizer
+finalizers
 flant
 flavorname
 flavorName
@@ -2017,6 +2020,10 @@ ZvirtInstanceClass
 засчет
 захеширован
 захешированном
+зеркалирование
+зеркалировании
+зеркалирования
+зеркалировать
 иcпользовать
 ИБ
 иммутабельный
@@ -2660,6 +2667,7 @@ ZvirtInstanceClass
 таймауты
 тайминги
 таргетов
+таргеты
 тегирование
 тегирования
 тегируются
@@ -2708,6 +2716,16 @@ ZvirtInstanceClass
 фикстурой
 фикстуру
 фикстуры
+финалайзер
+финалайзера
+финалайзерам
+финалайзерами
+финалайзерах
+финалайзере
+финалайзеров
+финалайзером
+финалайзеру
+финалайзеры
 фич
 фичах
 фичи

@@ -16,7 +16,6 @@ package rpp
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
@@ -33,7 +32,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	tlsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/tls"
 )
 
 const (
@@ -69,19 +67,16 @@ const (
 type tunnelCheckKind int
 
 const (
-	// checkHTTPSHealthz expects a real 200 from a TLS /healthz endpoint (5444 proxy).
-	checkHTTPSHealthz tunnelCheckKind = iota
-	// checkReachable treats any HTTP response (incl. 404) as proof the SSH
-	// channel is alive end-to-end (4282 rpp-get server has no /healthz route).
+	// checkHealthz expects a real 200 response from the /healthz endpoint.
+	checkHealthz tunnelCheckKind = iota
+
+	// checkReachable treats any HTTP response, including 404, as proof that
+	// the SSH channel is alive end-to-end. The rpp-get server has no /healthz route.
 	checkReachable
 )
 
-func reverseTunnelCheckURL(kind tunnelCheckKind, host, port string) string {
-	scheme := "https"
-	if kind == checkReachable {
-		scheme = "http"
-	}
-	return fmt.Sprintf("%s://%s/healthz", scheme, net.JoinHostPort(host, port))
+func reverseTunnelCheckURL(host, port string) string {
+	return fmt.Sprintf("http://%s/healthz", net.JoinHostPort(host, port))
 }
 
 func NewRegistryPackagesProxy(clusterDomain string, configGetter registry.ClientConfigGetter, logger *slog.Logger, interactive bool) *RegistryPackagesProxy {
@@ -204,22 +199,8 @@ func (p *RegistryPackagesProxy) startProxy() error {
 
 	p.debug("Cluster domain for registry packages proxy: %s\n", p.clusterDomain)
 
-	const oneDay = 1
-
-	cert, err := tlsutils.GenerateCertificate(
-		"registry-packages-proxy",
-		p.clusterDomain,
-		tlsutils.CertKeyTypeRSA,
-		oneDay,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to generate TLS certificate for registry proxy: %w", err)
-	}
-
 	addr := net.JoinHostPort(localhost, "0")
-	listener, err := tls.Listen("tcp", addr, &tls.Config{
-		Certificates: []tls.Certificate{*cert},
-	})
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("failed to listen registry proxy socket: %w", err)
 	}
@@ -281,7 +262,7 @@ func (p *RegistryPackagesProxy) startProxy() error {
 func (p *RegistryPackagesProxy) startTunnel(ctx context.Context, sshCl libcon.SSHClient) error {
 	p.debug("Starting registry packages proxy tunnel...")
 
-	tunnel, err := p.upSingleTunnel(ctx, sshCl, p.localPort, p.remotePort, checkHTTPSHealthz)
+	tunnel, err := p.upSingleTunnel(ctx, sshCl, p.localPort, p.remotePort, checkHealthz)
 	if err != nil {
 		return err
 	}
@@ -320,7 +301,7 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 		return nil, fmt.Errorf("cannot bring up tunnel for registry packages proxy: %w", err)
 	}
 
-	checkURL := reverseTunnelCheckURL(check, listenAddress, remotePort)
+	checkURL := reverseTunnelCheckURL(listenAddress, remotePort)
 	var checkScript string
 	switch check {
 	case checkReachable:

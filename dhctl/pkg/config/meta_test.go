@@ -394,52 +394,6 @@ spec:
 	})
 }
 
-func TestEffectiveDefaultCRI(t *testing.T) {
-	nodeManagerMC := func(cri string) []*ModuleConfig {
-		settings := SettingsValues{}
-		if cri != "" {
-			settings["defaultCRI"] = cri
-		}
-		mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
-		mc.SetName("node-manager")
-		return []*ModuleConfig{mc}
-	}
-	// presentCC returns a ClusterConfiguration map that always contains a
-	// ClusterConfiguration (marked by clusterType), with defaultCRI only when set.
-	presentCC := func(cri string) map[string]json.RawMessage {
-		cc := map[string]json.RawMessage{"clusterType": json.RawMessage(`"Cloud"`)}
-		if cri != "" {
-			cc["defaultCRI"] = json.RawMessage(`"` + cri + `"`)
-		}
-		return cc
-	}
-
-	tests := []struct {
-		name       string
-		clusterCfg map[string]json.RawMessage
-		moduleCRI  string
-		expected   string
-	}{
-		{name: "only ClusterConfiguration", clusterCfg: presentCC("ContainerdV2"), moduleCRI: "", expected: "ContainerdV2"},
-		{name: "only ModuleConfig", clusterCfg: presentCC(""), moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
-		{name: "ModuleConfig overrides ClusterConfiguration", clusterCfg: presentCC("Containerd"), moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
-		{name: "ModuleConfig at default falls back to ClusterConfiguration", clusterCfg: presentCC("ContainerdV2"), moduleCRI: "Containerd", expected: "ContainerdV2"},
-		{name: "ClusterConfiguration present, nothing set, built-in default", clusterCfg: presentCC(""), moduleCRI: "", expected: "Containerd"},
-		{name: "no ClusterConfiguration, empty", clusterCfg: nil, moduleCRI: "", expected: ""},
-		{name: "no ClusterConfiguration but ModuleConfig set", clusterCfg: nil, moduleCRI: "ContainerdV2", expected: "ContainerdV2"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := &MetaConfig{
-				ClusterConfig: tt.clusterCfg,
-				ModuleConfigs: nodeManagerMC(tt.moduleCRI),
-			}
-			require.Equal(t, tt.expected, m.effectiveDefaultCRI())
-		})
-	}
-}
-
 func TestEnrichProxyData(t *testing.T) {
 	t.Run("proxy config is absent", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
@@ -529,7 +483,7 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 		"rppBootstrapServerPort": defaultClusterMasterRPPBootstrapServerPort,
 	}, endpoints[0])
 	require.Equal(t, []string{"127.0.0.1:6443"}, data["clusterMasterKubeAPIEndpoints"])
-	require.Equal(t, []string{"127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
+	require.Equal(t, []string{"http://127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
 	require.Equal(t, []string{fmt.Sprintf("127.0.0.1:%d", defaultClusterMasterRPPBootstrapServerPort)}, data["clusterMasterRPPBootstrapAddresses"])
 }
 
@@ -552,7 +506,7 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 		"rppBootstrapServerPort": defaultClusterMasterRPPBootstrapServerPort,
 	}, endpoints[0])
 	require.Empty(t, data["clusterMasterKubeAPIEndpoints"])
-	require.Equal(t, []string{"127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
+	require.Equal(t, []string{"http://127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
 	require.Equal(t, []string{fmt.Sprintf("127.0.0.1:%d", defaultClusterMasterRPPBootstrapServerPort)}, data["clusterMasterRPPBootstrapAddresses"])
 
 	mingetB64, ok := data["mingetB64"].(string)

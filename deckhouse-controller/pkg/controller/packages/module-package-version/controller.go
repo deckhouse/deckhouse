@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -57,24 +58,16 @@ const (
 	legacyPathSegment = "release"
 )
 
-// reconciler promotes draft ModulePackageVersion resources by loading package
-// metadata from the registry image and removing the draft label.
-type reconciler struct {
-	client   client.Client
-	logger   *log.Logger
-	registry *registry.Service
-	dc       dependency.Container
-}
-
 // RegisterController creates and registers the ModulePackageVersion controller.
 // It watches ModulePackageVersion resources and reconciles draft versions by
 // fetching metadata from the package registry and promoting them to non-draft status.
-func RegisterController(runtimeManager manager.Manager, dc dependency.Container, logger *log.Logger) error {
+func RegisterController(sync *sync.WaitGroup, runtimeManager manager.Manager, dc dependency.Container, logger *log.Logger) error {
 	r := &reconciler{
+		init:     sync,
 		client:   runtimeManager.GetClient(),
-		logger:   logger,
 		registry: registry.NewService(dc, logger),
 		dc:       dc,
+		logger:   logger.Named(controllerName),
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
@@ -84,10 +77,23 @@ func RegisterController(runtimeManager manager.Manager, dc dependency.Container,
 		Complete(r)
 }
 
+// reconciler promotes draft ModulePackageVersion resources by loading package
+// metadata from the registry image and removing the draft label.
+type reconciler struct {
+	init     *sync.WaitGroup
+	client   client.Client
+	registry *registry.Service
+	dc       dependency.Container
+	logger   *log.Logger
+}
+
 // Reconcile handles a single ModulePackageVersion event. Draft resources are
 // promoted by loading metadata; deleted resources have their finalizers removed
-// once no Module references remain (usedByCount == 0).
+// once no Module uses them any more.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// wait for init
+	r.init.Wait()
+
 	logger := r.logger.With(slog.String("name", req.Name))
 
 	logger.Debug("reconcile resource")
@@ -163,7 +169,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 
 	// Pick "version" by default; legacy images live under "release".
 	segment := defaultPathSegment
-	if mpv.Labels[v1alpha1.ModulePackageVersionLabelLegacy] == "true" {
+	if mpv.IsLegacy() {
 		segment = legacyPathSegment
 	}
 
@@ -245,9 +251,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 	return nil
 }
 
-// handleDelete removes the finalizer from the ModulePackageVersion once it is
-// no longer referenced by any Module (usedByCount == 0). While references exist,
-// the reconcile is requeued every 15 seconds to wait for Modules to release the MPV.
+// handleDelete removes the finalizer from the ModulePackageVersion once no Module uses
+// it any more. While it is still used, the reconcile is requeued every 15 seconds to
+// wait for the Module to release it.
 func (r *reconciler) handleDelete(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) (ctrl.Result, error) {
 	logger := r.logger.With(
 		slog.String("name", mpv.Name),
@@ -255,7 +261,7 @@ func (r *reconciler) handleDelete(ctx context.Context, mpv *v1alpha1.ModulePacka
 		slog.String("version", mpv.Spec.PackageVersion),
 		slog.String("repository", mpv.Spec.PackageRepositoryName))
 
-	if mpv.Status.UsedByCount > 0 {
+	if mpv.Status.Used {
 		return ctrl.Result{RequeueAfter: defaultRequeue}, nil
 	}
 
@@ -278,6 +284,8 @@ func (r *reconciler) handleDelete(ctx context.Context, mpv *v1alpha1.ModulePacka
 
 // setMetadataLoadedConditionTrue sets the MetadataLoaded condition to True, clearing reason and message.
 func (r *reconciler) setMetadataLoadedConditionTrue(mpv *v1alpha1.ModulePackageVersion) {
+	mpv.Status.ObservedGeneration = mpv.Generation
+
 	metautils.SetStatusCondition(&mpv.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded,
 		Status:             metav1.ConditionTrue,
@@ -289,6 +297,8 @@ func (r *reconciler) setMetadataLoadedConditionTrue(mpv *v1alpha1.ModulePackageV
 
 // setMetadataLoadedConditionFalse sets the MetadataLoaded condition to False with a reason and message.
 func (r *reconciler) setMetadataLoadedConditionFalse(mpv *v1alpha1.ModulePackageVersion, reason, message string) {
+	mpv.Status.ObservedGeneration = mpv.Generation
+
 	metautils.SetStatusCondition(&mpv.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded,
 		Status:             metav1.ConditionFalse,
@@ -334,6 +344,8 @@ func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.Module
 			Ru: pd.Descriptions.Ru,
 			En: pd.Descriptions.En,
 		},
+		Weight:         int32(pd.Weight),
+		Critical:       pd.Critical,
 		DisableOptions: disableOptionsToCR(pd.DisableOptions),
 		Licensing:      licensingToCR(pd.Licensing),
 		Requirements:   requirementsToCR(pd.Requirements),
@@ -361,17 +373,35 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 	}
 
 	mpv.Status.PackageMetadata.Licensing = legacyAccessibilityToCR(def.Accessibility)
+
+	mpv.Status.PackageMetadata.Weight = int32(def.Weight)
+	mpv.Status.PackageMetadata.Critical = def.Critical
 }
 
-// disableOptionsToCR projects parsed disable protection onto the CR shape,
-// returning nil when no disable protection is configured so the field omits cleanly.
+// disableOptionsToCR projects parsed disable protection onto the CR shape, returning nil
+// when no disable protection is configured so the field omits cleanly.
 func disableOptionsToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableOptions {
+	messages := disableMessagesToCR(opts)
+	if !opts.Confirmation && messages == nil {
+		return nil
+	}
+
 	return &v1alpha1.PackageDisableOptions{
 		Confirmation: opts.Confirmation,
-		Messages: v1alpha1.PackageDisableMessages{
-			Ru: opts.Messages.Ru,
-			En: opts.Messages.En,
-		},
+		Messages:     messages,
+	}
+}
+
+// disableMessagesToCR projects the localized confirmation messages, returning nil when
+// neither translation is set.
+func disableMessagesToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableMessages {
+	if opts.Messages.Ru == "" && opts.Messages.En == "" {
+		return nil
+	}
+
+	return &v1alpha1.PackageDisableMessages{
+		Ru: opts.Messages.Ru,
+		En: opts.Messages.En,
 	}
 }
 

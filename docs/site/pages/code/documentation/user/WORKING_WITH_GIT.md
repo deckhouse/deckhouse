@@ -1,5 +1,6 @@
 ---
 title: "Working with Git"
+description: Basic Git commands for cloning repositories and working with branches
 permalink: en/code/documentation/user/git.html
 ---
 

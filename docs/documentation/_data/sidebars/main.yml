@@ -1346,6 +1346,10 @@ entries:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
+            - title:
+                en: DKP cluster management
+                ru: Управление кластерами DKP
+              url: /architecture/deckhouse/commander.html
         - title:
             en: Delivery subsystem
             ru: Подсистема Delivery
@@ -1382,6 +1386,10 @@ entries:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
               url: /architecture/kubernetes-and-scheduling/vpa.html
+            - title:
+                en: Descheduler module
+                ru: Модуль descheduler
+              url: /architecture/kubernetes-and-scheduling/descheduler.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1546,6 +1554,10 @@ entries:
                 en: Overview
                 ru: Обзор
               url: /architecture/network/
+            - title:
+                en: Cni-cilium module
+                ru: Модуль cni-cilium
+              url: /architecture/network/cni-cilium.html              
             - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx

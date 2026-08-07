@@ -1,5 +1,6 @@
 ---
 title: "Managing Git repositories"
+description: How to manage Git repositories, branches, and files in a project
 permalink: en/code/documentation/user/repositories.html
 ---
 

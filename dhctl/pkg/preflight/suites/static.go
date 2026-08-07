@@ -48,6 +48,7 @@ func NewStaticSuite(deps StaticDeps, ctx context.Context) (preflight.Suite, erro
 		checks.SudoAllowed(nodeInterface),
 		checks.SSHTunnel(deps.SSHProviderInitializer, deps.GlobalOpts),
 		checks.StaticInstancesSSHAccess(deps.MetaConfig, deps.SSHProviderInitializer),
+		checks.HostNetworkCIDRIntersection(deps.MetaConfig, nodeInterface),
 		checks.DeckhouseUser(nodeInterface, deps.GlobalOpts),
 		checks.StaticSystemRequirements(deps.SSHProviderInitializer, deps.InstallConfig),
 		checks.Python(nodeInterface),

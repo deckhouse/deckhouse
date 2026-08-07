@@ -50,7 +50,7 @@ type Reconciler struct {
 	kubeClient kubernetes.Interface
 }
 
-func (r *Reconciler) Setup(mgr ctrl.Manager) error {
+func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	var err error
 	r.kubeClient, err = kubernetes.NewForConfig(mgr.GetConfig())
 	return err

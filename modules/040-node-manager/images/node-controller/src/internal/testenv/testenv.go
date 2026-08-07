@@ -118,7 +118,7 @@ func Start(scheme *runtime.Scheme, crdPaths ...string) (*envtest.Environment, *r
 // NewManager builds a manager (metrics/leader-election off) and wires every controller that
 // registered itself via register.RegisterController in the test binary. Import only the
 // controller package under test so only it gets wired. Start it with `go mgr.Start(ctx)`.
-func NewManager(cfg *rest.Config, scheme *runtime.Scheme) (manager.Manager, error) {
+func NewManager(ctx context.Context, cfg *rest.Config, scheme *runtime.Scheme) (manager.Manager, error) {
 	// Use the production cache/client scoping: a reconciler reading an object outside the
 	// scoped informers fails only against this configuration ("unknown namespace for the
 	// cache", empty cached reads), so tests on a default wide cache would miss exactly the
@@ -145,7 +145,7 @@ func NewManager(cfg *rest.Config, scheme *runtime.Scheme) (manager.Manager, erro
 	if err != nil {
 		return nil, fmt.Errorf("new manager: %w", err)
 	}
-	if err := register.SetupAll(mgr, mgr.GetClient(), "", 1, nil); err != nil {
+	if err := register.SetupAll(ctx, mgr, mgr.GetClient(), "", 1, nil); err != nil {
 		return nil, fmt.Errorf("setup controllers: %w", err)
 	}
 	return mgr, nil

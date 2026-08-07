@@ -1,5 +1,6 @@
 ---
 title: "Руководство пользователя Deckhouse Code"
+description: Руководство пользователя по работе с репозиториями, ветками и merge request
 permalink: ru/code/documentation/user/
 lang: ru
 ---

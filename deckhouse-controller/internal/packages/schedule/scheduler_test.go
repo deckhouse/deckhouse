@@ -682,6 +682,30 @@ func (s *SchedulerSuite) TestCheckConstraintsAnyOfRejectsAtAdmission() {
 	s.Contains(err.Error(), "cloud-provider", "failure message must name the unmet group")
 }
 
+// TestCheckConstraintsVersionRejectionNamesSubject pins the admission-time
+// message content for a version constraint. CheckConstraints surfaces only the
+// decision message and drops the Reason that carries the subject, so the message
+// itself must name what was checked, what was required and what the cluster has
+// — semver's own error ("1.34.9 is less than v1.35") names none of the three.
+//
+// A local scheduler is built because the suite fixture wires no version getter.
+func (s *SchedulerSuite) TestCheckConstraintsVersionRejectionNamesSubject() {
+	sched := schedule.NewScheduler(log.NewNop(), schedule.WithKubeVersionGetter(func() (*semver.Version, error) {
+		return mustVersion("1.34.9"), nil
+	}))
+	defer sched.Stop()
+
+	err := sched.CheckConstraints("proposed", schedule.Constraints{
+		Order:      schedule.FunctionalOrder,
+		Kubernetes: mustConstraint(">= v1.35"),
+	})
+
+	s.Require().Error(err)
+	s.Contains(err.Error(), "Kubernetes", "failure message must name the checked version")
+	s.Contains(err.Error(), ">=v1.35", "failure message must name the violated constraint")
+	s.Contains(err.Error(), "1.34.9", "failure message must name the current version")
+}
+
 // TestAnyOfMemberInstallTriggersReschedule confirms dynamic re-evaluation:
 // a consumer born disabled (no AnyOf member installed) flips to enabled when
 // a member becomes available and the scheduler re-runs.

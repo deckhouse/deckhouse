@@ -119,7 +119,7 @@ var _ = BeforeSuite(func() {
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, newKubernetesEndpointSlice("10.10.0.1")))).To(Succeed())
 
 	By("starting the manager with the bashible-context controller")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 	go func() {
 		defer GinkgoRecover()
