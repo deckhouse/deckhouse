@@ -479,7 +479,8 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 	}
 }
 
-// SetCapabilities injects GVK values, discovered during executing ModuleEnsureCRDs tasks, into .global.discovery.apiVersions values
+// SetCapabilities injects GVK values, discovered during executing ModuleEnsureCRDs tasks,
+// into the .Capabilities global value, exposed to charts as .Platform.Capabilities
 func (m *Module) SetCapabilities(apiVersions []string) {
 	if len(apiVersions) == 0 {
 		return
@@ -489,9 +490,14 @@ func (m *Module) SetCapabilities(apiVersions []string) {
 	sort.Strings(apiVersions)
 	data, _ := json.Marshal(apiVersions)
 
-	// backward compatibility: set apiVersions to .global.discovery.apiVersions
-	// TODO(ipaqsa): get rid of it further and add Capabilities field
 	patch := addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
+		{
+			Op:    "add",
+			Path:  "/Capabilities",
+			Value: data,
+		},
+		// backward compatibility: set apiVersions to .global.discovery.apiVersions
+		// TODO(ipaqsa): get rid of it further
 		{
 			Op:    "add",
 			Path:  "/discovery/apiVersions",
@@ -500,7 +506,7 @@ func (m *Module) SetCapabilities(apiVersions []string) {
 	}}
 
 	if err := m.values.ApplyValuesPatch(patch); err != nil {
-		m.logger.Error(fmt.Sprintf("failed to set enabled modules to global: %v", err.Error()))
+		m.logger.Error(fmt.Sprintf("failed to set capabilities to global: %v", err.Error()))
 	}
 }
 
