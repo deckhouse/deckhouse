@@ -63,7 +63,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7
 	github.com/deckhouse/lib-dhctl v0.22.0
-	github.com/deckhouse/module-sdk v0.12.2-0.20260807064517-c4c63dfe578c
+	github.com/deckhouse/module-sdk v0.12.2-0.20260807082203-e2df9f002d76
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/fsnotify/fsnotify v1.9.0
