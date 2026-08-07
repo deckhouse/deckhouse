@@ -12,7 +12,7 @@ Deckhouse Kubernetes Platform is tested against the CNCF Kubernetes conformance 
 {% assign conformance_results = site.data.kubernetes_conformance.results %}
 {% if conformance_results.size > 0 %}
 {% for result in conformance_results %}
-- Kubernetes **{{ result.version }}** — [JUnit XML report]({{ site.canonical_url_prefix_documentation }}{{ result.xml_path }})
+- Kubernetes **{{ result.version }}** — [XML report]({{ site.canonical_url_prefix_documentation }}{{ result.xml_path }})
 {% endfor %}
 {% else %}
 No conformance test results are available.
