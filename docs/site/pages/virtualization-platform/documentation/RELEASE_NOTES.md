@@ -55,8 +55,8 @@ Release date: July 23, 2026.
 - [vi] The name length limit has been raised from 49 to 253 characters for [VirtualImage](/modules/virtualization/cr.html#virtualimage) and from 48 to 253 for [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
 - [dvcr] Added per-namespace authorization for DVCR: image access is isolated between namespaces.
 - [module] Added a limit on concurrent inbound live migrations per target node.
+- [module] Added the ability to use the module without specifying subnets for the `Main` network. For this, the `sdn` module must be enabled.
 - [network] Added the ability to route live migration traffic over a dedicated SystemNetwork via `liveMigration.network` in the ModuleConfig of the `virtualization` module.
-- [vm] Added IPAM for additional network interfaces: automatic (DHCP) and static IP allocation via SDN `IPAddress` resources.
 - [vm] Added the ability to change CPU and memory of a running VM without live migration (in-place resize). To enable this functionality, add `HotplugCPUAndMemoryWithInPlaceResize` to `.spec.settings.featureGates` in the ModuleConfig of the `virtualization` module.
 - [vm] Switched VM networks to eBPF, providing more stable connectivity for additional networks with lower overhead.
 - [vmop] [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resources can now supersede other active operations on the same VM.

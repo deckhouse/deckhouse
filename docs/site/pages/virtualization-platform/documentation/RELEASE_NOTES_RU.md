@@ -56,8 +56,8 @@ lang: ru
 - [vi] Ограничение на длину имени увеличено с 49 до 253 символов для [VirtualImage](/modules/virtualization/cr.html#virtualimage) и с 48 до 253 для [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
 - [dvcr] Добавлена авторизация в DVCR на уровне неймспейса: доступ к образам изолирован между неймспейсами.
 - [module] Добавлено ограничение числа одновременных входящих живых миграций на целевой узел.
+- [module] Добавлена возможность использовать модуль без указания подсетей для сети `Main`. Для этого модуль `sdn` должен быть включен.
 - [network] Добавлена возможность направлять трафик живой миграции через выделенный SystemNetwork с помощью параметра `liveMigration.network` в ModuleConfig модуля `virtualization`.
-- [vm] Добавлен IPAM для дополнительных сетевых интерфейсов: автоматическое (DHCP) и статическое выделение IP-адресов через ресурсы `IPAddress` модуля SDN.
 - [vm] Добавлена возможность изменять CPU и память работающей ВМ без живой миграции (in-place resize). Чтобы включить функциональность, добавьте `HotplugCPUAndMemoryWithInPlaceResize` в `.spec.settings.featureGates` ModuleConfig модуля `virtualization`.
 - [vm] Сети ВМ переведены на eBPF: более стабильное подключение дополнительных сетей при меньших накладных расходах.
 - [vmop] Операции [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) теперь могут вытеснять другие активные операции над той же ВМ.
