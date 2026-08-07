@@ -7,6 +7,8 @@ lang: ru
 
 ALB средствами Istio реализуется через [Istio Ingress Gateway](#istio-ingress-gateway) или [Ingress NGINX](#ingress-nginx). Для этого используется модуль [`istio`](/modules/istio/).
 
+Этот вариант стоит выбрать, если нужны расширенные возможности управления трафиком в service mesh (например, canary-маршрутизация или mTLS). Справочник модуля: [`istio`](/modules/istio/).
+
 ## Ingress для публикации приложений
 
 ### Istio Ingress Gateway
@@ -19,7 +21,7 @@ ALB средствами Istio реализуется через [Istio Ingress 
    apiVersion: deckhouse.io/v1alpha1
    kind: IngressIstioController
    metadata:
-    name: main
+     name: main
    spec:
      # ingressGatewayClass содержит значение селектора лейблов, используемое при создании ресурса Gateway.
      ingressGatewayClass: istio-hp
@@ -92,7 +94,7 @@ ALB средствами Istio реализуется через [Istio Ingress 
 1. Определите правила маршрутизации с помощью VirtualService, который связывает шлюз и обслуживаемый им сервис:
 
    ```yaml
-   apiVersion: networking.istio.io/v1alpha3
+   apiVersion: networking.istio.io/v1beta1
    kind: VirtualService
    metadata:
      name: vs-app

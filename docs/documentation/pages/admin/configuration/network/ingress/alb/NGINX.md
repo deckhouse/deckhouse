@@ -9,7 +9,7 @@ The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB u
 {% alert level="info" %}
 In 2025, Ingress NGINX was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
-This does not apply to the module as part of Deckhouse Kubernetes Platform: the module is maintained by the Deckhouse team, including security updates. For details, see [Module support and security](#module-support-and-security).
+This does not apply to the module as part of Deckhouse Kubernetes Platform (DKP): the module is maintained by the Deckhouse team, including security updates. For details, see [Module support and security](#module-support-and-security).
 {% endalert %}
 
 The `ingress-nginx` module installs the Ingress NGINX Controller and manages it with custom resources.
@@ -140,7 +140,7 @@ spec:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 ```
 
-### Example for GCP / Yandex Cloud / Azure
+### Example for GCP/Yandex Cloud/Azure
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -204,9 +204,9 @@ spec:
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
   tolerations:
-  - effect: NoExecute
-    key: dedicated.deckhouse.io
-    value: frontend
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: frontend
 ```
 
 ### Example for bare metal with external load balancer
@@ -244,9 +244,9 @@ spec:
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
   tolerations:
-  - effect: NoExecute
-    key: dedicated.deckhouse.io
-    value: frontend
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: frontend
 ```
 
 When using MetalLB, its speaker pods must run on the same nodes as the Ingress controller pods.
@@ -255,17 +255,24 @@ To preserve the real client IP addresses,
 the Ingress controller Service should be created with `externalTrafficPolicy: Local` to avoid inter-node SNAT.
 In this configuration, MetalLB speaker will only announce the Service from nodes running target pods.
 
-Example [`metallb`](/modules/metallb/configuration.html) configuration:
+Example ModuleConfig for the [`metallb`](/modules/metallb/configuration.html) module:
 
 ```yaml
-metallb:
- speaker:
-   nodeSelector:
-     node-role.deckhouse.io/frontend: ""
-   tolerations:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      value: frontend
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  enabled: true
+  version: 2
+  settings:
+    speaker:
+      nodeSelector:
+        node-role.deckhouse.io/frontend: ""
+      tolerations:
+        - effect: NoExecute
+          key: dedicated.deckhouse.io
+          value: frontend
 ```
 
 ### Example for bare metal (MetalLB in L2 LoadBalancer mode)
@@ -288,7 +295,9 @@ Available in DKP Enterprise Edition only.
 
 1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
-   > Metallb balancers should be placed on the same nodes as ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose (to deploy ingress controllers and Metallb load balancers on frontend nodes, use the annotation `node-role.deckhouse.io/frontend: ""` in their manifests).
+   {% alert level="info" %}
+   MetalLB balancers should be placed on the same nodes as Ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose (to deploy Ingress controllers and MetalLB load balancers on frontend nodes, use the annotation `node-role.deckhouse.io/frontend: ""` in their manifests).
+   {% endalert %}
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -322,13 +331,15 @@ Available in DKP Enterprise Edition only.
      nodeSelector:
        node-role.deckhouse.io/frontend: ""
      tolerations:
-     - effect: NoExecute
-       key: dedicated.deckhouse.io
-       value: frontend
-       operator: Equal
+       - effect: NoExecute
+         key: dedicated.deckhouse.io
+         value: frontend
+         operator: Equal
    ```
 
-   > When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). [Example of using annotations](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
+   {% alert level="info" %}
+   When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). [Example of using annotations](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
+   {% endalert %}
 
 The platform will create a LoadBalancer Service with the specified number of IPs:
 
@@ -497,4 +508,4 @@ spec:
 
 ## Module support and security
 
-The `ingress-nginx` module is covered by Deckhouse Kubernetes Platform maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The Deckhouse team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases. For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. Among other things, vulnerability management processes and the release of security updates.
+The `ingress-nginx` module is covered by Deckhouse Kubernetes Platform maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The Deckhouse team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases. For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. DKP certification with FSTEC of Russia also covers vulnerability management processes and the release of security updates.
