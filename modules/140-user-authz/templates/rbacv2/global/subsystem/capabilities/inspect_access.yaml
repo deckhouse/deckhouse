@@ -1,0 +1,39 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem-capability:security:inspect_access
+  annotations:
+    en.meta.deckhouse.io/title: "Security: inspect access of any subject"
+    ru.meta.deckhouse.io/title: "Безопасность: разбор прав любого субъекта"
+    en.meta.deckhouse.io/description: "Inspect the permissions of other subjects: who can perform an action, and what a user, group or ServiceAccount is allowed to do."
+    ru.meta.deckhouse.io/description: "Просмотр прав других субъектов: кто может выполнить действие и что разрешено пользователю, группе или ServiceAccount'у."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "subsystem-capability.security.inspect_access"
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: security
+    # Aggregated at the manager level; the superadmin role of the subsystem
+    # aggregates the manager role, so both levels get it.
+    rbac.deckhouse.io/aggregate-to-security-as: manager
+rules:
+  # Reviewing one's own permissions is available to everyone; the nonself
+  # subresources are the elevated part, since a report about another subject
+  # discloses its full permission map across namespaces.
+  #
+  # roleaccessreports is here although it discloses nothing elevated -- every
+  # row of it is readable in the ClusterRoles themselves. It belongs to the same
+  # question: this capability is held by the identity that reviews access, and
+  # the catalogue of what each role grants is the other half of that review.
+  - apiGroups:
+      - authorization.deckhouse.io
+    resources:
+      - bulksubjectaccessreviews
+      - bulksubjectaccessreviews/nonself
+      - roleaccessreports
+      - subjectaccessreports
+      - subjectaccessreports/nonself
+      - whocans
+    verbs:
+      - create

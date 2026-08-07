@@ -21,15 +21,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"helm.sh/helm/v3/pkg/releaseutil"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
-	"controller/internal/validate"
+	"controller/apis/deckhouse.io/v1alpha3"
 )
 
 // clusterAdminPayload ends the value it is substituted into and continues as a new object. Applied,
@@ -180,19 +175,30 @@ data:
 			parameters: map[string]any{"script": "first line\nsecond line\n"},
 		},
 		{
-			// The shipped template quotes the substitution, so the payload stays the administrator's
-			// name. The schema refuses it before this point, but the template has to answer for
-			// itself: a copy of it in somebody's cluster carries no schema of ours.
-			name: "a payload as an administrator name in the shipped default template",
-			template: func(t *testing.T) *v1alpha1.ProjectTemplate {
-				template := shippedTemplate(t, "default")
-				stripAdministratorPattern(template)
-
-				return template
-			},
+			// The case that first tripped this check in a live cluster. Nothing about it is an
+			// injection: it is an annotation, and it stays one. The two renders differed by a single
+			// trailing space, because a block scalar comes back from YAML without its final line
+			// break while the same value with the break already replaced comes back with a space in
+			// its place.
+			name:     "a multi-line annotation through the shipped simple template",
+			template: func(t *testing.T) *v1alpha1.ProjectTemplate { return shippedTemplate(t, "simple") },
 			parameters: map[string]any{
-				"resourceQuota":  map[string]any{"requests": map[string]any{"cpu": "1"}},
-				"administrators": []any{map[string]any{"subject": "User", "name": clusterAdminPayload}},
+				"namespace": map[string]any{
+					"labels": map[string]any{"team": "platform"},
+					"annotations": map[string]any{
+						"owner-note": "first line\nsecond line: with a colon\n---\nand a separator that must stay text\n",
+					},
+				},
+			},
+		},
+		{
+			// toYaml writes whatever it is given as a value, key or not.
+			name:     "a payload used as an annotation key",
+			template: func(t *testing.T) *v1alpha1.ProjectTemplate { return shippedTemplate(t, "simple") },
+			parameters: map[string]any{
+				"namespace": map[string]any{
+					"annotations": map[string]any{clusterAdminPayload: "value"},
+				},
 			},
 		},
 	}
@@ -201,7 +207,7 @@ data:
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			project := new(v1alpha2.Project)
+			project := new(v1alpha3.Project)
 			project.Name = "test"
 			project.Spec.Parameters = tt.parameters
 
@@ -221,154 +227,30 @@ data:
 	}
 }
 
-// The payload is present in the rendered manifests -- as the administrator's name, which is where it
-// was put. What matters is that it produced no object of its own.
+// The payload is present in the rendered manifests -- as the value it was put in, which is the
+// point. What matters is that it produced no object of its own.
 func TestPayloadRendersAsAValueAndNothingElse(t *testing.T) {
 	t.Parallel()
 
 	client := injectionTestClient(t)
-	template := shippedTemplate(t, "default")
-	stripAdministratorPattern(template)
 
-	project := new(v1alpha2.Project)
+	project := new(v1alpha3.Project)
 	project.Name = "test"
 	project.Spec.Parameters = map[string]any{
-		"resourceQuota":  map[string]any{"requests": map[string]any{"cpu": "1"}},
-		"administrators": []any{map[string]any{"subject": "User", "name": clusterAdminPayload}},
+		"namespace": map[string]any{
+			"labels": map[string]any{"owner": clusterAdminPayload},
+		},
 	}
 
-	manifests, err := client.renderTemplate(project, template)
+	manifests, err := client.renderTemplate(project, shippedTemplate(t, "simple"))
 	require.NoError(t, err)
 
 	objects, err := canonicalObjects(manifests)
 	require.NoError(t, err)
+	require.Len(t, objects, 1)
 	for _, description := range objects {
-		assert.NotContains(t, description, "ClusterRoleBinding")
+		assert.Contains(t, description, "Namespace")
 	}
-}
-
-// The schema is the barrier in front of the template: a line break has no place in a subject name,
-// and the value is refused before anything is rendered.
-func TestAdministratorNameWithLineBreakIsRefusedBySchema(t *testing.T) {
-	t.Parallel()
-
-	for _, name := range []string{"default", "secure", "secure-with-dedicated-nodes"} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			template := shippedTemplate(t, name)
-			require.NoError(t, validate.ProjectTemplate(template))
-
-			project := new(v1alpha2.Project)
-			project.Name = "test"
-			project.Spec.ProjectTemplateName = name
-			project.Spec.Parameters = map[string]any{
-				"resourceQuota":  map[string]any{"requests": map[string]any{"cpu": "1"}},
-				"administrators": []any{map[string]any{"subject": "User", "name": clusterAdminPayload}},
-			}
-
-			err := validate.Project(project, template)
-			require.Error(t, err, "the schema accepted a subject name carrying a line break")
-			assert.Contains(t, err.Error(), "administrators")
-		})
-	}
-}
-
-// Pinning the log destination to a Kubernetes object name must not take the empty string with it:
-// the template skips the whole logging block for it, so that is how a project turns logging off, and
-// the schema is checked on every reconcile rather than only on edit -- refusing it would have broken
-// such a project without anybody touching it.
-func TestEmptyLogDestinationStaysAllowed(t *testing.T) {
-	t.Parallel()
-
-	for _, name := range []string{"default", "secure", "secure-with-dedicated-nodes"} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			template := shippedTemplate(t, name)
-			require.NoError(t, validate.ProjectTemplate(template))
-
-			project := new(v1alpha2.Project)
-			project.Name = "test"
-			project.Spec.ProjectTemplateName = name
-			project.Spec.Parameters = map[string]any{
-				"resourceQuota":             map[string]any{"requests": map[string]any{"cpu": "1"}},
-				"administrators":            []any{map[string]any{"subject": "User", "name": "user@example.com"}},
-				"clusterLogDestinationName": "",
-			}
-
-			require.NoError(t, validate.Project(project, template))
-
-			manifests, err := injectionTestClient(t).renderTemplate(project, template)
-			require.NoError(t, err)
-			assert.NotContains(t, manifests, "PodLoggingConfig", "an empty destination still rendered the logging block")
-
-			// And the pattern still does its work on a value that is not empty.
-			project.Spec.Parameters["clusterLogDestinationName"] = "loki\n---"
-			assert.Error(t, validate.Project(project, template))
-		})
-	}
-}
-
-// Quoting the quota substitutions turned the rendered values into strings. That is the canonical
-// form of a Quantity, but the golden fixtures render a copy of the template rather than the shipped
-// one, so nothing else would notice if it stopped parsing.
-func TestQuotedQuotaStaysAQuantity(t *testing.T) {
-	t.Parallel()
-
-	client := injectionTestClient(t)
-
-	project := new(v1alpha2.Project)
-	project.Name = "test"
-	project.Spec.Parameters = map[string]any{
-		"resourceQuota": map[string]any{
-			// A number, the way the documented example writes it.
-			"requests": map[string]any{"cpu": 1, "memory": "1Gi"},
-			"limits":   map[string]any{"memory": "15Gi"},
-		},
-		"administrators": []any{map[string]any{"subject": "User", "name": "user@example.com"}},
-	}
-
-	manifests, err := client.renderTemplate(project, shippedTemplate(t, "default"))
-	require.NoError(t, err)
-
-	quota := findObject(t, manifests, "ResourceQuota")
-	hard, found, err := unstructured.NestedStringMap(quota.Object, "spec", "hard")
-	require.NoError(t, err)
-	require.True(t, found, "the quota is not a map of strings")
-
-	for name, value := range hard {
-		_, err = resource.ParseQuantity(value)
-		assert.NoError(t, err, "%s = %q is not a quantity", name, value)
-	}
-	assert.Equal(t, "1", hard["requests.cpu"])
-}
-
-func findObject(t *testing.T, manifests, kind string) *unstructured.Unstructured {
-	t.Helper()
-
-	for _, raw := range releaseutil.SplitManifests(manifests) {
-		object := new(unstructured.Unstructured)
-		require.NoError(t, yaml.Unmarshal([]byte(raw), object))
-		if object.GetKind() == kind {
-			return object
-		}
-	}
-
-	t.Fatalf("no %s in the rendered manifests", kind)
-
-	return nil
-}
-
-// stripAdministratorPattern removes the schema constraint on administrator names, leaving the
-// template to answer for itself.
-func stripAdministratorPattern(template *v1alpha1.ProjectTemplate) {
-	properties, _ := template.Spec.ParametersSchema.OpenAPIV3Schema["properties"].(map[string]interface{})
-	administrators, _ := properties["administrators"].(map[string]interface{})
-	items, _ := administrators["items"].(map[string]interface{})
-	itemProperties, _ := items["properties"].(map[string]interface{})
-	name, _ := itemProperties["name"].(map[string]interface{})
-	delete(name, "pattern")
 }
 
 // A project the check has nothing to say about must not be rendered at all. The template here cannot
@@ -380,7 +262,7 @@ func TestNothingToCheckIsNotRendered(t *testing.T) {
 	broken := customTemplate("owner", "{{ this is not a template")
 
 	for _, parameters := range []map[string]any{nil, {}, {"owner": "user@example.com"}} {
-		project := new(v1alpha2.Project)
+		project := new(v1alpha3.Project)
 		project.Name = "test"
 		project.Spec.Parameters = parameters
 

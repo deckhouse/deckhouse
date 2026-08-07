@@ -30,6 +30,9 @@ type AuthorizationV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	AccessibleNamespacesGetter
 	BulkSubjectAccessReviewsGetter
+	RoleAccessReportsGetter
+	SubjectAccessReportsGetter
+	WhoCansGetter
 }
 
 // AuthorizationV1alpha1Client is used to interact with features provided by the authorization.deckhouse.io group.
@@ -43,6 +46,18 @@ func (c *AuthorizationV1alpha1Client) AccessibleNamespaces() AccessibleNamespace
 
 func (c *AuthorizationV1alpha1Client) BulkSubjectAccessReviews() BulkSubjectAccessReviewInterface {
 	return newBulkSubjectAccessReviews(c)
+}
+
+func (c *AuthorizationV1alpha1Client) RoleAccessReports() RoleAccessReportInterface {
+	return newRoleAccessReports(c)
+}
+
+func (c *AuthorizationV1alpha1Client) SubjectAccessReports() SubjectAccessReportInterface {
+	return newSubjectAccessReports(c)
+}
+
+func (c *AuthorizationV1alpha1Client) WhoCans() WhoCanInterface {
+	return newWhoCans(c)
 }
 
 // NewForConfig creates a new AuthorizationV1alpha1Client for the given config.

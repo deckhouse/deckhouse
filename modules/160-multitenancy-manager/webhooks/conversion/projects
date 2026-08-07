@@ -30,6 +30,16 @@ kubernetesCustomResourceConversion:
     conversions:
     - fromVersion: deckhouse.io/v1alpha2
       toVersion: deckhouse.io/v1alpha1
+  - name: v1alpha2_to_v1alpha3
+    crdName: projects.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha2
+      toVersion: deckhouse.io/v1alpha3
+  - name: v1alpha3_to_v1alpha2
+    crdName: projects.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha3
+      toVersion: deckhouse.io/v1alpha2
 EOF
 }
 
@@ -70,7 +80,100 @@ function __on_conversion::v1alpha2_to_v1alpha1() {
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"failedMessage":"Conversion of deckhouse.io.io failed"}
+{"failedMessage":"Conversion of deckhouse.io failed"}
+EOF
+  fi
+}
+
+# v1alpha2 -> v1alpha3 lifts administrators and resourceQuota out of spec.parameters into the
+# dedicated top-level spec.administrators and spec.quota fields.
+#   parameters.administrators[].subject -> administrators[].kind
+#   parameters.resourceQuota.{requests,limits}.* -> quota."requests.*"/"limits.*"
+#   parameters.resourceQuota.<other>       -> quota."<other>"
+# spec.quota is a flat ResourceQuota.spec.hard map, so it also holds keys that have no requests/limits
+# nesting ("pods", "count/deployments.apps"). Those are carried over verbatim; nested objects are
+# skipped because they have no flat representation.
+# Only an object under requests/limits is nesting. A scalar there is a quota key that happens to be
+# spelled "requests" (nothing in the schema forbids one), and it is carried over flat like any other
+# — expanding it would feed a string to to_entries and fail the conversion of the whole object.
+# quota_value keeps a whole number a number and stringifies everything else. spec.quota is
+# anyOf[integer, string], so a fractional "cpu: 0.5" is only representable as a string, while
+# stringifying "cpu: 1" as well would make the round trip back to v1alpha2 differ from what the client
+# wrote and leave kubectl apply with a diff it can never settle.
+function __on_conversion::v1alpha2_to_v1alpha3() {
+  if converted=$(context::jq -rc 'def quota_value: if (type == "number") and (. == floor) then . else tostring end;
+  .review.request.objects//[] | map(
+     if .apiVersion == "deckhouse.io/v1alpha2" then
+       .apiVersion = "deckhouse.io/v1alpha3" |
+       (if (.spec.administrators | not) and (.spec.parameters.administrators) then
+          .spec.administrators = (.spec.parameters.administrators | map({kind: .subject, name: .name}))
+        else . end) |
+       (if (.spec.quota | not) and (.spec.parameters.resourceQuota) then
+          .spec.parameters.resourceQuota as $rq |
+          .spec.quota = (
+            (if (($rq.requests | type) == "object") then ($rq.requests | to_entries | map({key: ("requests." + .key), value: (.value | quota_value)})) else [] end)
+            + (if (($rq.limits | type) == "object") then ($rq.limits | to_entries | map({key: ("limits." + .key), value: (.value | quota_value)})) else [] end)
+            + ($rq | to_entries
+                   | map(select(((.value | type) != "object") and ((.value | type) != "array")))
+                   | map({key: .key, value: (.value | quota_value)}))
+            | from_entries
+          )
+        else . end) |
+       (if .spec.parameters then del(.spec.parameters.administrators) | del(.spec.parameters.resourceQuota) else . end)
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of deckhouse.io failed"}
+EOF
+  fi
+}
+
+# v1alpha3 -> v1alpha2 pushes administrators and quota back into spec.parameters so that older
+# clients reading v1alpha2 keep seeing the legacy layout.
+# Only a "requests."/"limits." prefix means nesting; the remainder of the key is kept intact so that
+# "requests.nvidia.com/gpu" lands under requests as "nvidia.com/gpu". Every other key ("pods",
+# "count/deployments.apps") stays flat next to requests/limits instead of being dropped or split at an
+# arbitrary dot — the conversion has to round-trip, since a v1alpha2 client that reads and writes the
+# project back would otherwise erase those quota entries from storage.
+# A quota holding both "requests" and "requests.cpu" cannot be expressed here at all: v1alpha2 has one
+# key for the two. The nested form wins whatever the order of the keys, because the alternative is a
+# result that depends on it.
+function __on_conversion::v1alpha3_to_v1alpha2() {
+  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+     if .apiVersion == "deckhouse.io/v1alpha3" then
+       .apiVersion = "deckhouse.io/v1alpha2" |
+       (if .spec.administrators then
+          .spec.parameters = ((.spec.parameters // {}) + {administrators: (.spec.administrators | map({subject: .kind, name: .name}))})
+        else . end) |
+       (if .spec.quota then
+          .spec.parameters = ((.spec.parameters // {}) + {resourceQuota: (
+            reduce (.spec.quota | to_entries[]) as $e (
+              {};
+              ($e.key | split(".")) as $p |
+              if ($p | length) > 1 and ($p[0] == "requests" or $p[0] == "limits") then
+                .[$p[0]] = ((if ((.[$p[0]] | type) == "object") then .[$p[0]] else {} end) + {($p[1:] | join(".")): $e.value})
+              else
+                (if ((.[$e.key] | type) == "object") then . else .[$e.key] = $e.value end)
+              end
+            )
+          )})
+        else . end) |
+       del(.spec.administrators) |
+       del(.spec.quota)
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of deckhouse.io failed"}
 EOF
   fi
 }

@@ -380,6 +380,36 @@
   - nodes
   verbs:
 {{- include "user_authz_verbs" "p" }}
+# Permission browser queries about the caller itself. Harmless by construction:
+# they disclose nothing a caller cannot already obtain from SelfSubjectRulesReview.
+#
+# The cross-subject queries -- the nonself subresources and whocans -- are NOT
+# granted here on purpose. This access level supports limitNamespaces and
+# namespaceSelector, so its holder can be an administrator of a few namespaces,
+# while those queries answer for the whole cluster: both resources are
+# cluster-scoped, and the authorization webhook narrows cluster-scoped requests
+# only for namespaced resources, so nothing would confine the answer to the
+# namespaces the caller may see. A WhoCan about a foreign namespace would list
+# the subjects of its RoleBindings, which the same caller may not read directly.
+# Grant d8:user-authz:who-can-checker / d8:user-authz:subject-access-checker
+# explicitly to whoever is meant to audit other subjects.
+- apiGroups:
+  - authorization.deckhouse.io
+  resources:
+  - bulksubjectaccessreviews
+  - subjectaccessreports
+  verbs:
+  - create
+# The role catalogue: what the platform's own roles grant. Unlike the queries
+# above it says nothing about any subject -- it is the published role model,
+# assembled from ClusterRoles this access level can already read, so it is
+# granted here rather than through a checker role.
+- apiGroups:
+  - authorization.deckhouse.io
+  resources:
+  - roleaccessreports
+  verbs:
+  - create
 {{- end }}
 
 {{- define "user_authz_super_admin_rules" }}

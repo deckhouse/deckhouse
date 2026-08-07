@@ -804,3 +804,74 @@ func TestWrapRegexpTest(t *testing.T) {
 		})
 	}
 }
+
+// retiredVersionCache answers only for the version the cluster still serves, the way discovery does
+// once a CRD version is switched to served: false.
+type retiredVersionCache struct {
+	served    string
+	preferred string
+	err       error
+}
+
+func (c *retiredVersionCache) Get(apiGroup, resource string) (bool, error) {
+	if apiGroup != c.served {
+		return false, fmt.Errorf("resource %s/%s is not found in cluster", apiGroup, resource)
+	}
+
+	return false, nil
+}
+
+func (c *retiredVersionCache) GetCoreResources() (cache.CoreResourcesDict, error) {
+	return cache.CoreResourcesDict{}, nil
+}
+
+func (c *retiredVersionCache) GetPreferredVersion(_, _ string) (string, error) {
+	return c.preferred, c.err
+}
+
+func (c *retiredVersionCache) Check() error { return nil }
+
+// A client that still names a retired API version -- a stale discovery snapshot, or a generated
+// client built against the previous version of a CRD -- must not be told it has no access. Whether
+// a resource is namespaced is the only thing being asked here, and no two versions of a resource
+// disagree about that.
+func TestAuthorizeClusterScopedRequest_RetiredVersionIsResolvedThroughThePreferredOne(t *testing.T) {
+	request := func(version string) *WebhookRequest {
+		req := new(WebhookRequest)
+		req.Spec.ResourceAttributes = WebhookResourceAttributes{
+			Group:    "deckhouse.io",
+			Version:  version,
+			Resource: "projecttemplates",
+			Verb:     "watch",
+		}
+
+		return req
+	}
+
+	handler := &Handler{
+		logger: log.New(io.Discard, "", 0),
+		cache:  &retiredVersionCache{served: "deckhouse.io/v1alpha2", preferred: "v1alpha2"},
+	}
+
+	entry := &DirectoryEntry{NamespaceFiltersAbsent: true}
+
+	retired := handler.authorizeClusterScopedRequest(request("v1alpha1"), entry)
+	if retired.Status.Denied {
+		t.Fatalf("a retired version was denied: %q", retired.Status.Reason)
+	}
+
+	served := handler.authorizeClusterScopedRequest(request("v1alpha2"), entry)
+	if served.Status.Denied {
+		t.Fatalf("the served version was denied: %q", served.Status.Reason)
+	}
+
+	// A resource the cluster has never heard of is a different matter: nothing can resolve it, and
+	// the webhook has no basis to let the request through.
+	unknown := &Handler{
+		logger: log.New(io.Discard, "", 0),
+		cache:  &retiredVersionCache{served: "deckhouse.io/v1alpha2", err: fmt.Errorf("not found")},
+	}
+	if got := unknown.authorizeClusterScopedRequest(request("v1alpha1"), entry); !got.Status.Denied {
+		t.Fatal("an unknown resource was allowed")
+	}
+}

@@ -139,14 +139,23 @@ spec:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
   enforcement: Managed
-  # Available by default, but only the cluster roles marked delegatable with the
-  # rbac.deckhouse.io/delegatable label (the namespace-level access roles: d8:use:role:* and
-  # user-authz:{user,privileged-user,editor,admin}). Everything else lacks the label and is excluded.
+  # Available by default to every project, but only the cluster roles explicitly marked delegatable
+  # with the rbac.deckhouse.io/delegatable label — the namespace/project-level access roles:
+  # d8:namespace:* and d8:project:* (the role aggregates) and user-authz:{user,privileged-user,editor,admin}.
+  # Everything else (capabilities, cluster-scoped roles like cluster-admin/super-admin, the d8:system:*/
+  # d8:subsystem:* roles, the admin-kubeconfig roles, raw component roles) lacks the label and is excluded,
+  # so binding it from a project RoleBinding is rejected.
   defaultAvailability: All
+  # The value is part of the marker, not decoration: the admission webhook that guards the label
+  # judges "true" and nothing else, so a role labelled "false" is never validated as delegatable.
+  # Excluding by absence alone would admit exactly that role into every project — marked as not
+  # delegatable and available anyway. NotIn also covers the absent label, so one requirement says
+  # both things: anything that is not explicitly "true" stays out.
   excluded:
   - matchExpressions:
     - key: rbac.deckhouse.io/delegatable
-      operator: DoesNotExist
+      operator: NotIn
+      values: ["true"]
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference
