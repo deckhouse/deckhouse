@@ -25,9 +25,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -60,24 +57,27 @@ func masterNodeYAML() string {
 	}})
 }
 
-func setNearFallbackUsage(usage map[string]map[resourceKind]float64) {
-	// Memory stubs are plain bytes (PodMetric unit), near %-split of 4Gi combined.
-	usage[componentKubeApiserver] = map[resourceKind]float64{
-		resourceCPU:    0.66,
-		resourceMemory: 1417340000,
+func cpmResourcesRequestsMC(cpu, memory string) string {
+	settings := ""
+	if cpu != "" || memory != "" {
+		settings = "  settings:\n    resourcesRequests:\n"
+		if cpu != "" {
+			settings += fmt.Sprintf("      cpu: %q\n", cpu)
+		}
+		if memory != "" {
+			settings += fmt.Sprintf("      memory: %q\n", memory)
+		}
 	}
-	usage[componentEtcd] = map[resourceKind]float64{
-		resourceCPU:    0.70,
-		resourceMemory: 1503240000,
-	}
-	usage[componentKubeControllerManager] = map[resourceKind]float64{
-		resourceCPU:    0.40,
-		resourceMemory: 858990000,
-	}
-	usage[componentKubeScheduler] = map[resourceKind]float64{
-		resourceCPU:    0.20,
-		resourceMemory: 429500000,
-	}
+	return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  enabled: true
+  version: 1
+%s`, settings)
 }
 
 var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune :: decide", func() {
@@ -103,15 +103,15 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 
 var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_autotune", func() {
 	f := HookExecutionConfigInit(
-		`{"controlPlaneManager":{"internal":{"resourcesRequests":{"milliCpuControlPlane":2000,"memoryControlPlane":4294967296}}},"global":{"enabledModules":["prometheus","prometheus-metrics-adapter"]}}`,
+		`{"controlPlaneManager":{"internal":{"resourcesRequests":{}}},"global":{"enabledModules":["prometheus","prometheus-metrics-adapter"]}}`,
 		`{}`,
 	)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	var usage map[string]map[resourceKind]float64
 
 	BeforeEach(func() {
 		usage = map[string]map[resourceKind]float64{}
-		f.ValuesDelete("controlPlaneManager.resourcesRequests")
 		f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus","prometheus-metrics-adapter"]`))
 		fetchComponentUsage = func(_ context.Context, _ dependency.Container, component string, resourceName resourceKind) (float64, bool, error) {
 			if byRes, ok := usage[component]; ok {
@@ -139,16 +139,31 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
 					},
 				},
+				resourceMemory: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver:         {AppliedBytes: ptr.To(int64(100000000)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentEtcd:                  {AppliedBytes: ptr.To(int64(100000000)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeControllerManager: {AppliedBytes: ptr.To(int64(100000000)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeScheduler:         {AppliedBytes: ptr.To(int64(100000000)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+					},
+				},
 			}
-			usage[componentKubeApiserver] = map[resourceKind]float64{resourceCPU: 0.25}
-			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
+			usage[componentKubeApiserver] = map[resourceKind]float64{resourceCPU: 0.25, resourceMemory: 100000000}
+			usage[componentEtcd] = map[resourceKind]float64{resourceCPU: 0.10, resourceMemory: 100000000}
+			usage[componentKubeControllerManager] = map[resourceKind]float64{resourceCPU: 0.10, resourceMemory: 100000000}
+			usage[componentKubeScheduler] = map[resourceKind]float64{resourceCPU: 0.10, resourceMemory: 100000000}
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st) + cpmResourcesRequestsMC("", ""))
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
-		It("commits raised milliCPU for kube-apiserver", func() {
+		It("writes raised milliCPU into ConfigMap", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
+			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
+			Expect(ops.Exists()).To(BeTrue())
+			var st autotuneState
+			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(250)))
 		})
 	})
 
@@ -167,271 +182,135 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(50)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
 					},
 				},
+				resourceMemory: &autotuneMeasurementState{
+					Components: map[string]autotuneComponentState{
+						componentKubeApiserver:         {AppliedBytes: ptr.To(int64(50000000)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentEtcd:                  {AppliedBytes: ptr.To(int64(50000000)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeControllerManager: {AppliedBytes: ptr.To(int64(50000000)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+						componentKubeScheduler:         {AppliedBytes: ptr.To(int64(50000000)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
+					},
+				},
 			}
 			for _, c := range controlPlaneComponents {
-				usage[c] = map[resourceKind]float64{resourceCPU: 0.5}
+				usage[c] = map[resourceKind]float64{resourceCPU: 0.5, resourceMemory: 50000000}
 			}
-			f.KubeStateSet(tiny + autotuneStateYAML(st))
+			f.KubeStateSet(tiny + autotuneStateYAML(st) + cpmResourcesRequestsMC("", ""))
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
-		It("keeps applied values and emits insufficient-capacity metric", func() {
+		It("keeps applied values, stores pendingRaiseSum, emits deficit metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(50)))
+			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
+			var st autotuneState
+			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(50)))
+			Expect(st[resourceCPU].PendingRaiseSum).To(BeNumerically(">", 0))
+			Expect(st[resourceCPU].Components[componentKubeApiserver]).ToNot(BeNil())
 			found := false
 			for _, m := range f.MetricsCollector.CollectedMetrics() {
 				if m.Name == autotuneMetricName {
 					found = true
 					Expect(m.Labels).To(HaveKeyWithValue("resource", "cpu"))
+					Expect(*m.Value).To(BeNumerically(">", 0))
 				}
 			}
 			Expect(found).To(BeTrue())
 		})
 	})
 
-	Context("Schedule: raise blocked by other pods on master", func() {
+	Context("Schedule: ModuleConfig CPU override writes %-split into CM", func() {
 		BeforeEach(func() {
-			now := dependency.TestDC.GetClock().Now()
-			// 8 CPU master: effective ≈ 7900m after kubelet floor. Other pods take 7000m,
-			// so only ~900m free — four 500m raises (2000m) do not fit.
-			st := autotuneState{
-				resourceCPU: &autotuneMeasurementState{
-					Components: map[string]autotuneComponentState{
-						componentKubeApiserver:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
-						componentEtcd:                  {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
-						componentKubeControllerManager: {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
-						componentKubeScheduler:         {AppliedMilliCPU: ptr.To(int64(100)), LastChange: now.Add(-25 * time.Hour).Format(time.RFC3339)},
-					},
-				},
-			}
-			for _, c := range controlPlaneComponents {
-				usage[c] = map[resourceKind]float64{resourceCPU: 0.5}
-			}
-			// client-go fakes do not index spec.nodeName; stub the per-node list.
-			listPodsOnNode = func(_ context.Context, _ dependency.Container, nodeName string) ([]v1.Pod, error) {
-				if nodeName != "sandbox-0" {
-					return nil, nil
-				}
-				return []v1.Pod{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "kube-api-proxy",
-						Namespace: "kube-system",
-						Labels:    map[string]string{"tier": "control-plane", "component": "kube-api-proxy"},
-					},
-					Spec: v1.PodSpec{
-						NodeName: "sandbox-0",
-						Containers: []v1.Container{{
-							Name: "proxy",
-							Resources: v1.ResourceRequirements{
-								Requests: v1.ResourceList{
-									v1.ResourceCPU:    resource.MustParse("7"),
-									v1.ResourceMemory: resource.MustParse("1Gi"),
-								},
-							},
-						}},
-					},
-				}}, nil
-			}
-			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
+			f.KubeStateSet(masterNodeYAML() + cpmResourcesRequestsMC("2000m", ""))
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
-		AfterEach(func() {
-			listPodsOnNode = listPodsOnNodeFromAPI
-		})
-
-		It("blocks raises that would not fit beside kube-api-proxy and other non-autotuned requests", func() {
+		It("splits combined CPU override across components", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(100)))
-			found := false
-			for _, m := range f.MetricsCollector.CollectedMetrics() {
-				if m.Name == autotuneMetricName {
-					found = true
-					Expect(m.Labels).To(HaveKeyWithValue("resource", "cpu"))
-				}
-			}
-			Expect(found).To(BeTrue())
+			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
+			var st autotuneState
+			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(fallbackSplit(2000, 45)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(fallbackSplit(2000, 35)))
 		})
 	})
 
-	Context("Schedule: manual CPU override deletes cpu state branch", func() {
+	Context("Schedule: PMA off writes legacy discovery split", func() {
 		BeforeEach(func() {
-			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
-			st := autotuneState{
-				resourceCPU: &autotuneMeasurementState{
-					Components: map[string]autotuneComponentState{
-						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
-						componentEtcd:          {AppliedMilliCPU: ptr.To(int64(800)), LastChange: "2026-07-01T00:00:00Z"},
-					},
-				},
-				resourceMemory: &autotuneMeasurementState{
-					Components: map[string]autotuneComponentState{
-						componentKubeApiserver: {AppliedBytes: ptr.To(int64(512000000)), LastChange: "2026-07-01T00:00:00Z"},
-					},
-				},
-			}
-			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
+			f.KubeStateSet(masterNodeYAML() + cpmResourcesRequestsMC("", ""))
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
-		It("clears cpu components from values but keeps memory", func() {
+		It("always creates ConfigMap with full components", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Exists()).To(BeFalse())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.milliCPU").Exists()).To(BeFalse())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(512000000)))
-
 			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
 			Expect(ops.Exists()).To(BeTrue())
 			var st autotuneState
 			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(st[resourceCPU]).To(BeNil())
-			Expect(st[resourceMemory]).ToNot(BeNil())
+			Expect(st[resourceCPU].Components).To(HaveLen(4))
+			Expect(st[resourceMemory].Components).To(HaveLen(4))
 		})
 	})
 
-	Context("Schedule: both measurements overridden clears components without merge error", func() {
+	Context("Cluster without master nodes", func() {
 		BeforeEach(func() {
-			// Pre-seed components so Remove is exercised (the previous double-Remove
-			// bug only appeared when this key already existed in module values).
-			f.ValuesSetFromYaml("controlPlaneManager.internal.resourcesRequests.components", []byte(`
-kubeApiserver:
-  milliCPU: 700
-  memoryBytes: 536000000
-etcd:
-  milliCPU: 800
-`))
-			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
-			f.ValuesSet("controlPlaneManager.resourcesRequests.memory", "2Gi")
-			st := autotuneState{
-				resourceCPU: &autotuneMeasurementState{
-					Components: map[string]autotuneComponentState{
-						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(700)), LastChange: "2026-07-01T00:00:00Z"},
-					},
-				},
-				resourceMemory: &autotuneMeasurementState{
-					Components: map[string]autotuneComponentState{
-						componentKubeApiserver: {AppliedBytes: ptr.To(int64(512000000)), LastChange: "2026-07-01T00:00:00Z"},
-					},
-				},
-			}
-			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
+			f.KubeStateSet(cpmResourcesRequestsMC("", ""))
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
-		It("removes components and both state branches", func() {
+		It("is a no-op", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components").Exists()).To(BeFalse())
-
-			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
-			Expect(ops.Exists()).To(BeTrue())
-			var st autotuneState
-			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
-			Expect(st[resourceCPU]).To(BeNil())
-			Expect(st[resourceMemory]).To(BeNil())
-		})
-	})
-
-	Context("Schedule: first memory commit", func() {
-		BeforeEach(func() {
-			setNearFallbackUsage(usage)
-			// Apiserver recommendations differ enough from %-split (660m / ~1.4Gi)
-			// to pass the deadband; others stay near fallback.
-			usage[componentKubeApiserver] = map[resourceKind]float64{
-				resourceCPU:    0.25,
-				resourceMemory: 256000000,
-			}
-			f.KubeStateSet(masterNodeYAML())
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
-			f.RunHook()
-		})
-
-		It("commits milliCPU and memory together", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256000000)))
-			// Full initial snapshot materializes every component in one values write.
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.milliCPU").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.etcd.memoryBytes").Exists()).To(BeTrue())
-		})
-	})
-
-	Context("Schedule: incomplete initial metrics wait without writing components", func() {
-		BeforeEach(func() {
-			usage[componentKubeApiserver] = map[resourceKind]float64{
-				resourceCPU:    0.25,
-				resourceMemory: 256000000,
-			}
-			f.KubeStateSet(masterNodeYAML())
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
-			f.RunHook()
-		})
-
-		It("leaves components unset until the full set is available", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("Schedule: empty-string memory override does not skip memory autotune", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("controlPlaneManager.resourcesRequests", []byte("memory: \"\"\n"))
-			setNearFallbackUsage(usage)
-			usage[componentKubeApiserver] = map[resourceKind]float64{
-				resourceCPU:    0.25,
-				resourceMemory: 256000000,
-			}
-			f.KubeStateSet(masterNodeYAML())
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
-			f.RunHook()
-		})
-
-		It("commits memory despite empty memory key", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.milliCPU").Int()).To(Equal(int64(250)))
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components.kubeApiserver.memoryBytes").Int()).To(Equal(int64(256000000)))
-		})
-	})
-
-	Context("Schedule: PMA disabled discards autotune for legacy fallback", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus"]`))
-			f.ValuesSetFromYaml("controlPlaneManager.internal.resourcesRequests.components", []byte(`
-kubeApiserver:
-  milliCPU: 420
-`))
-			st := autotuneState{
-				resourceCPU: &autotuneMeasurementState{
-					Components: map[string]autotuneComponentState{
-						componentKubeApiserver: {AppliedMilliCPU: ptr.To(int64(420)), LastChange: "2026-07-01T00:00:00Z"},
-					},
-				},
-			}
-			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st))
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
-			f.RunHook()
-		})
-
-		It("removes components and deletes autotune ConfigMap", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName).Exists()).To(BeFalse())
 		})
 	})
 
-	Context("Managed cloud (no master nodes)", func() {
+	Context("Discovery: kubelet floor applied when Capacity == Allocatable", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(``)
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
+			f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}}) + cpmResourcesRequestsMC("", ""))
 			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 
-		It("exits without writing components", func() {
+		It(fmt.Sprintf("writes CM components as %d/%d/%d/%d split of discovery budget", 45, 35, 10, 10), func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.components").Exists()).To(BeFalse())
+			expectCPU := int64((4000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
+			expectMem := int64((8*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
+
+			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
+			Expect(ops.Exists()).To(BeTrue())
+			var st autotuneState
+			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 45)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 35)))
+			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 10)))
+			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(fallbackSplit(expectCPU, 10)))
+			Expect(*st[resourceMemory].Components[componentKubeApiserver].AppliedBytes).To(Equal(fallbackSplit(expectMem, 45)))
 		})
+	})
+
+	Context("Discovery: CPM ModuleConfig override", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
+			f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}}) + cpmResourcesRequestsMC("1000m", "1Gi"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		It("uses ModuleConfig combined budget and splits into CM", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
+			var st autotuneState
+			Expect(json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(450)))
+			Expect(*st[resourceCPU].Components[componentEtcd].AppliedMilliCPU).To(Equal(int64(350)))
+			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(int64(100)))
+			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(int64(100)))
+			Expect(*st[resourceMemory].Components[componentKubeApiserver].AppliedBytes).To(Equal(fallbackSplit(1024*1024*1024, 45)))
+			Expect(*st[resourceMemory].Components[componentEtcd].AppliedBytes).To(Equal(fallbackSplit(1024*1024*1024, 35)))		})
 	})
 })

@@ -18,26 +18,71 @@ package hooks
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-// Synchronization / OnBeforeHelm / Node events: repopulate values and recheck
-// capacityBlocked against the current fit budget (no metrics API).
-// Other-pod requests are listed per master (fieldSelector spec.nodeName).
-// Daily cron in resources_requests_autotune.go owns raise/lower decisions.
-// OnBeforeHelm clears manual overrides / repopulates components without waiting
-// for cron and without querying Prometheus on every ModuleRun.
+// Hook B: ConfigMap → values.internal.resourcesRequests.components only.
+// Does not know how Hook A calculated the numbers (MC split / PodMetrics / legacy).
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        autotuneQueue,
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
-		controlPlaneNodesBinding(true, true),
-		autotuneStateBinding(true),
+		autotuneStateBinding(true, true),
 	},
-}, dependency.WithExternalDependencies(func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	return runAutotune(ctx, input, dc, false)
-}))
+}, syncResourcesRequestsFromConfigMap)
+
+func syncResourcesRequestsFromConfigMap(_ context.Context, input *go_hook.HookInput) error {
+	states, err := sdkobjectpatch.UnmarshalToStruct[autotuneState](input.Snapshots, snapshotAutotune)
+	if err != nil {
+		return fmt.Errorf("unmarshal AutotuneState snapshots: %w", err)
+	}
+	if len(states) == 0 {
+		if input.Values.Exists(pathComponents) {
+			input.Values.Remove(pathComponents)
+		}
+		return nil
+	}
+	return projectAutotuneStateToValues(input, states[0])
+}
+
+func projectAutotuneStateToValues(input *go_hook.HookInput, state autotuneState) error {
+	if state == nil {
+		if input.Values.Exists(pathComponents) {
+			input.Values.Remove(pathComponents)
+		}
+		return nil
+	}
+
+	components := map[string]any{}
+	for _, comp := range controlPlaneComponents {
+		entry := map[string]any{}
+		if m := state[resourceCPU]; m != nil {
+			if cs, ok := m.Components[comp]; ok && cs.AppliedMilliCPU != nil {
+				entry["milliCPU"] = *cs.AppliedMilliCPU
+			}
+		}
+		if m := state[resourceMemory]; m != nil {
+			if cs, ok := m.Components[comp]; ok && cs.AppliedBytes != nil {
+				entry["memoryBytes"] = strconv.FormatInt(*cs.AppliedBytes, 10)
+			}
+		}
+		if len(entry) > 0 {
+			components[comp] = entry
+		}
+	}
+
+	if len(components) == 0 {
+		if input.Values.Exists(pathComponents) {
+			input.Values.Remove(pathComponents)
+		}
+		return nil
+	}
+	input.Values.Set(pathComponents, components)
+	return nil
+}

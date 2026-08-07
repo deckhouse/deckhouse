@@ -18,13 +18,10 @@ package hooks
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/tidwall/gjson"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
@@ -55,23 +52,10 @@ const (
 	containerKubeScheduler         = "kube-scheduler"
 )
 
-// Internal values paths for combined and per-component resource requests.
+// Internal values path for per-component resource requests.
 const (
-	pathMilliCPUControlPlane = "controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane"
-	pathMemoryControlPlane   = "controlPlaneManager.internal.resourcesRequests.memoryControlPlane"
-	pathComponents           = "controlPlaneManager.internal.resourcesRequests.components"
-
-	pathCPMCPU       = "controlPlaneManager.resourcesRequests.cpu"
-	pathCPMMemory    = "controlPlaneManager.resourcesRequests.memory"
-	pathGlobalCPU    = "global.modules.resourcesRequests.controlPlane.cpu"
-	pathGlobalMemory = "global.modules.resourcesRequests.controlPlane.memory"
+	pathComponents = "controlPlaneManager.internal.resourcesRequests.components"
 )
-
-// measurementOverridePaths is ModuleConfig then global fallback for each measurement.
-var measurementOverridePaths = map[resourceKind][]string{
-	resourceCPU:    {pathCPMCPU, pathGlobalCPU},
-	resourceMemory: {pathCPMMemory, pathGlobalMemory},
-}
 
 // controlPlaneComponents lists components in a stable order.
 var controlPlaneComponents = []string{
@@ -89,12 +73,13 @@ var componentContainer = map[string]string{
 	componentKubeScheduler:         containerKubeScheduler,
 }
 
-// componentFallbackPercent is the fixed %-split used when per-component
-// autotune values are absent (bootstrap / manual override / cold start).
+// componentFallbackPercent is the fixed %-split of a combined budget
+// (ModuleConfig override or legacy discovery). apiserver/etcd/kcm/scheduler =
+// 45/35/10/10.
 var componentFallbackPercent = map[string]int64{
 	componentKubeApiserver:         45,
-	componentEtcd:                  30,
-	componentKubeControllerManager: 15,
+	componentEtcd:                  35,
+	componentKubeControllerManager: 10,
 	componentKubeScheduler:         10,
 }
 
@@ -102,7 +87,12 @@ func fallbackSplit(total, percent int64) int64 {
 	return total * percent / 100
 }
 
-// controlPlaneNodesBinding watches master Nodes (shared by calculate + autotune).
+const (
+	obsoleteGlobalResourcesRequestsMetricName  = "d8_obsolete_global_control_plane_resources_requests"
+	obsoleteGlobalResourcesRequestsMetricGroup = "D8ObsoleteGlobalControlPlaneResourcesRequests"
+)
+
+// controlPlaneNodesBinding watches master Nodes (shared by Hook A).
 func controlPlaneNodesBinding(onSync, onEvents bool) go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:       "NodesResources",
@@ -127,8 +117,7 @@ const (
 	hardLimitMilliCPU       = 4 * 1000          // 4 Cpu
 	hardLimitMemory         = 8 * 1024 * 1024 * 1024
 
-	// Asymmetric deadband for resource request updates (autotune + legacy
-	// combined-budget calculate). Go constants, not config-values.
+	// Asymmetric deadband for autotune raise/lower. Go constants, not config-values.
 	// Change is significant only when delta > raiseThreshold or
 	// delta < -lowerThreshold (delta = (rec - applied) / applied).
 	raiseThreshold = 0.20 // +20%
@@ -301,17 +290,6 @@ func minMasterFitBudget(nodes []Node, otherByNode map[string]nodeOtherRequests) 
 	return minCPU, minMemBytes, true
 }
 
-// significantResourceChange reports whether rec differs from applied enough to
-// commit an update under the asymmetric deadband. applied <= 0 always accepts
-// a positive recommendation (first commit).
-func significantResourceChange(rec, applied int64) bool {
-	if applied <= 0 {
-		return rec > 0
-	}
-	delta := float64(rec-applied) / float64(applied)
-	return delta > raiseThreshold || delta < -lowerThreshold
-}
-
 // controlPlaneAutotuneActive is true when prometheus and prometheus-metrics-adapter
 // are enabled — the custom.metrics.k8s.io path used by per-component autotune.
 func controlPlaneAutotuneActive(input *go_hook.HookInput) bool {
@@ -319,93 +297,9 @@ func controlPlaneAutotuneActive(input *go_hook.HookInput) bool {
 	return enabled.Has("prometheus") && enabled.Has("prometheus-metrics-adapter")
 }
 
-func configQuantityPresent(v gjson.Result) bool {
-	return v.Exists() && strings.TrimSpace(v.String()) != ""
-}
-
-func getAndParseResourceQuantity(input gjson.Result) (resource.Quantity, error) {
-	strVal := input.String()
-	quantity, err := resource.ParseQuantity(strVal)
-	if err != nil {
-		return quantity, fmt.Errorf("cannot parse '%v': %v", strVal, err)
-	}
-	return quantity, nil
-}
-
-// isMeasurementOverridden is true when CPM or global config sets a non-empty quantity
-// for the measurement. Empty strings left by openapi/merge after clearing ModuleConfig
-// are ignored so autotune is not permanently skipped.
-func isMeasurementOverridden(input *go_hook.HookInput, resourceName resourceKind) bool {
-	for _, path := range measurementOverridePaths[resourceName] {
-		if configQuantityPresent(input.Values.Get(path)) {
-			return true
-		}
-	}
-	return false
-}
-
 type resolvedCombinedBudget struct {
 	MilliCPU         int64
 	MemoryBytes      int64
 	CPUFromConfig    bool
 	MemoryFromConfig bool
-	UsedGlobal       bool
-}
-
-// resolveCombinedBudget applies CPM/global overrides on top of discovery-calculated
-// combined control-plane budgets.
-func resolveCombinedBudget(
-	input *go_hook.HookInput,
-	discoveryMilliCPU, discoveryMemory int64,
-) (resolvedCombinedBudget, error) {
-	out := resolvedCombinedBudget{
-		MilliCPU:    discoveryMilliCPU,
-		MemoryBytes: discoveryMemory,
-	}
-
-	cpmCPU := input.Values.Get(pathCPMCPU)
-	cpmMemory := input.Values.Get(pathCPMMemory)
-	globalCPU := input.Values.Get(pathGlobalCPU)
-	globalMemory := input.Values.Get(pathGlobalMemory)
-
-	cpmCPUExists := configQuantityPresent(cpmCPU)
-	cpmMemoryExists := configQuantityPresent(cpmMemory)
-	globalCPUExists := configQuantityPresent(globalCPU)
-	globalMemoryExists := configQuantityPresent(globalMemory)
-
-	if cpmCPUExists {
-		quantity, err := getAndParseResourceQuantity(cpmCPU)
-		if err != nil {
-			return out, err
-		}
-		out.MilliCPU = quantity.MilliValue()
-		out.CPUFromConfig = true
-	} else if globalCPUExists {
-		quantity, err := getAndParseResourceQuantity(globalCPU)
-		if err != nil {
-			return out, err
-		}
-		out.MilliCPU = quantity.MilliValue()
-		out.CPUFromConfig = true
-		out.UsedGlobal = true
-	}
-
-	if cpmMemoryExists {
-		quantity, err := getAndParseResourceQuantity(cpmMemory)
-		if err != nil {
-			return out, err
-		}
-		out.MemoryBytes = quantity.Value()
-		out.MemoryFromConfig = true
-	} else if globalMemoryExists {
-		quantity, err := getAndParseResourceQuantity(globalMemory)
-		if err != nil {
-			return out, err
-		}
-		out.MemoryBytes = quantity.Value()
-		out.MemoryFromConfig = true
-		out.UsedGlobal = true
-	}
-
-	return out, nil
 }

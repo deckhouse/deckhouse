@@ -81,8 +81,8 @@
 {{- if and .settings .settings.resourcesRequests -}}
   {{- $resourcesRequests = .settings.resourcesRequests -}}
 {{- end -}}
-{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
+{{- $millicpu := 512 -}}
+{{- $memory := 536870912 }}
 {{- /* kube-apiserver */ -}}
 apiVersion: v1
 kind: Pod

@@ -131,13 +131,6 @@
         Free up resources on master nodes (move or shrink other workloads) or increase CPU/RAM so the new
         control-plane requests can fit without exceeding allocatable capacity.
 
-        The same deficit is stored in ConfigMap `kube-system/d8-control-plane-manager-resources-autotune-state`
-        under `data.state.<resource>.capacityBlocked.deficit`:
-
-        ```bash
-        d8 k -n kube-system get cm d8-control-plane-manager-resources-autotune-state -ojsonpath='{.data.state}' | jq
-        ```
-
         To disable autotune for this measurement and manage requests manually, set
         `spec.settings.resourcesRequests.{{ $labels.resource }}` in ModuleConfig `control-plane-manager`.
 

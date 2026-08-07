@@ -104,8 +104,20 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.cert", "test")
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.key", "testCA")
 		hec.ValuesSetFromYaml("controlPlaneManager.apiserver", publishAPIValues)
-		hec.ValuesSet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane", 1024)
-		hec.ValuesSet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane", 536870912)
+		hec.ValuesSetFromYaml("controlPlaneManager.internal.resourcesRequests.components", []byte(`
+kubeApiserver:
+  milliCPU: 460
+  memoryBytes: "241591910"
+etcd:
+  milliCPU: 358
+  memoryBytes: "187904819"
+kubeControllerManager:
+  milliCPU: 102
+  memoryBytes: "53687091"
+kubeScheduler:
+  milliCPU: 102
+  memoryBytes: "53687091"
+`))
 	})
 
 	Context("By default", func() {
