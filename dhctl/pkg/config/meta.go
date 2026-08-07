@@ -174,14 +174,23 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 		return nil, err
 	}
 
+	// Derive replica counts from the cluster NodeGroups in CloudProviderVars,
+	// the only source of them when PCC carries no nodeGroups (mc-flow). Must
+	// run after CloudProviderVars is resolved above: with it still nil the
+	// typed fields stay zeroed and bootstrap creates neither the additional
+	// masters nor any CloudPermanent node. Re-entrant by the guards inside —
+	// check and converge re-run Prepare on a DeepCopy of a prepared config.
+	applyNodeGroupReplicasFromCloudProviderVars(m)
+
 	return validateProviderConfig(ctx, validatorProvider, m)
 }
 
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec
-// and TerraNodeGroupSpecs from PCC (legacy flow), falling back to
-// CloudProviderVars.NodeGroups when PCC is empty (mc-flow). For providers that
-// require PCC a missing field fails fast instead of running converge with
-// zeroed typed fields.
+// and TerraNodeGroupSpecs from PCC. For providers that require PCC a missing
+// field fails fast instead of running converge with zeroed typed fields. When
+// PCC carries no nodeGroups (mc-flow) the specs come from
+// applyNodeGroupReplicasFromCloudProviderVars, which Prepare calls once
+// CloudProviderVars is known.
 func (m *MetaConfig) extractProviderClusterFields() error {
 	pccRequired := ProviderRequiresClusterConfig(m.ProviderName)
 	pccPresent := len(m.ProviderClusterConfig) > 0
@@ -213,9 +222,6 @@ func (m *MetaConfig) extractProviderClusterFields() error {
 	// "nodeGroups" is not required even for whitelisted providers: a
 	// master-only cluster is legitimate.
 
-	// mc-flow: derive replica counts from cluster NodeGroups, otherwise the
-	// zeroed typed fields misroute converge into "decrease to 0" logic.
-	applyNodeGroupReplicasFromCloudProviderVars(m)
 	return nil
 }
 

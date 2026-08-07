@@ -1169,3 +1169,61 @@ func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesCl
 	_, err := kubeCl.CoreV1().Secrets("d8-system").Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
+
+// The mc-flow bootstrap path in one piece: NodeGroup documents have no schema,
+// so they land in ResourcesYAML, from where Prepare must derive the typed node
+// group fields. Without them dhctl bootstraps a single master and no workers.
+func TestParseConfigFromDataCloudDerivesNodeGroups(t *testing.T) {
+	config := `
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: DVP
+  prefix: test
+kubernetesVersion: "Automatic"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+   imagesRepo: test
+   devBranch: test
+   # {"auths": { "test": {}}}
+   registryDockerCfg: eyJhdXRocyI6IHsgInRlc3QiOiB7fX19
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 1
+    classReference:
+      kind: DVPInstanceClass
+      name: master-dvp
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 1
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+`
+
+	metaConfig, err := ParseConfigFromData(t.Context(), config, DummyValidatorProvider(), nil)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, metaConfig.MasterNodeGroupSpec.Replicas)
+	require.Len(t, metaConfig.TerraNodeGroupSpecs, 1)
+	require.Equal(t, "worker", metaConfig.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, 1, metaConfig.TerraNodeGroupSpecs[0].Replicas)
+}
