@@ -32,7 +32,7 @@ func TestCloudProviderYandexConversions(t *testing.T) {
 		expectedVersion int
 	}{
 		{
-			name: "full v1 settings: move additionalExternalNetworkIDs, migrate storageClass, fill node placeholders",
+			name: "full v1 settings: move additionalExternalNetworkIDs, migrate storageClass.exclude, fill provider and node placeholders",
 			settings: `
 additionalExternalNetworkIDs:
   - enp1
@@ -44,7 +44,9 @@ storageClass:
 `,
 			expected: `
 provider:
-  parameters: {}
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
@@ -60,7 +62,6 @@ ccm:
 storage:
   disabled: false
   parameters:
-    defaultStorageClass: network-hdd
     excludedStorageClasses:
       - network-ssd-.*
 `,
@@ -73,7 +74,9 @@ storage:
 `,
 			expected: `
 provider:
-  parameters: {}
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
@@ -98,7 +101,9 @@ additionalExternalNetworkIDs:
 `,
 			expected: `
 provider:
-  parameters: {}
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
@@ -118,7 +123,7 @@ storage:
 			expectedVersion: 2,
 		},
 		{
-			name: "only storageClass in v1: migrate to storage.parameters, synthesize provider/nodes/ccm",
+			name: "only storageClass in v1: migrate exclude to storage.parameters, drop default, synthesize provider/nodes/ccm",
 			settings: `
 storageClass:
   default: network-hdd
@@ -128,7 +133,9 @@ storageClass:
 `,
 			expected: `
 provider:
-  parameters: {}
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
@@ -141,7 +148,6 @@ ccm:
 storage:
   disabled: false
   parameters:
-    defaultStorageClass: network-hdd
     excludedStorageClasses:
       - network-ssd-.*
       - network-hdd-.*
@@ -150,14 +156,16 @@ storage:
 			expectedVersion: 2,
 		},
 		{
-			name: "storageClass with only default in v1: migrate just defaultStorageClass, no excludedStorageClasses",
+			name: "storageClass with only default in v1: default is dropped, storage.parameters stays empty",
 			settings: `
 storageClass:
   default: network-hdd
 `,
 			expected: `
 provider:
-  parameters: {}
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
@@ -169,14 +177,13 @@ ccm:
   parameters: {}
 storage:
   disabled: false
-  parameters:
-    defaultStorageClass: network-hdd
+  parameters: {}
 `,
 			currentVersion:  1,
 			expectedVersion: 2,
 		},
 		{
-			name: "storageClass with only exclude in v1: migrate just excludedStorageClasses, no defaultStorageClass",
+			name: "storageClass with only exclude in v1: migrate excludedStorageClasses",
 			settings: `
 storageClass:
   exclude:
@@ -184,7 +191,9 @@ storageClass:
 `,
 			expected: `
 provider:
-  parameters: {}
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
@@ -210,7 +219,9 @@ additionalExternalNetworkIDs: []
 `,
 			expected: `
 provider:
-  parameters: {}
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
@@ -235,7 +246,9 @@ storageClass: {}
 `,
 			expected: `
 provider:
-  parameters: {}
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
@@ -260,7 +273,9 @@ storageClass: {}
 `,
 			expected: `
 provider:
-  parameters: {}
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
@@ -285,7 +300,66 @@ storageClass: null
 `,
 			expected: `
 provider:
+  parameters:
+    cloudID: PLACEHOLDER_REPLACE_ME
+    folderID: PLACEHOLDER_REPLACE_ME
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    nodeNetworkCIDR: 10.0.0.0/16
+    sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
+ccm:
+  disabled: false
   parameters: {}
+storage:
+  disabled: false
+  parameters: {}
+`,
+			currentVersion:  1,
+			expectedVersion: 2,
+		},
+		{
+			name: "already filled provider parameters: existing cloudID and folderID are preserved",
+			settings: `
+provider:
+  parameters:
+    cloudID: b1gxxxxxxxxxxxxxxxxx
+    folderID: b1fxxxxxxxxxxxxxxxxx
+`,
+			expected: `
+provider:
+  parameters:
+    cloudID: b1gxxxxxxxxxxxxxxxxx
+    folderID: b1fxxxxxxxxxxxxxxxxx
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    nodeNetworkCIDR: 10.0.0.0/16
+    sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
+ccm:
+  disabled: false
+  parameters: {}
+storage:
+  disabled: false
+  parameters: {}
+`,
+			currentVersion:  1,
+			expectedVersion: 2,
+		},
+		{
+			name: "partially filled provider parameters: only the missing field gets a placeholder",
+			settings: `
+provider:
+  parameters:
+    cloudID: b1gxxxxxxxxxxxxxxxxx
+`,
+			expected: `
+provider:
+  parameters:
+    cloudID: b1gxxxxxxxxxxxxxxxxx
+    folderID: PLACEHOLDER_REPLACE_ME
 nodes:
   disabled: false
   parameters:
