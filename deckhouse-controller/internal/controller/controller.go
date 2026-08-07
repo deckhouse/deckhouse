@@ -47,13 +47,12 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/module"
 	moduleoverride "github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/override"
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/packageversion"
+	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
-	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
@@ -121,19 +120,14 @@ func (c *Controller) Build(ctx context.Context, rest *rest.Config, ms metricssto
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, ms)
 
-	manager, err := pkgruntime.Build(runtime.GetClient(), dc, ms, logger)
-	if err != nil {
-		return nil, fmt.Errorf("create runtime: %w", err)
-	}
-
 	err = metrics.RegisterDeckhouseControllerMetrics(ms)
 	if err != nil {
 		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
 	}
 
-	err = deckhouserelease.NewDeckhouseReleaseController(runtime, dc, settingsContainer, ms)
+	manager, err := pkgruntime.Build(runtime.GetClient(), dc, ms, logger)
 	if err != nil {
-		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
+		return nil, fmt.Errorf("create runtime: %w", err)
 	}
 
 	err = docbuilder.RegisterController(runtime, dc, logger.Named("module-documentation-controller"))
@@ -146,14 +140,19 @@ func (c *Controller) Build(ctx context.Context, rest *rest.Config, ms metricssto
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	err = modulerelease.RegisterController(synced, runtime, embeddedPolicy, ms, dc, logger)
-	if err != nil {
-		return nil, fmt.Errorf("register module release controller: %w", err)
-	}
+	// err = modulerelease.RegisterController(synced, runtime, embeddedPolicy, ms, dc, logger)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("register module release controller: %w", err)
+	// }
 
 	err = moduleoverride.RegisterController(synced, runtime, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
+	}
+
+	err = modulesource.RegisterController(runtime, manager, ms, embeddedPolicy, settingsContainer, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
 
 	err = packagerepository.RegisterController(runtime, dc, logger)
@@ -176,12 +175,12 @@ func (c *Controller) Build(ctx context.Context, rest *rest.Config, ms metricssto
 		return nil, fmt.Errorf("register module package version controller: %w", err)
 	}
 
-	err = application.RegisterController(synced, runtime, manager, logger)
+	err = application.RegisterController(ctx, synced, runtime, manager, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register application controller: %w", err)
 	}
 
-	err = module.RegisterController(synced, runtime, manager, logger)
+	err = module.RegisterController(ctx, synced, runtime, manager, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module v2 controller: %w", err)
 	}
