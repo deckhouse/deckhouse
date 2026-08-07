@@ -14,13 +14,11 @@ Deckhouse Kubernetes Platform переводит управление узлам
 
 После появления поддержки CAPI существующие группы узлов типа [CloudEphemeral](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#добавление-cloudephemeral-узлов-в-облачном-кластере) продолжают использовать MCM (`status.engine: MCM`). Новые группы узлов по умолчанию создаются с использованием CAPI (`status.engine: CAPI`).
 
-Чтобы проверить, какой механизм управления используется для группы узлов, выполните команду:
+Проверить, какой механизм управления используется для группы узлов можно с помощью команды:
 
 ```shell
 d8 k get nodegroup -o custom-columns=NAME:.metadata.name,ENGINE:.status.engine
 ```
-
-## Как выполнить миграцию
 
 Чтобы перевести группу узлов с MCM на CAPI:
 
@@ -47,8 +45,6 @@ d8 k get nodegroup -o custom-columns=NAME:.metadata.name,ENGINE:.status.engine
 {% alert level="warning" %}
 При удалении NodeGroup удаляются все входящие в неё узлы. Перед удалением старой группы убедитесь, что необходимые рабочие нагрузки перенесены на новую группу и работают корректно.
 {% endalert %}
-
-## Принудительное создание NodeGroup с MCM
 
 При необходимости можно принудительно создать группу узлов под управлением MCM. Для этого до создания NodeGroup (или перед её пересозданием) задайте аннотацию `node.deckhouse.io/use-mcm`:
 

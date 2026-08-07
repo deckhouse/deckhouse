@@ -20,8 +20,6 @@ To check which management mechanism is used for a node group, run the following 
 d8 k get nodegroup -o custom-columns=NAME:.metadata.name,ENGINE:.status.engine
 ```
 
-## How to migrate
-
 To migrate a node group from MCM to CAPI:
 
 1. Create a new [NodeGroup](/modules/node-manager/cr.html#nodegroup) of the [CloudEphemeral](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudephemeral-nodes-in-a-cloud-cluster) type with the required configuration. Do not set the `node.deckhouse.io/use-mcm` annotation — otherwise the group will remain on MCM.
@@ -48,8 +46,6 @@ To migrate a node group from MCM to CAPI:
 {% alert level="warning" %}
 Deleting a NodeGroup deletes all nodes in that group. Before deleting the old group, make sure the required workloads have been moved to the new group and are running correctly.
 {% endalert %}
-
-## Forcing NodeGroup creation with MCM
 
 If necessary, you can force a node group to be created using MCM. To do this, add the `node.deckhouse.io/use-mcm` annotation before creating the NodeGroup (or before recreating it):
 
