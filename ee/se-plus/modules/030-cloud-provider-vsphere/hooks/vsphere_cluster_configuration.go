@@ -109,6 +109,17 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 		p.Provider.Insecure = m.Insecure
 	}
 
+	if m.CaBundle != nil {
+		if p.Provider == nil {
+			p.Provider = &v1.VsphereProvider{}
+		}
+		p.Provider.CaBundle = m.CaBundle
+	}
+
+	if p.Provider != nil && p.Provider.Insecure != nil && *p.Provider.Insecure && p.Provider.CaBundle != nil && *p.Provider.CaBundle != "" {
+		return errors.New("provider.insecure and provider.caBundle cannot be set simultaneously")
+	}
+
 	if m.RegionTagCategory != nil {
 		p.RegionTagCategory = m.RegionTagCategory
 	}
@@ -164,6 +175,11 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 	if m.Nsxt != nil {
 		p.Nsxt = m.Nsxt
 	}
+
+	if p.Nsxt != nil && p.Nsxt.InsecureFlag != nil && *p.Nsxt.InsecureFlag && p.Nsxt.CaBundle != nil && *p.Nsxt.CaBundle != "" {
+		return errors.New("nsxt.insecureFlag and nsxt.caBundle cannot be set simultaneously")
+	}
+
 	return nil
 }
 
