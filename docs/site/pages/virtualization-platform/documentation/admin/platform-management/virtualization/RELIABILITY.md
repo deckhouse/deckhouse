@@ -16,7 +16,7 @@ Virtual machine migration is an important feature in virtualized infrastructure 
 {% alert level="warning" %}
 Live migration has the following limitations:
 
-- By default, each node prepares and transfers the memory of only one virtual machine at a time, and accepts the memory of only one incoming migration at a time. See the [Tuning live migration concurrency](#tuning-live-migration-concurrency) section to change these limits.
+- By default, each node prepares and transfers the memory of only one virtual machine at a time, and accepts the memory of only one incoming migration at a time. See the ["Tuning live migration concurrency"](#tuning-live-migration-concurrency) section to change these limits.
 - The total number of concurrent migrations in the cluster cannot exceed the number of nodes where running virtual machines is permitted.
 - The bandwidth for a single migration is limited to 5 Gbps.
 {% endalert %}
@@ -62,8 +62,8 @@ metadata:
 To disable a sync limiter entirely, so that concurrency is bounded only by the preparation pool and by KubeVirt's own limits, set the corresponding annotation to `disabled`:
 
 ```yaml
-    virtualization.deckhouse.io/sync-migration-limit: "disabled"
-    virtualization.deckhouse.io/inbound-migration-limit: "disabled"
+virtualization.deckhouse.io/sync-migration-limit: "disabled"
+virtualization.deckhouse.io/inbound-migration-limit: "disabled"
 ```
 
 #### Start migration of an arbitrary machine

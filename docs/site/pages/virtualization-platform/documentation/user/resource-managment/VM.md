@@ -2545,15 +2545,15 @@ The allocated IP address is displayed in the VM status:
 
 ```yaml
 status:
-  ipAddress: 10.66.10.2                     # Main network IP
-  virtualMachineIPAddressName: vm-01-main-ip # Main network IPAddress name
+  ipAddress: 10.66.10.2                     # Main network IP.
+  virtualMachineIPAddressName: vm-01-main-ip # Main network IPAddress name.
   networks:
     - type: Main
     - type: ClusterNetwork
       name: corp-net
       macAddress: 32:a6:a1:0a:92:48
       virtualMachineMACAddressName: vm-01-rxzd6
-      ipAddress: 192.168.200.4               # Additional network IP (from IPAM)
+      ipAddress: 192.168.200.4               # Additional network IP (from IPAM).
 ```
 
 {% alert level="warning" %}

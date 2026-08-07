@@ -2575,15 +2575,15 @@ spec:
 
 ```yaml
 status:
-  ipAddress: 10.66.10.2                     # IP-адрес основной сети
-  virtualMachineIPAddressName: vm-01-main-ip # Имя IPAddress основной сети
+  ipAddress: 10.66.10.2                     # IP-адрес основной сети.
+  virtualMachineIPAddressName: vm-01-main-ip # Имя IPAddress основной сети.
   networks:
     - type: Main
     - type: ClusterNetwork
       name: corp-net
       macAddress: 32:a6:a1:0a:92:48
       virtualMachineMACAddressName: vm-01-rxzd6
-      ipAddress: 192.168.200.4               # IP-адрес дополнительной сети (из IPAM)
+      ipAddress: 192.168.200.4               # IP-адрес дополнительной сети (из IPAM).
 ```
 
 {% alert level="warning" %}

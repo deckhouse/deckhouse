@@ -89,9 +89,9 @@ spec:
   virtualMachineTemplate:
     spec:
       blockDeviceRefs:
-        - kind: VirtualDisk           # записываемый корневой диск на реплику, грузится первым
+        - kind: VirtualDisk           # Записываемый корневой диск на реплику, грузится первым.
           name: root
-        - kind: ClusterVirtualImage   # общий read-only CD-ROM, подключается ко всем репликам
+        - kind: ClusterVirtualImage   # Общий read-only CD-ROM, подключается ко всем репликам.
           name: tools-iso
   virtualDiskTemplates:
     - name: root
@@ -156,14 +156,14 @@ spec:
 Чтобы убрать именно заданные реплики (и сжать пул на это число), используйте сабресурс `scaleDownWith`:
 
 ```bash
-kubectl create --raw \
+d8 k create --raw \
   /apis/subresources.virtualization.deckhouse.io/v1alpha2/namespaces/ci/virtualmachinepools/runners/scaledownwith \
   -f - <<'EOF'
 {"targets": ["runners-1b2e84", "runners-9c0d11"]}
 EOF
 ```
 
-Обычный `kubectl delete vm` пул не сжимает: контроллер воспринимает это как утрату реплики и создаёт замену.
+Обычный `d8 k delete vm` пул не сжимает: контроллер воспринимает это как утрату реплики и создаёт замену.
 
 ## Переиспользуемые диски (`reclaim`)
 

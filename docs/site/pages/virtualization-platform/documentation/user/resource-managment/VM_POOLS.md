@@ -88,9 +88,9 @@ spec:
   virtualMachineTemplate:
     spec:
       blockDeviceRefs:
-        - kind: VirtualDisk           # per-replica writable root, boots first
+        - kind: VirtualDisk           # Per-replica writable root, boots first.
           name: root
-        - kind: ClusterVirtualImage   # shared read-only CD-ROM, attached to every replica
+        - kind: ClusterVirtualImage   # Shared read-only CD-ROM, attached to every replica.
           name: tools-iso
   virtualDiskTemplates:
     - name: root
@@ -155,14 +155,14 @@ By default, when the pool shrinks the controller chooses which replica to remove
 To remove particular replicas (and shrink the pool by that count), use the `scaleDownWith` subresource:
 
 ```bash
-kubectl create --raw \
+d8 k create --raw \
   /apis/subresources.virtualization.deckhouse.io/v1alpha2/namespaces/ci/virtualmachinepools/runners/scaledownwith \
   -f - <<'EOF'
 {"targets": ["runners-1b2e84", "runners-9c0d11"]}
 EOF
 ```
 
-A plain `kubectl delete vm` does not shrink the pool: the controller treats it as a lost replica and creates a replacement.
+A plain `d8 k delete vm` does not shrink the pool: the controller treats it as a lost replica and creates a replacement.
 
 ## Reusable disks (`reclaim`)
 
