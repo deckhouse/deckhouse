@@ -44,9 +44,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- /* Keep the request even with VPA enabled: a limit without a request makes
+                   Kubernetes default the request to the limit, reserving it in full until
+                   VPA has a recommendation to apply. */}}
             {{- include "web_resources" . | nindent 12 }}
-  {{- end }}
           limits:
             cpu: 200m
             memory: 100Mi
@@ -119,9 +120,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- /* Keep the request even with VPA enabled: a limit without a request makes
+                   Kubernetes default the request to the limit, so the builder would reserve
+                   2Gi on the system node until VPA has a recommendation to apply. */}}
             {{- include "builder_resources" . | nindent 12 }}
-  {{- end }}
           limits:
             cpu: 200m
             memory: 2Gi
