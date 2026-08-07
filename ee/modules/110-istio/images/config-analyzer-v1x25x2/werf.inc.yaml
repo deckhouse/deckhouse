@@ -14,7 +14,6 @@ import:
   before: install
 imageSpec:
   config:
-    user: "64535:64535"
     entrypoint: ["/istio-config-analyzer"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
