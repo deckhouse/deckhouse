@@ -295,79 +295,29 @@ To implement validation for resources with a different label (for example, `heri
 
 ## Granting cluster-scoped resources to projects
 
-The `multitenancy-manager` lets cluster administrators control which cluster-scoped resources (for example StorageClass) may be referenced from within project namespaces.
+The `multitenancy-manager` lets cluster administrators control, per project, which cluster-scoped
+resources (e.g. `StorageClass`, `ClusterIssuer`, `ClusterRole`, `LoadBalancerClass`) may be
+referenced from within project namespaces, and which value is used by default.
 
-To do this, custom resources are used:
+This is a separate mechanism from RBAC: RBAC decides *who can create* an object, grants decide *which
+cluster resource values that object may reference*.
 
-- GrantableClusterResourceDefinition (cluster-scoped) — registers a cluster resource that can be
-  granted to projects: which resource it is (`grantedResource`), where references to it are validated (`usageReferences`),
-  the baseline availability (`defaultAvailability`), and how the per-project default is discovered
-  (`defaultFrom`). Each reference opts into defaulting individually with `default: true` — set it only
-  for a field whose value the resource always needs (such as a `PersistentVolumeClaim`'s
-  `storageClassName`). Leave it off for a reference whose absence is meaningful, such as an annotation
-  that merely toggles a feature; that reference is still validated and counted, just never filled in.
-- ClusterResourceGrantPolicy (cluster-scoped) — selects projects (by namespace labels via
-  `projectSelector`) and, per resource (`resourceName`), the granted names (`allowed`,
-  `allowedSelector`) and the per-project `default`. An allow-list restricts the resource to it.
-- AvailableClusterResource (namespaced, read-only, short name `available`) — the controller-rendered
-  catalog of what a project may use; tenants read it to discover the available names.
-- ClusterResourceGrant (namespaced) — the per-project object-quota pool (limits on object count and
-  on measured quantities such as requested storage); its status reports current usage.
+Four custom resources are involved:
 
-{% raw %}
+- `GrantableClusterResourceDefinition` (`gcrd`, cluster-scoped) — registers a cluster resource as
+  grant-controlled (shipped by the platform and by modules).
+- `GrantableClusterResourceReference` (`gcrr`, cluster-scoped) — declares which field of which CRD is
+  validated/defaulted (shipped by modules).
+- `ClusterResourceGrantPolicy` (`crgp`, cluster-scoped) — the administrator's allow/deny lists and
+  defaults per project (the only manual step for access control).
+- `AvailableClusterResource` (`available`, namespaced, read-only) — the controller-rendered catalog a
+  project reads to discover what it may use.
 
-```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceDefinition
-metadata:
-  name: storageclasses
-spec:
-  grantedResource:
-    apiGroup: storage.k8s.io
-    kind: StorageClass
-  enforcement: Managed
-  defaultAvailability: All
-  defaultFrom:
-    annotationKey: storageclass.kubernetes.io/is-default-class
-  usageReferences:
-    - rule:
-        apiGroups:
-          - ""
-        apiVersions:
-          - v1
-        resources:
-          - persistentvolumeclaims
-      fieldPath: $.spec.storageClassName
-      default: true
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterResourceGrantPolicy
-metadata:
-  name: production-storage
-spec:
-  projectSelector:
-    matchLabels:
-      environment: production
-  resources:
-    - resourceName: storageclasses
-      default: fast-ssd          # Overrides the annotation-based default.
-      allowed:
-        - fast-ssd
-        - standard
-      allowedSelector:           # Plus any StorageClass with label shared=true.
-        matchLabels:
-          shared: "true"
-```
+Until an administrator creates a `ClusterResourceGrantPolicy`, all resources are available (permissive
+default). Validation applies only to project namespaces; existing objects are grandfathered on
+UPDATE.
 
-{% endraw %}
-
-Enforcement notes:
-
-- The validating webhook denies creating/updating objects in matched projects whose
-  referenced value is not granted. On update, values already present in the object are
-  grandfathered in, so pre-existing objects are not broken.
-- The defaulting webhook fills in the granted default on creation only, and only into references
-  marked `default: true`. References left without it (such as feature-toggling annotations) are never
-  filled in.
-- A grant that matches no project, or a project with no matching grant, imposes no
-  restriction.
+For the full guide — administrator scenarios (restricting StorageClasses, ClusterIssuers,
+ClusterRoles, LoadBalancerClasses), tenant resource discovery, the module developer guide, validation
+and defaulting rules, and monitoring — see the
+[multitenancy-manager module usage guide](/products/kubernetes-platform/documentation/v1/modules/160-multitenancy-manager/usage.html#managing-access-to-cluster-scoped-resources-grants).

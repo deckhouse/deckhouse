@@ -51,6 +51,27 @@ To manage project isolation scale, you can use the following Kubernetes features
 
 You can combine these tools to configure a project according to your application's requirements.
 
+### Managing access to cluster-scoped resources
+
+Projects routinely reference cluster-scoped resources — a `PersistentVolumeClaim` names a
+`StorageClass`, a `Certificate` names a `ClusterIssuer`, a `RoleBinding` references a `ClusterRole`.
+The module also controls, per project, **which** cluster resources may be referenced from within
+project namespaces, and which value is used by default. This is a separate mechanism from RBAC: RBAC
+decides *who can create* an object, grants decide *which cluster resource values that object may
+reference*.
+
+The mechanism uses four custom resources:
+
+- [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) (`gcrd`, cluster-scoped) — registers a cluster resource as grant-controlled (shipped by the platform and by modules).
+- [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) (`gcrr`, cluster-scoped) — declares which field of which CRD is validated/defaulted (shipped by modules).
+- [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) (`crgp`, cluster-scoped) — the administrator's allow/deny lists and defaults per project (the only manual step for access control).
+- [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource) (`available`, namespaced, read-only) — the controller-rendered catalog a project reads to discover what it may use.
+
+Until an administrator creates a `ClusterResourceGrantPolicy`, all resources are available (permissive
+default). Validation applies only to project namespaces; existing objects are grandfathered on UPDATE.
+
+For the full guide, see the [module usage guide](/modules/multitenancy-manager/usage.html#managing-access-to-cluster-scoped-resources-grants).
+
 ## Module architecture
 
 {% alert level="info" %}
@@ -77,6 +98,15 @@ The module consists of the following components:
 
    > **Warning.** Multitenancy-manager has `cluster-admin` permissions, which allow it to create any objects described in the ProjectTemplate resource.
 
+- **Cluster-objects-controller**: manages the grants mechanism — the custom resources
+  [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition),
+  [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference),
+  [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy), and
+  [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource). It renders the
+  per-project `AvailableClusterResource` catalogs and runs the validating/mutating admission webhooks
+  (`/is-granted`, `/defaults`, `/protect`) that enforce which cluster resources a project may reference and
+  substitute per-project defaults on CREATE.
+
 ## Module interactions
 
 The module interacts with the following components:
@@ -85,3 +115,4 @@ The module interacts with the following components:
   - Managing the Project and ProjectTemplate custom resources.
   - Validating the Project and ProjectTemplate custom resources and the standard Namespace resource.
   - Creating the resources specified in the ProjectTemplate custom resource based on the parameters set in Project.
+  - Grant admission: the cluster-objects-controller webhooks validate and default references to granted cluster resources (e.g. `StorageClass`, `ClusterIssuer`, `ClusterRole`) in objects created within project namespaces, and reject manual creation of `AvailableClusterResource` objects.

@@ -93,6 +93,38 @@ The module provides two access level for administrators:
 - `viewer` — allows viewing standard Kubernetes resources, the configuration of modules (resources ModuleConfig), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
 - `manager` — in addition to the role `viewer` it allows managing standard Kubernetes resources, the configuration of modules (resources ModuleConfig), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
 
+### Global resource dictionaries (`d8:use:dict`)
+
+In addition to the use and manage roles, the module creates a special ClusterRole `d8:use:dict`. It
+grants **read-only** access to cluster-scoped "reference" resources that users commonly need to discover
+when creating objects — for example, a user creating a `PersistentVolumeClaim` needs to see the available
+`StorageClass`es, and a user creating an `Ingress` needs to see the `IngressClass`es.
+
+The role grants `get`, `list`, `watch` on the following resources:
+
+- `storageclasses` (storage.k8s.io), plus `csidrivers`, `csinodes`, `volumeattachments`;
+- `volumesnapshotclasses` (snapshot.storage.k8s.io);
+- `ingressclasses` (networking.k8s.io);
+- `priorityclasses` (scheduling.k8s.io);
+- `runtimeclasses` (node.k8s.io);
+- `virtualmachineclasses`, `clustervirtualimages` (virtualization.deckhouse.io);
+- `clusterlogdestinations` (deckhouse.io);
+- `customresourcedefinitions` (apiextensions.k8s.io) — `get`, `list` only.
+
+#### Automatic binding
+
+The `d8:use:dict` ClusterRoleBinding is created **automatically** whenever a `RoleBinding` references a
+`d8:use:role:*` role (experimental model) or a legacy `user-authz:*` role (current model). This means
+project users can discover reference resources without any manual configuration — the binding appears with
+the `RoleBinding` and is removed when it is deleted. The binding is created and managed entirely by the
+`user-authz` module; you do not create it yourself.
+
+{% alert level="info" %}
+The `d8:use:dict` role is independent of the `multitenancy-manager` grants mechanism: it only gives
+**read** access to reference resources so users can discover them. The grants mechanism controls which
+resource **values** a project may actually reference when creating objects.
+{% endalert %}
+
 ### Subsystems of the role-based model
 
 Each DKP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.

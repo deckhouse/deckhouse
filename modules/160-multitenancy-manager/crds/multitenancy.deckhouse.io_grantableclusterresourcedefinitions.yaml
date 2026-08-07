@@ -38,8 +38,24 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: GrantableClusterResourceDefinition registers a cluster-scoped
-          resource as grant-controllable.
+        description: |-
+          GrantableClusterResourceDefinition registers a cluster-scoped resource as grant-controllable
+          (the multitenancy-manager grants mechanism).
+
+          Created by: module developers / the platform (shipped from the module Helm chart).
+          Manual creation: allowed, for custom cluster resources.
+          Purpose: defines which cluster resource is governed (object-backed, with a real k8s object, or
+          value-backed, without one); the enforcement mode (Managed = platform webhooks, External = the
+          module's own webhook); the baseline availability (defaultAvailability: All = available unless a
+          policy narrows it, None = locked by default); hard-excluded objects (excluded — a hard deny
+          regardless of any policy); and how the cluster-wide default is discovered (defaultFrom — an
+          annotation marking the default object).
+
+          The paths where the resource is referenced (field validation/defaulting) are declared by
+          separate GrantableClusterResourceReference objects — the definition is decoupled from the
+          owner of the references.
+
+          See the "Managing access to cluster-scoped resources" section in the module usage guide.
         properties:
           apiVersion:
             description: |-

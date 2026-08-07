@@ -134,4 +134,34 @@ Note that changing the template might cause resource conflicts.
 If the new template’s chart defines resources that already exist in the namespace, the template can't be applied.
 {% endalert %}
 
+## Discovering available cluster resources
+
+Your project may be limited by the cluster administrator as to which cluster-scoped resources it may
+reference — for example, which `StorageClass` a PVC may use, which `ClusterIssuer` a Certificate may
+reference, or which `ClusterRole` a RoleBinding may bind. The module renders a read-only catalog in your
+project's namespace, `AvailableClusterResource` (short name `available`), so you can discover what is
+allowed and which value is the default.
+
+List all available cluster resources in your project:
+
+```shell
+d8 k get available -n <project-name>
+```
+
+Get full details for one resource (the available names and which is the default):
+
+```shell
+d8 k get available storageclasses -n <project-name> -o yaml
+```
+
+If a create/update is rejected with a message like `resource <name> is not available to project
+<project>`, the value you referenced is not in your project's allow-list. Use a name listed in the
+`AvailableClusterResource` catalog, or ask the cluster administrator to add it.
+
+For some fields (e.g. a PVC's `storageClassName`, a Certificate's `issuerRef.name`), the per-project
+default is substituted automatically on CREATE when you leave the field empty — so you can often omit
+the value. See the
+[module usage guide](/modules/multitenancy-manager/usage.html#managing-access-to-cluster-scoped-resources-grants)
+for the full reference.
+
 For details on project templates and their creation, refer to the [Administration section](../../admin/multitenancy.html).

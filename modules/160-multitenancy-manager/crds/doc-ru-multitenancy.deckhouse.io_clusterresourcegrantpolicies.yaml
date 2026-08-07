@@ -1,0 +1,19 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Политика грантов на кластерные ресурсы — основной инструмент администратора кластера (механизм грантов модуля `multitenancy-manager`).
+
+            **Кто создаёт:** только администратор кластера.
+            **Ручное создание:** обязательно — система ничего не ограничивает, пока администратор не создаст политику. Без политик все ресурсы доступны (разрешающий дефолт).
+            **Назначение:** выбирает проекты по меткам неймспейса (`projectSelector`) и для каждого ресурса (`resources[].resourceName`, ссылается на [`GrantableClusterResourceDefinition`](cr.html#grantableclusterresourcedefinition)) задаёт:
+            - `allowed` / `allowedSelector` — разрешённые имена (явный список + label-селектор);
+            - `denied` / `deniedSelector` — запрещённые имена (перекрывает `allowed`);
+            - `default` — дефолт проекта (перекрывает `defaultFrom` определения);
+            - `availabilityDefault` — база доступности для совпавших проектов (`All`/`None`), перекрывает `defaultAvailability` определения.
+
+            Порядок определения доступности: `excluded` (на определении) → `denied`/`deniedSelector` → `allowed`/`allowedSelector` → `availabilityDefault` политики → `defaultAvailability` определения. Существующие объекты при UPDATE сохраняют значения (grandfathering). Квотирование объектов не входит в эту систему — используйте `ResourceQuota`.
+
+            Подробности и сценарии — в разделе [«Для администраторов кластера»](usage_ru.html#для-администраторов-кластера).

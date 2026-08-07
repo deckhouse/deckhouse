@@ -297,74 +297,29 @@ data:
 
 ## Выдача кластерных ресурсов проектам
 
-`multitenancy-manager` позволяет администраторам кластера управлять тем, какие кластерные ресурсы (например, StorageClass) можно использовать из неймспейсов проектов.
+Модуль `multitenancy-manager` позволяет администраторам кластера управлять для каждого проекта, какие
+кластерные ресурсы (напр. `StorageClass`, `ClusterIssuer`, `ClusterRole`, `LoadBalancerClass`) можно
+использовать из неймспейсов проектов, и какое значение используется по умолчанию.
 
-Для этого используются кастомные ресурсы:
+Это отдельный механизм от RBAC: RBAC решает, *кто может создать* объект, гранты — *какие кластерные
+ресурсы этот объект может ссылаться*.
 
-- GrantableClusterResourceDefinition (cluster-scoped) — регистрирует кластерный ресурс, который
-  можно выдавать проектам. Определяет тип ресурса (`grantedResource`), где проверяются ссылки на него
-  (`usageReferences`), базовую доступность (`defaultAvailability`) и способ определения значения по умолчанию для проекта
-  (`defaultFrom`). Каждая ссылка отдельно включает подстановку значения по умолчанию через `default: true`. Указывайте этот параметр только для полей, значение которых всегда должно быть задано (например, `storageClassName` у `PersistentVolumeClaim`). Если отсутствие ссылки имеет смысл (например, для аннотации-переключателя), не указывайте `default: true`. В этом случае такая ссылка по-прежнему будет проверяться и учитываться в квоте,
-  но её значение не будет подставляться автоматически.
-- ClusterResourceGrantPolicy (cluster-scoped) — выбирает проекты (по меткам неймспейса через
-  `projectSelector`) и для каждого ресурса (`resourceName`) задаёт разрешённые имена (`allowed`,
-  `allowedSelector`) и значение по умолчанию (`default`). Если задан allow-лист, использовать можно только ресурсы из этого списка.
-- AvailableClusterResource (namespaced, read-only, короткое имя `available`) — формируемый контроллером каталог доступных для проекта кластерных ресурсов. Пользователи проекта могут использовать его, чтобы узнать, какие ресурсы им доступны
-- ClusterResourceGrant (namespaced) — определяет квоты проекта на кластерные ресурсы (лимиты на количество объектов и
-  на измеряемые величины, например запрошенный объём хранилища). В статусе объекта отображается текущее потребление.
+В механизме участвуют четыре кастомных ресурса:
 
-{% raw %}
+- `GrantableClusterResourceDefinition` (`gcrd`, cluster-scoped) — регистрирует кластерный ресурс как
+  управляемый грантами (поставляется платформой и модулями).
+- `GrantableClusterResourceReference` (`gcrr`, cluster-scoped) — объявляет, какое поле какого CRD
+  валидируется/подставляется (поставляется модулями).
+- `ClusterResourceGrantPolicy` (`crgp`, cluster-scoped) — списки разрешений/запретов и дефолты
+  администратора для проекта (единственный ручной шаг для контроля доступа).
+- `AvailableClusterResource` (`available`, namespaced, read-only) — формируемый контроллером каталог,
+  который проект читает, чтобы узнать доступные ресурсы.
 
-```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceDefinition
-metadata:
-  name: storageclasses
-spec:
-  grantedResource:
-    apiGroup: storage.k8s.io
-    kind: StorageClass
-  enforcement: Managed
-  defaultAvailability: All
-  defaultFrom:
-    annotationKey: storageclass.kubernetes.io/is-default-class
-  usageReferences:
-    - rule:
-        apiGroups:
-          - ""
-        apiVersions:
-          - v1
-        resources:
-          - persistentvolumeclaims
-      fieldPath: $.spec.storageClassName
-      default: true
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterResourceGrantPolicy
-metadata:
-  name: production-storage
-spec:
-  projectSelector:
-    matchLabels:
-      environment: production
-  resources:
-    - resourceName: storageclasses
-      default: fast-ssd          # Перекрывает дефолт по аннотации.
-      allowed:
-        - fast-ssd
-        - standard
-      allowedSelector:           # Дополнительно разрешает любой StorageClass с меткой shared=true.
-        matchLabels:
-          shared: "true"
-```
+Пока администратор не создал `ClusterResourceGrantPolicy`, все ресурсы доступны (разрешающий дефолт).
+Валидация применяется только к неймспейсам проектов; существующие объекты при UPDATE сохраняют свои
+значения (grandfathering).
 
-{% endraw %}
-
-Особенности применения:
-
-- Проверяющий (validating) вебхук запрещает создание/обновление объектов в подходящих проектах, если
-  используемое значение не разрешено. Уже присутствующие в объекте значения при обновлении не блокируются — существующие объекты продолжают работать.
-- Мутирующий (mutating) вебхук подставляет значение по умолчанию только при создании и только в
-  ссылки, помеченные `default: true`. Ссылки без неё (например, аннотации-переключатели) никогда
-  не заполняются.
-- Grant без совпавших проектов (или проект без совпавших grant’ов) ничего не ограничивает.
+Полное руководство — сценарии для администратора (ограничение StorageClasses, ClusterIssuers,
+ClusterRoles, LoadBalancerClasses), обнаружение ресурсов тенантами, руководство для разработчиков
+модулей, правила валидации и дефолтинга, мониторинг — см. в
+[руководстве по использованию модуля multitenancy-manager](/products/kubernetes-platform/documentation/v1/modules/160-multitenancy-manager/usage_ru.html#управление-доступом-к-кластерным-ресурсам-гранты).
