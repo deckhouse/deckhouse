@@ -7,10 +7,12 @@
 #   (Static has no CI template — excluded; StaticCSE/DVPCSE/Custom excluded)
 
 include:
-  - local: .gitlab/ci-templates/e2e-framework.yml
-    inputs:
-      runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
-      vault_role: deckhouse
+- project: 'deckhouse/ssdlc-tools/e2e-framework'
+  file: '/ci-templates/e2e-framework.gitlab-ci.yml'
+  ref: 'main'
+  inputs:
+    runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
+    vault_role: deckhouse
 
 variables:
   E2E_PROVIDER:
