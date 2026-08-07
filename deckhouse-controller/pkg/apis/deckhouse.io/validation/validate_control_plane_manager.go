@@ -22,7 +22,6 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
-	"strings"
 
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
@@ -69,10 +68,12 @@ type clusterKubernetesStatus struct {
 // clusterKubernetesSpec is the subset of data.spec admission needs. Written by update-observer,
 // which is the only writer of the whole object.
 type clusterKubernetesSpec struct {
-	// MaxUsedVersion is the highest Kubernetes minor the cluster has ever run. It is the floor a
-	// downgrade may not cross by more than one minor, and it is monotonic — which is exactly why
-	// it is the only acceptable source: currentVersion is a point in time and drops as soon as a
-	// legitimate downgrade lands, which used to let a second downgrade straight through.
+	// MaxUsedVersion is the highest Kubernetes minor the cluster has ever converged onto (it leads
+	// the running control plane by one minor during a rollout; update-observer's controller.Spec
+	// carries the exact definition). It is the floor a downgrade may not cross by more than one
+	// minor, and it is monotonic — which is exactly why it is the only acceptable source:
+	// currentVersion is a point in time and drops as soon as a legitimate downgrade lands, which
+	// used to let a second downgrade straight through.
 	MaxUsedVersion string `json:"maxUsedKubernetesVersion"`
 }
 
@@ -176,10 +177,17 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		return res, nil
 	}
 
+	// Both remaining guards read the same two objects, so they read them once, together: the floor
+	// and the membership list are two projections of the same ConfigMap, and rejecting a version
+	// against one snapshot while accepting it against another would be indistinguishable from a bug.
+	// Resolved after validateKubernetesVersion so the module-compatibility reject path still costs
+	// no API reads.
+	facts := v.readKubernetesVersionFacts(ctx)
+
 	// The maxUsed floor runs unconditionally, not only when availableVersions is missing.
 	// Membership alone can miss deep downgrades before status is published or when Supported
 	// no longer encodes maxUsed-1 after a Deckhouse/edition change.
-	if res, err := v.rejectKubernetesVersionBelowMaxUsed(ctx, effective, fromFallback); res != nil || err != nil {
+	if res, err := rejectKubernetesVersionBelowMaxUsed(effective, fromFallback, facts); res != nil || err != nil {
 		if res != nil && !res.Valid {
 			// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 			log.Info("E2E-KV admission",
@@ -193,8 +201,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 		return res, err
 	}
 
-	available, ok := v.readAvailableKubernetesVersions(ctx)
-	if !ok || len(available) == 0 {
+	available := facts.AvailableVersions
+	if len(available) == 0 {
 		// TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
 		log.Info("E2E-KV admission",
 			"decision", "allow",
@@ -254,14 +262,17 @@ func (v *moduleConfigValidator) validateControlPlaneManagerKubernetesVersion(
 // sides and forbids handing control back to Deckhouse, which is a contract this webhook
 // explicitly allows. Here effective is always an already-resolved explicit version.
 //
+// Takes the resolved baseline rather than a client so the decision is a pure function of a single
+// snapshot — the caller owns the reads, and this is unit-testable without an API server.
+//
 // Fail-open on a missing/unreadable/unparsable baseline, matching every other guard in this file.
-func (v *moduleConfigValidator) rejectKubernetesVersionBelowMaxUsed(
-	ctx context.Context, effective string, fromFallback bool,
+func rejectKubernetesVersionBelowMaxUsed(
+	effective string, fromFallback bool, facts kubernetesVersionBaseline,
 ) (*kwhvalidating.ValidatorResult, error) {
-	floor, ok := v.readKubernetesVersionFloor(ctx)
-	if !ok {
+	if !facts.MaxUsedSet || facts.MaxUsed == "" {
 		return nil, nil
 	}
+	floor := facts.MaxUsed
 
 	maxUsed, err := parseVersion(floor)
 	if err != nil {
@@ -398,97 +409,31 @@ func rawModuleConfigSettings(cfg *v1alpha1.ModuleConfig) map[string]interface{} 
 	return m
 }
 
-// readAvailableKubernetesVersions returns status.availableVersions from
-// kube-system/d8-cluster-kubernetes. ok=false means fail-open (missing/empty/error).
-func (v *moduleConfigValidator) readAvailableKubernetesVersions(ctx context.Context) ([]string, bool) {
-	cm := &v1.ConfigMap{}
-	if err := v.client.Get(ctx, client.ObjectKey{
-		Name:      clusterKubernetesConfigMapName,
-		Namespace: kubeSystemNamespace,
-	}, cm); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Warn("skipping the kubernetesVersion availableVersions guard: cannot read the d8-cluster-kubernetes ConfigMap", log.Err(err))
-		}
-		return nil, false
-	}
-
-	raw, found := cm.Data[clusterKubernetesStatusDataKey]
-	if !found || raw == "" {
-		return nil, false
-	}
-
-	status := new(clusterKubernetesStatus)
-	if err := yaml.Unmarshal([]byte(raw), status); err != nil {
-		log.Warn("skipping the kubernetesVersion availableVersions guard: cannot parse d8-cluster-kubernetes status", log.Err(err))
-		return nil, false
-	}
-	if len(status.AvailableVersions) == 0 {
-		return nil, false
-	}
-	return status.AvailableVersions, true
-}
-
-// readKubernetesVersionFloor resolves the version the cluster must not land more than one minor
-// below: the highest minor it has ever run.
+// readKubernetesVersionFacts resolves every cluster-level fact this webhook needs — the maxUsed
+// floor, the Deckhouse default and status.availableVersions — from one read of each object.
 //
-// Exactly one quantity answers that, and it lives in spec.maxUsedKubernetesVersion of the cluster
-// ConfigMap. The previous chain of four sources mixed it with two that are not it —
-// status.currentVersion is a point in time and drops the moment a legitimate downgrade lands,
-// which silently lowered the floor and let a second downgrade through, and spec.desiredVersion is
-// a declaration rather than a record. Reading one monotonic value is also what keeps this guard
-// and the soft guard in the global discovery hook from disagreeing about the same window.
+// The floor is the version the cluster must not land more than one minor below: the highest minor it
+// has ever converged onto, and exactly one quantity answers that — spec.maxUsedKubernetesVersion of
+// the cluster ConfigMap. The chain this replaced mixed it with two values that are not it:
+// status.currentVersion is a point in time and drops the moment a legitimate downgrade lands, which
+// silently lowered the floor and let a second downgrade through, and spec.desiredVersion is a
+// declaration rather than a record.
 //
-// The Secret key is the migration fallback for the window between a Deckhouse upgrade and the
-// DaemonSet rollout that first writes the ConfigMap key.
+// Shares kubernetesVersionBaselineFor with the ClusterConfiguration webhook on purpose: one
+// resolution chain (ConfigMap, falling back per field to the d8-cluster-configuration Secret) means
+// the two webhooks cannot disagree about the same window. Reading it once also means the floor and
+// the membership list come from the same snapshot of the same object.
+//
+// The Secret is the migration fallback for the window between a Deckhouse upgrade and the DaemonSet
+// rollout that first writes the ConfigMap key; a missing Secret is not an error, the baseline just
+// keeps whatever the ConfigMap provided.
 // TODO(kubernetesVersion-deprecation): T+1 remove — drop the Secret branch.
 //
-// Returns ok=false only when nothing at all is known — a cluster still bootstrapping, where there
-// is no version to protect yet.
-func (v *moduleConfigValidator) readKubernetesVersionFloor(ctx context.Context) (string, bool) {
-	if spec, ok := v.readClusterKubernetesSpec(ctx); ok && spec.MaxUsedVersion != "" {
-		return spec.MaxUsedVersion, true
-	}
-
-	if baseline, ok := v.readKubernetesVersionBaseline(ctx); ok && baseline.MaxUsedSet && baseline.MaxUsed != "" {
-		return baseline.MaxUsed, true
-	}
-
-	return "", false
-}
-
-// readClusterKubernetesSpec returns data.spec of the cluster ConfigMap. ok=false means the object
-// or the block is missing or unreadable, i.e. the caller should fall back rather than fail.
-func (v *moduleConfigValidator) readClusterKubernetesSpec(ctx context.Context) (*clusterKubernetesSpec, bool) {
-	cm := &v1.ConfigMap{}
-	if err := v.client.Get(ctx, client.ObjectKey{
-		Name:      clusterKubernetesConfigMapName,
-		Namespace: kubeSystemNamespace,
-	}, cm); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Warn("cannot read the d8-cluster-kubernetes ConfigMap", log.Err(err))
-		}
-		return nil, false
-	}
-
-	spec := new(clusterKubernetesSpec)
-	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err != nil {
-		log.Warn("cannot parse d8-cluster-kubernetes data.spec", log.Err(err))
-		return nil, false
-	}
-
-	spec.MaxUsedVersion = strings.TrimSpace(spec.MaxUsedVersion)
-
-	return spec, true
-}
-
-// readKubernetesVersionBaseline returns the version bookkeeping control-plane-manager keeps in the
-// d8-cluster-configuration Secret. ok=false means fail-open (missing/unreadable).
-func (v *moduleConfigValidator) readKubernetesVersionBaseline(ctx context.Context) (kubernetesVersionBaseline, bool) {
-	secret, ok := v.readClusterConfigurationSecret(ctx)
-	if !ok {
-		return kubernetesVersionBaseline{}, false
-	}
-	return kubernetesVersionBaselineFromSecret(secret), true
+// Every field comes back unset when nothing at all is known — a cluster still bootstrapping, where
+// there is no version to protect yet — and each guard fail-opens on that.
+func (v *moduleConfigValidator) readKubernetesVersionFacts(ctx context.Context) kubernetesVersionBaseline {
+	secret, _ := v.readClusterConfigurationSecret(ctx)
+	return kubernetesVersionBaselineFor(ctx, v.client, secret)
 }
 
 func (v *moduleConfigValidator) readClusterConfigurationSecret(ctx context.Context) (*v1.Secret, bool) {
@@ -533,7 +478,13 @@ func (v *moduleConfigValidator) readRawClusterConfigurationVersion(ctx context.C
 // its next reconcile, which the delete of any key already triggers.
 func clusterKubernetesConfigMapHandler() http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, ar *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-		if ar.Operation == model.OperationDelete {
+		// The object is also narrowed by the rule's objectSelector/namespaceSelector in
+		// modules/002-deckhouse/templates/admission/validation.yaml. Checking it here too costs one
+		// comparison and bounds the damage of a mistake in that template: the rule runs with
+		// failurePolicy: Fail over configmaps in kube-system, so a selector that stopped matching
+		// would otherwise make every ConfigMap in that namespace undeletable.
+		if ar.Operation == model.OperationDelete &&
+			ar.Name == clusterKubernetesConfigMapName && ar.Namespace == kubeSystemNamespace {
 			return rejectResult("It is forbidden to delete configmap d8-cluster-kubernetes")
 		}
 

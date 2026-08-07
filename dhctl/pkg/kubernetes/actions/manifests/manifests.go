@@ -673,7 +673,7 @@ const (
 // the d8-cluster-configuration Secret is what closes that window.
 //
 // maxUsedKubernetesVersion starts equal to the version being installed: on a fresh cluster the
-// highest minor ever run and the one being installed are the same thing.
+// highest minor ever converged onto and the one being installed are the same thing.
 //
 // The name label is what the ValidatingWebhookConfiguration forbidding deletion selects on —
 // same reason the d8-cluster-configuration Secret carries one.

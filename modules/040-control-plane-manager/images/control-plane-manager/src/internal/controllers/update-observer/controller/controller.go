@@ -306,8 +306,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 func determineReconcileTrigger(configMap *corev1.ConfigMap, clusterCfg *cluster.Configuration) ReconcileTrigger {
 	previousVersion, exists := configMap.GetLabels()[common.K8sVersionLabelKey]
 
-	// A missing k8s-version label is the real first-run signal: the hook seeds the ConfigMap with
-	// heritage and data.spec only, so this controller's first pass over it has no version label yet.
+	// A missing k8s-version label is the real first-run signal: dhctl seeds the ConfigMap at
+	// bootstrap with labels and data.spec only, so this controller's first pass over it has no
+	// version label yet. ResourceVersion cannot serve as that signal — the seeded object arrives
+	// with a non-empty one.
 	if !exists {
 		return ReconcileTriggerInit
 	}

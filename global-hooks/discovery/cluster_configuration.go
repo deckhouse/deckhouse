@@ -34,6 +34,15 @@ import (
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
+// maxUsedK8sVersionSecretKey is Deckhouse's own bookkeeping in the d8-cluster-configuration Secret,
+// not a ClusterConfiguration field. It lives next to its only reader, the FilterFunc below; the
+// value it carries is consumed by the soft guard in target_kubernetes_version.go.
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — nothing writes this key any more
+// (update-observer owns spec.maxUsedKubernetesVersion of the cluster ConfigMap); it is read only as
+// a migration seed.
+const maxUsedK8sVersionSecretKey = "maxUsedControlPlaneKubernetesVersion"
+
 type ClusterConfigurationYaml struct {
 	Content []byte
 	// MaxUsed is maxUsedControlPlaneKubernetesVersion from the same Secret (baseline for soft-guard).

@@ -331,7 +331,11 @@ func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc
 		return err
 	}
 
-	// Step 1 of 2: the floor — the highest minor this cluster is known to have ever run.
+	// Step 1 of 2: the floor — the highest minor this cluster is known to have converged onto.
+	// Derived from effectiveKubernetesVersion below, which leads the running control plane by one
+	// minor while a rollout is in flight, so during an upgrade the floor already names the minor
+	// being moved to. That is deliberate — the alternative is a floor that forgets an upgrade the
+	// moment it is announced — but it means the value is not literally "what the apiservers serve".
 	//
 	// The three sources are not different quantities being aggregated; they are the same
 	// monotonic quantity at three different freshnesses, so "highest" and "first that has a

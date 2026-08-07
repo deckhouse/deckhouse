@@ -16,6 +16,7 @@
 
 import base64
 import logging
+import re
 import yaml
 from typing import Optional, List
 from deckhouse import hook
@@ -24,6 +25,8 @@ from dotmap import DotMap
 from feature_gates_generated import exists_in_component, is_forbidden, is_deprecated
 
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
+# A declared version this webhook is willing to hand onward as a version.
+VERSION_RE = re.compile(r'^v?\d+\.\d+(\.\d+)?$')
 # Sentinels meaning "let Deckhouse pick the version". The two documents do not accept the same
 # word: ModuleConfig takes Default only, while ClusterConfiguration keeps Automatic, which predates
 # Default there and cannot be removed without breaking existing documents.
@@ -42,6 +45,30 @@ def is_cluster_configuration_pinned(version) -> bool:
     obviously not a version must never be handed onward as one.
     """
     return bool(version) and version not in (AUTOMATIC_VERSION, DEFAULT_VERSION)
+
+
+def usable_declared_version(version, source: str) -> Optional[str]:
+    """Drop a declared kubernetesVersion that is neither a sentinel nor a version, and say so.
+
+    Mirrors usableDeclaredVersion in global-hooks/discovery/target_kubernetes_version.go. Both
+    enums make such a value unwritable, so this is defence in depth for objects that predate the
+    current schema — most concretely a ModuleConfig carrying the Automatic alias, which was legal
+    there before the alias was dropped from that enum.
+
+    Returning None makes the caller fall through to the next source, which is what already happens
+    when the field is absent. Without the log the fall-through is indistinguishable from an unset
+    field, and the version silently stops being checked at all.
+    """
+    if not version:
+        return None
+    if VERSION_RE.match(version):
+        return version
+
+    logging.warning(
+        "ignoring the declared kubernetesVersion %r from %s: not a version and not a sentinel this document accepts",
+        version, source,
+    )
+    return None
 
 config = f"""
 configVersion: v1
@@ -124,15 +151,17 @@ def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
 
 
 def get_k8s_version(ctx: DotMap) -> Optional[str]:
-    # Mirrors global-hooks/discovery/cluster_configuration.go resolveTargetKubernetesVersion:
+    # Mirrors global-hooks/discovery/target_kubernetes_version.go resolveTargetKubernetesVersion:
     # a present ModuleConfig setting decides on its own, Default/Automatic included (it then means the
     # Deckhouse default, and ClusterConfiguration is not consulted at all).
     settings = ctx.review.request.object.get('spec', {}).get('settings', {})
     mc_version = settings.get('kubernetesVersion')
     if mc_version and not is_module_config_track_default(mc_version):
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-feature-gates source=mc-pin version=%s", mc_version)
-        return mc_version
+        mc_pin = usable_declared_version(mc_version, "ModuleConfig control-plane-manager")
+        if mc_pin:
+            # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+            logging.info("E2E-KV python-feature-gates source=mc-pin version=%s", mc_pin)
+            return mc_pin
 
     snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
@@ -142,11 +171,13 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
 
     secret = snapshot[0]
     if not secret or not hasattr(secret, 'object'):
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-feature-gates source=none reason=bad-secret mc=%s", mc_version)
         return None
 
     data = secret.object.data
     if not data:
+        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
         logging.info("E2E-KV python-feature-gates source=none reason=empty-secret mc=%s", mc_version)
         return None
 
@@ -158,9 +189,11 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
 
     k8s_version = get_k8s_version_from_cluster_config(data)
     if is_cluster_configuration_pinned(k8s_version):
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-feature-gates source=cc-pin version=%s", k8s_version)
-        return k8s_version
+        cc_pin = usable_declared_version(k8s_version, "ClusterConfiguration")
+        if cc_pin:
+            # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+            logging.info("E2E-KV python-feature-gates source=cc-pin version=%s", cc_pin)
+            return cc_pin
 
     version = get_deckhouse_default_version_from_secret(data)
     # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).

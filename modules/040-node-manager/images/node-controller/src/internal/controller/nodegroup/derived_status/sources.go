@@ -43,6 +43,7 @@ const (
 	clusterConfigSecretName        = "d8-cluster-configuration"
 	clusterConfigSecretNamespace   = "kube-system"
 	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
+	clusterKubernetesConfigMapNS   = "kube-system"
 	clusterUUIDConfigMapName       = "d8-cluster-uuid"
 	clusterUUIDConfigMapNS         = "kube-system"
 
@@ -141,32 +142,32 @@ func (s *Service) readClusterConfiguration(ctx context.Context) string {
 func (s *Service) readTargetKubernetesVersion(ctx context.Context) (*semver.Version, error) {
 	configMap := &corev1.ConfigMap{}
 	if err := s.Client.Get(ctx, types.NamespacedName{
-		Namespace: clusterConfigSecretNamespace,
+		Namespace: clusterKubernetesConfigMapNS,
 		Name:      clusterKubernetesConfigMapName,
 	}, configMap); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("get ConfigMap %s/%s: %w", clusterConfigSecretNamespace, clusterKubernetesConfigMapName, err)
+		return nil, fmt.Errorf("get ConfigMap %s/%s: %w", clusterKubernetesConfigMapNS, clusterKubernetesConfigMapName, err)
 	}
 
 	rawSpec, ok := configMap.Data["spec"]
 	if !ok || rawSpec == "" {
-		return nil, fmt.Errorf("configMap %s/%s has no 'spec' data key yet", clusterConfigSecretNamespace, clusterKubernetesConfigMapName)
+		return nil, fmt.Errorf("configMap %s/%s has no 'spec' data key yet", clusterKubernetesConfigMapNS, clusterKubernetesConfigMapName)
 	}
 
 	var spec clusterKubernetesSpec
 	if err := sigsyaml.Unmarshal([]byte(rawSpec), &spec); err != nil {
-		return nil, fmt.Errorf("unmarshal ConfigMap %s/%s 'spec': %w", clusterConfigSecretNamespace, clusterKubernetesConfigMapName, err)
+		return nil, fmt.Errorf("unmarshal ConfigMap %s/%s 'spec': %w", clusterKubernetesConfigMapNS, clusterKubernetesConfigMapName, err)
 	}
 	if spec.DesiredVersion == "" {
-		return nil, fmt.Errorf("configMap %s/%s 'spec.desiredVersion' is empty", clusterConfigSecretNamespace, clusterKubernetesConfigMapName)
+		return nil, fmt.Errorf("configMap %s/%s 'spec.desiredVersion' is empty", clusterKubernetesConfigMapNS, clusterKubernetesConfigMapName)
 	}
 
 	version, err := semver.NewVersion(spec.DesiredVersion)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ConfigMap %s/%s 'spec.desiredVersion' %q: %w",
-			clusterConfigSecretNamespace, clusterKubernetesConfigMapName, spec.DesiredVersion, err)
+			clusterKubernetesConfigMapNS, clusterKubernetesConfigMapName, spec.DesiredVersion, err)
 	}
 	return version, nil
 }

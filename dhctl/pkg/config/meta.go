@@ -698,6 +698,17 @@ func isClusterConfigurationPinned(version string) bool {
 func (m *MetaConfig) kubernetesVersionRaw() string {
 	mcVersion := ""
 	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {
+		// Read straight off spec.settings, without running the settings-version conversions: this
+		// runs at bootstrap, where the conversion chain is not wired up. Safe only while no
+		// conversion moves or renames this key — control-plane-manager has none today, and the
+		// setting is new in this release, so there is no older shape it could be stored in. A
+		// future conversion that touches kubernetesVersion has to be reflected here, otherwise
+		// dhctl and the on-cluster admission webhook (which validates the *converted* settings)
+		// would silently disagree about what the operator declared.
+		//
+		// A non-string value (an unquoted `kubernetesVersion: 1.35`) is dropped rather than
+		// coerced, for the reason spelled out in global-hooks/discovery/target_kubernetes_version.go:
+		// a minor ending in zero loses it, so 1.40 would come back as "1.4".
 		if v, ok := mc.Spec.Settings["kubernetesVersion"].(string); ok {
 			mcVersion = v
 		}

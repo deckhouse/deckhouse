@@ -16,6 +16,7 @@
 
 import base64
 import logging
+import re
 import yaml
 from typing import Optional, List
 from deckhouse import hook
@@ -31,6 +32,8 @@ CLUSTER_KUBERNETES_SNAPSHOT_NAME = "d8-cluster-kubernetes"
 # Default there and cannot be removed without breaking existing documents.
 AUTOMATIC_VERSION = "Automatic"
 DEFAULT_VERSION = "Default"
+# A declared version this webhook is willing to hand onward as a version.
+VERSION_RE = re.compile(r'^v?\d+\.\d+(\.\d+)?$')
 
 
 def is_module_config_track_default(version) -> bool:
@@ -44,6 +47,32 @@ def is_cluster_configuration_pinned(version) -> bool:
     obviously not a version must never be handed onward as one.
     """
     return bool(version) and version not in (AUTOMATIC_VERSION, DEFAULT_VERSION)
+
+
+def usable_declared_version(version, source: str) -> Optional[str]:
+    """Drop a declared kubernetesVersion that is neither a sentinel nor a version, and say so.
+
+    Mirrors usableDeclaredVersion in global-hooks/discovery/target_kubernetes_version.go. Both
+    enums make such a value unwritable, so this is defence in depth for objects that predate the
+    current schema — most concretely a ModuleConfig carrying the Automatic alias, which was legal
+    there before the alias was dropped from that enum.
+
+    Load-bearing here in a way it is not in the Go hook: an unusable value used to travel all the
+    way into is_feature_gate_deprecated_up_to_version, whose exception is swallowed per feature gate
+    (see build_deprecated_feature_gates_error), so the whole deprecation check silently became a
+    no-op and the webhook allowed everything. Returning None makes the caller fall through to the
+    next source instead, which is what already happens when the field is absent.
+    """
+    if not version:
+        return None
+    if VERSION_RE.match(version):
+        return version
+
+    logging.warning(
+        "ignoring the declared kubernetesVersion %r from %s: not a version and not a sentinel this document accepts",
+        version, source,
+    )
+    return None
 
 config = f"""
 configVersion: v1
@@ -271,14 +300,16 @@ def resolve_effective_version(
     ctx: DotMap,
     secret_data=None,
 ) -> Optional[str]:
-    # Mirrors global-hooks/discovery/cluster_configuration.go resolveTargetKubernetesVersion:
+    # Mirrors global-hooks/discovery/target_kubernetes_version.go resolveTargetKubernetesVersion:
     # a present ModuleConfig setting decides on its own, Default/Automatic included (it then means the
     # Deckhouse default, and ClusterConfiguration is not consulted at all). Only an absent setting
     # falls back to ClusterConfiguration, where "Automatic" is not a pin either.
     if mc_kubernetes_version and not is_module_config_track_default(mc_kubernetes_version):
-        # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-        logging.info("E2E-KV python-k8s-fg source=mc-pin version=%s", mc_kubernetes_version)
-        return mc_kubernetes_version
+        mc_pin = usable_declared_version(mc_kubernetes_version, "ModuleConfig control-plane-manager")
+        if mc_pin:
+            # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+            logging.info("E2E-KV python-k8s-fg source=mc-pin version=%s", mc_pin)
+            return mc_pin
 
     if secret_data is None:
         secret_data = get_cluster_configuration_secret_data(ctx)
@@ -303,9 +334,11 @@ def resolve_effective_version(
     if secret_data:
         cc_version = get_k8s_version_from_cluster_config(secret_data)
         if is_cluster_configuration_pinned(cc_version):
-            # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
-            logging.info("E2E-KV python-k8s-fg source=cc-pin version=%s", cc_version)
-            return cc_version
+            cc_pin = usable_declared_version(cc_version, "ClusterConfiguration")
+            if cc_pin:
+                # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
+                logging.info("E2E-KV python-k8s-fg source=cc-pin version=%s", cc_pin)
+                return cc_pin
 
     version = deckhouse_default()
     # TODO(E2E-KV): temporary stand Info logs — remove before final PR (`rg E2E-KV`).
@@ -315,6 +348,16 @@ def resolve_effective_version(
 
 def build_deprecated_feature_gates_error(target_version: str, enabled_feature_gates: List[str]) -> Optional[str]:
     normalized_version = normalize_version(target_version)
+
+    # The per-gate `except Exception: continue` below cannot tell "this gate is not in the
+    # deprecation table" from "the version is unusable, so nothing can be looked up". Rejecting an
+    # unusable version up front keeps the second case from passing as a clean check, and logs it.
+    if not VERSION_RE.match(normalized_version):
+        logging.warning(
+            "skipping the deprecated feature gates check: %r is not a usable Kubernetes version",
+            target_version,
+        )
+        return None
 
     deprecated_feature_gates = []
 

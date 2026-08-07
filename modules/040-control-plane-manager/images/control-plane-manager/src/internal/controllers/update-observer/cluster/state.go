@@ -26,7 +26,13 @@ type State struct {
 	Status
 }
 
-func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState, versionSettings VersionSettings, maxUsedVersion, sourceVersion string, downgradeInProgress bool) *State {
+// GetState derives everything published in the cluster ConfigMap from the declared configuration
+// and the observed cluster.
+//
+// maxUsed is taken from cfg rather than passed separately: it is the same field the Spec below is
+// built from, and a separate argument only made it possible to publish an availableVersions list
+// that contradicts the maxUsed written next to it.
+func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState, versionSettings VersionSettings, sourceVersion string, downgradeInProgress bool) *State {
 	currentVersion := determineCurrentVersion(nodes.versions, controlPlane.versions, downgradeInProgress)
 
 	state := &State{
@@ -38,7 +44,7 @@ func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneS
 		Status: Status{
 			CurrentVersion:    currentVersion,
 			SupportedVersions: versionSettings.Supported,
-			AvailableVersions: versionSettings.Available(version.GetMax(maxUsedVersion, currentVersion)), // prevent stale list when maxUsedVersion updates post-calculation
+			AvailableVersions: versionSettings.Available(version.GetMax(cfg.MaxUsedVersion, currentVersion)), // prevent stale list when maxUsedVersion updates post-calculation
 			AutomaticVersion:  versionSettings.Automatic,
 			ControlPlaneState: *controlPlane,
 			NodesState:        *nodes,

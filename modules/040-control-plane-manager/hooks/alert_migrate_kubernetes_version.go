@@ -69,8 +69,8 @@ func checkKubernetesVersionMigration(_ context.Context, input *go_hook.HookInput
 }
 
 // isKubernetesVersionMigrated reports whether ModuleConfig control-plane-manager has
-// kubernetesVersion set. Presence (including the deprecated Automatic alias) is enough — the
-// alert targets only clusters that still rely on the unset→CC-fallback path.
+// kubernetesVersion set. Presence is enough, Default included — the alert targets only clusters
+// that still rely on the unset→CC-fallback path, not clusters that chose to track the default.
 func isKubernetesVersionMigrated(mcVersion string) bool {
 	return mcVersion != ""
 }

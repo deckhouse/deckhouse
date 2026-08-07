@@ -51,11 +51,12 @@ func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configura
 		return nil, fmt.Errorf("failed to parse versions from env: %w", err)
 	}
 
-	// availableVersions is derived from the maxUsed this pass computed, not from the max-k8s-version
-	// label or from the value still stored in the ConfigMap. Both of those describe the previous
-	// pass, so the published list would lag a reconcile behind the floor the ModuleConfig admission
-	// webhook enforces from the same quantity — and the two must not contradict each other.
-	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, cfg.MaxUsedVersion, sourceVersion, downgradeInProgress), nil
+	// availableVersions is derived from the maxUsed this pass computed (cfg.MaxUsedVersion), not from
+	// the max-k8s-version label or from the value still stored in the ConfigMap. Both of those
+	// describe the previous pass, so the published list would lag a reconcile behind the floor the
+	// ModuleConfig admission webhook enforces from the same quantity — and the two must not
+	// contradict each other.
+	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, sourceVersion, downgradeInProgress), nil
 }
 
 // desiredConfiguration returns the data.spec block to write: the declared configuration from the

@@ -231,14 +231,22 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 
 	// Guards against the test quietly becoming a no-op: it was inert for a while because its name
 	// did not match the CI -run filter, and skipping absent editions must not recreate that.
-	checkedSchemas := 0
+	//
+	// Counted per edition, not per schema: a global "at least one schema was checked" is satisfied by
+	// the CE edition alone, so a ModuleConfig schema that went missing under ee/ would skip silently
+	// while the assertion below still passed. Each edition present in the checkout must contribute.
+	checkedEditions := 0
+	expectedEditions := 0
 
 	for _, edition := range kubernetesVersionEditions {
+		edition := edition
 		t.Run(edition.name, func(t *testing.T) {
 			var cc clusterConfigurationSchema
 			if !readYAML(t, edition.clusterConfiguration, &cc) {
 				t.Skipf("%s is absent in this checkout (edition not shipped here)", edition.clusterConfiguration)
 			}
+			// The edition is shipped here, so every ModuleConfig schema it lists has to be checked.
+			expectedEditions++
 			require.NotEmpty(t, cc.APIVersions, "%s has no apiVersions", edition.clusterConfiguration)
 
 			ccEnum := cc.APIVersions[0].OpenAPISpec.Properties.KubernetesVersion.Enum
@@ -247,11 +255,14 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 
 			ccPins := pinVersions(ccEnum, sentinelsCC)
 
+			checked := 0
 			for _, mcPath := range edition.moduleConfigs {
 				var mc moduleConfigValuesSchema
-				if !readYAML(t, mcPath, &mc) {
-					continue
-				}
+				// A ClusterConfiguration that is present with a ModuleConfig schema that is not is
+				// not a "not shipped here" checkout — it is the enum guard losing its subject.
+				require.True(t, readYAML(t, mcPath, &mc),
+					"%s exists but %s does not: the kubernetesVersion enum guard has nothing to compare against",
+					edition.clusterConfiguration, mcPath)
 
 				mcEnum := mc.Properties.KubernetesVersion.Enum
 				require.Contains(t, mcEnum, "Default", "%s must offer Default", mcPath)
@@ -261,8 +272,9 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 				require.NotContains(t, mcEnum, "Automatic", "%s must not accept the Automatic alias", mcPath)
 				assert.Equal(t, ccPins, pinVersions(mcEnum, sentinelsMC),
 					"pinned kubernetesVersion values in %s differ from %s", mcPath, edition.clusterConfiguration)
-				checkedSchemas++
+				checked++
 			}
+			require.Positive(t, checked, "edition %q lists no ModuleConfig schema to check", edition.name)
 
 			var vm k8sVersionMap
 			if readYAML(t, edition.versionMap, &vm) {
@@ -272,11 +284,15 @@ func TestKubernetesVersionEnumValidation(t *testing.T) {
 						"version %q is offered by %s but absent from %s", version, edition.clusterConfiguration, edition.versionMap)
 				}
 			}
+
+			checkedEditions++
 		})
 	}
 
-	require.Positive(t, checkedSchemas,
-		"no ModuleConfig kubernetesVersion schema was checked in this checkout — the enum guard is inert")
+	require.Positive(t, checkedEditions,
+		"no edition's kubernetesVersion schemas were checked in this checkout — the enum guard is inert")
+	require.Equal(t, expectedEditions, checkedEditions,
+		"an edition was found in this checkout but its kubernetesVersion enums were not fully checked")
 }
 
 func pinVersions(enum []string, sentinels map[string]struct{}) []string {

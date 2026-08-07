@@ -257,7 +257,7 @@ func kubernetesVersionBelowFloor(target, floor *semver.Version) bool {
 // "Automatic" against. Both values are Deckhouse's own bookkeeping (written by the
 // control-plane-manager effective_kubernetes_version.go hook), not ClusterConfiguration fields.
 type kubernetesVersionBaseline struct {
-	// MaxUsed is the highest version the cluster has ever run
+	// MaxUsed is the highest version the cluster has ever converged onto
 	// (maxUsedControlPlaneKubernetesVersion).
 	MaxUsed    string
 	MaxUsedSet bool
@@ -265,6 +265,12 @@ type kubernetesVersionBaseline struct {
 	// (deckhouseDefaultKubernetesVersion).
 	DeckhouseDefault    string
 	DeckhouseDefaultSet bool
+	// AvailableVersions is status.availableVersions, the set update-observer publishes as
+	// Supported[maxUsed-1:]. Only the ConfigMap ever carried it, so it stays empty when that object
+	// is missing — there is no Secret key to fall back to. Carried on the baseline so the
+	// ModuleConfig webhook resolves the floor and the membership list from one snapshot of one
+	// object instead of reading it twice.
+	AvailableVersions []string
 }
 
 // kubernetesVersionBaselineFromSecret reads the baseline out of the d8-cluster-configuration Secret.
@@ -311,18 +317,24 @@ func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret
 		return baseline
 	}
 
+	// A block this webhook cannot read leaves the Secret-derived value in place, which is the right
+	// degradation — but it is logged, because a guard that quietly falls back to a stale source
+	// looks exactly like a guard that found nothing to correct.
 	spec := new(clusterKubernetesSpec)
-	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err == nil {
-		if maxUsed := strings.TrimSpace(spec.MaxUsedVersion); maxUsed != "" {
-			baseline.MaxUsed, baseline.MaxUsedSet = maxUsed, true
-		}
+	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesSpecDataKey]), spec); err != nil {
+		log.Warn("cannot parse d8-cluster-kubernetes data.spec, keeping the Secret baseline", log.Err(err))
+	} else if maxUsed := strings.TrimSpace(spec.MaxUsedVersion); maxUsed != "" {
+		baseline.MaxUsed, baseline.MaxUsedSet = maxUsed, true
 	}
 
 	status := new(clusterKubernetesStatus)
-	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesStatusDataKey]), status); err == nil {
+	if err := yaml.Unmarshal([]byte(cm.Data[clusterKubernetesStatusDataKey]), status); err != nil {
+		log.Warn("cannot parse d8-cluster-kubernetes data.status, keeping the Secret baseline", log.Err(err))
+	} else {
 		if automaticVersion := strings.TrimSpace(status.AutomaticVersion); automaticVersion != "" {
 			baseline.DeckhouseDefault, baseline.DeckhouseDefaultSet = automaticVersion, true
 		}
+		baseline.AvailableVersions = status.AvailableVersions
 	}
 
 	return baseline

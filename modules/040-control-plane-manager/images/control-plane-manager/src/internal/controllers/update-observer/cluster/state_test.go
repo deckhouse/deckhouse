@@ -76,9 +76,12 @@ var defaultVersionSettings = VersionSettings{
 	Automatic: "1.34",
 }
 
+// MaxUsedVersion is set because LoadConfigurationFromEnv rejects it empty: a Configuration without
+// it could not reach GetState in production.
 var defaultCfg = &Configuration{
 	DesiredVersion: "1.34",
 	UpdateMode:     UpdateModeAutomatic,
+	MaxUsedVersion: "1.34",
 }
 
 // buildState is a helper that constructs a cluster State from raw node/pod data.
@@ -91,7 +94,7 @@ func buildState(t *testing.T, cfg *Configuration, nodes []corev1.Node, pods *cor
 	cpState, err := GetControlPlaneState(pods, cfg.DesiredVersion, sourceVersion)
 	require.NoError(t, err)
 
-	return GetState(cfg, nodesState, cpState, defaultVersionSettings, sourceVersion, sourceVersion, false)
+	return GetState(cfg, nodesState, cpState, defaultVersionSettings, sourceVersion, false)
 }
 
 func TestProgress_UpgradeOneVersionAtATime(t *testing.T) {
@@ -177,6 +180,7 @@ func TestProgress_UpgradeThreeHops(t *testing.T) {
 	threeHopsCfg := &Configuration{
 		DesiredVersion: "1.35",
 		UpdateMode:     UpdateModeAutomatic,
+		MaxUsedVersion: "1.32",
 	}
 
 	t.Run("nothing updated yet — 0%", func(t *testing.T) {

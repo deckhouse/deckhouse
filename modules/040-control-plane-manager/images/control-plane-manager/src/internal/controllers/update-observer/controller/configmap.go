@@ -41,10 +41,16 @@ type ConfigMapData struct {
 type Spec struct {
 	DesiredVersion string `yaml:"desiredVersion"`
 	UpdateMode     string `yaml:"updateMode"`
-	// MaxUsedVersion is the highest Kubernetes minor this cluster has ever run. It is monotonic
-	// and derived from the throttled effective version, never from DesiredVersion: an operator may
-	// declare a version several minors ahead, and seeding the historical maximum from a declared
-	// value would raise the downgrade floor to a version the cluster never actually ran.
+	// MaxUsedVersion is the highest Kubernetes minor this cluster has ever converged onto. It is
+	// monotonic and derived from the throttled effective version, never from DesiredVersion: an
+	// operator may declare a version several minors ahead, and seeding the historical maximum from
+	// a declared value would raise the downgrade floor to a version the cluster never approached.
+	//
+	// "Converged onto", not "ran": the effective version leads the running control plane by one
+	// minor for the duration of a rollout, so during an upgrade this value names the minor the
+	// cluster is moving to rather than the one its apiservers are serving. This is the canonical
+	// definition — other readers of the field describe it as "ever run", which is the operator's
+	// view of the same number and accurate everywhere except inside that window.
 	MaxUsedVersion string `yaml:"maxUsedKubernetesVersion,omitempty"`
 }
 

@@ -101,8 +101,6 @@ const (
 	clusterKubernetesConfigMapName      = "d8-cluster-kubernetes"
 	clusterKubernetesConfigMapNamespace = "kube-system"
 
-	maxUsedK8sVersionSecretKey = "maxUsedControlPlaneKubernetesVersion"
-
 	defaultVersionDriftMetricGroup = "D8ControlPlaneDefaultVersionDrift"
 	defaultVersionDriftMetricName  = "d8_control_plane_default_version_drift"
 

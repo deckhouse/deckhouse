@@ -37,6 +37,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/golang/protobuf/proto" // nolint: staticcheck
 	"helm.sh/helm/v3/pkg/releaseutil"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
@@ -125,20 +126,25 @@ func init() {
 	}
 }
 
-// The Kubernetes binding below is a trigger only — the hook reads the resolved answer from
-// global.discovery.kubernetesVersionIsDefault, not from the snapshot (nothing here reads
-// input.Snapshots at all, hence the nil FilterFunc result). It exists because Values are not an
-// event source: without it the K8sVersionsWithDeprecations requirement, which gates
-// DeckhouseRelease installation, would keep a stale answer for up to an hour after an operator
-// switches the version between Default and a pin.
+// The Kubernetes bindings below are triggers only — the hook reads the resolved answer from
+// global.discovery.kubernetesVersionIsDefault, not from the snapshots (nothing here reads
+// input.Snapshots at all, hence the nil FilterFunc results). They exist because Values are not an
+// event source: without them the K8sVersionsWithDeprecations requirement, which gates
+// DeckhouseRelease installation, would keep a stale answer until the next hourly tick after an
+// operator switches the version between Default and a pin.
 //
-// It watches ModuleConfig, not the ClusterConfiguration Secret: ModuleConfig owns the version now,
-// and patching it does not touch the Secret — so a Secret binding no longer fires on the very
-// change it was added to catch. The object changes rarely, so this costs no extra helm-release
-// scans in practice.
+// Both documents are watched, and that is not redundancy. ModuleConfig owns the version now, and
+// patching it does not touch the Secret — so the Secret binding alone stopped firing on the very
+// change it was added to catch. But while the deprecated ClusterConfiguration field is still
+// honoured (it decides whenever ModuleConfig says nothing), editing *it* also flips the resolved
+// answer, and the ModuleConfig binding cannot see that. Neither object changes often, so two
+// bindings cost no extra helm-release scans in practice.
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — drop the clusterConfiguration binding together
+// with the ClusterConfiguration field; the ModuleConfig one is the permanent trigger.
 //
 // OnStartup must not be combined with Kubernetes bindings (addon-operator panics); Synchronization
-// of this binding already fires the hook at startup.
+// of these bindings already fires the hook at startup.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/helm-releases-scan",
 	Schedule: []go_hook.ScheduleConfig{
@@ -155,8 +161,41 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{MatchNames: []string{"control-plane-manager"}},
 			FilterFunc:   filterModuleConfigTriggerOnly,
 		},
+		{
+			Name:              "clusterConfiguration",
+			ApiVersion:        "v1",
+			Kind:              "Secret",
+			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
+			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
+			FilterFunc:        filterClusterConfigurationVersionTriggerOnly,
+		},
 	},
 }, dependency.WithExternalDependencies(handleHelmReleases))
+
+// filterClusterConfigurationVersionTriggerOnly narrows the Secret snapshot to the deprecated
+// kubernetesVersion field, for the same reason filterModuleConfigTriggerOnly narrows its object:
+// the whole Secret changes for reasons that have nothing to do with the version (defaultCRI, the
+// CIDRs, Deckhouse's own bookkeeping keys), and each change would cost a full helm-release scan.
+//
+// Never returns an error: a FilterFunc error discards the snapshot and takes the hook down, and this
+// binding only needs to deliver a wake-up. An unreadable document becomes "".
+//
+// TODO(kubernetesVersion-deprecation): T+1 remove — dies with the binding above.
+func filterClusterConfigurationVersionTriggerOnly(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return "", nil
+	}
+
+	var cfg struct {
+		KubernetesVersion string `json:"kubernetesVersion"`
+	}
+	if err := yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], &cfg); err != nil {
+		return "", nil
+	}
+
+	return cfg.KubernetesVersion, nil
+}
 
 // filterModuleConfigTriggerOnly narrows the snapshot to the one field this binding exists for.
 // Nothing reads the result — handleHelmReleases takes the resolved answer from Values — but the
