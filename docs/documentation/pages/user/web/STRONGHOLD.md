@@ -25,6 +25,8 @@ defined in the global `modules.publicDomainTemplate` parameter.
 
 ## Managing secrets engines
 
+Configuration guides for common engine types are available in the [Deckhouse Stronghold documentation](/products/stronghold/documentation/): [KV secrets engine](/products/stronghold/documentation/user/secrets-engines/kv/overview.html) and [PKI secrets engine](/products/stronghold/documentation/user/secrets-engines/pki.html).
+
 ### Viewing a secrets engine
 
 To view a secrets engine:

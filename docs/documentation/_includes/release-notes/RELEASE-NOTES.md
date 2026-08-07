@@ -223,7 +223,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
 - The `vertical-pod-autoscaler` module has been updated from version 1.4.1 to [1.5.1](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.5.1).
   Starting from version 1.5.0, the `updateMode: Auto` mode is [considered deprecated](https://github.com/kubernetes/autoscaler/pull/8426).
   Users are advised to replace it with [`updateMode: InPlaceOrRecreate`](https://deckhouse.io/modules/vertical-pod-autoscaler/v1.75/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-updatemode).
-  See the [vertical scaling documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/architecture/vpa.html#vpa-operating-modes) for details.
+  See the [vertical scaling documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/architecture/kubernetes-and-scheduling/vpa.html#vpa-operating-modes) for details.
 
 - When issuing new certificates using the [`cert-manager`](https://deckhouse.io/modules/cert-manager/v1.75/) module, the certificate's private key is now re-generated as well.
   This change mitigates potential security risks.
