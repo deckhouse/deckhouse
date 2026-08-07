@@ -22,7 +22,7 @@ properties:
     enum: [AllowAny, RegistryOnly]
     x-examples: ["AllowAny"]
     description: |
-      Policy for requests directed to external services that aren't registered in the service mesh.
+      Policy for requests directed to external services that aren't registered in the mesh (a group of data plane services that share a TrustDomain and authenticate each other using trusted root certificates).
 
       With `RegistryOnly`, external services must be registered via a `ServiceEntry` custom resource or routed through an `egressgateway`.
     default: AllowAny
