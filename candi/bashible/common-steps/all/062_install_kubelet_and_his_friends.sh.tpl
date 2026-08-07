@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
-{{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
+{{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 # d8 is the largest registrypackage. Step 004 deliberately skips it; the 001 prefetch
 # keeps downloading it in parallel with the rest of bashible. Wait + install happen

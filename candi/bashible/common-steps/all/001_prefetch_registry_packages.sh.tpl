@@ -20,7 +20,7 @@
 # Package list MUST stay identical to 007_fetch_registry_packages.sh.tpl.
 
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
-{{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
+{{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 {{- $containerd := "containerd1734"}}
 {{- if eq .cri "ContainerdV2" }}
