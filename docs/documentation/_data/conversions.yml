@@ -47,19 +47,23 @@ cloud-provider-yandex:
       description:
         en: |
             Migration to the new ModuleConfig schema for cloud-provider-yandex.
-            Sections `provider` and `nodes` with required fields are added.
-            Fields `nodes.parameters.layout` / `nodes.parameters.nodeNetworkCIDR` / `nodes.parameters.sshPublicKey` get placeholder values — update them manually.
-            Fields `storageClass.default` / `storageClass.exclude` are replaced with `storage.parameters.defaultStorageClass` / `storage.parameters.excludedStorageClasses`.
+            Sections `provider`, `nodes`, `storage` and `ccm` with required fields are added.
+            Fields `provider.parameters.cloudID` / `provider.parameters.folderID` / `nodes.parameters.layout` / `nodes.parameters.nodeNetworkCIDR` / `nodes.parameters.sshPublicKey` get placeholder values — update them manually.
+            Field `storageClass.exclude` is replaced with `storage.parameters.excludedStorageClasses`.
+            Field `storageClass.default` is removed. Use the global `global.defaultClusterStorageClass` parameter instead.
             Field `additionalExternalNetworkIDs` is moved to `ccm.parameters.additionalExternalNetworkIDs`.
         ru: |
             Переход на новую схему ModuleConfig для cloud-provider-yandex.
-            Добавлены секции `provider` и `nodes` с обязательными полями.
-            Поля `nodes.parameters.layout` / `nodes.parameters.nodeNetworkCIDR` / `nodes.parameters.sshPublicKey` получают placeholder-значения — замените их реальными значениями вручную.
-            Поля `storageClass.default` / `storageClass.exclude` заменены на `storage.parameters.defaultStorageClass` / `storage.parameters.excludedStorageClasses`.
+            Добавлены секции `provider`, `nodes`, `storage` и `ccm` с обязательными полями.
+            Поля `provider.parameters.cloudID` / `provider.parameters.folderID` / `nodes.parameters.layout` / `nodes.parameters.nodeNetworkCIDR` / `nodes.parameters.sshPublicKey` получают placeholder-значения — замените их реальными значениями вручную.
+            Поле `storageClass.exclude` заменено на `storage.parameters.excludedStorageClasses`.
+            Поле `storageClass.default` удалено. Вместо этого параметра используйте глобальный параметр `global.defaultClusterStorageClass`.
             Поле `additionalExternalNetworkIDs` перемещено в `ccm.parameters.additionalExternalNetworkIDs`.
       conversions:
         - if .provider == null then .provider = {} end
         - if .provider.parameters == null then .provider.parameters = {} end
+        - if .provider.parameters.cloudID == null then .provider.parameters.cloudID = "PLACEHOLDER_REPLACE_ME" end
+        - if .provider.parameters.folderID == null then .provider.parameters.folderID = "PLACEHOLDER_REPLACE_ME" end
         - if .nodes == null then .nodes = {} end
         - if .nodes.parameters == null then .nodes.parameters = {} end
         - if .nodes.parameters.layout == null then .nodes.parameters.layout = "Standard" end
@@ -68,7 +72,6 @@ cloud-provider-yandex:
         - if .nodes.disabled == null then .nodes.disabled = false end
         - if .storage == null then .storage = {} end
         - if .storage.parameters == null then .storage.parameters = {} end
-        - if .storageClass.default != null then .storage.parameters.defaultStorageClass = .storageClass.default end
         - if .storageClass.exclude != null then .storage.parameters.excludedStorageClasses = .storageClass.exclude end
         - del(.storageClass)
         - if .storage.disabled == null then .storage.disabled = false end
