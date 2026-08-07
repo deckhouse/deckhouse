@@ -17,7 +17,6 @@ package immutable
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 
 	"sigs.k8s.io/yaml"
