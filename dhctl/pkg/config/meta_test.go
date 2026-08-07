@@ -491,3 +491,136 @@ func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, float64(3), masterPool["replicas"])
 }
+
+// mcFlowResources mirrors a DVP bootstrap config: the CloudPermanent node
+// groups live in the resources documents, not in a ProviderClusterConfiguration.
+const mcFlowResources = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 3
+    classReference:
+      kind: DVPInstanceClass
+      name: master-dvp
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 2
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+  nodeTemplate:
+    labels:
+      node-role: worker
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 1
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ephemeral
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 5
+    maxPerZone: 7
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+`
+
+func cloudMetaConfig(resourcesYAML string) *MetaConfig {
+	return &MetaConfig{
+		ClusterConfig: map[string]json.RawMessage{
+			"clusterType":       json.RawMessage(`"Cloud"`),
+			"serviceSubnetCIDR": json.RawMessage(`"10.222.0.0/16"`),
+			"clusterDomain":     json.RawMessage(`"cluster.local"`),
+			"cloud":             json.RawMessage(`{"provider":"DVP","prefix":"test"}`),
+		},
+		ResourcesYAML: resourcesYAML,
+	}
+}
+
+func TestPrepareDerivesNodeGroupsFromResources(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, 3, m.MasterNodeGroupSpec.Replicas)
+
+	require.Len(t, m.TerraNodeGroupSpecs, 2, "master is not a terra node group, CloudEphemeral is not provisioned by dhctl")
+	require.Equal(t, "system", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, 1, m.TerraNodeGroupSpecs[0].Replicas)
+	require.Equal(t, "worker", m.TerraNodeGroupSpecs[1].Name)
+	require.Equal(t, 2, m.TerraNodeGroupSpecs[1].Replicas)
+	require.Equal(t, map[string]interface{}{"labels": map[string]interface{}{"node-role": "worker"}}, m.TerraNodeGroupSpecs[1].NodeTemplate)
+}
+
+func TestPrepareKeepsProviderClusterConfigNodeGroups(t *testing.T) {
+	m := cloudMetaConfig(mcFlowResources)
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[{"name":"legacy","replicas":7}]`),
+	}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, 1, m.MasterNodeGroupSpec.Replicas, "provider cluster configuration wins over cluster node groups")
+	require.Len(t, m.TerraNodeGroupSpecs, 1)
+	require.Equal(t, "legacy", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, 7, m.TerraNodeGroupSpecs[0].Replicas)
+}
+
+// An explicitly empty nodeGroups list in the provider cluster configuration is
+// not distinguished from an absent one: the guard in
+// applyNodeGroupReplicasFromCloudProviderVars checks len(), not nil, so the
+// cluster node groups are still derived. That is a choice of the guard, not a
+// property of the data — this documents the behaviour, it does not bless it.
+func TestPrepareDerivesOnEmptyProviderClusterConfigNodeGroups(t *testing.T) {
+	m := cloudMetaConfig(mcFlowResources)
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[]`),
+	}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Len(t, m.TerraNodeGroupSpecs, 2)
+	require.Equal(t, "system", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, "worker", m.TerraNodeGroupSpecs[1].Name)
+}
+
+// check and converge re-run Prepare on a DeepCopy of an already prepared
+// config, so the derivation must not append the same node groups twice.
+func TestPrepareOnDeepCopyIsIdempotent(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	again, err := m.DeepCopy().Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, m.MasterNodeGroupSpec.Replicas, again.MasterNodeGroupSpec.Replicas)
+	require.Equal(t, m.TerraNodeGroupSpecs, again.TerraNodeGroupSpecs)
+}
