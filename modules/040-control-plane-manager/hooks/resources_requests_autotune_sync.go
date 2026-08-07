@@ -27,8 +27,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-// Hook B: ConfigMap → values.internal.resourcesRequests.components only.
-// Does not know how Hook A calculated the numbers (MC split / PodMetrics / legacy).
+// ConfigMap → values.internal.resourcesRequests.components only.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        autotuneQueue,
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},

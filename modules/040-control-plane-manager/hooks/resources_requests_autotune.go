@@ -57,9 +57,8 @@ const (
 	snapshotNodes    = "NodesResources"
 )
 
-// Hook A (calculator): always writes per-component requests into the ConfigMap.
-// Schedule evaluates PodMetrics; ModuleConfig/node sync applies MC split or legacy.
-// Hook B (resources_requests_autotune_sync.go) only projects that CM into values.
+// Hook A: schedule → calculate per-component requests → ConfigMap.
+// Hook B (resources_requests_autotune_sync.go) projects that CM into values.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: autotuneQueue,
 	Schedule: []go_hook.ScheduleConfig{
@@ -67,28 +66,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{Name: autotuneScheduleName, Crontab: "*/5 * * * *"},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
+		// Snapshots only — do not re-enter on node/MC events (cron owns recalculation).
 		controlPlaneNodesBinding(false, false),
 		resourcesRequestsMCBinding(snapshotCPMMC, "control-plane-manager", applyCPMResourcesRequestsFilter, false, false),
 		resourcesRequestsMCBinding(snapshotGlobalMC, "global", applyGlobalResourcesRequestsFilter, false, false),
 		autotuneStateBinding(false, false),
 	},
-}, dependency.WithExternalDependencies(func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	return runAutotune(ctx, input, dc, true)
-}))
-
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: autotuneQueue,
-	Kubernetes: []go_hook.KubernetesConfig{
-		controlPlaneNodesBinding(true, true),
-		resourcesRequestsMCBinding(snapshotCPMMC, "control-plane-manager", applyCPMResourcesRequestsFilter, true, true),
-		resourcesRequestsMCBinding(snapshotGlobalMC, "global", applyGlobalResourcesRequestsFilter, true, true),
-		// Read previous applied* for deadband/cooldown; events=false so our own
-		// CreateOrUpdate does not re-enter Hook A.
-		autotuneStateBinding(true, false),
-	},
-}, dependency.WithExternalDependencies(func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	return runAutotune(ctx, input, dc, false)
-}))
+}, dependency.WithExternalDependencies(runAutotune))
 
 func resourcesRequestsMCBinding(
 	name, mcName string,
@@ -109,9 +93,7 @@ func resourcesRequestsMCBinding(
 }
 
 // runAutotune calculates per-component requests and always persists them to the CM.
-// evaluate=true (cron): may raise/lower from PodMetrics.
-// evaluate=false (MC/node sync): MC split, keep previous, or legacy discovery split.
-func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Container, evaluate bool) error {
+func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.Snapshots, snapshotNodes)
 	if err != nil {
 		return fmt.Errorf("unmarshal NodesResources snapshots: %w", err)
@@ -189,7 +171,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 			continue
 		}
 
-		if evaluate && pmaActive {
+		if pmaActive {
 			recs, usageOK := fetchRecs(ctx, dc, fetchComponentUsage, kind, false, fit[kind], func(comp string, ferr error) {
 				input.Logger.Warn("autotune: metrics API fetch failed", "resource", kind, "component", comp, "error", ferr)
 			})
@@ -203,7 +185,7 @@ func runAutotune(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 			continue
 		}
 
-		// Sync / no PMA: keep previous applied*, else legacy %-split of discovery/override budget.
+		// No PMA: keep previous applied*, else legacy %-split of discovery budget.
 		if !measurementHasAnyApplied(state[kind], kind) {
 			applyPercentSplit(state, kind, combined[kind], now)
 		}
