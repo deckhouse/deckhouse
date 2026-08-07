@@ -1,0 +1,54 @@
+deckhouse:
+  fixes:
+    - summary: Locate CRDs by repository contents.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21819
+    - summary: stop false drift detection reinstalling packages with helm hooks
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21840
+    - summary: An unset `settings.update.mode` now defaults to `AutoPatch` instead of silently running
+        as `Auto`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21927
+deckhouse-controller:
+  fixes:
+    - summary: Module releases rendered with nelm no longer raise false absent-resource alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21831
+    - summary: >-
+        nelm now takes over fields left by the old Helm 3 engine, so stale fields get removed on module
+        upgrade.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21831
+docs:
+  features:
+    - summary: Add upmeter module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21801
+    - summary: Add descheduler module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21905
+  fixes:
+    - summary: Clarify that DKP does not support version downgrades
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21807
+    - summary: Add nil-safety guards for OpenAPI extraction to prevent panics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21812
+    - summary: Fixed incorrect description of allowedHostPaths in SecurityPolicy documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21642
+    - summary: Fix broken documentation links
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21884
+documentation:
+  fixes:
+    - summary: >-
+        Fix a memory leak in the documentation builder so memory is released between builds; add CPU/memory
+        limits and an opt-in profiling endpoint.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21935
+node-local-dns:
+  fixes:
+    - summary: Bump Go dependencies in the coredns helper image to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21873
+      impact: The node-local-dns DaemonSet pods will restart after the update.
+tools:
+  fixes:
+    - summary: >-
+        Fixed module release validation incorrectly failing for `!optional` dependencies when the required
+        module doesn't exist in the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21944
+user-authn:
+  fixes:
+    - summary: ClusterAdmin can watch the Dex storage CRDs (passwords, offlinesessionses), not only list
+        them.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21794
