@@ -28,13 +28,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/fencingstate"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/agent"
 	"fencing-agent/internal/config"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/usecase/profile"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 // resolveIdentityTimeout and profileLoadTimeout bound the worst-case startup
@@ -49,24 +50,23 @@ const (
 )
 
 func main() {
-	cfg := &config.Config{}
-	err := cfg.Load()
+	logger := newLogger()
 
-	// The logger exists before the first error is reported: a configuration
-	// failure must produce a clean log line and exit, not a panic dump.
-	logger := newLogger(cfg.LogLevel)
-
-	if err == nil {
-		err = run(cfg, logger)
-	}
-
-	if err != nil {
+	if err := run(logger); err != nil {
 		logger.Error("fencing-agent failed", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run(cfg *config.Config, logger *log.Logger) error {
+func run(logger *log.Logger) error {
+	cfg := &config.Config{}
+
+	if err := cfg.Load(); err != nil {
+		return err
+	}
+
+	logger.SetLevel(log.LogLevelFromStr(cfg.LogLevel))
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
@@ -131,10 +131,9 @@ func resolveIdentity(ctx context.Context, k8s kubernetes.Interface, nodeName str
 	}
 }
 
-func newLogger(level string) *log.Logger {
+func newLogger() *log.Logger {
 	return log.NewLogger(
 		log.WithOutput(os.Stdout),
-		log.WithLevel(log.LogLevelFromStr(level).Level()),
 		log.WithHandlerType(log.JSONHandlerType),
 	)
 }
