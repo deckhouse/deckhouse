@@ -5,6 +5,76 @@ description: "Переключение между редакциями Deckhouse
 lang: ru
 ---
 
+{% capture cse_containerd_integrity_ngc %}
+{% raw %}
+
+```shell
+d8 k apply -f - <<'EOF'
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: zz-cse-containerd-integrity-migration.sh
+spec:
+  nodeGroups: ['*']
+  bundles: ['*']
+  weight: 32
+  content: |
+    {{- if eq .cri "ContainerdV2" }}
+    command -v containerd &>/dev/null || exit 0
+    containerd --help 2>/dev/null | grep -q -- '--integrity-check-interval' || exit 0
+
+    snapshots="/var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots"
+    [ -d "$snapshots" ] || exit 0
+    stale=""
+    for layer in "$snapshots"/*/layer.erofs; do
+      [ -e "$layer" ] || continue
+      [ -e "${layer}.verity" ] || { stale=yes; break; }
+    done
+    [ -n "$stale" ] || exit 0
+
+    bb-log-info "Stale erofs layers without verity found, containerd state wipe is required"
+    bb-deckhouse-get-disruptive-update-approval
+
+    bb-package-install "pause:{{ $.images.registrypackages.pause }}"
+    bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
+
+    systemctl stop kubelet.service
+    crictl ps -q | xargs -r crictl stop -t 0 && crictl ps -a -q | xargs -r crictl rm -f
+    systemctl stop containerd-deckhouse.service
+    for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
+    if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
+      chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
+    fi
+    rm -rf /var/lib/containerd/*
+
+    systemctl start containerd-deckhouse.service
+    bb-flag-unset containerd-need-restart
+    systemctl start kubelet.service
+
+    bb-flag-set need-local-images-import
+    bb-flag-set kubelet-need-restart
+    bb-flag-set reboot
+    {{- end }}
+EOF
+```
+
+{% endraw %}
+{% endcapture %}
+
+{% capture cse_containerd_integrity_approve %}
+Каждый узел один раз перезагрузится с очисткой кэша образов containerd. После перезагрузки узел заново скачает все образы из container registry, поэтому доступ к нему обязателен.
+
+Подтверждайте узлы по одному, дожидаясь возвращения каждого в состояние `Ready`:
+
+```shell
+d8 k annotate node <ИМЯ_УЗЛА> update.node.deckhouse.io/disruption-approved=
+```
+
+До подтверждения узел работает штатно, но не переходит в состояние `UPTODATE`.
+
+Перед подтверждением убедитесь, что манифесты control plane на master-узлах уже ссылаются на образы DKP CSE — команда `grep image: /etc/kubernetes/manifests/*` не должна возвращать строк с `deckhouse/ee`.
+{% endcapture %}
+
 ## Переключение DKP с EE на CSE
 
 Переключение DKP с EE на CSE может быть выполнено одним из следующих способов:
@@ -26,6 +96,12 @@ lang: ru
 Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27, DKP CSE 1.67 поддерживает Kubernetes версий 1.27 и 1.29.
 
 При переключении на DKP CSE возможна временная недоступность компонентов кластера.
+
+Если узлы кластера используют ContainerdV2, каждый из них будет поочерёдно перезагружен с полной очисткой кэша образов containerd. Чтобы управлять моментом перезагрузки, заранее переведите все NodeGroup, включая `master`, в ручной режим подтверждения простоя, а после завершения переключения верните исходное значение:
+
+```shell
+d8 k patch ng <ИМЯ_NODEGROUP> --type=merge -p '{"spec":{"disruptions":{"approvalMode":"Manual"}}}'
+```
 {% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition нужным способом выполните описанные ниже действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя).
@@ -111,6 +187,14 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k delete pod/cse-image
    d8 k delete secret/cse-image-pull-secret
    ```
+
+1. **Только для узлов на ContainerdV2** — примените конфигурацию миграции состояния containerd:
+
+   {{ cse_containerd_integrity_ngc | regex_replace: "^", "   " }}
+
+   Сборка containerd в DKP CSE проверяет целостность образов и распаковывает каждый слой вместе с файлом `.verity`. Слои, оставшиеся от предыдущей редакции, такого файла не имеют и переиспользуются по совпадающему digest'у, из-за чего поды не запускаются с ошибкой `checking hash image: no such file or directory`. Конфигурация обнаруживает такие слои и очищает состояние containerd на узле.
+
+   Применяйте её **до** переключения редакции: узел не должен получить сборку с проверками целостности раньше, чем будет готов к очистке.
 
 1. Выполните переключение на новую редакцию. Для этого укажите следующие параметры в ModuleConfig `deckhouse` (для подробной настройки ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/configuration.html)):
 
@@ -200,6 +284,10 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        status: "True"
        type: Ready
    ```
+
+1. **Только для узлов на ContainerdV2** — подтвердите перезагрузку узлов:
+
+   {{ cse_containerd_integrity_approve | regex_replace: "^", "   " }}
 
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
 
@@ -437,6 +525,14 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
+1. **Только для узлов на ContainerdV2** — примените конфигурацию миграции состояния containerd:
+
+   {{ cse_containerd_integrity_ngc | regex_replace: "^", "   " }}
+
+   Сборка containerd в DKP CSE проверяет целостность образов и распаковывает каждый слой вместе с файлом `.verity`. Слои, оставшиеся от предыдущей редакции, такого файла не имеют и переиспользуются по совпадающему digest'у, из-за чего поды не запускаются с ошибкой `checking hash image: no such file or directory`. Конфигурация обнаруживает такие слои и очищает состояние containerd на узле.
+
+   Применяйте её **до** смены образа Deckhouse: узел не должен получить сборку с проверками целостности раньше, чем будет готов к очистке.
+
 1. Актуализируйте секрет доступа к registry Deckhouse CSE, выполнив следующую команду:
 
    ```shell
@@ -486,6 +582,10 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    - 88 other queues (0 active, 88 empty): 0 tasks.
    - no tasks to handle.
    ```
+
+1. **Только для узлов на ContainerdV2** — подтвердите перезагрузку узлов:
+
+   {{ cse_containerd_integrity_approve | regex_replace: "^", "   " }}
 
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
 
