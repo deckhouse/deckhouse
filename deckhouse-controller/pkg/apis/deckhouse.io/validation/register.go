@@ -78,6 +78,7 @@ func RegisterAdmissionHandlers(
 	reg.RegisterHandler("/validate/v1/deckhouse-registry-secret", withInvalidReason(RegistrySecretHandler()))
 	reg.RegisterHandler("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts.GetModuleDependency(), edition)))
 	reg.RegisterHandler("/validate/v1alpha1/modules", withInvalidReason(moduleValidationHandler()))
+	reg.RegisterHandler("/validate/v1alpha2/modules", withInvalidReason(moduleV1alpha2ValidationHandler(cli)))
 	reg.RegisterHandler("/validate/v1/configuration-secret", withInvalidReason(clusterConfigurationHandler(mm, cli, schemaStore)))
 	reg.RegisterHandler("/validate/v1/provider-configuration-secret", withInvalidReason(providerConfigurationHandler(schemaStore)))
 	reg.RegisterHandler("/validate/v1/static-configuration-secret", withInvalidReason(staticConfigurationHandler(schemaStore)))
