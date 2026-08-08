@@ -36,7 +36,6 @@ func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 		checks.ImmutableSysextDigests(deps.MetaConfig),
 		checks.ImmutableControlPlaneImages(deps.MetaConfig),
 		checks.ImmutableRegistryMode(deps.MetaConfig),
-		checks.ImmutableMasterReplicas(deps.MetaConfig),
 		checks.ImmutableSignatureMode(deps.MetaConfig, deps.GlobalOpts),
 		checks.ImmutablePostBootstrapScript(deps.BootstrapOpts),
 		checks.ImmutableKubeconfigOut(deps.BootstrapOpts, checks.ImmutableKubeconfigOutOptions{

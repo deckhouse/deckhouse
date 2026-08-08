@@ -36,7 +36,6 @@ const (
 	ImmutableSysextDigestsCheckName      preflight.CheckName = "immutable-sysext-digests"
 	ImmutableControlPlaneImagesCheckName preflight.CheckName = "immutable-control-plane-images"
 	ImmutableRegistryModeCheckName       preflight.CheckName = "immutable-registry-mode"
-	ImmutableMasterReplicasCheckName     preflight.CheckName = "immutable-master-replicas"
 	ImmutablePostBootstrapHookCheckName  preflight.CheckName = "immutable-post-bootstrap-script"
 	ImmutableSignatureModeCheckName      preflight.CheckName = "immutable-signature-mode"
 	ImmutableKubeconfigOutCheckName      preflight.CheckName = "immutable-kubeconfig-out"
@@ -102,24 +101,6 @@ func ImmutableRegistryMode(metaConfig *config.MetaConfig) preflight.Check {
 					"an immutable master supports registry mode %q only, got %q: the node pulls from the registry directly during bootstrap",
 					constant.ModeUnmanaged, mode,
 				)
-			}
-			return nil
-		},
-	}
-}
-
-// ImmutableMasterReplicas rejects a multi-master immutable group. The extra
-// masters are ordered with the cloud config node-manager publishes for the
-// group, which is a bashible bundle an immutable node cannot run.
-func ImmutableMasterReplicas(metaConfig *config.MetaConfig) preflight.Check {
-	return preflight.Check{
-		Name:        ImmutableMasterReplicasCheckName,
-		Description: "immutable master group has a single replica",
-		Phase:       preflight.PhasePreInfra,
-		Retry:       noRetry(),
-		Run: func(_ context.Context) error {
-			if replicas := metaConfig.MasterNodeGroupSpec.Replicas; replicas > 1 {
-				return fmt.Errorf("masterNodeGroup.replicas is %d: an immutable master group supports a single replica", replicas)
 			}
 			return nil
 		},
