@@ -251,3 +251,19 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 		})
 	}
 }
+
+// The mount is what gives a control-plane node its etcd disk, so the three
+// things that make it work are asserted rather than left to the golden file:
+// blank (a cloud disk has no partition table, so nothing else would match it),
+// the path etcd's static pod carries as a hostPath, and the mode etcd checks on
+// every start.
+func TestEtcdMountClaimsABlankDiskUnderEtcd(t *testing.T) {
+	mounts := etcdMounts()
+
+	require.Len(t, mounts, 1)
+	require.Equal(t, etcdDataDir, mounts[0].BindTo)
+	require.Equal(t, etcdDataMode, mounts[0].Mode)
+	require.Equal(t, etcdDiskSize, mounts[0].PartitionSelector.Size)
+	require.True(t, mounts[0].PartitionSelector.Blank)
+	require.LessOrEqual(t, len(mounts[0].Name), 16, "the name becomes an ext4 label")
+}

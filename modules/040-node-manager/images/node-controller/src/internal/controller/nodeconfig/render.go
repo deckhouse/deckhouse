@@ -160,10 +160,18 @@ func nodeIPStillHolds(nodeIP string, reported []string) bool {
 	return slices.Contains(reported, nodeIP)
 }
 
-// storageIsExplicit reports whether a storage section names a disk rather than
-// standing for "whatever the first usable one is".
+// storageIsExplicit reports whether a storage section names something rather
+// than standing for "whatever the first usable one is".
+//
+// Mounts count, and they are the case that matters in practice: a control-plane
+// node is given the disk etcd lives on through them, and a render that dropped
+// the list would leave the node with nothing under /var/lib/etcd on its next
+// pass — etcd would come up as a brand new cluster after the next reboot.
 func storageIsExplicit(storage *internalv1alpha1.Storage) bool {
 	if storage.Device != "" {
+		return true
+	}
+	if len(storage.Mounts) > 0 {
 		return true
 	}
 	return storage.DiskSelector != nil && *storage.DiskSelector != internalv1alpha1.DiskSelector{}

@@ -264,6 +264,113 @@ type Registry struct {
 // install time (see the initramfs repo docs/disk-provisioning-plan.md).
 type Storage struct {
 	Disk `json:",inline"`
+	// Mounts are additional filesystems the node makes available, at /mnt/<name>
+	// or wherever bindTo names. They are independent of the OS install above:
+	// nothing here is partitioned, only existing partitions and blank whole disks
+	// are formatted (when empty) and mounted. Reconciled by nodelet on a running
+	// node, so a disk added to a live node is picked up without a reboot.
+	//
+	// This is how a control-plane node is given the disk etcd lives on: the
+	// installer cannot name the device, because it renders the config before the
+	// machine — and therefore the disk — exists, so it renders a selector instead.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	Mounts []Mount `json:"mounts,omitempty"`
+}
+
+// Mount is one additional filesystem the node makes available, at /mnt/<name>
+// unless bindTo says otherwise.
+//
+// The partition is named by a fixed path (device) or by attributes
+// (partitionSelector) — exactly one of the two. The selector is the resilient
+// form: /dev/sdX names move between boots, a UUID or a partition label does not.
+//
+// There are exactly two cases. Empty means "format it, then mount it", with the
+// label set to name. Already formatted means "mount it" — including when the
+// filesystem is of a different type than requested, which is reported but
+// mounted as it is. Nothing here ever reformats: an existing filesystem is data.
+// +kubebuilder:validation:XValidation:rule="has(self.device) != has(self.partitionSelector)",message="exactly one of device or partitionSelector must be set"
+type Mount struct {
+	// Name identifies the mount, and is both the mount point (/mnt/<name>) and
+	// the filesystem label written when this node formats the partition. Capped
+	// at 16 characters because that is the size of the ext4 volume label field.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=16
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	Name string `json:"name"`
+	// Device is the partition to use, e.g. "/dev/sdb1" or a stable
+	// "/dev/disk/by-id/...-part1" path.
+	// +optional
+	// +kubebuilder:validation:Pattern=`^/dev/[A-Za-z0-9._/-]+$`
+	Device string `json:"device,omitempty"`
+	// PartitionSelector picks the partition by attributes instead of a fixed path.
+	// +optional
+	PartitionSelector *PartitionSelector `json:"partitionSelector,omitempty"`
+	// BindTo mounts the filesystem at this path instead of /mnt/<name>, for a
+	// directory something else already knows by name — /var/lib/etcd is one, being
+	// what the etcd static pod carries as a hostPath.
+	//
+	// The directory must be empty when the mount is made: mounting over files
+	// hides them rather than replacing them, and hidden etcd data is data etcd
+	// decides it does not have.
+	// +optional
+	// +kubebuilder:validation:Pattern=`^/[A-Za-z0-9._/-]+$`
+	BindTo string `json:"bindTo,omitempty"`
+	// Mode is the mode of the filesystem root after mounting, as an octal string,
+	// e.g. "0700". Left alone when unset. A freshly made ext4 has its root at
+	// 0755, which is a mode etcd refuses to start on.
+	// +optional
+	// +kubebuilder:validation:Pattern=`^0[0-7]{3}$`
+	Mode string `json:"mode,omitempty"`
+	// Filesystem is what to create when the partition is empty. It says what to
+	// create and is not a matching condition.
+	// +optional
+	// +kubebuilder:validation:Enum=ext4
+	// +kubebuilder:default=ext4
+	Filesystem string `json:"filesystem,omitempty"`
+}
+
+// PartitionSelector matches one partition by attributes (all specified fields
+// are AND-ed). String fields are shell-style globs, except uuid and partUUID,
+// which are compared literally (case-insensitively).
+//
+// Matching several devices is an error, not a choice: the node refuses to act
+// and reports the candidates, rather than picking one and possibly putting a
+// filesystem on the wrong disk.
+type PartitionSelector struct {
+	// Name matches the kernel device name (glob), e.g. "sdb1" or "nvme0n1p*".
+	// +optional
+	Name string `json:"name,omitempty"`
+	// UUID matches the filesystem UUID exactly, ignoring case.
+	// +optional
+	UUID string `json:"uuid,omitempty"`
+	// Label matches the filesystem label (glob).
+	// +optional
+	Label string `json:"label,omitempty"`
+	// FSType matches the type of the filesystem already present (glob).
+	// +optional
+	FSType string `json:"fsType,omitempty"`
+	// PartUUID matches the GPT partition UUID exactly, ignoring case.
+	// +optional
+	PartUUID string `json:"partUUID,omitempty"`
+	// PartLabel matches the GPT partition name (glob).
+	// +optional
+	PartLabel string `json:"partLabel,omitempty"`
+	// Size matches the size, optionally with a comparison operator, e.g.
+	// ">=100Gi", ">1Ti", "512Gi". Without an operator the comparison is ">=";
+	// "=" allows 1%, since a disk rarely reports an exact round size.
+	// +optional
+	Size string `json:"size,omitempty"`
+	// Blank makes whole disks selectable, and only the ones that carry nothing:
+	// no partition table and no filesystem. It is how a cloud disk is named
+	// before it has ever been touched.
+	//
+	// Without it a selector sees partitions only, however wide it is: a whole disk
+	// is where somebody's layout lives, and putting a filesystem over one destroys
+	// every partition on it at once.
+	// +optional
+	Blank bool `json:"blank,omitempty"`
 }
 
 // Disk names one whole-disk block device, by path or by attributes, and says
