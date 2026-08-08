@@ -383,6 +383,12 @@ For the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} cloud prov
 the instance class is a custom resource called [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass),
 which contains the specific configuration of the VMs.
 
+{% alert level="info" %}
+An OpenStack cluster is deployed in a single region ([`provider.region`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-region)).
+Zones from other regions cannot be used.
+For details on configuring zones for CloudPermanent and CloudEphemeral nodes, see [How do I create NodeGroups in availability zones?](/modules/cloud-provider-openstack/faq.html#how-do-i-create-nodegroups-in-availability-zones) section.
+{% endalert %}
+
 {% alert level="warning" %}
 When the module settings are changed, **existing Machine objects in the cluster are NOT recreated**
 (new Machine objects will use the updated parameters).
