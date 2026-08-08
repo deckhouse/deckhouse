@@ -137,12 +137,9 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 	serverTLSBootstrap := false
 
 	spec := nodeSpec{
-		NodeName: in.NodeName,
-		OSImage:  registry.Address + registry.Path + "/" + osImageNameAndTag,
-		// Nothing about the disk: rendered before the machine exists, and a size
-		// threshold matches whatever falls under it, the cloud-init image
-		// included. The node can see its disks; the installer cannot.
-		Storage:    disk{},
+		NodeName:   in.NodeName,
+		OSImage:    registry.Address + registry.Path + "/" + osImageNameAndTag,
+		Storage:    storage{Mounts: etcdMounts()},
 		Extensions: extensions,
 		Kernel: kernel{
 			Sysctl: map[string]string{
@@ -440,6 +437,49 @@ func digestGroup(images map[string]any, key string) (map[string]string, error) {
 		}
 	}
 	return group, nil
+}
+
+// etcdDataMountName is both the mount's name and the label the node writes on
+// the filesystem it makes, so the disk is recognisable as this one afterwards.
+// Capped at the ext4 label size, which is 16 characters.
+const etcdDataMountName = "kubernetes-data"
+
+// etcdDataDir is where the etcd static pod expects its data. The path is in the
+// control-plane manifest as a hostPath, so it is not the node's to choose.
+const etcdDataDir = "/var/lib/etcd"
+
+// etcdDataMode is what etcd checks on every start. A freshly made ext4 has its
+// root at 0755 and etcd refuses to run on that.
+const etcdDataMode = "0700"
+
+// etcdDiskSize is the smallest disk a cloud installation is ever given for etcd.
+// A size with no operator means "at least this much", so it also covers the
+// providers that hand out 15 or 20 gibibytes, and it rules out the config drives
+// and other small volumes a machine comes with.
+const etcdDiskSize = "10Gi"
+
+// etcdMounts gives a control-plane node the disk etcd lives on.
+//
+// The disk is described rather than named: dhctl renders this document before
+// the machine exists, so there is no /dev path and no by-id link to point at
+// yet. What is known is what was asked of the provider — one spare disk, blank,
+// at least etcdDiskSize — and that is what the selector says.
+//
+// A machine with no second disk matches nothing, which is a supported way to
+// run: etcd shares the data partition, slower but correct. The node says so in
+// its log rather than failing.
+func etcdMounts() []mount {
+	return []mount{{
+		Name: etcdDataMountName,
+		PartitionSelector: &partitionSelector{
+			Size: etcdDiskSize,
+			// Without this the selector would see partitions only, and the disk a
+			// cloud attaches has none: no partition table, no filesystem.
+			Blank: true,
+		},
+		BindTo: etcdDataDir,
+		Mode:   etcdDataMode,
+	}}
 }
 
 func clusterConfigString(metaConfig *config.MetaConfig, key string) (string, error) {
