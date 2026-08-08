@@ -45,6 +45,16 @@ reserved: true
 
 **Не используйте** эту опцию, если указанные рекурсивные DNS-серверы не могут разрешать тот же список зон, что сможет разрешать рекурсивный DNS-сервер в подсети Yandex Cloud.
 
+## Изменение `networkType` не пересоздаёт CloudEphemeral-узлы
+
+В кластерах, использующих Machine Controller Manager (MCM), изменение параметра [`networkType`](cr.html#yandexinstanceclass-v1-spec-networktype) в ресурсе YandexInstanceClass не приводит к автоматическому пересозданию существующих CloudEphemeral-узлов. Хотя MachineClass обновляется, тип сетевого ускорения у уже созданных виртуальных машин в Yandex Cloud не изменяется.
+
+DKP намеренно не учитывает параметр `networkType` при определении необходимости пересоздания CloudEphemeral-узлов в MCM. Если бы он учитывался, обновление DKP привело бы к пересозданию CloudEphemeral-узлов во всех кластерах, где `networkType` уже указан, даже если его значение не изменялось.
+
+В Cluster API параметр `networkType` учитывается при определении необходимости пересоздания узлов, поэтому его изменение запускает их обновление автоматически. Новые CloudEphemeral NodeGroup в Yandex по умолчанию используют CAPI.
+
+Если вы изменили `networkType` в кластере на MCM и хотите, чтобы новое значение применилось к уже существующим CloudEphemeral-узлам, пересоздайте их вручную — инструкция в [документации](/modules/node-manager/faq.html#как-пересоздать-эфемерные-машины-в-облаке-с-новой-конфигурацией).
+
 ## Назначение произвольного StorageClass используемого по умолчанию
 
 Чтобы назначить произвольный StorageClass используемым по умолчанию для ваших PVC, укажите его имя в параметре [defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) модуля `global`.
