@@ -43,6 +43,15 @@ const (
 	NodeTypeCloudStatic    NodeType = "CloudStatic"
 )
 
+// SystemType selects how the node is managed: a classic mutable node
+// configured by bashible, or an immutable node reconciled from a NodeConfig
+// object. An empty value means Mutable.
+//
+// The hooks only copy the value through to values; the named constants live in
+// the node-controller's own API package, which is where anything compares
+// against them.
+type SystemType string
+
 type NodeGroupEngine string
 
 const (
@@ -75,6 +84,10 @@ type NodeGroup struct {
 type NodeGroupSpec struct {
 	// Type of nodes in group: CloudEphemeral, CloudPermanent, CloudStatic, Static. Field is required
 	NodeType NodeType `json:"nodeType,omitempty"`
+
+	// SystemType selects how the node is managed: Mutable (bashible) or
+	// Immutable (olcedar, reconciled from a NodeConfig). Empty means Mutable.
+	SystemType SystemType `json:"systemType,omitempty"`
 
 	// Maximum drain time of CloudEphemeral machines in seconds
 	NodeDrainTimeoutSecond *int64 `json:"nodeDrainTimeoutSecond,omitempty"`
