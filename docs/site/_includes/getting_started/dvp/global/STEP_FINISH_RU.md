@@ -1,15 +1,12 @@
-<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
-<script type="text/javascript" src='{% javascript_asset_tag getting-started-finish %}[_assets/js/getting-started-finish.js]{% endjavascript_asset_tag %}'></script>
-<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
+{%- include getting_started/dvp/global/partials/gs_scripts.liquid step='finish' -%}
 
 {::options parse_block_html="false" /}
 
-<div markdown="1">
-## Все установлено, настроено и работает!
+Кластер DVP готов к работе. Войдите в [веб-интерфейс DVP](https://console.domain.my) с учётной записью администратора:
 
-Рассмотрим дальнейшие возможности Deckhouse Virtualization Platform, открывающиеся сразу после установки.
+- Логин — `admin@deckhouse.io`
+- Пароль — `<GENERATED_PASSWORD>`
 
-Доступ к веб-интерфейсам возможен c использованием статического пользователя, созданного в кластере во время установки.
-</div>
+Сохраните пароль — его хеш также указан в `config.yml`. В веб-интерфейсе DVP вы сможете управлять кластером, создавать виртуальные машины и пользоваться другими возможностями DVP.
 
 {% include getting_started/dvp/global/partials/FINISH_CARDS_RU.md %}
