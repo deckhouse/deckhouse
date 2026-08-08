@@ -887,6 +887,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 				b.InfrastructureContext,
 				&b.Options.Global,
 				b.PhasedExecutionContext,
+				bctx.immutableMaster,
 			)
 		})
 		if err != nil {
@@ -1084,11 +1085,12 @@ func bootstrapAdditionalNodesForCloudCluster(
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
 	pec phases.DefaultPhasedExecutionContext,
+	immutableMaster bool,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
 
-	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions); err != nil {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions, immutableMaster); err != nil {
 		return err
 	}
 
