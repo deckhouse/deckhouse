@@ -40,7 +40,7 @@ var _ = Describe("DVPInstanceClass webhook", func() {
 		err := testK8sClient.Update(testCtx, worker)
 		Expect(err).To(HaveOccurred())
 		Expect(apierrors.IsInvalid(err)).To(BeTrue())
-		Expect(err.Error()).To(ContainSubstring(`worker.spec.etcdDisk: Invalid value: map[string]interface {}{"size":"5Gi", "storageClass":"replicated"}: InstanceClass.spec.etcdDisk can be used only when class is attached to NodeGroup master`))
+		Expect(err.Error()).To(ContainSubstring(`worker.spec.etcdDisk: Invalid value: {"size":"5Gi","storageClass":"replicated"}: InstanceClass.spec.etcdDisk can be used only when class is attached to NodeGroup master`))
 	})
 
 	It("rejects deleting an instance class used by a NodeGroup", func() {
@@ -64,6 +64,6 @@ var _ = Describe("DVPInstanceClass webhook", func() {
 		err := testK8sClient.Update(testCtx, master)
 		Expect(err).To(HaveOccurred())
 		Expect(apierrors.IsInvalid(err)).To(BeTrue())
-		Expect(err.Error()).To(ContainSubstring(`master-dvp.spec.etcdDisk: Invalid value: "null": DVPInstanceClass for NodeGroup master must define spec.etcdDisk`))
+		Expect(err.Error()).To(ContainSubstring(`master-dvp.spec.etcdDisk: Invalid value: null: DVPInstanceClass for NodeGroup master must define spec.etcdDisk`))
 	})
 })

@@ -12,19 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package meta contains DVP validation constants.
-package meta
+package api
 
-import (
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-)
-
-const (
-	// ProviderClusterConfigKubeconfigPath is the dot path to kubeconfig in legacy ProviderClusterConfiguration.
-	ProviderClusterConfigKubeconfigPath = "provider.kubeconfigDataBase64"
-)
-
-var (
-	// AllowedCredentialAuthSchemes lists auth schemes supported by the DVP provider.
-	AllowedCredentialAuthSchemes = []cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig}
-)
+// ProviderClusterConfigObject is a typed providerClusterConfiguration usable by common rules.
+//
+// Implementations are instantiated with pointer types, so every provider-defined method
+// must be nil-safe: the legacy resource is absent on a freshly bootstrapped cluster, and
+// rules call these methods without checking for it first.
+type ProviderClusterConfigObject interface {
+	// HasMasterNodeGroup reports whether the masterNodeGroup section is set.
+	HasMasterNodeGroup() bool
+	// NodeGroupNames returns names of the additional node groups.
+	NodeGroupNames() []string
+}

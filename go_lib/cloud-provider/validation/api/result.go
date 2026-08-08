@@ -12,22 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package validation provides shared validation helpers for cloud-provider modules.
-package validation
+// Package api defines shared validation types and state for cloud-provider modules.
+package api
 
 import (
 	"errors"
+	"fmt"
+	"maps"
+	"slices"
 	"strings"
-
-	"golang.org/x/exp/maps"
 )
 
 const (
-	// SeverityError marks a validation violation that must block the operation.
-	SeverityError = "error"
-	// SeverityWarning marks a non-blocking validation violation.
-	SeverityWarning = "warning"
-
 	// CodeInternalStateNil marks a caller contract violation: validation State was not initialized.
 	CodeInternalStateNil = "internal_state_nil"
 )
@@ -44,8 +40,6 @@ type Violation struct {
 	Message string `json:"message"`
 	// Value is the rejected field value for admission errors.
 	Value any `json:"value,omitempty"`
-	// Severity is either SeverityError or SeverityWarning.
-	Severity string `json:"severity"`
 }
 
 // Result aggregates validation errors and warnings.
@@ -69,11 +63,10 @@ func (r *Result) AddError(path, code string, value any, message string) {
 	}
 
 	r.errors[violationKey(code, path)] = Violation{
-		Path:     path,
-		Code:     code,
-		Message:  message,
-		Value:    value,
-		Severity: SeverityError,
+		Path:    path,
+		Code:    code,
+		Message: message,
+		Value:   value,
 	}
 }
 
@@ -85,11 +78,10 @@ func (r *Result) AddWarning(path, code string, value any, message string) {
 	}
 
 	r.warnings[violationKey(code, path)] = Violation{
-		Path:     path,
-		Code:     code,
-		Message:  message,
-		Value:    value,
-		Severity: SeverityWarning,
+		Path:    path,
+		Code:    code,
+		Message: message,
+		Value:   value,
 	}
 }
 
@@ -113,14 +105,25 @@ func (r *Result) Merge(results ...Result) {
 	}
 }
 
-// Errors returns blocking violations.
+// Errors returns blocking violations ordered by code and path.
 func (r Result) Errors() []Violation {
-	return maps.Values(r.errors)
+	return sortedViolations(r.errors)
 }
 
-// Warnings returns non-blocking violations.
+// Warnings returns non-blocking violations ordered by code and path.
 func (r Result) Warnings() []Violation {
-	return maps.Values(r.warnings)
+	return sortedViolations(r.warnings)
+}
+
+// sortedViolations returns violations in a stable order: admission denial texts and dhctl
+// output must not change between runs when a result holds more than one violation.
+func sortedViolations(violations map[string]Violation) []Violation {
+	result := make([]Violation, 0, len(violations))
+	for _, key := range slices.Sorted(maps.Keys(violations)) {
+		result = append(result, violations[key])
+	}
+
+	return result
 }
 
 // HasErrors reports whether the result contains blocking violations.
@@ -141,7 +144,7 @@ func (r Result) Error() string {
 			continue
 		}
 
-		lines = append(lines, violation.Path+": "+violation.Message)
+		lines = append(lines, fmt.Sprintf("%s: %s", violation.Path, violation.Message))
 	}
 
 	return strings.Join(lines, "\n")
@@ -157,5 +160,5 @@ func (r Result) ErrorOrNil() error {
 }
 
 func violationKey(code, path string) string {
-	return code + "\x00" + path
+	return fmt.Sprintf("%s\x00%s", code, path)
 }

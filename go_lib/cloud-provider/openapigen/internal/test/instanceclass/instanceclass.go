@@ -105,7 +105,6 @@ type InstanceClassVirtualMachineCPU struct {
 	Cores int `json:"cores"`
 	// Guaranteed share of CPU fraction that will be allocated to the virtual machine.
 	// +kubebuilder:default="100%"
-	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Pattern=`^100%$|^[1-9][0-9]?%$`
 	// +deckhouse:XDocExample:value="100%"
 	// +optional

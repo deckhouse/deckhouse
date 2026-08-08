@@ -15,29 +15,13 @@
 package validation
 
 import (
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"fmt"
 )
 
-func credentialContentState(secrets []cpapi.CredentialSecret) *State {
-	return &State{
-		NamespaceName:     "d8-cloud-provider-test",
-		CredentialSecrets: secrets,
+func getNamedResourcePath(kind, name string) string {
+	if name == "" {
+		return kind
 	}
-}
 
-func instanceClassState(kind string, nodeGroups []cpapi.NodeGroup, classes []cpapi.InstanceClass) *State {
-	return &State{
-		InstanceClassKind: kind,
-		NodeGroups:        nodeGroups,
-		InstanceClasses:   classes,
-	}
-}
-
-func hasViolationCode(result Result, code string) bool {
-	for _, violation := range result.Errors() {
-		if violation.Code == code {
-			return true
-		}
-	}
-	return false
+	return fmt.Sprintf("%s/%s", kind, name)
 }
