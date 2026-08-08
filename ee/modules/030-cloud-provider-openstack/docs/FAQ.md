@@ -63,6 +63,50 @@ The `additionalSecurityGroups` field contains an array of strings with security 
 
 You have to set the `additionalSecurityGroups` parameter for all OpenStackInstanceClasses in the cluster that require additional security groups. See the [parameters of the cloud-provider-openstack](/cloud-provider-openstack/configuration.html) module.
 
+## How do I create NodeGroups in availability zones?
+
+An OpenStack cluster is deployed in a single region, which is set by the [`provider.region`](cluster_configuration.html#openstackclusterconfiguration-provider-region) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource. Nodes can be created only in availability zones of this region. Using zones from other regions is not supported.
+
+To get the list of availability zones in the region, run:
+
+```shell
+openstack --os-region-name <REGION> availability zone list --compute
+```
+
+CloudPermanent node groups are defined in the [`nodeGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups) section of the OpenStackClusterConfiguration resource. To limit availability zones, use the [`nodeGroups[].zones`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-zones) parameter.
+
+CloudEphemeral nodes are created with a separate [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with `nodeType: CloudEphemeral`. Availability zones for them are set in the [`spec.cloudInstances.zones`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) parameter. If the [`zones`](cluster_configuration.html#openstackclusterconfiguration-zones) parameter is specified in OpenStackClusterConfiguration, the required zones must also be added to it.
+
+{% alert level="info" %}
+If the admission webhook returns the `unknown zone` error when creating a NodeGroup, make sure that the specified zone belongs to the `provider.region` region and, when using the `zones` parameter, is included in the OpenStackClusterConfiguration zones list.
+{% endalert %}
+
+Nodes from another region can be added to the cluster only manually as Static nodes. The `cloud-provider-openstack` module does not create such nodes.
+
+{% alert level="warning" %}
+After changing OpenStackClusterConfiguration, run the `dhctl converge` command. For details, see [Adding and managing cloud nodes](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudpermanent-nodes-to-a-cloud-cluster).
+{% endalert %}
+
+Example NodeGroup for CloudEphemeral nodes:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: workers
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: workers
+    minPerZone: 1
+    maxPerZone: 1
+    zones:
+    - eu-3a
+    - eu-3b
+```
+
 ## How do I create a hybrid cluster?
 
 A hybrid cluster combines bare metal and OpenStack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
