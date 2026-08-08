@@ -90,10 +90,27 @@ const (
 
 // nodeConfigInput is everything buildNodeConfig needs.
 type nodeConfigInput struct {
-	// NodeName is the name the first master registers under.
+	// NodeName is the name the node registers under.
 	NodeName string
 	// MetaConfig is the parsed cluster configuration.
 	MetaConfig *config.MetaConfig
+	// Join carries what a node needs to enter a cluster that already runs. It is
+	// nil for the first master, which has no cluster to join.
+	Join *joinInput
+}
+
+// joinInput is what the cluster — not the installer — decides for a joining
+// node. The CA and the token are read from the running cluster rather than
+// rendered here: they exist only after Deckhouse creates them, and a second
+// source for either is a second source of truth.
+type joinInput struct {
+	CACert         string
+	BootstrapToken string
+	// APIServerEndpoints are the apiservers already serving the cluster. The
+	// first master leaves a placeholder here and expands it from its own address,
+	// which a joining node cannot do: its own apiserver does not exist yet, and
+	// will not until control-plane-manager puts one there.
+	APIServerEndpoints []string
 }
 
 // buildNodeConfig renders the nodeConfig the first control-plane node boots
@@ -195,8 +212,22 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		spec.Kubelet.ClusterDNS = []string{in.MetaConfig.ClusterDNSAddress}
 	}
 
+	if in.Join != nil {
+		// Everything a node needs to enter a cluster that already runs, and the
+		// three fields above that only made sense for the one that starts it.
+		spec.Kubelet.CACert = in.Join.CACert
+		spec.Kubelet.BootstrapToken = in.Join.BootstrapToken
+		spec.APIServerEndpoints = in.Join.APIServerEndpoints
+		// Deckhouse is running by now, so the serving CSR gets approved and
+		// kubelet does not block on it. Left off, this node would be the only one
+		// in the cluster with a self-signed serving certificate — no kubectl exec
+		// and no kubectl logs against it, for the life of the cluster.
+		spec.Kubelet.ServerTLSBootstrap = nil
+	}
+
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(
-		"Built nodeConfig for %s: Kubernetes %s, %d system extensions", in.NodeName, kubernetesVersion, len(extensions),
+		"Built nodeConfig for %s: Kubernetes %s, %d system extensions, join=%t",
+		in.NodeName, kubernetesVersion, len(extensions), in.Join != nil,
 	))
 
 	return &nodeConfig{

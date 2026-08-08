@@ -55,6 +55,7 @@ func BootstrapAdditionalMasterNodes(
 	infrastructureContext *infrastructure.Context,
 	stateCache state.Cache,
 	globalOptions *options.GlobalOptions,
+	immutableMaster bool,
 ) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		dhlog.FromContext(ctx).DebugContext(ctx, "Skipping additional master node bootstrap because replicas == 1")
@@ -62,17 +63,44 @@ func BootstrapAdditionalMasterNodes(
 	}
 
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Bootstrap additional master nodes", func(ctx context.Context) error {
-		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), global.MasterNodeGroupName, global.ShowDeckhouseLogs)
-		if err != nil {
-			return err
-		}
-
-		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, infrastructureContext, globalOptions)
+		// The group's published cloud config is a bashible bundle, which an
+		// immutable node cannot run; its payload is rendered per node instead,
+		// below, because it carries the node's own name.
+		masterCloudConfig := ""
+		if !immutableMaster {
+			var err error
+			masterCloudConfig, err = entity.GetCloudConfig(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), global.MasterNodeGroupName, global.ShowDeckhouseLogs)
 			if err != nil {
 				return err
 			}
-			addressTracker[fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)] = outputs.MasterIPForSSH
+		}
+
+		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
+			nodeName := fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)
+
+			nodeCloudConfig := masterCloudConfig
+			if immutableMaster {
+				var err error
+				nodeCloudConfig, err = buildImmutableJoinPayload(ctx, kubeCl, metaConfig, nodeName)
+				if err != nil {
+					return fmt.Errorf("build the payload of %s: %w", nodeName, err)
+				}
+			}
+
+			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, nodeCloudConfig, infrastructureContext, globalOptions)
+			if err != nil {
+				return err
+			}
+
+			// An immutable master runs no sshd, so its address is of no use to
+			// anything that dials one — and recording it here is worse than
+			// useless: this cache is what converge later builds its SSH session
+			// from, and an unreachable host in it stalls that session. The first
+			// master is kept out of the same cache for the same reason.
+			if immutableMaster {
+				continue
+			}
+			addressTracker[nodeName] = outputs.MasterIPForSSH
 
 			state.SaveMasterHostsToCache(ctx, stateCache, addressTracker)
 		}
