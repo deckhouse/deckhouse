@@ -373,6 +373,12 @@ d8 system edit provider-cluster-configuration
 Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference`).
 Инстанс-класс для облачного провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }} — это custom resource [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass), в котором указываются конкретные параметры самих машин.
 
+{% alert level="info" %}
+Кластер в OpenStack разворачивается в одном регионе ([`provider.region`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-region)).
+Зоны других регионов использовать нельзя.
+Подробнее о настройке зон для узлов типов CloudPermanent и CloudEphemeral — [в разделе «Как создать NodeGroup в зонах доступности?»](/modules/cloud-provider-openstack/faq.html#как-создать-nodegroup-в-зонах-доступности).
+{% endalert %}
+
 {% alert level="warning" %}
 При изменении настроек модуля **пересоздания существующих объектов Machines в кластере НЕ происходит** (новые объекты Machine будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
 {% endalert %}
