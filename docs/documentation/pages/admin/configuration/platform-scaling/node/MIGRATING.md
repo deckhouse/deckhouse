@@ -5,6 +5,18 @@ permalink: en/admin/configuration/platform-scaling/node/migrating.html
 
 You can configure containerd v2 as the primary container runtime either at the cluster level or for specific node groups. This runtime option enables the use of cgroups v2, provides improved security, and allows more flexible resource management.
 
+{% alert level="info" %}
+
+To view the current container runtime type used by default in the cluster NodeGroups, use the following command:
+
+```shell
+d8 system edit cluster-configuration
+```
+
+The container runtime type is specified in the [`defaultCRI`](../../../../reference/api/cr.html#clusterconfiguration-defaultcri) parameter.
+
+{% endalert %}
+
 ## Requirements
 
 Migration to containerd v2 is possible under the following conditions:
