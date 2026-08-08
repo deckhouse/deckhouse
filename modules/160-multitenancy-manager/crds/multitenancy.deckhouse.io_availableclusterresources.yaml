@@ -36,8 +36,22 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          AvailableClusterResource is the per-project, controller-owned catalog (discovery only) for one
-          GrantableClusterResourceDefinition. metadata.name equals the grantable resource name.
+          AvailableClusterResource is the per-project, controller-owned catalog (discovery only) for
+          one GrantableClusterResourceDefinition (the multitenancy-manager grants mechanism).
+          metadata.name equals the grantable resource name.
+
+          Created by: the multitenancy-manager controller only (automatically, one object per definition
+          in each matched project's namespace).
+          Manual creation: forbidden — rejected by the /protect webhook.
+          Purpose: project users (tenants) read it to discover which cluster resource names are
+          available and which is the default. Data lives only in status (available — the list of
+          available names with the default flagged; default — the per-project default;
+          grantedResourceKind — informational).
+
+          Inspect with: `d8 k get available -n <project>` (list) or
+          `d8 k get available storageclasses -n <project> -o yaml` (details).
+
+          See the "For project users (tenants)" section in the module usage guide.
         properties:
           apiVersion:
             description: |-

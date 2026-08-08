@@ -32,8 +32,28 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: GrantableClusterResourceReference registers a validation/defaulting
-          path for a granted cluster resource.
+        description: |-
+          GrantableClusterResourceReference registers a validation/defaulting path for a granted cluster
+          resource (the multitenancy-manager grants mechanism).
+
+          Created by: module developers.
+          Manual creation: allowed, for fields of custom CRDs that reference a registered granted
+          resource.
+          Purpose: declares WHERE a granted resource is referenced — which field (fieldPaths[].path, a
+          JSONPath) of which usage object (by rule: apiGroups/apiVersions/resources, plural names) is
+          validated and/or defaulted. The reference is decoupled from the owner of the definition
+          (grantableClusterResourceName points at a GrantableClusterResourceDefinition).
+
+          Per-path defaulting mode (fieldPaths[].defaulting): None = validate only; FillEmpty = fill the
+          per-project default into an empty field on CREATE; Coerce = rewrite an unavailable or empty
+          value to the per-project default on CREATE. An optional match guard enables the path only when
+          a predicate holds. For CRDs with multiple versions, provide version-scoped entries
+          (apiGroups/apiVersions) and an unscoped fallback.
+
+          Status: bound — whether the referenced definition exists; conditions[Bound]: Resolved or
+          UnknownResource (definition not found).
+
+          See the "For module developers" section in the module usage guide.
         properties:
           apiVersion:
             description: |-

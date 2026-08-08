@@ -26,8 +26,25 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterResourceGrantPolicy is the Schema for the clusterresourcegrantpolicies
-          API.
+        description: |-
+          ClusterResourceGrantPolicy is the cluster administrator's allow/deny list and per-project
+          defaults for granted cluster resources (the multitenancy-manager grants mechanism).
+
+          Created by: cluster administrators only.
+          Manual creation: required — the system imposes no restrictions until an admin creates a
+          policy. Without policies, all resources are available (permissive default).
+          Purpose: selects projects by namespace labels (projectSelector) and, per resource
+          (resources[].resourceName, referencing a GrantableClusterResourceDefinition), sets the allowed
+          names (allowed / allowedSelector), denied names (denied / deniedSelector, overrides allowed),
+          the per-project default (default, overrides the definition's defaultFrom), and the baseline
+          availability for matched projects (availabilityDefault: All/None, overrides defaultAvailability).
+
+          Availability resolution order: excluded (on the definition) → denied/deniedSelector →
+          allowed/allowedSelector → policy availabilityDefault → definition defaultAvailability. On
+          UPDATE, values already present in an object are preserved (grandfathering). Object quota is
+          not part of this system — use ResourceQuota.
+
+          See the "For cluster administrators" section in the module usage guide.
         properties:
           apiVersion:
             description: |-

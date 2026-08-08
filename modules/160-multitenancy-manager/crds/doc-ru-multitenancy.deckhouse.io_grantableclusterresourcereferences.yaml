@@ -1,0 +1,17 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Объявляет путь валидации/дефолтинга для ссылки на грантуемый кластерный ресурс (механизм грантов модуля `multitenancy-manager`).
+
+            **Кто создаёт:** разработчики модулей.
+            **Ручное создание:** разрешено — для полей собственных кастомных CRD, ссылающихся на зарегистрированный ресурс.
+            **Назначение:** определяет, ГДЕ грантируемый ресурс используется — какое поле (`fieldPaths[].path`, JSONPath) какого usage-объекта (по `rule`: apiGroups/apiVersions/resources во множественном числе) валидируется и/или подставляется по умолчанию. Ссылка отделена от владельца определения (`grantableClusterResourceName` указывает на [`GrantableClusterResourceDefinition`](cr.html#grantableclusterresourcedefinition)).
+
+            Режим дефолтинга на путь (`fieldPaths[].defaulting`): `None` — только валидация; `FillEmpty` — подставить дефолт проекта в пустое поле при CREATE; `Coerce` — перезаписать недоступное или пустое значение на дефолт проекта при CREATE. Опциональный guard `match` включает путь только при выполнении предиката. Для CRD с несколькими версиями используйте version-scoped записи (`apiGroups`/`apiVersions`) и unscoped fallback.
+
+            В статусе: `bound` — связан ли с существующим определением; `conditions[Bound]` — `Resolved` или `UnknownResource` (определение не найдено).
+
+            Подробности — в разделе [«Для разработчиков модулей»](usage_ru.html#для-разработчиков-модулей).

@@ -70,3 +70,81 @@ The project is based on the `Namespace` resource mechanism. Namespaces group pod
 
 These tools can be combined to configure the project according to the requirements of your application.
 
+## Managing access to cluster-scoped resources
+
+Projects routinely reference cluster-scoped resources — a `PersistentVolumeClaim` names a
+`StorageClass`, a `Certificate` names a `ClusterIssuer`, a `RoleBinding` references a `ClusterRole`.
+The module lets cluster administrators control, per project, **which** cluster resources may be used
+from within project namespaces, and which value is used by default.
+
+This is a separate mechanism from RBAC: RBAC decides *who can create* an object, grants decide *which
+cluster resource values that object may reference*.
+
+### How it works
+
+The mechanism is a five-step pipeline:
+
+1. **Definitions** ([`GrantableClusterResourceDefinition`](./cr.html#grantableclusterresourcedefinition),
+   short name `gcrd`) register which cluster resources are governed (shipped by the platform, extended
+   by module developers).
+2. **References** ([`GrantableClusterResourceReference`](./cr.html#grantableclusterresourcereference),
+   short name `gcrr`) declare *where* a granted resource is referenced — which field of which CRD is
+   validated/defaulted (shipped by modules).
+3. The **administrator** creates a
+   [`ClusterResourceGrantPolicy`](./cr.html#clusterresourcegrantpolicy) (short name `crgp`) — the only
+   manual step for access control. A policy selects projects by label and, per resource, lists the
+   allowed/denied names and the per-project default.
+4. The **controller** renders an
+   [`AvailableClusterResource`](./cr.html#availableclusterresource) (short name `available`) catalog in
+   each matched project's namespace — a read-only list of what the project may use.
+5. **Webhooks** validate references on CREATE/UPDATE and substitute defaults on CREATE.
+
+```mermaid
+flowchart LR
+    A["Module developer / Platform<br/>ships GCRD + GCRR"] --> C
+    B["Cluster admin<br/>creates CRGP"] --> C["Controller"]
+    C --> D["AvailableClusterResource<br/>in each project namespace"]
+    E["User creates object<br/>e.g. PVC"] --> F["Mutating webhook<br/>/defaults"]
+    F --> G["Validating webhook<br/>/is-granted"]
+    D -. available names .-> G
+    G --> H["Object created<br/>or rejected"]
+```
+
+Until an administrator creates a `ClusterResourceGrantPolicy`, **all** resources are available (the
+permissive default). Resource **quota** is not part of this system — it is delegated to the standard
+Kubernetes `ResourceQuota`. Validation applies only to project namespaces; existing objects are
+grandfathered on UPDATE.
+
+### Resources registered by the platform
+
+| Definition name | Granted resource | Registered paths | Defaulting mode |
+| --- | --- | --- | --- |
+| `storageclasses` | `StorageClass` (storage.k8s.io) | PVC `.spec.storageClassName` | Coerce |
+| `loadbalancerclasses` | value-backed (no k8s object) | Service `.spec.loadBalancerClass` (guarded by `type: LoadBalancer`) | FillEmpty |
+| `clusterissuers` | `ClusterIssuer` (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress annotation `cert-manager.io/cluster-issuer` | FillEmpty / None |
+| `clusterroles` | `ClusterRole` (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | None |
+
+The `clusterroles` registration excludes every `ClusterRole` lacking the
+`rbac.deckhouse.io/delegatable` label — so by default only the namespace-level access roles
+(`d8:use:role:*` and the legacy `user-authz:*` roles) are available in `RoleBinding`s.
+
+### CRD ownership at a glance
+
+| CRD | Short name | Scope | Created by | Manual creation | Purpose |
+| --- | --- | --- | --- | --- | --- |
+| `GrantableClusterResourceDefinition` | `gcrd` | Cluster | Module developer / Platform | Allowed for custom resources | Registers a cluster resource as grant-controlled |
+| `GrantableClusterResourceReference` | `gcrr` | Cluster | Module developer | Allowed for custom CRD fields | Declares where a granted resource is referenced |
+| `ClusterResourceGrantPolicy` | `crgp` | Cluster | Cluster administrator | **Required** — only manual | Allow/deny lists and defaults per project |
+| `AvailableClusterResource` | `available` | Namespace | Controller (automatic) | **Forbidden** — protected by webhook | Read-only catalog of available resources for a project |
+
+### Key behaviors
+
+- **Permissive default**: without a `ClusterResourceGrantPolicy`, all resources are available.
+- **Not a quota**: resource quota is delegated to the standard Kubernetes `ResourceQuota`.
+- **Project namespaces only**: validation applies only to namespaces that are projects.
+- **Grandfathering on UPDATE**: values already present in an object are preserved when the policy is
+  narrowed — existing objects keep working.
+
+For the full guide — administrator scenarios, tenant resource discovery, the module developer guide,
+and validation/defaulting rules — see the [usage guide](./usage.html#managing-access-to-cluster-scoped-resources-grants).
+
