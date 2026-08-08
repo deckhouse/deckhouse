@@ -91,6 +91,26 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 			},
 			expStorage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{Device: "/dev/sdb"}},
 		},
+		{
+			// The disk etcd lives on is given to a control-plane node this way.
+			// Dropping the list would leave nothing under /var/lib/etcd on the next
+			// pass, and etcd would come up as a brand new cluster after a reboot.
+			name: "the mounts a master keeps etcd on are not dropped",
+			existing: internalv1alpha1.NodeSpec{
+				Storage: internalv1alpha1.Storage{Mounts: []internalv1alpha1.Mount{{
+					Name:              "kubernetes-data",
+					PartitionSelector: &internalv1alpha1.PartitionSelector{Size: "10Gi", Blank: true},
+					BindTo:            "/var/lib/etcd",
+					Mode:              "0700",
+				}}},
+			},
+			expStorage: internalv1alpha1.Storage{Mounts: []internalv1alpha1.Mount{{
+				Name:              "kubernetes-data",
+				PartitionSelector: &internalv1alpha1.PartitionSelector{Size: "10Gi", Blank: true},
+				BindTo:            "/var/lib/etcd",
+				Mode:              "0700",
+			}}},
+		},
 	}
 
 	for _, tc := range tests {

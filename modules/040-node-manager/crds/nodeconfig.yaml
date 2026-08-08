@@ -485,6 +485,127 @@ spec:
                         description: WWID matches the World Wide Identifier (glob).
                         type: string
                     type: object
+                  mounts:
+                    description: |-
+                      Mounts are additional filesystems the node makes available, at /mnt/<name>
+                      or wherever bindTo names. They are independent of the OS install above:
+                      nothing here is partitioned, only existing partitions and blank whole disks
+                      are formatted (when empty) and mounted. Reconciled by nodelet on a running
+                      node, so a disk added to a live node is picked up without a reboot.
+
+                      This is how a control-plane node is given the disk etcd lives on: the
+                      installer cannot name the device, because it renders the config before the
+                      machine — and therefore the disk — exists, so it renders a selector instead.
+                    items:
+                      description: |-
+                        Mount is one additional filesystem the node makes available, at /mnt/<name>
+                        unless bindTo says otherwise.
+
+                        The partition is named by a fixed path (device) or by attributes
+                        (partitionSelector) — exactly one of the two. The selector is the resilient
+                        form: /dev/sdX names move between boots, a UUID or a partition label does not.
+
+                        There are exactly two cases. Empty means "format it, then mount it", with the
+                        label set to name. Already formatted means "mount it" — including when the
+                        filesystem is of a different type than requested, which is reported but
+                        mounted as it is. Nothing here ever reformats: an existing filesystem is data.
+                      properties:
+                        bindTo:
+                          description: |-
+                            BindTo mounts the filesystem at this path instead of /mnt/<name>, for a
+                            directory something else already knows by name — /var/lib/etcd is one, being
+                            what the etcd static pod carries as a hostPath.
+
+                            The directory must be empty when the mount is made: mounting over files
+                            hides them rather than replacing them, and hidden etcd data is data etcd
+                            decides it does not have.
+                          pattern: ^/[A-Za-z0-9._/-]+$
+                          type: string
+                        device:
+                          description: |-
+                            Device is the partition to use, e.g. "/dev/sdb1" or a stable
+                            "/dev/disk/by-id/...-part1" path.
+                          pattern: ^/dev/[A-Za-z0-9._/-]+$
+                          type: string
+                        filesystem:
+                          default: ext4
+                          description: |-
+                            Filesystem is what to create when the partition is empty. It says what to
+                            create and is not a matching condition.
+                          enum:
+                          - ext4
+                          type: string
+                        mode:
+                          description: |-
+                            Mode is the mode of the filesystem root after mounting, as an octal string,
+                            e.g. "0700". Left alone when unset. A freshly made ext4 has its root at
+                            0755, which is a mode etcd refuses to start on.
+                          pattern: ^0[0-7]{3}$
+                          type: string
+                        name:
+                          description: |-
+                            Name identifies the mount, and is both the mount point (/mnt/<name>) and
+                            the filesystem label written when this node formats the partition. Capped
+                            at 16 characters because that is the size of the ext4 volume label field.
+                          maxLength: 16
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        partitionSelector:
+                          description: PartitionSelector picks the partition by attributes
+                            instead of a fixed path.
+                          properties:
+                            blank:
+                              description: |-
+                                Blank makes whole disks selectable, and only the ones that carry nothing:
+                                no partition table and no filesystem. It is how a cloud disk is named
+                                before it has ever been touched.
+
+                                Without it a selector sees partitions only, however wide it is: a whole disk
+                                is where somebody's layout lives, and putting a filesystem over one destroys
+                                every partition on it at once.
+                              type: boolean
+                            fsType:
+                              description: FSType matches the type of the filesystem
+                                already present (glob).
+                              type: string
+                            label:
+                              description: Label matches the filesystem label (glob).
+                              type: string
+                            name:
+                              description: Name matches the kernel device name (glob),
+                                e.g. "sdb1" or "nvme0n1p*".
+                              type: string
+                            partLabel:
+                              description: PartLabel matches the GPT partition name
+                                (glob).
+                              type: string
+                            partUUID:
+                              description: PartUUID matches the GPT partition UUID
+                                exactly, ignoring case.
+                              type: string
+                            size:
+                              description: |-
+                                Size matches the size, optionally with a comparison operator, e.g.
+                                ">=100Gi", ">1Ti", "512Gi". Without an operator the comparison is ">=";
+                                "=" allows 1%, since a disk rarely reports an exact round size.
+                              type: string
+                            uuid:
+                              description: UUID matches the filesystem UUID exactly,
+                                ignoring case.
+                              type: string
+                          type: object
+                      required:
+                      - name
+                      type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of device or partitionSelector must be
+                          set
+                        rule: has(self.device) != has(self.partitionSelector)
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   wipe:
                     description: |-
                       Wipe controls whether an already-provisioned disk is wiped and
