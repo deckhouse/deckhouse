@@ -17,6 +17,7 @@ package immutable
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"sigs.k8s.io/yaml"
@@ -88,7 +89,60 @@ func BuildMasterPayload(ctx context.Context, in MasterPayloadInput) (string, err
 	return base64.StdEncoding.EncodeToString([]byte(document)), nil
 }
 
-// buildCloudConfig wraps both payload documents into the single #cloud-config
+// JoinPayloadInput is everything BuildJoinPayload needs. The three cluster
+// facts come from the running cluster, not from the installer's own idea of it.
+type JoinPayloadInput struct {
+	// NodeName is the name this master registers under.
+	NodeName string
+	// MetaConfig is the parsed cluster configuration.
+	MetaConfig *config.MetaConfig
+	// CACert is the cluster CA, base64-encoded, as the cluster holds it.
+	CACert string
+	// BootstrapToken is the group's current bootstrap token.
+	BootstrapToken string
+	// APIServerEndpoints are the apiservers already serving the cluster.
+	APIServerEndpoints []string
+}
+
+// BuildJoinPayload renders the cloud-init an additional master boots with.
+//
+// It is the first master's payload minus the ControlPlaneConfig, plus the CA
+// and the token that let kubelet reach an apiserver somebody else is already
+// running. The node joins as an ordinary member of the master group and
+// control-plane-manager makes a control-plane node out of it afterwards —
+// the same path a classic cluster's second and third masters take.
+func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, error) {
+	switch {
+	case in.CACert == "":
+		return "", errors.New("build join payload: cluster CA is empty")
+	case in.BootstrapToken == "":
+		return "", errors.New("build join payload: bootstrap token is empty")
+	case len(in.APIServerEndpoints) == 0:
+		return "", errors.New("build join payload: no apiserver endpoints")
+	}
+
+	nodeConfig, err := buildNodeConfig(ctx, nodeConfigInput{
+		NodeName:   in.NodeName,
+		MetaConfig: in.MetaConfig,
+		Join: &joinInput{
+			CACert:             in.CACert,
+			BootstrapToken:     in.BootstrapToken,
+			APIServerEndpoints: in.APIServerEndpoints,
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("build node config: %w", err)
+	}
+
+	document, err := buildCloudConfig(nodeConfig, nil)
+	if err != nil {
+		return "", fmt.Errorf("build cloud config: %w", err)
+	}
+
+	return base64.StdEncoding.EncodeToString([]byte(document)), nil
+}
+
+// buildCloudConfig wraps the payload documents into the single #cloud-config
 // document the VM boots with.
 //
 // The generator on the node accepts plain content only — the "encoding" and
@@ -101,17 +155,27 @@ func buildCloudConfig(nodeConfig *nodeConfig, controlPlaneConfig *controlPlaneCo
 	if err != nil {
 		return "", fmt.Errorf("marshal nodeConfig: %w", err)
 	}
-	controlPlaneYAML, err := yaml.Marshal(controlPlaneConfig)
-	if err != nil {
-		return "", fmt.Errorf("marshal controlPlaneConfig: %w", err)
+
+	files := []map[string]any{
+		{"path": nodeConfigPath, "content": string(nodeConfigYAML)},
 	}
 
-	cloudConfig := map[string]any{
-		"write_files": []map[string]any{
-			{"path": nodeConfigPath, "content": string(nodeConfigYAML)},
-			{"path": controlPlaneConfigPath, "content": string(controlPlaneYAML)},
-		},
+	// Only the node that creates the cluster gets one. A joining master must not:
+	// the document is an order to generate a cluster CA and start an apiserver
+	// against it, and a second CA in one cluster is not something the node could
+	// recover from. It gets its control plane the way every other master does —
+	// from control-plane-manager, after it has joined.
+	if controlPlaneConfig != nil {
+		controlPlaneYAML, err := yaml.Marshal(controlPlaneConfig)
+		if err != nil {
+			return "", fmt.Errorf("marshal controlPlaneConfig: %w", err)
+		}
+		files = append(files, map[string]any{
+			"path": controlPlaneConfigPath, "content": string(controlPlaneYAML),
+		})
 	}
+
+	cloudConfig := map[string]any{"write_files": files}
 
 	body, err := yaml.Marshal(cloudConfig)
 	if err != nil {

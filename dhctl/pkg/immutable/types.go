@@ -160,6 +160,18 @@ type kubelet struct {
 	// until Deckhouse is installed.
 	ServerTLSBootstrap  *bool                `json:"serverTLSBootstrap,omitempty"`
 	ResourceReservation *resourceReservation `json:"resourceReservation,omitempty"`
+	// CACert is the cluster CA, base64-encoded, and BootstrapToken is what
+	// kubelet presents to get its first certificate. Both are empty for the
+	// first master, which generates the CA itself and needs no token to talk to
+	// an apiserver it starts on its own — and both are required for every node
+	// that joins a cluster that already exists.
+	//
+	// A non-empty CACert is also what the node uses to tell the two apart: its
+	// control-plane controller refuses a bootstrap payload that carries one, so
+	// a join payload can never be mistaken for an order to start a second
+	// cluster.
+	CACert         string `json:"caCert,omitempty"`
+	BootstrapToken string `json:"bootstrapToken,omitempty"`
 }
 
 // resourceReservation controls how much of the node is kept for the system.
