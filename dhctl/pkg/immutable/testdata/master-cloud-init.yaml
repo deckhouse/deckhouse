@@ -57,7 +57,14 @@ write_files:
         auth: dXNlcjpwYXNzd29yZA==
         path: /sys/deckhouse-oss
         scheme: HTTPS
-      storage: {}
+      storage:
+        mounts:
+        - bindTo: /var/lib/etcd
+          mode: "0700"
+          name: kubernetes-data
+          partitionSelector:
+            blank: true
+            size: 10Gi
       updatePolicy:
         mode: Automatic
   path: /config/nodeconfig.yaml

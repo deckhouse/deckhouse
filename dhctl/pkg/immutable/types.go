@@ -67,7 +67,7 @@ type nodeConfig struct {
 type nodeSpec struct {
 	NodeName           string           `json:"nodeName"`
 	OSImage            string           `json:"osImage"`
-	Storage            disk             `json:"storage,omitempty"`
+	Storage            storage          `json:"storage,omitempty"`
 	Extensions         []extension      `json:"extensions,omitempty"`
 	Kernel             kernel           `json:"kernel,omitempty"`
 	Network            network          `json:"network,omitempty"`
@@ -78,12 +78,34 @@ type nodeSpec struct {
 	Registry           *registrySpec    `json:"registry,omitempty"`
 }
 
-// disk picks one whole block device. dhctl names none: it renders the document
-// before the machine exists, so the only disk facts it would have are the sizes
-// that were asked for, and a size matches whatever falls under it — the
-// cloud-init image included. The empty object it emits leaves the choice to the
-// node, which can see the disks.
-type disk struct{}
+// storage is what the node is told about its disks.
+//
+// The disk to install the OS onto is not named here: the initramfs picks it, and
+// dhctl could not name it anyway — it renders this document before the machine,
+// and therefore the disk, exists. What is named is the disk etcd lives on, as a
+// selector rather than a path, for the same reason.
+type storage struct {
+	Mounts []mount `json:"mounts,omitempty"`
+}
+
+// mount is one filesystem the node puts in place before kubelet starts.
+type mount struct {
+	Name              string             `json:"name"`
+	PartitionSelector *partitionSelector `json:"partitionSelector,omitempty"`
+	// BindTo is the path the filesystem is mounted at, when it is not the node's
+	// to choose: /var/lib/etcd is what the etcd static pod carries as a hostPath.
+	BindTo string `json:"bindTo,omitempty"`
+	// Mode is the mode of the filesystem root, octal. A freshly made ext4 has its
+	// root at 0755, which is a mode etcd refuses to start on.
+	Mode string `json:"mode,omitempty"`
+}
+
+// partitionSelector names a device by what it looks like rather than by path.
+type partitionSelector struct {
+	Size string `json:"size,omitempty"`
+	// Blank makes whole disks selectable, and only the ones carrying nothing.
+	Blank bool `json:"blank,omitempty"`
+}
 
 // registrySpec is the node's own path to the registry: it pulls the control-plane
 // images and the system extensions directly, without the in-cluster
