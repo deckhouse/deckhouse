@@ -45,6 +45,16 @@ If the dhcpOptions parameter is set, all DNS are routed to the DNS servers speci
 
 **Do not use** this option if the recursive DNSs specified cannot resolve the same list of zones that the recursive DNSs in the Yandex Cloud subnet can resolve.
 
+## Changing `networkType` does not recreate CloudEphemeral nodes
+
+In clusters that use Machine Controller Manager (MCM), changing the [`networkType`](cr.html#yandexinstanceclass-v1-spec-networktype) parameter in a YandexInstanceClass resource does not trigger automatic recreation of existing CloudEphemeral nodes. Although the MachineClass is updated, the network acceleration type of existing virtual machines in Yandex Cloud remains unchanged.
+
+DKP intentionally does not take the `networkType` parameter into account when determining whether CloudEphemeral nodes should be recreated in MCM. If it did, updating DKP would recreate CloudEphemeral nodes in all clusters where `networkType` is specified, even if its value had not changed.
+
+In Cluster API, the `networkType` parameter is taken into account when determining whether nodes should be recreated, so changing it automatically triggers node recreation. New CloudEphemeral NodeGroups in Yandex Cloud use Cluster API by default.
+
+If you changed `networkType` in an MCM-based cluster and want the new value to apply to existing CloudEphemeral nodes, recreate them manually — instructions in the [documentation](/modules/node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
+
 ## Setting a custom StorageClass as default
 
 Specify the StorageClass name in the [defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter in the `global` module settings.
