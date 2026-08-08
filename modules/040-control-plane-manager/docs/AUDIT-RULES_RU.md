@@ -404,6 +404,7 @@ namespaces:
   - d8-cloud-provider-dynamix
   - d8-cloud-provider-gcp
   - d8-cloud-provider-huaweicloud
+  - d8-cloud-provider-metal3
   - d8-cloud-provider-openstack
   - d8-cloud-provider-vcd
   - d8-cloud-provider-vsphere
@@ -873,6 +874,7 @@ rules:
       - d8-cloud-provider-dynamix
       - d8-cloud-provider-gcp
       - d8-cloud-provider-huaweicloud
+      - d8-cloud-provider-metal3
       - d8-cloud-provider-openstack
       - d8-cloud-provider-vcd
       - d8-cloud-provider-vsphere

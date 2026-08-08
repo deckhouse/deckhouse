@@ -1,0 +1,795 @@
+{{- $ironic := .Values.cloudProviderMetal3.ironic | default dict -}}
+{{- if $ironic.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: capm3-manager
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: capm3-leader-election-role
+  namespace: d8-cloud-provider-metal3
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: capm3-manager-role
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ''
+  resources:
+  - nodes
+  verbs:
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  verbs:
+  - list
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - clusters
+  - clusters/status
+  - machinesets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - kubeadmcontrolplanes
+  - machinedeployments
+  - machines
+  - machines/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - metal3clusters
+  - metal3dataclaims
+  - metal3datas
+  - metal3datatemplates
+  - metal3machines
+  - metal3machinetemplates
+  - metal3remediations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - metal3clusters/status
+  - metal3dataclaims/status
+  - metal3datas/status
+  - metal3datatemplates/status
+  - metal3machines/status
+  - metal3remediations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ipam.cluster.x-k8s.io
+  resources:
+  - ipaddressclaims
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ipam.cluster.x-k8s.io
+  resources:
+  - ipaddressclaims/status
+  verbs:
+  - get
+  - watch
+- apiGroups:
+  - ipam.cluster.x-k8s.io
+  - ipam.metal3.io
+  resources:
+  - ipaddresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ipam.cluster.x-k8s.io
+  - ipam.metal3.io
+  resources:
+  - ipaddresses/status
+  verbs:
+  - get
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ipclaims
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ipam.metal3.io
+  resources:
+  - ipclaims/status
+  verbs:
+  - get
+  - watch
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - volumeattachments
+  verbs:
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: capm3-leader-election-rolebinding
+  namespace: d8-cloud-provider-metal3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: capm3-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: capm3-manager
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: capm3-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: capm3-manager-role
+subjects:
+- kind: ServiceAccount
+  name: capm3-manager
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: v1
+data:
+  CAPM3_FAST_TRACK: "false"
+kind: ConfigMap
+metadata:
+  name: capm3-capm3fasttrack-configmap
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: capm3-webhook-service
+  namespace: d8-cloud-provider-metal3
+spec:
+  ports:
+  - port: 443
+    targetPort: webhook-server
+  selector:
+    control-plane: controller-manager
+    controller-tools.k8s.io: '1.0'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: controller-manager
+    controller-tools.k8s.io: '1.0'
+  name: capm3-controller-manager
+  namespace: d8-cloud-provider-metal3
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+      controller-tools.k8s.io: '1.0'
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+        controller-tools.k8s.io: '1.0'
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      containers:
+      - args:
+        - --webhook-port=9443
+        - --enableBMHNameBasedPreallocation=false
+        - --diagnostics-address=:8443
+        - --insecure-diagnostics=false
+        - --tls-min-version=VersionTLS13
+        command:
+        - /manager
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        envFrom:
+        - configMapRef:
+            name: capm3-capm3fasttrack-configmap
+        image: {{ include "helm_lib_module_image" (list . "capm3ControllerManager") }}
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 9440
+          name: healthz
+          protocol: TCP
+        - containerPort: 8443
+          name: metrics
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: healthz
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsGroup: 65532
+          runAsUser: 65532
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: capm3-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: capm3-webhook-service-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: capm3-serving-cert
+  namespace: d8-cloud-provider-metal3
+spec:
+  dnsNames:
+  - capm3-webhook-service.d8-cloud-provider-metal3.svc
+  - capm3-webhook-service.d8-cloud-provider-metal3.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: capm3-selfsigned-issuer
+  secretName: capm3-webhook-service-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: capm3-selfsigned-issuer
+  namespace: d8-cloud-provider-metal3
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: d8-cloud-provider-metal3/capm3-serving-cert
+  name: capm3-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3cluster
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.metal3cluster.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3clusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3clustertemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.metal3clustertemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3clustertemplates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3data
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.metal3data.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3datas
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3dataclaim
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.metal3dataclaim.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3dataclaims
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3datatemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.metal3datatemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3datatemplates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3machine
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.metal3machine.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3machines
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3machinetemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.metal3machinetemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3machinetemplates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3remediation
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.metal3remediation.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3remediations
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3remediationtemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: default.metal3remediationtemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3remediationtemplates
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: d8-cloud-provider-metal3/capm3-serving-cert
+  name: capm3-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3cluster
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.metal3cluster.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3clusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3clustertemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.metal3clustertemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3clustertemplates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3data
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.metal3data.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3datas
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3dataclaim
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.metal3dataclaim.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3dataclaims
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3datatemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.metal3datatemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3datatemplates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3machine
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.metal3machine.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3machines
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3machinetemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.metal3machinetemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3machinetemplates
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3remediation
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.metal3remediation.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3remediations
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: capm3-webhook-service
+      namespace: d8-cloud-provider-metal3
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3remediationtemplate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validation.metal3remediationtemplate.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - metal3remediationtemplates
+  sideEffects: None
+{{- end }}

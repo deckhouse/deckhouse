@@ -36,6 +36,7 @@
   {{- $_ := set $tpl_context "mingetB64" ($context.Files.Get "candi/bashible/bootstrap/minget" | b64enc) }}
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
     {{- $_ := set $tpl_context "provider" $context.Values.nodeManager.internal.cloudProvider.type }}
+    {{- $_ := set $tpl_context "cloudProviderType" $context.Values.nodeManager.internal.cloudProvider.type }}
   {{- end }}
 #!/usr/bin/env bash
 set -Eeuo pipefail

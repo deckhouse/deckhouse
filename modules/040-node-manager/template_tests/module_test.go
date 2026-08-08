@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"sort"
@@ -2033,6 +2034,124 @@ internal:
 					name:         "myprefix-worker-8ced91ee",
 					templateName: "worker-a6381073",
 				})
+			})
+		})
+
+		Context("Metal3", func() {
+			const nodeManagerMetal3 = `
+internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: metal3
+    machineClassKind: ""
+    capiClusterKind: "Metal3Cluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1"
+    capiClusterName: "metal3"
+    capiMachineTemplateKind: "Metal3MachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta1"
+    metal3: {}
+  nodeGroups:
+    - cloudInstances:
+        classReference:
+          kind: Metal3InstanceClass
+          name: worker
+        maxPerZone: 5
+        minPerZone: 4
+        zones:
+          - default
+      cri:
+        type: Containerd
+      instanceClass:
+        image:
+          url: http://172.22.0.10:6180/images/ubuntu-24.04.raw
+          checksum: 4571234c4f2d812d5051282b47545a2e5a7f96d02fce77e5a16f0217741e4d49
+          checksumType: sha256
+          format: raw
+        hostSelector:
+          matchLabels:
+            capm3-test: ironic-4
+        automatedCleaningMode: disabled
+        nodeReuse: false
+      kubelet:
+        resourceReservation:
+          mode: Auto
+        topologyManager: {}
+      kubernetesVersion: "1.32"
+      manualRolloutID: ""
+      name: worker
+      nodeType: CloudEphemeral
+      updateEpoch: "1746532947"
+  machineControllerManagerEnabled: false
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerMetal3)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("must render Metal3 CAPI resources", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertClusterResources(f, "metal3")
+
+				metal3Cluster := f.KubernetesResource("Metal3Cluster", "d8-cloud-instance-manager", "metal3")
+				Expect(metal3Cluster.Exists()).To(BeTrue())
+				Expect(metal3Cluster.Field("spec.noCloudProvider").Bool()).To(BeTrue())
+				Expect(metal3Cluster.Field("spec.controlPlaneEndpoint.host").String()).To(Equal("10.0.0.1"))
+				Expect(metal3Cluster.Field("spec.controlPlaneEndpoint.port").Int()).To(Equal(int64(6443)))
+
+				// MachineTemplate and Metal3DataTemplate are rendered by node-controller from
+				// the cloud-provider CAPI template secret; Helm only renders bootstrap Secret.
+				template := f.KubernetesResource("Metal3MachineTemplate", "d8-cloud-instance-manager", "worker-50710a9d")
+				Expect(template.Exists()).To(BeFalse())
+
+				dataTemplate := f.KubernetesResource("Metal3DataTemplate", "d8-cloud-instance-manager", "worker-50710a9d")
+				Expect(dataTemplate.Exists()).To(BeFalse())
+
+				bootstrapSecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-8ced91ee")
+				Expect(bootstrapSecret.Exists()).To(BeTrue())
+				bootstrapUserDataBytes, err := base64.StdEncoding.DecodeString(bootstrapSecret.Field("data.value").String())
+				Expect(err).NotTo(HaveOccurred())
+				bootstrapUserData := string(bootstrapUserDataBytes)
+				Expect(bootstrapUserData).To(ContainSubstring("/var/lib/bashible/metal3-early-bootstrap.sh"))
+				Expect(bootstrapUserData).To(ContainSubstring("/var/lib/bashible/machine-name"))
+				Expect(bootstrapUserData).To(ContainSubstring("/var/lib/bashible/node-spec-provider-id"))
+				Expect(bootstrapUserData).To(ContainSubstring("metal3://{bmh_namespace}/{bmh_name}/{machine_name}"))
+				Expect(bootstrapUserData).NotTo(ContainSubstring("--cloud-provider=external"))
+
+				nodeControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-controller")
+				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
+				Expect(nodeControllerRole.Field("rules").String()).To(ContainSubstring("metal3instanceclasses"))
+
+				capiControllerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:capi-controller-manager:manager-role")
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3clusters"))
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3dataclaims"))
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3datas"))
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3datatemplates"))
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3machines"))
+				Expect(capiControllerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
+
+				clusterAutoscalerRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:cluster-autoscaler")
+				Expect(clusterAutoscalerRole.Field("rules").String()).To(ContainSubstring("metal3machinetemplates"))
 			})
 		})
 	})
