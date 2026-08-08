@@ -1531,6 +1531,10 @@ entries:
                 ru: Обзор
               url: /architecture/network/
             - title:
+                en: Cni-cilium module
+                ru: Модуль cni-cilium
+              url: /architecture/network/cni-cilium.html              
+            - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
               url: /architecture/network/ingress-nginx.html
