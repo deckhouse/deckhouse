@@ -1,0 +1,16 @@
+admission-policy-engine:
+  fixes:
+    - summary: update Gatekeeper up to 3.22.2, fix CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20454
+cloud-provider-dvp:
+  features:
+    - summary: skip
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20421
+  fixes:
+    - summary: separate migration resources creation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20500
+control-plane-manager:
+  fixes:
+    - summary: Add audit policy rule to log kubectl get logs requests (pods/log)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20274
+
