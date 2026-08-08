@@ -1759,6 +1759,10 @@ entries:
             ru: Поддерживаемые версии K8s и ОС
           url: /reference/supported_versions.html
         - title:
+            en: Kubernetes conformance test results
+            ru: Результаты Kubernetes conformance-тестов
+          url: /reference/kubernetes-conformance.html
+        - title:
             en: Revision comparison
             ru: Сравнение редакций
           url: /reference/revision-comparison.html
