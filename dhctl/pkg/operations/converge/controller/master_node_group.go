@@ -141,6 +141,14 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 
 		replicas := 3
 
+		if !c.convergeState.PreserveExistingHAMode {
+			c.convergeState.PreserveExistingHAMode = true
+			err := ctx.SetConvergeState(c.convergeState)
+			if err != nil {
+				return fmt.Errorf("failed to set converge state: %w", err)
+			}
+		}
+
 		err = c.runWithReplicas(ctx, replicas)
 		if err != nil {
 			return fmt.Errorf("failed to converge with 3 replicas: %w", err)
@@ -171,6 +179,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 		}
 
 		c.convergeState.Phase = ""
+		c.convergeState.PreserveExistingHAMode = false
 
 		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "scaled to single-master, saving state...")
 
@@ -411,6 +420,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Destructive change single master. Scale to multimaster and converge")
 
 			c.convergeState.Phase = phases.ScaleToMultiMasterPhase
+			c.convergeState.PreserveExistingHAMode = true
 
 			err := ctx.SetConvergeState(c.convergeState)
 			if err != nil {

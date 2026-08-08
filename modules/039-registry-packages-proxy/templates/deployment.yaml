@@ -30,6 +30,7 @@ spec:
         memory: 30Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
+{{- if (include "helm_lib_ha_enabled" .) }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -42,6 +43,7 @@ spec:
   selector:
     matchLabels:
       app: "registry-packages-proxy"
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
