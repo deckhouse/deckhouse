@@ -31,7 +31,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`adaptive-resource-management`](/modules/adaptive-resource-management/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-![Adaptive-resource-management module architecture](../../../images/architecture/kubernetes-and-scheduling/c4-l2-adaptive-resource-management.png)
+![Adaptive-resource-management module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-adaptive-resource-management.png)
 
 ## Module components
 
