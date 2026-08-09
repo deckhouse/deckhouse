@@ -140,6 +140,22 @@ spec:
                     type: string
                   description: |
                     The NodeGroups the selectors currently match.
+                appliedNodes:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                  description: |
+                    How many of the selected nodes report the sysext installed and merged. Reported by the nodes themselves: a request can resolve here and still be refused by every node it reaches.
+                failedNodes:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                  description: |
+                    How many of the selected nodes report the sysext refused.
+                failureMessage:
+                  type: string
+                  description: |
+                    What the nodes say about the refusal, taken from one of them.
                 conditions:
                   type: array
                   description: |

@@ -62,8 +62,17 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 		return
 	}
 
+	// What the nodes made of these requests. A read failure is logged and the
+	// statuses are still written without the counts: knowing that a request
+	// resolved is worth publishing even when the fleet's answer is unavailable.
+	outcomes, err := readNEROutcomes(ctx, r.Client)
+	if err != nil {
+		logger.Error(err, "cannot read what the nodes report about NodeExtensionRequests")
+		outcomes = nil
+	}
+
 	for i := range ners.Items {
-		if err := r.updateNERStatus(ctx, &ners.Items[i], conflicts, groups); err != nil {
+		if err := r.updateNERStatus(ctx, &ners.Items[i], conflicts, groups, outcomes[ners.Items[i].Name]); err != nil {
 			logger.Error(err, "cannot update NodeExtensionRequest status", "request", ners.Items[i].Name)
 		}
 	}
@@ -89,22 +98,40 @@ func (r *Reconciler) immutableNodeGroupNames(ctx context.Context) ([]string, err
 
 // updateNERStatus computes and patches one request's status, skipping the write
 // when nothing changed.
-func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, immutableGroups []string) error {
+func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, immutableGroups []string, outcome nerOutcome) error {
 	desired := ner.Status.DeepCopy()
 	desired.ObservedGeneration = ner.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(ner, immutableGroups)
+	desired.AppliedNodes = outcome.applied
+	desired.FailedNodes = outcome.failed
+	desired.FailureMessage = outcome.message
 
 	reason, message := nerStatusReason(ner, conflicts)
-	if reason == "" {
+	switch {
+	case reason == "" && outcome.failed > 0:
+		// It resolved here and the nodes refused it. Reporting Ready on the
+		// strength of the resolution alone is what made a rejected extension
+		// indistinguishable from a working one.
+		desired.Phase = phaseDegraded
+		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
+			Type:               readyConditionType,
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: ner.Generation,
+			Reason:             reasonRefusedByNodes,
+			Message: fmt.Sprintf("%d node(s) refused the sysext, %d applied it: %s",
+				outcome.failed, outcome.applied, outcome.message),
+		})
+	case reason == "":
 		desired.Phase = phaseReady
 		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
 			Type:               readyConditionType,
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: ner.Generation,
 			Reason:             reasonResolved,
-			Message:            "the sysext resolved and is ready to merge onto the matched nodes",
+			Message: fmt.Sprintf("the sysext resolved; %d node(s) report it applied",
+				outcome.applied),
 		})
-	} else {
+	default:
 		desired.Phase = phaseDegraded
 		meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
 			Type:               readyConditionType,

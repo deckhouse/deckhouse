@@ -162,6 +162,24 @@ type NodeExtensionRequestStatus struct {
 	// MatchedNodeGroups are the NodeGroups the selectors currently match.
 	// +optional
 	MatchedNodeGroups []string `json:"matchedNodeGroups,omitempty"`
+
+	// AppliedNodes is how many of the selected nodes report the sysext installed
+	// and merged; FailedNodes how many report it refused. They come from the
+	// nodes themselves rather than from this controller's own view, and that is
+	// the point: a request can resolve perfectly here and still be rejected by
+	// every node it reaches — an image signed by a key the kernel does not trust
+	// is exactly that — and without these the request keeps reporting Ready while
+	// nothing runs anywhere.
+	// +optional
+	AppliedNodes int32 `json:"appliedNodes,omitempty"`
+	// +optional
+	FailedNodes int32 `json:"failedNodes,omitempty"`
+
+	// FailureMessage is what the nodes say about the refusal, taken from one of
+	// them. A bad image fails the same way everywhere, so one message is the
+	// whole story — and it is the operator's shortcut past a serial console.
+	// +optional
+	FailureMessage string `json:"failureMessage,omitempty"`
 }
 
 // NodeExtensionRequestList is a list of NodeExtensionRequest objects.
