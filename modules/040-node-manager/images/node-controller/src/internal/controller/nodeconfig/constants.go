@@ -124,6 +124,13 @@ const (
 	// was given.
 	phaseReady = "Ready"
 
+	// extensionStateReady and extensionStateFailed are the per-extension states a
+	// node publishes in NodeConfig.status.extensions[].state. They mirror the
+	// agent's own enum; its third value, Pending, is a node still working and
+	// counts as neither outcome.
+	extensionStateReady  = "Ready"
+	extensionStateFailed = "Failed"
+
 	// kubernetesLabelNamespace and k8sLabelNamespace are the label namespaces a
 	// node may not put itself into, beyond kubeletAllowedLabels below.
 	kubernetesLabelNamespace = "kubernetes.io"
