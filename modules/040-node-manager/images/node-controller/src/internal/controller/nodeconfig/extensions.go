@@ -82,6 +82,10 @@ const (
 	reasonConflict       = "Conflict"
 	reasonModuleConflict = "KernelModuleConflict"
 	reasonReservedName   = "ReservedName"
+	// reasonRefusedByNodes is the request that resolved here and was rejected
+	// where it matters. The others are this controller's own verdicts; this one
+	// is the fleet's.
+	reasonRefusedByNodes = "RefusedByNodes"
 )
 
 // resolveExtension turns a request's Sysext into the NodeConfig extension the
