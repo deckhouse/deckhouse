@@ -1,0 +1,15 @@
+[Unit]
+Description=bob, a test system extension that proves signature enforcement
+Documentation=https://deckhouse.io
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# The point of this unit is that it runs at all: a node where it is active has
+# merged the extension, and a node where it is absent has not. It writes the
+# marker under /run so it disappears with the merge it belongs to — a stale
+# marker on the data partition would say "merged" about a previous boot.
+ExecStart=/usr/bin/sh -c 'mkdir -p /run/bob && echo "$${SYSEXT_NAME:-bob} merged at $$(date -Is)" > /run/bob/merged'
+
+[Install]
+WantedBy=multi-user.target
