@@ -105,14 +105,16 @@ func TestSchemeRegistersEveryKind(t *testing.T) {
 	}
 
 	objects := map[string]runtime.Object{
-		"FencingFailedNodeState":         &FencingFailedNodeState{},
-		"FencingFailedNodeStateList":     &FencingFailedNodeStateList{},
-		"FencingAgentNodeView":     &FencingAgentNodeView{},
-		"FencingAgentNodeViewList": &FencingAgentNodeViewList{},
-		"FencingAgentPeer":         &FencingAgentPeer{},
-		"FencingAgentPeerList":     &FencingAgentPeerList{},
-		"FencingAgentEvent":        &FencingAgentEvent{},
-		"FencingAgentEventList":    &FencingAgentEventList{},
+		"FencingFailedNodeState":     &FencingFailedNodeState{},
+		"FencingFailedNodeStateList": &FencingFailedNodeStateList{},
+		"FencingAgentNodeView":       &FencingAgentNodeView{},
+		"FencingAgentNodeViewList":   &FencingAgentNodeViewList{},
+		"FencingAgentPeer":           &FencingAgentPeer{},
+		"FencingAgentPeerList":       &FencingAgentPeerList{},
+		"FencingAgentEvent":          &FencingAgentEvent{},
+		"FencingAgentEventList":      &FencingAgentEventList{},
+		"FencingSLAProfile":          &FencingSLAProfile{},
+		"FencingSLAProfileList":      &FencingSLAProfileList{},
 	}
 
 	for wantKind, obj := range objects {

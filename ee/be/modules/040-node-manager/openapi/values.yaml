@@ -452,6 +452,8 @@ properties:
               properties:
                 mode:
                   type: string
+                profile:
+                  type: string
                 watchdog:
                   type: object
                   properties:

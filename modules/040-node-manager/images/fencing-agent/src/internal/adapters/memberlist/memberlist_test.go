@@ -17,10 +17,60 @@ limitations under the License.
 package memberlist
 
 import (
+	"strings"
 	"testing"
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
+
+// testTuning returns a valid tuning fixture shared by the buildConfig tests.
+func testTuning() v1alpha1.FencingSLAProfileMemberlist {
+	return v1alpha1.FencingSLAProfileMemberlist{
+		ProbeInterval:           metav1.Duration{Duration: 100 * time.Millisecond},
+		ProbeTimeout:            metav1.Duration{Duration: 50 * time.Millisecond},
+		SuspicionMult:           2,
+		SuspicionMaxTimeoutMult: 6,
+		IndirectChecks:          4,
+		AwarenessMaxMultiplier:  8,
+		GossipInterval:          metav1.Duration{Duration: 100 * time.Millisecond},
+		RetransmitMult:          4,
+		GossipToTheDeadTime:     metav1.Duration{Duration: 2 * time.Second},
+	}
+}
+
+func TestBuildConfigAppliesProfileTuning(t *testing.T) {
+	tuning := testTuning()
+
+	cfg := buildConfig(Config{
+		NodeName:      "worker-1",
+		NodeGroup:     "worker",
+		AdvertiseAddr: "10.0.0.1",
+		Port:          8500,
+		Tuning:        tuning,
+	}, log.NewNop(), newEventDelegate(log.NewNop()))
+
+	if cfg.ProbeInterval != tuning.ProbeInterval.Duration || cfg.ProbeTimeout != tuning.ProbeTimeout.Duration {
+		t.Errorf("probe timings not applied: interval=%s timeout=%s", cfg.ProbeInterval, cfg.ProbeTimeout)
+	}
+
+	if cfg.SuspicionMult != 2 || cfg.SuspicionMaxTimeoutMult != 6 {
+		t.Errorf("suspicion tuning not applied: mult=%d maxMult=%d", cfg.SuspicionMult, cfg.SuspicionMaxTimeoutMult)
+	}
+
+	if cfg.IndirectChecks != 4 || cfg.AwarenessMaxMultiplier != 8 {
+		t.Errorf("lifeguard tuning not applied: indirect=%d awareness=%d", cfg.IndirectChecks, cfg.AwarenessMaxMultiplier)
+	}
+
+	if cfg.GossipInterval != tuning.GossipInterval.Duration || cfg.RetransmitMult != 4 || cfg.GossipToTheDeadTime != tuning.GossipToTheDeadTime.Duration {
+		t.Errorf("gossip tuning not applied: interval=%s retransmit=%d deadTime=%s",
+			cfg.GossipInterval, cfg.RetransmitMult, cfg.GossipToTheDeadTime)
+	}
+}
 
 func TestBuildConfigAdvertisesTheNodeAddress(t *testing.T) {
 	cfg := buildConfig(Config{
@@ -28,6 +78,7 @@ func TestBuildConfigAdvertisesTheNodeAddress(t *testing.T) {
 		NodeGroup:     "worker",
 		AdvertiseAddr: "10.0.0.1",
 		Port:          8500,
+		Tuning:        testTuning(),
 	}, log.NewNop(), newEventDelegate(log.NewNop()))
 
 	if cfg.Name != "worker-1" {
@@ -61,6 +112,25 @@ func TestBuildConfigAdvertisesTheNodeAddress(t *testing.T) {
 
 	if cfg.Logger == nil || cfg.Events == nil {
 		t.Error("logger and event delegate must be wired")
+	}
+}
+
+func TestNewRejectsZeroTuning(t *testing.T) {
+	// No listener is created on this error path (the guard runs before
+	// hcml.Create), so there is no port to clean up.
+	_, err := New(Config{
+		NodeName:      "worker-1",
+		NodeGroup:     "worker",
+		AdvertiseAddr: "127.0.0.1",
+		Port:          0,
+	}, log.NewNop())
+
+	if err == nil {
+		t.Fatal("expected an error for zero-value Tuning, memberlist must refuse to start")
+	}
+
+	if !strings.Contains(err.Error(), "ProbeInterval") {
+		t.Errorf("error %q does not mention ProbeInterval", err)
 	}
 }
 
