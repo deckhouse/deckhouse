@@ -393,7 +393,7 @@ func generationOf(name string) int {
 // from the provider Secret and is not in cache.Options.ByObject — the same reason pruneStaleCAPI
 // and deleteInfraMachineTemplates read live — and because this read decides whether machines roll.
 func (r *MachineDeploymentReconciler) getMachineTemplate(ctx context.Context, gvk schema.GroupVersionKind, name string) (*unstructured.Unstructured, error) {
-	obj := newUnstructuredForGVK(gvk)
+	obj := newUnstructured(gvk.Group, gvk.Version, gvk.Kind)
 	err := r.APIReader.Get(ctx, types.NamespacedName{Name: name, Namespace: common.MachineNamespace}, obj)
 	if errors.IsNotFound(err) {
 		return nil, nil
