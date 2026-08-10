@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -46,6 +47,49 @@ metadata:
 data:
   state: %s
 `, autotuneStateCMName, string(escaped))
+}
+
+func brokenAutotuneStateYAML() string {
+	return fmt.Sprintf(`
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: %s
+  namespace: kube-system
+data:
+  state: "}{ not json"
+`, autotuneStateCMName)
+}
+
+func autotuneCMState(f *HookExecutionConfig) autotuneState {
+	ops := f.KubernetesResource("ConfigMap", "kube-system", autotuneStateCMName)
+	ExpectWithOffset(1, ops.Exists()).To(BeTrue())
+	var st autotuneState
+	ExpectWithOffset(1, json.Unmarshal([]byte(ops.Field("data.state").String()), &st)).To(Succeed())
+	return st
+}
+
+func hasDegradedReason(f *HookExecutionConfig, reason string) bool {
+	for _, m := range f.MetricsCollector.CollectedMetrics() {
+		if m.Name == autotuneDegradedMetricName && m.Labels["reason"] == reason {
+			return true
+		}
+	}
+	return false
+}
+
+func completeAutotuneState(milliCPU, bytes int64, lastChange time.Time) autotuneState {
+	ts := lastChange.Format(time.RFC3339)
+	st := autotuneState{
+		resourceCPU:    &autotuneMeasurementState{Components: map[string]autotuneComponentState{}},
+		resourceMemory: &autotuneMeasurementState{Components: map[string]autotuneComponentState{}},
+	}
+	for _, comp := range controlPlaneComponents {
+		st[resourceCPU].Components[comp] = autotuneComponentState{AppliedMilliCPU: ptr.To(milliCPU), LastChange: ts}
+		st[resourceMemory].Components[comp] = autotuneComponentState{AppliedBytes: ptr.To(bytes), LastChange: ts}
+	}
+	return st
 }
 
 func masterNodeYAML() string {
@@ -109,11 +153,14 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	var usage map[string]map[resourceKind]float64
+	var usageCalls int
 
 	BeforeEach(func() {
 		usage = map[string]map[resourceKind]float64{}
+		usageCalls = 0
 		f.ValuesSetFromYaml("global.enabledModules", []byte(`["prometheus","prometheus-metrics-adapter"]`))
 		fetchComponentUsage = func(_ context.Context, _ dependency.Container, component string, resourceName resourceKind) (float64, bool, error) {
+			usageCalls++
 			if byRes, ok := usage[component]; ok {
 				if v, ok := byRes[resourceName]; ok {
 					return v, true, nil
@@ -125,6 +172,7 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 
 	AfterEach(func() {
 		fetchComponentUsage = fetchComponentUsageFromMetricsAPI
+		listPodsOnNode = listPodsOnNodeFromAPI
 	})
 
 	Context("Schedule: raise after cooldown", func() {
@@ -324,6 +372,184 @@ var _ = Describe("Module hooks :: control-plane-manager :: resources_requests_au
 			Expect(*st[resourceCPU].Components[componentKubeControllerManager].AppliedMilliCPU).To(Equal(int64(100)))
 			Expect(*st[resourceCPU].Components[componentKubeScheduler].AppliedMilliCPU).To(Equal(int64(100)))
 			Expect(*st[resourceMemory].Components[componentKubeApiserver].AppliedBytes).To(Equal(fallbackSplit(1024*1024*1024, 45)))
-			Expect(*st[resourceMemory].Components[componentEtcd].AppliedBytes).To(Equal(fallbackSplit(1024*1024*1024, 35)))		})
+			Expect(*st[resourceMemory].Components[componentEtcd].AppliedBytes).To(Equal(fallbackSplit(1024*1024*1024, 35)))
+		})
+	})
+
+	Context("Schedule: listing pods on masters fails", func() {
+		BeforeEach(func() {
+			listPodsOnNode = func(_ context.Context, _ dependency.Container, _ string) ([]v1.Pod, error) {
+				return nil, fmt.Errorf("connection refused")
+			}
+			for _, c := range controlPlaneComponents {
+				usage[c] = map[resourceKind]float64{resourceCPU: 0.5, resourceMemory: 500000000}
+			}
+			f.KubeStateSet(masterNodeYAML() + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		It("still writes a complete ConfigMap, skips the metrics path, reports degradation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			st := autotuneCMState(f)
+			Expect(measurementIsComplete(st[resourceCPU], resourceCPU)).To(BeTrue())
+			Expect(measurementIsComplete(st[resourceMemory], resourceMemory)).To(BeTrue())
+			Expect(usageCalls).To(Equal(0))
+			Expect(st[resourceCPU].LastMetricsRun).To(BeEmpty())
+			Expect(hasDegradedReason(f, degradedReasonListPods)).To(BeTrue())
+		})
+	})
+
+	Context("Schedule: master nodes below the discovery threshold", func() {
+		BeforeEach(func() {
+			tiny := generateMasterNodesConfig([]masterNode{{cpu: "300m", memory: "1Gi"}})
+			f.KubeStateSet(tiny + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		It("writes no budget rather than an invented one", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// The every-node reservation is honoured, so nothing is left to split and
+			// the templates keep applying their own fallback.
+			st := autotuneCMState(f)
+			Expect(st[resourceCPU]).To(BeNil())
+			Expect(st[resourceMemory]).To(BeNil())
+			Expect(hasDegradedReason(f, degradedReasonNodesTooSmall)).To(BeTrue())
+		})
+	})
+
+	Context("Schedule: unreadable state ConfigMap", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
+			f.KubeStateSet(masterNodeYAML() + brokenAutotuneStateYAML() + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		It("recomputes the state from scratch and reports degradation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			st := autotuneCMState(f)
+			Expect(measurementIsComplete(st[resourceCPU], resourceCPU)).To(BeTrue())
+			Expect(measurementIsComplete(st[resourceMemory], resourceMemory)).To(BeTrue())
+			Expect(hasDegradedReason(f, degradedReasonBadState)).To(BeTrue())
+		})
+	})
+
+	Context("Schedule: complete state with a fresh LastMetricsRun", func() {
+		BeforeEach(func() {
+			now := dependency.TestDC.GetClock().Now().UTC()
+			st := completeAutotuneState(500, 500000000, now.Add(-100*time.Hour))
+			st[resourceCPU].LastMetricsRun = now.Add(-1 * time.Hour).Format(time.RFC3339)
+			st[resourceMemory].LastMetricsRun = now.Add(-1 * time.Hour).Format(time.RFC3339)
+			for _, c := range controlPlaneComponents {
+				usage[c] = map[resourceKind]float64{resourceCPU: 2, resourceMemory: 2000000000}
+			}
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st) + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		It("does not touch the metrics API and keeps the applied values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(usageCalls).To(Equal(0))
+			st := autotuneCMState(f)
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(500)))
+		})
+	})
+
+	Context("Schedule: a run that changes nothing", func() {
+		var lastChange string
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
+			now := dependency.TestDC.GetClock().Now().UTC()
+			lastChange = now.Add(-200 * time.Hour).Format(time.RFC3339)
+			st := autotuneState{
+				resourceCPU:    &autotuneMeasurementState{Components: map[string]autotuneComponentState{}},
+				resourceMemory: &autotuneMeasurementState{Components: map[string]autotuneComponentState{}},
+			}
+			for _, comp := range controlPlaneComponents {
+				pct := componentMeta[comp].percent
+				st[resourceCPU].Components[comp] = autotuneComponentState{
+					AppliedMilliCPU: ptr.To(fallbackSplit(1000, pct)), LastChange: lastChange,
+				}
+				st[resourceMemory].Components[comp] = autotuneComponentState{
+					AppliedBytes: ptr.To(fallbackSplit(1024*1024*1024, pct)), LastChange: lastChange,
+				}
+			}
+			st[resourceCPU].AppliedOverride = ptr.To(int64(1000))
+			st[resourceMemory].AppliedOverride = ptr.To(int64(1024 * 1024 * 1024))
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st) + cpmResourcesRequestsMC("1000m", "1Gi"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		It("keeps LastChange untouched", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			st := autotuneCMState(f)
+			for _, comp := range controlPlaneComponents {
+				Expect(st[resourceCPU].Components[comp].LastChange).To(Equal(lastChange))
+				Expect(st[resourceMemory].Components[comp].LastChange).To(Equal(lastChange))
+			}
+		})
+	})
+
+	Context("Schedule: ModuleConfig override removed", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`[]`))
+			now := dependency.TestDC.GetClock().Now().UTC()
+			st := autotuneState{
+				resourceCPU:    &autotuneMeasurementState{Components: map[string]autotuneComponentState{}},
+				resourceMemory: &autotuneMeasurementState{Components: map[string]autotuneComponentState{}},
+			}
+			for _, comp := range controlPlaneComponents {
+				pct := componentMeta[comp].percent
+				st[resourceCPU].Components[comp] = autotuneComponentState{
+					AppliedMilliCPU: ptr.To(fallbackSplit(2000, pct)),
+					LastChange:      now.Add(-200 * time.Hour).Format(time.RFC3339),
+				}
+			}
+			st[resourceCPU].AppliedOverride = ptr.To(int64(2000))
+			f.KubeStateSet(masterNodeYAML() + autotuneStateYAML(st) + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		It("rebases on the discovery budget immediately and clears AppliedOverride", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// 8-CPU master is capped by hardLimitMilliCPU before the carve-out.
+			expectCPU := int64(hardLimitMilliCPU-configEveryNodeMilliCPU) * controlPlanePercent / 100
+			st := autotuneCMState(f)
+			Expect(st[resourceCPU].AppliedOverride).To(BeNil())
+			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).
+				To(Equal(fallbackSplit(expectCPU, 45)))
+		})
+	})
+
+	Context("Schedule: cold start without a ConfigMap", func() {
+		BeforeEach(func() {
+			for _, c := range controlPlaneComponents {
+				usage[c] = map[resourceKind]float64{resourceCPU: 0.3, resourceMemory: 300000000}
+			}
+			f.KubeStateSet(masterNodeYAML() + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		It("runs the metrics path at once and gates the immediate next run", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(usageCalls).To(BeNumerically(">", 0))
+			st := autotuneCMState(f)
+			Expect(st[resourceCPU].LastMetricsRun).ToNot(BeEmpty())
+			Expect(st[resourceMemory].LastMetricsRun).ToNot(BeEmpty())
+
+			// The ConfigMap the hook just wrote is now in the cluster.
+			callsAfterFirst := usageCalls
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(usageCalls).To(Equal(callsAfterFirst))
+		})
 	})
 })

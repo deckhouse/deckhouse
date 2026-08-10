@@ -18,8 +18,11 @@ package hooks
 
 import (
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,17 +42,11 @@ const (
 )
 
 // Control-plane component keys used in internal values / ConfigMap / templates.
-// Container names match static-pod container names and PodMetric selectors.
 const (
 	componentKubeApiserver         = "kubeApiserver"
 	componentEtcd                  = "etcd"
 	componentKubeControllerManager = "kubeControllerManager"
 	componentKubeScheduler         = "kubeScheduler"
-
-	containerKubeApiserver         = "kube-apiserver"
-	containerEtcd                  = "etcd"
-	containerKubeControllerManager = "kube-controller-manager"
-	containerKubeScheduler         = "kube-scheduler"
 )
 
 // Internal values path for per-component resource requests.
@@ -65,22 +62,17 @@ var controlPlaneComponents = []string{
 	componentKubeScheduler,
 }
 
-// componentContainer maps internal component key → static-pod container name.
-var componentContainer = map[string]string{
-	componentKubeApiserver:         containerKubeApiserver,
-	componentEtcd:                  containerEtcd,
-	componentKubeControllerManager: containerKubeControllerManager,
-	componentKubeScheduler:         containerKubeScheduler,
-}
-
-// componentFallbackPercent is the fixed %-split of a combined budget
-// (ModuleConfig override or legacy discovery). apiserver/etcd/kcm/scheduler =
-// 45/35/10/10.
-var componentFallbackPercent = map[string]int64{
-	componentKubeApiserver:         45,
-	componentEtcd:                  35,
-	componentKubeControllerManager: 10,
-	componentKubeScheduler:         10,
+// componentMeta maps an internal component key to its static-pod container name
+// (matches PodMetric selectors) and its fixed %-share of a combined budget
+// (ModuleConfig override or legacy discovery): 45/35/10/10.
+var componentMeta = map[string]struct {
+	container string
+	percent   int64
+}{
+	componentKubeApiserver:         {"kube-apiserver", 45},
+	componentEtcd:                  {"etcd", 35},
+	componentKubeControllerManager: {"kube-controller-manager", 10},
+	componentKubeScheduler:         {"kube-scheduler", 10},
 }
 
 func fallbackSplit(total, percent int64) int64 {
@@ -92,8 +84,88 @@ const (
 	obsoleteGlobalResourcesRequestsMetricGroup = "D8ObsoleteGlobalControlPlaneResourcesRequests"
 )
 
-// controlPlaneNodesBinding watches master Nodes (shared by Hook A).
-func controlPlaneNodesBinding(onSync, onEvents bool) go_hook.KubernetesConfig {
+const (
+	// 20h and not 24h so that the 03:00 cron run is never skipped because the
+	// previous run happened a few minutes early or the scheduler drifted.
+	metricsRunInterval = 20 * time.Hour
+
+	// Each group expires independently, hence a separate group per hook.
+	autotuneDegradedMetricName      = "d8_control_plane_manager_resources_autotune_degraded"
+	autotuneDegradedMetricGroup     = "D8ControlPlaneResourcesAutotuneDegraded"
+	autotuneSyncDegradedMetricGroup = "D8ControlPlaneResourcesAutotuneSyncDegraded"
+
+	autotuneIncompleteMetricName  = "d8_control_plane_manager_resources_autotune_state_incomplete"
+	autotuneIncompleteMetricGroup = "D8ControlPlaneResourcesAutotuneStateIncomplete"
+)
+
+// Reasons for autotuneDegradedMetricName.
+const (
+	degradedReasonBadNodes      = "bad_nodes"
+	degradedReasonBadState      = "bad_state"
+	degradedReasonBadOverride   = "bad_override"
+	degradedReasonNodesTooSmall = "nodes_too_small"
+	degradedReasonListPods      = "list_pods"
+	degradedReasonReadThrough   = "read_through"
+)
+
+func setAutotuneDegraded(input *go_hook.HookInput, group, reason string) {
+	input.MetricsCollector.Set(
+		autotuneDegradedMetricName,
+		1,
+		map[string]string{"reason": reason},
+		metrics.WithGroup(group),
+	)
+}
+
+func countApplied(m *autotuneMeasurementState, kind resourceKind) int {
+	if m == nil || m.Components == nil {
+		return 0
+	}
+	n := 0
+	for _, comp := range controlPlaneComponents {
+		if appliedValue(m.Components[comp], kind) > 0 {
+			n++
+		}
+	}
+	return n
+}
+
+func measurementIsComplete(m *autotuneMeasurementState, kind resourceKind) bool {
+	return countApplied(m, kind) == len(controlPlaneComponents)
+}
+
+// metricsRunDue keeps event- and sync-driven runs from touching raise/lower
+// outside the daily window.
+func metricsRunDue(m *autotuneMeasurementState, now time.Time) bool {
+	if m == nil || m.LastMetricsRun == "" {
+		return true
+	}
+	t, err := time.Parse(time.RFC3339, m.LastMetricsRun)
+	return err != nil || now.Sub(t) >= metricsRunInterval
+}
+
+// LastChange is touched only on an actual change: rewriting it every run would
+// keep it permanently "just now" and block the next raise/lower on cooldown.
+func setAppliedIfChanged(m *autotuneMeasurementState, comp string, kind resourceKind, val int64, ts string) bool {
+	cs := m.Components[comp]
+	switch kind {
+	case resourceCPU:
+		if cs.AppliedMilliCPU != nil && *cs.AppliedMilliCPU == val {
+			return false
+		}
+	case resourceMemory:
+		if cs.AppliedBytes != nil && *cs.AppliedBytes == val {
+			return false
+		}
+	}
+	setApplied(&cs, kind, val)
+	cs.LastChange = ts
+	m.Components[comp] = cs
+	return true
+}
+
+// controlPlaneNodesBinding watches master Nodes.
+func controlPlaneNodesBinding() go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:       "NodesResources",
 		ApiVersion: "v1",
@@ -105,8 +177,8 @@ func controlPlaneNodesBinding(onSync, onEvents bool) go_hook.KubernetesConfig {
 			},
 		}},
 		FilterFunc:                   applyNodesResourcesFilter,
-		ExecuteHookOnEvents:          ptr.To(onEvents),
-		ExecuteHookOnSynchronization: ptr.To(onSync),
+		ExecuteHookOnEvents:          ptr.To(false),
+		ExecuteHookOnSynchronization: ptr.To(true),
 	}
 }
 
@@ -175,19 +247,14 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 // our floor). The result is stable across the kubelet warm-up window, so the
 // hook output does not flip a few minutes into the bootstrap.
 func effectiveMasterResources(n *Node) (int64, int64) {
-	cpuReservation := n.CapacityMilliCPU - n.AllocatableMilliCPU
-	if cpuReservation < kubeletResourceReservationCPUFloor {
-		cpuReservation = kubeletResourceReservationCPUFloor
-	}
-	memReservation := n.CapacityMemory - n.AllocatableMemory
-	if memReservation < kubeletResourceReservationMemoryFloor {
-		memReservation = kubeletResourceReservationMemoryFloor
-	}
+	cpuReservation := max(n.CapacityMilliCPU-n.AllocatableMilliCPU, kubeletResourceReservationCPUFloor)
+	memReservation := max(n.CapacityMemory-n.AllocatableMemory, kubeletResourceReservationMemoryFloor)
 	return n.CapacityMilliCPU - cpuReservation, n.CapacityMemory - memReservation
 }
 
-// minMasterNodeBudget returns the control-plane allocatable budget of the
-// weakest master: effectiveMasterResources(minNode) − configEveryNode.
+// minMasterNodeBudget returns effectiveMasterResources of the weakest master,
+// capped by the hard limits. The configEveryNode reservation and the
+// controlPlanePercent carve-out are applied by the caller.
 func minMasterNodeBudget(nodes []Node) (int64, int64, bool) {
 	if len(nodes) == 0 {
 		return 0, 0, false
@@ -198,17 +265,11 @@ func minMasterNodeBudget(nodes []Node) (int64, int64, bool) {
 
 	for i := range nodes {
 		effCPU, effMem := effectiveMasterResources(&nodes[i])
-		if effCPU < discoveryMasterNodeMilliCPU {
-			discoveryMasterNodeMilliCPU = effCPU
-		}
-		if effMem < discoveryMasterNodeMemory {
-			discoveryMasterNodeMemory = effMem
-		}
+		discoveryMasterNodeMilliCPU = min(discoveryMasterNodeMilliCPU, effCPU)
+		discoveryMasterNodeMemory = min(discoveryMasterNodeMemory, effMem)
 	}
 
-	return discoveryMasterNodeMilliCPU - configEveryNodeMilliCPU,
-		discoveryMasterNodeMemory - configEveryNodeMemory,
-		true
+	return discoveryMasterNodeMilliCPU, discoveryMasterNodeMemory, true
 }
 
 // nodeOtherRequests is the sum of non-control-plane pod requests on one node.
@@ -217,24 +278,25 @@ type nodeOtherRequests struct {
 	MemoryBytes int64
 }
 
-// autotunedControlPlaneComponents are static-pod component labels whose requests
-// are managed by resources autotune. Other tier=control-plane pods (e.g.
-// component=kube-api-proxy) still consume capacity and count as "other".
-var autotunedControlPlaneComponents = map[string]struct{}{
-	containerKubeApiserver:         {},
-	containerEtcd:                  {},
-	containerKubeControllerManager: {},
-	containerKubeScheduler:         {},
-}
-
+// isAutotunedControlPlanePod reports whether the pod is one of the static pods
+// whose requests are managed by resources autotune. Other tier=control-plane
+// pods (e.g. component=kube-api-proxy) still consume capacity and count as
+// "other".
 func isAutotunedControlPlanePod(pod *v1.Pod) bool {
 	if pod.Labels["tier"] != "control-plane" {
 		return false
 	}
-	_, ok := autotunedControlPlaneComponents[pod.Labels["component"]]
-	return ok
+	for _, comp := range controlPlaneComponents {
+		if componentMeta[comp].container == pod.Labels["component"] {
+			return true
+		}
+	}
+	return false
 }
 
+// sumContainerRequests is called for app and init containers separately, and the
+// two results are summed. Scheduling uses max(init) + sum(app); summing both is a
+// slightly stricter upper bound and avoids under-estimating reserved capacity.
 func sumContainerRequests(containers []v1.Container) (int64, int64) {
 	var milliCPU, memoryBytes int64
 	for i := range containers {
@@ -248,14 +310,6 @@ func sumContainerRequests(containers []v1.Container) (int64, int64) {
 	return milliCPU, memoryBytes
 }
 
-func otherRequestsFromPod(pod *v1.Pod) (int64, int64) {
-	cpu, mem := sumContainerRequests(pod.Spec.Containers)
-	initCPU, initMem := sumContainerRequests(pod.Spec.InitContainers)
-	// Scheduling uses max(init) + sum(app); summing both is a slightly stricter
-	// upper bound and avoids under-estimating reserved capacity.
-	return cpu + initCPU, mem + initMem
-}
-
 // minMasterFitBudget is the tightest free capacity across masters for fitting
 // proposed control-plane requests:
 //
@@ -267,25 +321,13 @@ func minMasterFitBudget(nodes []Node, otherByNode map[string]nodeOtherRequests) 
 	if len(nodes) == 0 {
 		return 0, 0, false
 	}
-	minCPU := int64(-1)
-	minMemBytes := int64(-1)
+	minCPU := int64(math.MaxInt64)
+	minMemBytes := int64(math.MaxInt64)
 	for i := range nodes {
 		effCPU, effMem := effectiveMasterResources(&nodes[i])
 		other := otherByNode[nodes[i].Name]
-		availCPU := effCPU - other.MilliCPU
-		availMem := effMem - other.MemoryBytes
-		if availCPU < 0 {
-			availCPU = 0
-		}
-		if availMem < 0 {
-			availMem = 0
-		}
-		if minCPU < 0 || availCPU < minCPU {
-			minCPU = availCPU
-		}
-		if minMemBytes < 0 || availMem < minMemBytes {
-			minMemBytes = availMem
-		}
+		minCPU = min(minCPU, max(effCPU-other.MilliCPU, 0))
+		minMemBytes = min(minMemBytes, max(effMem-other.MemoryBytes, 0))
 	}
 	return minCPU, minMemBytes, true
 }
@@ -295,11 +337,4 @@ func minMasterFitBudget(nodes []Node, otherByNode map[string]nodeOtherRequests) 
 func controlPlaneAutotuneActive(input *go_hook.HookInput) bool {
 	enabled := set.NewFromValues(input.Values, "global.enabledModules")
 	return enabled.Has("prometheus") && enabled.Has("prometheus-metrics-adapter")
-}
-
-type resolvedCombinedBudget struct {
-	MilliCPU         int64
-	MemoryBytes      int64
-	CPUFromConfig    bool
-	MemoryFromConfig bool
 }
