@@ -1,149 +1,9 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-fb6ff86b77fd5c157ab057c9a9cb51c02ed16a95da49472f904e4470da6cb1ea",
+  "@id": "merged-vex-04bcde7459dda0580b69464ca806a1cca31bbe6fb61b8af004597eff02435498",
   "author": "Deckhouse <contact@deckhouse.io>",
   "version": 1,
   "statements": [
-    {
-      "vulnerability": {
-        "name": "CVE-2025-32386"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-32387"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-53547"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-55198"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-55199"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-35206"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The component uses Helm only to render and deliver built-in Istio control-plane Kubernetes manifests. Charts/templates are compiled into the image at build time and cannot be replaced at runtime due to a read-only container filesystem, so Helm chart/archive/schema parsing CVEs are not exploitable here.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-40179"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Stored XSS in the Prometheus 3.x web UI (CVE-2026-40179). This binary does not run the Prometheus server or expose that UI; github.com/prometheus/prometheus is a library dependency only.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-42151"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Azure OAuth client_secret disclosure via Prometheus /-/config API (CVE-2026-42151). This binary does not run the Prometheus server or expose that endpoint; the dependency is library-only.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-42154"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "DoS via snappy payload on Prometheus remote-read /api/v1/read (CVE-2026-42154). This binary does not run the Prometheus server or handle that endpoint; the dependency is library-only.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-44903"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Stored XSS in the legacy Prometheus UI (CVE-2026-44903). This binary does not run the Prometheus server or expose that UI; the dependency is library-only.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
-    },
     {
       "vulnerability": {
         "name": "GO-2026-5932"
@@ -156,6 +16,20 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 concerns golang.org/x/crypto/openpgp, which is unmaintained and unsafe by design. This component does not import or execute the openpgp package; golang.org/x/crypto is pulled in transitively for other subpackages. Exploitation of openpgp via this binary is not available.",
+      "timestamp": "2026-07-24T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-47262"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.33"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-47262 is a DoS via a maliciously crafted image in containerd. The Istio/Sail operator does not pull or run untrusted OCI images via containerd CRI in the vulnerable path; containerd is a transitive dependency and the vulnerable execute path is not used.",
       "timestamp": "2026-07-24T12:00:00.000000000Z"
     }
   ],
