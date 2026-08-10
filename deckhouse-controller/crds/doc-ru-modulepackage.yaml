@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Представляет информацию о доступном пакете приложения.
+            Представляет информацию о доступном пакете модуля.
           properties:
             apiVersion:
               description: |-
@@ -18,25 +18,8 @@ spec:
                 Больше информации [в документации Kubernetes](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             status:
               description: |
-                Статус пакета приложения.
+                Статус пакета модуля.
               properties:
                 availableRepositories:
                   description: |
-                    Список названий репозиториев, где доступен этот пакет приложения.
-                usedBy:
-                  description: |
-                    Информация о приложениях, использующих этот пакет.
-                  items:
-                    properties:
-                      name:
-                        description: |
-                          Название экземпляра приложения.
-                      namespace:
-                        description: |
-                          Неймспейс, в котором установлено приложение.
-                      version:
-                        description: |
-                          Версия пакета, используемая этим приложением.
-                usedByCount:
-                  description: |
-                    Количество приложений, использующих этот пакет. Всегда равно длине `usedBy`.
+                    Список названий репозиториев, где доступен этот пакет модуля.
