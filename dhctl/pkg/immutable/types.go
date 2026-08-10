@@ -80,12 +80,22 @@ type nodeSpec struct {
 
 // storage is what the node is told about its disks.
 //
-// The disk to install the OS onto is not named here: the initramfs picks it, and
-// dhctl could not name it anyway — it renders this document before the machine,
-// and therefore the disk, exists. What is named is the disk etcd lives on, as a
-// selector rather than a path, for the same reason.
+// Neither disk is named by path: this document is rendered before the machine,
+// and therefore the disk, exists. Both are described by what they look like, and
+// whoever needs one matches that against what the machine actually has.
 type storage struct {
-	Mounts []mount `json:"mounts,omitempty"`
+	SystemDisk *systemDisk `json:"systemDisk,omitempty"`
+	Mounts     []mount     `json:"mounts,omitempty"`
+}
+
+// systemDisk names the disk the OS is installed onto, for the initramfs.
+type systemDisk struct {
+	DiskSelector *diskSelector `json:"diskSelector,omitempty"`
+}
+
+// diskSelector picks a whole disk by its attributes.
+type diskSelector struct {
+	Size string `json:"size,omitempty"`
 }
 
 // mount is one filesystem the node puts in place before kubelet starts.

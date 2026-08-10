@@ -156,7 +156,10 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 	spec := nodeSpec{
 		NodeName:   in.NodeName,
 		OSImage:    registry.Address + registry.Path + "/" + osImageNameAndTag,
-		Storage:    storage{Mounts: etcdMounts()},
+		Storage: storage{
+			SystemDisk: &systemDisk{DiskSelector: &diskSelector{Size: systemDiskSize}},
+			Mounts:     etcdMounts(),
+		},
 		Extensions: extensions,
 		Kernel: kernel{
 			Sysctl: map[string]string{
@@ -488,6 +491,19 @@ const etcdDataMode = "0700"
 // providers that hand out 15 or 20 gibibytes, and it rules out the config drives
 // and other small volumes a machine comes with.
 const etcdDiskSize = "10Gi"
+
+// systemDiskSize tells the initramfs which disk to install onto.
+//
+// The threshold sits between the two disks a master gets — 10Gi for etcd and 50Gi
+// for the system — rather than at either one. Naming the system disk's own size
+// would make the match depend on the provider rounding it the way we expect, and
+// a disk handed out as 50Gi arriving as 49.9 would leave the node with nothing to
+// install onto.
+//
+// Order cannot be used instead: the machine attaches the system disk first, but
+// the kernel named it /dev/sdc while the 10Gi one became /dev/sdb (measured on
+// DVP, 10.08.2026). Size is what actually separates them.
+const systemDiskSize = ">=20Gi"
 
 // etcdMounts gives a control-plane node the disk etcd lives on.
 //
