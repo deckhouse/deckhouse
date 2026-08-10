@@ -29,6 +29,12 @@ chmod +x rbacv2-migrate-module.sh
 `aggregationRule` выбирает эти метки; наполняет их сам Kubernetes. Модуль поставляет только
 capabilities, роли принадлежат `user-authz` и `multitenancy-manager`.
 
+В манифесте роли поля `rules` нет вообще — даже `rules: []`. Полем владеет
+`clusterrole-aggregation-controller`, и чарт, который его объявляет, начинает бороться за него с
+контроллером: server-side apply падает с `conflict with "clusterrole-aggregation-controller": .rules`,
+а если конфликт продавить, объект переписывается дважды за реконсайл и в промежутке между этими
+записями роль не даёт ничего.
+
 | Линейка | Уровни | Выдаётся через | Что кладёт туда модуль |
 |---------|--------|----------------|------------------------|
 | `namespace` | `viewer`, `user`, `manager`, `admin`, `superadmin` | `RoleBinding` в пространстве имён | Ресурсы модуля внутри пространства имён — то, с чем работает тенант |
@@ -190,7 +196,8 @@ grep -rn 'rbac.deckhouse.io/kind: \(use\|manage\)\|d8:use:capability\|d8:manage:
 Контракт, который платформа проверяет на своих модулях, лежит в
 [`testing/rbacv2`](../../../../testing/rbacv2) репозитория `deckhouse` (`go test -tags validation ./testing/rbacv2/`):
 префикс имени `d8:` и шаблон имени для каждой области, наличие `kind` и `scope`, четыре i18n-аннотации,
-роль с `aggregationRule` и без собственных правил против capability с правилами и без `aggregationRule`,
+роль с `aggregationRule` и без собственных правил (без ключа `rules` вообще) против capability
+с правилами и без `aggregationRule`,
 уникальный маркер `rbac.deckhouse.io/capability` и хотя бы одна метка агрегации на каждой capability,
 а также `rbac.deckhouse.io/delegatable` только на namespace- и проектных ролях.
 

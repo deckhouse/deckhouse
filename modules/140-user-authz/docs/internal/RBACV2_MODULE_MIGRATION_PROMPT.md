@@ -84,6 +84,12 @@ Permissions live in **capabilities**: `ClusterRole` objects that carry `rules` p
 objects whose `aggregationRule` selects those labels; Kubernetes fills them in. A module ships
 capabilities only — the roles belong to `user-authz` and `multitenancy-manager`.
 
+If you do end up touching a role, its manifest must carry no `rules` key at all — not even
+`rules: []`. That field belongs to the `clusterrole-aggregation-controller`, and a chart that
+declares it fights the controller for it: the apply fails with
+`conflict with "clusterrole-aggregation-controller": .rules`, and forcing the conflict rewrites the
+object twice per reconcile, leaving the role empty in between.
+
 | Lineage | Levels | Granted with | What a module puts there |
 |---------|--------|--------------|--------------------------|
 | `namespace` | `viewer`, `user`, `manager`, `admin`, `superadmin` | `RoleBinding` | The module's namespaced resources — what a tenant works with |
@@ -258,7 +264,8 @@ And every migrated object satisfies the contract the platform tests
   `d8:system-capability:`;
 - `rbac.deckhouse.io/kind: capability` and a `rbac.deckhouse.io/scope` of `system` or `namespace`;
 - all four i18n annotations are present;
-- it has `rules` and no `aggregationRule` (that is what distinguishes a capability from a role);
+- it has `rules` and no `aggregationRule` (that is what distinguishes a capability from a role; a
+  role is the other way round and carries no `rules` key at all);
 - it carries a unique `rbac.deckhouse.io/capability` marker, at most 63 characters;
 - it carries at least one `rbac.deckhouse.io/aggregate-to-<lineage>-as` label, whose lineage is
   `namespace`, `system`, `project` or a subsystem, and whose level is one of `viewer`, `user`,

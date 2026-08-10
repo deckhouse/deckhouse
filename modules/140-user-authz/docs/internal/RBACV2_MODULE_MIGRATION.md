@@ -29,6 +29,12 @@ Permissions live in **capabilities**: `ClusterRole` objects that carry rules and
 objects whose `aggregationRule` selects those labels; Kubernetes fills them in. A module ships
 capabilities only — the roles belong to `user-authz` and `multitenancy-manager`.
 
+A role manifest carries no `rules` key at all — not even `rules: []`. The field belongs to the
+`clusterrole-aggregation-controller`, and a chart that declares it fights the controller for it:
+a server-side apply then fails with `conflict with "clusterrole-aggregation-controller": .rules`,
+and forcing the conflict rewrites the object twice on every reconcile, leaving the role empty for
+the moment between the two writes.
+
 | Lineage | Levels | Granted with | What a module puts there |
 |---------|--------|--------------|--------------------------|
 | `namespace` | `viewer`, `user`, `manager`, `admin`, `superadmin` | `RoleBinding` in a namespace | The module's namespaced resources — what a tenant works with |
@@ -192,8 +198,9 @@ grep -rn 'rbac.deckhouse.io/kind: \(use\|manage\)\|d8:use:capability\|d8:manage:
 The contract the platform enforces on its own modules is in
 [`testing/rbacv2`](../../../../testing/rbacv2) of the `deckhouse` repository (`go test -tags validation ./testing/rbacv2/`):
 the `d8:` name prefix and the naming pattern per scope, the presence of `kind` and `scope`, the four
-i18n annotations, a role with an `aggregationRule` and no rules of its own versus a capability with
-rules and no `aggregationRule`, a unique `rbac.deckhouse.io/capability` marker and at least one
+i18n annotations, a role with an `aggregationRule` and no rules of its own (no `rules` key at all)
+versus a capability with rules and no `aggregationRule`, a unique `rbac.deckhouse.io/capability`
+marker and at least one
 aggregation label on every capability, and `rbac.deckhouse.io/delegatable` only on namespace and
 project roles.
 
