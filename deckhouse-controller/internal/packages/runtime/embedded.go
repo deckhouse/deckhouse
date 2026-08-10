@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
@@ -34,10 +35,6 @@ import (
 )
 
 const (
-	// embeddedDir is the directory, relative to the working directory, that
-	// holds embedded modules shipped with the controller.
-	embeddedDir = "modules"
-
 	// embeddedLoadWorkers caps how many embedded modules are loaded
 	// concurrently in loadEmbedded.
 	embeddedLoadWorkers = 8
@@ -81,7 +78,7 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 	return nil
 }
 
-// loadEmbedded discovers embedded modules under embeddedDir and registers the
+// loadEmbedded discovers embedded modules under app.EmbeddedModulesDir and registers the
 // ones enabled by the bundle. It reads the bundle's enabled map, then for each
 // module directory builds the module from its on-disk config, wires the
 // runtime's shared managers into it, and stores it in the runtime's module map.
@@ -89,6 +86,8 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 func (r *Runtime) loadEmbedded(ctx context.Context) error {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbedded")
 	defer span.End()
+
+	embeddedDir := app.EmbeddedModulesDir
 
 	span.SetAttributes(attribute.String("path", embeddedDir))
 

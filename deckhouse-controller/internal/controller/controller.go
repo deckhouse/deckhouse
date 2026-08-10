@@ -40,8 +40,6 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -178,7 +176,7 @@ func buildControllerOpts(ctx context.Context, scheme *runtime.Scheme) ctrl.Optio
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
 		},
-		GracefulShutdownTimeout: ptr.To(gracefulShutdownTimeout),
+		GracefulShutdownTimeout: new(gracefulShutdownTimeout),
 		Cache: cache.Options{
 			ByObject: buildCacheByObject(),
 		},
@@ -188,7 +186,7 @@ func buildControllerOpts(ctx context.Context, scheme *runtime.Scheme) ctrl.Optio
 // buildCacheByObject lists the cached kinds. A kind whose CRD the cluster does not serve never
 // syncs and wedges WaitForCacheSync, so the gated ones follow the flag that installs them.
 func buildCacheByObject() map[client.Object]cache.ByObject {
-	byObject := map[client.Object]cache.ByObject{
+	return map[client.Object]cache.ByObject{
 		// for ModuleDocumentation controller
 		&coordv1.Lease{}: {
 			Namespaces: map[string]cache.Config{
@@ -225,31 +223,23 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 			},
 		},
 		// for deckhouse.io apis
-		&v1alpha1.Module{}:              {},
-		&v1alpha1.ModuleConfig{}:        {},
-		&v1alpha1.ModuleDocumentation{}: {},
-		&v1alpha1.ModuleRelease{}:       {},
-		&v1alpha1.ModuleSource{}:        {},
-		&v1alpha2.ModuleUpdatePolicy{}:  {},
-		&v1alpha2.ModulePullOverride{}:  {},
-		&v1alpha1.DeckhouseRelease{}:    {},
+		&v1alpha1.Module{}:                     {},
+		&v1alpha1.ModuleConfig{}:               {},
+		&v1alpha1.ModuleDocumentation{}:        {},
+		&v1alpha1.ModuleRelease{}:              {},
+		&v1alpha1.ModuleSource{}:               {},
+		&v1alpha2.ModuleUpdatePolicy{}:         {},
+		&v1alpha2.ModulePullOverride{}:         {},
+		&v1alpha1.DeckhouseRelease{}:           {},
+		&v1alpha1.PackageRepository{}:          {},
+		&v1alpha1.PackageRepositoryOperation{}: {},
+		&v1alpha1.ApplicationPackageVersion{}:  {},
+		&v1alpha1.ApplicationPackage{}:         {},
+		&v1alpha1.Application{}:                {},
+		&v1alpha1.ModulePackage{}:              {},
+		&v1alpha1.ModulePackageVersion{}:       {},
+		&v1alpha2.Module{}:                     {},
 	}
-
-	if app.PackageSystemEnabled() {
-		byObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
-		byObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
-		byObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
-		byObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
-		byObject[&v1alpha1.Application{}] = cache.ByObject{}
-	}
-
-	if app.ModulePackagesEnabled() {
-		byObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
-		byObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-		byObject[&v1alpha2.Module{}] = cache.ByObject{}
-	}
-
-	return byObject
 }
 
 // Start runs the manager, rebuilds the module tree from the cluster and hands it to the runtime.

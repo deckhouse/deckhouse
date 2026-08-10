@@ -33,6 +33,12 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+// dummyModules are modules that should be skipped.
+var dummyModules = []string{
+	"000-common",
+	"007-registrypackages",
+}
+
 // syncModulesSettings mirrors every module config onto the module of the same name, so a
 // module carries its settings before loadModulesV2 hands it to the runtime. It does the
 // same work the module config controller does per event, for the configs that predate it.
@@ -106,7 +112,7 @@ func (c *Controller) restoreModulesV2ByOverrides(ctx context.Context) error {
 			continue
 		}
 
-		if err := c.ensureModuleV2(ctx, mpo.Name, module.Properties.Source, mpo.Spec.ImageTag); err != nil {
+		if err := c.ensureModuleV2(ctx, mpo.Name, module.Properties.Source, mpo.Spec.ImageTag, true); err != nil {
 			return fmt.Errorf("restore module '%s' by override: %w", mpo.Name, err)
 		}
 	}
@@ -135,7 +141,7 @@ func (c *Controller) restoreModulesV2ByReleases(ctx context.Context) error {
 			continue
 		}
 
-		if err := c.ensureModuleV2(ctx, name, release.GetModuleSource(), release.GetModuleVersion()); err != nil {
+		if err := c.ensureModuleV2(ctx, name, release.GetModuleSource(), release.GetModuleVersion(), false); err != nil {
 			return fmt.Errorf("restore module '%s' by release: %w", name, err)
 		}
 	}
@@ -201,7 +207,7 @@ func (c *Controller) supersedeRelease(ctx context.Context, release *v1alpha1.Mod
 
 // ensureModuleV2 places the module on repository and version, whether or not it already
 // exists. The restore runs on every start, so it must not trip over what the last one left.
-func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, version string) error {
+func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, version string, dev bool) error {
 	cli := c.ctrl.GetClient()
 
 	module := new(v1alpha2.Module)
@@ -219,6 +225,11 @@ func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, versi
 				PackageVersion:        version,
 			},
 		}
+		if dev {
+			module.Annotations = map[string]string{
+				v1alpha2.ModuleAnnotationDev: "true",
+			}
+		}
 
 		// AlreadyExists means only that the informer cache had not caught up; the module
 		// is placed either way, and the next start moves it if it drifted.
@@ -230,13 +241,21 @@ func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, versi
 		return nil
 	}
 
-	if module.Spec.PackageRepositoryName == repository && module.Spec.PackageVersion == version {
+	devAnnotationSet := module.Annotations[v1alpha2.ModuleAnnotationDev] == "true"
+	if module.Spec.PackageRepositoryName == repository && module.Spec.PackageVersion == version && (!dev || devAnnotationSet) {
 		return nil
 	}
 
 	patch := client.MergeFrom(module.DeepCopy())
 	module.Spec.PackageRepositoryName = repository
 	module.Spec.PackageVersion = version
+	if dev {
+		if module.Annotations == nil {
+			module.Annotations = make(map[string]string)
+		}
+
+		module.Annotations[v1alpha2.ModuleAnnotationDev] = "true"
+	}
 
 	if err := cli.Patch(ctx, module, patch); err != nil {
 		c.logger.Error("failed to patch the module", slog.String("name", name), log.Err(err))

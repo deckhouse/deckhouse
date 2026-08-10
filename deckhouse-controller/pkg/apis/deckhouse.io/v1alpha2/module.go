@@ -31,6 +31,9 @@ const (
 	ModuleFinalizerStatisticRegistered = "module.deckhouse.io/statistic-registered"
 
 	ModuleAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
+
+	// ModuleAnnotationDev marks a module restored from a development pull override.
+	ModuleAnnotationDev = "modules.deckhouse.io/dev"
 )
 
 var (
