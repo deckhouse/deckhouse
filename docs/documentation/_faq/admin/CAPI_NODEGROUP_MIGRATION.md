@@ -44,7 +44,7 @@ To migrate a node group from MCM to CAPI:
 1. Delete the old NodeGroup.
 
 {% alert level="warning" %}
-Deleting a NodeGroup deletes all nodes in that group. Before deleting the old group, make sure the required workloads have been moved to the new group and are running correctly.
+Deleting a NodeGroup deletes all nodes in that group. Before deleting the old group, make sure the required workloads have been moved on the new group nodes and are running correctly.
 {% endalert %}
 
 If necessary, you can force a node group to be created using MCM. To do this, add the `node.deckhouse.io/use-mcm` annotation before creating the NodeGroup (or before recreating it):
