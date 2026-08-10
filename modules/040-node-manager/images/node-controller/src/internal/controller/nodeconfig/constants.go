@@ -110,6 +110,12 @@ const (
 	// (dhctl/pkg/immutable/nodeconfig.go).
 	platformExtensionRequestedBy = "node-manager"
 
+	// nerRequestedByPrefix qualifies an extension that came from a
+	// NodeExtensionRequest. The field also carries the platform marker above, so
+	// a bare name leaves a reader guessing which of the two kinds they are
+	// looking at — and which object to go read.
+	nerRequestedByPrefix = "NodeExtensionRequest/"
+
 	// resourceReservationModeAuto and resourceReservationModeStatic are the
 	// NodeGroup kubeReserved modes this render has to reason about: Auto is the
 	// default on both sides, and Static has no counterpart on an immutable node.
