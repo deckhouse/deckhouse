@@ -237,7 +237,7 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 			Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
 		}, discovery)).To(Succeed())
 		discovery.Data["type"] = jsonBytes(p.name)
-		discovery.Data["instanceClassKind"] = jsonBytes(p.instanceClassKind)
+		discovery.Data["instanceClassKind"] = []byte(p.instanceClassKind)
 		discovery.Data["capiMachineTemplateKind"] = []byte(p.templateKind)
 		discovery.Data["capiMachineTemplateAPIVersion"] = []byte(p.templateAPIVersion)
 		discovery.Data[p.name] = jsonBytes(p.providerConfig)
@@ -286,7 +286,7 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 			Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
 		}, discovery)).To(Succeed())
 		discovery.Data["type"] = jsonBytes("dvp")
-		discovery.Data["instanceClassKind"] = jsonBytes("DVPInstanceClass")
+		discovery.Data["instanceClassKind"] = []byte("DVPInstanceClass")
 		discovery.Data["capiMachineTemplateKind"] = []byte("DeckhouseMachineTemplate")
 		discovery.Data["capiMachineTemplateAPIVersion"] = []byte("infrastructure.cluster.x-k8s.io/v1alpha1")
 		delete(discovery.Data, p.name)
