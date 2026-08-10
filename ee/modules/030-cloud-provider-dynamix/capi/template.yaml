@@ -1,0 +1,35 @@
+version: v2
+
+# InstanceClass fields whose change requires recreating the machines, carried over one to one from
+# the v1 instance-class.checksum.
+rolloutFields:
+  - imageName
+  - numCPUs
+  - memory
+  - rootDiskSizeGb
+  - externalNetwork
+
+# Every field is optional in the CRD, so all of them are read with `get`: the sandbox runs with
+# missingkey=error, and `get` yields an empty value for an absent key — which is exactly the
+# truthy test the v1 template did with a direct path.
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: DynamixMachineTemplate
+  spec:
+    template:
+      spec:
+        {{- if get .instanceClass "imageName" }}
+        imageName: {{ .instanceClass.imageName | quote }}
+        {{- end }}
+        {{- if get .instanceClass "numCPUs" }}
+        cpu: {{ .instanceClass.numCPUs }}
+        {{- end }}
+        {{- if get .instanceClass "memory" }}
+        memory: {{ .instanceClass.memory }}
+        {{- end }}
+        {{- if get .instanceClass "rootDiskSizeGb" }}
+        rootDiskSizeGb: {{ .instanceClass.rootDiskSizeGb }}
+        {{- end }}
+        {{- if get .instanceClass "externalNetwork" }}
+        externalNetwork: {{ .instanceClass.externalNetwork }}
+        {{- end }}

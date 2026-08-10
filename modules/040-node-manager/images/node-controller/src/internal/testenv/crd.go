@@ -29,6 +29,7 @@ type (
 const (
 	MachineCRDFile            ControllerCRDFile = "machine.yaml"
 	MachineDeploymentCRDFile  ControllerCRDFile = "machine-deployment.yaml"
+	MachineSetCRDFile         ControllerCRDFile = "machine-sets.yaml"
 	ClusterCRDFile            ControllerCRDFile = "cluster.yaml"
 	MachineHealthCheckCRDFile ControllerCRDFile = "machine-health-check.yaml"
 
@@ -102,6 +103,13 @@ func WithMachineCRDFile() crdOpt {
 
 func WithMachineDeploymentCRDFile() crdOpt {
 	return WithController(MachineDeploymentCRDFile)
+}
+
+// WithMachineSetCRDFile installs the MachineSet CRD. A suite exercising the CAPI pruner needs it:
+// the pruner asks which templates the NodeGroup's MachineSets still reference, and without the
+// CRD that list fails, so the whole prune is skipped and the test would silently prove nothing.
+func WithMachineSetCRDFile() crdOpt {
+	return WithController(MachineSetCRDFile)
 }
 
 func WithNodeGroupCRDFile() crdOpt {
