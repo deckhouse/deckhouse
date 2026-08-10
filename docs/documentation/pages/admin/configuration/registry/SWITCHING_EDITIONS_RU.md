@@ -72,6 +72,8 @@ EOF
 d8 k drain <ИМЯ_УЗЛА> --ignore-daemonsets --delete-emptydir-data
 ```
 
+Не подтверждайте узел, пока манифесты control plane на master-узлах не начнут ссылаться на образы DKP CSE: команда `grep image: /etc/kubernetes/manifests/*` не должна возвращать строк с `deckhouse/ee`. Если такие строки ещё есть, дождитесь, пока control-plane-manager перепишет манифесты. До подтверждения узел работает штатно, но не переходит в состояние `UPTODATE`.
+
 Подтвердите обновление узла:
 
 ```shell
@@ -83,10 +85,6 @@ d8 k annotate node <ИМЯ_УЗЛА> update.node.deckhouse.io/disruption-approve
 ```shell
 d8 k uncordon <ИМЯ_УЗЛА>
 ```
-
-До подтверждения узел работает штатно, но не переходит в состояние `UPTODATE`.
-
-Перед подтверждением убедитесь, что манифесты control plane на master-узлах уже ссылаются на образы DKP CSE — команда `grep image: /etc/kubernetes/manifests/*` не должна возвращать строк с `deckhouse/ee`.
 {% endcapture %}
 
 ## Переключение DKP с EE на CSE
