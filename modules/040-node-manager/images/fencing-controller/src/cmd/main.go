@@ -20,12 +20,13 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func main() {
@@ -42,7 +43,7 @@ func main() {
 	flag.IntVar(&verbosity, "v", 0, "log verbosity level")
 	flag.Parse()
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := newLogger(os.Getenv("LOG_LEVEL"))
 
 	if err := run(logger, healthBindAddress, leaderElect); err != nil {
 		logger.Error("fencing-controller failed", "error", err)
@@ -50,7 +51,7 @@ func main() {
 	}
 }
 
-func run(logger *slog.Logger, healthBindAddress string, leaderElect bool) error {
+func run(logger *log.Logger, healthBindAddress string, leaderElect bool) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
@@ -79,11 +80,27 @@ func run(logger *slog.Logger, healthBindAddress string, leaderElect bool) error 
 
 	select {
 	case <-ctx.Done():
+		logger.Info("shutting down", "reason", "signal", "error", ctx.Err())
+
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		return server.Shutdown(shutdownCtx)
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			logger.Error("shutdown failed", "error", err)
+			return err
+		}
+
+		logger.Info("stopped")
+		return nil
 	case err := <-errCh:
 		return err
 	}
+}
+
+func newLogger(level string) *log.Logger {
+	return log.NewLogger(
+		log.WithOutput(os.Stdout),
+		log.WithLevel(log.LogLevelFromStr(level).Level()),
+		log.WithHandlerType(log.JSONHandlerType),
+	)
 }
