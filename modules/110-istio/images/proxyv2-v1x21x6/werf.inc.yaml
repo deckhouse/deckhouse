@@ -109,13 +109,13 @@ imageSpec:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
-  before: install
+  before: setup
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
@@ -123,9 +123,8 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
-  install:
+  - pm install git binutils
+  setup:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
   - export GOOS=linux GOARCH=amd64
