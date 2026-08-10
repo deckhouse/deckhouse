@@ -42,6 +42,7 @@ type InternalValues struct {
 	ProviderAccessKeyID       string            `json:"providerAccessKeyId"`
 	ProviderSecretAccessKey   string            `json:"providerSecretAccessKey"`
 	Region                    string            `json:"region"`
+	IMDSv2                    bool              `json:"imdsv2"`
 	Tags                      map[string]string `json:"tags"`
 }
 
@@ -59,6 +60,7 @@ type Provider struct {
 	ProviderAccessKeyID     string `json:"providerAccessKeyId"`
 	ProviderSecretAccessKey string `json:"providerSecretAccessKey"`
 	Region                  string `json:"region"`
+	IMDSv2                  bool   `json:"imdsv2"`
 }
 
 type Instances struct {
@@ -156,6 +158,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	input.Values.Set("cloudProviderAws.internal.zoneToSubnetIdMap", discoveryData.ZoneToSubnetIDMap)
 	input.Values.Set("cloudProviderAws.internal.instances", discoveryData.Instances)
 	input.Values.Set("cloudProviderAws.internal.region", provider.Region)
+	input.Values.Set("cloudProviderAws.internal.imdsv2", provider.IMDSv2)
 	input.Values.Set("cloudProviderAws.internal.providerAccessKeyId", provider.ProviderAccessKeyID)
 	input.Values.Set("cloudProviderAws.internal.providerSecretAccessKey", provider.ProviderSecretAccessKey)
 	input.Values.Set("cloudProviderAws.internal.tags", tags)

@@ -450,6 +450,15 @@ apiVersions:
             description: |
               The name of the AWS region where instances will be provisioned.
             x-unsafe: true
+          imdsv2:
+            type: boolean
+            x-doc-default: false
+            description: |
+              Enables IMDSv2 and disables IMDSv1 for all EC2 instances created for the cluster.
+
+              The default is `false` for backward compatibility with existing clusters and applications that only support IMDSv1.
+
+              It is recommended to enable IMDSv2 because it requires session tokens for metadata requests and reduces the risk of unauthorized access to instance metadata, including through server-side request forgery (SSRF). Before enabling it, make sure that all applications accessing instance metadata support IMDSv2.
       zones:
         type: array
         items:

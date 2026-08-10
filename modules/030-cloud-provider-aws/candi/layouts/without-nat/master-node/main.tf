@@ -18,6 +18,7 @@ module "master-node" {
   cluster_uuid = var.clusterUUID
   node_index = var.nodeIndex
   node_group = var.providerClusterConfiguration.masterNodeGroup
+  imdsv2 = lookup(var.providerClusterConfiguration.provider, "imdsv2", false)
   associate_public_ip_address = true
   root_volume_size = local.root_volume_size
   root_volume_type = local.root_volume_type

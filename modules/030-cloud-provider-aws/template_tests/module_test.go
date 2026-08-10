@@ -95,6 +95,7 @@ const moduleValues = `
     providerSecretAccessKey: myprovsecretaccesskey
     zones: ["zonea", "zoneb"]
     region: myregion
+    imdsv2: false
     instances:
       ami: ami-aaabbbccc
       associatePublicIPAddress: true
@@ -243,6 +244,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
     "providerAccessKeyId":"myprovacckeyid",
     "providerSecretAccessKey":"myprovsecretaccesskey",
     "region":"myregion",
+    "imdsv2":false,
     "tags":{
       "aaa": "aaa"
     }
@@ -543,6 +545,34 @@ storageclass.kubernetes.io/is-default-class: "true"
 				vpa := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "node-termination-handler")
 				Expect(vpa.Exists()).To(BeFalse())
 			})
+		})
+	})
+
+	Context("IMDSv1 alert", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus-crd"]`)
+			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render when IMDSv2 is disabled", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			rule := f.KubernetesResource("PrometheusRule", moduleNamespace, "cloud-provider-aws-imdsv1")
+			Expect(rule.Exists()).To(BeTrue())
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8CloudProviderAWSIMDSv1Enabled"))
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("vector(1)"))
+		})
+
+		It("Should not render when IMDSv2 is enabled", func() {
+			f.ValuesSet("cloudProviderAws.internal.imdsv2", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			rule := f.KubernetesResource("PrometheusRule", moduleNamespace, "cloud-provider-aws-imdsv1")
+			Expect(rule.Exists()).To(BeFalse())
 		})
 	})
 

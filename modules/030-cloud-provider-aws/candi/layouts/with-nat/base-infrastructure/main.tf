@@ -246,6 +246,13 @@ resource "aws_instance" "bastion" {
   source_dest_check      = false
   iam_instance_profile   = "${local.prefix}-node"
 
+  dynamic "metadata_options" {
+    for_each = lookup(var.providerClusterConfiguration.provider, "imdsv2", false) ? [1] : []
+    content {
+      http_tokens = "required"
+    }
+  }
+
   root_block_device {
     volume_size = local.root_volume_size
     volume_type = local.root_volume_type
