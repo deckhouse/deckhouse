@@ -1,4 +1,4 @@
-2805
+2816
 1GB
 2GB
 5XX
@@ -96,6 +96,7 @@ autoK
 autoK8sVersion
 autoload
 Autoloading
+AutoPatch
 AutoplaceTarget
 autoscaler
 autoscalers
@@ -470,6 +471,7 @@ dst
 DVCR
 dvp
 DVP
+DVPClusterConfiguration
 Dynamix
 DynamiX
 dynDNS
@@ -552,6 +554,8 @@ FileManagement
 filesystem
 FileSystem
 filesystems
+finalizer
+finalizers
 flant
 flavorname
 flavorName
@@ -889,6 +893,7 @@ longtermStorageClass
 LowNodeUtilization
 LRS
 lsblk
+lt
 LTS
 Lua
 LUN
@@ -1785,6 +1790,7 @@ ZvirtInstanceClass
 автосогласования
 агрегатор
 агрегатора
+агрегаторам
 агрегаторе
 агрегаторов
 агрегаторы
@@ -2017,6 +2023,10 @@ ZvirtInstanceClass
 засчет
 захеширован
 захешированном
+зеркалирование
+зеркалировании
+зеркалирования
+зеркалировать
 иcпользовать
 ИБ
 иммутабельный
@@ -2375,6 +2385,7 @@ ZvirtInstanceClass
 перенаправление
 перенаправления
 перенаправлениям
+перенаправлениями
 перенастраиваются
 переоткрытии
 переподключиться
@@ -2447,6 +2458,7 @@ ZvirtInstanceClass
 Пререквизиты
 прилинкованным
 применились
+применилось
 применится
 применятся
 примонтировав
@@ -2659,6 +2671,7 @@ ZvirtInstanceClass
 таймауты
 тайминги
 таргетов
+таргеты
 тегирование
 тегирования
 тегируются
@@ -2707,6 +2720,16 @@ ZvirtInstanceClass
 фикстурой
 фикстуру
 фикстуры
+финалайзер
+финалайзера
+финалайзерам
+финалайзерами
+финалайзерах
+финалайзере
+финалайзеров
+финалайзером
+финалайзеру
+финалайзеры
 фич
 фичах
 фичи
