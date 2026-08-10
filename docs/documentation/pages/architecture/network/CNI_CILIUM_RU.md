@@ -21,7 +21,7 @@ description: Архитектура модуля cni-cilium в Deckhouse Kuberne
 
 Архитектура модуля [`cni-cilium`](/modules/cni-cilium/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображена на следующей диаграмме:
 
-![Архитектура модуля cni-cilium](../../images/architecture/network/c4-l2-cni-cilium.ru.png)
+![Архитектура модуля cni-cilium](../../../images/architecture/network/c4-l2-cni-cilium.ru.png)
 
 ## Компоненты модуля
 
@@ -111,5 +111,6 @@ description: Архитектура модуля cni-cilium в Deckhouse Kuberne
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Prometheus-main** — сбор метрик компонентов agent и operator.
-2. **Containerd** — запускает исполняемый файл cilium-cni с определенными командами в соответствии со спецификацией CNI, например ADD при запуске контейнера и DEL при его удалении.
+1. **Hubble-relay** — подключается к агентам Cilium для приема событий через gRPC-поток.
+1. **Prometheus-main** — собирает метрики компонентов agent и operator.
+1. **Containerd** — запускает исполняемый файл cilium-cni с определенными командами в соответствии со спецификацией CNI, например ADD при запуске контейнера и DEL при его удалении.

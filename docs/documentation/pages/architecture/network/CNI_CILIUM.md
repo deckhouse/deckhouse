@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`cni-cilium`](/modules/cni-cilium/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-![Cni-cilium module architecture](../../images/architecture/network/c4-l2-cni-cilium.png)
+![Cni-cilium module architecture](../../../images/architecture/network/c4-l2-cni-cilium.png)
 
 ## Module components
 
@@ -110,5 +110,6 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
+1. **Hubble-relay**: Connects to Cilium agents to receive events via gRPC streaming.
 1. **Prometheus-main**: Collects metrics from agent and operator.
-2. **Containerd**: Runs the cilium-cni executable file with certain commands according to the CNI specification, for example, ADD when starting the container and DEL when deleting it.
+1. **Containerd**: Runs the cilium-cni executable file with certain commands according to the CNI specification, for example, ADD when starting the container and DEL when deleting it.
