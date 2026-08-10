@@ -19,6 +19,8 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -76,6 +78,7 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 			continue
 		}
 
+		applied := make(map[string]bool, len(config.Status.Extensions))
 		for _, status := range config.Status.Extensions {
 			ner, ok := owner[status.Name]
 			if !ok {
@@ -85,13 +88,38 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 			switch status.State {
 			case extensionStateReady:
 				outcome.applied++
+				applied[status.Name] = true
 			case extensionStateFailed:
 				outcome.failed++
+				applied[status.Name] = true
 				if outcome.message == "" {
 					outcome.message = status.Message
 				}
 			}
 			outcomes[ner] = outcome
+		}
+
+		// A node that rejected the configuration wholesale keeps running the
+		// last one it accepted, and its next reconcile rebuilds the extension
+		// statuses from that config — the refused extension's Failed entry
+		// lives for one pass and vanishes. The refusal itself is durable: the
+		// ConfigurationApplied condition stays False and names it. So a
+		// spec-owned extension that never reached the status of a refusing
+		// node is counted as failed off the condition, or a poisoned request
+		// reads as merely "not applied anywhere" — indistinguishable from one
+		// still rolling out.
+		if cond := meta.FindStatusCondition(config.Status.Conditions, configurationAppliedCondition); cond != nil && cond.Status == metav1.ConditionFalse {
+			for name, ner := range owner {
+				if applied[name] {
+					continue
+				}
+				outcome := outcomes[ner]
+				outcome.failed++
+				if outcome.message == "" {
+					outcome.message = cond.Message
+				}
+				outcomes[ner] = outcome
+			}
 		}
 	}
 	return outcomes, nil
