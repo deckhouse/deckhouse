@@ -113,9 +113,12 @@ shell:
   # the artifact is valid in every respect except whose key signed it.
   - |
     set -eo pipefail
-    openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+    # -config /dev/null: the build image is distroless and ships no openssl.cnf,
+    # which `req` insists on even when every field it would read is on the
+    # command line already.
+    openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -config /dev/null \
       -subj "/CN=bob untrusted test signer" \
-      -keyout /tmp/untrusted.key -out /tmp/untrusted.pem 2>/dev/null
+      -keyout /tmp/untrusted.key -out /tmp/untrusted.pem
     openssl dgst -sha256 -sign /tmp/untrusted.key -out /tmp/roothash.sig /out/bob.roothash
     /usr/lib/systemd/systemd-keyutil pkcs7 \
       --certificate=/tmp/untrusted.pem \
