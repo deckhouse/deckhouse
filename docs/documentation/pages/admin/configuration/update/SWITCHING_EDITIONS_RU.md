@@ -218,6 +218,33 @@ d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(
 
 {% endcapture %}
 
+{% capture cse_containerd_migration %}
+Каждый узел один раз перезагрузится с очисткой кэша образов containerd. После перезагрузки узел заново скачает все образы из хранилища образов контейнеров.
+
+Подтверждайте узлы по одному, дожидаясь возвращения каждого в состояние `Ready`.
+
+В ручном режиме подтверждения простоя DKP не вытесняет поды с узла — аннотация подтверждения сразу разрешает очистку состояния containerd. Вытесните нагрузку самостоятельно:
+
+```shell
+d8 k drain <ИМЯ_УЗЛА> --ignore-daemonsets --delete-emptydir-data
+```
+
+Не подтверждайте узел, пока манифесты control plane на master-узлах не начнут ссылаться на образы DKP CSE: команда `grep image: /etc/kubernetes/manifests/*` не должна возвращать строк с `deckhouse/ee`. Если такие строки ещё есть, дождитесь, пока control-plane-manager перепишет манифесты. До подтверждения узел работает штатно, но не переходит в состояние `UPTODATE`.
+
+Подтвердите обновление узла:
+
+```shell
+d8 k annotate node <ИМЯ_УЗЛА> update.node.deckhouse.io/disruption-approved=
+```
+
+После возвращения узла в состояние `Ready` верните его в планирование:
+
+```shell
+d8 k uncordon <ИМЯ_УЗЛА>
+```
+
+{% endcapture %}
+
 {% capture change_registry_mc_deckhouse_unmanaged %}
 
 ```yaml
