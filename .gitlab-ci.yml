@@ -10,7 +10,7 @@ include:
   - .gitlab/**.yml
 
 variables:
-  CI_IMAGES_TAG: "v6"
+  CI_IMAGES_TAG: "v7"
 
 default:
   tags:

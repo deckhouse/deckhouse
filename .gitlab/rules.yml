@@ -45,6 +45,10 @@ workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_DOCS_PDF_ENABLE == "true"
 
+.rules:on_schedule_e2e_autocleaner:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $DKP_E2E_AUTOCLEANER_ENABLE == "true"
+
 
 # Manual edition builds (MR / main). Release-branch editions are automatic.
 .rules:on_main_manual:
