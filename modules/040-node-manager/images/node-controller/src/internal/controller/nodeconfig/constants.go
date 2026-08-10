@@ -184,6 +184,15 @@ const (
 // installed from with one an air-gapped cluster cannot reach.
 const osImageNameAndTag = "olcedar:v0.1"
 
+// systemDiskSelectorSize is the diskSelector this controller renders for a
+// node whose provisioner named no disk. It cannot name the disk — a NodeGroup
+// has no disk field — so it says the one true thing it can: any real disk, as
+// opposed to the attach junk (cloud-init drives and config drives are
+// megabytes; no real system disk is). The machines this reaches have exactly
+// one real disk, which makes the selector unambiguous; a machine with several
+// needs a provisioner that names one, the boot path refuses to guess.
+const systemDiskSelectorSize = ">=2Gi"
+
 // How many pods a node advertises for each slice of the pod subnet, and the
 // prefix assumed when the cluster configuration names none. The brackets are
 // bashible's (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl), so

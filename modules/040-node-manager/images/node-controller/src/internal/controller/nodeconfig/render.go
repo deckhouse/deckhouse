@@ -71,14 +71,16 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		OSImage:            in.OSImage,
 		APIServerEndpoints: in.APIServerEndpoints,
 		Extensions:         mergeExtensions(renderExtensions(in.SysextDigests), extraExtensions),
-		// No disk: a NodeGroup has no disk field, so this controller has no input
-		// for the decision. The boot path picks the system disk on the machine,
-		// where the disk layout can actually be seen; a selector constraining
-		// nothing matches the first disk enumerated, which on a platform that
-		// attaches its cloud-init drive as an ordinary megabyte-sized disk is that
-		// drive. An explicit selector the installer chose survives this zero value
-		// through keepBootstrapOnlyFields.
-		Storage:          internalv1alpha1.Storage{},
+		// A NodeGroup has no disk field, so the only true statement this
+		// controller can make about the machine is systemDiskSelector: any real
+		// disk, none of the attach junk. Without a selector the boot path
+		// refuses outright ("neither device nor diskSelector set" — measured, a
+		// worker stuck in the initramfs shell), and the machines this reaches
+		// have exactly one real disk, so the selector is unambiguous. A selector
+		// the installer chose is richer (it separates the master's system disk
+		// from the etcd disk) and survives this value through
+		// keepBootstrapOnlyFields.
+		Storage:          internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}}},
 		Kernel:           kernel,
 		Network:          renderNetwork(node),
 		Kubelet:          renderKubelet(ng, node, in),

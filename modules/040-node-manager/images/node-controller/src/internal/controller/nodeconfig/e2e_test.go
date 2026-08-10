@@ -131,13 +131,15 @@ var _ = Describe("NodeConfig controller", func() {
 			// node unable to start kubelet at all.
 			g.Expect(nc.Spec.Kubelet.CACert).To(Equal(base64.StdEncoding.EncodeToString([]byte(testClusterCA))))
 
-			// Nothing: a NodeGroup has no disk field, so this controller has no
-			// input for the decision and does not make one. A selector that
-			// constrains nothing is worse than none — it matches the first disk
-			// enumerated, which on a platform that attaches its cloud-init drive
-			// as an ordinary megabyte-sized disk is that drive, and the install
-			// dies on it.
-			g.Expect(nc.Spec.Storage).To(Equal(internalv1alpha1.Storage{}))
+			// A NodeGroup has no disk field, so the selector cannot name the
+			// disk — but rendering none at all is a dead node: the boot path
+			// refuses outright with "neither device nor diskSelector set"
+			// (measured, a worker stuck in the initramfs shell). What it says
+			// instead is the one true statement available: any real disk. The
+			// size bound is what keeps the megabyte cloud-init drive out.
+			g.Expect(nc.Spec.Storage).To(Equal(internalv1alpha1.Storage{
+				Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}},
+			}))
 
 			// The node talks to the API servers the cluster actually has.
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
