@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestPickDigest(t *testing.T) {
+func TestNewestPatchDigest(t *testing.T) {
 	tests := []struct {
 		name     string
 		packages map[string]string
@@ -46,15 +46,6 @@ func TestPickDigest(t *testing.T) {
 			want:   "sha256:patch10", // 1.35.10 > 1.35.6
 		},
 		{
-			name: "containerd two-digit patch wins",
-			packages: map[string]string{
-				"containerdSysext224":  "sha256:v224",
-				"containerdSysext2210": "sha256:v2210",
-			},
-			prefix: "containerdSysext",
-			want:   "sha256:v2210", // 2.2.10 > 2.2.4
-		},
-		{
 			name:     "no matching prefix yields empty",
 			packages: map[string]string{"other": "x"},
 			prefix:   "kubeletSysext",
@@ -69,11 +60,46 @@ func TestPickDigest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := pickDigest(tt.packages, tt.prefix); got != tt.want {
-				t.Fatalf("pickDigest = %q, want %q", got, tt.want)
+			if got := newestPatchDigest(tt.packages, tt.prefix); got != tt.want {
+				t.Fatalf("newestPatchDigest = %q, want %q", got, tt.want)
 			}
 		})
 	}
+}
+
+// The camelcase image name strips the version separators, so for containerd and
+// CNI no "newest" can be told from the name: several candidates are a build
+// defect to report, not an ordering problem to solve. The same rule lives in
+// dhctl's soleDigest, which reads the same digests file for the first master.
+func TestSoleDigest(t *testing.T) {
+	t.Run("exactly one is returned", func(t *testing.T) {
+		d, err := soleDigest(map[string]string{"containerdSysext224": "sha256:v224"}, "containerdSysext")
+		require.NoError(t, err)
+		require.Equal(t, "sha256:v224", d)
+	})
+	t.Run("none is empty, not an error", func(t *testing.T) {
+		d, err := soleDigest(map[string]string{"other": "x"}, "containerdSysext")
+		require.NoError(t, err)
+		require.Empty(t, d)
+	})
+	t.Run("a non-numeric tail is a different image", func(t *testing.T) {
+		d, err := soleDigest(map[string]string{
+			"containerdSysext224":     "sha256:v224",
+			"containerdSysextDebug":   "x",
+			"containerdSysextLegacy2": "x",
+		}, "containerdSysext")
+		require.NoError(t, err)
+		require.Equal(t, "sha256:v224", d)
+	})
+	t.Run("several candidates are refused with both names", func(t *testing.T) {
+		_, err := soleDigest(map[string]string{
+			"containerdSysext224":  "sha256:v224",
+			"containerdSysext2210": "sha256:v2210",
+		}, "containerdSysext")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "containerdSysext224")
+		require.Contains(t, err.Error(), "containerdSysext2210")
+	})
 }
 
 // The cluster configuration decides the node's DNS domain and how many pods it
