@@ -672,9 +672,6 @@ manifests: controller-gen enrich-crds-local ## Generate WebhookConfiguration, Cl
 .PHONY: copy-crds
 copy-crds:
 	@echo "Copying CRDs to deckhouse-controller/crds..."
-	@cp bin/crd/bases/deckhouse.io_modules.yaml deckhouse-controller/crds/module.yaml
-	@cp bin/crd/bases/deckhouse.io_modulepackageversions.yaml deckhouse-controller/crds/modulepackageversion.yaml
-	@cp bin/crd/bases/deckhouse.io_modulepackages.yaml deckhouse-controller/crds/modulepackage.yaml
 	@cp bin/crd/bases/deckhouse.io_applications.yaml deckhouse-controller/crds/application.yaml
 	@cp bin/crd/bases/deckhouse.io_packagerepositoryoperations.yaml deckhouse-controller/crds/packagerepositoryoperation.yaml
 	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
@@ -682,6 +679,7 @@ copy-crds:
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
 	@cp bin/crd/bases/deckhouse.io_modulepackageversions.yaml deckhouse-controller/crds/modulepackageversion.yaml
 	@cp bin/crd/bases/deckhouse.io_modulepackages.yaml deckhouse-controller/crds/modulepackage.yaml
+	@cp bin/crd/bases/deckhouse.io_modules.yaml deckhouse-controller/crds/module.yaml
 
 .PHONY: generate-crds
 generate-crds: controller-gen
