@@ -26,7 +26,11 @@
 // installer's cache, so the node generates the PKI and dhctl collects the admin
 // kubeconfig afterwards from the one-shot handoff endpoint the node opens for
 // it — see handoff.go. The manifests that do travel carry image references,
-// flags and file paths, and nothing that is worth stealing.
+// flags and file paths, and nothing that is worth stealing. The handoff
+// server key and token do travel — deliberately: whoever reads the payload
+// can at most impersonate or close that one channel, which the infrastructure
+// owner, who also owns the VM itself, can do anyway; no cluster credential is
+// reachable through it.
 //
 // A few exported helpers here are pure and take a context they never use. The
 // rule is that every exported function takes one first, and the alternative —

@@ -6,7 +6,7 @@ write_files:
     metadata:
       labels:
         node.deckhouse.io/group: master
-      name: zykov-master-0
+      name: example-master-0
     spec:
       apiServerEndpoints:
       - https://$MY_IP:6443
@@ -46,11 +46,11 @@ write_files:
           mode: Auto
         serverTLSBootstrap: false
       network:
-        hostname: zykov-master-0
+        hostname: example-master-0
         interfaces:
         - dhcp: true
           name: eth0
-      nodeName: zykov-master-0
+      nodeName: example-master-0
       osImage: dev-registry.deckhouse.io/sys/deckhouse-oss/olcedar:v0.1
       registry:
         address: dev-registry.deckhouse.io
@@ -74,7 +74,7 @@ write_files:
     apiVersion: internal.deckhouse.io/v1alpha1
     kind: ControlPlaneConfig
     metadata:
-      name: zykov-master-0
+      name: example-master-0
     spec:
       bootstrap: true
       cluster:
@@ -103,11 +103,11 @@ write_files:
           \ name: etcd\n  namespace: kube-system\nspec:\n  containers:\n  - command:\n
           \   - etcd\n    - --advertise-client-urls=https://$MY_IP:2379\n    - --cert-file=/etc/kubernetes/pki/etcd/server.crt\n
           \   - --client-cert-auth=true\n    - --data-dir=/var/lib/etcd\n    - --initial-advertise-peer-urls=https://$MY_IP:2380\n
-          \   - --initial-cluster=zykov-master-0=https://$MY_IP:2380\n    - --watch-progress-notify-interval=5s\n
+          \   - --initial-cluster=example-master-0=https://$MY_IP:2380\n    - --watch-progress-notify-interval=5s\n
           \   - --quota-backend-bytes=2147483648\n    - --metrics=extensive\n    - --key-file=/etc/kubernetes/pki/etcd/server.key\n
           \   - --listen-client-urls=https://127.0.0.1:2379,https://$MY_IP:2379\n    -
           --listen-metrics-urls=http://127.0.0.1:2381\n    - --listen-peer-urls=https://$MY_IP:2380\n
-          \   - --name=zykov-master-0\n    - --peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt\n
+          \   - --name=example-master-0\n    - --peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt\n
           \   - --peer-client-cert-auth=true\n    - --peer-key-file=/etc/kubernetes/pki/etcd/peer.key\n
           \   - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt\n    - --snapshot-count=10000\n
           \   - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt\n    env:\n    - name:

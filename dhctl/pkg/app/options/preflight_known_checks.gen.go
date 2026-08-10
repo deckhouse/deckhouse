@@ -14,7 +14,6 @@ var generatedPreflightChecks = []string{
 	"immutable-control-plane-images",
 	"immutable-kubeconfig-kept",
 	"immutable-kubeconfig-out",
-	"immutable-master-replicas",
 	"immutable-post-bootstrap-script",
 	"immutable-registry-mode",
 	"immutable-signature-mode",

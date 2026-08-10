@@ -45,13 +45,13 @@ func TestBuildCloudConfigGolden(t *testing.T) {
 	globalOptions := options.NewGlobalOptions()
 
 	nodeConfig, err := buildNodeConfig(context.Background(), nodeConfigInput{
-		NodeName:   "zykov-master-0",
+		NodeName:   "example-master-0",
 		MetaConfig: metaConfig,
 	})
 	require.NoError(t, err)
 
 	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), MasterPayloadInput{
-		NodeName:      "zykov-master-0",
+		NodeName:      "example-master-0",
 		MetaConfig:    metaConfig,
 		StateCache:    cache.NewTestCache(),
 		CandiDir:      testCandiDir(t),
@@ -99,7 +99,7 @@ func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
 	globalOptions := options.NewGlobalOptions()
 
 	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), MasterPayloadInput{
-		NodeName:      "zykov-master-0",
+		NodeName:      "example-master-0",
 		MetaConfig:    metaConfig,
 		StateCache:    cache.NewTestCache(),
 		CandiDir:      testCandiDir(t),
@@ -125,7 +125,7 @@ func TestBuildCloudConfigHasNoConflictingKeys(t *testing.T) {
 	metaConfig := testMetaConfig(t)
 
 	nodeConfig, err := buildNodeConfig(context.Background(), nodeConfigInput{
-		NodeName:   "zykov-master-0",
+		NodeName:   "example-master-0",
 		MetaConfig: metaConfig,
 	})
 	require.NoError(t, err)

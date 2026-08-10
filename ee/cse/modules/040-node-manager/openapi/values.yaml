@@ -394,7 +394,7 @@ properties:
               type: string
               enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
             systemType:
-              # See NodeGroup in candi/openapi/node_group.yaml
+              # See NodeGroup in modules/040-node-manager/crds/node_group.yaml
               type: string
               enum: ["Mutable", "Immutable"]
             gpu:

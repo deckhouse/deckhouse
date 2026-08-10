@@ -108,7 +108,7 @@ func TestCheckKubeconfigOutSurvivesCleanup(t *testing.T) {
 		},
 		{
 			name:          "inside, but named the way the cleaner spares",
-			kubeconfigOut: filepath.Join(tmpDir, "zykov-"+cache.AdminKubeconfigName),
+			kubeconfigOut: filepath.Join(tmpDir, "example-"+cache.AdminKubeconfigName),
 			tmpDir:        tmpDir,
 		},
 		{name: "outside the temporary directory", kubeconfigOut: filepath.Join(outside, "prod.kubeconfig"), tmpDir: tmpDir},

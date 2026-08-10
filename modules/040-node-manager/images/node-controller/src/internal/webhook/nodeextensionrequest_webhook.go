@@ -34,6 +34,11 @@ var nerWebhookLog = logf.Log.WithName("nodeextensionrequest-webhook")
 // a request's sysext name and digest must each be free across all other requests,
 // and the name must not be one the platform reserves. The controller carries a
 // backstop for the create/create race this admission check cannot see.
+//
+// Kernel-module conflicts between requests are deliberately not checked here:
+// which request wins depends on the creationTimestamp order, which does not
+// exist yet at admission time — the status backstop in the nodeconfig
+// controller's extensions pass reports them instead.
 type NodeExtensionRequestValidator struct {
 	Client  client.Client
 	decoder admission.Decoder
