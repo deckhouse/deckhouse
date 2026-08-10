@@ -56,7 +56,7 @@ func TestNodeExtensions(t *testing.T) {
 	drbdExtension := internalv1alpha1.Extension{
 		Name:        "drbd",
 		Digest:      drbdDigest,
-		RequestedBy: "sds-drbd",
+		RequestedBy: nerRequestedByPrefix + "sds-drbd",
 	}
 
 	older := metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
@@ -135,7 +135,7 @@ func TestNodeExtensions(t *testing.T) {
 				Repository:     "dev-registry.deckhouse.io/sys/deckhouse-oss/modules",
 				AdditionalPath: "sds-replicated-volume",
 				Digest:         drbdDigest,
-				RequestedBy:    "sds-drbd",
+				RequestedBy:    nerRequestedByPrefix + "sds-drbd",
 			}},
 		},
 		{
@@ -173,7 +173,7 @@ func TestNodeExtensions(t *testing.T) {
 			wantExtensions: []internalv1alpha1.Extension{{
 				Name:        "drbd",
 				Digest:      drbdDigest,
-				RequestedBy: "drbd-old",
+				RequestedBy: nerRequestedByPrefix + "drbd-old",
 			}},
 		},
 		{
@@ -191,7 +191,7 @@ func TestNodeExtensions(t *testing.T) {
 			wantExtensions: []internalv1alpha1.Extension{{
 				Name:        "alpha",
 				Digest:      drbdDigest,
-				RequestedBy: "alpha",
+				RequestedBy: nerRequestedByPrefix + "alpha",
 			}},
 		},
 		{
@@ -214,7 +214,7 @@ func TestNodeExtensions(t *testing.T) {
 			wantExtensions: []internalv1alpha1.Extension{{
 				Name:        "alpha",
 				Digest:      drbdDigest,
-				RequestedBy: "zebra",
+				RequestedBy: nerRequestedByPrefix + "zebra",
 			}},
 			wantModules: []internalv1alpha1.KernelModule{
 				{Name: "drbd", Params: []string{"usermode_helper=disabled"}},
@@ -286,7 +286,7 @@ func TestNodeExtensionsOrderDoesNotFollowTheListing(t *testing.T) {
 	// And it is the order every decision about them is made in: oldest first,
 	// whatever the listing said.
 	got := []string{oneWay[0].RequestedBy, oneWay[1].RequestedBy}
-	if !reflect.DeepEqual(got, []string{"zebra", "apple"}) {
+	if !reflect.DeepEqual(got, []string{nerRequestedByPrefix + "zebra", nerRequestedByPrefix + "apple"}) {
 		t.Fatalf("extensions = %v, want the oldest request first", got)
 	}
 }

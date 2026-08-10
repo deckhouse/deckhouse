@@ -49,8 +49,8 @@ func TestNEROutcomesCountWhatTheNodesReport(t *testing.T) {
 		// Two nodes refuse bob and accept bob-signed.
 		nodeConfigWith("master-0",
 			[]internalv1alpha1.Extension{
-				{Name: "bob", RequestedBy: "bob-request"},
-				{Name: "bob-signed", RequestedBy: "bob-signed-request"},
+				{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"},
+				{Name: "bob-signed", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
 			},
 			[]internalv1alpha1.ExtensionStatus{
 				{Name: "bob", State: "Failed", Message: "Required key not available"},
@@ -58,8 +58,8 @@ func TestNEROutcomesCountWhatTheNodesReport(t *testing.T) {
 			}),
 		nodeConfigWith("worker-0",
 			[]internalv1alpha1.Extension{
-				{Name: "bob", RequestedBy: "bob-request"},
-				{Name: "bob-signed", RequestedBy: "bob-signed-request"},
+				{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"},
+				{Name: "bob-signed", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
 			},
 			[]internalv1alpha1.ExtensionStatus{
 				{Name: "bob", State: "Failed", Message: "Required key not available"},
@@ -67,7 +67,7 @@ func TestNEROutcomesCountWhatTheNodesReport(t *testing.T) {
 			}),
 		// A node that has not answered yet counts as neither.
 		nodeConfigWith("worker-1",
-			[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: "bob-request"}},
+			[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"}},
 			nil),
 		// A platform extension: node-manager asked for it, no NER owns it.
 		nodeConfigWith("worker-2",
@@ -99,7 +99,7 @@ func TestNEROutcomesIgnorePendingNodes(t *testing.T) {
 
 	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 		nodeConfigWith("worker-0",
-			[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: "bob-request"}},
+			[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"}},
 			[]internalv1alpha1.ExtensionStatus{{Name: "bob", State: "Pending"}}),
 	).Build()
 

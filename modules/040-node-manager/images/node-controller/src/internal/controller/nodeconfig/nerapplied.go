@@ -19,6 +19,7 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -62,12 +63,14 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 		// requestedBy per extension name, for this node.
 		owner := make(map[string]string, len(config.Spec.Extensions))
 		for _, ext := range config.Spec.Extensions {
-			// Platform extensions carry a fixed marker rather than a request
-			// name; counting them would invent an owner that does not exist.
-			if ext.RequestedBy == "" || ext.RequestedBy == platformExtensionRequestedBy {
+			// Only extensions a request put there have a request to report to:
+			// platform ones carry the module marker instead, and counting those
+			// would invent an owner that does not exist.
+			name, ok := strings.CutPrefix(ext.RequestedBy, nerRequestedByPrefix)
+			if !ok || name == "" {
 				continue
 			}
-			owner[ext.Name] = ext.RequestedBy
+			owner[ext.Name] = name
 		}
 		if len(owner) == 0 {
 			continue
