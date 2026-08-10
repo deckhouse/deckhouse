@@ -59,6 +59,7 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 		existing    internalv1alpha1.NodeSpec
 		reportedIPs []string
 		expStorage  internalv1alpha1.Storage
+		expNetwork  internalv1alpha1.Network
 		expNodeIP   string
 	}{
 		{
@@ -83,6 +84,38 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 				Storage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{}}},
 			},
 			expStorage: internalv1alpha1.Storage{},
+		},
+		{
+			// A statically addressed machine: the render must not put it back
+			// on DHCP — the OS renders its network from this spec on every
+			// boot, and eth0-DHCP over a static address is a dead node.
+			name: "a static network survives the render, the hostname does not",
+			existing: internalv1alpha1.NodeSpec{
+				Network: internalv1alpha1.Network{
+					Hostname: "what-the-machine-said",
+					Interfaces: []internalv1alpha1.NetworkInterface{{
+						Name: "eth0", DHCP: false, Addresses: []string{"192.0.2.10/24"}, Gateway: "192.0.2.1",
+					}},
+				},
+			},
+			expStorage: internalv1alpha1.Storage{},
+			expNetwork: internalv1alpha1.Network{
+				Hostname: "master-0",
+				Interfaces: []internalv1alpha1.NetworkInterface{{
+					Name: "eth0", DHCP: false, Addresses: []string{"192.0.2.10/24"}, Gateway: "192.0.2.1",
+				}},
+			},
+		},
+		{
+			name: "the rendered DHCP default is not explicit and is re-rendered",
+			existing: internalv1alpha1.NodeSpec{
+				Network: internalv1alpha1.Network{
+					Hostname:   "master-0",
+					Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+				},
+			},
+			expStorage: internalv1alpha1.Storage{},
+			expNetwork: internalv1alpha1.Network{Hostname: "master-0", Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}}},
 		},
 		{
 			name: "an explicit device is as specific as a selector",
@@ -119,13 +152,20 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 			desired := internalv1alpha1.NodeSpec{
 				NodeName: "master-0",
 				Registry: rendered,
-				Kubelet:  internalv1alpha1.Kubelet{MaxPods: maxPodsPerNodeCIDR24},
+				Network: internalv1alpha1.Network{
+					Hostname:   "master-0",
+					Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+				},
+				Kubelet: internalv1alpha1.Kubelet{MaxPods: maxPodsPerNodeCIDR24},
 			}
 
 			keepBootstrapOnlyFields(&desired, &tc.existing, tc.reportedIPs)
 
 			require.Equal(t, tc.expStorage, desired.Storage)
 			require.Equal(t, tc.expNodeIP, desired.Kubelet.NodeIP)
+			if tc.expNetwork.Hostname != "" {
+				require.Equal(t, tc.expNetwork, desired.Network)
+			}
 
 			// The cluster owns these, so the render wins even when the node was
 			// bootstrapped with something else. resourceReservation is one of

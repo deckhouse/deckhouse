@@ -96,22 +96,25 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 	return spec
 }
 
-// keepBootstrapOnlyFields carries over the two parts of the spec that describe
-// the machine rather than the group, which is what this controller renders. Both
+// keepBootstrapOnlyFields carries over the parts of the spec that describe the
+// machine rather than the group, which is what this controller renders. They
 // belong to whoever provisioned the node; overwriting them with the rendered
-// zero value is what a wholesale spec patch would otherwise do.
+// value is what a wholesale spec patch would otherwise do.
 //
 //   - kubelet.nodeIP: the address the node registers under, kept only while the
 //     node still reports it (nodeIPStillHolds).
-//   - storage: which disk to install onto, kept only when it names one
-//     (storageIsExplicit).
+//   - network: static addressing, DNS, NTP and routes, kept when they name
+//     anything beyond the rendered eth0-on-DHCP (networkIsExplicit). The
+//     hostname stays the cluster's either way.
+//   - storage: which disk to install onto, kept only when it names something
+//     richer than the rendered selector (storageIsExplicit) — the installer's
+//     master payload does: its selector separates the system disk from the etcd
+//     disk, and its mounts are where /var/lib/etcd lives.
 //
-// Neither is set by the current installer — its payload leaves nodeIP empty and
-// writes an empty storage — so on today's first master both branches are no-ops.
-// They are kept because the same NodeConfig can be pushed to a node by hand
+// Beyond the installer, the same NodeConfig can be pushed to a node by hand
 // through nodelet's maintenance endpoint, which is where a machine-specific
-// address or disk would come from; a render that dropped them would undo that
-// push on its next pass.
+// address or network would come from; a render that dropped them would undo
+// that push on its next pass.
 //
 // Everything else the payload sets is rendered rather than preserved, including
 // two that used to be carried over and must not be: registry (preserving it
@@ -130,6 +133,18 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, reportedNodeIPs []string) {
 	if nodeIPStillHolds(existing.Kubelet.NodeIP, reportedNodeIPs) {
 		desired.Kubelet.NodeIP = existing.Kubelet.NodeIP
+	}
+
+	// A statically configured network belongs to whoever provisioned the
+	// machine: the render only ever says "eth0, DHCP", and overwriting a
+	// static address with that leaves the node unreachable after its next
+	// reboot — the OS renders its network from this spec.
+	if networkIsExplicit(&existing.Network) {
+		hostname := desired.Network.Hostname
+		desired.Network = existing.Network
+		// The hostname is the cluster's: it must match the Node name however
+		// the machine was given its addresses.
+		desired.Network.Hostname = hostname
 	}
 
 	// An empty rendered selector claims nothing; anything the node already
@@ -177,6 +192,23 @@ func storageIsExplicit(storage *internalv1alpha1.Storage) bool {
 		return true
 	}
 	return storage.DiskSelector != nil && *storage.DiskSelector != internalv1alpha1.DiskSelector{}
+}
+
+// networkIsExplicit reports whether a network section names something the
+// render cannot: a static interface, DNS, NTP or routes. The rendered default
+// — eth0 on DHCP plus the hostname — is not explicit, and neither is an empty
+// section.
+func networkIsExplicit(network *internalv1alpha1.Network) bool {
+	if len(network.DNS.Servers) > 0 || len(network.DNS.Search) > 0 ||
+		len(network.NTP.Servers) > 0 || len(network.Routes) > 0 {
+		return true
+	}
+	for _, iface := range network.Interfaces {
+		if !iface.DHCP || len(iface.Addresses) > 0 || iface.Gateway != "" || iface.Name != "eth0" {
+			return true
+		}
+	}
+	return false
 }
 
 // renderKernel publishes what the CLUSTER decides about the kernel. This config
