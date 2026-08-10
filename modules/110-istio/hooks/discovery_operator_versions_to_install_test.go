@@ -223,7 +223,10 @@ internal:
     "1.27":
         revision: "v1x27"
         supportsOperator: false
-  versionsToInstall: ["1.25", "1.27"]
+    "1.29":
+        revision: "v1x29"
+        supportsOperator: false
+  versionsToInstall: ["1.25", "1.27", "1.29"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 			f.BindingContexts.Set(f.KubeStateSet(``))

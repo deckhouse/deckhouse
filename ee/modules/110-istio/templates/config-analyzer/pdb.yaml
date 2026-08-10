@@ -1,6 +1,6 @@
 {{- if .Values.istio.configAnalysis.enabled }}
 {{- range $version := .Values.istio.internal.versionsToInstall }}
-  {{- if has $version (list "1.21" "1.25" "1.27") }}
+  {{- if has $version (list "1.21" "1.25" "1.27" "1.29") }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
   {{- $revision := get $versionInfo "revision" }}
 ---

@@ -297,7 +297,10 @@ func openstackCheck(f *Config, k8sVer string) {
 		providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
 		Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
 		Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
-		Expect(len(providerSpecificCAPISecretData["machine-template.yaml"].String()) > 0).To(BeTrue())
+		// template.yaml is the whole v2 machine-template contract: the go-template, the list of
+		// InstanceClass fields that recreate machines, and the extra MachineDeployment fields.
+		// It replaced machine-template.yaml + instance-class.checksum + machine-deployment-spec-patch.yaml.
+		Expect(len(providerSpecificCAPISecretData["template.yaml"].String()) > 0).To(BeTrue())
 
 		Expect(providerRegistrationSecret.Field("data.capiClusterKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("OpenStackCluster"))))
 		Expect(providerRegistrationSecret.Field("data.capiMachineTemplateKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("OpenStackMachineTemplate"))))
@@ -423,11 +426,13 @@ storageclass.kubernetes.io/is-default-class: "true"
 		providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
 		Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
 
-		machineTemplateSource, err := base64.StdEncoding.DecodeString(providerSpecificCAPISecret.Field("data.machine-template\\.yaml").String())
+		// The v2 contract reads the same two values from the sandbox context instead of the
+		// synthetic helm values tree the v1 template addressed.
+		machineTemplateSource, err := base64.StdEncoding.DecodeString(providerSpecificCAPISecret.Field("data.template\\.yaml").String())
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(string(machineTemplateSource)).To(ContainSubstring("allowedAddressPairs:"))
-		Expect(string(machineTemplateSource)).To(ContainSubstring(`ipAddress: {{ $.Values.global.discovery.podSubnet | quote }}`))
-		Expect(string(machineTemplateSource)).To(ContainSubstring(`eq $.Values.nodeManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled"`))
+		Expect(string(machineTemplateSource)).To(ContainSubstring(`ipAddress: {{ $.cluster.podSubnet | quote }}`))
+		Expect(string(machineTemplateSource)).To(ContainSubstring(`eq $.provider.podNetworkMode "DirectRoutingWithPortSecurityEnabled"`))
 	})
 }
 

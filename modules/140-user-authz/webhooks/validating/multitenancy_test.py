@@ -41,9 +41,9 @@ class TestMultiTenancyValidationForCarsAndModuleConfig(unittest.TestCase):
         ]:
             with self.subTest(title=scenario):
                 tests.assert_validation_deny(self, self.run_hook(ctx_json), '; '.join([
-                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user1' (EE Only)",
-                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user1' (EE Only)",
-                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user1' (EE Only)",
+                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user1'",
                 ]))
 
     def test_car_allowed_when_multitenancy_disabled_and_no_multitenancy_related_fields(self):
@@ -63,6 +63,14 @@ class TestMultiTenancyValidationForCarsAndModuleConfig(unittest.TestCase):
     def test_car_allowed_when_multitenancy_enabled_and_multitenancy_related_fields_used(self):
         for scenario, ctx_json in [
             ['enableMultiTenancy is True',
+             factories.prepare_car_binding_context(
+                car_restricted_multitenancy_fields=True, module_enable_multitenancy_field=True)
+            ],
+            # CSE edition: enableMultiTenancy defaults to true in the schema.
+            # The ModuleConfig has no explicit enableMultiTenancy field, but
+            # the Module CR status.lastAppliedConfiguration reflects the
+            # effective value (true) after merging with schema defaults.
+            ['enableMultiTenancy is True via schema default (CSE edition)',
              factories.prepare_car_binding_context(
                 car_restricted_multitenancy_fields=True, module_enable_multitenancy_field=True)
             ],
@@ -93,12 +101,12 @@ class TestMultiTenancyValidationForCarsAndModuleConfig(unittest.TestCase):
         ]:
              with self.subTest(scenario):
                 tests.assert_validation_deny(self, self.run_hook(ctx_json), "; ".join([
-                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user1' (EE Only)",
-                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user1' (EE Only)",
-                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user1' (EE Only)",
-                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user3' (EE Only)",
-                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user3' (EE Only)",
-                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user3' (EE Only)",
+                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user3'",
+                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user3'",
+                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user3'",
                 ]))
 
     def test_module_config_allowed_when_multitenancy_disabled_and_no_cars_have_multitenancy_related_fields(self):

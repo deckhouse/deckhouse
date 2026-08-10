@@ -359,6 +359,7 @@ A virtual machine (VM) goes through several phases in its existence, from creati
   A VM has just been created, restarted or started after a shutdown and is waiting for the necessary resources (disks, images, ip addresses, etc.) to be ready.
   - Possible problems:
     - Dependent resources are not ready: disks, images, VM classes, secret with initial configuration script, etc.
+    - Namespace or project quotas have been exceeded.
   - Diagnostics: In `.status.conditions` you should pay attention to `*Ready` conditions. By them you can determine what is blocking the transition to the next phase, for example, waiting for disks to be ready (BlockDevicesReady) or VM class (VirtualMachineClassReady).
 
     ```bash
@@ -371,7 +372,6 @@ A virtual machine (VM) goes through several phases in its existence, from creati
   - Possible problems:
     - There is no suitable node to start.
     - There is not enough CPU or memory on suitable nodes.
-    - Namespace or project quotas have been exceeded.
   - Diagnostics:
     - If the startup is delayed, check `.status.conditions`, the `type: Running` condition
 
@@ -806,6 +806,12 @@ spec:
 ### Guest OS agent
 
 To improve VM management efficiency, it is recommended to install the QEMU Guest Agent, a tool that enables communication between the hypervisor and the operating system inside the VM.
+
+Deckhouse Virtualization Platform supports `qemu-guest-agent` version 5.2.0 and later. To check the current agent version in the guest OS, run:
+
+```bash
+qemu-guest-agent --version
+```
 
 How will the agent help?
 
@@ -1522,6 +1528,8 @@ After creation, `VirtualMachineBlockDeviceAttachment` can be in the following st
 - `InProgress`: The process of device connection is in progress.
 - `Attached`: The device is connected.
 
+Hot-plugging a disk is not possible while the virtual machine is undergoing live migration. In this case, the `VirtualMachineBlockDeviceAttachment` resource remains in the `Pending` phase, and the `Attached` condition reports the `BlockedByMigration` reason. Attachment resumes automatically after the migration completes.
+
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block
 
 Check the state of your resource:
@@ -1937,6 +1945,8 @@ For successful live migration, certain requirements must be met. Failure to meet
 
 - Disk availability: All disks attached to the VM must be accessible on the target node, otherwise migration will be impossible. For network storage (NFS, Ceph, etc.), this requirement is usually met automatically, as disks are accessible on all cluster nodes. For local storage, the situation is different: the storage system must be available on the target node to create a new local volume. If local storage exists only on the source node, migration cannot be performed.
 
+- Disk hot-plugging: During live migration, attaching disks to a VM via the `VirtualMachineBlockDeviceAttachment` resource is unavailable. The resource remains in the `Pending` phase with the `BlockedByMigration` reason in the `Attached` condition until the migration completes.
+
 - Network bandwidth: Network speed is critical for live migration. With low bandwidth, the number of memory synchronization iterations increases, VM downtime during the final stage of migration increases, and in the worst case, migration may not complete due to a timeout. To manage the migration process, configure the live migration policy [`.spec.liveMigrationPolicy`](#configuring-migration-policy) in the virtual machine settings. For network problems, use the AutoConverge mechanism (see the [Migration with insufficient network bandwidth](#migration-with-insufficient-network-bandwidth) section).
 
 - Kernel versions on nodes: For stable live migration operation, all cluster nodes must use the same Linux kernel version. Differences in kernel versions can lead to incompatible interfaces, system calls, and resource handling features, which can disrupt the virtual machine migration process.
@@ -2349,7 +2359,7 @@ Important considerations when working with additional network interfaces:
 - Adding or removing additional networks takes effect only after the VM is rebooted.
 - To preserve the order of network interfaces inside the guest operating system, it is recommended to add new networks to the end of the `.spec.networks` list (do not change the order of existing ones).
 - Network security policies (NetworkPolicy) do not apply to additional network interfaces.
-- Network parameters (IP addresses, gateways, DNS, etc.) for additional networks are configured manually from within the guest OS (for example, using Cloud-Init).
+- Network parameters (IP addresses, gateways, DNS, etc.) for additional networks are configured manually from within the guest OS (for example, using Cloud-Init), unless IPAM is configured on the network (for details, see ["IPAM for additional network interfaces"](#ipam-for-additional-network-interfaces)).
 
 {% alert level="info" %}
 When configuring network interfaces in the guest OS, use stable identifiers (predictable names `enpXsY` or MAC address binding) instead of `ethX` names. For more details, see the [Network interface naming in guest OS](#network-interface-naming-in-guest-os) section.
@@ -2478,3 +2488,96 @@ When a network is removed from the VM configuration:
 
 - The MAC address of the interface is released.
 - The associated `VirtualMachineMACAddress` and `VirtualMachineMACAddressLease` resources are automatically deleted.
+- The auto-allocated `IPAddress` (if IPAM was used) is deleted.
+
+### IPAM for additional network interfaces
+
+If the [`sdn`](/modules/sdn/) module has IPAM (IP Address Management) configured for an additional network (a pool of IP addresses bound to the network via [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref)), Deckhouse Virtualization Platform can automatically allocate IP addresses for additional VM interfaces and deliver them to the guest OS via DHCP.
+
+Two modes are supported:
+
+- **Automatic (DHCP):** If [`ipAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks-ipaddressname) is not specified in `.spec.networks[]`, the controller automatically creates an IPAddress resource (type `Auto`) bound to the VM via `ownerReferences` and passes it to the `sdn` module. The `sdn` module allocates an address from the pool and delivers it to the guest OS via DHCP. The address remains stable across VM restarts and migrations since it is bound to the VM, not the pod. For this mode to work, the guest OS must have a DHCP client enabled on the corresponding interface.
+
+- **Static:** If [`ipAddressName`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks-ipaddressname) is specified in `.spec.networks[]`, the controller uses the user-provided IPAddress resource (type `Static`, `network.deckhouse.io/v1alpha1`). The address is determined by the user and is not modified automatically.
+
+If the additional network does not have an IPAM pool configured, the IPAM feature is not enabled — the interface operates in L2-only mode, and IP addressing needs to be configured manually in the guest OS.
+
+Configuration example of a VM with automatic IP allocation on an additional network:
+
+```yaml
+spec:
+  networks:
+    - type: Main
+    - type: ClusterNetwork
+      name: corp-net
+      # ipAddressName is not specified → automatic mode (DHCP) is used
+```
+
+Configuration example of a VM with a static IP on an additional network:
+
+```yaml
+spec:
+  networks:
+    - type: Main
+    - type: ClusterNetwork
+      name: corp-net
+      ipAddressName: my-static-ip # Name of the IPAddress resource (SDN)
+```
+
+Configuration example of a static IPAddress resource:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: IPAddress
+metadata:
+  name: my-static-ip
+  namespace: my-namespace
+spec:
+  networkRef:
+    kind: ClusterNetwork
+    name: corp-net
+  type: Static
+  static:
+    ip: 192.168.200.42
+```
+
+The allocated IP address is displayed in the VM status:
+
+```yaml
+status:
+  ipAddress: 10.66.10.2                     # Main network IP.
+  virtualMachineIPAddressName: vm-01-main-ip # Main network IPAddress name.
+  networks:
+    - type: Main
+    - type: ClusterNetwork
+      name: corp-net
+      macAddress: 32:a6:a1:0a:92:48
+      virtualMachineMACAddressName: vm-01-rxzd6
+      ipAddress: 192.168.200.4               # Additional network IP (from IPAM).
+```
+
+{% alert level="warning" %}
+If an IPAM pool is configured on an additional network, do not configure a static IP on the additional interface in the guest OS manually (via Cloud-Init). Use the automatic (DHCP) or static (`ipAddressName`) mode instead to avoid address conflicts.
+{% endalert %}
+
+{% alert level="info" %}
+If an additional network has an IPAM pool but the IPAddress resource is not yet allocated or is in a `Pending` state (for example, due to exhausted address pool), the interface is temporarily skipped — the VM starts without it, and the `NetworkReady` condition reports the error. Once the address becomes available, the interface is attached automatically via the hotplug mechanism.
+{% endalert %}
+
+#### Configuring guest OS for hotplug interfaces
+
+When an additional network interface is attached via hotplug (after the VM has already started), the guest OS must be configured to automatically bring up new network interfaces and request a DHCP lease. Linux does not start a DHCP client on hotplugged interfaces by default.
+
+To ensure hotplugged interfaces are configured automatically, use one of the following approaches in the guest OS:
+
+- **NetworkManager** (Ubuntu, RHEL, CentOS): Automatically configures new interfaces with DHCP if the `network-manager` service is running.
+- **udev rule** (Alpine, others without NetworkManager): Add a udev rule to bring up new interfaces:
+
+  ```yaml
+  write_files:
+    - path: /etc/udev/rules.d/90-hotplug-network.rules
+      content: |
+        SUBSYSTEM=="net", ACTION=="add", RUN+="/sbin/ifup %k"
+  ```
+
+For interfaces present at VM boot (included in the initial network configuration), no additional configuration is required — the guest OS configures them during startup via Cloud-Init.

@@ -161,92 +161,10 @@ def prepare_car_binding_context(
         }}
       }},
       "snapshots": {{
-        "d8-user-authz-moduleconfig": [
+        "d8-user-authz-module": [
           {{
-            "object": {{
-              "apiVersion": "deckhouse.io/v1alpha1",
-              "kind": "ModuleConfig",
-              "metadata": {{
-                "creationTimestamp": "2025-07-29T02:01:51Z",
-                "finalizers": [
-                  "modules.deckhouse.io/module-registered"
-                ],
-                "generation": 19,
-                "managedFields": [
-                  {{
-                    "apiVersion": "deckhouse.io/v1alpha1",
-                    "fieldsType": "FieldsV1",
-                    "fieldsV1": {{
-                      "f:spec": {{
-                        ".": {{}},
-                        "f:enabled": {{}},
-                        "f:version": {{}}
-                      }}
-                    }},
-                    "manager": "dhctl",
-                    "operation": "Update",
-                    "time": "2025-07-29T02:01:51Z"
-                  }},
-                  {{
-                    "apiVersion": "deckhouse.io/v1alpha1",
-                    "fieldsType": "FieldsV1",
-                    "fieldsV1": {{
-                      "f:metadata": {{
-                        "f:finalizers": {{
-                          ".": {{}}
-                        }}
-                      }}
-                    }},
-                    "manager": "deckhouse-controller",
-                    "operation": "Update",
-                    "time": "2025-07-29T02:02:28Z"
-                  }},
-                  {{
-                    "apiVersion": "deckhouse.io/v1alpha1",
-                    "fieldsType": "FieldsV1",
-                    "fieldsV1": {{
-                      "f:status": {{
-                        ".": {{}},
-                        "f:message": {{}},
-                        "f:version": {{}}
-                      }}
-                    }},
-                    "manager": "deckhouse-controller",
-                    "operation": "Update",
-                    "subresource": "status",
-                    "time": "2025-07-29T02:02:28Z"
-                  }},
-                  {{
-                    "apiVersion": "deckhouse.io/v1alpha1",
-                    "fieldsType": "FieldsV1",
-                    "fieldsV1": {{
-                      "f:spec": {{
-                        "f:settings": {{
-                          ".": {{}},
-                          "f:enableMultiTenancy": {{}}
-                        }}
-                      }}
-                    }},
-                    "manager": "kubectl-edit",
-                    "operation": "Update",
-                    "time": "2025-07-29T23:27:00Z"
-                  }}
-                ],
-                "name": "user-authz",
-                "resourceVersion": "663947",
-                "uid": "71324cad-b74b-45ce-b122-1040558471ee"
-              }},
-              "spec": {{
-                "enabled": true,
-                "settings": {{
-                  {'' if module_enable_multitenancy_field is None else ('"enableMultiTenancy": true' if module_enable_multitenancy_field else '"enableMultiTenancy": false')}
-                }},
-                "version": 1
-              }},
-              "status": {{
-                "message": "",
-                "version": "1"
-              }}
+            "filterResult": {{
+              {'' if module_enable_multitenancy_field is None else ('"enableMultiTenancy": true' if module_enable_multitenancy_field else '"enableMultiTenancy": false')}
             }}
           }}
         ]
