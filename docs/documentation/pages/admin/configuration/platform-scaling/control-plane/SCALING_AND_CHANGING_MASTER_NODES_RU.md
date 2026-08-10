@@ -139,7 +139,19 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
    d8 system queue list
    ```
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
+1. **На локальной машине** авторизуйтесь в хранилище образов контейнеров (измените адрес хранилища образов при необходимости):
+
+   ```shell
+   docker login registry.deckhouse.ru
+   ```
+
+   В процессе авторизации необходимо будет ввести `Username` и `Password`.
+
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
+
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -290,7 +302,19 @@ spec:
    d8 system queue list
    ```
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
+1. **На локальной машине** авторизуйтесь в хранилище образов контейнеров (измените адрес хранилища образов при необходимости):
+
+   ```shell
+   docker login registry.deckhouse.ru
+   ```
+
+   В процессе авторизации необходимо будет ввести `Username` и `Password`.
+
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
+
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -358,7 +382,19 @@ spec:
    d8 system queue list
    ```
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
+1. **На локальной машине** авторизуйтесь в хранилище образов контейнеров (измените адрес хранилища образов при необходимости):
+
+   ```shell
+   docker login registry.deckhouse.ru
+   ```
+
+   В процессе авторизации необходимо будет ввести `Username` и `Password`.
+
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
+
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -389,7 +425,7 @@ spec:
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **OpenStack** и **VKCloud(OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
+   > Для **OpenStack** и **VK Cloud (OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
    >
    > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе Openstack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
    >
