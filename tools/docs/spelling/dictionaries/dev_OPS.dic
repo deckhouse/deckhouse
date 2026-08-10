@@ -1,4 +1,4 @@
-2814
+2816
 1GB
 2GB
 5XX
@@ -893,6 +893,7 @@ longtermStorageClass
 LowNodeUtilization
 LRS
 lsblk
+lt
 LTS
 Lua
 LUN
@@ -2384,6 +2385,7 @@ ZvirtInstanceClass
 перенаправление
 перенаправления
 перенаправлениям
+перенаправлениями
 перенастраиваются
 переоткрытии
 переподключиться
