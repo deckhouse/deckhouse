@@ -85,7 +85,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -166,7 +168,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
 
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -279,7 +283,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -400,7 +406,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
 
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 

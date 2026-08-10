@@ -122,7 +122,9 @@ Deckhouse Virtualization Platform (DVP) поддерживает автомат�
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — должно содержать ключ лицензии Deckhouse Virtualization Platform.
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Virtualization Platform.
+   {% endalert %}
 
 1. **На локальной машине** запустите контейнер установщика DVP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 

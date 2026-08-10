@@ -77,7 +77,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 system queue list
    ```
 
-1. **On your local machine**, login to the registry (change the container registry address if necessary):
+1. **On your local machine**, log in to the registry (change the container registry address if necessary):
 
    ```shell
    docker login registry.deckhouse.io
@@ -85,7 +85,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the registry.deckhouse.io registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% alert level="info" %}
+   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% endalert %}
 
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
@@ -157,7 +159,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 system queue list
    ```
 
-1. **On your local machine**, login to the registry (change the container registry address if necessary):
+1. **On your local machine**, log in to the registry (change the container registry address if necessary):
 
    ```shell
    docker login registry.deckhouse.io
@@ -165,7 +167,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the registry.deckhouse.io registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% alert level="info" %}
+   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% endalert %}
 
 1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
 
@@ -268,7 +272,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 system queue list
    ```
 
-1. **On your local machine**, login to the registry (change the container registry address if necessary):
+1. **On your local machine**, log in to the registry (change the container registry address if necessary):
 
    ```shell
    docker login registry.deckhouse.io
@@ -276,7 +280,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the registry.deckhouse.io registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% alert level="info" %}
+   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% endalert %}
 
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
@@ -388,7 +394,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    d8 system queue list
    ```
 
-1. **On your local machine**, login to the registry (change the container registry address if necessary):
+1. **On your local machine**, log in to the registry (change the container registry address if necessary):
 
    ```shell
    docker login registry.deckhouse.io
@@ -396,7 +402,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    During the login process, you will need to enter your `Username` and `Password`.
 
-   > When logging in to the registry.deckhouse.io registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% alert level="info" %}
+   When logging in to the `registry.deckhouse.io` registry, the `Username` field must be set to `license-token`, and the `Password` field must contain the Deckhouse Kubernetes Platform license key.
+   {% endalert %}
 
 1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
 

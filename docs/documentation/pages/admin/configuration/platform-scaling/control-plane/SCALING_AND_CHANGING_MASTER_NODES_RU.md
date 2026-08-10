@@ -147,7 +147,9 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — должно содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
 
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -308,7 +310,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — должно содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
 
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -386,7 +390,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище registry.deckhouse.ru поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% alert level="info" %}
+   При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   {% endalert %}
 
 1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
@@ -419,7 +425,7 @@ spec:
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **OpenStack** и **VKCloud(OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
+   > Для **OpenStack** и **VK Cloud (OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
    >
    > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе Openstack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
    >
