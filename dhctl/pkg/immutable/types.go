@@ -84,13 +84,11 @@ type nodeSpec struct {
 // and therefore the disk, exists. Both are described by what they look like, and
 // whoever needs one matches that against what the machine actually has.
 type storage struct {
-	SystemDisk *systemDisk `json:"systemDisk,omitempty"`
-	Mounts     []mount     `json:"mounts,omitempty"`
-}
-
-// systemDisk names the disk the OS is installed onto, for the initramfs.
-type systemDisk struct {
+	// DiskSelector names the disk the OS is installed onto. Read by the
+	// initramfs; the agent parses the same document and would reject an
+	// unknown field, so this has to match the NodeConfig CRD exactly.
 	DiskSelector *diskSelector `json:"diskSelector,omitempty"`
+	Mounts       []mount       `json:"mounts,omitempty"`
 }
 
 // diskSelector picks a whole disk by its attributes.
