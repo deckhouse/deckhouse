@@ -423,6 +423,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"registryProxy":                   "imageHash-registrypackages-registryProxy",
 		"rppGet":                          "imageHash-registrypackages-rppGet",
 		"socat1734":                       "imageHash-registrypackages-socat1734",
+		"sysextBobSigned":                 "imageHash-registrypackages-sysextBobSigned",
+		"sysextBobUntrusted":              "imageHash-registrypackages-sysextBobUntrusted",
 		"systemctlPowerCommandsWrapper02": "imageHash-registrypackages-systemctlPowerCommandsWrapper02",
 		"tailLog":                         "imageHash-registrypackages-tailLog",
 		"tomlMerge01":                     "imageHash-registrypackages-tomlMerge01",
