@@ -34,6 +34,7 @@
 package hooks
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
@@ -190,56 +191,46 @@ func applyClusterKubernetesConfigMapFilter(obj *unstructured.Unstructured) (go_h
 	return snap, nil
 }
 
+// readSnapshot returns the first object of a snapshot, or the zero value when the snapshot is empty
+// or cannot be unmarshalled.
+//
+// An unreadable snapshot is logged and degraded, never fatal: this hook is the only publisher of
+// global.discovery.targetKubernetesVersion, and one broken object must not stop the version from
+// being published. Health of each document is reported by the hook that owns it — a malformed
+// ClusterConfiguration, for instance, is cluster_configuration.go's to report.
+func readSnapshot[T any](input *go_hook.HookInput, name string) T {
+	var zero T
+
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[T](input.Snapshots, name)
+	if err != nil {
+		input.Logger.Warn("failed to unmarshal snapshot", slog.String("snapshot", name), dlog.Err(err))
+		return zero
+	}
+
+	if len(snaps) == 0 {
+		return zero
+	}
+
+	return snaps[0]
+}
+
 func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(defaultVersionDriftMetricGroup)
 
-	mcVersion := ""
-	mcSnaps, err := sdkobjectpatch.UnmarshalToStruct[moduleConfigKubernetesVersion](input.Snapshots, controlPlaneManagerModuleConfigSnapshot)
-	if err != nil {
-		input.Logger.Warn(
-			"failed to unmarshal snapshot",
-			slog.String("snapshot", controlPlaneManagerModuleConfigSnapshot),
-			dlog.Err(err),
-		)
-	} else if len(mcSnaps) > 0 {
-		if mcSnaps[0].Malformed {
-			input.Logger.Warn(
-				"ignoring ModuleConfig control-plane-manager kubernetesVersion: the value is not a string " +
-					"(an unquoted version is parsed as a number); falling back to ClusterConfiguration or the Deckhouse default",
-			)
-		}
-		mcVersion = mcSnaps[0].Version
-	}
-	mcVersion = usableDeclaredVersion(input, mcVersion, "ModuleConfig control-plane-manager", isModuleConfigPinned)
+	mcSnap := readSnapshot[moduleConfigKubernetesVersion](input, controlPlaneManagerModuleConfigSnapshot)
+	cmSnap := readSnapshot[clusterKubernetesSnapshot](input, clusterKubernetesConfigMapSnapshot)
+	ccSnap := readSnapshot[ClusterConfigurationYaml](input, targetVersionClusterConfigSnapshot)
 
-	var cmSnap clusterKubernetesSnapshot
-	cmSnaps, err := sdkobjectpatch.UnmarshalToStruct[clusterKubernetesSnapshot](input.Snapshots, clusterKubernetesConfigMapSnapshot)
-	if err != nil {
+	if mcSnap.Malformed {
 		input.Logger.Warn(
-			"failed to unmarshal snapshot",
-			slog.String("snapshot", clusterKubernetesConfigMapSnapshot),
-			dlog.Err(err),
+			"ignoring ModuleConfig control-plane-manager kubernetesVersion: the value is not a string " +
+				"(an unquoted version is parsed as a number); falling back to ClusterConfiguration or the Deckhouse default",
 		)
-	} else if len(cmSnaps) > 0 {
-		cmSnap = cmSnaps[0]
 	}
 
-	ccRawVersion := ""
-	secretMaxUsed := ""
-	ccSnaps, err := sdkobjectpatch.UnmarshalToStruct[ClusterConfigurationYaml](input.Snapshots, targetVersionClusterConfigSnapshot)
-	if err != nil {
-		// Deliberately not fatal: a broken ClusterConfiguration must not stop the version from
-		// being published. cluster_configuration.go is the hook that reports that document's health.
-		input.Logger.Warn(
-			"failed to unmarshal snapshot",
-			slog.String("snapshot", targetVersionClusterConfigSnapshot),
-			dlog.Err(err),
-		)
-	} else if len(ccSnaps) > 0 {
-		ccRawVersion = strings.TrimSpace(ccSnaps[0].KubernetesVersion)
-		secretMaxUsed = ccSnaps[0].MaxUsed
-	}
-	ccRawVersion = usableDeclaredVersion(input, ccRawVersion, "ClusterConfiguration", isClusterConfigurationPinned)
+	mcVersion := usableDeclaredVersion(input, mcSnap.Version, "ModuleConfig control-plane-manager", isModuleConfigPinned)
+	ccRawVersion := usableDeclaredVersion(input, strings.TrimSpace(ccSnap.KubernetesVersion), "ClusterConfiguration", isClusterConfigurationPinned)
+	secretMaxUsed := ccSnap.MaxUsed
 
 	target, isDefault := resolveTargetKubernetesVersion(mcVersion, ccRawVersion, hooks.DefaultKubernetesVersion)
 
@@ -266,9 +257,13 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 		// TODO(kubernetesVersion-deprecation): T+1 remove — the Secret key is a migration
 		// fallback, for the window between a Deckhouse upgrade and the DaemonSet rollout that
 		// first puts the value into the ConfigMap.
-		maxUsed := usableMaxUsedBaseline(input,
-			maxUsedCandidate{source: "cluster ConfigMap spec.maxUsedKubernetesVersion", value: cmSnap.MaxUsed},
-			maxUsedCandidate{source: "ClusterConfiguration Secret maxUsedControlPlaneKubernetesVersion", value: secretMaxUsed},
+		//
+		// cmp.Or takes the first non-empty candidate, and each is filtered through
+		// usableMaxUsedVersion first, so an unusable value falls through to the next source instead
+		// of becoming the floor.
+		maxUsed := cmp.Or(
+			usableMaxUsedVersion(input, "cluster ConfigMap spec.maxUsedKubernetesVersion", cmSnap.MaxUsed),
+			usableMaxUsedVersion(input, "ClusterConfiguration Secret maxUsedControlPlaneKubernetesVersion", secretMaxUsed),
 		)
 		froze := false
 		if maxUsed != "" {
@@ -290,13 +285,11 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 				// wipes all three at once — while maxUsed survives in the Secret until T+1.
 				// Without the third source the guard would know the window is violated and still
 				// publish the lower Default.
-				frozen := cmSnap.DesiredVersion
-				if frozen == "" {
-					frozen = cmSnap.CurrentVersion
-				}
-				if frozen == "" {
-					frozen = input.Values.Get("global.discovery.targetKubernetesVersion").String()
-				}
+				frozen := cmp.Or(
+					cmSnap.DesiredVersion,
+					cmSnap.CurrentVersion,
+					input.Values.Get("global.discovery.targetKubernetesVersion").String(),
+				)
 				if frozen != "" {
 					publishedTarget = frozen
 					froze = true
@@ -442,47 +435,34 @@ func usableDeclaredVersion(input *go_hook.HookInput, version, source string, isP
 	return version
 }
 
-// maxUsedCandidate is one source of the maxUsed floor, named for the log line it may produce.
-type maxUsedCandidate struct {
-	source string
-	value  string
-}
-
-// usableMaxUsedBaseline returns the first candidate that is actually a version, in priority order:
-// the cluster ConfigMap (what update-observer records) then the ClusterConfiguration Secret (the
-// migration seed). Empty when no candidate is usable.
+// usableMaxUsedVersion returns the value when it is actually a version, and "" otherwise, so the
+// caller's cmp.Or falls through to the next source.
 //
-// Parsing is part of choosing rather than a later step, because the two are not equivalent. Picking
-// first and parsing afterwards let a single unusable value in the higher-priority source shadow a
-// perfectly good lower-priority one and switch the guard off entirely — the ConfigMap block is
-// hand-editable by design (update-observer rewrites edits on its next pass), so one `kubectl edit`
-// in the window before that pass was enough. Discarding the value and falling through is what
-// "unusable" should have meant all along.
+// Filtering before choosing rather than after is load-bearing: choosing first and parsing afterwards
+// let a single unusable value in the higher-priority source shadow a perfectly good lower-priority
+// one and switch the guard off entirely. The ConfigMap block is hand-editable by design
+// (update-observer rewrites edits on its next pass), so one `kubectl edit` in the window before that
+// pass was enough.
 //
 // Every discard is logged: a guard that turns itself off looks exactly like a guard that found
 // nothing wrong.
-//
-// NOTE(kubernetesVersion-deprecation): keep — the ordering survives the Secret candidate's removal.
-func usableMaxUsedBaseline(input *go_hook.HookInput, candidates ...maxUsedCandidate) string {
-	for _, candidate := range candidates {
-		if strings.TrimSpace(candidate.value) == "" {
-			continue
-		}
-
-		if _, err := semver.NewVersion(strings.TrimSpace(candidate.value)); err != nil {
-			input.Logger.Warn(
-				"ignoring an unusable maxUsedKubernetesVersion baseline, falling through to the next source",
-				slog.String("source", candidate.source),
-				slog.String("value", candidate.value),
-				dlog.Err(err),
-			)
-			continue
-		}
-
-		return candidate.value
+func usableMaxUsedVersion(input *go_hook.HookInput, source, value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
 	}
 
-	return ""
+	if _, err := semver.NewVersion(value); err != nil {
+		input.Logger.Warn(
+			"ignoring an unusable maxUsedKubernetesVersion baseline, falling through to the next source",
+			slog.String("source", source),
+			slog.String("value", value),
+			dlog.Err(err),
+		)
+		return ""
+	}
+
+	return value
 }
 
 // kubernetesVersionInMaxUsedWindow reports whether target is within the maxUsed−1 floor window
