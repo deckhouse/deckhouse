@@ -54,14 +54,6 @@ properties:
     # fake *-crd modules are required for backward compatibility with lib_helm library TODO: remove fake crd modules
     - [ "cert-manager", "vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "prometheus", "prometheus-crd", "operator-prometheus", "operator-prometheus" ]
     - [ "cert-manager", "prometheus" ]
-  EnabledModules:
-    type: array
-    items:
-      type: string
-    description: |
-      Alias of enabledModules, exposed to package charts as .Platform.EnabledModules.
-    x-examples:
-    - [ "cert-manager", "prometheus" ]
   capabilities:
     type: array
     items:

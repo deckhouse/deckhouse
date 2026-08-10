@@ -457,7 +457,6 @@ func filterEnabledFromValuesPatch(valuesPatch *addonutils.ValuesPatch) map[strin
 
 // SetEnabledModules inject enabledModules to the global values
 // enabledModules are injected as a patch, to recalculate on every global values change
-// EnabledModules is an alias of the same list, exposed to charts as .Platform.EnabledModules
 func (m *Module) SetEnabledModules(enabledModules []string) {
 	if len(enabledModules) == 0 {
 		return
@@ -471,11 +470,6 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 		{
 			Op:    "add",
 			Path:  "/enabledModules",
-			Value: data,
-		},
-		{
-			Op:    "add",
-			Path:  "/EnabledModules",
 			Value: data,
 		},
 	}}
