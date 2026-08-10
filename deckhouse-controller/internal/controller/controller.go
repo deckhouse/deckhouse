@@ -40,6 +40,8 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -49,7 +51,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
 const (
@@ -59,8 +60,10 @@ const (
 	gracefulShutdownTimeout = 10 * time.Second
 )
 
+// Controller drives modules through the package runtime alone, without addon-operator.
 type Controller struct {
 	ctrl ctrlmanager.Manager
+	// sync is held for the whole bootstrap, so a waiter cannot observe a half-restored tree
 	sync *sync.WaitGroup
 
 	manager *pkgruntime.Runtime
@@ -75,15 +78,11 @@ type Controller struct {
 	logger *log.Logger
 }
 
-func (c *Controller) Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
-	scheme, err := c.buildSchema(ctx)
+// Build assembles the manager, the package runtime and the shared containers; it starts nothing.
+func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
+	scheme, err := buildSchema()
 	if err != nil {
 		return nil, fmt.Errorf("build schema: %w", err)
-	}
-
-	runtime, err := ctrl.NewManager(rest, c.buildCotrollerOpts(ctx, scheme))
-	if err != nil {
-		return nil, fmt.Errorf("create controller runtime manager: %w", err)
 	}
 
 	// Setting the controller-runtime logger to a no-op logger by default,
@@ -92,15 +91,20 @@ func (c *Controller) Build(ctx context.Context, rest *rest.Config, ms metricssto
 	// but otherwise we get a warning from the controller-runtime.
 	ctrl.SetLogger(logr.New(ctrllog.NullLogSink{}))
 
-	// inject otel tripper
+	// inject otel tripper; the manager reads the transport when it builds its clients, so wrap first
 	rest.Wrap(func(t http.RoundTripper) http.RoundTripper {
 		return otelhttp.NewTransport(t)
 	})
 
+	runtime, err := ctrl.NewManager(rest, buildControllerOpts(ctx, scheme))
+	if err != nil {
+		return nil, fmt.Errorf("create controller runtime manager: %w", err)
+	}
+
 	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig
 	embeddedPolicy := helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-			Mode: v1alpha2.UpdateModeAuto.String(),
+			Mode: v1alpha2.UpdateModeAutoPatch.String(),
 		},
 		ReleaseChannel: app.DefaultReleaseChannel,
 	})
@@ -132,11 +136,14 @@ func (c *Controller) Build(ctx context.Context, rest *rest.Config, ms metricssto
 		settings:   settingsContainer,
 		settingsCh: settingsCh,
 
+		dc: dc,
+
 		logger: logger,
 	}, nil
 }
 
-func (c *Controller) buildSchema(ctx context.Context) (*runtime.Scheme, error) {
+// buildSchema registers every group version the manager's client and cache decode.
+func buildSchema() (*runtime.Scheme, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		corev1.AddToScheme,
 		coordv1.AddToScheme,
@@ -156,7 +163,9 @@ func (c *Controller) buildSchema(ctx context.Context) (*runtime.Scheme, error) {
 	return scheme, nil
 }
 
-func (c *Controller) buildCotrollerOpts(ctx context.Context, scheme *runtime.Scheme) ctrl.Options {
+// buildControllerOpts narrows each cached kind to the namespaces and labels a controller reads,
+// so the manager does not hold every object of that kind in the cluster.
+func buildControllerOpts(ctx context.Context, scheme *runtime.Scheme) ctrl.Options {
 	return ctrl.Options{
 		Scheme: scheme,
 		BaseContext: func() context.Context {
@@ -168,67 +177,83 @@ func (c *Controller) buildCotrollerOpts(ctx context.Context, scheme *runtime.Sch
 		},
 		GracefulShutdownTimeout: ptr.To(gracefulShutdownTimeout),
 		Cache: cache.Options{
-			ByObject: map[client.Object]cache.ByObject{
-				// for ModuleDocumentation controller
-				&coordv1.Lease{}: {
-					Namespaces: map[string]cache.Config{
-						app.NamespaceDeckhouse: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
-						},
-					},
-				},
-				// for ModuleRelease controller and DeckhouseRelease controller
-				&corev1.Secret{}: {
-					Namespaces: map[string]cache.Config{
-						app.NamespaceDeckhouse: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
-						},
-						app.NamespaceKubeSystem: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"name": "d8-cluster-configuration"}),
-						},
-					},
-				},
-				// for DeckhouseRelease controller
-				&corev1.Pod{}: {
-					Namespaces: map[string]cache.Config{
-						app.NamespaceDeckhouse: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"app": "deckhouse"}),
-						},
-					},
-				},
-				// for DeckhouseRelease controller
-				&corev1.ConfigMap{}: {
-					Namespaces: map[string]cache.Config{
-						app.NamespaceDeckhouse: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
-						},
-					},
-				},
-				// for deckhouse.io apis
-				&v1alpha1.Module{}:                     {},
-				&v1alpha1.ModuleConfig{}:               {},
-				&v1alpha1.ModuleDocumentation{}:        {},
-				&v1alpha1.ModuleRelease{}:              {},
-				&v1alpha1.ModuleSource{}:               {},
-				&v1alpha2.ModuleUpdatePolicy{}:         {},
-				&v1alpha2.ModulePullOverride{}:         {},
-				&v1alpha1.DeckhouseRelease{}:           {},
-				&v1alpha1.PackageRepository{}:          {},
-				&v1alpha1.PackageRepositoryOperation{}: {},
-				&v1alpha1.ApplicationPackageVersion{}:  {},
-				&v1alpha1.ApplicationPackage{}:         {},
-				&v1alpha1.Application{}:                {},
-				&v1alpha1.ModulePackage{}:              {},
-				&v1alpha1.ModulePackageVersion{}:       {},
-				&v1alpha2.Module{}:                     {},
-			},
+			ByObject: buildCacheByObject(),
 		},
 	}
 }
 
-// Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
+// buildCacheByObject lists the cached kinds. A kind whose CRD the cluster does not serve never
+// syncs and wedges WaitForCacheSync, so the gated ones follow the flag that installs them.
+func buildCacheByObject() map[client.Object]cache.ByObject {
+	byObject := map[client.Object]cache.ByObject{
+		// for ModuleDocumentation controller
+		&coordv1.Lease{}: {
+			Namespaces: map[string]cache.Config{
+				app.NamespaceDeckhouse: {
+					LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
+				},
+			},
+		},
+		// for ModuleRelease controller and DeckhouseRelease controller
+		&corev1.Secret{}: {
+			Namespaces: map[string]cache.Config{
+				app.NamespaceDeckhouse: {
+					LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
+				},
+				app.NamespaceKubeSystem: {
+					LabelSelector: labels.SelectorFromSet(map[string]string{"name": "d8-cluster-configuration"}),
+				},
+			},
+		},
+		// for DeckhouseRelease controller
+		&corev1.Pod{}: {
+			Namespaces: map[string]cache.Config{
+				app.NamespaceDeckhouse: {
+					LabelSelector: labels.SelectorFromSet(map[string]string{"app": "deckhouse"}),
+				},
+			},
+		},
+		// for DeckhouseRelease controller
+		&corev1.ConfigMap{}: {
+			Namespaces: map[string]cache.Config{
+				app.NamespaceDeckhouse: {
+					LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
+				},
+			},
+		},
+		// for deckhouse.io apis
+		&v1alpha1.Module{}:              {},
+		&v1alpha1.ModuleConfig{}:        {},
+		&v1alpha1.ModuleDocumentation{}: {},
+		&v1alpha1.ModuleRelease{}:       {},
+		&v1alpha1.ModuleSource{}:        {},
+		&v1alpha2.ModuleUpdatePolicy{}:  {},
+		&v1alpha2.ModulePullOverride{}:  {},
+		&v1alpha1.DeckhouseRelease{}:    {},
+	}
+
+	if app.PackageSystemEnabled() {
+		byObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
+		byObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
+		byObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
+		byObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
+		byObject[&v1alpha1.Application{}] = cache.ByObject{}
+	}
+
+	if app.ModulePackagesEnabled() {
+		byObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
+		byObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
+		byObject[&v1alpha2.Module{}] = cache.ByObject{}
+	}
+
+	return byObject
+}
+
+// Start runs the manager, rebuilds the module tree from the cluster and hands it to the runtime.
+// The scheduler is resumed only once that tree is whole, so no module is scheduled half-restored.
 func (c *Controller) Start(ctx context.Context) error {
 	c.sync.Add(1)
+	defer c.sync.Done()
 
 	// starts all child controllers
 	go func() {
@@ -250,8 +275,8 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("restore modules by releases: %w", err)
 	}
 
-	if err := c.deleteModulesV1(ctx); err != nil {
-		return fmt.Errorf("delete modules v1: %w", err)
+	if err := c.deleteUnplacedModules(ctx); err != nil {
+		return fmt.Errorf("delete unplaced modules: %w", err)
 	}
 
 	if err := c.syncModulesSettings(ctx); err != nil {
@@ -262,7 +287,6 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("load modules v2: %w", err)
 	}
 
-	c.sync.Done()
 	c.manager.ResumeScheduler()
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig

@@ -249,20 +249,32 @@ func (c *Controller) ensureModuleV2(ctx context.Context, name, repository, versi
 	return nil
 }
 
-// deleteModulesV1 drops the v1alpha1 modules the restore has already replayed into
-// v1alpha2, which is what leaves the tree on a single version from here on.
-func (c *Controller) deleteModulesV1(ctx context.Context) error {
+// deleteUnplacedModules drops the modules the restore left behind. Module is one resource with
+// two versions and a None conversion strategy, so the previous generation cannot be selected by
+// listing v1alpha1 — that returns the same objects the restore just placed. What separates them
+// is the package spec: a module carries a version only if the package system installed it, and
+// nothing manages one that does not now that addon-operator is gone.
+// Runs after both restore steps, so their modules already carry a version by this point.
+func (c *Controller) deleteUnplacedModules(ctx context.Context) error {
 	cli := c.ctrl.GetClient()
 
-	modules := new(v1alpha1.ModuleList)
+	modules := new(v1alpha2.ModuleList)
 	if err := cli.List(ctx, modules); err != nil {
-		return fmt.Errorf("list v1alpha1 modules: %w", err)
+		return fmt.Errorf("list modules: %w", err)
 	}
 
 	for i := range modules.Items {
+		module := &modules.Items[i]
+
+		if module.Spec.PackageVersion != "" {
+			continue
+		}
+
+		c.logger.Info("module is not backed by a package, delete it", slog.String("name", module.Name))
+
 		// a module already gone is the outcome asked for
-		if err := cli.Delete(ctx, &modules.Items[i]); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("delete v1alpha1 module '%s': %w", modules.Items[i].Name, err)
+		if err := cli.Delete(ctx, module); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete module '%s': %w", module.Name, err)
 		}
 	}
 
