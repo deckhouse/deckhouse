@@ -53,7 +53,7 @@ The module consists of the following components:
 
    * **Cluster event handling**: The Agent works according to the event model: it constantly monitors changes in the Kubernetes API (creating pods, updating services, changing Endpoints, updating custom resources) and updates the configuration of eBPF programs on the fly.
 
-   * **Oservability**: The agent runs a local Hubble server (embedded in the agent process), which collects metrics and data on network flows. This allows you to monitor the network status, identify problems, and analyze traffic between pods. The Hubble server starts when the [`cilium-hubble`](/modules/cilium-hubble) module is enabled. The hubble-relay component of the [`cilium-hubble'] module(/modules/cilium-hubble) connects to Cilium agents to receive events via a gRPC streaming.
+   * **Oservability**: The agent runs a local Hubble server (embedded in the agent process), which collects metrics and data on network flows. This allows you to monitor the network status, identify problems, and analyze traffic between pods. The Hubble server starts when the [`cilium-hubble`](/modules/cilium-hubble/) module is enabled. The hubble-relay component of the [`cilium-hubble`](/modules/cilium-hubble/) module connects to Cilium agents to receive events via a gRPC streaming.
 
    How it works: when an event occurs in the cluster (for example, a new pod starts), the agent receives a notification about it and, based on the current cluster status and policies, configures eBPF programs so that traffic for this pod passes correctly.
 
