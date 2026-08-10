@@ -236,7 +236,7 @@ func (s *OperationService) performIncrementalScan(ctx context.Context, packageNa
 		return nil, fmt.Errorf("list tags from version: %w", err)
 	}
 
-	return filterLatestTags(tags), nil
+	return tags, nil
 }
 
 func extractOnlySemverTags(rawTags []string) []*semver.Version {
@@ -290,46 +290,6 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 	}
 
 	return newTags, nil
-}
-
-// filterLatestTags filters out the latest version for every major.minor version
-func filterLatestTags(tags []*semver.Version) []*semver.Version {
-	// map of major.minor.semver
-	latestTagsMap := map[uint64]map[uint64]*semver.Version{}
-	newLength := 0
-	for _, tag := range tags {
-		if tag == nil {
-			continue
-		}
-
-		major := tag.Major()
-		minor := tag.Minor()
-
-		if latestTagsMap[major] == nil {
-			latestTagsMap[major] = map[uint64]*semver.Version{}
-		}
-
-		present, ok := latestTagsMap[major][minor]
-		if !ok || present == nil {
-			latestTagsMap[major][minor] = tag
-			continue
-		}
-		if present.GreaterThan(tag) {
-			continue
-		}
-
-		latestTagsMap[major][minor] = tag
-		newLength++
-	}
-
-	result := make([]*semver.Version, 0, newLength)
-	for _, major := range latestTagsMap {
-		for _, minor := range major {
-			result = append(result, minor)
-		}
-	}
-
-	return result
 }
 
 func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageName string) string {

@@ -474,44 +474,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("incremental scan keeps only the latest patch of every minor", func() {
-		// Registry holds several patch releases for every minor line.
-		// The incremental scan must process only the newest patch of each
-		// major.minor line: v1.0.2, v1.1.1 and v2.0.0 - the intermediate
-		// patches (v1.0.0, v1.0.1, v1.1.0) must not produce resources.
-		reg := fakeRegistry.NewRegistry(registryHost)
-		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
-		modImg := moduleVersionImage().MustBuild()
-		for _, v := range []string{"v1.0.0", "v1.0.1", "v1.0.2", "v1.1.0", "v1.1.1", "v2.0.0"} {
-			reg.MustAddImage("test-package/version", v, modImg)
-		}
-
-		psm := createFakePSM(newInternalClient(reg))
-
-		suite.setupController("incremental-scan-latest-minors.yaml", withPackageServiceManager(psm))
-		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
-
-		err := repeat(func() error {
-			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
-			})
-
-			return err
-		})
-
-		require.NoError(suite.T(), err)
-
-		var versions v1alpha1.ModulePackageVersionList
-		require.NoError(suite.T(), suite.Client().List(ctx, &versions))
-
-		got := make([]string, 0, len(versions.Items))
-		for _, item := range versions.Items {
-			got = append(got, item.Spec.PackageVersion)
-		}
-
-		assert.ElementsMatch(suite.T(), []string{"v1.0.2", "v1.1.1", "v2.0.0"}, got)
-	})
-
 	suite.Run("incremental scan with no new versions keeps package in repository status", func() {
 		// Regression: pre-existing ApplicationPackageVersion v1.0.0 already processed
 		// (Status.PackageMetadata set). Registry still has only v1.0.0, so the incremental
