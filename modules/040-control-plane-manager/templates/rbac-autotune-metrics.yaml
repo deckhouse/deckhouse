@@ -2,24 +2,28 @@
 ---
 # Grant the deckhouse SA (hooks run under it) access to custom metrics exposed
 # by prometheus-metrics-adapter for control-plane resources autotune.
+# Scoped to kube-system only: hooks fetch metrics by concrete pod name via
+# GET /apis/custom.metrics.k8s.io/v1beta1/namespaces/kube-system/pods/<pod>/<metric>.
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: d8:control-plane-manager:autotune-metrics
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 rules:
 - apiGroups:
   - custom.metrics.k8s.io
   resources:
-  - "*"
+  - pods/d8-cpm-autotune-cpu
+  - pods/d8-cpm-autotune-memory
   verbs:
   - get
-  - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: d8:control-plane-manager:autotune-metrics
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 subjects:
 - kind: ServiceAccount
@@ -27,6 +31,6 @@ subjects:
   namespace: d8-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: d8:control-plane-manager:autotune-metrics
 {{- end }}
