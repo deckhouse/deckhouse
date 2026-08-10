@@ -21,7 +21,7 @@ spec:
       avg_over_time(
         rate(
           container_cpu_usage_seconds_total{<<.LabelMatchers>>,container!="POD",container!=""}[5m]
-        )[7d:5m]
+        )[7m:1m]
       )
     ) by (<<.GroupBy>>)
 ---
@@ -36,7 +36,7 @@ spec:
     round(
       sum(
         avg_over_time(
-          container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7d:5m]
+          container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7m:1m]
         )
       ) by (<<.GroupBy>>)
     )
