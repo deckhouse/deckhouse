@@ -129,4 +129,75 @@ spec:
 			Expect(f.MetricsCollector.CollectedMetrics()).To(ConsistOf(expireOp, setOp("24h")))
 		})
 	})
+
+	Context("No ModuleConfig", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.RunHook()
+		})
+
+		It("Expires metric, sets nothing", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.MetricsCollector.CollectedMetrics()).To(ConsistOf(expireOp))
+		})
+	})
+
+	Context("ModuleConfig with unparsable idTokenTTL", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  enabled: true
+  version: 2
+  settings:
+    idTokenTTL: not-a-duration
+`))
+			f.RunHook()
+		})
+
+		It("Expires metric and skips Set without failing the hook", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.MetricsCollector.CollectedMetrics()).To(ConsistOf(expireOp))
+		})
+	})
+
+	Context("Long TTL is lowered on the next reconcile", func() {
+		const longTTL = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  enabled: true
+  version: 2
+  settings:
+    idTokenTTL: 24h
+`
+		const fixedTTL = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  enabled: true
+  version: 2
+  settings:
+    idTokenTTL: 1h
+`
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(longTTL))
+			f.RunHook()
+			f.BindingContexts.Set(f.KubeStateSet(fixedTTL))
+			f.RunHook()
+		})
+
+		It("Last run expires the metric and emits nothing else", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m[len(m)-1]).To(BeEquivalentTo(expireOp))
+		})
+	})
 })
