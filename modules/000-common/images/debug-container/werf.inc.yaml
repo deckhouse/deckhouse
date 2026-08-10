@@ -46,13 +46,6 @@ import:
   add: /out
   to: /
   before: install
-- image: control-plane-manager/etcd
-  add: /usr/bin
-  to: /usr/bin
-  includePaths:
-  - etcdctl
-  - etcdutl
-  before: install
 - image: istio/istioctl-v1x21x6-build-artifact
   add: /src/istio/out/istioctl
   to: /usr/bin/istioctl-1.21
