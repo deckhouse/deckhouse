@@ -1105,6 +1105,38 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As a cluster operator, I want a master joining an existing
+	// cluster to keep the payload it booted with, so that scaling the control
+	// plane does not silently move its etcd off the disk the installer chose.
+	It("does not race a joining master that cannot label itself yet", func(ctx context.Context) {
+		ngName := testenv.UniqueName("master-imm")
+		createImmutableNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.NodeType = deckhousev1.NodeTypeCloudPermanent
+			ng.Spec.CloudInstances = nil
+		})
+		nodeName := testenv.UniqueName("master")
+
+		// A joining master registers WITHOUT the control-plane role label:
+		// NodeRestriction forbids kubelet to self-apply it, and the
+		// node-template controller adds it only later. The group label is in
+		// the payload's kubelet labels, so it is present from the start — and
+		// it is what has to hold the controller back here.
+		node := &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   nodeName,
+				Labels: map[string]string{nodecommon.NodeGroupLabel: ngName},
+			},
+		}
+		Expect(k8sClient.Create(ctx, node)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, node) })
+
+		By("waiting out the window in which the role label does not exist yet")
+		Consistently(func(g Gomega) {
+			nc := &internalv1alpha1.NodeConfig{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, nc)).NotTo(Succeed())
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As a cluster operator, I want the first master to keep working
 	// after Deckhouse is installed, so that installing the very thing that
 	// manages the cluster does not take its control plane down.

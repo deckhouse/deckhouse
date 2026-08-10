@@ -435,13 +435,21 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	existing := &internalv1alpha1.NodeConfig{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, existing)
 	if apierrors.IsNotFound(err) {
-		// A control-plane node was provisioned from an installer payload, not
+		// A CloudPermanent node was provisioned from an installer payload, not
 		// from a rendered NodeConfig, and it publishes that payload itself. The
 		// object created here would carry none of the bootstrap-only fields
 		// (see keepBootstrapOnlyFields) and would win over the file the node
 		// holds them in, so it waits for the node to register instead.
-		if isControlPlaneNode(node) {
-			logger.V(1).Info("waiting for the control-plane node to publish its own NodeConfig", "node", desired.Name)
+		//
+		// The group's type, not the control-plane role label: a joining master
+		// cannot label itself with the role (NodeRestriction), so between its
+		// registration and the node-template controller applying the label the
+		// role test reads false — and this create would win the race against
+		// the node's own publish, taking the etcd mounts with it. The group
+		// label the test relies on instead is in the payload's kubelet labels,
+		// so it is there from the node's first appearance.
+		if isControlPlaneNode(node) || ng.Spec.NodeType == v1.NodeTypeCloudPermanent {
+			logger.V(1).Info("waiting for the payload-provisioned node to publish its own NodeConfig", "node", desired.Name)
 			return nil, nil
 		}
 		if err := r.Client.Create(ctx, desired); err != nil {
@@ -559,6 +567,19 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, "SettingClamped",
 			fmt.Sprintf("kubelet.resourceReservation.mode %s cannot be honoured on an immutable node, which reserves by capacity or not at all; the nodes of this group are configured with %s",
 				resourceReservationModeStatic, resourceReservationModeAuto))
+	}
+	if ng.Spec.Disruptions != nil {
+		var windows []v1.DisruptionWindow
+		if ng.Spec.Disruptions.Automatic != nil {
+			windows = ng.Spec.Disruptions.Automatic.Windows
+		} else if ng.Spec.Disruptions.RollingUpdate != nil {
+			windows = ng.Spec.Disruptions.RollingUpdate.Windows
+		}
+		if len(windows) > 1 {
+			r.Recorder.Event(ng, corev1.EventTypeWarning, "SettingClamped",
+				fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
+					len(windows)))
+		}
 	}
 }
 
