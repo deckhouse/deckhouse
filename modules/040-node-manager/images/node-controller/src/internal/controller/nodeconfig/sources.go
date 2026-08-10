@@ -487,11 +487,17 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 
 	// The image names carry the version with the separators stripped:
 	// containerdSysext224, kubernetesCniSysext162, kubeletSysext1356.
-	if d := pickDigest(packages, "containerdSysext"); d != "" {
-		digests[containerdExtension] = d
-	}
-	if d := pickDigest(packages, "kubernetesCniSysext"); d != "" {
-		digests[cniExtension] = d
+	for prefix, name := range map[string]string{
+		"containerdSysext":    containerdExtension,
+		"kubernetesCniSysext": cniExtension,
+	} {
+		d, err := soleDigest(packages, prefix)
+		if err != nil {
+			return nil, err
+		}
+		if d != "" {
+			digests[name] = d
+		}
 	}
 	if d := pickKubeletDigest(packages, kubernetesVersion); d != "" {
 		digests[kubeletExtension] = d
@@ -505,12 +511,44 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 	return digests, nil
 }
 
-// pickDigest returns the digest of the newest image with the given prefix. The
-// version suffix (the digits after the prefix, e.g. "1356" for kubeletSysext1356)
-// is compared numerically, not lexicographically: once a component reaches two
-// digits a string compare picks the wrong image ("kubeletSysext1356" sorts after
-// "kubeletSysext13510", i.e. patch 6 over patch 10).
-func pickDigest(packages map[string]string, prefix string) string {
+// soleDigest returns the digest of the one image with the given prefix. It
+// picks no newest because none can be told: the camelcase name strips the
+// separators, so "kubernetesCniSysext1610" is 1.6.10, 1.61.0 and 16.1.0 at
+// once. The release ships exactly one of each, so several is a build defect —
+// reported, not resolved by guessing. Kept in step with soleDigest in
+// dhctl/pkg/immutable/nodeconfig.go, which reads the same digests file.
+func soleDigest(packages map[string]string, prefix string) (string, error) {
+	found := make([]string, 0, 1)
+	for name := range packages {
+		suffix, ok := strings.CutPrefix(name, prefix)
+		if !ok {
+			continue
+		}
+		// Everything after the prefix is the version, so a non-numeric tail is
+		// another image whose name merely starts the same way.
+		if _, err := strconv.Atoi(suffix); err != nil {
+			continue
+		}
+		found = append(found, name)
+	}
+
+	switch len(found) {
+	case 0:
+		return "", nil
+	case 1:
+		return packages[found[0]], nil
+	default:
+		sort.Strings(found)
+		return "", fmt.Errorf("the release carries %d %q system extensions (%s): their names do not say which one is newer",
+			len(found), prefix, strings.Join(found, ", "))
+	}
+}
+
+// newestPatchDigest returns the newest image with the given prefix, which pins
+// everything but the patch — so the suffix is one number and compares exactly.
+// A string compare would put "kubeletSysext1356" after "kubeletSysext13510",
+// i.e. patch 6 over patch 10.
+func newestPatchDigest(packages map[string]string, prefix string) string {
 	best, bestVer := "", -1
 	for name, digest := range packages {
 		suffix, ok := strings.CutPrefix(name, prefix)
@@ -528,14 +566,15 @@ func pickDigest(packages map[string]string, prefix string) string {
 	return best
 }
 
-// pickKubeletDigest finds the kubelet extension for a Kubernetes minor version:
-// kubeletSysext1356 serves 1.35. Falls back to the newest build of that minor.
+// pickKubeletDigest returns the newest patch of the kubelet extension serving a
+// Kubernetes minor version: for 1.35 the prefix pins kubeletSysext135, and the
+// remaining suffix is the patch alone.
 func pickKubeletDigest(packages map[string]string, kubernetesVersion string) string {
 	minor := strings.ReplaceAll(kubernetesVersion, ".", "")
 	if minor == "" {
 		return ""
 	}
-	return pickDigest(packages, "kubeletSysext"+minor)
+	return newestPatchDigest(packages, "kubeletSysext"+minor)
 }
 
 // readPackagesProxyToken returns the token the node presents to the registry
