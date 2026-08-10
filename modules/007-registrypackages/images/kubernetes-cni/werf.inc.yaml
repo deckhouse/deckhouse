@@ -98,6 +98,7 @@ shell:
     - make build_linux
     - mv /src/scripts/* /
     - cp -f /src/cni-plugin/dist/flannel-amd64 /flannel
+{{- if ne $.Env "CSE" }}
 ---
 
 # kubernetes-cni sysext
@@ -177,3 +178,4 @@ shell:
   - tr -d ' \n' < roothash.txt > /out/kubernetes-cni.roothash
   - veritysetup verify /out/kubernetes-cni.raw /out/kubernetes-cni.verity "$(cat /out/kubernetes-cni.roothash)"
 {{- include "olcedar sysext sign" "kubernetes-cni" }}
+{{- end }}
