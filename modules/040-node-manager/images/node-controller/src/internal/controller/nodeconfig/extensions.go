@@ -103,7 +103,7 @@ func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest) (internalv1al
 		Repository:     sysext.Repository,
 		AdditionalPath: sysext.Path,
 		Digest:         sysext.Digest,
-		RequestedBy:    ner.Name,
+		RequestedBy:    nerRequestedByPrefix + ner.Name,
 	}, ""
 }
 
