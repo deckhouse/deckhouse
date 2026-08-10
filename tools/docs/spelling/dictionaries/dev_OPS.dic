@@ -1,4 +1,4 @@
-2812
+2813
 1GB
 2GB
 5XX
@@ -96,6 +96,7 @@ autoK
 autoK8sVersion
 autoload
 Autoloading
+AutoPatch
 AutoplaceTarget
 autoscaler
 autoscalers
@@ -470,6 +471,7 @@ dst
 DVCR
 dvp
 DVP
+DVPClusterConfiguration
 Dynamix
 DynamiX
 dynDNS
@@ -2019,6 +2021,10 @@ ZvirtInstanceClass
 засчет
 захеширован
 захешированном
+зеркалирование
+зеркалировании
+зеркалирования
+зеркалировать
 иcпользовать
 ИБ
 иммутабельный
@@ -2449,6 +2455,7 @@ ZvirtInstanceClass
 Пререквизиты
 прилинкованным
 применились
+применилось
 применится
 применятся
 примонтировав
