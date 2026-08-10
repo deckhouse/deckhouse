@@ -60,11 +60,12 @@ echo "PDF_BUILDER_IMAGE: ${PDF_BUILDER_IMAGE}"
 CONTAINER_NAME="d8-doc-${WERF_ENV,,}"
 docker stop "${CONTAINER_NAME}" &>/dev/null || true
 docker rm "${CONTAINER_NAME}" &>/dev/null || true
-docker create --name "${CONTAINER_NAME}" "${STATIC_IMAGE}"
+docker create --user ${UID} --name "${CONTAINER_NAME}" "${STATIC_IMAGE}"
 echo "Container was created."
 
 mkdir -p "${WORK_DIR}/content/en" "${WORK_DIR}/content/ru" \
-         "${WORK_DIR}/embedded-modules/en" "${WORK_DIR}/embedded-modules/ru"
+         "${WORK_DIR}/embedded-modules/en" "${WORK_DIR}/embedded-modules/ru" \
+         "${WORK_DIR}/chunks_ru" "${WORK_DIR}/chunks_en" "${WORK_DIR}/content/assets/"
 docker cp "${CONTAINER_NAME}":/app/_site/en/. "${WORK_DIR}/content/en/"
 docker cp "${CONTAINER_NAME}":/app/_site/ru/. "${WORK_DIR}/content/ru/"
 docker cp "${CONTAINER_NAME}":/app/_site/images/. "${WORK_DIR}/content/images/"
@@ -76,7 +77,7 @@ docker rm "${CONTAINER_NAME}" &>/dev/null
 MODULES_CONTAINER="d8-modules-${WERF_ENV,,}"
 docker stop "${MODULES_CONTAINER}" &>/dev/null || true
 docker rm "${MODULES_CONTAINER}" &>/dev/null || true
-docker create --name "${MODULES_CONTAINER}" "${MODULES_IMAGE}"
+docker create --user ${UID} --name "${MODULES_CONTAINER}" "${MODULES_IMAGE}"
 docker cp "${MODULES_CONTAINER}":/app/_site/en/modules/. "${WORK_DIR}/embedded-modules/en/modules/"
 docker cp "${MODULES_CONTAINER}":/app/_site/ru/modules/. "${WORK_DIR}/embedded-modules/ru/modules/"
 docker rm "${MODULES_CONTAINER}" &>/dev/null
@@ -104,6 +105,7 @@ mkdir -p "${PDF_OUT}"
 SIDEBAR_YAML="${REPO_ROOT}/docs/documentation/_data/sidebars/main.yml"
 
 docker run --rm \
+  --user ${UID} \
   -w /app \
   -e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
   -e DOC_VERSION="${DOC_VERSION}" \
@@ -111,12 +113,15 @@ docker run --rm \
   -e EXCLUDE_SECTIONS="Using" \
   -v "${WORK_DIR}/content:/app/content:ro" \
   -v "${WORK_DIR}/embedded-modules:/app/embedded-modules:ro" \
+  -v "${WORK_DIR}/chunks_ru:/app/chunks_ru" \
+  -v "${WORK_DIR}/chunks_en:/app/chunks_en" \
   -v "${SIDEBAR_YAML}:/app/main.yml:ro" \
   -v "${PDF_OUT}:/out" \
   "${PDF_BUILDER_IMAGE}" \
   python3 get_pdf_page.py
 
 docker run --rm \
+  --user ${UID} \
   -w /app \
   -e PDF_OUTPUT_PATH=/out/deckhouse-user-guide.pdf \
   -e DOC_VERSION="${DOC_VERSION}" \
@@ -126,6 +131,8 @@ docker run --rm \
   -e GUIDE_TITLE_RU="Руководство пользователя" \
   -v "${WORK_DIR}/content:/app/content:ro" \
   -v "${WORK_DIR}/embedded-modules:/app/embedded-modules:ro" \
+  -v "${WORK_DIR}/chunks_ru:/app/chunks_ru" \
+  -v "${WORK_DIR}/chunks_en:/app/chunks_en" \
   -v "${SIDEBAR_YAML}:/app/main.yml:ro" \
   -v "${PDF_OUT}:/out" \
   "${PDF_BUILDER_IMAGE}" \

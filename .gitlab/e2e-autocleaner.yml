@@ -1,0 +1,40 @@
+# E2E Commander Autoclean jobs.
+include:
+  - '.gitlab/notify-failure.yml'
+
+.scripts:
+  e2e_cmd: |
+    python3 /usr/bin/main.py --${E2E_MODE}
+
+.e2e-variables:
+  variables:
+    E2E_MODE: auto # [auto] Delete clusters older than 48 hours, [pr] Delete clusters created by the specified pull request
+
+.e2e-base-common:
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/e2e-commander-clean:${CI_IMAGES_TAG}
+  variables:
+    GIT_STRATEGY: none
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    E2E_COMMANDER_HOST: # required
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables/E2E_COMMANDER_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    E2E_COMMANDER_TOKEN: # required
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables/E2E_COMMANDER_TOKEN@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - !reference [.scripts, e2e_cmd]
+
+e2e-autocleaner:
+  stage: test
+  extends:
+    - .rules:on_schedule_e2e_autocleaner
+    - .e2e-base-common
+    - .e2e-variables
+    - .notify
