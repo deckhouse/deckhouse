@@ -27,7 +27,7 @@ The Level 2 C4 architecture of the [`cilium-hubble`](/modules/cilium-hubble/) mo
 The module consists of the following components:
 
 1. **Hubble-relay**: Component that aggregates events from all cluster nodes (as well as from multiple cluster in the ClusterMesh scenario) into a single view. Hubble-relay establishes a permanent connection to each Cilium Agent on the nodes and, through the gRPC stream, receives events, deduplicates them, and provides a single gRPC endpoint for the Hubble CLI and Hubble UI (web interface). Important: hubble-relay does not store history, it broadcasts an event stream in real time.
-   
+
    It consists of a single container:
 
    * **hubble-relay**: Main container. It is a part of [Cilium](https://github.com/cilium/cilium) project.
@@ -39,7 +39,7 @@ The module consists of the following components:
    * **frontend**: Container that is an [NGINX](https://github.com/nginx/nginx) proxy server, which distributes static files of the hubble-ui web interface and forwards requests to the `/api` endpoint to the **backend** container of the component.
    * **backend**: Container implementing the hubble-ui API that sends requests to the hubble-relay component to receive in real time data coming from Cilium agents.
    * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC, providing secure access to Hubble UI. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
-   
+
    Frontend and backend containers are built based on [Hubble-UI](https://github.com/cilium/hubble-ui ), which is an Open Source project.
 
 ## Module interactions

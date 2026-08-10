@@ -34,7 +34,7 @@ description: Архитектура модуля cilium-hubble в Deckhouse Kube
 Модуль состоит из следующих компонентов:
 
 1. **Hubble-relay** — компонент, который агрегируeт события со всех узлов кластера (а в сценарии ClusterMesh — и из нескольких кластеров) в единое представление. Hubble-relay поддерживает постоянное соединение с каждым экземпляром Cilium Agent на узлах и через gRPC-поток принимает события, дедуплицирует их и предоставляет единый gRPC-эндпоинт для Hubble CLI и Hubble UI (веб-интерфейс). Важно: hubble-relay не хранит историю — он транслирует поток событий в реальном времени.
-   
+
    Состоит из одного контейнера:
 
    * **hubble-relay** — основной контейнер. Является частью проекта [Cilium](https://github.com/cilium/cilium).
@@ -47,7 +47,7 @@ description: Архитектура модуля cilium-hubble в Deckhouse Kube
    * **backend** — контейнер, реализующий API hubble-ui, который отправляет запросы в компонент hubble-relay для получения данных, поступающих с агентов Cilium в реальном времени.
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к веб-интерфейсу Hubble UI. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-   Контейнеры frontend и backend собраны на основе [Hubble-UI](https://github.com/cilium/hubble-ui), являющегося Open Source-проектом. 
+   Контейнеры frontend и backend собраны на основе [Hubble-UI](https://github.com/cilium/hubble-ui), являющегося Open Source-проектом.
 
 ## Взаимодействия модуля
 
