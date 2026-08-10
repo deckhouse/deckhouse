@@ -306,13 +306,13 @@ rules:
     - watch
   ## deckhouse bootstrap provider (immutable NodeGroups): the MachineSet clones a
   ## NodeBootstrapConfig from the template per Machine, and the Machine controller
-  ## reads the config's status for the bootstrap data secret.
+  ## reads the config's status for the bootstrap data secret. The templates are
+  ## owned and written by node-controller; CAPI only reads them to clone.
   - apiGroups:
     - bootstrap.deckhouse.io
     resources:
     - nodebootstrapconfigs
     - nodebootstrapconfigs/status
-    - nodebootstrapconfigtemplates
     verbs:
     - create
     - delete
@@ -320,6 +320,14 @@ rules:
     - list
     - patch
     - update
+    - watch
+  - apiGroups:
+    - bootstrap.deckhouse.io
+    resources:
+    - nodebootstrapconfigtemplates
+    verbs:
+    - get
+    - list
     - watch
   ## cluster access
   - apiGroups:

@@ -106,7 +106,9 @@ func wrapCloudConfig(spec internalv1alpha1.NodeSpec, machineName, ngName string)
 // readBootstrapToken returns the newest non-expired bootstrap token of the
 // NodeGroup, the same per-group rotating token bashible nodes are given. The
 // token secrets live in kube-system, one or more per group, labelled with the
-// group name.
+// group name. Kept in step with groupBootstrapToken in dhctl's
+// pkg/operations/bootstrap/steps_immutable_join.go, which picks the token for
+// a joining master the same way.
 func readBootstrapToken(ctx context.Context, reader client.Reader, ngName string) (string, error) {
 	req, err := labels.NewRequirement(bootstrapTokenNGLabel, selection.Equals, []string{ngName})
 	if err != nil {

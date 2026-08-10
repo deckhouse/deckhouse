@@ -15,6 +15,7 @@
 package immutable
 
 import (
+	"errors"
 	"context"
 	"fmt"
 	"net"
@@ -229,7 +230,7 @@ func (in manifestsInput) data() map[string]any {
 
 func (in manifestsInput) validate() error {
 	if in.Registry == nil {
-		return fmt.Errorf("registry is nil")
+		return errors.New("registry is nil")
 	}
 
 	required := []struct {

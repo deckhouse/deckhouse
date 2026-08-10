@@ -206,7 +206,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		// The zeroth master is its own apiserver and its address is unknown
 		// while the payload is being built, so the endpoint stays a
 		// placeholder; the node expands it from its own address on load.
-		APIServerEndpoints: []string{fmt.Sprintf("https://$MY_IP:%d", APIServerPort)},
+		APIServerEndpoints: []string{fmt.Sprintf("https://%s:%d", nodeAddressPlaceholder, APIServerPort)},
 		UpdatePolicy:       updatePolicy{Mode: "Automatic"},
 		Registry:           registry,
 	}
@@ -362,7 +362,9 @@ func sysextDigests(images map[string]any, kubernetesVersion string) (map[string]
 
 // soleDigest returns the digest of the one image with the given prefix. It picks
 // no newest because none can be told: camelcase strips the separators, so
-// "kubernetesCniSysext1610" is 1.6.10, 1.61.0 and 16.1.0 at once.
+// "kubernetesCniSysext1610" is 1.6.10, 1.61.0 and 16.1.0 at once. The day-2
+// renderer applies the same rule to the same digests file — kept in step with
+// soleDigest in the node-controller's internal/controller/nodeconfig/sources.go.
 func soleDigest(packages map[string]string, prefix string) (string, error) {
 	found := make([]string, 0, 1)
 	for name := range packages {
@@ -500,9 +502,9 @@ const etcdDiskSize = "10Gi"
 // a disk handed out as 50Gi arriving as 49.9 would leave the node with nothing to
 // install onto.
 //
-// Order cannot be used instead: the machine attaches the system disk first, but
-// the kernel named it /dev/sdc while the 10Gi one became /dev/sdb (measured on
-// DVP, 10.08.2026). Size is what actually separates them.
+// Order cannot be used instead: device names do not follow attach order — a
+// system disk attached first can enumerate after the etcd disk. Size is what
+// actually separates them.
 const systemDiskSize = ">=20Gi"
 
 // etcdMounts gives a control-plane node the disk etcd lives on.

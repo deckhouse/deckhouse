@@ -51,7 +51,7 @@ func testMetaConfig(t *testing.T) *config.MetaConfig {
 
 	metaConfig := &config.MetaConfig{
 		ClusterType:       config.CloudClusterType,
-		ClusterPrefix:     "zykov",
+		ClusterPrefix:     "example",
 		ClusterDomain:     "cluster.local",
 		ClusterDNSAddress: "10.223.0.10",
 		ClusterConfig: map[string]json.RawMessage{
@@ -132,7 +132,7 @@ func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
 			}
 
 			nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
-				NodeName:   "zykov-master-0",
+				NodeName:   "example-master-0",
 				MetaConfig: metaConfig,
 			})
 			require.NoError(t, err)
@@ -239,7 +239,7 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 			metaConfig.Registry.Settings.RemoteData.ImagesRepo = tt.imagesRepo
 
 			nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
-				NodeName:   "zykov-master-0",
+				NodeName:   "example-master-0",
 				MetaConfig: metaConfig,
 			})
 			require.NoError(t, err)
