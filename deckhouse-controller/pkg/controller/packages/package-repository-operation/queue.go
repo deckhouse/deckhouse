@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation/operation"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -44,7 +43,7 @@ import (
 // Always returns Requeue=true so the next Discovered entry is picked up on the
 // following reconcile, draining the queue one-at-a-time with etcd checkpoints
 // between packages.
-func (r *reconciler) processNextPackage(ctx context.Context, op *v1alpha1.PackageRepositoryOperation, svc *operation.Service) (ctrl.Result, error) {
+func (r *reconciler) processNextPackage(ctx context.Context, op *v1alpha1.PackageRepositoryOperation, svc *OperationService) (ctrl.Result, error) {
 	currentPackage := op.Status.Packages.Discovered[0]
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name))
@@ -65,13 +64,13 @@ func (r *reconciler) processNextPackage(ctx context.Context, op *v1alpha1.Packag
 	// Ensure the appropriate package resource based on detected type.
 	// Skip resource creation for unrecognized packages (e.g. legacy modules without metadata).
 	switch processResult.PackageType {
-	case operation.PackageTypeModule:
+	case packageTypeModule:
 		if ensureErr := svc.EnsureModulePackage(ctx, currentPackage.Name); ensureErr != nil {
 			r.logger.Error("failed to ensure module package resource",
 				slog.String("package", currentPackage.Name),
 				log.Err(ensureErr))
 		}
-	case operation.PackageTypeApplication:
+	case packageTypeApplication:
 		if ensureErr := svc.EnsureApplicationPackage(ctx, currentPackage.Name); ensureErr != nil {
 			r.logger.Error("failed to ensure application package resource",
 				slog.String("package", currentPackage.Name),
@@ -126,7 +125,7 @@ func (r *reconciler) dequeuePackageWithError(ctx context.Context, op *v1alpha1.P
 // knew the package but couldn't ingest some of its versions.
 //
 // Precondition: Packages non-nil and Discovered non-empty (guaranteed by caller).
-func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.PackageRepositoryOperation, packageName string, result *operation.PackageProcessResult) (ctrl.Result, error) {
+func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.PackageRepositoryOperation, packageName string, result *PackageProcessResult) (ctrl.Result, error) {
 	original := op.DeepCopy()
 
 	if len(op.Status.Packages.Discovered) > 0 {
