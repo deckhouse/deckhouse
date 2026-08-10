@@ -123,6 +123,9 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 		return nil, fmt.Errorf("create runtime: %w", err)
 	}
 
+	// run the manager in the background
+	manager.Run()
+
 	settingsCh := make(chan addonutils.Values)
 
 	return &Controller{
