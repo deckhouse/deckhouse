@@ -103,6 +103,8 @@ spec:
                     Квота ресурсов проекта, применяемая как `ResourceQuota` с именем `d8-project-quota` в пространстве имён проекта.
 
                     Ключи и значения соответствуют формату `ResourceQuota.spec.hard`, например `requests.cpu: "100"`.
+                    Для memory и storage нужна явная единица измерения (например `requests.memory: 2Gi`);
+                    голые числа интерпретируются как байты и отклоняются admission webhook.
                 parameters:
                   description: |
                     Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.

@@ -229,6 +229,8 @@ spec:
                     Resource quota of the project, applied as a `ResourceQuota` named `d8-project-quota` in the project namespace.
 
                     Keys and values follow the `ResourceQuota.spec.hard` format, for example `requests.cpu: "100"`.
+                    Memory and storage quantities must include an explicit unit suffix (for example `requests.memory: 2Gi`);
+                    bare numbers are interpreted as bytes and are rejected by the admission webhook.
                   type: object
                   additionalProperties:
                     anyOf:

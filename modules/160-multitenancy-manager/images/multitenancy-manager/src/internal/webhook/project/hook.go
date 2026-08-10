@@ -22,11 +22,13 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -189,6 +191,11 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	return admission.Allowed("")
 }
 
+// byteQuantityUnitRE matches a Kubernetes Quantity that carries an explicit byte-scale unit.
+// Milli/micro/nano suffixes (m/u/n) and bare numbers are intentionally excluded: for memory and
+// storage a bare "5" is 5 bytes, which is almost always a mistake.
+var byteQuantityUnitRE = regexp.MustCompile(`(Ki|Mi|Gi|Ti|Pi|Ei|[kMGTPE])$`)
+
 // validateStandardFields performs cheap validation of the Project standard fields. It returns a
 // non-empty denial message when the project is invalid.
 func validateStandardFields(project *v1alpha3.Project) string {
@@ -199,6 +206,40 @@ func validateStandardFields(project *v1alpha3.Project) string {
 		if admin.Name == "" {
 			return "administrator name must not be empty"
 		}
+	}
+	if msg := validateQuotaByteUnits(project.Spec.Quota); msg != "" {
+		return msg
+	}
+	return ""
+}
+
+// resourceNameRequiresByteUnit reports whether a ResourceQuota hard key is a memory/storage
+// quantity that must include an explicit unit suffix (Gi, Mi, …). hugepages-* are page counts and
+// are left alone; cpu/pods/count/* stay numeric.
+func resourceNameRequiresByteUnit(name corev1.ResourceName) bool {
+	s := string(name)
+	if strings.Contains(s, "hugepages-") {
+		return false
+	}
+	return strings.HasSuffix(s, "memory") || strings.HasSuffix(s, "storage")
+}
+
+func hasByteUnitSuffix(q resource.Quantity) bool {
+	return byteQuantityUnitRE.MatchString(q.String())
+}
+
+func validateQuotaByteUnits(quota corev1.ResourceList) string {
+	for name, quantity := range quota {
+		if !resourceNameRequiresByteUnit(name) {
+			continue
+		}
+		if hasByteUnitSuffix(quantity) {
+			continue
+		}
+		return fmt.Sprintf(
+			"%s must include a unit suffix, e.g. 2Gi (bare numbers are interpreted as bytes)",
+			name,
+		)
 	}
 	return ""
 }

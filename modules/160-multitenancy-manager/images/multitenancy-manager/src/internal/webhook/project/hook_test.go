@@ -52,7 +52,62 @@ func TestValidateStandardFields(t *testing.T) {
 			name: "valid administrators and quota",
 			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
 				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}, {Kind: "Group", Name: "team"}},
-				Quota:          corev1.ResourceList{"requests.cpu": resource.MustParse("2")},
+				Quota: corev1.ResourceList{
+					"requests.cpu":    resource.MustParse("2"),
+					"requests.memory": resource.MustParse("1Gi"),
+					"limits.memory":   resource.MustParse("512Mi"),
+					"pods":            resource.MustParse("10"),
+				},
+			}},
+		},
+		{
+			name: "cpu and pods may be bare numbers",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{
+					"requests.cpu": resource.MustParse("5"),
+					"limits.cpu":   resource.MustParse("500m"),
+					"pods":         resource.MustParse("10"),
+				},
+			}},
+		},
+		{
+			name: "memory with decimal SI unit is allowed",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.memory": resource.MustParse("1G")},
+			}},
+		},
+		{
+			name: "bare memory is denied",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.memory": resource.MustParse("5")},
+			}},
+			denied: true,
+		},
+		{
+			name: "bare storage is denied",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.storage": resource.MustParse("5")},
+			}},
+			denied: true,
+		},
+		{
+			name: "ephemeral-storage without unit is denied",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.ephemeral-storage": resource.MustParse("100")},
+			}},
+			denied: true,
+		},
+		{
+			name: "memory milli suffix is denied",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"limits.memory": resource.MustParse("1000m")},
+			}},
+			denied: true,
+		},
+		{
+			name: "hugepages count may be bare",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.hugepages-2Mi": resource.MustParse("5")},
 			}},
 		},
 		{
