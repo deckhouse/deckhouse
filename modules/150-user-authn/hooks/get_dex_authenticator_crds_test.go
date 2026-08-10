@@ -19,13 +19,22 @@ package hooks
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+type inputDexAuthenticatorAllowAccess struct {
+	annotation *string
+	allowed    bool
+	warns      bool
+}
 
 var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
@@ -305,6 +314,71 @@ spec:
 			Expect(namesMap.Get(shortID).Get("ingressNames").Get("0").Get("truncated").Bool()).Should(BeFalse())
 		})
 	})
+
+	DescribeTable("The dexauthenticator.deckhouse.io/allow-access-to-kubernetes annotation",
+		func(in inputDexAuthenticatorAllowAccess) {
+			var annotations string
+			if in.annotation != nil {
+				annotations = fmt.Sprintf("\n  annotations:\n    %s: %q", dexAuthenticatorAllowAccessToKubernetesAnnotation, *in.annotation)
+			}
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: test
+  namespace: test` + annotations + `
+spec:
+  applications:
+  - domain: test
+    ingressClassName: "nginx"
+  sendAuthorizationHeader: false
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			authenticator := f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs.0")
+			Expect(authenticator.Get("allowAccessToKubernetes").Bool()).To(Equal(in.allowed))
+			Expect(authenticator.Get("allowAccessToKubernetesAnnotation").Exists()).To(BeFalse())
+
+			logs := string(f.LoggerOutput.Contents())
+			if in.warns {
+				Expect(logs).To(ContainSubstring("Ignoring invalid allow-access-to-kubernetes annotation"))
+				Expect(logs).To(ContainSubstring(dexAuthenticatorAllowAccessToKubernetesAnnotation))
+			} else {
+				Expect(logs).NotTo(ContainSubstring("Ignoring invalid allow-access-to-kubernetes annotation"))
+			}
+		},
+		Entry(`grants access to the Kubernetes API when the value is "true"`,
+			inputDexAuthenticatorAllowAccess{annotation: ptr.To("true"), allowed: true},
+		),
+		Entry(`grants access to the Kubernetes API when the value is "1"`,
+			inputDexAuthenticatorAllowAccess{annotation: ptr.To("1"), allowed: true},
+		),
+		Entry(`grants access to the Kubernetes API when the value is "True"`,
+			inputDexAuthenticatorAllowAccess{annotation: ptr.To("True"), allowed: true},
+		),
+		Entry(`denies access to the Kubernetes API when the value is "false"`,
+			inputDexAuthenticatorAllowAccess{annotation: ptr.To("false")},
+		),
+		Entry(`denies access to the Kubernetes API when the value is "0"`,
+			inputDexAuthenticatorAllowAccess{annotation: ptr.To("0")},
+		),
+		Entry("denies access to the Kubernetes API and warns when the value is empty",
+			inputDexAuthenticatorAllowAccess{annotation: ptr.To(""), warns: true},
+		),
+		Entry(`denies access to the Kubernetes API and warns when the value is "yes"`,
+			inputDexAuthenticatorAllowAccess{annotation: ptr.To("yes"), warns: true},
+		),
+		Entry(`denies access to the Kubernetes API and warns when the value is "enabled"`,
+			inputDexAuthenticatorAllowAccess{annotation: ptr.To("enabled"), warns: true},
+		),
+		Entry("denies access to the Kubernetes API without warning when the annotation is absent",
+			inputDexAuthenticatorAllowAccess{},
+		),
+	)
 })
 
 var _ = Describe("safeDNS1123Name", func() {
