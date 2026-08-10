@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-a215ac0e5b7ebabf62399fda80008ccc3f4877d8b0c09adada7b27e489ce60ed",
+  "@id": "merged-vex-cf1ef4435e187633710e8124251aa489b055dd1c84d1201e6e326c77e0cac6b5",
   "author": "Deckhouse <contact@deckhouse.io>",
   "version": 1,
   "statements": [
@@ -10,7 +10,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
         }
       ],
       "status": "not_affected",
