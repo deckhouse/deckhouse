@@ -489,9 +489,11 @@ subjects:
   name: node-controller
   namespace: d8-cloud-instance-manager
 ---
-# Namespaced write access for the bashible-apiserver-context Secret, the single-writer
-# replacement for the helm define bashible_input_data. Scoped to d8-cloud-instance-manager
-# (least privilege) instead of widening the cluster-wide secret read to cluster-wide write.
+# Namespaced write access to Secrets in d8-cloud-instance-manager: the
+# bashible-apiserver-context Secret (single-writer replacement for the helm
+# define bashible_input_data) and the per-machine bootstrap-data Secrets the
+# nodebootstrap controller writes. Scoped to the namespace (least privilege)
+# instead of widening the cluster-wide secret read to cluster-wide write.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:

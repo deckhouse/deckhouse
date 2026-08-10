@@ -24,7 +24,9 @@ import (
 // the cluster, a CRD (internal.deckhouse.io/v1alpha1). It describes the desired
 // state of a Deckhouse olcedar node. The on-node loader (nodelet) parses the
 // same type from the config file, so this file and the agent's own
-// internal/config/types.go are one contract and must stay identical. The CRD in
+// internal/config/types.go are one contract and must stay identical — as are
+// the spec-only mirror types dhctl writes the first master's payload with
+// (dhctl/pkg/immutable/types.go). The CRD in
 // modules/040-node-manager/crds/nodeconfig.yaml is generated from it — see the
 // "Generate" section of this module's Makefile.
 //

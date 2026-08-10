@@ -844,11 +844,10 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 	return nil
 }
 
-// bootstrapAdditionalNodes creates every node beyond the first master.
-//
-// A multi-replica immutable master group is refused by the immutable-master-
-// replicas preflight, before any infrastructure exists; repeating the check
-// here would only fail after Deckhouse is already installed.
+// bootstrapAdditionalNodes creates every node beyond the first master. For an
+// immutable master group these are replicas two and three, each booted with a
+// join payload rendered against the now-running cluster — see
+// buildImmutableJoinPayload.
 func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx *bootstrapContext) error {
 	if bctx.metaConfig.ClusterType == config.CloudClusterType {
 		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallAdditionalMastersAndStaticNodes, true, bctx.stateCache, nil); err != nil {

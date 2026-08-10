@@ -54,7 +54,7 @@ import (
 func TestBuildImmutableMasterPayloadIsBase64CloudConfig(t *testing.T) {
 	b, bctx := immutableTestBootstrapper(t)
 
-	payload, err := b.buildImmutableMasterPayload(t.Context(), bctx, "zykov-master-0")
+	payload, err := b.buildImmutableMasterPayload(t.Context(), bctx, "example-master-0")
 	require.NoError(t, err)
 
 	document, err := base64.StdEncoding.DecodeString(payload)
@@ -108,7 +108,7 @@ func TestAdminKubeconfigFromCache(t *testing.T) {
 		stateCache, err := cache.NewStateCache(t.TempDir())
 		require.NoError(t, err)
 
-		saved := filepath.Join(t.TempDir(), "zykov-admin.kubeconfig")
+		saved := filepath.Join(t.TempDir(), "example-admin.kubeconfig")
 		require.NoError(t, os.WriteFile(saved, []byte(collected), 0o600))
 		require.NoError(t, immutable.SaveCollectedKubeconfig(t.Context(), stateCache, saved))
 
@@ -126,7 +126,7 @@ func TestAdminKubeconfigFromCache(t *testing.T) {
 		stateCache, err := cache.NewStateCache(t.TempDir())
 		require.NoError(t, err)
 
-		missing := filepath.Join(t.TempDir(), "zykov-admin.kubeconfig")
+		missing := filepath.Join(t.TempDir(), "example-admin.kubeconfig")
 		require.NoError(t, immutable.SaveCollectedKubeconfig(t.Context(), stateCache, missing))
 
 		content, path, err := adminKubeconfigFromCache(t.Context(), stateCache)
@@ -163,7 +163,7 @@ func TestSaveAdminKubeconfigNamesTheFileAfterTheCluster(t *testing.T) {
 
 	require.NoError(t, b.saveAdminKubeconfig(t.Context(), []byte("apiVersion: v1\nkind: Config\n"), bctx))
 
-	require.Equal(t, filepath.Join(b.TmpDir, "zykov-admin.kubeconfig"), bctx.adminKubeconfigPath)
+	require.Equal(t, filepath.Join(b.TmpDir, "example-admin.kubeconfig"), bctx.adminKubeconfigPath)
 	require.FileExists(t, bctx.adminKubeconfigPath)
 
 	// The tmp cleaner spares this file by suffix, so the per-cluster name has to
@@ -181,7 +181,7 @@ func TestSaveAdminKubeconfigWritesAFreshPrivateFile(t *testing.T) {
 		b, bctx := immutableTestBootstrapper(t)
 		b.TmpDir = t.TempDir()
 
-		path := filepath.Join(b.TmpDir, "zykov-admin.kubeconfig")
+		path := filepath.Join(b.TmpDir, "example-admin.kubeconfig")
 		require.NoError(t, os.WriteFile(path, []byte("stale"), 0o644))
 
 		require.NoError(t, b.saveAdminKubeconfig(t.Context(), []byte("apiVersion: v1\nkind: Config\n"), bctx))
@@ -199,7 +199,7 @@ func TestSaveAdminKubeconfigWritesAFreshPrivateFile(t *testing.T) {
 		target := filepath.Join(t.TempDir(), "somebody-elses-file")
 		require.NoError(t, os.WriteFile(target, []byte("untouched"), 0o600))
 
-		path := filepath.Join(b.TmpDir, "zykov-admin.kubeconfig")
+		path := filepath.Join(b.TmpDir, "example-admin.kubeconfig")
 		require.NoError(t, os.Symlink(target, path))
 
 		require.NoError(t, b.saveAdminKubeconfig(t.Context(), []byte("apiVersion: v1\nkind: Config\n"), bctx))
@@ -264,7 +264,7 @@ func immutableTestMetaConfig(t *testing.T) *config.MetaConfig {
 
 	metaConfig := &config.MetaConfig{
 		ClusterType:       config.CloudClusterType,
-		ClusterPrefix:     "zykov",
+		ClusterPrefix:     "example",
 		ClusterDomain:     "cluster.local",
 		ClusterDNSAddress: "10.223.0.10",
 		ClusterConfig: map[string]json.RawMessage{
@@ -354,7 +354,7 @@ func immutableWaitingBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstra
 
 	b, bctx := immutableTestBootstrapper(t)
 	bctx.masterIP = "127.0.0.1"
-	bctx.masterNodeName = "zykov-master-0"
+	bctx.masterNodeName = "example-master-0"
 
 	material, err := immutable.HandoffMaterialFor(t.Context(), bctx.stateCache, bctx.masterNodeName)
 	require.NoError(t, err)

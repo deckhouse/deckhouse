@@ -106,6 +106,9 @@ func clusterCABase64(ctx context.Context, kubeCl *client.KubernetesClient) (stri
 // group — the same rotating token a bashible node is given. node-manager keeps
 // one per NodeGroup and replaces it as it ages; taking the newest is what keeps
 // a node from booting with one that expires while it is still installing.
+// Kept in step with readBootstrapToken in the node-controller's
+// internal/controller/nodebootstrap/render.go, which picks the token for a
+// provisioned machine the same way.
 func groupBootstrapToken(ctx context.Context, kubeCl *client.KubernetesClient, ngName string) (string, error) {
 	secrets, err := kubeCl.CoreV1().Secrets(kubeSystemNS).List(ctx, metav1.ListOptions{
 		LabelSelector: bootstrapTokenNGLabel + "=" + ngName,

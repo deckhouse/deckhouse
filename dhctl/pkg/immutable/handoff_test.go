@@ -27,7 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-const handoffTestNodeName = "zykov-master-0"
+const handoffTestNodeName = "example-master-0"
 
 // handoffTestServer serves the given response over the material's certificate,
 // the way the node does, and returns the address dhctl dials.

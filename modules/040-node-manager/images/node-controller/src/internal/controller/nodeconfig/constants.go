@@ -197,6 +197,8 @@ const systemDiskSelectorSize = ">=2Gi"
 // prefix assumed when the cluster configuration names none. The brackets are
 // bashible's (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl), so
 // an immutable node and a bashible node beside it advertise the same capacity.
+// dhctl carries the same ladder for the first master's payload
+// (dhctl/pkg/immutable/nodeconfig.go) — keep the three in step.
 const (
 	defaultPodSubnetNodeCIDRPrefix = 24
 	maxPodsPerNodeCIDR24           = 120

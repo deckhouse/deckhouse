@@ -18,6 +18,12 @@
 # They are delivered by NodeExtensionRequest, not by images_digests.json: the
 # NER carries the digest directly, so nothing here has to be wired into the
 # platform digest table.
+# (The digests still land in the generated digest table automatically — every
+# modules/*/images/* build does — they are just not read from there.)
+#
+# Skipped in CSE builds like the platform sysext images: the edition ships no
+# olcedar and the signing infrastructure is not wired there.
+{{- if ne $.Env "CSE" }}
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-signed-artifact
@@ -148,3 +154,4 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
+{{- end }}
