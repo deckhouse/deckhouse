@@ -21,7 +21,7 @@ description: Архитектура модуля cilium-hubble в Deckhouse Kube
 
 Архитектура модуля [`cilium-hubble`](/modules/cilium-hubble/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображена на следующей диаграмме:
 
-![Архитектура модуля cilium-hubble](../../../../images/architecture/network/c4-l2-cilium-hubble.ru.png)
+![Архитектура модуля cilium-hubble](../../../images/architecture/network/c4-l2-cilium-hubble.ru.png)
 
 {% alert level="info" %}
 Номерами на схеме отмечен порядок прохождения запроса пользователя к компоненту hubble-ui:
