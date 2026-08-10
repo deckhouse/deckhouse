@@ -47,13 +47,14 @@ spec:
     fi
     rm -rf /var/lib/containerd/*
 
-    systemctl start containerd-deckhouse.service
-    bb-flag-unset containerd-need-restart
-    systemctl start kubelet.service
-
     bb-flag-set need-local-images-import
     bb-flag-set kubelet-need-restart
     bb-flag-set reboot
+
+    if systemctl start containerd-deckhouse.service; then
+      bb-flag-unset containerd-need-restart
+      systemctl start kubelet.service
+    fi
     {{- end }}
 EOF
 ```
