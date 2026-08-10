@@ -13,7 +13,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 - режим [DRA (Dynamic Resource Allocation)](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/) — механизм Kubernetes для запроса и совместного использования устройств, который обеспечивает динамическое и декларативное выделение вычислительных ресурсов GPU;
 - режим Device Plugin (по умолчанию) — классическая модель работы с вычислительными ресурсами узла в Kubernetes. В этом режиме модуль публикует ресурсы `nvidia.com/gpu` или `nvidia.com/mig-*`, которые использует kube-scheduler для планирования размещения подов, использующих эти ресурсы.
 
-Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/gpu/configuration.html).
+Подробнее с описанием модуля можно ознакомиться [в соответствующем разделе документации](/modules/gpu/configuration.html).
 
 Архитектура модуля зависит от режима работы.
 
@@ -40,13 +40,13 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 Архитектура модуля [`gpu`](/modules/gpu/) в режиме DRA на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-![Архитектура модуля gpu в режиме DRA](../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-dra.ru.png)
+![Архитектура модуля gpu в режиме DRA](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-dra.ru.svg)
 
 ### Компоненты модуля (в режиме DRA)
 
 Модуль состоит из следующих компонентов:
 
-1. **gpu-controller** (Deployment) — контроллер, который реализует обработку запросов на GPU ресурсы и выполняет admission-вебхуки для DRA-объектов. Контроллер работает на master-узлах.
+1. **gpu-controller** (Deployment) — контроллер, который реализует обработку запросов на GPU-ресурсы и выполняет admission-вебхуки для DRA-объектов. Контроллер работает на master-узлах.
 
    Контроллер gpu-controller выполняет следующие действия:
 
@@ -63,18 +63,18 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 1. **gpu-node-agent** (DaemonSet) — компонент, состоящий из одного контейнера **gpu-node-agent**, выполняет следующие действия:
 
-   - сканирование `/sys` хоста и базу PCI ID;
-   - сопоставление устройства с ConfigMap `gpu-supported-vendors`;
-   - создаёт кастомные ресурсы PhysicalGPU для каждой обнаруженной карты;
-   - выставляет лейбл `gpu.deckhouse.io/vendor=<VENDOR>` на ресурс Node.
+   - сканирует`/sys` хоста и базы PCI ID;
+   - сопоставляет устройства с ConfigMap `gpu-supported-vendors`;
+   - создаёт кастомных ресурсов PhysicalGPU для каждой обнаруженной карты;
+   - устанавливает лейблы `gpu.deckhouse.io/vendor=<VENDOR>` на ресурс Node.
 
-   Компонент работает на всех узлах кластера, исключая control-plane.
+   Компонент работает на всех узлах кластера, исключая узлы control plane.
 
 1. **&lt;VENDOR&gt;-adapter** (DaemonSet) — компонент, обеспечивающий работу с оборудованием по подготовке, выделению и освобождению ресурсов GPU. На данный момент поддерживается два поставщика оборудования: NVIDIA, MetaX.
 
    Компонент выполняет следующие действия:
 
-   - регистрируется в [kubelet](../kubernetes-and-scheduling/kubelet.html) как DRA kubelet plugin;
+   - регистрируется в [kubelet](../../kubernetes-and-scheduling/kubelet.html) как DRA kubelet plugin;
    - подготавливает и освобождает выделенные ресурсы для подов через операции PrepareResourceClaims и UnprepareResourceClaims;
    - публикует список доступных устройств через ресурсы ResourceSlice;
    - получает аппаратные возможности оборудования;
@@ -101,7 +101,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 1. **Kube-apiserver**:
 
-   — авторизация запросов на получение метрик;
+   - авторизация запросов на получение метрик;
    - работа с кастомными ресурсами PhysicalGPU и GPUClass;
    - обновление ресурсов Node;
    - работа с ресурсами DeviceClass и ResourceClaim.
@@ -118,14 +118,14 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 В режиме Device Plugin модуль работает со следующими ресурсами:
 
-- NodeFeature — хранится фактическая информация об аппаратных возможностях конкретного узла;
-- NodeFeatureRule — хранится набор правил, на основе которого модуль настраивает лейблы, аннотации и тейнты для узла кластера.
+- NodeFeature — хранит фактическая информация об аппаратных возможностях конкретного узла;
+- NodeFeatureRule — хранит набор правил, на основе которого модуль настраивает лейблы, аннотации и тейнты для узла кластера.
 
 ### Архитектура модуля (в режиме Device Plugin)
 
 Архитектура модуля [`gpu`](/modules/gpu/) в режиме Device Plugin на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
-![Архитектура модуля gpu в режиме Device Plugin](../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-device-plugin.ru.png)
+![Архитектура модуля gpu в режиме Device Plugin](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-device-plugin.ru.svg)
 
 ### Компоненты модуля (в режиме Device Plugin)
 
@@ -160,10 +160,10 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
    Компонент выполняет следующие действия:
 
    - получает желаемый MIG-профиль (лейбл `nvidia.com/mig.config`) и текущее состояние;
-   - при необходимости переводит узел в режим обслуживания (выставляет taint/cordon/drain);
+   - переводит узел в режим обслуживания (выставляет taint/cordon/drain) при необходимости;
    - останавливает поды, использующие GPU на узле;
    - применяет MIG-профиль;
-   - при необходимости инициирует перезагрузку узла;
+   - инициирует перезагрузку узла при необходимости;
    - возвращает узел в работу.
 
    Состоит из следующих контейнеров:
@@ -181,10 +181,10 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 1. **Kube-apiserver**:
 
-   — авторизация запросов на получение метрик;
+   - авторизация запросов на получение метрик;
    - работа с ресурсами NodeFeature и NodeFeatureRule;
    - обновление ресурсов Node;
-   - завершение подов, использующие GPU-ресурсы при изменении MIG-профиля.
+   - завершение подов, использующих GPU-ресурсы при изменении MIG-профиля.
 
 1. **Kubelet** — регистрация через Device Plugin API.
 
