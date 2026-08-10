@@ -18,4 +18,3 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/aggregate-to-project-as: superadmin
-rules: []

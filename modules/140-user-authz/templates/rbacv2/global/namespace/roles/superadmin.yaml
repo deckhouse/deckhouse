@@ -18,4 +18,3 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/aggregate-to-namespace-as: superadmin
-rules: []

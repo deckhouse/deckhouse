@@ -20,4 +20,3 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/aggregate-to-storage-as: viewer
-rules: []

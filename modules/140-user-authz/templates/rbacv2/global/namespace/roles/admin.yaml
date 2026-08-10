@@ -19,4 +19,3 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/aggregate-to-namespace-as: admin
-rules: []
