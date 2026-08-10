@@ -108,3 +108,46 @@ func TestNEROutcomesIgnorePendingNodes(t *testing.T) {
 	require.Equal(t, int32(0), outcomes["bob-request"].applied)
 	require.Equal(t, int32(0), outcomes["bob-request"].failed)
 }
+
+
+// A node that rejects the configuration wholesale keeps running the last one
+// it accepted, so the refused extension's Failed entry is gone from its status
+// by the next pass — measured on a live cluster: the NER read Ready while the
+// node sat Degraded over it. The durable trace of the refusal is the
+// ConfigurationApplied condition, and the count has to come from there.
+func TestNEROutcomesCountWholesaleRejections(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
+
+	rejected := nodeConfigWith("master-0",
+		[]internalv1alpha1.Extension{
+			{Name: "containerd", RequestedBy: "node-manager"},
+			{Name: "bob-signed", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
+			{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"},
+		},
+		// Last-known-good statuses: bob-signed made it in an earlier
+		// generation, bob never appears.
+		[]internalv1alpha1.ExtensionStatus{
+			{Name: "containerd", State: "Ready"},
+			{Name: "bob-signed", State: "Ready"},
+		})
+	rejected.Status.Conditions = []metav1.Condition{{
+		Type:    configurationAppliedCondition,
+		Status:  metav1.ConditionFalse,
+		Reason:  "Rejected",
+		Message: "bob: config rejected: its roothash signature is not one this node trusts",
+	}}
+
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(rejected).Build()
+
+	outcomes, err := readNEROutcomes(context.Background(), client)
+	require.NoError(t, err)
+
+	require.Equal(t, int32(1), outcomes["bob-request"].failed)
+	require.Equal(t, int32(0), outcomes["bob-request"].applied)
+	require.Contains(t, outcomes["bob-request"].message, "not one this node trusts")
+
+	// The extension that did make it is not blamed for the rejection.
+	require.Equal(t, int32(1), outcomes["bob-signed-request"].applied)
+	require.Equal(t, int32(0), outcomes["bob-signed-request"].failed)
+}
