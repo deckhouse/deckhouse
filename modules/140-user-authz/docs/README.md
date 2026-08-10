@@ -378,7 +378,6 @@ read:
     - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/projectnamespaces
     - deckhouse.io/projectrolebindings
-    - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
     - deckhouse.io/securitypolicyexceptions
