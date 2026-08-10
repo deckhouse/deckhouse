@@ -13,3 +13,7 @@ description: "Управление облачными ресурсами в Deck
 - Заказ дисков в Yandex Cloud с помощью компонента `CSI storage`.
 - Регистрация в модуле [node-manager](/modules/node-manager/) для использования [YandexInstanceClass'ы](cr.html#yandexinstanceclass) можно было использовать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. Начиная с DKP 1.76 по умолчанию используется [`cni-cilium`](/modules/cni-cilium/) в режиме `VXLAN`с трансляцией исходных IP-адресов средствами [BPF](/products/kubernetes-platform/documentation/v1/admin/configuration/network/other/bpflb.html).
+
+{% alert level="warning" %}
+Модуль находится в процессе миграции управления CloudEphemeral-узлами с Machine Controller Manager (MCM) на Cluster API (CAPI). Существующие NodeGroup продолжают использовать MCM, а новые по умолчанию создаются с использованием CAPI. Порядок миграции существующих групп — в разделе [«Как мигрировать группы узлов на Cluster API (CAPI)»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-группы-узлов-на-cluster-api-capi).
+{% endalert %}
