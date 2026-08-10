@@ -114,7 +114,7 @@ func (c *Controller) Build(ctx context.Context, rest *rest.Config, ms metricssto
 		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
 	}
 
-	manager, err := pkgruntime.Build(runtime.GetClient(), dc, nil, ms, logger)
+	manager, err := pkgruntime.Build(runtime.GetClient(), nil, dc, ms, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create runtime: %w", err)
 	}

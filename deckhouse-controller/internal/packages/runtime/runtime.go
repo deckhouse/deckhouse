@@ -143,7 +143,7 @@ type moduleManagerI interface {
 
 // Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -158,7 +158,13 @@ func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleMan
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
-	r.edition = edition
+
+	edit, err := edition.Parse(app.Version)
+	if err != nil {
+		return nil, fmt.Errorf("new edition: %w", err)
+	}
+
+	r.edition = edit
 
 	r.registry = registry.NewService(dc, logger)
 	downloadedDir := app.DownloadedModulesDir()
