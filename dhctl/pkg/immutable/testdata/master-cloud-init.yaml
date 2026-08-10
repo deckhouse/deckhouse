@@ -58,6 +58,8 @@ write_files:
         path: /sys/deckhouse-oss
         scheme: HTTPS
       storage:
+        diskSelector:
+          size: '>=20Gi'
         mounts:
         - bindTo: /var/lib/etcd
           mode: "0700"
@@ -65,9 +67,6 @@ write_files:
           partitionSelector:
             blank: true
             size: 10Gi
-        systemDisk:
-          diskSelector:
-            size: '>=20Gi'
       updatePolicy:
         mode: Automatic
   path: /config/nodeconfig.yaml

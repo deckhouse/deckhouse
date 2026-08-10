@@ -157,8 +157,8 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		NodeName: in.NodeName,
 		OSImage:  registry.Address + registry.Path + "/" + osImageNameAndTag,
 		Storage: storage{
-			SystemDisk: &systemDisk{DiskSelector: &diskSelector{Size: systemDiskSize}},
-			Mounts:     etcdMounts(),
+			DiskSelector: &diskSelector{Size: systemDiskSize},
+			Mounts:       etcdMounts(),
 		},
 		Extensions: extensions,
 		Kernel: kernel{
