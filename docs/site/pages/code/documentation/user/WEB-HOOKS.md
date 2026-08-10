@@ -1,8 +1,7 @@
 ---
 title: "Webhooks"
-menuTitle: Webhooks
 force_searchable: true
-description: Webhooks
+description: How to configure webhooks for event-driven integration with external systems
 permalink: en/code/documentation/user/web-hooks.html
 lang: en
 weight: 50

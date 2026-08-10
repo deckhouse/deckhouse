@@ -21,7 +21,7 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 
-	"github.com/deckhouse/deckhouse/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 )
 
 const (

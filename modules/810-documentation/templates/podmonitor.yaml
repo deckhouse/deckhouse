@@ -1,3 +1,4 @@
+{{- if (.Values.global.discovery.apiVersions | has "monitoring.coreos.com/v1/PodMonitor") }}
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -32,3 +33,4 @@ spec:
     matchLabels:
       app: documentation
       app.kubernetes.io/part-of: deckhouse-docs
+{{- end }}

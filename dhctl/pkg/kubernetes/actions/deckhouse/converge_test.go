@@ -350,9 +350,24 @@ func TestErrorConvergeManifests(t *testing.T) {
 		}
 	})
 
-	assertError(t, yandexClusterConvergeParams.CopyWithName("no provider config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
-		createYandexConfigurationSecret(t, tst, params)
+	// ProviderRequiresClusterConfig is derived from the presence of the
+	// provider's candi schemas (the probe stats /deckhouse/candi), so a yandex
+	// case would flip between environments: no candi on a developer machine,
+	// full candi inside the CI image. Use a provider name that ships candi
+	// nowhere — a ModuleConfig-only external provider — for a deterministic
+	// skip: the d8-provider-cluster-configuration write is omitted, not an
+	// error.
+	t.Run("no provider config for an external provider skips the provider secret", func(t *testing.T) {
+		tst := testCreateConvergeManifestTest(t, yandexClusterConvergeParams.CopyWithName("no provider config for external provider"))
+		createYandexConfigurationSecret(t, tst, yandexClusterConvergeParams)
+		tst.metaConfig.ProviderName = "externalprovidertest"
 		tst.metaConfig.ProviderClusterConfig = nil
+
+		tasks, err := getTasksForRunning(t.Context(), tst.kubeCl, tst.commanderUUID, tst.metaConfig)
+		require.NoError(t, err)
+		for _, task := range tasks {
+			require.NotEqual(t, `Secret "d8-provider-cluster-configuration"`, task.Name)
+		}
 	})
 
 	assertError(t, yandexClusterConvergeParams.CopyWithName("incorrect provider config"), func(t *testing.T, params testConvergeManifestsParams, tst *testConvergeManifests) {
@@ -526,7 +541,7 @@ func testCreateMetaConfigForConvergeManifests(t *testing.T, ctx context.Context,
 	metaConfig, err := config.ParseConfigFromData(
 		ctx,
 		configData,
-		config.DummyPreparatorProvider(),
+		config.DummyValidatorProvider(),
 		nil,
 	)
 

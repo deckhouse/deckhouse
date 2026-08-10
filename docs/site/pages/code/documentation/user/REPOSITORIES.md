@@ -1,5 +1,6 @@
 ---
 title: "Managing Git repositories"
+description: How to manage Git repositories, branches, and files in a project
 permalink: en/code/documentation/user/repositories.html
 ---
 
@@ -29,7 +30,7 @@ Branches allow you to develop new features and fixes in isolation from the main 
 - Create branches: `git branch <name>`, `git checkout -b <name>`.
 - Switch between branches: `git checkout <branch>`.
 - Merge changes: `git merge <branch>`.
-- Support for protected branches — changes must go through a merge request.
+- Support for [protected branches](/products/code/documentation/user/protected-branches.html) — changes must go through a merge request.
 - Automatic deletion of merged branches (if enabled).
 
 ## Built-in web editor

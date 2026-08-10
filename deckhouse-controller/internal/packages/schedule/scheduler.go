@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -42,6 +43,14 @@ const (
 	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
 	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
 	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
+
+	// Subjects and messages spell out for the user what the reason above encodes
+	// for a condition. CheckConstraints surfaces only the decision message, so
+	// whatever is missing there is lost on the admission path.
+	subjectKubernetes = "Kubernetes"
+	subjectDeckhouse  = "Deckhouse"
+
+	messageRequirementsBootstrap = "cluster bootstrap is not finished yet"
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -62,6 +71,8 @@ type Scheduler struct {
 	dynamicGetter          dynamic.Getter      // Reports a module's resolved enablement intent (ModuleConfig + dynamic), answered by the global module
 
 	pause atomic.Bool // When true, no state changes are processed
+
+	logger *log.Logger
 }
 
 // Option configures a Scheduler during construction.
@@ -113,10 +124,11 @@ func WithBundleChecker(getter bundle.BundleChecker) Option {
 // NewScheduler creates a Scheduler with an empty dependency graph and a
 // buffered event channel. Use functional options to configure version
 // providers and conditions. Call [Scheduler.Ch] to consume lifecycle events.
-func NewScheduler(opts ...Option) *Scheduler {
+func NewScheduler(logger *log.Logger, opts ...Option) *Scheduler {
 	s := &Scheduler{
 		nodes:   make(map[string]*node),
 		eventCh: make(chan Event, defaultBufferSize),
+		logger:  logger,
 	}
 
 	for _, opt := range opts {
@@ -166,15 +178,15 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 	var rules []rule.Rule
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		rules = append(rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
+		rules = append(rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, subjectKubernetes, reasonRequirementsKubernetes))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		rules = append(rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
+		rules = append(rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, subjectDeckhouse, reasonRequirementsDeckhouse))
 	}
 
 	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		rules = append(rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap))
+		rules = append(rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {

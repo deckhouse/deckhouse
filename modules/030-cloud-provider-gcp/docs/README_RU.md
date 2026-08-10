@@ -12,5 +12,5 @@ description: "Управление облачными ресурсами в Deck
   - Создание LoadBalancer'ов для Service-объектов Kubernetes с типом `LoadBalancer`.
   - Актуализация метаданных узлов кластера согласно описанным параметрам конфигурации и удаление из кластера узлов, которых уже нет в GCP.
 - Заказ дисков в GCP с помощью компонента `CSI storage`.
-- Включение необходимого CNI (использует [simple bridge](/modules/cni-simple-bridge/)).
+- Включение необходимого CNI (использует [cni-cilium](/modules/cni-cilium/)).
 - Регистрация в модуле [node-manager](/modules/node-manager/) для использования [GCPInstanceClass'ов](cr.html#gcpinstanceclass) при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).

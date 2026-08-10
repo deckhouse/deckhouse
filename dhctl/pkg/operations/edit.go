@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
 // EditOptions bundles the values Edit/SecretEdit used to read from the
@@ -36,6 +37,38 @@ type EditOptions struct {
 	Editor      string
 	TmpDir      string
 	SanityCheck bool
+	// OnAbsent runs when the edited Secret does not exist, before SecretEdit
+	// falls back to creating it. Returning an error refuses the edit — a
+	// missing Secret is sometimes not an invitation to create one (see
+	// RejectLegacyProviderEditOnMcFlow).
+	OnAbsent func(ctx context.Context, kubeCl *client.KubernetesClient) error
+}
+
+// OnAbsentFor returns the guard for the Secret being edited, or nil when a
+// missing Secret is genuinely fine to create.
+func OnAbsentFor(secret string) func(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	if secret == config.LegacyProviderClusterConfigSecret {
+		return RejectLegacyProviderEditOnMcFlow
+	}
+	return nil
+}
+
+// RejectLegacyProviderEditOnMcFlow refuses to create the legacy
+// d8-provider-cluster-configuration Secret on a cluster that is configured
+// through the cloud-provider ModuleConfig: writing it would fork the provider
+// configuration into two sources of truth.
+func RejectLegacyProviderEditOnMcFlow(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	usesMC, err := config.ClusterUsesProviderModuleConfig(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+	if usesMC {
+		return fmt.Errorf(
+			"this cluster is configured via the cloud-provider ModuleConfig (mc-flow), not the legacy %q Secret; "+
+				"edit the cloud-provider-<name> ModuleConfig, NodeGroups and instance classes instead",
+			config.LegacyProviderClusterConfigSecret)
+	}
+	return nil
 }
 
 func Edit(ctx context.Context, data []byte, globalOptions *options.GlobalOptions, opts EditOptions) ([]byte, error) {

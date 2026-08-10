@@ -5,13 +5,13 @@
 Adds `CertificateOwnerRef` flag to Certificate CRD. `CertificateOwnerRef` flag is whether to set the certificate resource as an owner of a secret where the TLS certificate is stored. When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
 https://github.com/cert-manager/cert-manager/pull/5158
 
-Fixed:
-CVE-2026-33186
-CVE-2026-34986
-CVE-2026-39883 
+### 999-fix-cve.patch
 
+Fix CVEs:
+- CVE-2026-46600
+- CVE-2026-56852
 
-### 002-fix-cve.patch
+GHSA:
+- GHSA-gcjh-h69q-9w9g
+- GHSA-hrxh-6v49-42gf
 
-Fixed:
-CVE-2026-32952

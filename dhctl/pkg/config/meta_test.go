@@ -28,9 +28,103 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
+
+func TestEffectiveClusterPrefix(t *testing.T) {
+	globalMC := func(prefix string) []*ModuleConfig {
+		settings := SettingsValues{}
+		if prefix != "" {
+			settings["prefix"] = prefix
+		}
+		mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
+		mc.SetName("global")
+		return []*ModuleConfig{mc}
+	}
+
+	tests := []struct {
+		name        string
+		moduleCfgs  []*ModuleConfig
+		cloudPrefix string
+		expected    string
+	}{
+		{name: "global MC prefix takes precedence", moduleCfgs: globalMC("mcprefix"), cloudPrefix: "cloudprefix", expected: "mcprefix"},
+		{name: "global MC prefix unset falls back to cloud.prefix", moduleCfgs: globalMC(""), cloudPrefix: "cloudprefix", expected: "cloudprefix"},
+		{name: "no global MC falls back to cloud.prefix", moduleCfgs: nil, cloudPrefix: "cloudprefix", expected: "cloudprefix"},
+		{name: "neither set", moduleCfgs: globalMC(""), cloudPrefix: "", expected: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MetaConfig{ModuleConfigs: tt.moduleCfgs}
+			require.Equal(t, tt.expected, m.effectiveClusterPrefix(tt.cloudPrefix))
+		})
+	}
+}
+
+func TestClusterConfigForInfrastructure(t *testing.T) {
+	cloudPrefixOf := func(cc map[string]json.RawMessage) (string, bool) {
+		raw, ok := cc["cloud"]
+		if !ok {
+			return "", false
+		}
+		var cloud map[string]any
+		if err := json.Unmarshal(raw, &cloud); err != nil {
+			return "", false
+		}
+		p, ok := cloud["prefix"].(string)
+		return p, ok
+	}
+
+	t.Run("injects prefix into tfvars but leaves the persisted ClusterConfig untouched", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   CloudClusterType,
+			ClusterPrefix: "lysov-test",
+			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"Yandex"}`)},
+		}
+
+		infra := m.clusterConfigForInfrastructure()
+
+		// tfvars copy has the prefix (and preserves other cloud fields)...
+		p, ok := cloudPrefixOf(infra)
+		require.True(t, ok)
+		require.Equal(t, "lysov-test", p)
+		var infraCloud map[string]any
+		require.NoError(t, json.Unmarshal(infra["cloud"], &infraCloud))
+		require.Equal(t, "Yandex", infraCloud["provider"])
+
+		// ...while the original (→ d8-cluster-configuration secret) has NO prefix.
+		_, ok = cloudPrefixOf(m.ClusterConfig)
+		require.False(t, ok, "m.ClusterConfig must not be mutated (secret stays clean)")
+	})
+
+	t.Run("global MC prefix overrides an existing cloud.prefix in tfvars only", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   CloudClusterType,
+			ClusterPrefix: "from-mc",
+			ClusterConfig: map[string]json.RawMessage{"cloud": json.RawMessage(`{"provider":"AWS","prefix":"old"}`)},
+		}
+		infra := m.clusterConfigForInfrastructure()
+		p, _ := cloudPrefixOf(infra)
+		require.Equal(t, "from-mc", p)
+		// original preserved verbatim
+		orig, _ := cloudPrefixOf(m.ClusterConfig)
+		require.Equal(t, "old", orig)
+	})
+
+	t.Run("static cluster returns config unchanged", func(t *testing.T) {
+		m := &MetaConfig{
+			ClusterType:   StaticClusterType,
+			ClusterPrefix: "x",
+			ClusterConfig: map[string]json.RawMessage{},
+		}
+		infra := m.clusterConfigForInfrastructure()
+		_, ok := infra["cloud"]
+		require.False(t, ok)
+	})
+}
 
 func TestGetDNSAddress(t *testing.T) {
 	tests := []struct {
@@ -220,7 +314,7 @@ func generateOldDockerCfg(host string, username, password *string) string {
 func generateMetaConfig(t *testing.T, template string, data map[string]any, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
 
-	cfg, err := ParseConfigFromData(t.Context(), configData, DummyPreparatorProvider(), &options.New().Global)
+	cfg, err := ParseConfigFromData(t.Context(), configData, DummyValidatorProvider(), &options.New().Global)
 	f := require.NoError
 	if hasErr {
 		f = require.Error
@@ -389,7 +483,7 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 		"rppBootstrapServerPort": defaultClusterMasterRPPBootstrapServerPort,
 	}, endpoints[0])
 	require.Equal(t, []string{"127.0.0.1:6443"}, data["clusterMasterKubeAPIEndpoints"])
-	require.Equal(t, []string{"127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
+	require.Equal(t, []string{"http://127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
 	require.Equal(t, []string{fmt.Sprintf("127.0.0.1:%d", defaultClusterMasterRPPBootstrapServerPort)}, data["clusterMasterRPPBootstrapAddresses"])
 }
 
@@ -412,7 +506,7 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 		"rppBootstrapServerPort": defaultClusterMasterRPPBootstrapServerPort,
 	}, endpoints[0])
 	require.Empty(t, data["clusterMasterKubeAPIEndpoints"])
-	require.Equal(t, []string{"127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
+	require.Equal(t, []string{"http://127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
 	require.Equal(t, []string{fmt.Sprintf("127.0.0.1:%d", defaultClusterMasterRPPBootstrapServerPort)}, data["clusterMasterRPPBootstrapAddresses"])
 
 	mingetB64, ok := data["mingetB64"].(string)
@@ -422,4 +516,204 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	mingetBytes, err := base64.StdEncoding.DecodeString(mingetB64)
 	require.NoError(t, err)
 	require.Equal(t, expectedMingetBytes, mingetBytes)
+}
+
+func TestMetaConfig_DeepCopy_PreservesValidateInputs(t *testing.T) {
+	src := &MetaConfig{
+		DownloadRootDir:  "/tmp/dl",
+		DownloadCacheDir: "/tmp/cache",
+		VersionFilePath:  "/tmp/v.yaml",
+		ResourcesYAML:    "kind: X\n",
+		ModuleConfigs:    []*ModuleConfig{{Spec: ModuleConfigSpec{Settings: SettingsValues{"k": "v"}}}},
+		Images:           imagesDigests{"a": map[string]interface{}{"b": "c"}},
+		VersionMap:       map[string]interface{}{"k": "v"},
+		InstallerVersion: "1.2.3",
+		ShowProgress:     true,
+	}
+	src.ModuleConfigs[0].SetName("x")
+
+	cp := src.DeepCopy()
+
+	require.Equal(t, src.DownloadRootDir, cp.DownloadRootDir)
+	require.Equal(t, src.DownloadCacheDir, cp.DownloadCacheDir)
+	require.Equal(t, src.VersionFilePath, cp.VersionFilePath)
+	require.Equal(t, src.ResourcesYAML, cp.ResourcesYAML)
+	require.Equal(t, src.InstallerVersion, cp.InstallerVersion)
+	require.True(t, cp.ShowProgress)
+	require.Len(t, cp.ModuleConfigs, 1)
+	require.Equal(t, "x", cp.ModuleConfigs[0].GetName())
+	require.Equal(t, "v", cp.VersionMap["k"])
+	require.Equal(t, "c", cp.Images["a"]["b"])
+}
+
+func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
+	src := &MetaConfig{
+		CloudProviderVars: &CloudProviderVars{
+			Settings:   map[string]interface{}{"k": "v"},
+			NodeGroups: map[string]map[string]interface{}{"ng": {"replicas": 1}},
+		},
+	}
+	cp := src.DeepCopy()
+
+	cp.CloudProviderVars.Settings["k"] = "mutated"
+	cp.CloudProviderVars.NodeGroups["ng"]["replicas"] = 99
+
+	require.Equal(t, "v", src.CloudProviderVars.Settings["k"])
+	require.Equal(t, 1, src.CloudProviderVars.NodeGroups["ng"]["replicas"])
+}
+
+func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {
+	settings := SettingsValues{"masterPool": map[string]interface{}{"replicas": 3}}
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Version: 2, Settings: settings}}
+	mc.SetName("cloud-provider-dvp")
+
+	m := &MetaConfig{
+		ProviderName:  "dvp",
+		ModuleConfigs: []*ModuleConfig{mc},
+	}
+
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	require.NotNil(t, m.CloudProviderVars)
+	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.True(t, ok, "expected spec object in CloudProviderVars.Settings")
+	require.Equal(t, float64(2), spec["version"])
+	specSettings, ok := spec["settings"].(map[string]interface{})
+	require.True(t, ok)
+	masterPool, ok := specSettings["masterPool"].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, float64(3), masterPool["replicas"])
+}
+
+// mcFlowResources mirrors a DVP bootstrap config: the CloudPermanent node
+// groups live in the resources documents, not in a ProviderClusterConfiguration.
+const mcFlowResources = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 3
+    classReference:
+      kind: DVPInstanceClass
+      name: master-dvp
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 2
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+  nodeTemplate:
+    labels:
+      node-role: worker
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 1
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ephemeral
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 5
+    maxPerZone: 7
+    classReference:
+      kind: DVPInstanceClass
+      name: worker-dvp
+`
+
+func cloudMetaConfig(resourcesYAML string) *MetaConfig {
+	return &MetaConfig{
+		ClusterConfig: map[string]json.RawMessage{
+			"clusterType":       json.RawMessage(`"Cloud"`),
+			"serviceSubnetCIDR": json.RawMessage(`"10.222.0.0/16"`),
+			"clusterDomain":     json.RawMessage(`"cluster.local"`),
+			"cloud":             json.RawMessage(`{"provider":"DVP","prefix":"test"}`),
+		},
+		ResourcesYAML: resourcesYAML,
+	}
+}
+
+func TestPrepareDerivesNodeGroupsFromResources(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, 3, m.MasterNodeGroupSpec.Replicas)
+
+	require.Len(t, m.TerraNodeGroupSpecs, 2, "master is not a terra node group, CloudEphemeral is not provisioned by dhctl")
+	require.Equal(t, "system", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, 1, m.TerraNodeGroupSpecs[0].Replicas)
+	require.Equal(t, "worker", m.TerraNodeGroupSpecs[1].Name)
+	require.Equal(t, 2, m.TerraNodeGroupSpecs[1].Replicas)
+	require.Equal(t, map[string]interface{}{"labels": map[string]interface{}{"node-role": "worker"}}, m.TerraNodeGroupSpecs[1].NodeTemplate)
+}
+
+func TestPrepareKeepsProviderClusterConfigNodeGroups(t *testing.T) {
+	m := cloudMetaConfig(mcFlowResources)
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[{"name":"legacy","replicas":7}]`),
+	}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, 1, m.MasterNodeGroupSpec.Replicas, "provider cluster configuration wins over cluster node groups")
+	require.Len(t, m.TerraNodeGroupSpecs, 1)
+	require.Equal(t, "legacy", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, 7, m.TerraNodeGroupSpecs[0].Replicas)
+}
+
+// An explicitly empty nodeGroups list in the provider cluster configuration is
+// not distinguished from an absent one: the guard in
+// applyNodeGroupReplicasFromCloudProviderVars checks len(), not nil, so the
+// cluster node groups are still derived. That is a choice of the guard, not a
+// property of the data — this documents the behaviour, it does not bless it.
+func TestPrepareDerivesOnEmptyProviderClusterConfigNodeGroups(t *testing.T) {
+	m := cloudMetaConfig(mcFlowResources)
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":          json.RawMessage(`"Standard"`),
+		"masterNodeGroup": json.RawMessage(`{"replicas":1}`),
+		"nodeGroups":      json.RawMessage(`[]`),
+	}
+
+	m, err := m.Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Len(t, m.TerraNodeGroupSpecs, 2)
+	require.Equal(t, "system", m.TerraNodeGroupSpecs[0].Name)
+	require.Equal(t, "worker", m.TerraNodeGroupSpecs[1].Name)
+}
+
+// check and converge re-run Prepare on a DeepCopy of an already prepared
+// config, so the derivation must not append the same node groups twice.
+func TestPrepareOnDeepCopyIsIdempotent(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	again, err := m.DeepCopy().Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Equal(t, m.MasterNodeGroupSpec.Replicas, again.MasterNodeGroupSpec.Replicas)
+	require.Equal(t, m.TerraNodeGroupSpecs, again.TerraNodeGroupSpecs)
 }

@@ -58,7 +58,7 @@ cat <<'SCRIPT_END' | docker run -i --rm \
 
 # Render each file in workflow_templates
 # directory and copy to /out/workflows
-set -e
+set -eo pipefail
 
 umask ${TARGET_UMASK}
 
@@ -130,7 +130,7 @@ if [[ $ACTIONLINT_RUN != "yes" ]] ; then
   for file in /out/workflows/* ; do
     # Ignore md files. '== *.md' is not working in ash.
     [[ $file != ${file%.md} ]] && continue
-    gomplate -i "$file"'{{ $_ := file.Read "'"$file"'" | yaml }} OK{{ "\n" }}' || true
+    gomplate -i "$file"'{{ $_ := file.Read "'"$file"'" | yaml }} OK{{ "\n" }}'
   done
 fi
 

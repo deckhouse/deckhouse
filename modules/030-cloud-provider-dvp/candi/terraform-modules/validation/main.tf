@@ -37,7 +37,7 @@ data "kubernetes_resources" "images" {
 resource "terraform_data" "validation" {
   lifecycle {
     precondition {
-      condition = length(data.kubernetes_resources.virtual_machine_classes.objects) > 0
+      condition     = length(data.kubernetes_resources.virtual_machine_classes.objects) > 0
       error_message = <<-EOT
         ERROR: VirtualMachineClass '${var.virtual_machine_class_name}' not found in parent DVP cluster.
 
@@ -47,7 +47,7 @@ resource "terraform_data" "validation" {
     }
 
     precondition {
-      condition = length(data.kubernetes_resources.images.objects) > 0
+      condition     = length(data.kubernetes_resources.images.objects) > 0
       error_message = <<-EOT
         ERROR: ${var.image_kind} '${var.image_name}' not found${var.image_kind == "VirtualImage" ? " in namespace '${var.namespace}'" : ""} in parent DVP cluster.
 

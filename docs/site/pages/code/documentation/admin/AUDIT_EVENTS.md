@@ -1,8 +1,9 @@
 ---
 title: "Audit events"
+description: Security audit events recorded by Deckhouse Code and how to view them
 menuTitle: Audit events
 searchable: true
-description: Audit events
+description: Security audit events recorded by Deckhouse Code and how to view them
 permalink: en/code/documentation/admin/audit-events.html
 lang: en
 weight: 50

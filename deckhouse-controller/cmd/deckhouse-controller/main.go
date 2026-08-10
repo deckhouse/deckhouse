@@ -26,13 +26,13 @@ import (
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"github.com/spf13/cobra"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/dhctlcli"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -63,6 +63,7 @@ var legacyBashCompletion bool
 func main() {
 	app.SetShellOperatorVersion(ShellOperatorVersion)
 	app.SetAddonOperatorVersion(AddonOperatorVersion)
+	app.SetDeckhouseVersion(DeckhouseVersion)
 
 	// deckhouse-controller is the single source of truth for environment-driven
 	// configuration of addon-operator (and the shell-operator globals
@@ -213,7 +214,7 @@ func main() {
 		dhctlOpts.Global.GlobalHooksModule = options.DefaultGlobalHooksModule
 		dhctlOpts.Global.InfrastructureVersions = options.DefaultInfrastructureVersions
 		dhctlOpts.Global.VersionMap = options.DefaultVersionMap
-		dhctlOpts.Global.NeedDownload = false
+		dhctlOpts.Global.EnsureCandiAvailable = false
 
 		dhctlcli.RegisterCobraBridges(rootCmd, fileName, dhctlOpts)
 	}

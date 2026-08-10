@@ -2,6 +2,39 @@ cilium-hubble:
     - version: 2
       conversions:
         - del(.auth.password) | if .auth == {} then del(.auth) end
+cloud-provider-dvp:
+    - version: 2
+      description:
+        en: |
+            * Move `provider.namespace` to `provider.parameters.namespace`.
+            * Move `zones` to `nodes.parameters.zones`.
+            * Delete `provider.kubeconfigDataBase64`. The kubeconfig is stored in a Secret of type `cloud-provider.deckhouse.io/credentials`.
+            * Set `nodes.parameters.layout` (defaults to `Standard`).
+            * Replace the placeholder in `nodes.parameters.sshPublicKey` with a real SSH public key.
+        ru: |
+            * Перенесите `provider.namespace` в `provider.parameters.namespace`.
+            * Перенесите `zones` в `nodes.parameters.zones`.
+            * Удалите `provider.kubeconfigDataBase64`. Kubeconfig хранится в секрете типа `cloud-provider.deckhouse.io/credentials`.
+            * Задайте `nodes.parameters.layout` (по умолчанию — `Standard`).
+            * Замените плейсхолдер в `nodes.parameters.sshPublicKey` на реальный публичный SSH-ключ.
+      conversions:
+        - if .provider == null then .provider = {} end
+        - if .provider.parameters == null then .provider.parameters = {} end
+        - if .provider.parameters.namespace == null then (if .provider.namespace != null then .provider.parameters.namespace = .provider.namespace else .provider.parameters.namespace = "default" end) end
+        - del(.provider.namespace)
+        - del(.provider.kubeconfigDataBase64)
+        - if .nodes == null then .nodes = {} end
+        - if .nodes.parameters == null then .nodes.parameters = {} end
+        - if .nodes.parameters.layout == null then .nodes.parameters.layout = "Standard" end
+        - if .nodes.parameters.sshPublicKey == null then .nodes.parameters.sshPublicKey = "ssh-rsa PLACEHOLDER_REPLACE_ME" end
+        - if .zones != null then .nodes.parameters.zones = .zones end
+        - del(.zones)
+        - if .nodes.disabled == null then .nodes.disabled = false end
+        - if .storage == null then .storage = {} end
+        - if .storage.disabled == null then .storage.disabled = false end
+        - if .ccm == null then .ccm = {} end
+        - if .ccm.disabled == null then .ccm.disabled = false end
+        - if .storage.parameters == null then .storage.parameters = {} end
 cloud-provider-vsphere:
     - version: 2
       description:

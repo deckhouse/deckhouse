@@ -60,22 +60,9 @@ Recommended quotas for a new cluster:
 ## Yandex Cloud integration
 
 {% alert level="warning" %}
-Starting with DKP version 1.76, Yandex Cloud uses the `cilium` CNI by default for new clusters.
+Starting with DKP version 1.76, Yandex Cloud uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
 
-When using CentOS 8, you must explicitly enable the `cni-simple-bridge` module in the `config.yml` file.
-
-{% offtopic title="Example configuration for CentOS 8 in Yandex Cloud..." %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-simple-bridge
-spec:
-  enabled: true
-```
-
-{% endofftopic %}
+New clusters require Linux kernel version 5.8 or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
 {% endalert %}
 
 ### Configuring security groups
@@ -88,9 +75,18 @@ Do not delete the default rules that allow for traffic to pass in any direction 
 
 This section provides general guidelines for setting up a security group. Incorrect configuration of security groups may affect the performance of the cluster. Please consult [security group usage details](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups#security-groups-notes) in Yandex Cloud before using it in production environments.
 
+If the cluster uses `cilium` in VXLAN mode, make sure security groups allow inter-node UDP traffic on the ports required for Cilium. For details, see [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
+
 1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
-   The network name matches the `prefix` field of [the ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource. It can be retrieved using the following command:
+   The network name matches the [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) parameter of the ModuleConfig `global`.
+   You can retrieve it using the following command:
+
+   ```bash
+   d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+   ```
+
+   If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of ClusterConfiguration (the prefix has moved to the ModuleConfig `global`):
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \

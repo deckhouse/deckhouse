@@ -1,8 +1,7 @@
 ---
 title: "Вебхуки"
-menuTitle: Вебхуки
 force_searchable: true
-description: Вебхуки
+description: Как настроить вебхуки для событийной интеграции с внешними системами
 permalink: ru/code/documentation/user/web-hooks.html
 lang: ru
 weight: 50

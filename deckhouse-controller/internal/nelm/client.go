@@ -46,6 +46,15 @@ const (
 
 	// ReleaseLabelPackageChecksum stores the rendered-manifests checksum on the release storage secret.
 	ReleaseLabelPackageChecksum = "packageChecksum"
+
+	// ReleaseLabelModuleChecksum stores the module checksum on the release storage secret.
+	ReleaseLabelModuleChecksum = "moduleChecksum"
+
+	// ReleaseLabelMaintenance marks a release whose resources must not be reconciled.
+	// The value is "true" while the package is under maintenance, "false" otherwise.
+	// It doubles as a resource label key (with an empty value) so the deckhouse
+	// admission policy stops guarding those resources against manual edits.
+	ReleaseLabelMaintenance = "maintenance.deckhouse.io/no-resource-reconciliation"
 )
 
 var (
@@ -250,6 +259,31 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 	return "", ErrLabelNotFound
 }
 
+// GetReleaseLabel returns the value of a storage label on the latest release.
+// Returns ErrReleaseNotFound (wrapped) if the release doesn't exist and
+// ErrLabelNotFound if the label is absent.
+func (c *Client) GetReleaseLabel(ctx context.Context, namespace, releaseName, key string) (string, error) {
+	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "GetReleaseLabel")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("release", releaseName))
+	span.SetAttributes(attribute.String("namespace", namespace))
+
+	res, err := c.getRelease(ctx, namespace, releaseName)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", fmt.Errorf("get nelm release '%s': %w", releaseName, err)
+	}
+
+	if res.Release != nil {
+		if value, ok := res.Release.StorageLabels[key]; ok {
+			return value, nil
+		}
+	}
+
+	return "", ErrLabelNotFound
+}
+
 // InstallOptions contains options for installing a Helm chart
 type InstallOptions struct {
 	Path        string   // Path to the chart directory
@@ -329,7 +363,9 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			RootSetJSON: valuesSet,
 		},
 		TrackingOptions: common.TrackingOptions{
-			NoPodLogs: true,
+			NoPodLogs:                    true,
+			NoFinalTracking:              true,
+			LegacyHelmCompatibleTracking: true,
 		},
 		Chart:                  opts.Path,
 		DefaultChartName:       releaseName,
@@ -411,6 +447,15 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	// Combine all resources into a single YAML document with separators
 	var result strings.Builder
 	for _, resource := range res.Resources {
+		// Keep only regular release resources. Helm hooks live in the cluster just
+		// for the duration of a hook, and standalone crds/ CRDs are never applied at
+		// all because Install passes NoInstallStandaloneCRDs. Both are legitimately
+		// absent from the cluster, so they must not reach the release checksum and
+		// the absent-resources monitor.
+		if resource.StoreAs != common.StoreAsRegular {
+			continue
+		}
+
 		marshalled, err := yaml.Marshal(resource.Unstruct)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())

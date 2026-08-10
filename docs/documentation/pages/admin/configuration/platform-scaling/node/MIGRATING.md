@@ -5,6 +5,18 @@ permalink: en/admin/configuration/platform-scaling/node/migrating.html
 
 You can configure containerd v2 as the primary container runtime either at the cluster level or for specific node groups. This runtime option enables the use of cgroups v2, provides improved security, and allows more flexible resource management.
 
+{% alert level="info" %}
+
+To view the current container runtime type used by default in the cluster NodeGroups, use the following command:
+
+```shell
+d8 system edit cluster-configuration
+```
+
+The container runtime type is specified in the [`defaultCRI`](../../../../reference/api/cr.html#clusterconfiguration-defaultcri) parameter.
+
+{% endalert %}
+
 ## Requirements
 
 Migration to containerd v2 is possible under the following conditions:
@@ -12,6 +24,14 @@ Migration to containerd v2 is possible under the following conditions:
 - Nodes meet the requirements described in the [cluster-wide parameters](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 - The node kernel version is not in the range 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS).
 - There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
+
+{% alert level="warning" %}
+On Ubuntu nodes in AWS, the `erofs` kernel module required by containerd v2 is shipped in a separate `linux-modules-extra` package. DKP installs it automatically, but for some kernels, mostly outdated ones, the package is no longer published in the APT repository. In that case, the installation is skipped, a warning is written to the node logs, the node gets the `node.deckhouse.io/containerd-v2-unsupported` label, and the [`D8NodeContainerdV2NotSupported`](../../../../reference/alerts.html#node-manager-d8nodecontainerdv2notsupported) alert fires.
+
+The problem has been confirmed for the `5.15.0-1028-aws`, `6.8.0-1024-aws`, and `6.8.0-1029-aws` kernels. To migrate such nodes, switch the node group to a newer AMI or kernel that provides `erofs`.
+
+Before migrating, check whether there are such nodes in the cluster: check the alerts and the list of labelled nodes (see the commands below).
+{% endalert %}
 
 If any of the requirements described in the [general cluster parameters](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) are not met, Deckhouse Kubernetes Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in the `/etc/containerd/conf.d/` (if CRI containerd v1 is used on the cluster nodes) or `/etc/containerd/conf2.d/` (if CRI containerd v2 is used on the cluster nodes) directories, the label `node.deckhouse.io/containerd-config=custom` is added to it.
 

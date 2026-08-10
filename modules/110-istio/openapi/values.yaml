@@ -2,6 +2,12 @@ x-extend:
   schema: config-values.yaml
 type: object
 properties:
+  registry:
+    type: object
+    default: {}
+    properties:
+      dockercfg:
+        type: string
   internal:
     type: object
     default: {}
@@ -42,6 +48,7 @@ properties:
           "1.21": ["1.32", "1.33", "1.34", "1.35", "1.36"]
           "1.25": ["1.32", "1.33", "1.34", "1.35", "1.36"]
           "1.27": ["1.32", "1.33", "1.34", "1.35", "1.36"]
+          "1.29": ["1.32", "1.33", "1.34", "1.35", "1.36"]
         additionalProperties:
           type: array
           items:
@@ -233,6 +240,15 @@ properties:
                 inlet:
                   type: string
                   x-examples:  ["HostPort", "LoadBalancer"]
+                networkTopology:
+                  type: object
+                  properties:
+                    numTrustedProxies:
+                      type: integer
+                      x-examples: [2]
+                    proxyProtocol:
+                      type: boolean
+                      x-examples: [true]
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -272,6 +288,8 @@ properties:
                     annotations:
                       type: object
                       additionalProperties: true
+                    loadBalancerClass:
+                      type: string
                 nodePort:
                   type: object
                   default: {}

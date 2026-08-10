@@ -48,33 +48,30 @@ func newInfrastructureUtilProvider(binariesDir string) *InfrastructureUtilProvid
 }
 
 func (p *InfrastructureUtilProvider) DownloadTerraform(ctx context.Context, _ cloud.InfrastructureUtilProviderParams, destination string, conf *config.MetaConfig) error {
-	p.m.Lock()
-	defer p.m.Unlock()
-
-	_, err := os.Stat(filepath.Join(p.binariesDir, "terraform"))
-	if err == nil {
-		return fsutils.CreateLinkIfNotExists(ctx, filepath.Join(p.binariesDir, "terraform"), checkIsExecFile, destination)
-	}
-	if err = downloadImage(ctx, conf, terraformImageName, "terraformManager", conf.ShowProgress); err != nil {
-		return err
-	}
-
-	return fsutils.CreateLinkIfNotExists(ctx, filepath.Join(conf.DownloadRootDir, "terraform"), checkIsExecFile, destination)
+	return p.setupBinary(ctx, conf, "terraform", terraformImageName, destination)
 }
 
 func (p *InfrastructureUtilProvider) DownloadOpenTofu(ctx context.Context, _ cloud.InfrastructureUtilProviderParams, destination string, conf *config.MetaConfig) error {
+	return p.setupBinary(ctx, conf, "opentofu", opentofuImageName, destination)
+}
+
+func (p *InfrastructureUtilProvider) setupBinary(ctx context.Context, conf *config.MetaConfig, binaryName, imageName, destination string) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	_, err := os.Stat(filepath.Join(p.binariesDir, "opentofu"))
-	if err == nil {
-		return fsutils.CreateLinkIfNotExists(ctx, filepath.Join(p.binariesDir, "opentofu"), checkIsExecFile, destination)
-	}
-	if err = downloadImage(ctx, conf, opentofuImageName, "terraformManager", conf.ShowProgress); err != nil {
-		return err
+	bundled := filepath.Join(p.binariesDir, binaryName)
+	if _, err := os.Stat(bundled); err == nil {
+		return fsutils.CreateLinkIfNotExists(ctx, bundled, checkIsExecFile, destination)
 	}
 
-	return fsutils.CreateLinkIfNotExists(ctx, filepath.Join(conf.DownloadRootDir, "opentofu"), checkIsExecFile, destination)
+	downloaded := filepath.Join(conf.DownloadRootDir, binaryName)
+	if _, err := os.Stat(downloaded); err != nil {
+		if err := downloadImage(ctx, conf, imageName, "terraformManager", conf.ShowProgress); err != nil {
+			return err
+		}
+	}
+
+	return fsutils.CreateLinkIfNotExists(ctx, downloaded, checkIsExecFile, destination)
 }
 
 func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section string, showProgress bool) error {
@@ -82,9 +79,9 @@ func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section s
 	var err error
 	var imageName string
 	if govalue.NotNil(conf.DeckhouseConfig) {
-		dc, err2 := image.DecodeDockerConfig(conf.DeckhouseConfig.RegistryDockerCfg)
-		if err2 != nil {
-			return err
+		dc, decodeErr := image.DecodeDockerConfig(conf.DeckhouseConfig.RegistryDockerCfg)
+		if decodeErr != nil {
+			return decodeErr
 		}
 		scheme := "HTTPS"
 		if strings.ToUpper(conf.DeckhouseConfig.RegistryScheme) == "HTTP" || strings.ToUpper(conf.DeckhouseConfig.RegistryScheme) == "HTTPS" {

@@ -26,6 +26,26 @@ Then add a new user. Follow these steps:
 1. Click "Create" to complete the user creation process.
 1. Click "OK" to download the `Access Key ID` and `Secret Access Key`. Make sure to save these credentials in a secure location, as they will be needed to access the API.
 
+Obtain the ID of the project where the cluster will be deployed. To do this, follow these steps:
+
+1. Go to the "Identity and Access Management (IAM)" section.
+1. In the left-hand menu, select "Projects".
+1. From the project list, select the project that corresponds to the region where the cluster will be deployed.
+1. On the project page, in the "Basic Information" section, copy the value of the `Project ID` field.
+1. Use the obtained value as the `projectID` parameter when configuring the cluster.
+
+{% alert level="info" %}
+The `enterpriseProjectID` parameter is optional. The cluster can be deployed without specifying it. Use this parameter if the cluster resources need to be placed in a specific Enterprise Project.
+{% endalert %}
+
+To obtain the Enterprise Project ID, follow these steps:
+
+1. In the upper-right corner of the Huawei Cloud console, open the profile menu.
+1. Select "Enterprise Management".
+1. On the "Enterprise Project Management Service" page, select the Enterprise Project where the cluster resources should be placed.
+1. On the selected Enterprise Project page, copy the value of the `ID` field.
+1. Use the obtained value as the `enterpriseProjectID` parameter when configuring the cluster.
+
 ## JSON policies
 
 Below are the contents of the policies in JSON format:

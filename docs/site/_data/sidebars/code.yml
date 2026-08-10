@@ -24,6 +24,14 @@ entries:
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
       - title:
+          en: Maintenance mode
+          ru: Режим обслуживания
+        url: /code/documentation/admin/configuration/maintenance-mode.html
+      - title:
+          en: Advanced search
+          ru: Расширенный поиск
+        url: /code/documentation/admin/configuration/advanced-search.html
+      - title:
           en: Service account
           ru: Сервисный аккаунт
         url: /code/documentation/admin/service-account.html
@@ -55,6 +63,10 @@ entries:
           en: Managing Git repositories
           ru: Управление репозиториями Git
         url: /code/documentation/user/repositories.html
+      - title:
+          en: Protected branches
+          ru: Защищённые ветки
+        url: /code/documentation/user/protected-branches.html
       - title:
           en: Working with the codebase and Code Review
           ru: Работа с кодовой базой и Code Review
@@ -92,6 +104,10 @@ entries:
           ru: Интеграция с внешним Vault
         url: /code/documentation/user/external-vault.html
       - title:
+          en: DefectDojo integration
+          ru: Интеграция с DefectDojo
+        url: /code/documentation/user/defect-dojo.html
+      - title:
           en: External status checks
           ru: Внешние проверки статуса
         url: /code/documentation/user/external-status-checks.html
@@ -108,8 +124,8 @@ entries:
           ru: Вебхуки
         url: /code/documentation/user/web-hooks.html
       - title:
-          en: Search
-          ru: Поиск
+          en: Advanced search
+          ru: Расширенный поиск
         url: /code/documentation/user/search.html
       - title:
           en: Push rules

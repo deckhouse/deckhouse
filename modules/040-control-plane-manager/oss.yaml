@@ -3,6 +3,8 @@
   description: An open source system for managing containerized applications across multiple hosts.
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
+  id: kubernetes
+  version: 1.32+
 
 - name: Etcd
   link: https://github.com/etcd-io/etcd
@@ -10,4 +12,4 @@
   logo: /images/logos/etcd-icon-color.svg
   license: Apache License 2.0
   id: etcd
-  version: 3.6.10
+  version: 3.6.13

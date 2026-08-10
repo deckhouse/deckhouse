@@ -96,7 +96,7 @@ func TestApplyGrantDefaults(t *testing.T) {
 	}})
 
 	t.Run("injects default into empty field", func(t *testing.T) {
-		err := app.ApplySettings(addonutils.Values{})
+		err := app.ApplySettings(0, addonutils.Values{})
 		require.NoError(t, err)
 
 		settings := app.GetSettings()
@@ -104,7 +104,7 @@ func TestApplyGrantDefaults(t *testing.T) {
 	})
 
 	t.Run("user value overrides default", func(t *testing.T) {
-		err := app.ApplySettings(addonutils.Values{"storageClass": "hdd"})
+		err := app.ApplySettings(0, addonutils.Values{"storageClass": "hdd"})
 		require.NoError(t, err)
 
 		settings := app.GetSettings()
@@ -113,7 +113,7 @@ func TestApplyGrantDefaults(t *testing.T) {
 
 	t.Run("no default when feature inactive", func(t *testing.T) {
 		inactive := newTestApp(t, grants.NoopResolver{})
-		err := inactive.ApplySettings(addonutils.Values{})
+		err := inactive.ApplySettings(0, addonutils.Values{})
 		require.NoError(t, err)
 
 		settings := inactive.GetSettings()
@@ -126,7 +126,7 @@ func TestApplyGrantDefaults(t *testing.T) {
 			Default:   "",
 			Available: []string{"ssd", "hdd"},
 		}})
-		err := noDefault.ApplySettings(addonutils.Values{})
+		err := noDefault.ApplySettings(0, addonutils.Values{})
 		require.NoError(t, err)
 
 		settings := noDefault.GetSettings()

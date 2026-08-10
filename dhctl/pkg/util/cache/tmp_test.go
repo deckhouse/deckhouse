@@ -22,6 +22,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -813,4 +814,23 @@ func assertKeepAndRemoved(t *testing.T, removed []fileDirToCreate, f testFunc, k
 	assertKeep(t, f, keept, true)
 
 	assertNoErrorsInLog(t, f)
+}
+
+func TestKeepProviderBundleDirs(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	bundle := filepath.Join(tmpDir, "dvp@sha256:"+strings.Repeat("a", 64))
+	testMkDir(t, filepath.Join(bundle, "candi"))
+	require.NoError(t, os.WriteFile(filepath.Join(bundle, "validator"), []byte("bin"), 0o755))
+
+	junkDir := filepath.Join(tmpDir, "some-run-dir")
+	testMkDir(t, junkDir)
+	require.NoError(t, os.WriteFile(filepath.Join(junkDir, "f"), []byte("x"), 0o644))
+
+	NewTmpCleaner(ClearTmpParams{TmpDir: tmpDir, DefaultTmpDir: tmpDir}).Cleanup()
+
+	// Digest-pinned bundles are a content-addressed cache reused by the next
+	// run; everything else must still be cleaned.
+	require.FileExists(t, filepath.Join(bundle, "validator"))
+	require.NoDirExists(t, junkDir)
 }

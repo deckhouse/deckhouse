@@ -101,11 +101,13 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 	}
 
 	kubeCl := kube.NewKubernetesClient(c.baseProviderSettings).WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient, c.baseProviderSettings))
-	params := &kube.Config{
-		KubeConfig:          c.initParams.KubeConfig,
-		KubeConfigContext:   c.initParams.KubeConfigContext,
-		KubeConfigInCluster: c.initParams.KubeConfigInCluster,
-		RestConfig:          c.initParams.RestConfig,
+	// initParams is optional: the converge controlplane path does not wire it.
+	params := &kube.Config{}
+	if c.initParams != nil {
+		params.KubeConfig = c.initParams.KubeConfig
+		params.KubeConfigContext = c.initParams.KubeConfigContext
+		params.KubeConfigInCluster = c.initParams.KubeConfigInCluster
+		params.RestConfig = c.initParams.RestConfig
 	}
 
 	err = kubeCl.InitContext(ctx, params)

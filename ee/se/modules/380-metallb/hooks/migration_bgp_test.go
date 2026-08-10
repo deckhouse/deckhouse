@@ -9,6 +9,9 @@ See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 package hooks
 
 import (
+	"fmt"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -190,6 +193,76 @@ settings:
     protocol: bgp
 version: 2
 `))
+		})
+	})
+
+	Context("With many BGP pools each having its own IP address", func() {
+		const poolCount = 80
+
+		poolIP := func(i int) string {
+			return fmt.Sprintf("10.10.0.%d/32", i)
+		}
+
+		BeforeEach(func() {
+			var sb strings.Builder
+			sb.WriteString(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  version: 2
+  settings:
+    speaker:
+      nodeSelector:
+        dedicated: metallb
+    bgpPeers:
+    - my-asn: 64500
+      peer-address: 192.168.0.1
+      peer-asn: 64500
+      hold-time: 3s
+    - my-asn: 64500
+      peer-address: 192.168.0.2
+      peer-asn: 64500
+      hold-time: 3s
+    addressPools:
+`)
+			localPrefs := []int{100, 150, 200}
+			for i := 0; i < poolCount; i++ {
+				sb.WriteString(fmt.Sprintf("    - name: pool-%02d-bgp\n", i))
+				sb.WriteString("      protocol: bgp\n")
+				sb.WriteString("      addresses:\n")
+				sb.WriteString(fmt.Sprintf("      - %s\n", poolIP(i)))
+				// Every 4th pool has no bgp-advertisements (like haproxy pools in the example).
+				if i%4 != 0 {
+					sb.WriteString("      bgp-advertisements:\n")
+					sb.WriteString("      - aggregation-length: 32\n")
+					sb.WriteString(fmt.Sprintf("        localpref: %d\n", localPrefs[i%len(localPrefs)]))
+				}
+			}
+
+			f.BindingContexts.Set(f.KubeStateSet(sb.String()))
+			f.RunHook()
+		})
+
+		It("Should migrate all pools with their own IP", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Every pool must be migrated into its own MetalLoadBalancerPool with its own address.
+			for i := 0; i < poolCount; i++ {
+				name := fmt.Sprintf("pool-%02d-bgp", i)
+				pool := f.KubernetesResource("MetalLoadBalancerPool", "", name)
+				Expect(pool.Exists()).To(BeTrue(), "pool %q should exist", name)
+				Expect(pool.Field("spec.addresses").AsStringSlice()).To(Equal([]string{poolIP(i)}))
+			}
+
+			// The single configuration must contain one advertisement per pool and both peers.
+			config := f.KubernetesResource("MetalLoadBalancerConfiguration", "", "migrated-bgp")
+			Expect(config.Exists()).To(BeTrue())
+			Expect(config.Field("spec.mode").String()).To(Equal("BGP"))
+			Expect(config.Field("spec.advertisements.#").Int()).To(BeEquivalentTo(poolCount))
+			Expect(config.Field("spec.bgp.peerNames").AsStringSlice()).To(Equal([]string{"peer-0", "peer-1"}))
 		})
 	})
 

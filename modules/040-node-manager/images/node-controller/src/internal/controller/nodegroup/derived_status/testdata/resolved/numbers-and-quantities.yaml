@@ -1,0 +1,40 @@
+cloudInstances:
+  maxPerZone: 20
+  minPerZone: 0
+  standby: 15%
+  standbyHolder:
+    overprovisioningRate: 0.5
+  zones:
+  - a
+cri:
+  type: Containerd
+engine: MCM
+instanceClass:
+  additionalTags: {}
+  coreFraction: 0.5
+  cores: 4
+  gpus: 0
+  memory: 8589934592
+  spot: false
+  subnets: []
+kubelet:
+  containerLogMaxFiles: 4
+  containerLogMaxSize: 50Mi
+  maxPods: 110
+  resourceReservation:
+    mode: Static
+    static:
+      cpu: 500m
+      ephemeralStorage: 2Gi
+      memory: 1Gi
+kubernetesVersion: "1.33"
+manualRolloutID: ""
+name: numbers
+nodeCapacity:
+  cpu: 3900m
+  memory: 7969960Ki
+nodeDrainTimeoutSecond: 45.5
+nodeType: CloudEphemeral
+serializedLabels: node.deckhouse.io/group=numbers
+serializedTaints: ""
+updateEpoch: "1012"

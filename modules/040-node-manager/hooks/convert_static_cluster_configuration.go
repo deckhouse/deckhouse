@@ -18,16 +18,19 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 )
 
 func applyStaticClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -59,6 +62,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, convertStaticClusterConfigurationHandler)
 
+const internalNetworkCIDRsPath = "nodeManager.internal.static.internalNetworkCIDRs"
+
 func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hook.HookInput) error {
 	secret := input.Snapshots.Get("static_cluster_configuration")
 
@@ -72,34 +77,67 @@ func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hoo
 		return fmt.Errorf("failed to unmarshal first 'static_cluster_configuration' snapshot: %w", err)
 	}
 
-	internalNetwork, err := internalNetworkFromStaticConfiguration(ctx, staticConfiguration)
+	internalNetwork, err := internalNetworkFromStaticConfiguration(staticConfiguration)
 	if err != nil {
 		return err
 	}
 
-	input.Values.Set("nodeManager.internal.static.internalNetworkCIDRs", internalNetwork)
+	if isEmptyInternalNetwork(internalNetwork) {
+		if existing := input.Values.Get(internalNetworkCIDRsPath); len(existing.Array()) > 0 {
+			return fmt.Errorf(
+				"static-cluster-configuration.yaml no longer contains 'internalNetworkCIDRs', but %q is currently set to %s; "+
+					"refusing to silently clear it, since this looks like an accidental config change that could break node network setup",
+				internalNetworkCIDRsPath, existing.String(),
+			)
+		}
+	}
+
+	input.Values.Set(internalNetworkCIDRsPath, internalNetwork)
 	return nil
 }
 
-func internalNetworkFromStaticConfiguration(ctx context.Context, data []byte) (interface{}, error) {
-	var err error
-	var metaConfig *config.MetaConfig
+func internalNetworkFromStaticConfiguration(data []byte) (any, error) {
+	if isBlankYAMLDocument(data) {
+		return []any{}, nil
+	}
 
-	metaConfig, err = config.ParseConfigFromData(
-		ctx,
-		string(data),
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParamsWithoutLogger(),
-		),
-		nil,
-	)
+	if err := validation.ValidateData([]string{}, &data); err != nil {
+		if !errors.Is(err, validation.ErrSchemaNotFound) {
+			return nil, err
+		}
+	}
+	res := make(map[any]any)
+	err := yaml.Unmarshal(data, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	intNet := metaConfig.StaticClusterConfig["internalNetworkCIDRs"]
-	if intNet == nil {
-		return []interface{}{}, nil
+	intNet, ok := res["internalNetworkCIDRs"]
+	if ok {
+		return intNet, nil
 	}
-	return intNet, nil
+
+	return []any{}, nil
+}
+
+// isBlankYAMLDocument reports whether data contains no actual YAML content:
+// only whitespace and/or "---" document separators (e.g. "", "\n", "---", "---\n").
+func isBlankYAMLDocument(data []byte) bool {
+	trimmed := strings.TrimFunc(string(data), func(r rune) bool {
+		return r == '-' || unicode.IsSpace(r)
+	})
+	return trimmed == ""
+}
+
+func isEmptyInternalNetwork(v any) bool {
+	switch t := v.(type) {
+	case nil:
+		return true
+	case []any:
+		return len(t) == 0
+	case string:
+		return t == ""
+	default:
+		return false
+	}
 }

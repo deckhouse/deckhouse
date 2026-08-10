@@ -14,12 +14,7 @@ spec:
   packageRepositoryName: deckhouse
   packageVersion: "v1.0.0"
 status:
-  usedByCount: 2
-  usedBy:
-  - name: my-module
-    namespace: default
-  - name: other-module
-    namespace: kube-system
+  used: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

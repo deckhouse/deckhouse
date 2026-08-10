@@ -1,5 +1,6 @@
 ---
 title: "Управление репозиториями Git"
+description: Как управлять репозиториями Git, ветками и файлами в проекте
 permalink: ru/code/documentation/user/repositories.html
 lang: ru
 ---
@@ -30,7 +31,7 @@ Deckhouse Code предоставляет инструменты для рабо
 - Создание веток: `git branch <name>`, `git checkout -b <name>`.
 - Переключение между ветками: `git checkout <branch>`.
 - Слияние изменений: `git merge <branch>`.
-- Поддержка защищённых веток (protected branches) — для внесения изменений требуется merge request.
+- Поддержка [защищённых веток](/products/code/documentation/user/protected-branches.html) (protected branches) — для внесения изменений требуется merge request.
 - Автоматическое удаление веток после слияния (если включено).
 
 ## Встроенный web-редактор

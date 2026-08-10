@@ -270,6 +270,10 @@ To apply only the required security policies without turning off the entire buil
 1. Create a SecurityPolicy that matches the [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) or [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted) policy while also editing the list of `policies` elements as you see fit.
 1. Add a label to your namespace that matches the `namespaceSelector` in the SecurityPolicy. In the examples below, the label is `security-policy.deckhouse.io/baseline-enabled: "true"` or `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
+{% alert level="info" %}
+The `allowedHostPaths` field defines the list of allowed path prefixes for `hostPath` mounts. An empty list (`[]`) forbids `hostPath` for all paths. If the field is omitted, no restrictions apply.
+{% endalert %}
+
 SecurityPolicy that matches baseline:
 
 ```yaml
@@ -541,6 +545,17 @@ To protect system components managed by Deckhouse, the `admission-policy-engine`
 This policy doesn't apply to the following users who are allowed to run `kubectl exec` and `kubectl attach` operations to Pods labeled with `heritage: deckhouse`:
 
 - `system:sudouser`;
+- service accounts from `d8-*` namespaces (`system:serviceaccount:d8-*`);
+- service accounts from `kube-*` namespaces (`system:serviceaccount:kube-*`).
+
+### Built-in policy for finalizers
+
+To protect objects managed by DKP controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `deckhouse.io` substring on any cluster objects.
+
+This policy doesn't apply to the following users who are allowed to remove such finalizers:
+
+- Kubernetes system controllers (`system:kube-controller-manager`, `system:kube-scheduler`, etc.);
+- `system:sudouser`, `dhctl`, `observability`;
 - service accounts from `d8-*` namespaces (`system:serviceaccount:d8-*`);
 - service accounts from `kube-*` namespaces (`system:serviceaccount:kube-*`).
 

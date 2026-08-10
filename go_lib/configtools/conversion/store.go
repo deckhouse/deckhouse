@@ -35,7 +35,7 @@ func (s *ConversionsStore) Add(module, pathToConversions string) error {
 		s.converters = make(map[string]*Converter)
 	}
 
-	converter, err := newConverter(pathToConversions)
+	converter, err := NewConverterFromDir(pathToConversions)
 	if err != nil {
 		return err
 	}

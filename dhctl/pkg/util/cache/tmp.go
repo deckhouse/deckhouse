@@ -20,6 +20,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -33,6 +34,22 @@ import (
 )
 
 const cleanupErrorPrefix = "Error during cleanup tmp dir:"
+
+const (
+	traceFilePrefix = "trace-"
+	traceFileSuffix = ".jsonl"
+)
+
+var providerBundleDirRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*@sha256:[a-f0-9]{64}$`)
+
+// isProviderBundleDir reports whether fullPath is a digest-pinned provider
+// bundle directory right under tmpDir (e.g. /tmp/dhctl/dvp@sha256:<hex>).
+func isProviderBundleDir(tmpDir, fullPath string) bool {
+	if filepath.Dir(fullPath) != tmpDir {
+		return false
+	}
+	return providerBundleDirRe.MatchString(filepath.Base(fullPath))
+}
 
 type ClearTmpParams struct {
 	IsDebug         bool
@@ -193,6 +210,16 @@ func (r *regularTmpCleaner) Cleanup() {
 				return nil
 			}
 
+			// Digest-pinned provider bundles are a content-addressed cache:
+			// keep them so the next run (e.g. a converge-periodical iteration)
+			// reuses the unpacked bundle instead of re-downloading it. A new
+			// bundle version lands under a different @sha256 directory, so a
+			// stale entry can never shadow it.
+			if isProviderBundleDir(tmpDir, fullPath) {
+				keepFiles = append(keepFiles, fullPath)
+				return filepath.SkipDir
+			}
+
 			dirsForDeletion = append(dirsForDeletion, fullPath)
 			return nil
 		}
@@ -207,6 +234,11 @@ func (r *regularTmpCleaner) Cleanup() {
 				keepFiles = append(keepFiles, fullPath)
 				return nil
 			}
+		}
+
+		if isTraceFile(fullPath) {
+			keepFiles = append(keepFiles, fullPath)
+			return nil
 		}
 
 		// keep download layers cache
@@ -270,6 +302,12 @@ func (r *regularTmpCleaner) Cleanup() {
 	} else {
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cleaning temp dir '%s' skipeed because it default or have keept files %d", tmpDir, len(keepFiles)))
 	}
+}
+
+func isTraceFile(fullPath string) bool {
+	fileName := filepath.Base(fullPath)
+
+	return strings.HasPrefix(fileName, traceFilePrefix) && strings.HasSuffix(fileName, traceFileSuffix)
 }
 
 func (r *regularTmpCleaner) DisableCleanup(msg string) {

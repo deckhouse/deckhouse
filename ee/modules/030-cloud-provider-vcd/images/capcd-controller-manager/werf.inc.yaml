@@ -59,3 +59,5 @@ shell:
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version={{ $version }}" -o /cluster-api-provider-cloud-director
   - chown 64535:64535 /cluster-api-provider-cloud-director
   - chmod 0755 /cluster-api-provider-cloud-director
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

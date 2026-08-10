@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -93,13 +94,15 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("disable package '%s': %w", t.pkg.GetName(), err)
 	}
 
+	// Queue names must be built exactly as the enable task and the event routers
+	// build them (filepath.Join): hook queues are often absolute ("/modules/<name>"),
+	// and Join collapses the resulting double slash while Sprintf does not, so a
+	// hand-built name would not match the queue that was actually spawned.
 	for _, q := range t.pkg.GetHooksQueues() {
 		t.logger.Debug("remove package queue", slog.String("queue", q))
-		t.queueService.Remove(fmt.Sprintf("%s/%s", t.pkg.GetName(), q))
-		t.queueService.Remove(fmt.Sprintf("%s/%s/sync", t.pkg.GetName(), q))
+		t.queueService.Remove(filepath.Join(t.pkg.GetName(), q))
+		t.queueService.Remove(filepath.Join(t.pkg.GetName(), q, "sync"))
 	}
-
-	t.queueService.Remove(fmt.Sprintf("%s/sync", t.pkg.GetName()))
 
 	return nil
 }
@@ -108,10 +111,11 @@ func (t *task) Execute(ctx context.Context) error {
 //
 // Process:
 //  1. Stop Helm resource monitoring
-//  2. Uninstall Helm release
-//  3. Run AfterDeleteHelm hooks
-//  4. Disable all schedule hooks
-//  5. Stop all Kubernetes event monitors
+//  2. Run BeforeDeleteHelm hooks (on failure: skip uninstall and AfterDeleteHelm, retry with backoff)
+//  3. Uninstall Helm release
+//  4. Run AfterDeleteHelm hooks
+//  5. Disable all schedule hooks
+//  6. Stop all Kubernetes event monitors
 func (t *task) disablePackage(ctx context.Context) error {
 	_, span := otel.Tracer(taskTracer).Start(ctx, "DisablePackage")
 	defer span.End()
@@ -124,6 +128,16 @@ func (t *task) disablePackage(ctx context.Context) error {
 	t.nelm.RemoveMonitor(t.pkg.GetName())
 
 	if !t.keep {
+		t.logger.Debug("run before delete helm hooks")
+
+		// Run beforeDeleteHelm hooks just before helm uninstall. On hook failure,
+		// helm uninstall and afterDeleteHelm are NOT executed and the disable is
+		// retried with backoff. Symmetric to beforeHelm aborting a helm install.
+		if err := t.pkg.RunHooksByBinding(ctx, addontypes.BeforeDeleteHelm); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return fmt.Errorf("run before delete helm hooks: %w", err)
+		}
+
 		t.logger.Debug("delete nelm release")
 		if err := t.nelm.Delete(ctx, t.namespace, t.pkg.GetName()); err != nil {
 			span.SetStatus(codes.Error, err.Error())

@@ -37,8 +37,8 @@ import (
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 )
 
 var rootTmpDirStaticAbort = path.Join(os.TempDir(), "dhctl-test-static-abort")
@@ -129,7 +129,7 @@ func (ts *testAbortStaticTest) getStateCache() dhctlstate.Cache {
 
 func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestParams) *testAbortStaticTest {
 	require.NotEmpty(t, params.host.Host)
-	metaConfig, err := config.ParseConfigFromData(t.Context(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), nil)
+	metaConfig, err := config.ParseConfigFromData(t.Context(), staticClusterGeneralConfigYAML, config.DummyValidatorProvider(), nil)
 	require.NoError(t, err, "parsing config from data")
 	metaConfig.UUID = uuid.Must(uuid.NewRandom()).String()
 

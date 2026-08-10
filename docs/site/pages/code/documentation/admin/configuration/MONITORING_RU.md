@@ -1,5 +1,6 @@
 ---
 title: "Мониторинг и управление"
+description: Как настроить лимиты на репозитории и артефакты и оптимизировать производительность
 permalink: ru/code/documentation/admin/configuration/monitoring.html
 lang: ru
 ---

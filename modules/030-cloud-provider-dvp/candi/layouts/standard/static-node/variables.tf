@@ -16,7 +16,8 @@ variable "clusterConfiguration" {
 }
 
 variable "providerClusterConfiguration" {
-  type = any
+  type    = any
+  default = null
 }
 
 variable "nodeIndex" {
@@ -45,13 +46,54 @@ variable "additional_disks" {
   default = []
 }
 
-locals {
-  prefix         = var.clusterConfiguration.cloud.prefix
-  node_index     = var.nodeIndex
-  namespace      = var.providerClusterConfiguration.provider.namespace
-  ng             = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
-  instance_class = local.ng["instanceClass"]
+variable "nodeGroups" {
+  type    = any
+  default = {}
+}
 
+variable "instanceClasses" {
+  type    = any
+  default = {}
+}
+
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
+}
+
+module "migration" {
+  source                       = "../../../terraform-modules/migration"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  nodeGroups                   = var.nodeGroups
+  instanceClasses              = var.instanceClasses
+  secrets                      = var.secrets
+  settings                     = var.settings
+}
+
+locals {
+  prefix     = var.clusterConfiguration.cloud.prefix
+  node_index = var.nodeIndex
+
+  _ng            = lookup(module.migration.nodeGroups, var.nodeGroupName, null)
+  _ic_name       = try(local._ng.spec.cloudInstances.classReference.name, "")
+  instance_class = try(module.migration.instanceClasses[local._ic_name].spec, {})
+
+  namespace      = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
+  ssh_public_key = try(module.migration.settings.spec.settings.nodes.parameters.sshPublicKey, "")
+  region         = try(module.migration.settings.spec.settings.nodes.parameters.region, "")
+  actual_zones   = try(module.migration.settings.spec.settings.nodes.parameters.zones, [])
+  zones          = try(local._ng.spec.cloudInstances.zones, null) != null ? tolist(setintersection(local.actual_zones, local._ng.spec.cloudInstances.zones)) : local.actual_zones
+  zone           = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
+
+  ipv4_address = try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses[var.nodeGroupName], null) == null ? "Auto" : (
+    var.nodeIndex + 1 > length(try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses[var.nodeGroupName], [])) ? "Auto" :
+    try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses[var.nodeGroupName], [])[var.nodeIndex]
+  )
 
   cluster_uuid = var.clusterUUID
 
@@ -69,7 +111,6 @@ locals {
     }
   ]
 
-
   cpu = {
     cores         = local.instance_class.virtualMachine.cpu.cores
     core_fraction = lookup(local.instance_class.virtualMachine.cpu, "coreFraction", "100%")
@@ -77,23 +118,13 @@ locals {
   memory_size                = local.instance_class.virtualMachine.memory.size
   virtual_machine_class_name = local.instance_class.virtualMachine.virtualMachineClassName
 
-  bootloader = lookup(local.instance_class.virtualMachine, "bootloader", null)
+  bootloader            = lookup(local.instance_class.virtualMachine, "bootloader", null)
   live_migration_policy = lookup(local.instance_class.virtualMachine, "liveMigrationPolicy", "PreferForced")
   run_policy = lookup(
-  local.instance_class.virtualMachine,
-  "runPolicy",
-  "AlwaysOnUnlessStoppedManually",
-)
-
-  ssh_public_key = var.providerClusterConfiguration.sshPublicKey
-
-  ipv4_address = lookup(local.instance_class.virtualMachine, "ipAddresses", null) == null ? "Auto" : local.node_index + 1 > length(local.instance_class.virtualMachine.ipAddresses) ? "Auto" : local.instance_class.virtualMachine.ipAddresses[local.node_index]
-
-  region = lookup(var.providerClusterConfiguration, "region", "")
-
-  actual_zones = lookup(var.providerClusterConfiguration, "zones", [])
-  zones        = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
-  zone         = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
+    local.instance_class.virtualMachine,
+    "runPolicy",
+    "AlwaysOnUnlessStoppedManually",
+  )
 
   additional_labels      = lookup(local.instance_class.virtualMachine, "additionalLabels", {})
   additional_annotations = lookup(local.instance_class.virtualMachine, "additionalAnnotations", {})
@@ -101,8 +132,7 @@ locals {
   node_selector          = lookup(local.instance_class.virtualMachine, "nodeSelector", {})
   tolerations            = lookup(local.instance_class.virtualMachine, "tolerations", null)
 
-  node_group = local.ng.name
+  node_group = var.nodeGroupName
   hostname   = join("-", [local.prefix, local.node_group, local.node_index])
   user_data  = var.cloudConfig == "" ? "" : var.cloudConfig
 }
-

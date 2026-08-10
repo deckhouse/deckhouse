@@ -168,6 +168,11 @@ rules:
 - apiGroups: ["storage.k8s.io"]
   resources: ["storageclasses", "csinodes", "csistoragecapacities", "csidrivers", "volumeattachments"]
   verbs: ["get", "list", "watch"]
+# Cluster-autoscaler 1.35+ always starts DRA informers and blocks on their cache sync,
+# so these permissions are required even in clusters that do not use DRA.
+- apiGroups: ["resource.k8s.io"]
+  resources: ["resourceclaims", "resourceslices", "deviceclasses"]
+  verbs: ["get", "list", "watch"]
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create", "update", "patch"]

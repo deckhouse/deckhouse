@@ -247,6 +247,24 @@
         d8 k patch moduleconfig {{ $labels.module }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
         ```
 
+  - alert: ApplicationIsInMaintenanceMode
+    expr: sum(deckhouse_application_maintenance{state="NoResourceReconciliation"}) by (namespace, name) > 0
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` is running in maintenance mode.
+      description: |
+        Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the application back to normal mode, edit the corresponding Application resource with the following command:
+
+        ```bash
+        d8 k patch application {{ $labels.name }} -n {{ $labels.namespace }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
+        ```
+
   - alert: DeckhouseReleaseNotificationNotSent
     expr: sum by (name) (d8_release_info{notificationNotSent="true"})
     labels:

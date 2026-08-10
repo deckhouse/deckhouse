@@ -20,3 +20,10 @@ report `<none>`). This requires watching ReplicaSets, so the descheduler
 `result` is a bounded enum (`success`, `error`, `blocked`) and `reason` is a
 normalized value (e.g. `node_limit_reached`, `too_many_requests`); arbitrary
 error text is never used as a label value.
+
+## 003-go-mod.patch
+
+This patch bumps `golang.org/x/crypto` to v0.52.0, `golang.org/x/net` to v0.55.0
+and `golang.org/x/sys` to v0.45.0 (pulling in `x/term` v0.43.0, `x/text` v0.37.0,
+`x/mod` v0.35.0 and `x/tools` v0.44.0 as transitive requirements) in `go.mod` and
+`go.sum` to remediate CVEs in these libraries.

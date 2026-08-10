@@ -43,7 +43,7 @@ type fakePackageManager struct {
 	gotConstraints schedule.Constraints
 }
 
-func (f *fakePackageManager) ValidatePackageSettings(_ context.Context, _ string, _ addonutils.Values) (settingscheck.Result, error) {
+func (f *fakePackageManager) ValidatePackageSettings(_ context.Context, _ string, _ int, _ addonutils.Values) (settingscheck.Result, error) {
 	return f.validateResult, f.validateErr
 }
 
@@ -157,14 +157,14 @@ func TestValidateApplicationSettings(t *testing.T) {
 
 	t.Run("nil settings schema is a no-op", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
-		apv.Status.PackageSchemas = &v1alpha1.ApplicationPackageVersionStatusSchemas{}
+		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{}
 		app := newApplication("repo", "pkg", "1.0.0")
 		require.NoError(t, validateAppSettings(apv, app))
 	})
 
 	t.Run("settings satisfying the schema pass", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
-		apv.Status.PackageSchemas = &v1alpha1.ApplicationPackageVersionStatusSchemas{
+		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{
 			SettingsSchema: objectSchema(map[string]openapi.OpenAPIV3Schema{
 				"foo": {Type: "string"},
 			}, []string{"foo"}),
@@ -177,7 +177,7 @@ func TestValidateApplicationSettings(t *testing.T) {
 
 	t.Run("settings violating the schema are rejected", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
-		apv.Status.PackageSchemas = &v1alpha1.ApplicationPackageVersionStatusSchemas{
+		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{
 			SettingsSchema: objectSchema(map[string]openapi.OpenAPIV3Schema{
 				"foo": {Type: "string"},
 			}, []string{"foo"}),

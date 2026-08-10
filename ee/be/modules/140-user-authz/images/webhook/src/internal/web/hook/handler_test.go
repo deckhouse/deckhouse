@@ -67,7 +67,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -114,7 +114,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -139,7 +139,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -280,7 +280,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			Namespaces: []runtime.Object{},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "namespaces \"namespace-selector-test\" not found",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -329,7 +329,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -390,7 +390,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -412,7 +412,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{
@@ -486,7 +486,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "user has no access to the namespace",
+				Reason: noNamespaceAccessReason,
 			},
 		},
 		{

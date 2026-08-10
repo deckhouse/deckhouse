@@ -34,6 +34,7 @@ permissions:
   contents: read
   id-token: write
   pull-requests: read
+  packages: read
 
 jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
@@ -157,7 +158,7 @@ jobs:
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "read_werf_version_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "werf_setup_steps" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
@@ -175,7 +176,7 @@ jobs:
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
-{!{ tmpl.Exec "read_werf_version_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "werf_setup_steps" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
 {!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}

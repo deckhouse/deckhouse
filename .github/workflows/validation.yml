@@ -462,13 +462,12 @@ jobs:
       # </template: login_readonly_registry_step>
 
       - name: Render GitHub workflow
-        run: |
-          cd .github
-          ./render-workflows.sh
+        env:
+          ACTIONLINT_RUN: noop
+        run: .github/render-workflows.sh
 
       - name: Check rendered files
-        run: |
-          git diff --exit-code
+        run: git diff --exit-code
     # </template: workflow_render_template>
 
 

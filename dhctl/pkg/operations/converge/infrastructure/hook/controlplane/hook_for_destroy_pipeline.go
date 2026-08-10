@@ -28,12 +28,12 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type HookForDestroyPipeline struct {
@@ -80,7 +80,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.nodeToDestroy, h.commanderMode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.getter, h.nodeToDestroy, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
@@ -115,7 +115,7 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, commanderMode bool) error {
+func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, commanderMode bool) error {
 	err := removeLabelsFromNode(ctx, kubeCl, nodeName, []string{
 		"node-role.kubernetes.io/control-plane",
 		"node-role.kubernetes.io/master",
@@ -125,7 +125,7 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 		return fmt.Errorf("failed to remove labels from node '%s': %v", nodeName, err)
 	}
 
-	err = waitEtcdHasNoMember(ctx, kubeCl.KubeClient.(libcon.KubeClient), nodeName)
+	err = waitEtcdHasNoMember(ctx, kubeGetter, nodeName)
 	if err != nil {
 		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
 	}

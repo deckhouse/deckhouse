@@ -76,7 +76,7 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionRequirementsMet)
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionReadyOnFilesystem)
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionLoaded)
-	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), make(addonutils.Values))
+	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), 0, make(addonutils.Values), "", false)
 
 	return nil
 }
@@ -129,25 +129,26 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 			conf.ScheduleManager = r.scheduleManager
 			conf.KubeEventsManager = r.kubeEventsManager
 			conf.GlobalValuesGetter = r.global.GetValues
-			// TODO(ipaqsa): set deckhouse version instead
-			conf.Definition.Version = "v0.0.0"
+			conf.Definition.Version = r.edition.Version
 
 			module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 			if err != nil {
 				return fmt.Errorf("new module by config: %w", err)
 			}
 
+			// lifecycle.Store is not thread-safe, so guard it (and the module map)
+			// with r.mu; status.Service is internally synchronized.
 			r.mu.Lock()
 			r.modules[module.GetName()] = module
+			r.packages.Update(module.GetName(), module.GetVersion().String(), 0, make(addonutils.Values), "", false)
 			r.mu.Unlock()
 
-			// register package in status and packages stores
+			// register package in status store
 			r.status.NewStatus(module.GetName())
 			r.status.SetConditionTrue(module.GetName(), status.ConditionRequirementsMet)
 			r.status.SetConditionTrue(module.GetName(), status.ConditionReadyOnFilesystem)
 			r.status.SetConditionTrue(module.GetName(), status.ConditionLoaded)
 			r.status.UpdateVersion(module.GetName(), module.GetVersion().String())
-			r.packages.Update(module.GetName(), module.GetVersion().String(), make(addonutils.Values))
 
 			return nil
 		})

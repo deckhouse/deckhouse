@@ -58,7 +58,7 @@ layout: sidebar-guides
 
 * **Bastion** — не менее 4 ядер CPU, 8 ГБ ОЗУ, 150 ГБ на быстром диске. Такой объём дискового пространства необходим, поскольку на bastion-хосте временно хранятся все образы DKP, используемые при установке. Перед загрузкой в приватный container registry образы скачиваются с публичного registry DKP на bastion-хост, после чего упаковываются в архивы. Эти операции требуют значительного объёма свободного места.
 * **ВМ под приватный registry** — не менее 4 ядер CPU, 8 ГБ ОЗУ и не менее 150 ГБ на быстром диске для хранения образов DKP. Требуемый объём дискового пространства рекомендуется планировать с запасом, ориентируясь на размер бандла после выполнения команды `d8 mirror push`.
-* **Узлы кластера** — [ресурсы под будущие узлы кластера](./hardware-requirements.html#выбор-ресурсов-для-узлов) выбираются исходя из требований к планируемой нагрузке. Для примера подойдёт минимально рекомендуемая конфигурация — 4 ядра CPU, 8 ГБ ОЗУ и 60 ГБ на быстром диске (400+ IOPS) на каждый узел.
+* **Узлы кластера** — [ресурсы под будущие узлы кластера](./hardware-requirements.html#выбор-ресурсов-для-узлов) выбираются исходя из требований к планируемой нагрузке. Для примера подойдёт минимально рекомендуемая конфигурация — 4 ядра CPU (_рекомендовано  8 ядер CPU_), 8 ГБ ОЗУ (_рекомендовано 16 ГБ ОЗУ_) и 60 ГБ на быстром диске (400+ IOPS) на каждый узел.
 
 ## Подготовка приватного container registry
 
@@ -998,14 +998,14 @@ Login Succeeded
 
 Доступны два способа подключения:
 
-1. *Подключение через jump-хост.* Выполните команду:
+1. _Подключение через jump-хост._ Выполните команду:
 
    ```bash
    ssh -J ubuntu@<BASTION_IP> ubuntu@<NODE_IP>
    ```
 
    В этом режиме сначала выполняется подключение к серверу Bastion, затем через него к целевому серверу с использованием того же SSH-ключа.
-1. *Подключение в режиме агента.* Подключитесь к серверу Bastion командой:
+1. _Подключение в режиме агента._ Подключитесь к серверу Bastion командой:
 
    ```bash
    ssh -A ubuntu@<BASTION_IP>
@@ -1173,30 +1173,27 @@ Status: Downloaded newer image for ubuntu/squid:latest
   Здесь указываются следующие параметры:
   * адреса HTTP и HTTPS прокси-сервера;
   * список доменов и IP-адресов, которые **не будут проксироваться** через прокси-сервер (внутренние доменные имена и внутренние IP-адреса всех серверов).
-  
-* В секции `InitConfiguration` добавьте параметры доступа к registry:
 
-  ```yaml
-  deckhouse:
-    # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
-    imagesRepo: harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>
-    # Строка с ключом для доступа к Docker registry в формате Base64.
-    registryDockerCfg: <DOCKER_CFG_BASE64>
-    # Протокол доступа к registry (HTTP или HTTPS).
-    registryScheme: HTTPS
-    # Корневой сертификат, созданный ранее.
-    # Получить его можно командой: `cat harbor/certs/ca.crt`.
-    registryCA: |
-      -----BEGIN CERTIFICATE-----
-      ...
-      -----END CERTIFICATE-----
-  ```
+* В ModuleConfig `deckhouse`:
+  * измените значение параметра [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html);
+  * в секции `spec.settings.registry` укажите параметры доступа к приватному хранилищу образов контейнеров (в данном случае Harbor):
 
-  Здесь `<DOCKER_CFG_BASE64>` — строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
+    ```yaml
+    # Настройки для доступа к хранилищу образов контейнеров с образами DKP.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # Адрес хранилища.
+        imagesRepo: <IMAGES_REPO_URI>
+        # Имя пользователя для аутентификации в хранилище.
+        username: <REGISTRY_USERNAME>
+        # Пароль для аутентификации в хранилище.
+        password: <REGISTRY_PASSWORD>
+        scheme: HTTPS
+        # Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища.
+        ca: <REGISTRY_CA>
+    ```
 
-  Например, для доступа к container registry `harbor.example` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (строка `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}` в Base64).
-
-* В параметре [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) ModuleConfig `deckhouse` измените на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html).
 * В ModuleConfig [global](../documentation/v1/reference/api/global.html) укажите использование самоподписанных сертификатов для компонентов кластера и укажите шаблон доменного имени для системных приложений в параметре `publicDomainTemplate`:
 
   ```yaml
@@ -1436,7 +1433,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 Для этого выполните следующие шаги:
 
-* Настройте StorageClass [локального хранилища](../../../modules/local-path-provisioner/cr.html#localpathprovisioner), выполнив на master-узле следующую команду:
+* Настройте StorageClass [локального хранилища](/modules/local-path-provisioner/cr.html#localpathprovisioner), выполнив на master-узле следующую команду:
 
   ```console
   sudo -i d8 k create -f - << EOF
@@ -1475,7 +1472,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   EOF
   ```
 
-* Создайте в кластере ресурс [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:
+* Создайте в кластере ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:
 
   ```console
   sudo -i d8 k create -f - <<EOF
@@ -1495,7 +1492,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   cat /dev/shm/caps-id.pub
   ```
 
-* Создайте [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
+* Создайте [StaticInstance](/modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
 
   ```console
   # Укажите IP-адрес узла, который нужно подключить к кластеру.
@@ -1533,7 +1530,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 ### Установка ingress-контроллера
 
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](../../../modules/ingress-nginx/) запустился и находится в статусе `Running`. Для этого выполните на master-узле следующую команду:
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/modules/ingress-nginx/) запустился и находится в статусе `Running`. Для этого выполните на master-узле следующую команду:
 
 ```bash
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise

@@ -270,6 +270,10 @@ spec:
 1. Создайте ресурс SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
 1. Добавьте в неймспейс дополнительный лейбл, который будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
+{% alert level="info" %}
+Поле `allowedHostPaths` определяет список разрешённых префиксов путей для монтирования `hostPath`. Если указан пустой список (`[]`), использование `hostPath` запрещено для всех путей. Если поле отсутствует, ограничения не применяются.
+{% endalert %}
+
 SecurityPolicy, соответствующая baseline:
 
 ```yaml
@@ -541,6 +545,17 @@ spec:
 Политика не распространяется на следующих пользователей, которым разрешены операции `kubectl exec` и `kubectl attach` в поды с лейблом `heritage: deckhouse`:
 
 - `system:sudouser`;
+- сервисные аккаунты из неймспейсов `d8-*` (`system:serviceaccount:d8-*`);
+- сервисные аккаунты из неймспейсов `kube-*` (`system:serviceaccount:kube-*`).
+
+### Встроенная политика для финалайзеров
+
+Для защиты объектов, управляемых контроллерами DKP, в модуле `admission-policy-engine` предусмотрена встроенная ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io`, которая запрещает удалять финалайзеры, содержащие подстроку `deckhouse.io`, на любых объектах кластера.
+
+Политика не распространяется на следующих пользователей, которым разрешено снимать такие финалайзеры:
+
+- системные контроллеры Kubernetes (`system:kube-controller-manager`, `system:kube-scheduler` и др.);
+- `system:sudouser`, `dhctl`, `observability`;
 - сервисные аккаунты из неймспейсов `d8-*` (`system:serviceaccount:d8-*`);
 - сервисные аккаунты из неймспейсов `kube-*` (`system:serviceaccount:kube-*`).
 

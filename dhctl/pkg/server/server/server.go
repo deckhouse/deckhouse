@@ -107,7 +107,7 @@ func Serve(ctx context.Context, params settings.ServerParams) error {
 	reflection.Register(s)
 
 	// init services
-	validationService := validation.New(config.NewSchemaStore(params.GlobalOptions))
+	validationService := validation.New(config.NewSchemaStore(params.GlobalOptions), params.GlobalOptions)
 	statusService := status.New(requestsCounter)
 
 	// register services

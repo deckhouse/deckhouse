@@ -90,13 +90,17 @@ var _ = BeforeSuite(func() {
 	secret := &corev1.Secret{}
 	secret.Name = ua.ConfigurationChecksumsSecretName
 	secret.Namespace = ua.MachineNamespace
+	// In production bashible-apiserver owns this secret and labels it app=bashible-apiserver;
+	// the production cache scopes machine-namespace Secret informers by that label, so the
+	// fixture must carry it or the controller's cached reads see NotFound.
+	secret.Labels = map[string]string{"app": "bashible-apiserver"}
 	secret.Data = map[string][]byte{}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, secret))).To(Succeed())
 
 	// The update-approval controller registered itself via its package init(); since only this
 	// package is compiled into the test binary, NewManager wires up just this controller.
 	By("starting the manager with the update-approval controller")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {

@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"log/slog"
 	"path/filepath"
 	"slices"
 
@@ -26,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
@@ -41,12 +43,15 @@ const (
 )
 
 // App represents an application instance as received from the Application controller.
-// It carries the user-specified package identity, version constraints, and settings.
+// It carries the user-specified package identity, version constraints, settings, and
+// maintenance mode.
 type App struct {
-	Name       string
-	Namespace  string
-	Definition apps.Definition
-	Settings   addonutils.Values
+	Name            string
+	Namespace       string
+	Definition      apps.Definition
+	Settings        addonutils.Values
+	SettingsVersion int // schema version from Application.Spec.Version (reserved for future use)
+	Maintenance     string
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.
@@ -64,6 +69,8 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	r.logger.Debug("update app", slog.String("name", app.Name))
+
 	if len(app.Namespace) == 0 {
 		app.Namespace = defaultNamespace
 	}
@@ -76,11 +83,12 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	version := app.Definition.Version
 	packageName := app.Definition.Name
 
-	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum()) {
+	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum(), app.SettingsVersion, app.Maintenance) {
 		return
 	}
 
-	ctx := r.packages.Update(name, version, app.Settings)
+	// applications have immutable tags, so a version change is the only invalidation
+	ctx := r.packages.Update(name, version, app.SettingsVersion, app.Settings, app.Maintenance, false)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
@@ -161,8 +169,13 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	r.logger.Debug("remove app", slog.String("namespace", namespace), slog.String("instance", instance))
+
 	name := apps.BuildName(namespace, instance)
 	r.scheduler.RemoveNode(name)
+
+	// A removed application no longer reconciles anything, so drop its maintenance gauge.
+	r.setMaintenanceMetric(name, nelm.Managed)
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {

@@ -1,8 +1,7 @@
 ---
 title: "CODEOWNERS"
-menuTitle: CODEOWNERS
 force_searchable: true
-description: CODEOWNERS
+description: How to assign owners responsible for repository paths with the CODEOWNERS file
 permalink: en/code/documentation/user/code-owners.html
 weight: 50
 ---
@@ -211,7 +210,7 @@ Things to note about the example:
 
 Used to exclude files within a section:
 
-```plaintext
+```console
 * @default
 !package-lock.json
 !**/generated/**
@@ -290,6 +289,43 @@ Example:
 - MR changes the backend file.
 
 Result: **3 approvals** are required.
+
+## Disabling CODEOWNERS checks
+
+CODEOWNERS checks, which are enabled by default in Deckhouse Code, can be disabled at the project level. This is useful when a project has a `CODEOWNERS` file, but approvals from code owners are not required.
+
+To disable these checks, navigate to "Project" → "Settings" → "Merge requests" → the additional approval rule settings, and select "Disable Code Owners approval checks".
+
+![Setting "Disable Code Owners approval checks"](/images/code/disable_code_owners_checks_en.png)
+
+Once the checks are disabled, CODEOWNERS are skipped across the whole project:
+
+- Merge requests are not blocked by missing approvals from code owners.
+- Code owners are not defined for the changed files — the list of applicable entries is empty.
+- Enabling or disabling the setting is immediately applied to already open merge requests.
+
+Validation of the `CODEOWNERS` file syntax keeps working. The file can be validated even when the checks are disabled.
+
+## Automatically assigning code owners as reviewers
+
+Code owners matching the changed files can be automatically assigned as reviewers of a merge request.
+
+To enable that, navigate to "Project" → "Settings" → "Merge requests" → "Automatic reviewer assignment", and select "Automatically assign code owners as reviewers".
+
+![Setting "Automatically assign code owners as reviewers"](/images/code/assign_code_owners_reviewers_en.png)
+
+This setting is disabled by default. When it is enabled, code owners are assigned as reviewers:
+
+- When a merge request is created as ready (not a draft).
+- When a draft merge request is marked ready.
+
+Restrictions applied when the automatic assignment is enabled:
+
+- Assignment is not performed for drafts.
+- If a merge request already has reviewers, automatic assignment is skipped — manually assigned reviewers are kept.
+- The merge request author can never be assigned as a reviewer.
+- Only users with read access to the merge request are assigned.
+- If the project forbids to assign multiple reviewers, only the first code owner is assigned.
 
 ## Formatting recommendations
 

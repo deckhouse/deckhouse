@@ -1,8 +1,7 @@
 ---
 title: "Правила отправки изменений"
-menuTitle: Правила отправки изменений
 force_searchable: true
-description: Правила отправки изменений
+description: Как применять политики к коммитам и отправке изменений в репозиторий
 permalink: ru/code/documentation/user/push-rules.html
 lang: ru
 weight: 50

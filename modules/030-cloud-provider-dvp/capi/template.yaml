@@ -1,0 +1,65 @@
+version: v2
+
+# InstanceClass fields whose change requires recreating the machines. DVP cannot change any of
+# them on a live VM. etcdDisk is deliberately absent: it configures master disks, never the
+# ephemeral nodes rendered here, and listing it would roll the whole fleet on a master-only edit.
+rolloutFields:
+  - virtualMachine.virtualMachineClassName
+  - virtualMachine.bootloader
+  - virtualMachine.cpu.cores
+  - virtualMachine.cpu.coreFraction
+  - virtualMachine.memory.size
+  - rootDisk.size
+  - rootDisk.storageClass
+  - rootDisk.image.kind
+  - rootDisk.image.name
+  - additionalDisks
+
+# Optional fields are read with `get`, which yields an empty value instead of failing: the sandbox
+# runs with missingkey=error, so a direct path to an absent key is a render error by design.
+# Required fields (virtualMachine.cpu.cores, virtualMachine.memory.size, rootDisk.image.*, …) are
+# read directly — the CRD guarantees them.
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: DeckhouseMachineTemplate
+  spec:
+    template:
+      spec:
+        {{- if .instanceClass.virtualMachine.virtualMachineClassName }}
+        vmClassName: {{ .instanceClass.virtualMachine.virtualMachineClassName }}
+        {{- else }}
+        vmClassName: generic
+        {{- end }}
+        {{- if get .instanceClass.rootDisk "storageClass" }}
+        rootDiskStorageClass: {{ .instanceClass.rootDisk.storageClass | quote }}
+        {{- end }}
+        cpu:
+          {{- if .instanceClass.virtualMachine.cpu.cores }}
+          cores: {{ .instanceClass.virtualMachine.cpu.cores | int }}
+          {{- end }}
+          {{- if get .instanceClass.virtualMachine.cpu "coreFraction" }}
+          cpuFraction: {{ .instanceClass.virtualMachine.cpu.coreFraction }}
+          {{- end }}
+        {{- if .instanceClass.virtualMachine.memory.size }}
+        memory: {{ .instanceClass.virtualMachine.memory.size }}
+        {{- end }}
+        {{- if .instanceClass.rootDisk.size }}
+        rootDiskSize: {{ .instanceClass.rootDisk.size | quote }}
+        {{- end }}
+        {{- if get .instanceClass "additionalDisks" }}
+        additionalDisks:
+        {{- range $disk := .instanceClass.additionalDisks }}
+          - size: {{ $disk.size | quote }}
+            storageClass: {{ $disk.storageClass | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if get .instanceClass.virtualMachine "bootloader" }}
+        bootloader: {{ .instanceClass.virtualMachine.bootloader | quote }}
+        {{- end }}
+        bootDiskImageRef:
+          {{- if .instanceClass.rootDisk.image.kind }}
+          kind: {{ .instanceClass.rootDisk.image.kind | quote }}
+          {{- end }}
+          {{- if .instanceClass.rootDisk.image.name }}
+          name: {{ .instanceClass.rootDisk.image.name | quote }}
+          {{- end }}

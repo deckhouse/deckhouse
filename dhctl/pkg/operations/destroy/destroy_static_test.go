@@ -51,8 +51,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 )
 
 var rootTmpDirStatic = path.Join(os.TempDir(), "dhctl-test-static-destroy")
@@ -1671,7 +1671,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 
 	testCreateClusterUUIDCM(t, kubeCl, clusterUUID)
 
-	metaConfig, err := config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider(), nil)
+	metaConfig, err := config.ParseConfigFromCluster(ctx, kubeCl, config.DummyValidatorProvider(), nil, "")
 	require.NoError(t, err)
 
 	const commanderMode = false

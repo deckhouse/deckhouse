@@ -33,7 +33,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: Automatic
 clusterDomain: cluster.local
 `
-	s := New(config.NewSchemaStore(nil))
+	s := New(config.NewSchemaStore(nil), nil)
 	resp, err := s.ConfigExtender(t.Context(), &pb.ConfigExtenderRequest{
 		Config: cfg,
 		Kind:   pb.ConfigExtensionKind_CONFIG_EXTENSION_KIND_CNI,
@@ -43,7 +43,7 @@ clusterDomain: cluster.local
 }
 
 func TestConfigExtender_UnspecifiedKind_EmptyConfig(t *testing.T) {
-	s := New(config.NewSchemaStore(nil))
+	s := New(config.NewSchemaStore(nil), nil)
 	resp, err := s.ConfigExtender(t.Context(), &pb.ConfigExtenderRequest{
 		Config: "",
 		Kind:   pb.ConfigExtensionKind_CONFIG_EXTENSION_KIND_UNSPECIFIED,
@@ -55,7 +55,7 @@ func TestConfigExtender_UnspecifiedKind_EmptyConfig(t *testing.T) {
 // Parse failures surface in the response's Err field rather than as a gRPC
 // error, matching the convention used by other validation methods.
 func TestConfigExtender_InvalidConfig_ErrorInResponse(t *testing.T) {
-	s := New(config.NewSchemaStore(nil))
+	s := New(config.NewSchemaStore(nil), nil)
 	resp, err := s.ConfigExtender(t.Context(), &pb.ConfigExtenderRequest{
 		Config: "not a yaml: : :",
 		Kind:   pb.ConfigExtensionKind_CONFIG_EXTENSION_KIND_CNI,

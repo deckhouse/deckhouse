@@ -42,6 +42,18 @@ func TestWithInvalidReason(t *testing.T) {
 		},
 	})
 
+	multiReasonBody := mustMarshalReview(t, admissionv1.AdmissionReview{
+		TypeMeta: metav1.TypeMeta{APIVersion: "admission.k8s.io/v1", Kind: "AdmissionReview"},
+		Response: &admissionv1.AdmissionResponse{
+			UID:     "uid-multi",
+			Allowed: false,
+			Result: &metav1.Status{
+				Message: "\n cannot approve DeckhouseRelease \"v1.0.0\": requirements not met: \n- reason one\n- reason two",
+				Code:    http.StatusBadRequest,
+			},
+		},
+	})
+
 	allowedBody := mustMarshalReview(t, admissionv1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{APIVersion: "admission.k8s.io/v1", Kind: "AdmissionReview"},
 		Response: &admissionv1.AdmissionResponse{
@@ -73,6 +85,31 @@ func TestWithInvalidReason(t *testing.T) {
 				assert.Equal(t, int32(http.StatusUnprocessableEntity), got.Response.Result.Code)
 				assert.Equal(t, metav1.StatusFailure, got.Response.Result.Status)
 				assert.Equal(t, "spec.version=999 is unsupported", got.Response.Result.Message)
+				require.NotNil(t, got.Response.Result.Details)
+				assert.Equal(t, []metav1.StatusCause{
+					{Message: "spec.version=999 is unsupported"},
+				}, got.Response.Result.Details.Causes)
+			},
+		},
+		{
+			name:     "composite message split into one cause per reason",
+			giveBody: multiReasonBody,
+			giveCode: http.StatusOK,
+			wantCode: http.StatusOK,
+			wantCheck: func(t *testing.T, body []byte) {
+				var got admissionv1.AdmissionReview
+				require.NoError(t, json.Unmarshal(body, &got))
+				require.NotNil(t, got.Response)
+				require.NotNil(t, got.Response.Result)
+				assert.Equal(t, metav1.StatusReasonInvalid, got.Response.Result.Reason)
+				// Full message is preserved as-is.
+				assert.Equal(t, "\n cannot approve DeckhouseRelease \"v1.0.0\": requirements not met: \n- reason one\n- reason two", got.Response.Result.Message)
+				require.NotNil(t, got.Response.Result.Details)
+				assert.Equal(t, []metav1.StatusCause{
+					{Message: "cannot approve DeckhouseRelease \"v1.0.0\": requirements not met:"},
+					{Message: "reason one"},
+					{Message: "reason two"},
+				}, got.Response.Result.Details.Causes)
 			},
 		},
 		{

@@ -21,7 +21,7 @@ shell:
   - rm -r ethtool/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -35,8 +35,7 @@ mount:
 {{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache autoconf automake make libtool g++ linux-headers pkgconfig
+  - pm install autoconf m4 automake libtool build-base linux-headers pkgconf
   setup:
   - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
   - cd /src/libmnl

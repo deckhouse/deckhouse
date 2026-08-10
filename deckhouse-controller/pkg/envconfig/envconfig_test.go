@@ -20,7 +20,7 @@ import (
 
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 
-	"github.com/deckhouse/deckhouse/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 )
 
 // TestLoad_RegressionMODULES_DIR pins the original bug fix: the deployment

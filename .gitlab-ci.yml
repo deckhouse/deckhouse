@@ -1,0 +1,18 @@
+stages:
+  - .pre
+  - validate
+  - build
+  - test
+  - deploy
+  - .post
+
+include:
+  - .gitlab/**.yml
+
+variables:
+  CI_IMAGES_TAG: "v5"
+
+default:
+  tags:
+    - k8s-intteam-cloud-d8-ssdlc-runner
+  interruptible: true

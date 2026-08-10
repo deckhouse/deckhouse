@@ -1,6 +1,6 @@
 ---
 title: "The istio module: examples"
-description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, telemetry, and control plane upgrades."
+description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, telemetry, control plane upgrades, and automated data plane sidecar upgrades."
 ---
 
 ## Circuit Breaker
@@ -57,7 +57,7 @@ Assign a name with the `grpc` prefix or value to the port in the corresponding s
 
 ## Locality Failover
 
-> Read [the main documentation](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/) if you need.
+{% alert level="info" %}Read the [Istio Locality Failover documentation](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/) if needed.{% endalert %}
 
 Istio allows you to configure a priority-based locality (geographic location) failover between endpoints. Istio uses node labels with the appropriate hierarchy to define the zone:
 
@@ -200,16 +200,19 @@ spec:
 
 ### Istio Ingress Gateway
 
-Example:
+The [IngressIstioController](cr.html#ingressistiocontroller) custom resource spins up a dedicated Istio Ingress Gateway proxy. Each controller instance gets its own gateway class, and you select the instance from an Istio `Gateway` resource by referencing the matching `istio.deckhouse.io/ingress-gateway-class` label. The module manages the gateway workload and its `Service`, while the `Gateway` and routing resources (`VirtualService`) remain yours to manage.
+
+Start by creating an `IngressIstioController`. In the example below, HTTP and HTTPS are exposed on the selected frontend nodes using host ports:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: IngressIstioController
 metadata:
- name: main
+  name: main
 spec:
-  # ingressGatewayClass contains the label selector value used to create the Gateway resource
+  # The value selected by Gateway resources via the istio.deckhouse.io/ingress-gateway-class label.
   ingressGatewayClass: istio-hp
+  # IngressIstioController works with LoadBalancer, NodePort, and HostPort inlets.
   inlet: HostPort
   hostPort:
     httpPort: 80
@@ -224,6 +227,8 @@ spec:
   resourcesRequests:
     mode: VPA
 ```
+
+Note that the TLS secret for an ingress gateway must be created in the `d8-ingress-istio` namespace, not in your application's namespace — this is an easy detail to miss.
 
 ```yaml
 apiVersion: v1
@@ -287,6 +292,101 @@ spec:
         - destination:
             host: app-svc
 ```
+
+For the full list of controller settings — load-balancer annotations, network topology, scheduling, and resource management — see the [IngressIstioController custom resource reference](cr.html#ingressistiocontroller).
+
+#### Preserving client attributes behind external proxies
+
+When the gateway is deployed behind other proxies or load balancers (for example, a cloud load balancer or a reverse proxy), configure [`spec.networkTopology`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology) so that the gateway can correctly extract the client's original attributes, such as the source IP address. See [Configuring Gateway Network Topology](https://istio.io/latest/docs/ops/configuration/traffic-management/network-topologies/) in the Istio documentation for details.
+
+Use [`numTrustedProxies`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-numtrustedproxies) when the upstream proxies pass the client IP address in the `X-Forwarded-For` header. Set it to the number of trusted proxies deployed in front of the gateway so that Istio extracts the correct client address and populates the `X-Envoy-External-Address` header for upstream services. For example, if a cloud load balancer and a reverse proxy sit in front of the gateway, set the value to `2`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressIstioController
+metadata:
+  name: main
+spec:
+  ingressGatewayClass: istio-hp
+  inlet: LoadBalancer
+  networkTopology:
+    numTrustedProxies: 2
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: VPA
+```
+
+Use [`proxyProtocol`](cr.html#ingressistiocontroller-v1alpha1-spec-networktopology-proxyprotocol) when an upstream L4/TCP load balancer forwards the client attributes via the [PROXY protocol](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) instead of HTTP headers. When this parameter is enabled, the gateway starts parsing the PROXY protocol header on incoming TCP connections:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressIstioController
+metadata:
+  name: main
+spec:
+  ingressGatewayClass: istio-hp
+  inlet: LoadBalancer
+  networkTopology:
+    proxyProtocol: true
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  resourcesRequests:
+    mode: VPA
+```
+
+{% alert level="info" %}
+`numTrustedProxies` and `proxyProtocol` can be used together. When both are configured and an incoming request contains an `X-Forwarded-For` header, Istio uses the trusted `X-Forwarded-For` chain in preference to the PROXY protocol attributes.
+{% endalert %}
+
+#### Managing gateway resource requests
+
+Use [`spec.resourcesRequests`](cr.html#ingressistiocontroller-v1alpha1-spec-resourcesrequests) to control CPU and memory requests for the ingress gateway pods. Two modes are available:
+
+- `Static` — requests are specified directly and stay fixed:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: IngressIstioController
+  metadata:
+    name: main
+  spec:
+    ingressGatewayClass: istio-hp
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+    resourcesRequests:
+      mode: Static
+      static:
+        cpu: 100m
+        memory: 128Mi
+  ```
+
+- `VPA` — a [Vertical Pod Autoscaler](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md) adjusts requests within the configured `min`/`max` bounds. Starting from DKP version 1.75, the recommended VPA mode is `InPlaceOrRecreate`, which updates pod resources in place when the cluster supports it and falls back to recreating the pod otherwise (the legacy `Auto` mode always recreates the pod):
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: IngressIstioController
+  metadata:
+    name: main
+  spec:
+    ingressGatewayClass: istio-hp
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+    resourcesRequests:
+      mode: VPA
+      vpa:
+        mode: InPlaceOrRecreate
+        cpu:
+          min: 100m
+          max: 1000m
+        memory:
+          min: 128Mi
+          max: 2000Mi
+  ```
 
 ### Ingress NGINX
 
@@ -541,7 +641,7 @@ spec:
 ### Allow from any cluster (via mTLS)
 
 {% alert level="warning" %}
-The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
+The denying rules (if they exist) have priority over any other rules. For details, refer to [Decision-making algorithm](#decision-making-algorithm).
 {% endalert %}
 
 Example:
@@ -627,6 +727,106 @@ spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
 ```
 
+## Ambient mesh
+
+{% alert level="warning" %}Available in Enterprise Edition only.{% endalert %}
+
+{% alert level="warning" %}Ambient mesh support is experimental and not recommended for production use.{% endalert %}
+
+The ambient mesh components mentioned in this section are described on the [module overview page](./#ambient-mesh).
+
+### Enabling ambient mesh
+
+Ambient mode requires the [`CNIPlugin`](#cniplugin-application-traffic-redirection-mode-restrictions) traffic redirection mode and Istio 1.25 or newer.
+
+The following is a module configuration example with the ambient mode enabled:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  enabled: true
+  version: 2
+  settings:
+    dataPlane:
+      trafficRedirectionSetupMode: CNIPlugin
+    ambient:
+      enabled: true
+```
+
+Once enabled, the module runs the `ztunnel` DaemonSet and the waypoint controller. To enroll workloads into the ambient mesh, follow the steps below.
+
+### Enrolling workloads into the ambient (L4) mesh
+
+Add the `istio.io/dataplane-mode=ambient` label to a namespace to capture the traffic of its pods with `ztunnel`. This provides L4 features (mutual TLS, identity, L4 authorization) without a sidecar:
+
+```shell
+d8 k label namespace myns istio.io/dataplane-mode=ambient
+```
+
+### Adding a waypoint for L7 features
+
+To get L7 features (HTTP routing, L7 authorization, richer telemetry), create a [WaypointInstance](cr.html#waypointinstance) resource in the namespace:
+
+The following is a WaypointInstance resource example, which creates a waypoint for all workloads and services in a namespace:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: WaypointInstance
+metadata:
+  name: main
+  namespace: myns
+spec:
+  waypointFor: All
+  replicasManagement:
+    mode: Static
+    static:
+      replicas: 2
+  resourcesManagement:
+    mode: VPA
+    vpa:
+      mode: InPlaceOrRecreate
+      cpu:
+        min: 100m
+        max: 1000m
+      memory:
+        min: 128Mi
+        max: 2000Mi
+```
+
+The controller provisions the waypoint infrastructure (Deployment, Service, Gateway, VPA, and a PDB — when the effective replica count is `>= 2`). The controller **does not** attach workloads to the waypoint. You can do that with the `istio.io/use-waypoint` label.
+
+To attach all workloads and services in the namespace to the waypoint, run the following command:
+
+```shell
+d8 k label namespace myns istio.io/use-waypoint=main
+```
+
+To attach a single service or workload, run the following command:
+
+```shell
+d8 k -n myns label service myservice istio.io/use-waypoint=main
+```
+
+### Disabling ambient mesh
+
+{% alert level="warning" %}
+Before disabling ambient mode, delete all WaypointInstance resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. This leaves orphaned waypoints, which are reported by Deckhouse Kubernetes Platform (DKP) in the [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled) alert.
+{% endalert %}
+
+To disable the ambient mode, follow these steps:
+
+1. Check if any WaypointInstance resources remain and delete them as necessary using the following commands:
+
+   ```shell
+   d8 k get waypointinstance -A
+   d8 k -n myns delete waypointinstance main
+   ```
+
+2. Disable the ambient mode by setting [`ambient.enabled`](configuration.html#parameters-ambient-enabled) to `false` in the module configuration.
+
 ## Control the data-plane behavior
 
 ### Prevent istio-proxy from terminating before the main application's connections are closed
@@ -699,7 +899,7 @@ If you see series such as `istio_requests_total`, metrics are wired correctly.
 
 ### Prometheus scraping and Grafana
 
-The module creates a [`PodMonitor`](/modules/prometheus/) for sidecar metrics when the [`operator-prometheus`](/modules/operator-prometheus/) module is enabled. Monitored namespaces are derived automatically from mesh membership (istio-injected workloads); you can exclude a namespace from scraping with label `istio.deckhouse.io/discard-metrics: "true"` on the `Namespace`.
+The module creates a [`PodMonitor`](/modules/prometheus/) for sidecar metrics when the [`operator-prometheus`](/modules/operator-prometheus/) module is enabled. Monitored namespaces are derived automatically from mesh membership (istio-injected workloads); you can exclude a namespace from scraping with label `istio.deckhouse.io/discard-metrics: "true"` on the Namespace.
 
 If workload dashboards stay empty while control plane dashboards work, confirm that:
 
@@ -730,8 +930,8 @@ For tag removal, disabling specific metrics or modes, follow [Customizing Istio 
 
 [`tracing.collector`](configuration.html#parameters-tracing-collector) is the single ModuleConfig entry for mesh-wide trace export (Zipkin or OpenTelemetry).
 
-- `telemetryAPI.enabled: false` plus [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — legacy only: `meshConfig.defaultConfig.tracing.zipkin` from [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (`host:port`, Jaeger Zipkin port `9411`). OpenTelemetry needs Telemetry API mode.
-- `telemetryAPI.enabled: true` plus `tracing.enabled: true` — the module registers `deckhouse-tracing` when [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) has `service` and `port`, or when [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) is set (OpenTelemetry wins if both are configured). Legacy `defaultConfig.tracing` is omitted; mesh-wide `Telemetry` `d8-main` gets `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, default `1.0`).
+- `telemetryAPI.enabled: false` plus [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true`: Legacy only: `meshConfig.defaultConfig.tracing.zipkin` from [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (`host:port`, Jaeger Zipkin port `9411`). OTLP (OpenTelemetry Protocol) export requires Telemetry API mode.
+- `telemetryAPI.enabled: true` plus `tracing.enabled: true`: The module registers `deckhouse-tracing` when [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) has `service` and `port`, or when [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) is set (OpenTelemetry wins if both are configured). Legacy `defaultConfig.tracing` is omitted; mesh-wide `Telemetry` `d8-main` gets `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, default `1.0`).
 
 Exporters the module does not model (SkyWalking, custom TLS stacks, extra provider names) still need namespace-scoped `Telemetry` with `selector`—not a second selector-less CR in `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). See [Distributed tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
@@ -814,7 +1014,7 @@ spec:
 
 #### Example — disable span export for ingress-only namespaces
 
-In Deckhouse, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
+In DKP, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -838,7 +1038,94 @@ spec:
 
 The module-managed `Telemetry` objects for this mode disappear on the next sync; Istio restores the full `telemetry.v2` configuration.
 
-## `CNIPlugin` application traffic redirection mode restrictions
+## Debugging Istio with istioctl from the debug container
+
+The DKP debug container includes versioned `istioctl` binaries. Use it when you need to inspect Istio configuration, run analyzers, or retrieve Envoy proxy configuration from application Pods.
+
+Before starting the debug container, create a dedicated ServiceAccount and grant it the permissions required by the `istioctl` commands you want to run. For example, the following manifest grants permissions that allow running the `istioctl proxy-config` commands for Pods in a single application namespace:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istioctl-debug
+  namespace: <debug-namespace>
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups: [""]
+    resources:
+      - pods/portforward
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: istioctl-debug
+  namespace: <target-namespace>
+subjects:
+  - kind: ServiceAccount
+    name: istioctl-debug
+    namespace: <debug-namespace>
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istioctl-debug
+```
+
+Replace `<debug-namespace>` with the namespace where the temporary debug Pod will be created, and `<target-namespace>` with the namespace of the application Pod you want to inspect. Create the Role and RoleBinding resources for every target namespace where `istioctl` must access Pods.
+
+This RBAC manifest is intended for commands that address a Pod directly, for example, to a resource like `<pod-name>.<target-namespace>`. If you use typed resource names such as `deployment/<name>`, grant additional read access to those resource types so `istioctl` can resolve them to Pods.
+
+{% alert level="warning" %}
+Creating Pods in system namespaces such as `d8-system` and using system ServiceAccounts such as `deckhouse` usually requires the `cluster-admin` level of privileges. Use a dedicated ServiceAccount with the minimum required permissions instead.
+{% endalert %}
+
+Start a temporary debug Pod with the built-in debug image:
+
+```shell
+IMG="$(d8 k -n d8-system get cm debug-container -o jsonpath='{.data.image}')"
+
+d8 k -n <debug-namespace> run istioctl-debug \
+  --rm -it \
+  --restart=Never \
+  --image="$IMG" \
+  --overrides='{"spec":{"serviceAccountName":"istioctl-debug","automountServiceAccountToken":true}}' \
+  -- bash
+```
+
+Select the minor version of Istio used by the target control plane:
+
+```shell
+export ISTIOCTL_VERSION=1.21
+```
+
+Available values are `1.21`, `1.25`, `1.27` and `1.29`. You can also run a specific binary directly: `istioctl-1.21`, `istioctl-1.25`, `istioctl-1.27` or `istioctl-1.29`.
+
+Example:
+
+```shell
+istioctl pc all <pod-name>.<target-namespace>
+```
+
+The `istioctl pc` commands require a target Pod with an injected `istio-proxy` sidecar. If the target Pod has no sidecar, Envoy admin port `15000` will not be available.
+
+{% alert level="warning" %}
+The RBAC manifest above is not enough to run `istioctl analyze` or `istioctl analyze -A`. These commands require additional read-only access to namespaces and to the Kubernetes and Istio resources covered by the analyzers. Grant such access separately according to your security policy.
+{% endalert %}
+
+## CNIPlugin application traffic redirection mode restrictions
 
 Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init-container. This means that application init-containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar container, which is not yet running. Workarounds:
 
@@ -855,7 +1142,7 @@ UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. Do not 
 
 ### Upgrading Istio control-plane
 
-* Deckhouse allows you to install different control-plane versions simultaneously:
+* DKP allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
   * Additional versions handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
@@ -880,11 +1167,35 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 {% alert level="warning" %}Upgrading to Istio 1.25 is only possible from version 1.21.{% endalert %}
 
+<span id="auto-upgrading-istio-data-plane"></span>
+
 ### Auto upgrading istio data-plane
 
 {% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
+
+Automatic upgrading is triggered when the current data-plane version of a Pod with an istio-sidecar differs from the desired version. Adding a version to the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter does not restart application Pods by itself. A mismatch usually appears in the following cases:
+
+* The [`globalVersion`](configuration.html#parameters-globalversion) parameter changed for a namespace that uses the global Istio version (`istio-injection=enabled` or `istio.io/rev=default`).
+* The `istio.io/rev` label changed on a Namespace or on a Pod.
+* The patch version of the installed control plane was updated.
+
+Before restarting a workload, the module checks that the corresponding control plane is installed and ready. Then the module adds or updates the `istio.deckhouse.io/full-version` annotation in `spec.template.metadata.annotations`, and Kubernetes performs a regular rollout. Within the same namespace, the module does not start upgrading the next workload until the previously upgraded workload is ready.
+
+The `istio.deckhouse.io/auto-upgrade="true"` label must be set on the same entity that defines Istio usage for the workload:
+
+* If injection is enabled at the namespace level with `istio-injection=enabled`, `istio.io/rev=<REVISION>`, or `istio.io/rev=default`, you can set `istio.deckhouse.io/auto-upgrade="true"` on the same Namespace.
+* If sidecar injection is enabled at the workload or pod template level, for example with `sidecar.istio.io/inject="true"`, set `istio.deckhouse.io/auto-upgrade="true"` on the corresponding Deployment, DaemonSet, or StatefulSet.
+* A namespace with only the `istio.deckhouse.io/auto-upgrade="true"` label does not enable automatic upgrading for a workload if injection is configured only at the workload or pod template level.
+
+Automatic upgrading is supported only for Deployment, DaemonSet, and StatefulSet resources. Job, CronJob, standalone Pod, and custom controllers, including Kruise `AdvancedDaemonSet`, are not handled. If an ingress controller is managed by an `AdvancedDaemonSet`, the `istio.deckhouse.io/auto-upgrade="true"` label on that resource is ignored. Upgrade such ingress controllers manually following the ["Istio control plane upgrade"](#upgrading-istio-control-plane) procedure and the ["Ingress NGINX integration"](#ingress-nginx) section.
+
+Use the [`D8IstioDataPlaneVersionMismatch`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istiodataplaneversionmismatch) alert to detect Pods whose patch data-plane version differs from the control plane version — the scenario that automatic upgrading addresses. The [`D8IstioActualDataPlaneVersionNotEqualDesired`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactualdataplaneversionnotequaldesired) alert indicates a revision mismatch and usually requires changing namespace or Pod labels before sidecars can be updated.
+
+{% alert level="warning" %}
+Do not delete the old Istio control plane manually during an upgrade. The old `istiod` and related resources are removed automatically after there are no sidecars connected to the old revision left in the cluster. Manual deletion can break the regular upgrade automation.
+{% endalert %}
 
 ## Customizing istio-proxy sidecar resource management
 

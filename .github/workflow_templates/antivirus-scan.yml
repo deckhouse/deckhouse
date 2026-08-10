@@ -105,8 +105,8 @@ jobs:
             echo "tags=[\"main\"]" >> $GITHUB_OUTPUT
           fi
 
-{!{ tmpl.Exec "drweb_scan_job" . | strings.Indent 2 }!}
+{!{ tmpl.Exec "drweb_scan_job" "main" | strings.Indent 2 }!}
 
-{!{ tmpl.Exec "kaspersky_scan_job" . | strings.Indent 2 }!}
+{!{ tmpl.Exec "kaspersky_scan_job" "main" | strings.Indent 2 }!}
 
 {!{ tmpl.Exec "antivirus_notify_failure_job" . | strings.Indent 2 }!}

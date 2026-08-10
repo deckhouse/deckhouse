@@ -27,7 +27,11 @@ import (
 const (
 	configPath = "/etc/user-authz-webhook/config.json"
 
-	noNamespaceAccessReason      = "user has no access to the namespace"
+	// Deliberately ambiguous: a user who may not act in a namespace must not be
+	// able to tell an existing namespace from a missing one. Distinct answers
+	// turned the authorizer into a namespace-existence oracle for anyone whose
+	// access is limited by a ClusterAuthorizationRule.
+	noNamespaceAccessReason      = "either you have no access to the namespace or the namespace does not exist"
 	namespaceLimitedAccessReason = "making cluster-scoped requests for namespaced resources is not allowed"
 	internalErrorReason          = "webhook: kubernetes api request error"
 )
@@ -45,18 +49,34 @@ type Handler struct {
 	nsLister corev1listers.NamespaceLister
 	nsSynced kcache.InformerSynced
 
+	// independentRBAC, when set, is consulted before denying a request:
+	// requests explicitly granted by CAR-independent RBAC (RoleBindings,
+	// non-CAR ClusterRoleBindings) must not be denied by multi-tenancy
+	// filters. See RBACEvaluator for details.
+	independentRBAC independentRBACResolver
+
 	//        [user type] [user name]
 	mu        sync.RWMutex
 	directory map[string]map[string]DirectoryEntry
 }
 
-func NewHandler(logger *log.Logger, discoveryCache cache.Cache, nsLister corev1listers.NamespaceLister, nsSynced kcache.InformerSynced) (*Handler, error) {
+func NewHandler(logger *log.Logger, discoveryCache cache.Cache, nsLister corev1listers.NamespaceLister, nsSynced kcache.InformerSynced, independentRBAC independentRBACResolver) (*Handler, error) {
 	return &Handler{
-		logger:   logger,
-		cache:    discoveryCache,
-		nsLister: nsLister,
-		nsSynced: nsSynced,
+		logger:          logger,
+		cache:           discoveryCache,
+		nsLister:        nsLister,
+		nsSynced:        nsSynced,
+		independentRBAC: independentRBAC,
 	}, nil
+}
+
+// independentRBACAllows reports whether CAR-independent RBAC explicitly
+// grants the request.
+func (h *Handler) independentRBACAllows(request *WebhookRequest) bool {
+	if h.independentRBAC == nil {
+		return false
+	}
+	return h.independentRBAC.AllowsIndependently(&request.Spec)
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -127,11 +147,26 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 	if request.Status.Denied && len(entry.NamespaceSelectors) > 0 {
 		match, err := h.namespaceLabelsMatchSelector(request.Spec.ResourceAttributes.Namespace, entry.NamespaceSelectors)
 		if err != nil {
-			request.Status.Reason = err.Error()
+			// The lookup fails for a namespace that does not exist as well as for a
+			// genuine cache problem. Neither may reach the user: `namespaces "x" not
+			// found` as the denial reason disclosed exactly what the deny is meant to
+			// hide. The operator still gets the detail from the log.
+			h.logger.Printf("namespace selector check for %q failed: %v", request.Spec.ResourceAttributes.Namespace, err)
 		} else if match {
 			request.Status.Denied = false
 			request.Status.Reason = ""
 		}
+	}
+
+	// The namespace is outside the user's CAR scope, but the request may be
+	// explicitly granted by CAR-independent RBAC: a RoleBinding in the
+	// namespace (including RoleBindings rendered from AuthorizationRules) or
+	// a ClusterRoleBinding not generated from a CAR. Such grants exist
+	// regardless of any CAR and must not be denied here; the final decision
+	// is still made by the RBAC authorizer after this webhook.
+	if request.Status.Denied && h.independentRBACAllows(request) {
+		request.Status.Denied = false
+		request.Status.Reason = ""
 	}
 
 	return request
@@ -190,8 +225,12 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 		// could not check whether resource is namespaced or not (from cache) - deny access
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
 	} else if namespaced && hasAnyFilters(entry) {
-		// we should not allow cluster-scoped requests for the namespaced objects if access to the namespaces is limited
-		h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
+		// Cluster-scoped access to a namespaced resource granted by a non-CAR
+		// ClusterRoleBinding is a deliberate cluster-wide grant; do not deny it.
+		if !h.independentRBACAllows(request) {
+			// we should not allow cluster-scoped requests for the namespaced objects if access to the namespaces is limited
+			h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
+		}
 	}
 
 	return request
@@ -245,8 +284,6 @@ func (h *Handler) renewDirectories() {
 		return
 	}
 
-	h.lastAppliedStat = fileStat
-
 	var config UserAuthzConfig
 
 	configRawData, err := os.ReadFile(configPath)
@@ -290,7 +327,11 @@ func (h *Handler) renewDirectories() {
 			if crd.Spec.NamespaceSelector == nil {
 				// This is an important thing! All regular expressions is wrapped in the ^...$
 				for _, ln := range crd.Spec.LimitNamespaces {
-					r, _ := regexp.Compile(wrapRegex(ln))
+					r, err := regexp.Compile(wrapRegex(ln))
+					if err != nil {
+						h.logger.Printf("cannot compile limitNamespaces pattern %q from ClusterAuthorizationRule %q: %v", ln, crd.Name, err)
+						return
+					}
 					dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, r)
 				}
 
@@ -307,9 +348,9 @@ func (h *Handler) renewDirectories() {
 	}
 
 	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	h.directory = directory
+	h.lastAppliedStat = fileStat
+	h.mu.Unlock()
 	h.logger.Println("configuration was reloaded successfully")
 }
 

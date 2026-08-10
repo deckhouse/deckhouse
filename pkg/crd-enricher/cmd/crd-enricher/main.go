@@ -25,6 +25,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	crdenricher "github.com/deckhouse/deckhouse/pkg/crd-enricher"
@@ -65,6 +66,31 @@ func run(args []string) error {
 		case strings.HasPrefix(arg, "dir="):
 			opts.Dir = trimQuotes(strings.TrimPrefix(arg, "dir="))
 
+		// Automatic example generation is opt-in. Accept both the value-less
+		// flag forms (auto-examples / --auto-examples) and an explicit boolean
+		// (auto-examples=true).
+		case arg == "auto-examples", arg == "--auto-examples":
+			opts.GenerateExamples = true
+
+		case strings.HasPrefix(arg, "auto-examples="):
+			value, err := parseBool(trimQuotes(strings.TrimPrefix(arg, "auto-examples=")))
+			if err != nil {
+				return err
+			}
+			opts.GenerateExamples = value
+
+		// Indented output is opt-in. Accept the value-less flag forms (reindent /
+		// --reindent) and an explicit boolean (reindent=true).
+		case arg == "reindent", arg == "--reindent":
+			opts.Reindent = true
+
+		case strings.HasPrefix(arg, "reindent="):
+			value, err := parseBool(trimQuotes(strings.TrimPrefix(arg, "reindent=")))
+			if err != nil {
+				return err
+			}
+			opts.Reindent = value
+
 		default:
 			return fmt.Errorf("unknown argument %q", arg)
 		}
@@ -85,6 +111,14 @@ func run(args []string) error {
 	return nil
 }
 
+func parseBool(s string) (bool, error) {
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return false, fmt.Errorf("invalid boolean value %q", s)
+	}
+	return v, nil
+}
+
 func trimQuotes(s string) string {
 	s = strings.TrimSpace(s)
 	if len(s) >= 2 {
@@ -99,15 +133,22 @@ func usage() {
 	fmt.Print(`crd-enricher enriches controller-gen CRDs with custom x-doc-* schema fields.
 
 Usage:
-  crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>]
+  crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] [reindent]
 
 Arguments:
-  paths=   Comma separated Go package patterns with the API structs (repeatable).
-  crds=    Directory with the CRD YAML files produced by controller-gen.
-           The controller-gen alias output:crd:artifacts:config=<dir> is accepted too.
-  dir=     Optional working directory used to resolve the package patterns.
+  paths=        Comma separated Go package patterns with the API structs (repeatable).
+  crds=         Directory with the CRD YAML files produced by controller-gen.
+                The controller-gen alias output:crd:artifacts:config=<dir> is accepted too.
+  dir=          Optional working directory used to resolve the package patterns.
+  auto-examples Opt in to the automatic synthesis of composite x-doc-examples
+                from defaults, enums and explicit examples markers.
+                Off by default; explicit examples markers are always applied.
+                Accepts auto-examples, --auto-examples or auto-examples=<bool>.
+  reindent      Encode the output with indented block sequences (the goyaml.v3
+                layout) instead of the flush sigs.k8s.io/yaml layout. Off by
+                default. Accepts reindent, --reindent or reindent=<bool>.
 
 Example:
-  crd-enricher paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." crds=bin/crd/bases
+  crd-enricher paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." crds=bin/crd/bases auto-examples
 `)
 }

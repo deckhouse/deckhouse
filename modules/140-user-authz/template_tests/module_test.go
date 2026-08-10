@@ -382,6 +382,19 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:permission-browser-apiserver").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:bulk-sar-creator").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:self-bulk-sar-creator").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:bulk-sar-creator").Field("rules").String()).
+				To(ContainSubstring("bulksubjectaccessreviews/nonself"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:self-bulk-sar-creator").Field("rules").String()).
+				ToNot(ContainSubstring("bulksubjectaccessreviews/nonself"))
+			selfBulkSARBinding := f.KubernetesGlobalResource(
+				"ClusterRoleBinding",
+				"d8:user-authz:self-bulk-sar-creator:system-authenticated",
+			)
+			Expect(selfBulkSARBinding.Exists()).To(BeTrue())
+			Expect(selfBulkSARBinding.Field("roleRef.name").String()).
+				To(Equal("d8:user-authz:self-bulk-sar-creator"))
+			Expect(selfBulkSARBinding.Field("subjects.0.kind").String()).To(Equal("Group"))
+			Expect(selfBulkSARBinding.Field("subjects.0.name").String()).To(Equal("system:authenticated"))
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:permission-browser-apiserver").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:permission-browser-apiserver:auth-delegator").Exists()).To(BeTrue())
 		})
@@ -601,6 +614,46 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 				rules := cr.Field("rules").String()
 				Expect(rules).To(ContainSubstring("accessiblenamespaces"))
+			})
+		})
+
+		// A cluster-wide read of `projects` would be answered by RBAC before the
+		// namespace ACL could narrow it, so it exists only where that ACL does not.
+		Context("Project visibility with multitenancy-manager enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "multitenancy-manager"]`)
+				f.ValuesSet("global.deckhouseEdition", "EE")
+			})
+
+			It("user-authz:user should not read projects cluster-wide when the namespace ACL filters them", func() {
+				f.ValuesSet("userAuthz.enableMultiTenancy", true)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).NotTo(ContainSubstring(`"projects"`))
+			})
+
+			It("user-authz:user should read projects cluster-wide when nothing filters them", func() {
+				f.ValuesSet("userAuthz.enableMultiTenancy", false)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).To(ContainSubstring(`"projects"`))
+			})
+
+			It("user-authz:user should not read projects when multitenancy-manager is absent", func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+				f.ValuesSet("userAuthz.enableMultiTenancy", false)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).NotTo(ContainSubstring(`"projects"`))
 			})
 		})
 	})

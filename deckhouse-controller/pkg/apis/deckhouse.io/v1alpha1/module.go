@@ -144,6 +144,15 @@ type Module struct {
 
 	Properties ModuleProperties `json:"properties,omitempty"`
 
+	// +Spec preserves the raw spec of newer API versions (for example, v1alpha2) so that
+	// +their fields are not pruned when an object is stored as this (storage) version.
+	// +Conversion strategy is None, so fields are not remapped between versions; this only
+	// +prevents data loss on round-trip. Consumers that need the newer fields must read the
+	// +object in its own version.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	Spec *runtime.RawExtension `json:"spec,omitempty"`
+
 	Status ModuleStatus `json:"status,omitempty"`
 }
 
@@ -212,7 +221,8 @@ type ModuleDisableOptions struct {
 	Messages ModuleDisableMessages `json:"messages,omitempty" yaml:"messages"`
 }
 
-// ModuleDisableMessages holds localized disable confirmation messages for the module.
+// Warning messages displayed when disabling the module, localized for different languages.
+// If a message for the selected language is not defined, the value of the `message` field is used instead.
 type ModuleDisableMessages struct {
 	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
 	En string `json:"en,omitempty" yaml:"en,omitempty"`
@@ -231,18 +241,18 @@ type ModuleStatus struct {
 }
 
 type ModuleCondition struct {
-	// Type is the type of the condition.
+	// +Type is the type of the condition.
 	Type string `json:"type,omitempty"`
-	// Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
+	// +Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
 	Reason string `json:"reason,omitempty"`
-	// Human-readable message indicating details about last transition.
+	// +Human-readable message indicating details about last transition.
 	Message string `json:"message,omitempty"`
-	// Status is the status of the condition.
-	// Can be True, False, Unknown.
+	// +Status is the status of the condition.
+	// +Can be True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status,omitempty"`
-	// Timestamp of when the condition was last probed.
+	// +Timestamp of when the condition was last probed.
 	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-	// Last time the condition transitioned from one status to another.
+	// +Last time the condition transitioned from one status to another.
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
@@ -262,18 +272,18 @@ func (m *Module) IsEnabledByBundle(editionName, bundleName string) bool {
 		return false
 	}
 
-	// check edition‑specific bundles first
-	if edition, ok := access.Editions[editionName]; ok && isEnabledInBundle(edition.EnabledInBundles, bundleName) {
-		return true
+	// an explicit edition entry is authoritative: it fully defines the enabled
+	// bundles for the edition and does not fall back to the default settings
+	if edition, ok := access.Editions[editionName]; ok {
+		return isEnabledInBundle(edition.EnabledInBundles, bundleName)
 	}
 
-	// check the default settings
+	// no edition entry — fall back to the default settings
 	defaultSettings, ok := access.Editions["_default"]
 	if !ok {
 		return false
 	}
 
-	// fallback to the default
 	return isEnabledInBundle(defaultSettings.EnabledInBundles, bundleName)
 }
 

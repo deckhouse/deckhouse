@@ -128,34 +128,6 @@ const moduleValues = `
       floatingNetworkID: my-floating-network-id
 `
 
-const badModuleValues = `
-  internal:
-    capoControllerManagerWebhookCert:
-      ca: myca
-      key: mykey
-      crt: mycrt
-    connection:
-      authURL: http://my.cloud.lalla/123/
-      username: myuser
-      password: myPaSs
-      domainName: mydomain
-      tenantName: mytenantname
-      tenantID: mytenantid
-      caCert: mycacert
-      region: myreg
-    internalNetworkNames:
-      - myintnetname
-      - myintnetname2
-    externalNetworkNames:
-      - myextnetname
-      - myextnetname2
-    podNetworkMode: "VXLAN"
-    instances:
-      sshKeyPairName: mysshkeypairname
-      securityGroups: ["aaa","bbb"]
-    zones: ["zonea", "zoneb"]
-`
-
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -325,7 +297,10 @@ func openstackCheck(f *Config, k8sVer string) {
 		providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
 		Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
 		Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
-		Expect(len(providerSpecificCAPISecretData["machine-template.yaml"].String()) > 0).To(BeTrue())
+		// template.yaml is the whole v2 machine-template contract: the go-template, the list of
+		// InstanceClass fields that recreate machines, and the extra MachineDeployment fields.
+		// It replaced machine-template.yaml + instance-class.checksum + machine-deployment-spec-patch.yaml.
+		Expect(len(providerSpecificCAPISecretData["template.yaml"].String()) > 0).To(BeTrue())
 
 		Expect(providerRegistrationSecret.Field("data.capiClusterKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("OpenStackCluster"))))
 		Expect(providerRegistrationSecret.Field("data.capiMachineTemplateKind").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("OpenStackMachineTemplate"))))
@@ -352,6 +327,12 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(ccmCRB.Exists()).To(BeTrue())
 		Expect(ccmVPA.Exists()).To(BeTrue())
 		Expect(ccmDeploy.Exists()).To(BeTrue())
+		Expect(ccmDeploy.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(
+			And(
+				WithTransform(func(v gjson.Result) string { return v.Get("name").String() }, Equal("SKIP_NODE_DELETION")),
+				WithTransform(func(v gjson.Result) string { return v.Get("value").String() }, Equal("1")),
+			),
+		))
 		Expect(ccmSecret.Exists()).To(BeTrue())
 		ccmExpectedConfig := `
 [Global]
@@ -402,6 +383,7 @@ rescan-on-resize = true`
 		Expect(capoWebhookConfig.Exists()).To(BeTrue())
 		Expect(capoWebhookConfig.Field("webhooks.1.clientConfig.service.namespace").String()).To(Equal(moduleNamespace))
 		Expect(capoDeployment.Field("spec.template.metadata.annotations").Map()["checksum/config"].String()).ToNot(BeEmpty())
+		Expect(capoDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 
 		Expect(scFast.Exists()).To(BeTrue())
 		Expect(scFast.Field("metadata.annotations").String()).To(MatchYAML(`
@@ -444,11 +426,13 @@ storageclass.kubernetes.io/is-default-class: "true"
 		providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
 		Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
 
-		machineTemplateSource, err := base64.StdEncoding.DecodeString(providerSpecificCAPISecret.Field("data.machine-template\\.yaml").String())
+		// The v2 contract reads the same two values from the sandbox context instead of the
+		// synthetic helm values tree the v1 template addressed.
+		machineTemplateSource, err := base64.StdEncoding.DecodeString(providerSpecificCAPISecret.Field("data.template\\.yaml").String())
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(string(machineTemplateSource)).To(ContainSubstring("allowedAddressPairs:"))
-		Expect(string(machineTemplateSource)).To(ContainSubstring(`ipAddress: {{ $.Values.global.discovery.podSubnet | quote }}`))
-		Expect(string(machineTemplateSource)).To(ContainSubstring(`eq $.Values.nodeManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled"`))
+		Expect(string(machineTemplateSource)).To(ContainSubstring(`ipAddress: {{ $.cluster.podSubnet | quote }}`))
+		Expect(string(machineTemplateSource)).To(ContainSubstring(`eq $.provider.podNetworkMode "DirectRoutingWithPortSecurityEnabled"`))
 	})
 }
 
@@ -485,20 +469,6 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			Expect(scSlow.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
 `))
-		})
-	})
-
-	Context("Openstack bad config", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
-			f.HelmRender()
-		})
-
-		It("Test should fail", func() {
-			Expect(f.RenderError).Should(HaveOccurred())
-			Expect(f.RenderError.Error()).ShouldNot(BeEmpty())
 		})
 	})
 

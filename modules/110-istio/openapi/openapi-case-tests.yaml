@@ -40,6 +40,8 @@ positive:
         trafficRedirectionSetupMode: CNIPlugin
     - telemetryAPI:
         enabled: true
+    - configAnalysis:
+        enabled: false
     - jwksResolverAdditionalRootCA: |
         -----BEGIN CERTIFICATE-----
         MIIDXTCCAkWgAwIBAgIJAN...

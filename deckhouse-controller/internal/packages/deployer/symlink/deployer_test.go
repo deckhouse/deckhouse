@@ -136,7 +136,7 @@ func TestDeployDownloadsPackage(t *testing.T) {
 				cancel()
 			}
 
-			err := deployer.Deploy(ctx, repo, "my-package", "my-package", "1.0.0")
+			err := deployer.Deploy(ctx, repo, "my-package", "my-package", "1.0.0", false)
 
 			if tc.wantErrIs != nil {
 				require.Error(t, err)
@@ -167,7 +167,7 @@ func TestDeployRemovesPartialDownload(t *testing.T) {
 	failingDownloader := &mockDownloader{partialBeforeErr: true}
 	deployer, packageDir, deployed := setupDeployer(tmpDir, failingDownloader)
 
-	err := deployer.Deploy(context.Background(), repo, "my-package", "my-package", "1.0.0")
+	err := deployer.Deploy(context.Background(), repo, "my-package", "my-package", "1.0.0", false)
 	require.Error(t, err)
 
 	_, statErr := os.Stat(filepath.Join(packageDir, "1.0.0"))
@@ -178,7 +178,7 @@ func TestDeployRemovesPartialDownload(t *testing.T) {
 	successfulDownloader := &mockDownloader{}
 	deployer, _, _ = setupDeployer(tmpDir, successfulDownloader)
 
-	err = deployer.Deploy(context.Background(), repo, "my-package", "my-package", "1.0.0")
+	err = deployer.Deploy(context.Background(), repo, "my-package", "my-package", "1.0.0", false)
 	require.NoError(t, err)
 	require.Equal(t, 1, successfulDownloader.calls)
 
@@ -198,9 +198,50 @@ func TestDeployReusesCompletedVersion(t *testing.T) {
 
 	repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
 
-	err := deployer.Deploy(context.Background(), repo, "my-package", "my-package", "1.0.0")
+	err := deployer.Deploy(context.Background(), repo, "my-package", "my-package", "1.0.0", false)
 	require.NoError(t, err)
 	require.Zero(t, downloader.calls)
+
+	content, err := os.ReadFile(filepath.Join(deployed, "package.yaml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "version: cached")
+}
+
+// TestDeployForceReplacesCachedVersion verifies that a forced deploy re-downloads a
+// cached version, which is how a re-pushed tag replaces stale content on disk.
+func TestDeployForceReplacesCachedVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	downloader := &mockDownloader{}
+	deployer, packageDir, deployed := setupDeployer(tmpDir, downloader)
+	setupVersionDir(t, packageDir, "1.0.0", "")
+	require.NoError(t, os.WriteFile(filepath.Join(packageDir, "1.0.0", "package.yaml"), []byte("name: my-package\nversion: stale"), 0644))
+
+	repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+
+	err := deployer.Deploy(context.Background(), repo, "my-package", "my-package", "1.0.0", true)
+	require.NoError(t, err)
+	require.Equal(t, 1, downloader.calls)
+
+	content, err := os.ReadFile(filepath.Join(deployed, "package.yaml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "version: 1.0.0")
+	assert.NotContains(t, string(content), "stale")
+}
+
+// TestDeployForceKeepsCachedVersionOnFailure verifies that a failed forced download
+// leaves the previously deployed content in place instead of removing it.
+func TestDeployForceKeepsCachedVersionOnFailure(t *testing.T) {
+	tmpDir := t.TempDir()
+	downloader := &mockDownloader{partialBeforeErr: true}
+	deployer, packageDir, deployed := setupDeployer(tmpDir, downloader)
+	versionPath := setupVersionDir(t, packageDir, "1.0.0", "")
+	require.NoError(t, os.WriteFile(filepath.Join(versionPath, "package.yaml"), []byte("name: my-package\nversion: cached"), 0644))
+	setupSymlink(t, deployed, versionPath)
+
+	repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+
+	err := deployer.Deploy(context.Background(), repo, "my-package", "my-package", "1.0.0", true)
+	require.Error(t, err)
 
 	content, err := os.ReadFile(filepath.Join(deployed, "package.yaml"))
 	require.NoError(t, err)
@@ -288,7 +329,7 @@ func TestDeploy(t *testing.T) {
 			}
 
 			repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
-			err := deployer.Deploy(ctx, repo, "my-package", "my-package", tc.version)
+			err := deployer.Deploy(ctx, repo, "my-package", "my-package", tc.version, false)
 
 			if tc.wantErrIs != nil {
 				require.Error(t, err)
@@ -652,7 +693,7 @@ func TestLifecycle(t *testing.T) {
 
 			// Download and deploy each version.
 			for _, version := range tc.versions {
-				err := deployer.Deploy(ctx, repo, "my-package", "my-package", version)
+				err := deployer.Deploy(ctx, repo, "my-package", "my-package", version, false)
 				require.NoError(t, err, "deploy %s", version)
 
 				// Verify correct version is deployed

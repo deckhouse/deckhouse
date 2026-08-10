@@ -39,6 +39,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -48,7 +49,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -410,6 +410,10 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 			}
 			deletedCount++
 			deleteSpan.End()
+
+			// The module has just been deleted; skip the status update below so we
+			// don't try to update a non-existent module.
+			continue
 		}
 
 		var found bool
@@ -454,7 +458,26 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 		attribute.Int("status_updated_modules", statusUpdatedCount),
 	)
 
+	l.syncModuleVersions(modulesList.Items)
+
 	return nil
+}
+
+// syncModuleVersions propagates Module.Properties.Version into each BasicModule.
+// Embedded modules are intentionally NOT filtered out: Properties.Version for
+// them holds the Deckhouse release version, which kubeall expects to see.
+func (l *Loader) syncModuleVersions(modules []v1alpha1.Module) {
+	for i := range modules {
+		m := &modules[i]
+		if m.Properties.Version == "" {
+			continue
+		}
+		mod, ok := l.modules[m.Name]
+		if !ok {
+			continue
+		}
+		mod.GetBasicModule().SetVersion(m.Properties.Version)
+	}
 }
 
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
@@ -516,8 +539,22 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				// set deckhouse version to embedded modules
 				module.Properties.Version = l.version
 
-				// set embedded source if its unset
-				if len(module.Properties.Source) == 0 {
+				// A physically embedded module must always report Source == "Embedded".
+				// This branch runs for a def parsed from the embedded modules dir, i.e. the
+				// embedded copy is shipped on the filesystem right now, so the module is
+				// served by that copy and its active source cannot be an external one.
+				// The transition off the "Embedded" sentinel is done elsewhere (moduleloader
+				// restore, release deploy) only once the embedded copy is dropped on upgrade,
+				// and both are gated on !IsEmbeddedPresent - so it can never legitimately be
+				// external while we are here.
+				//
+				// Force the sentinel back, do not merely fill it when empty: a stale external
+				// value (e.g. left over from a pre-hardening erroneous flip, or written by a
+				// future regression) would otherwise stick across restarts and could only be
+				// cleared by manually deleting the Module resource. ensureModule runs on every
+				// startup over exactly the set of physically embedded modules, so it is the
+				// authoritative reconciliation point for this invariant.
+				if module.Properties.Source != v1alpha1.ModuleSourceEmbedded {
 					module.Properties.Source = v1alpha1.ModuleSourceEmbedded
 				}
 			}

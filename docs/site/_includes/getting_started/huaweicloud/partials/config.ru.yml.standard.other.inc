@@ -135,14 +135,14 @@ provider:
   # [<en>] The Huawei Cloud secret key.
   # [<ru>] Секретный ключ облака Huawei Cloud.
   secretKey: "<Secret key>"
-  # [<en>] Trust self-signed SSL certificates.
-  # [<ru>] Доверять самоподписанным SSL-сертификатам.
+  # [<en>] Optional. Trust self-signed SSL certificates.
+  # [<ru>] Необязательный параметр. Доверять самоподписанным SSL-сертификатам.
   insecure: false
-  # [<en>] The identity authentication URL.
-  # [<ru>] URL-адрес аутентификации личности.
+  # [<en>] Optional. The identity authentication URL.
+  # [<ru>] Необязательный параметр. URL-адрес аутентификации.
   authURL: "<Auth URL>"
-  # [<en>] The account name of IAM to scope to.
-  # [<ru>] Имя учетной записи IAM для охвата.
+  # [<en>] Optional. The IAM account name used for scoping.
+  # [<ru>] Необязательный параметр. Имя учетной записи IAM, используемое для определения области действия.
   domainName: "<Domain Name>"
   # [<en>] The project ID.
   # [<ru>] Идентификатор проекта.

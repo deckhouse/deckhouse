@@ -48,8 +48,8 @@ func NewNodesController(ctx context.Context, clusterMetaConfig *config.MetaConfi
 }
 
 func getNgMetaConfig(ctx context.Context, clusterMetaConfig *config.MetaConfig, settings []byte) (*config.MetaConfig, error) {
-	// we use dummy preparator because metaConfig was prepared early
-	cfg, err := clusterMetaConfig.DeepCopy().Prepare(ctx, config.DummyPreparatorProvider())
+	// we use dummy validator because metaConfig was prepared early
+	cfg, err := clusterMetaConfig.DeepCopy().Prepare(ctx, config.DummyValidatorProvider())
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare copied config: %v", err)
 	}

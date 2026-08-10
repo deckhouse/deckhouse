@@ -64,9 +64,16 @@ discovery:
 `
 
 const istioValues = `
+    registry: {}
     internal:
       globalVersion: "1.21.6"
       versionMap:
+        "1.29.6":
+          revision: "v1x29x6"
+          fullVersion: "1.29.6"
+          imageSuffix: "V1x29x6"
+          supportsAmbient: true
+          supportsOperator: false
         "1.27.9":
           revision: "v1x27x9"
           fullVersion: "1.27.9"
@@ -370,6 +377,146 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			telemetry := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
 			Expect(telemetry.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
 		})
+
+		It("renders istio config analyzer for control plane 1.27", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x27")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("istio-config-analyzer"))
+			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--revision=v1x27"))
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x27")
+			Expect(podMonitor.Exists()).To(BeTrue())
+		})
+
+		It("does not render istio config analyzer when configAnalysis is disabled", func() {
+			f.ValuesSet("istio.configAnalysis.enabled", false)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x27")
+			Expect(deployment.Exists()).To(BeFalse())
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x27")
+			Expect(podMonitor.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Telemetry mesh defaults for operator-free control plane 1.29", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.29":
+  revision: "v1x29"
+  fullVersion: "1.29.6"
+  imageSuffix: "V1x29x6"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.29"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
+		})
+
+		It("enables mesh metrics via defaultProviders and Telemetry d8-main by default", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			meshConfig := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Field("data.mesh").String()
+			Expect(meshConfig).To(ContainSubstring("defaultProviders"))
+			Expect(meshConfig).To(ContainSubstring("prometheus"))
+
+			telemetry := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(telemetry.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+		})
+
+		It("keeps Telemetry API mode configuration when enabled", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			meshConfig := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Field("data.mesh").String()
+			Expect(meshConfig).To(ContainSubstring("defaultProviders"))
+			Expect(meshConfig).To(ContainSubstring("prometheus"))
+
+			telemetry := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(telemetry.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+		})
+	})
+
+	Context("Istio config analyzer for control plane 1.25", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.25":
+  revision: "v1x25"
+  fullVersion: "1.25.2"
+  imageSuffix: "V1x25x2"
+  supportsAmbient: true
+  supportsOperator: true
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
+		})
+
+		It("renders istio config analyzer for control plane 1.25", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x25")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("istio-config-analyzer"))
+			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--revision=v1x25"))
+			Expect(deployment.Field("spec.template.spec.containers.0.image").String()).To(ContainSubstring("configAnalyzerV1x25x2"))
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x25")
+			Expect(podMonitor.Exists()).To(BeTrue())
+
+			clusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:config-analyzer:v1x25")
+			Expect(clusterRole.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Istio config analyzer for control plane 1.21", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.21":
+  revision: "v1x21"
+  fullVersion: "1.21.6"
+  imageSuffix: "V1x21x6"
+  supportsAmbient: false
+  supportsOperator: true
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.21")
+		})
+
+		It("renders istio config analyzer for control plane 1.21", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x21")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("istio-config-analyzer"))
+			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--revision=v1x21"))
+			Expect(deployment.Field("spec.template.spec.containers.0.image").String()).To(ContainSubstring("configAnalyzerV1x21x6"))
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x21")
+			Expect(podMonitor.Exists()).To(BeTrue())
+
+			clusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:config-analyzer:v1x21")
+			Expect(clusterRole.Exists()).To(BeTrue())
+		})
 	})
 
 	Context("There are revisions to install, no federations or multiclusters", func() {
@@ -578,7 +725,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6","1.25.2","1.27.9"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6","1.25.2","1.27.9","1.29.6"]`)
 			f.ValuesSet("istio.jwksResolverAdditionalRootCA", jwksResolverAdditionalRootCA)
 			f.HelmRender()
 		})
@@ -591,23 +738,30 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			jwksExtraRootCAV21 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x21x6")
 			jwksExtraRootCAV25 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x25x2")
 			jwksExtraRootCAV27 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x27x9")
+			jwksExtraRootCAV29 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x29x6")
 
 			Expect(iopV21.Exists()).To(BeTrue())
 			Expect(istioV25.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV21.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV25.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV27.Exists()).To(BeTrue())
+			Expect(jwksExtraRootCAV29.Exists()).To(BeTrue())
 
 			deplV27 := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27x9")
+			deplV29 := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x29x6")
 
 			Expect(iopV21.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(istioV25.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV21.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV25.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV27.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(jwksExtraRootCAV29.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(deplV27.Exists()).To(BeTrue())
 			Expect(deplV27.Field("spec.template.spec.containers.0.volumeMounts").String()).To(ContainSubstring(`"mountPath":"/cacerts"`))
 			Expect(deplV27.Field("spec.template.spec.volumes").String()).To(ContainSubstring("pilot-jwks-extra-cacerts-v1x27x9"))
+			Expect(deplV29.Exists()).To(BeTrue())
+			Expect(deplV29.Field("spec.template.spec.containers.0.volumeMounts").String()).To(ContainSubstring(`"mountPath":"/cacerts"`))
+			Expect(deplV29.Field("spec.template.spec.volumes").String()).To(ContainSubstring("pilot-jwks-extra-cacerts-v1x29x6"))
 		})
 	})
 
@@ -651,6 +805,7 @@ neighbour-0:
 			f.ValuesSetFromYaml("istio.alliance.ingressGateway.gatewayPodAnnotations", `
 test.deckhouse.io/annotation: test-value
 `)
+			f.ValuesSet("istio.alliance.ingressGateway.loadBalancerClass", "my-lb-class")
 			f.HelmRender()
 		})
 
@@ -688,7 +843,10 @@ test.deckhouse.io/annotation: test-value
 			Expect(ingressgatewayDaemonSet.Field("spec.template.metadata.annotations.test\\.deckhouse\\.io/annotation").String()).To(Equal("test-value"))
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Gateway", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
+			ingressgatewayService := f.KubernetesResource("Service", "d8-istio", "ingressgateway")
+			Expect(ingressgatewayService.Exists()).To(BeTrue())
+			Expect(ingressgatewayService.Field("spec.type").String()).To(Equal("LoadBalancer"))
+			Expect(ingressgatewayService.Field("spec.loadBalancerClass").String()).To(Equal("my-lb-class"))
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Role", "d8-istio", "alliance:ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "alliance:ingressgateway").Exists()).To(BeTrue())
@@ -1413,9 +1571,9 @@ MY_VAR: "myvalue"
 			Expect(ingressSvc.Exists()).To(BeTrue())
 
 			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
-			Expect(ingressVpa.Field("spec.resourcePolicy").String()).To(MatchJSON(`{"containerPolicies":[{"containerName":"istio-proxy","maxAllowed":{"cpu":"50m","memory":"200Mi"},"minAllowed":{"cpu":"10m","memory":"50Mi"}}]}`))
+			Expect(ingressVpa.Field("spec.resourcePolicy").String()).To(MatchJSON(`{"containerPolicies":[{"containerName":"istio-proxy","controlledValues":"RequestsAndLimits","maxAllowed":{"cpu":"1000m","memory":"2000Mi"},"minAllowed":{"cpu":"100m","memory":"128Mi"}}]}`))
 
-			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"nodeport-test","istio.deckhouse.io/ingress-gateway-class":"np","module":"istio"}`))
+			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"nodeport-test","istio":"ingressgateway","istio.deckhouse.io/ingress-gateway-class":"np","istio.io/dataplane-mode":"none","module":"istio"}`))
 
 			Expect(ingressSvc.Field("spec.type").String()).To(Equal("NodePort"))
 		})
@@ -1448,16 +1606,45 @@ MY_VAR: "myvalue"
 			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-ingress-istio", "ingress-gateway-controller-loadbalancer-test")
 			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-loadbalancer-test")
 			ingressSvc := f.KubernetesResource("service", "d8-ingress-istio", "ingress-gateway-controller-loadbalancer-test")
-			Expect(ingressVpa.Exists()).To(BeTrue())
+			// Static mode does not render a VPA.
+			Expect(ingressVpa.Exists()).To(BeFalse())
+			Expect(ingressDs.Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchJSON(`{"cpu":"100m","memory":"128Mi","ephemeral-storage":"60Mi"}`))
 			Expect(ingressDs.Exists()).To(BeTrue())
 			Expect(ingressSvc.Exists()).To(BeTrue())
 
-			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Off"))
-
-			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"loadbalancer-test","istio.deckhouse.io/ingress-gateway-class":"lb","module":"istio"}`))
+			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"loadbalancer-test","istio":"ingressgateway","istio.deckhouse.io/ingress-gateway-class":"lb","istio.io/dataplane-mode":"none","module":"istio"}`))
 
 			Expect(ingressSvc.Field("metadata.annotations").String()).To(MatchJSON(`{ "aaa": "bbb" }`))
 			Expect(ingressSvc.Field("spec.type").String()).To(Equal("LoadBalancer"))
+			Expect(ingressSvc.Field("spec.loadBalancerClass").Exists()).To(BeFalse())
+		})
+	})
+	Context("ingress gateway controller with inlet LoadBalancer and loadBalancerClass is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: loadbalancerclass-test
+  spec:
+    ingressGatewayClass: lbc
+    inlet: LoadBalancer
+    loadBalancer:
+      loadBalancerClass: my-lb-class
+    resourcesRequests:
+      mode: Static
+`)
+			f.HelmRender()
+		})
+
+		It("should render the service with spec.loadBalancerClass", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ingressSvc := f.KubernetesResource("service", "d8-ingress-istio", "ingress-gateway-controller-loadbalancerclass-test")
+			Expect(ingressSvc.Exists()).To(BeTrue())
+
+			Expect(ingressSvc.Field("spec.type").String()).To(Equal("LoadBalancer"))
+			Expect(ingressSvc.Field("spec.loadBalancerClass").String()).To(Equal("my-lb-class"))
 		})
 	})
 	Context("ingress gateway controller with inlet HostPort is enabled", func() {
@@ -1486,24 +1673,177 @@ MY_VAR: "myvalue"
 			ingressVpa := f.KubernetesResource("verticalpodautoscaler", "d8-ingress-istio", "ingress-gateway-controller-hostport-test")
 			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-hostport-test")
 			ingressSvc := f.KubernetesResource("service", "d8-ingress-istio", "ingress-gateway-controller-hostport-test")
+			// Omitted resourcesRequests uses the built-in VPA defaults.
 			Expect(ingressVpa.Exists()).To(BeTrue())
+			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
+			Expect(ingressDs.Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchJSON(`{"cpu":"100m","memory":"128Mi","ephemeral-storage":"60Mi"}`))
 			Expect(ingressDs.Exists()).To(BeTrue())
 			Expect(ingressSvc.Exists()).To(BeTrue())
 
-			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Off"))
-
-			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"hostport-test","istio.deckhouse.io/ingress-gateway-class":"hp","module":"istio"}`))
+			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"hostport-test","istio":"ingressgateway","istio.deckhouse.io/ingress-gateway-class":"hp","istio.io/dataplane-mode":"none","module":"istio"}`))
 			istioProxyContainer := ingressDs.Field("spec.template.spec.containers").Array()
 			Expect(len(istioProxyContainer)).To(Equal(1))
 			Expect((istioProxyContainer[0].Get("ports"))).To(MatchJSON(`[
 {"containerPort":8080,"hostPort":80,"name":"http","protocol":"TCP"},
 {"containerPort":8443,"hostPort":443,"name":"https","protocol":"TCP"},
+{"containerPort":15020,"name":"metrics","protocol":"TCP"},
 {"containerPort":15090,"name":"http-envoy-prom","protocol":"TCP"},
 {"containerPort":15021,"name":"status-port","protocol":"TCP"},
 {"containerPort":15012,"name":"tls-istiod","protocol":"TCP"}
 ]`))
 
 			Expect(ingressSvc.Field("spec.type").String()).To(Equal("ClusterIP"))
+		})
+	})
+
+	Context("ingress gateway controller with networkTopology.numTrustedProxies", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: xff-test
+  spec:
+    ingressGatewayClass: xff
+    inlet: LoadBalancer
+    networkTopology:
+      numTrustedProxies: 2
+`)
+			f.HelmRender()
+		})
+
+		It("renders the proxy.istio.io/config annotation with numTrustedProxies", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-xff-test")
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressDs.Field("spec.template.metadata.annotations").Get(`proxy\.istio\.io/config`).String()).
+				To(MatchJSON(`{"gatewayTopology":{"numTrustedProxies":2}}`))
+		})
+	})
+
+	Context("ingress gateway controller with networkTopology.numTrustedProxies set to 0", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: xff-zero-test
+  spec:
+    ingressGatewayClass: xff0
+    inlet: LoadBalancer
+    networkTopology:
+      numTrustedProxies: 0
+`)
+			f.HelmRender()
+		})
+
+		It("renders numTrustedProxies even when it is zero", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-xff-zero-test")
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressDs.Field("spec.template.metadata.annotations").Get(`proxy\.istio\.io/config`).String()).
+				To(MatchJSON(`{"gatewayTopology":{"numTrustedProxies":0}}`))
+		})
+	})
+
+	Context("ingress gateway controller with networkTopology.proxyProtocol", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: pp-test
+  spec:
+    ingressGatewayClass: pp
+    inlet: LoadBalancer
+    networkTopology:
+      proxyProtocol: true
+`)
+			f.HelmRender()
+		})
+
+		It("renders the proxy.istio.io/config annotation with an empty proxyProtocol object", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-pp-test")
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressDs.Field("spec.template.metadata.annotations").Get(`proxy\.istio\.io/config`).String()).
+				To(MatchJSON(`{"gatewayTopology":{"proxyProtocol":{}}}`))
+		})
+	})
+
+	Context("ingress gateway controller with both network topology settings", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: combined-topology-test
+  spec:
+    ingressGatewayClass: combined
+    inlet: LoadBalancer
+    networkTopology:
+      numTrustedProxies: 1
+      proxyProtocol: true
+`)
+			f.HelmRender()
+		})
+
+		It("renders both gateway topology settings", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-combined-topology-test")
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressDs.Field("spec.template.metadata.annotations").Get(`proxy\.istio\.io/config`).String()).
+				To(MatchJSON(`{"gatewayTopology":{"numTrustedProxies":1,"proxyProtocol":{}}}`))
+		})
+	})
+
+	Context("ingress gateway controller without networkTopology", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.ingressControllers", `
+- name: no-topology-test
+  spec:
+    ingressGatewayClass: nt
+    inlet: LoadBalancer
+`)
+			f.HelmRender()
+		})
+
+		It("does not render the proxy.istio.io/config annotation", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-no-topology-test")
+			Expect(ingressDs.Exists()).To(BeTrue())
+			Expect(ingressDs.Field("spec.template.metadata.annotations").Get(`proxy\.istio\.io/config`).Exists()).To(BeFalse())
+		})
+
+		It("uses the upstream gateway probes and metrics metadata", func() {
+			ingressDs := f.KubernetesResource("daemonset", "d8-ingress-istio", "ingress-gateway-controller-no-topology-test")
+			istioProxy := ingressDs.Field("spec.template.spec.containers.0")
+			Expect(istioProxy.Get("ports").String()).
+				To(ContainSubstring(`"containerPort":15020,"name":"metrics","protocol":"TCP"`))
+			Expect(istioProxy.Get("env.#(name==ISTIO_META_POD_PORTS).value").String()).To(Equal("[]"))
+			Expect(istioProxy.Get("startupProbe").String()).To(MatchJSON(`{
+				"failureThreshold":30,
+				"httpGet":{"path":"/healthz/ready","port":15021,"scheme":"HTTP"},
+				"initialDelaySeconds":1,
+				"periodSeconds":1,
+				"successThreshold":1,
+				"timeoutSeconds":1
+			}`))
+			Expect(istioProxy.Get("readinessProbe").String()).To(MatchJSON(`{
+				"failureThreshold":4,
+				"httpGet":{"path":"/healthz/ready","port":15021,"scheme":"HTTP"},
+				"initialDelaySeconds":0,
+				"periodSeconds":15,
+				"successThreshold":1,
+				"timeoutSeconds":1
+			}`))
+
+			podMonitor := f.KubernetesResource("podmonitor", "d8-monitoring", "istio-ingress-gateway-controller")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.podMetricsEndpoints.0.relabelings.1.replacement").String()).To(Equal("${1}:15020"))
 		})
 	})
 
@@ -1578,6 +1918,78 @@ MY_VAR: "myvalue"
 			Expect(cniConfig.Field("data.AMBIENT_ENABLEMENT_SELECTOR").String()).To(ContainSubstring("istio.io/dataplane-mode: ambient"))
 			Expect(cniConfig.Field("data.ISTIO_OWNED_CNI_CONFIG").String()).To(Equal("false"))
 			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
+			Expect(cniConfig.Field("data.ENABLE_AMBIENT_DETECTION_RETRY").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("custom control plane for operator-free version 1.29", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.29":
+  revision: "v1x29"
+  fullVersion: "1.29.6"
+  imageSuffix: "V1x29x6"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.29"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
+			f.HelmRender()
+		})
+
+		It("renders custom istiod resources and skips operator CRs", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x29").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x29").Exists()).To(BeFalse())
+
+			svc := f.KubernetesResource("Service", "d8-istio", "istiod-v1x29")
+			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("grpc-xds"))
+			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("https-webhook"))
+
+			ds := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x29")
+			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("cni.istio.io/not-ready"))
+			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("node-role.kubernetes.io/master"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/name").String()).To(Equal("istiod"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/instance").String()).To(Equal("v1x29-istiod"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/version").String()).To(Equal("1.29.6"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/part-of").String()).To(Equal("istio"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/managed-by").String()).To(Equal("Helm"))
+
+			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x29").Field("data.values").String()
+			Expect(injectorValues).To(ContainSubstring(`"resources": {}`))
+
+			cniConfig := f.KubernetesResource("ConfigMap", "d8-istio", "cni-config")
+			Expect(cniConfig.Field("data.AMBIENT_ENABLEMENT_SELECTOR").String()).To(ContainSubstring("istio.io/dataplane-mode: ambient"))
+			Expect(cniConfig.Field("data.ISTIO_OWNED_CNI_CONFIG").String()).To(Equal("false"))
+			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
+			// Upstream CNI default not implemented yet for 1.29 — stubbed off explicitly.
+			Expect(cniConfig.Field("data.ENABLE_AMBIENT_DETECTION_RETRY").String()).To(Equal("false"))
+		})
+
+		It("renders istio config analyzer for control plane 1.29", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x29")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("istio-config-analyzer"))
+			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--revision=v1x29"))
+			Expect(deployment.Field("spec.template.spec.containers.0.image").String()).To(ContainSubstring("configAnalyzerV1x29x6"))
+
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x29")
+			Expect(podMonitor.Exists()).To(BeTrue())
+
+			clusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:config-analyzer:v1x29")
+			Expect(clusterRole.Exists()).To(BeTrue())
+			Expect(clusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
 		})
 	})
 

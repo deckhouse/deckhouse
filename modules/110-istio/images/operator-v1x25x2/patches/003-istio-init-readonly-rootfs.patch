@@ -1,0 +1,13 @@
+diff --git a/resources/v1.25.2/charts/istiod/files/injection-template.yaml b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
+index 3b3f69cd..0b72b7af 100644
+--- a/resources/v1.25.2/charts/istiod/files/injection-template.yaml
++++ b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
+@@ -155,7 +155,7 @@ spec:
+         drop:
+         - ALL
+     {{- if not .Values.pilot.cni.enabled }}
+-      readOnlyRootFilesystem: false
++      readOnlyRootFilesystem: true
+       runAsGroup: 0
+       runAsNonRoot: false
+       runAsUser: 0

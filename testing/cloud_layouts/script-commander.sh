@@ -215,7 +215,30 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
+    }"
+    ;;
+
+  "Huawei")
+    KEY_ID=$LAYOUT_HUAWEI_KEY_ID
+    KEY_SECRET=$LAYOUT_HUAWEI_KEY_SECRET
+    ssh_user="ubuntu"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"keyId\": \"${KEY_ID}\",
+      \"keySecret\": \"${KEY_SECRET}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -238,7 +261,9 @@ function prepare_environment() {
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -262,7 +287,9 @@ function prepare_environment() {
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -289,7 +316,9 @@ function prepare_environment() {
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -305,7 +334,9 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -322,7 +353,9 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -341,7 +374,9 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -357,7 +392,9 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -382,7 +419,9 @@ function prepare_environment() {
       \"sshBastionUser\": \"${bastion_user}\",
       \"sshBastionPort\": \"${bastion_port}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
 
     ;;
@@ -416,7 +455,9 @@ function prepare_environment() {
     \"sshBastionHost\": \"${ssh_bastion_ip}\",
     \"sshBastionUser\": \"${ssh_user}\",
     \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-    \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+    \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+    \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
   }"
     ;;
 
@@ -986,6 +1027,8 @@ function wait_alerts_resolve() {
   "D8SignatureErrorsDetected" # by default signatures not enabled for etcd keys
   "CertmanagerCertificateChallengeStuck" # This is normal for e2e tests
   "D8NodeLocalDNSKubeforwardRequestLatencyP95High" # Doesn't work with closed clusters
+  "D8CloudProviderDVPMigrationPending" # Ignore migration DVP
+  "D8IstioConfigAnalysisWarning" # This is normal for e2e tests
   )
 
   # Alerts
@@ -1376,7 +1419,9 @@ function run-test() {
             \"sshPrivateKey\": \"${SSH_KEY}\",
             \"imagesRepo\": \"${IMAGES_REPO}\",
             \"branch\": \"${DEV_BRANCH}\",
-            \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\"
+            \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\",
+            \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+            \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
           }"
   elif [[ ${PROVIDER} == "Static-cse" ]]; then
     bootstrap_static || return $?
@@ -1399,7 +1444,9 @@ function run-test() {
       \"sshWorker3User\": \"${ssh_astra_user}\",
       \"sshSystemHost\": \"${system_ip}\",
       \"sshSystemUser\": \"${ssh_mosos_user}\",
-      \"sshPrivateKey\": \"${SSH_KEY}\"
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
   fi
   if [[ ${PROVIDER} == "VCD" ]]; then

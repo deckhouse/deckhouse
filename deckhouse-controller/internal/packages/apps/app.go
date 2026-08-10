@@ -46,6 +46,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
@@ -72,6 +73,12 @@ type Application struct {
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
+	// initialized tracks whether hook controllers have been built for this instance,
+	// so the Enable task skips re-initialization on every reschedule. It is per-instance
+	// on purpose: hook controllers may live on process-global SDK-registry singletons,
+	// so inferring init state from controller presence would leak across instances.
+	initialized atomic.Bool
+
 	definition Definition        // Application definition
 	digests    map[string]string // Package digests
 	repository registry.Remote   // Application repository
@@ -79,6 +86,10 @@ type Application struct {
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
+
+	// maintenance is the package maintenance mode, set by the Configure task and
+	// read by the Run/nelm layer. Empty (Managed) means reconcile normally.
+	maintenance nelm.MaintenanceState
 
 	// grantResolver resolves per-project cluster resource grants for settings
 	// fields tagged with x-deckhouse-grantable-resource. Never nil (defaults to NoopResolver).
@@ -328,7 +339,7 @@ func (a *Application) GetSettingsChecksum() string {
 }
 
 // ValidateSettings validates settings against openAPI and call setting check if exists
-func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+func (a *Application) ValidateSettings(ctx context.Context, _ int, settings addonutils.Values) (settingscheck.Result, error) {
 	if err := a.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
@@ -364,7 +375,7 @@ func (a *Application) GetValues() addonutils.Values {
 // ApplySettings applies settings values to application. Before persisting the
 // user config it resolves per-project grant defaults from
 // AvailableClusterResource and stores them for the grantDefaultsTransformer.
-func (a *Application) ApplySettings(settings addonutils.Values) error {
+func (a *Application) ApplySettings(_ int, settings addonutils.Values) error {
 	if err := a.resolveGrantDefaults(context.Background()); err != nil {
 		return err
 	}
@@ -489,16 +500,27 @@ func (a *Application) GetSettings() addonutils.Values {
 	return a.values.GetSettings()
 }
 
+// SetMaintenance records the application maintenance mode. Called by the Configure
+// task on the package's serialized queue.
+func (a *Application) SetMaintenance(state nelm.MaintenanceState) {
+	a.maintenance = state
+}
+
+// GetMaintenance returns the application maintenance mode. Empty (Managed) means
+// the application reconciles normally.
+func (a *Application) GetMaintenance() nelm.MaintenanceState {
+	return a.maintenance
+}
+
 // GetConstraints returns scheduler checks, their determine if an app should be enabled/disabled
 func (a *Application) GetConstraints() schedule.Constraints {
 	return a.definition.Constraints()
 }
 
-// HooksInitialized reports whether the package requires a hook initialize phase.
-// This is true when hooks have not yet been initialized (no controllers attached),
-// meaning the pkg needs to go through the full startup sequence before it can run.
+// HooksInitialized reports whether this instance has already built its hook
+// controllers. When true, the Enable task skips the initialize+sync phase.
 func (a *Application) HooksInitialized() bool {
-	return a.hooks.Initialized()
+	return a.initialized.Load()
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
@@ -520,6 +542,8 @@ func (a *Application) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+
+	a.initialized.Store(true)
 }
 
 // DisableHooks tears down all active hook bindings and clears the hook registry.
@@ -545,6 +569,14 @@ func (a *Application) DisableHooks() {
 		}
 	}
 
+	// Detach controllers so a subsequent InitializeHooks starts fresh. Hook objects
+	// may be process-global SDK-registry singletons, so a stale controller left here
+	// would make the next Enable wrongly believe this instance is already initialized.
+	for _, hook := range a.hooks.GetHooks() {
+		hook.WithHookController(nil)
+	}
+
+	a.initialized.Store(false)
 	a.running.Store(false)
 }
 
@@ -566,7 +598,7 @@ func (a *Application) GetHooksByBinding(binding shtypes.BindingType) []hooks.Con
 }
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.
-// It creates a binding context with snapshots for BeforeHelm/AfterHelm/AfterDeleteHelm hooks.
+// It creates a binding context with snapshots for BeforeHelm/AfterHelm/BeforeDeleteHelm/AfterDeleteHelm hooks.
 func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error {
 	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "RunHooksByBinding")
 	defer span.End()
@@ -582,7 +614,8 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 			Binding: string(binding),
 		}
 		// Update kubernetes snapshots just before execute a hook
-		if binding == types.BeforeHelm || binding == types.AfterHelm || binding == types.AfterDeleteHelm {
+		if binding == types.BeforeHelm || binding == types.AfterHelm ||
+			binding == types.BeforeDeleteHelm || binding == types.AfterDeleteHelm {
 			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
 			bc.Metadata.IncludeAllSnapshots = true
 		}

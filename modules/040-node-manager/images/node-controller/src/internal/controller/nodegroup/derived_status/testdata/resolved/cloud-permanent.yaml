@@ -1,0 +1,22 @@
+cri:
+  type: Containerd
+disruptions:
+  approvalMode: Manual
+engine: None
+kubelet:
+  containerLogMaxFiles: 4
+  containerLogMaxSize: 50Mi
+  resourceReservation:
+    mode: Auto
+  topologyManager: {}
+kubernetesVersion: "1.32"
+manualRolloutID: ""
+name: master
+nodeTemplate:
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+nodeType: CloudPermanent
+serializedLabels: node-role.kubernetes.io/master=,node.deckhouse.io/group=master,node.deckhouse.io/type=CloudPermanent
+serializedTaints: node-role.kubernetes.io/control-plane:NoSchedule
+updateEpoch: "1003"

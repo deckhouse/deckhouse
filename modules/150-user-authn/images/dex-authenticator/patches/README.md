@@ -40,3 +40,22 @@ Oauth2-proxy returns 200 (instead of 202) when the request is authenticated and 
 ### 007-add-json-logging.patch
 
 Add json logging.
+
+### 999-fix-cve.patch
+
+Additional dependency bumps on top of `005-fix-cves.patch` (applied last).
+
+Fix CVEs:
+- CVE-2026-25680
+- CVE-2026-25681
+- CVE-2026-27136
+- CVE-2026-33814
+- CVE-2026-39821
+- CVE-2026-39824
+- CVE-2026-42502
+- CVE-2026-42506
+- CVE-2026-46600
+- CVE-2026-56852
+
+GHSA:
+- GHSA-hrxh-6v49-42gf

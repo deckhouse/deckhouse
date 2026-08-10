@@ -77,13 +77,13 @@ imageSpec:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
-  before: install
+  before: setup
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
@@ -91,9 +91,8 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
-  install:
+  - pm install git binutils
+  setup:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
   - export VERSION={{ $istioVersion }}
@@ -175,7 +174,7 @@ shell:
   - mkdir -p /relocate/sbin
   - |
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+      ln -sf /sbin/xtables-nft-multi "/relocate/sbin/${cmd}"
     done
     # broken symlinks are not imported from the artifact
     touch /sbin/iptables-wrapper
@@ -276,3 +275,4 @@ shell:
   - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
   - cd /src/proxy/
 ---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

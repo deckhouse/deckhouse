@@ -1,0 +1,25 @@
+{{- $bootstrapHostNetwork := not .Values.global.clusterIsBootstrapped }}
+
+{{- if and (.Values.global.enabledModules | has "admission-policy-engine-crd") $bootstrapHostNetwork }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: validation-webhook
+  namespace: d8-cloud-provider-dvp
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host network access for validation webhook server.
+          The DVP validation webhook server requires host network access to continue infrastructure reconciliation even if the CNI or pod network is unavailable.
+    hostPorts:
+      - port: 4330
+        protocol: TCP
+        metadata:
+          description: |
+            Allow binding TCP port 4330 for the validation webhook server.
+            This port is used by validation-webhook to serve admission webhooks via validation-webhook service.
+{{- end }}

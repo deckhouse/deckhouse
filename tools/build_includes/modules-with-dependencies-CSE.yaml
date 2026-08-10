@@ -143,6 +143,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/140-user-authz/requirements
+  to: /deckhouse/modules/140-user-authz/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/150-user-authn/hooks
   to: /deckhouse/modules/150-user-authn/hooks
   excludePaths:
@@ -259,6 +267,16 @@
         - '**/*'
 - add: /ee/modules/150-user-authn/hooks/custom_logo_test.go
   to: /deckhouse/modules/150-user-authn/hooks/custom_logo_test.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
+  to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller_test.go
   stageDependencies:
     install:
         - '**/*'

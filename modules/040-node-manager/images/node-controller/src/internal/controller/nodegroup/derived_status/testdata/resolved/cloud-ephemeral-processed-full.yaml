@@ -1,0 +1,50 @@
+chaos:
+  mode: DrainAndDelete
+  period: 6h
+cloudInstances:
+  classReference:
+    kind: YandexInstanceClass
+    name: worker
+  maxPerZone: 5
+  maxSurgePerZone: 2
+  maxUnavailablePerZone: 0
+  minPerZone: 1
+  quickShutdown: true
+  zones:
+  - ru-central1-a
+  - ru-central1-b
+cri:
+  type: Containerd
+disruptions:
+  approvalMode: Automatic
+engine: MCM
+gpu:
+  sharing: TimeSlicing
+instanceClass:
+  coreFraction: 100
+  cores: 4
+  diskType: network-ssd
+  memory: 8589934592
+  platformID: standard-v3
+kubelet:
+  containerLogMaxFiles: 4
+  containerLogMaxSize: 50Mi
+  resourceReservation:
+    mode: Auto
+  topologyManager: {}
+kubernetesVersion: "1.32"
+manualRolloutID: rollout-1
+name: worker
+nodeCapacity:
+  cpu: "4"
+  memory: 8Gi
+nodeDrainTimeoutSecond: 300
+nodeTemplate:
+  labels:
+    role: worker
+nodeType: CloudEphemeral
+operatingSystem:
+  manageKernel: false
+serializedLabels: node-role.kubernetes.io/worker=,node.deckhouse.io/group=worker,node.deckhouse.io/type=CloudEphemeral,role=worker
+serializedTaints: ""
+updateEpoch: "1004"

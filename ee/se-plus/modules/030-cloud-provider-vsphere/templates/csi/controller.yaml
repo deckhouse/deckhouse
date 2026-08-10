@@ -60,10 +60,14 @@
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
 {{- if $csiControllerImage }}
 
+{{- $syncerImageName := join "" (list "csiVsphereSyncer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
+{{- $syncerImage := include "helm_lib_module_image_no_fail" (list . $syncerImageName) }}
+
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
 {{- $_ := set $csiControllerConfig "snapshotterEnabled" true }}
 {{- $_ := set $csiControllerConfig "syncerEnabled" true }}
+{{- $_ := set $csiControllerConfig "syncerImage" $syncerImage }}
 {{- $_ := set $csiControllerConfig "securityPolicyExceptionEnabled" true }}
 {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}

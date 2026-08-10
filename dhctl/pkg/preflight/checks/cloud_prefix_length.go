@@ -16,13 +16,11 @@ package checks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 
 const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length"
@@ -61,41 +59,6 @@ func providerMasterNodeDiskNames(prefix, nodeIndex string) []string {
 	}
 }
 
-func dvpMasterDiskNames(prefix, nodeIndex, hash string, withAdditional bool) []string {
-	names := []string{
-		fmt.Sprintf("%s-master-%s-%s", prefix, nodeIndex, hash),
-		fmt.Sprintf("%s-master-kubernetes-data-%s-%s", prefix, nodeIndex, hash),
-	}
-	if withAdditional {
-		names = append(names, fmt.Sprintf("%s-master-additional-disk-0-%s-%s", prefix, nodeIndex, hash))
-	}
-	return names
-}
-
-func dvpNodeGroupDiskNames(prefix, nodeGroup, nodeIndex, hash string, withAdditional bool) []string {
-	names := []string{
-		fmt.Sprintf("%s-%s-%s-%s", prefix, nodeGroup, nodeIndex, hash),
-	}
-	if withAdditional {
-		names = append(names, fmt.Sprintf("%s-%s-additional-disk-0-%s-%s", prefix, nodeGroup, nodeIndex, hash))
-	}
-	return names
-}
-
-type dvpInstanceClass struct {
-	AdditionalDisks []json.RawMessage `json:"additionalDisks,omitempty"`
-}
-
-type dvpMasterNodeGroup struct {
-	InstanceClass dvpInstanceClass `json:"instanceClass"`
-}
-
-type dvpNodeGroup struct {
-	Name          string           `json:"name"`
-	Replicas      int              `json:"replicas"`
-	InstanceClass dvpInstanceClass `json:"instanceClass"`
-}
-
 type CloudDiskNameLengthCheck struct {
 	MetaConfig *config.MetaConfig
 }
@@ -119,10 +82,6 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 
 	prefix := c.MetaConfig.ClusterPrefix
 	provider := c.MetaConfig.ProviderName
-
-	if provider == "dvp" {
-		return c.runDVP(prefix)
-	}
 
 	nodeIndex := maxNodeIndex(c.MetaConfig.MasterNodeGroupSpec.Replicas)
 
@@ -150,55 +109,6 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (c CloudDiskNameLengthCheck) runDVP(prefix string) error {
-	masterIndex := maxNodeIndex(c.MetaConfig.MasterNodeGroupSpec.Replicas)
-	for _, diskName := range dvpMasterDiskNames(prefix, masterIndex, "abcdef", c.dvpMasterHasAdditionalDisks()) {
-		if len(diskName) > maxDiskNameLength {
-			return fmt.Errorf(
-				"disk name %q for node group %q exceeds %d characters (got %d); "+
-					"use a shorter cluster prefix or node group name",
-				diskName, "master", maxDiskNameLength, len(diskName),
-			)
-		}
-	}
-
-	for _, ng := range c.dvpNodeGroups() {
-		hasAdditional := len(ng.InstanceClass.AdditionalDisks) > 0
-		ngIndex := maxNodeIndex(ng.Replicas)
-		for _, diskName := range dvpNodeGroupDiskNames(prefix, ng.Name, ngIndex, "abcdef", hasAdditional) {
-			if len(diskName) > maxDiskNameLength {
-				return fmt.Errorf(
-					"disk name %q for node group %q exceeds %d characters (got %d); "+
-						"use a shorter cluster prefix or node group name",
-					diskName, ng.Name, maxDiskNameLength, len(diskName),
-				)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (c CloudDiskNameLengthCheck) dvpMasterHasAdditionalDisks() bool {
-	master, err := dhctljson.UnmarshalToFromMessageMap[dvpMasterNodeGroup](
-		c.MetaConfig.ProviderClusterConfig, "masterNodeGroup",
-	)
-	if err != nil {
-		return false
-	}
-	return len(master.InstanceClass.AdditionalDisks) > 0
-}
-
-func (c CloudDiskNameLengthCheck) dvpNodeGroups() []dvpNodeGroup {
-	groups, err := dhctljson.UnmarshalToFromMessageMap[[]dvpNodeGroup](
-		c.MetaConfig.ProviderClusterConfig, "nodeGroups",
-	)
-	if err != nil {
-		return nil
-	}
-	return *groups
 }
 
 func CloudDiskNameLength(metaConfig *config.MetaConfig) preflight.Check {

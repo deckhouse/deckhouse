@@ -65,8 +65,14 @@ type GlobalOptions struct {
 	ModulesDir             string
 	ModuleConfigCRDPath    string
 
-	// indecates if download is needed
-	NeedDownload bool
+	// EnsureCandiAvailable: the install tree is missing and must be downloaded.
+	EnsureCandiAvailable bool
+
+	// KubeInCluster mirrors KubeOptions.InCluster: dhctl runs inside the target
+	// cluster (auto-converger, exporter), so the in-cluster registry mirror is
+	// reachable. When false (manual dhctl over SSH, commander) the upstream
+	// registry from registry-config is used instead.
+	KubeInCluster bool
 }
 
 func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
@@ -83,21 +89,6 @@ func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
 	}
 }
 
-func (o GlobalOptions) RecheckNeedDownload(skip ...string) GlobalOptions {
-	if len(skip) == 0 || !o.NeedDownload || !CheckDirs(skip...) {
-		return o
-	}
-
-	root, err := os.Getwd()
-	if err != nil {
-		root = "/"
-	}
-	cpy := o
-	cpy.NeedDownload = false
-	SetPaths(root, &cpy)
-	return cpy
-}
-
 // NewGlobalOptions returns GlobalOptions with defaults applied.
 //
 // The DHCTL_DEBUG environment variable is honored here so commands receive
@@ -112,13 +103,7 @@ func NewGlobalOptions() GlobalOptions {
 		ConfigPaths:      make([]string, 0),
 	}
 
-	rootPath, _ := os.Getwd()
-	if !CheckDirs() {
-		rootPath = o.DownloadDir
-		o.NeedDownload = true
-	}
-
-	SetPaths(rootPath, &o)
+	ResolveAndApplyPaths(&o)
 
 	return o
 }
@@ -250,6 +235,21 @@ func CheckDirs(skip ...string) bool {
 	}
 
 	return true
+}
+
+// ResolveAndApplyPaths roots the install-tree paths at pwd when the tree is
+// present there, otherwise at opts.DownloadDir with EnsureCandiAvailable set.
+// skip lists directories that may legitimately be absent.
+func ResolveAndApplyPaths(opts *GlobalOptions, skip ...string) {
+	rootPath, err := os.Getwd()
+	if err != nil {
+		rootPath = "/"
+	}
+	opts.EnsureCandiAvailable = !CheckDirs(skip...)
+	if opts.EnsureCandiAvailable {
+		rootPath = opts.DownloadDir
+	}
+	SetPaths(rootPath, opts)
 }
 
 func SetPaths(root string, o *GlobalOptions) {

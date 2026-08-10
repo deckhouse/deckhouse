@@ -181,4 +181,31 @@ istio:
 			}))
 		})
 	})
+
+	Context("operator-free istio 1.29 is incompatible with current k8s version", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", []byte(`["1.29"]`))
+			f.ValuesSetFromYaml("istio.internal.istioToK8sCompatibilityMap", []byte(`{"1.29": ["1.32", "1.33", "1.34", "1.35", "1.36"]}`))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.31.0")
+
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully and generate metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_telemetry_istio_version_incompatible_with_k8s_version",
+				Group:  monitoringMetricsGroup,
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{
+					"istio_version": "1.29",
+					"k8s_version":   "1.31.0",
+				},
+			}))
+		})
+	})
 })

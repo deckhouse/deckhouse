@@ -257,6 +257,8 @@ users:
   - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
   - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
+  - system:serviceaccount:d8-cloud-instance-manager:integrity-containerd-configurator
+  - system:serviceaccount:d8-cloud-instance-manager:integrity-controller
   - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:node-controller
   - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-gc
@@ -277,6 +279,7 @@ users:
   - system:serviceaccount:d8-cloud-provider-dvp:capdvp-controller-manager
   - system:serviceaccount:d8-cloud-provider-dvp:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-dvp:cloud-data-discoverer
+  - system:serviceaccount:d8-cloud-provider-dvp:validation-webhook
   - system:serviceaccount:d8-cloud-provider-dynamix:capd-controller-manager
   - system:serviceaccount:d8-cloud-provider-dynamix:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-dynamix:cloud-data-discoverer
@@ -315,6 +318,7 @@ users:
   - system:serviceaccount:d8-istio:alliance-ingressgateway
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
   - system:serviceaccount:d8-istio:cni
+  - system:serviceaccount:d8-istio:config-analyzer
   - system:serviceaccount:d8-istio:ingress-gateway-controller
   - system:serviceaccount:d8-istio:kiali
   - system:serviceaccount:d8-istio:multicluster-api-proxy
@@ -730,6 +734,8 @@ rules:
       - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
       - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
+      - system:serviceaccount:d8-cloud-instance-manager:integrity-containerd-configurator
+      - system:serviceaccount:d8-cloud-instance-manager:integrity-controller
       - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:node-controller
       - system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-gc
@@ -750,6 +756,7 @@ rules:
       - system:serviceaccount:d8-cloud-provider-dvp:capdvp-controller-manager
       - system:serviceaccount:d8-cloud-provider-dvp:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-dvp:cloud-data-discoverer
+      - system:serviceaccount:d8-cloud-provider-dvp:validation-webhook
       - system:serviceaccount:d8-cloud-provider-dynamix:capd-controller-manager
       - system:serviceaccount:d8-cloud-provider-dynamix:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-dynamix:cloud-data-discoverer
@@ -788,6 +795,7 @@ rules:
       - system:serviceaccount:d8-istio:alliance-ingressgateway
       - system:serviceaccount:d8-istio:alliance-metadata-exporter
       - system:serviceaccount:d8-istio:cni
+      - system:serviceaccount:d8-istio:config-analyzer
       - system:serviceaccount:d8-istio:ingress-gateway-controller
       - system:serviceaccount:d8-istio:kiali
       - system:serviceaccount:d8-istio:multicluster-api-proxy

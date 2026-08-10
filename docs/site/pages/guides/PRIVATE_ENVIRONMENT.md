@@ -58,7 +58,7 @@ Server requirements:
 
 * **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. That much disk space is needed because the bastion host temporarily holds all DKP images used for installation. Images are downloaded from the public DKP registry to the bastion host before being pushed to the private container registry and packed into archives; these steps require substantial free space.
 * **VM for the private registry**: at least 4 CPU cores, 8 GB RAM, and at least 150 GB on fast storage for DKP images. Plan disk capacity with a margin, using the bundle size after `d8 mirror push` as a guide.
-* **Cluster nodes**: choose [resources for future cluster nodes](./hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores, 8 GB RAM, and 60 GB on fast storage (400+ IOPS) per node.
+* **Cluster nodes**: choose [resources for future cluster nodes](./hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores (_8 CPU cores recommended_), 8 GB RAM (_16 GB RAM recommended_), and 60 GB on fast storage (400+ IOPS) per node.
 
 ## Preparing a private container registry
 
@@ -684,19 +684,19 @@ Create a [robot account](https://goharbor.io/docs/1.10/working-with-projects/pro
 Open the `deckhouse` project and go to the **Robot Accounts** tab. Click **New Robot Account**:
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_robot_account_ru.png" alt="Harbor robot accounts...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_account.png" alt="Harbor robot accounts...">
 </div>
 
 Set the account name, optional description, and expiration (days or never expire):
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_create_robot_account_ru.png" alt="Creating a Harbor robot account...">
+<img src="/images/guides/install_to_private_environment/harbor_create_robot_account.png" alt="Creating a Harbor robot account...">
 </div>
 
 For correct operation, grant full access under **Repository**. Adjust other permissions as needed or per your security policy.
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_robot_permissions_ru.png" alt="Harbor robot account permissions...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_permissions.png" alt="Harbor robot account permissions...">
 </div>
 
 After creation, Harbor shows the robot account secret (token).
@@ -706,7 +706,7 @@ Save the secret immediately. Harbor will not show it again, and it cannot be ret
 {% endalert %}
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_robot_created_ru.png" alt="Harbor robot account created...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_created.png" alt="Harbor robot account created...">
 </div>
 
 Harbor configuration is now complete! 🎉
@@ -966,14 +966,14 @@ To connect via SSH to a server without external access, you can use the Bastion 
 
 There are two ways to connect:
 
-1. *Connect via a jump host.* Run the command:
+1. _Connect via a jump host._ Run the command:
 
    ```bash
    ssh -J ubuntu@<BASTION_IP> ubuntu@<NODE_IP>
    ```
 
    In this mode, you first connect to the Bastion host, and then connect through it to the target server using the same SSH key.
-1. *Connect with agent forwarding.* Connect to the Bastion host using:
+1. _Connect with agent forwarding._ Connect to the Bastion host using:
 
    ```bash
    ssh -A ubuntu@<BASTION_IP>
@@ -1131,29 +1131,26 @@ You should see a container named `squid` in the list.
   * HTTP and HTTPS proxy addresses
   * hostnames and IP addresses that **must not** use the proxy (internal names and internal IPs of your servers).
 
-* In `InitConfiguration`, add registry access settings:
+* In the `deckhouse` ModuleConfig:
+  * Set [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) to `Stable` to use the stable [release channel](../documentation/v1/reference/release-channels.html).
+  * In the `spec.settings.registry` section, specify access settings for the private container registry (Harbor in this guide):
 
-  ```yaml
-  deckhouse:
-    # Docker registry that hosts Deckhouse images (set the DKP edition).
-    imagesRepo: harbor.example/deckhouse/<EDITION>
-    # Base64-encoded Docker client auth string for the registry.
-    registryDockerCfg: <DOCKER_CFG_BASE64>
-    # Registry protocol (HTTP or HTTPS).
-    registryScheme: HTTPS
-    # Root CA used to verify the registry certificate.
-    # Example: `cat harbor/certs/ca.crt`.
-    registryCA: |
-      -----BEGIN CERTIFICATE-----
-      ...
-      -----END CERTIFICATE-----
-  ```
+    ```yaml
+    # Settings for accessing the container registry with DKP images.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # Address of the registry.
+        imagesRepo: <IMAGES_REPO_URI>
+        # Username for authenticating with the registry.
+        username: <REGISTRY_USERNAME>
+        # Password for authenticating with the registry.
+        password: <REGISTRY_PASSWORD>
+        scheme: HTTPS
+        # Root CA certificate in PEM format used to verify the registry server certificate.
+        ca: <REGISTRY_CA>
+    ```
 
-  `<DOCKER_CFG_BASE64>` is the contents of the Docker client config (on Linux, usually `$HOME/.docker/config.json`) for the third-party registry, encoded in Base64.
-
-  For example, for registry `harbor.example` with user `user` and password `P@ssw0rd`, the value is `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (Base64 of `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}`).
-
-* In the `deckhouse` ModuleConfig, set [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) to `Stable` for the stable [update channel](../documentation/v1/reference/release-channels.html).
 * In the [global](../documentation/v1/reference/api/global.html) ModuleConfig, enable self-signed certificates for modules and set `publicDomainTemplate` for system application hostnames:
 
   ```yaml
@@ -1395,7 +1392,7 @@ Add a worker node to the cluster.
 
 Perform the following steps:
 
-* Configure a StorageClass for [local storage](../../../modules/local-path-provisioner/cr.html#localpathprovisioner) by running the following command on the master node:
+* Configure a StorageClass for [local storage](/modules/local-path-provisioner/cr.html#localpathprovisioner) by running the following command on the master node:
 
   ```console
   sudo -i d8 k create -f - << EOF
@@ -1434,7 +1431,7 @@ Perform the following steps:
   EOF
   ```
 
-* Create an [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials) resource in the cluster. Run on the master node:
+* Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster. Run on the master node:
 
   ```console
   sudo -i d8 k create -f - <<EOF
@@ -1454,7 +1451,7 @@ Perform the following steps:
   cat /dev/shm/caps-id.pub
   ```
 
-* Create a [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) for the node to add. On the master node, set the node IP and apply:
+* Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance) for the node to add. On the master node, set the node IP and apply:
 
   ```console
   # Specify the IP address of the node to be added to the cluster.
@@ -1489,7 +1486,7 @@ Perform the following steps:
 
 ### Installing the ingress controller
 
-Make sure the Kruise controller manager Pod of the [ingress-nginx](../../../modules/ingress-nginx/) module is running and in the `Running` status. To do this, run the following command on the master node:
+Make sure the Kruise controller manager Pod of the [ingress-nginx](/modules/ingress-nginx/) module is running and in the `Running` status. To do this, run the following command on the master node:
 
 ```bash
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise

@@ -61,11 +61,11 @@ func buildTLSConfig() (*tls.Config, error) {
 }
 
 type Server struct {
-	cache            discoverycache.Cache
-	handler          *hook.Handler
-	logger           *log.Logger
-	informerFactory  informers.SharedInformerFactory
-	nsInformerSynced kcache.InformerSynced
+	cache           discoverycache.Cache
+	handler         *hook.Handler
+	logger          *log.Logger
+	informerFactory informers.SharedInformerFactory
+	informersSynced []kcache.InformerSynced
 }
 
 func NewServer(logger *log.Logger) (*Server, error) {
@@ -83,16 +83,20 @@ func NewServer(logger *log.Logger) (*Server, error) {
 	informerFactory := informers.NewSharedInformerFactory(clientSet, 0)
 	nsInformer := informerFactory.Core().V1().Namespaces()
 
-	h, err := hook.NewHandler(logger, c, nsInformer.Lister(), nsInformer.Informer().HasSynced)
+	// RBAC informers back the CAR-independent grants check: requests allowed
+	// by RoleBindings or non-CAR ClusterRoleBindings must not be denied.
+	rbacEvaluator := hook.NewRBACEvaluator(logger, informerFactory)
+
+	h, err := hook.NewHandler(logger, c, nsInformer.Lister(), nsInformer.Informer().HasSynced, rbacEvaluator)
 	if err != nil {
 		return nil, err
 	}
 	return &Server{
-		logger:           logger,
-		cache:            c,
-		handler:          h,
-		informerFactory:  informerFactory,
-		nsInformerSynced: nsInformer.Informer().HasSynced,
+		logger:          logger,
+		cache:           c,
+		handler:         h,
+		informerFactory: informerFactory,
+		informersSynced: append([]kcache.InformerSynced{nsInformer.Informer().HasSynced}, rbacEvaluator.Synced()...),
 	}, nil
 }
 
@@ -142,8 +146,8 @@ func (s *Server) Run() error {
 
 	s.informerFactory.Start(stopCh)
 
-	if ok := kcache.WaitForCacheSync(stopCh, s.nsInformerSynced); !ok {
-		return fmt.Errorf("failed to sync namespace informer cache")
+	if ok := kcache.WaitForCacheSync(stopCh, s.informersSynced...); !ok {
+		return fmt.Errorf("failed to sync informer caches")
 	}
 
 	go s.handler.StartRenewConfigLoop(stopCh)

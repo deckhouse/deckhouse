@@ -65,8 +65,8 @@
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
 {!{- $script_commander := "script-commander.sh" -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
-{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" "huawei" -}!}
+{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" "huawei" -}!}
 {!{- if eq $provider "aws" }!}
   TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
   LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
@@ -109,6 +109,10 @@
 {!{- else if eq $provider "dvp" }!}
   TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
   LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+{!{- else if eq $provider "huawei" }!}
+  TEMPLATE_ID: "defba1f2-e2a4-4ae0-a071-0e4fb8b0a2ad"
+  LAYOUT_HUAWEI_KEY_ID: ${{ steps.secrets.outputs.LAYOUT_HUAWEI_KEY_ID }}
+  LAYOUT_HUAWEI_KEY_SECRET: ${{ steps.secrets.outputs.LAYOUT_HUAWEI_KEY_SECRET }}
 {!{- else if eq $provider "zvirt" }!}
   TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
 {!{- end }!}
@@ -197,6 +201,8 @@ run: |
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
   -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
   -e PREFIX=${PREFIX} \
+  -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+  -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e CRI=${CRI} \
   -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -220,6 +226,8 @@ run: |
   -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
   -e PREFIX=${PREFIX} \
+  -e DECKHOUSE_REGISTRY_READ_RU_HOST=${DECKHOUSE_REGISTRY_READ_RU_HOST} \
+  -e DECKHOUSE_E2E_MODULES_DOCKERCFG=${DECKHOUSE_E2E_MODULES_DOCKERCFG} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -281,6 +289,8 @@ run: |
   export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
   export LAYOUT=${LAYOUT:-not_provided}
   export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+  export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+  export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
   {!{- if or (eq $provider "gcp") (and (eq $script_arg "run-test") $run_from_issue_or_pr (ne $provider "static") (ne $provider "eks")) }!}
   export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
   {!{- end }!}
@@ -317,6 +327,9 @@ run: |
   export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- else if eq $provider "dvp" }!}
   export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+  {!{- else if eq $provider "huawei" }!}
+  export LAYOUT_HUAWEI_KEY_ID=${{ steps.secrets.outputs.LAYOUT_HUAWEI_KEY_ID }}
+  export LAYOUT_HUAWEI_KEY_SECRET=${{ steps.secrets.outputs.LAYOUT_HUAWEI_KEY_SECRET }}
   {!{- else if eq $provider "zvirt" }!}
   export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
   export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
@@ -453,8 +466,8 @@ check_e2e_labels:
 {!{- define "e2e_run_job_template" -}!}
 {!{- $ctx := . -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
-{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" "huawei" -}!}
+{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" "huawei" -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- if has $newCommanderProviders $ctx.provider }!}
 {!{-   $runsOnLabel = "regular" -}!}
@@ -514,6 +527,8 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa" "id_rsa_b64" "LAYOUT_SSH_KEY" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent" "e2e_log_agent_token" "E2E_LOG_AGENT_TOKEN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent" "pull_artifact_token" "E2E_LOG_AGENT_PULL_ARTIFACT" ) $secrets -}!}
 {!{- if has $newCommanderProviders $provider }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
@@ -524,6 +539,8 @@ check_e2e_labels:
 {!{- if or (eq $provider "aws") (eq $provider "eks") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_READ_RU_HOST" "DECKHOUSE_REGISTRY_READ_RU_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG" "DECKHOUSE_E2E_MODULES_DOCKERCFG" "DECKHOUSE_E2E_MODULES_DOCKERCFG" ) $secrets -}!}
 {!{- else if eq $provider "gcp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP" "credentials_json_b64" "LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON" ) $secrets -}!}
 {!{- else if eq $provider "azure" }!}
@@ -556,6 +573,9 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "dvp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "LAYOUT_DVP_KUBECONFIGDATABASE64" "LAYOUT_DVP_KUBECONFIGDATABASE64" ) $secrets -}!}
+{!{- else if eq $provider "huawei" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/cloud-ru" "keyId" "LAYOUT_HUAWEI_KEY_ID" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/cloud-ru" "keySecret" "LAYOUT_HUAWEI_KEY_SECRET" ) $secrets -}!}
 {!{- else if eq $provider "zvirt" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max" "base-domain" "LAYOUT_ZVIRT_BASE_DOMAIN" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max" "login" "LAYOUT_ZVIRT_USERNAME" ) $secrets -}!}
@@ -750,6 +770,8 @@ check_e2e_labels:
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+        E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+        E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
 {!{- if not (has $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
 {!{- end }!}
@@ -759,6 +781,8 @@ check_e2e_labels:
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
         CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+        DECKHOUSE_E2E_MODULES_DOCKERCFG: ${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+        DECKHOUSE_REGISTRY_READ_RU_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_RU_HOST }}
 {!{- end }!}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -908,8 +932,8 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
-{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" "huawei" -}!}
+{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" "huawei" -}!}
 {!{- if has $newCommanderProviders $ctx.provider }!}
 {!{-   $runsOnLabel = "regular" -}!}
 {!{- end -}!}
@@ -947,6 +971,8 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa" "id_rsa_b64" "LAYOUT_SSH_KEY" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent" "e2e_log_agent_token" "E2E_LOG_AGENT_TOKEN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent" "pull_artifact_token" "E2E_LOG_AGENT_PULL_ARTIFACT" ) $secrets -}!}
 {!{- if has $newCommanderProviders $provider }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
@@ -987,6 +1013,9 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "dvp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "LAYOUT_DVP_KUBECONFIGDATABASE64" "LAYOUT_DVP_KUBECONFIGDATABASE64" ) $secrets -}!}
+{!{- else if eq $provider "huawei" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/cloud-ru" "keyId" "LAYOUT_HUAWEI_KEY_ID" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/cloud-ru" "keySecret" "LAYOUT_HUAWEI_KEY_SECRET" ) $secrets -}!}
 {!{- else if eq $provider "zvirt" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max" "base-domain" "LAYOUT_ZVIRT_BASE_DOMAIN" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max" "login" "LAYOUT_ZVIRT_USERNAME" ) $secrets -}!}

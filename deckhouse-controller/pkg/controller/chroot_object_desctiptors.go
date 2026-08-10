@@ -21,7 +21,7 @@ package controller
 import (
 	envmgr "github.com/flant/addon-operator/pkg/module_manager/environment_manager"
 
-	"github.com/deckhouse/deckhouse/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 )
 
 func getChrootObjectDescriptors() []envmgr.ObjectDescriptor {

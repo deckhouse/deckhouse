@@ -44,6 +44,8 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 	app.DefineDeckhouseInstallFlags(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
+	forceVerboseLogging(cmd, opts)
+
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
@@ -82,6 +84,8 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 	app.DefineBashibleBundleFlags(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
+	forceVerboseLogging(cmd, opts)
+
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
@@ -115,6 +119,8 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options)
 	app.DefineConfigsForResourcesPhaseFlags(cmd, &opts.Global)
 	app.DefineResourcesFlags(cmd, &opts.Bootstrap, false)
 	app.DefineKubeFlags(cmd, &opts.Kube)
+
+	forceVerboseLogging(cmd, opts)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -207,6 +213,8 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 	app.DefineDropCacheFlags(cmd, &opts.Cache)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
+	forceVerboseLogging(cmd, opts)
+
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
@@ -243,6 +251,8 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause, opts *options.Options
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefinePostBootstrapScriptFlags(cmd, &opts.Bootstrap)
 
+	forceVerboseLogging(cmd, opts)
+
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
@@ -268,5 +278,14 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause, opts *options.Options
 		})
 
 		return bootstraper.ExecPostBootstrap(ctx)
+	})
+}
+
+// forceVerboseLogging makes the command behave as if -v/--verbose was passed,
+// regardless of what the user actually specified on the command line.
+func forceVerboseLogging(cmd *kingpin.CmdClause, opts *options.Options) {
+	cmd.PreAction(func(c *kingpin.ParseContext) error {
+		opts.Global.ShowProgress = true
+		return nil
 	})
 }

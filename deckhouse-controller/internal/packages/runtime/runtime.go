@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -41,6 +42,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
@@ -68,7 +70,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -99,6 +100,7 @@ type Runtime struct {
 	healthService    *health.Service    // Resources health monitor
 	appDeployer      deployerI          // Deploys and undeploys application package images
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
+	registry         *registry.Service  // Registry service for managing package digests
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
@@ -121,12 +123,14 @@ type Runtime struct {
 
 	addonModuleManager moduleManagerI
 
+	metricStorage metricsstorage.Storage // Publishes the application maintenance gauge
+
 	logger *log.Logger
 }
 
 // deployerI abstracts package image deployment to and removal from the filesystem.
 type deployerI interface {
-	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error
+	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string, force bool) error
 	Undeploy(ctx context.Context, deployedName string, keep bool) error
 	Cleanup(ctx context.Context, preserve []deployer.PreservePackage) error
 }
@@ -137,9 +141,9 @@ type moduleManagerI interface {
 	IsModuleEnabled(name string) bool
 }
 
-// New creates and initializes a Runtime with all subsystems wired together.
+// Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -149,27 +153,28 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	// Initialize foundational services
 	r.addonModuleManager = moduleManager
 	r.grantResolver = grants.NewResolver(cli)
+	r.metricStorage = metricStorage
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
 	r.edition = edition
 
-	reg := registry.NewService(dc, logger)
+	r.registry = registry.NewService(dc, logger)
 	downloadedDir := app.DownloadedModulesDir()
 
 	appsDir := filepath.Join(downloadedDir, "apps")
 	modulesDir := filepath.Join(downloadedDir, "modules")
 
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.appDeployer = symlinkdeploy.NewDeployer(reg, appsDir, logger)
-	r.moduleDeployer = symlinkdeploy.NewDeployer(reg, modulesDir, logger)
+	r.appDeployer = symlinkdeploy.NewDeployer(r.registry, appsDir, logger)
+	r.moduleDeployer = symlinkdeploy.NewDeployer(r.registry, modulesDir, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.appDeployer = erofsdeploy.NewDeployer(reg, appsDir, logger)
-		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
+		r.appDeployer = erofsdeploy.NewDeployer(r.registry, appsDir, logger)
+		r.moduleDeployer = erofsdeploy.NewDeployer(r.registry, modulesDir, logger)
 	}
 
 	// Build object patcher with optimized rate limits for batch operations
@@ -573,6 +578,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 	}
 
 	r.scheduler = schedule.NewScheduler(
+		r.logger,
 		schedule.WithDynamicGetter(r.global.IsEnabled),
 		schedule.WithBundleChecker(r.edition.IsEnabled),
 		schedule.WithBootstrapCondition(bootstrapCondition),
@@ -644,8 +650,8 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 		}
 	}
 
-	settings := r.packages.GetPendingSettings(r.global.GetName())
-	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, r.status, r.logger))
+	settings, _ := r.packages.GetPendingSettings(r.global.GetName())
+	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, 0, nelm.Managed, r.status, r.logger))
 
 	// Enable initializes and syncs the global hooks; its OnStartup step is a no-op
 	// because global has no OnStartup hooks. globalrun then runs BeforeAll, ensures
@@ -687,16 +693,23 @@ func (r *Runtime) schedulePackage(name string) {
 
 	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
-	settings := r.packages.GetPendingSettings(name)
+	settings, settingsVersion := r.packages.GetPendingSettings(name)
+	maintenance := nelm.MaintenanceState(r.packages.GetPendingMaintenance(name))
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
+		// Only applications support maintenance; publish (or clear) the gauge so the
+		// ApplicationIsInMaintenanceMode alert reflects the current mode.
+		r.setMaintenanceMetric(name, maintenance)
+
+		// Configure applies the maintenance mode onto the package; Run reads it back
+		// via the package's GetMaintenance.
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, settingsVersion, maintenance, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, settingsVersion, maintenance, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, app.NamespaceDeckhouse, r.nelmService, r.status, r.logger), onDone)
 	}
@@ -721,12 +734,38 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 	r.status.SetConditionFalse(name, status.ConditionRequirementsMet, reason, msg)
 
 	if pkg := r.apps[name]; pkg != nil {
+		// A disabled application no longer reconciles anything, so drop its maintenance gauge.
+		r.setMaintenanceMetric(name, nelm.Managed)
+
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
 	}
+}
+
+// applicationMaintenanceMetric is set to 1 while an application runs under
+// maintenance; the ApplicationIsInMaintenanceMode alert fires on it.
+const applicationMaintenanceMetric = "deckhouse_application_maintenance"
+
+// setMaintenanceMetric publishes the maintenance gauge for an application, or clears
+// it when the application is managed normally. The application's package name is used
+// as the metric group so it can be expired independently of other applications.
+func (r *Runtime) setMaintenanceMetric(name string, state nelm.MaintenanceState) {
+	if state != nelm.NoResourceReconciliation {
+		// Expire only this feature's gauge in the group, not every collector's.
+		r.metricStorage.Grouped().ExpireGroupMetricByName(name, applicationMaintenanceMetric)
+		return
+	}
+
+	// name is "<namespace>.<instance>"; a namespace never contains a dot.
+	namespace, instance, _ := strings.Cut(name, ".")
+	r.metricStorage.Grouped().GaugeSet(name, applicationMaintenanceMetric, 1, map[string]string{
+		"namespace": namespace,
+		"name":      instance,
+		"state":     string(state),
+	})
 }
 
 // Stop performs graceful shutdown of all operator subsystems.
@@ -806,9 +845,14 @@ func (r *Runtime) GetStatus(name string) status.Status {
 	return r.status.GetStatus(name)
 }
 
-// GetStatusQueue returns the status queue for external access
-func (r *Runtime) GetStatusQueue() workqueue.TypedRateLimitingInterface[string] {
-	return r.status.Queue()
+// GetAppStatusQueue returns the application status queue for external access
+func (r *Runtime) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.AppQueue()
+}
+
+// GetModuleStatusQueue returns the module status queue for external access
+func (r *Runtime) GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.ModuleQueue()
 }
 
 // PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.
@@ -831,12 +875,12 @@ func (r *Runtime) CheckConstraints(name string, constraints schedule.Constraints
 
 // settingsValidatorI validates settings for a loaded runtime package.
 type settingsValidatorI interface {
-	ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error)
+	ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error)
 }
 
-// ValidatePackageSettings checks settings against the package's OpenAPI schema.
-// Returns valid if the package is not loaded yet (settings validated on load).
-func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
+// ValidatePackageSettings converts (if needed) and validates settings against the
+// package's OpenAPI schema. Returns valid if the package is not loaded yet.
+func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidatePackageSettings")
 	defer span.End()
 
@@ -856,5 +900,5 @@ func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, sett
 		return settingscheck.Result{Valid: true}, nil
 	}
 
-	return validator.ValidateSettings(ctx, settings)
+	return validator.ValidateSettings(ctx, settingsVersion, settings)
 }

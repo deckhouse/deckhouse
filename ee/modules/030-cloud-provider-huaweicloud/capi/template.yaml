@@ -1,0 +1,68 @@
+version: v2
+
+# InstanceClass fields whose change requires recreating the machines, carried over one to one from
+# the v1 instance-class.checksum.
+rolloutFields:
+  - imageName
+  - flavorName
+  - rootDiskSize
+  - rootDiskType
+  - subnets
+  - mainNetwork
+  - additionalNetworks
+  - securityGroups
+  - serverGroupID
+  - vipAddress
+
+# subnetId and securityGroupId are read directly from the provider config: they are mandatory
+# there, and under missingkey=error their absence fails the render loudly — which is what the v1
+# `| required "cloudProvider.huaweicloud is required"` guard did.
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: HuaweiCloudMachineTemplate
+  spec:
+    template:
+      spec:
+        {{- if get .instanceClass "imageName" }}
+        imageName: {{ .instanceClass.imageName | quote }}
+        {{- end }}
+        {{- if get .instanceClass "flavorName" }}
+        flavorName: {{ .instanceClass.flavorName | quote }}
+        {{- end }}
+        {{- if get .instanceClass "rootDiskSize" }}
+        rootDiskSize: {{ .instanceClass.rootDiskSize }}
+        {{- end }}
+        {{- if get .instanceClass "rootDiskType" }}
+        rootDiskType: {{ .instanceClass.rootDiskType | quote }}
+        {{- end }}
+
+        {{- $nets := list (get .instanceClass "mainNetwork" | default .provider.subnetId) -}}
+        {{- if get .instanceClass "additionalNetworks" -}}
+        {{- $nets = concat $nets .instanceClass.additionalNetworks -}}
+        {{- end -}}
+        {{- if get .instanceClass "subnets" -}}
+        {{- $nets = concat $nets .instanceClass.subnets -}}
+        {{- end -}}
+
+        {{- if gt (len $nets) 0 }}
+        subnets:
+        {{- range (uniq $nets) }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- end }}
+
+        securityGroups:
+        {{- if get .instanceClass "securityGroups" }}
+        {{- range (prepend .instanceClass.securityGroups .provider.securityGroupId) }}
+        - {{ . | quote }}
+        {{- end }}
+        {{- else }}
+        - {{ .provider.securityGroupId | quote }}
+        {{- end }}
+        {{- if get .instanceClass "serverGroupID" }}
+        serverGroupID: {{ .instanceClass.serverGroupID | quote }}
+        {{- end }}
+        availabilityZone: {{ .zone | quote }}
+        {{- if get .instanceClass "vipAddress" }}
+        vipAddress: {{ .instanceClass.vipAddress | quote }}
+        {{- end }}

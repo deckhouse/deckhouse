@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -178,6 +179,14 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	nodeInfo, err := bashible.ReadNodeInfo(ctx)
 	if err != nil {
 		return err
+	}
+
+	if reflect.DeepEqual(nodeInfo, &dhbashible.NodeInfo{}) {
+		return fmt.Errorf("nodeInfo is empty, seems like hostname and node IP were not discovered")
+	}
+
+	if nodeInfo.NodeIP == "" {
+		return fmt.Errorf("Discovered NodeIP is empty. Check out your StaticClusterConfiguration internalNetworkCIDRs are filled and the same as node NIC CIDRs")
 	}
 
 	modulesPreparators, controlPlanePreparator := getModulesPreparators(ctx, params)

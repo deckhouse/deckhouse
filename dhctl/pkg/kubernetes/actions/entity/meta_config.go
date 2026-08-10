@@ -24,14 +24,13 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
 
-func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, globalOptions *options.GlobalOptions) (*config.MetaConfig, error) {
+func GetMetaConfig(ctx context.Context, kubeCl *client.KubernetesClient, globalOptions *options.GlobalOptions, operation string) (*config.MetaConfig, error) {
 	metaConfig, err := config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(),
-		),
+		infrastructureprovider.MetaConfigValidatorProvider(),
 		globalOptions,
+		operation,
 	)
 	if err != nil {
 		return nil, err

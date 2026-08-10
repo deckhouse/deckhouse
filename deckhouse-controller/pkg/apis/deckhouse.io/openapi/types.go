@@ -95,6 +95,15 @@ type OpenAPIV3Schema struct {
 	// a toggle in the web console UI.
 	// +optional
 	XUIAdvanced bool `json:"x-deckhouse-ui-advanced,omitempty"`
+
+	// x-deckhouse-ui-order sets the display order of a settings field in the
+	// web console UI: fields with lower values are shown first.
+	// +optional
+	XUIOrder *int64 `json:"x-deckhouse-ui-order,omitempty"`
+
+	// x-deckhouse-ui-validation-message overrides the validation error.
+	// +optional
+	XUIValidationMessage string `json:"x-deckhouse-ui-validation-message,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema

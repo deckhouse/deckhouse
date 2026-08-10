@@ -28,7 +28,7 @@ import (
 )
 
 func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.GlobalOptions{})
+	metaConfig, err := config.ParseConfigFromData(t.Context(), clusterConfig+initConfig, config.DummyValidatorProvider(), &options.GlobalOptions{})
 	require.NoError(t, err)
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
@@ -50,5 +50,5 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	require.Contains(t, content, `PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID=""`)
 	require.Contains(t, content, fmt.Sprintf(`export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="127.0.0.1:%d"`, testRPPBootstrapServerPort))
 	require.NotContains(t, content, "PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS")
-	require.Contains(t, content, `export PACKAGES_PROXY_ADDRESSES="127.0.0.1:5444"`)
+	require.Contains(t, content, `export PACKAGES_PROXY_ADDRESSES="http://127.0.0.1:5444"`)
 }

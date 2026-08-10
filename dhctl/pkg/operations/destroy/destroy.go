@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
@@ -93,9 +94,15 @@ func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {
 }
 
 func (p *Params) getStateLoaderParams() *stateLoaderParams {
+	var globalOptions *options.GlobalOptions
+	if p.Options != nil {
+		globalOptions = &p.Options.Global
+	}
+
 	return &stateLoaderParams{
 		commanderMode:   p.CommanderMode,
 		commanderParams: p.CommanderModeParams,
+		globalOptions:   globalOptions,
 
 		stateCache: p.StateCache,
 
@@ -108,6 +115,7 @@ func (p *Params) getStateLoaderParams() *stateLoaderParams {
 type stateLoaderParams struct {
 	commanderMode   bool
 	commanderParams *commander.CommanderModeParams
+	globalOptions   *options.GlobalOptions
 
 	stateCache dhctlstate.Cache
 
@@ -122,7 +130,12 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams)
+		// Commander sends no registry_config; the external provider bundle
+		// registry is read from the target cluster inside ParseMetaConfig. The
+		// kube client is fetched lazily, only when a bundle download is needed,
+		// so a destroy served entirely from the local state cache (in-tree
+		// provider) never dials the kube API.
+		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, infrastructureprovider.DhctlOperationDestroy, kubeProvider.KubeClientCtx, params.globalOptions)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
 		}
@@ -134,7 +147,7 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		stateLoaderKubeProvider = newKubeClientErrorProvider("Skip resources flag was provided. State not found in cache")
 	}
 
-	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache).
+	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, infrastructureprovider.DhctlOperationDestroy).
 		WithForceFromCache(params.forceFromCache)
 	return infrastructurestate.NewLazyTerraStateLoader(cached), stateLoaderKubeProvider, nil
 }

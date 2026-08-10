@@ -37,6 +37,7 @@ import (
 )
 
 func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineConvergeFlags(cmd, &opts.Converge)
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
@@ -76,7 +77,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 					AutoDismissChanges:     false,
 					AutoDismissDestructive: false,
 					AutoApproveSettings: infrastructure.AutoApproveSettings{
-						AutoApprove: false,
+						AutoApprove: opts.Converge.DestructiveApproved,
 					},
 				},
 			},
@@ -138,13 +139,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
-		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
-		// but in exporter and autoconverger we do not need it
-		// and we reset it here
-		// unfortianally global params parsed in place when we do no have command
-		// that user ran
-		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+		options.ResolveAndApplyPaths(&opts.Global, options.ConvergerPodsSpiCheckPaths...)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
@@ -204,14 +199,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
-		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
-		// but in exporter and autoconverger we do not need it
-		// and we reset it here
-		// unfortianally global params parsed in place when we do no have command
-		// that user ran
-		// converge migration also can run as sidecar of auto-converger pod
-		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+		options.ResolveAndApplyPaths(&opts.Global, options.ConvergerPodsSpiCheckPaths...)
 
 		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
 

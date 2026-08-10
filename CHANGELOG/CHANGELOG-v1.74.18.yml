@@ -1,0 +1,22 @@
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Don't create an external module release for a module that is still shipped embedded, so it can't
+        replace or duplicate the embedded copy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21131
+    - summary: >-
+        A module that conditionally depends on another is no longer disabled when an incompatible version
+        of that dependency is enabled; the enable is rejected instead.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21190
+istio:
+  fixes:
+    - summary: Implement graceful metadata secret renewal for multiclusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20192
+network-gateway:
+  fixes:
+    - summary: Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19935
+node-local-dns:
+  fixes:
+    - summary: Fix name of registry secret in safe-updater deployment
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19889

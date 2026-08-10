@@ -47,6 +47,15 @@ const (
 
 var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`)
 
+// externalCloudProviders are shipped as external OCI bundles that dhctl
+// downloads at runtime (bootstrap and the in-cluster terraform-manager pods,
+// which run the same dhctl). Their candi/terraform-modules must NOT be baked
+// into installer, candi or terraform-manager images. Keep in sync with the
+// external-provider list in .werf/defines/installer.tmpl.
+var externalCloudProviders = map[string]struct{}{
+	"dvp": {},
+}
+
 var workDir = cwd()
 
 var testsExcludes = []string{
@@ -129,6 +138,141 @@ func writeExcludedModules(settings writeSettings, modules map[string]string, ed 
 	}
 }
 
+// writeGlobalHooksExcludedPaths writes exclude paths for global-hooks files that are
+// overridden by a .build.yaml in an edition's global-hooks directory. Each overridden
+// file is excluded from the root git import (which includes the root global-hooks via
+// includePaths) so that only the edition-specific version is shipped.
+func writeGlobalHooksExcludedPaths(settings writeSettings) {
+	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
+
+	if settings.Dir == "" {
+		return
+	}
+
+	prefix := filepath.Join(workDir, settings.Prefix)
+	buildFile := filepath.Join(prefix, settings.Dir, ".build.yaml")
+
+	ok, err := fileExists(buildFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !ok {
+		return
+	}
+
+	content, err := os.ReadFile(buildFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(content) == 0 {
+		return
+	}
+
+	resultArr := make([]string, 0)
+
+	scanner := bufio.NewScanner(bytes.NewReader(content))
+	for scanner.Scan() {
+		s := strings.TrimSpace(scanner.Text())
+		if s == "" {
+			continue
+		}
+
+		// Exclude the overridden files from the root global-hooks directory.
+		resultArr = append(resultArr, fmt.Sprintf("- %s/%s", settings.Dir, s))
+	}
+
+	if len(resultArr) == 0 {
+		return
+	}
+
+	result := []byte(strings.Join(resultArr, "\n"))
+
+	if err := writeToFile(saveTo, result); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// writeGlobalHooksBuildYaml processes a .build.yaml file in an edition's global-hooks
+// directory and adds entries to modules-with-exclude-<edition>.yaml for each file
+// listed in the .build.yaml. This mirrors the .build.yaml mechanism used for modules.
+func writeGlobalHooksBuildYaml(settings writeSettings) {
+	if settings.Dir == "" {
+		return
+	}
+
+	prefix := filepath.Join(workDir, settings.Prefix)
+	buildFile := filepath.Join(prefix, settings.Dir, ".build.yaml")
+
+	ok, err := fileExists(buildFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !ok {
+		return
+	}
+
+	content, err := os.ReadFile(buildFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(content) == 0 {
+		return
+	}
+
+	var addEntries []addEntry
+
+	scanner := bufio.NewScanner(bytes.NewReader(content))
+	for scanner.Scan() {
+		s := strings.TrimSpace(scanner.Text())
+		if s == "" {
+			continue
+		}
+
+		files, err := filepath.Glob(filepath.Join(prefix, settings.Dir, s))
+		if err != nil {
+			log.Fatalf("globbing: %v", err)
+		}
+
+		for _, f := range files {
+			info, err := os.Stat(f)
+			if err != nil {
+				continue
+			}
+
+			entry := addEntry{
+				Add:               strings.TrimPrefix(f, workDir),
+				To:                filepath.Join("/deckhouse", settings.Dir, strings.TrimPrefix(f, filepath.Join(prefix, settings.Dir))),
+				StageDependencies: stageDependenciesInstall,
+			}
+
+			if !info.IsDir() {
+				entry.ExcludePaths = nil
+			} else {
+				entry.ExcludePaths = settings.ExcludePaths
+				entry.StageDependencies = settings.StageDependencies
+			}
+
+			addEntries = append(addEntries, entry)
+		}
+	}
+
+	if len(addEntries) == 0 {
+		return
+	}
+
+	result, err := yaml.Marshal(addEntries)
+	if err != nil {
+		log.Fatalf("converting entries to YAML: %v", err)
+	}
+
+	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
+	if err := writeToFile(saveTo, result); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func writeSections(settings writeSettings) {
 	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
 
@@ -154,6 +298,13 @@ func writeSections(settings writeSettings) {
 		}
 		// remove /ee/modules/040-node-manager/templates/nvidia-gpu in CSE
 		if strings.Contains(file, "/ee/modules/040-node-manager/templates/nvidia-gpu") && settings.Edition == "CSE" {
+			return
+		}
+		// istio config-analyzer is not shipped in CSE (FE inherits EE overlays)
+		if settings.Edition == "CSE" &&
+			(strings.Contains(file, "/ee/modules/110-istio/templates/config-analyzer") ||
+				strings.Contains(file, "/ee/modules/110-istio/monitoring/prometheus-rules/config-analysis") ||
+				strings.Contains(file, "/ee/modules/110-istio/monitoring/grafana-dashboards/istio/config-health")) {
 			return
 		}
 
@@ -292,6 +443,11 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 		}
 
 		cloudProviderName := extractCloudProviderName(file)
+
+		// External providers are downloaded by dhctl at runtime, not baked.
+		if _, external := externalCloudProviders[cloudProviderName]; external {
+			return
+		}
 
 		addEntries = append(addEntries, addEntry{
 			Add:               strings.TrimPrefix(candiPath, workDir),
@@ -668,12 +824,33 @@ func (e *executor) executeEdition(editionName string) {
 		writeSections(writeSettingCandi)
 		writeCandiCloudProvidersSections(writeSettingCandiCloudProviders)
 
+		// Process .build.yaml in an edition's global-hooks directory (if present)
+		// to add override entries to modules-with-exclude-<edition>.yaml.
+		writeGlobalHooksBuildYaml(writeSettings{
+			Edition:          editionName,
+			SaveTo:           modulesWithExcludeFileName,
+			Prefix:           prefix,
+			Dir:              "global-hooks",
+			ExcludePaths:     defaultModulesExcludes,
+			StageDependencies: stageDependenciesSetup,
+		})
+
 		if ed.Name == editionName {
 			// only for one edition
 			writeExcludedModules(writeSettings{
 				SaveTo:  modulesExcluded,
 				Edition: editionName,
 			}, modulesDict, ed)
+
+			// Exclude global-hooks files that are overridden by a .build.yaml in
+			// the edition's global-hooks directory from the root git import.
+			writeGlobalHooksExcludedPaths(writeSettings{
+				SaveTo:  modulesExcluded,
+				Edition: editionName,
+				Prefix:  prefix,
+				Dir:     "global-hooks",
+			})
+
 			return
 		}
 	}
@@ -773,6 +950,14 @@ func writeToFile(path string, content []byte) error {
 	}
 
 	_, err = f.Write(content)
+	if err != nil {
+		return err
+	}
+
+	// Ensure file ends with a trailing newline.
+	if len(content) > 0 && content[len(content)-1] != '\n' {
+		_, err = f.Write([]byte("\n"))
+	}
 	return err
 }
 

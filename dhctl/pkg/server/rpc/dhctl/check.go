@@ -170,12 +170,15 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 
 	var metaConfig *config.MetaConfig
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Parsing cluster config", func(ctx context.Context) error {
+		// This parse only feeds CachePath() (cluster prefix + provider name from
+		// ClusterConfiguration). It must not download the external provider
+		// bundle: commander sends no registry_config, so the registry is unknown
+		// here (no cluster connection yet) and an eager pull hits the wrong
+		// registry. The operation below delivers the bundle from the cluster.
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(),
-			),
+			config.DummyValidatorProvider(),
 			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),

@@ -130,8 +130,8 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 			input.Logger.Warn(
 				"Node lease is expired",
 				slog.String("name", node.Name),
-				slog.String("current time", time.Now().String()),
-				slog.String("node lease time", nodeLease.Spec.RenewTime.Time.String()),
+				slog.String("current_time", time.Now().String()),
+				slog.String("node_lease_time", nodeLease.Spec.RenewTime.Time.String()),
 			)
 			operationNodes[node.Name] = shouldDeleteNode(node)
 		}

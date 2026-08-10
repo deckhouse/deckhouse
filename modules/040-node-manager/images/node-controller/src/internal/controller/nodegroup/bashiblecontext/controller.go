@@ -1,0 +1,162 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package bashiblecontext
+
+import (
+	"context"
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
+	"github.com/deckhouse/node-controller/internal/register"
+)
+
+const resyncInterval = 10 * time.Minute
+
+func init() {
+	register.RegisterController("bashible-context", &v1.NodeGroup{}, &Controller{})
+}
+
+type Controller struct {
+	register.Base
+	apiReader client.Reader
+	clientset kubernetes.Interface
+	// lastAssemble implements the debounce. NodeGroup events enqueue per-name keys (only
+	// the secondary watches map to the fixed "assemble" key), so sequential access relies
+	// on the controller running with a single worker — enforced via
+	// --max-concurrent-reconciles=...,bashible-context=1 in the deployment.
+	lastAssemble time.Time
+	cache        cache.Cache
+}
+
+func (c *Controller) Setup(_ context.Context, mgr ctrl.Manager) error {
+	c.apiReader = mgr.GetAPIReader()
+	cs, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	c.clientset = cs
+	c.cache = mgr.GetCache()
+	return nil
+}
+
+var assembleRequest = []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "assemble"}}}
+
+// ForPredicates: the assembled context depends on NodeGroup specs only, so status writes
+// and finalizer patches must not re-run the whole assembly (each run derives every
+// NodeGroup — during a burst the unfiltered events multiplied into hundreds of passes).
+func (c *Controller) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)}
+}
+
+func (c *Controller) SetupWatches(w register.Watcher) {
+	enqueue := handler.EnqueueRequestsFromMapFunc(func(context.Context, client.Object) []reconcile.Request {
+		return assembleRequest
+	})
+	// The controller's own output Secret must not feed back into its trigger, otherwise
+	// every assembly re-enqueues the next one and the loop free-runs.
+	notOwnSecret := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetNamespace() != cloudInstanceManagerNS || obj.GetName() != secretName
+	})
+	w.Watches(&corev1.Secret{}, enqueue, builder.WithPredicates(predicate.And(
+		inNamespaces(kubeSystemNS, cloudInstanceManagerNS), notOwnSecret)))
+	w.Watches(&corev1.ConfigMap{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS, versionInfoCMNS)))
+	w.Watches(&corev1.Service{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS)))
+	w.Watches(&corev1.Pod{}, enqueue, builder.WithPredicates(inNamespaces(kubeSystemNS)))
+	// The master addresses in the context come from this EndpointSlice as well as from the
+	// kube-apiserver Pods. An endpoint change that no Pod event accompanies — an
+	// advertise-address change, a master replaced behind the same Pod identity — would
+	// otherwise sit unpublished until the resync, handing bootstrapping nodes dead addresses.
+	w.Watches(&discoveryv1.EndpointSlice{}, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetNamespace() == kubernetesEndpointSliceNS && obj.GetName() == kubernetesEndpointSliceName
+		})))
+	// The published context carries each NodeGroup's instanceClass, so an edit changes the
+	// configuration checksum the nodes compare against. Waiting for the resync would leave the
+	// nodes running the previous configuration for up to ten minutes with nothing to show why.
+	// The source is deferred: the kind and version come from the provider registration Secret,
+	// which may appear only after this pod started.
+	w.WatchesRawSource(nodecommon.LazyInstanceClassSource(c.cache, enqueue, predicate.GenerationChangedPredicate{}))
+}
+
+func inNamespaces(namespaces ...string) predicate.Predicate {
+	set := make(map[string]bool, len(namespaces))
+	for _, ns := range namespaces {
+		set[ns] = true
+	}
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return set[obj.GetNamespace()]
+	})
+}
+
+// assembleDebounce coalesces context assemblies: every write of the output Secret makes
+// bashible-apiserver re-render every bashible step for every NodeGroup (an expensive full
+// rebuild), so a burst of NodeGroup changes must collapse into one assembly per window
+// instead of one per event.
+const assembleDebounce = 3 * time.Second
+
+func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
+
+	if since := time.Since(c.lastAssemble); since < assembleDebounce {
+		return ctrl.Result{RequeueAfter: assembleDebounce - since}, nil
+	}
+	c.lastAssemble = time.Now()
+
+	// Certificate issuance and context assembly were independent before they were folded into
+	// this controller, and they must stay independent: issueCertificate waits on a CSR that a
+	// fresh cluster's signer may not serve yet, and letting that failure return early would
+	// leave the context Secret unwritten — bashible-apiserver would serve no bootstrap scripts
+	// and no node could join. The context simply omits the proxy certs until they exist.
+	certErr := c.ensureCertificate(ctx, logger)
+	if certErr != nil {
+		logger.Error(certErr, "failed to ensure kubernetes-api-proxy discovery certificate; assembling context without it")
+	}
+
+	r := &Reconciler{
+		Client:        c.Client,
+		Context:       &Service{Client: c.Client, Reader: c.apiReader},
+		DerivedStatus: &derived_status.Service{Client: c.Client, Reader: c.apiReader},
+	}
+	if err := r.Assemble(ctx); err != nil {
+		logger.Error(err, "failed to assemble bashible-apiserver-context")
+		return ctrl.Result{}, err
+	}
+	logger.Info("assembled bashible-apiserver-context")
+	if certErr != nil {
+		// Retry the certificate without discarding the assembly that just succeeded.
+		return ctrl.Result{}, certErr
+	}
+	return ctrl.Result{RequeueAfter: resyncInterval}, nil
+}

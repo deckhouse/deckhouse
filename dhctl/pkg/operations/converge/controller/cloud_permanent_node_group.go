@@ -171,11 +171,34 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
 }
 
-func (c *CloudPermanentNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
-	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas)
-	return dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), title, func(gocontext.Context) error {
-		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
-			return NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
-		})
-	})
+func (c *CloudPermanentNodeGroupController) deleteNodes(
+	ctx *context.Context,
+	nodesToDeleteInfo []nodeToDeleteInfo,
+) error {
+	title := fmt.Sprintf(
+		"Delete Nodes from NodeGroup %s (replicas: %v)",
+		c.name,
+		c.desiredReplicas,
+	)
+
+	return dhlog.RunProcess(
+		ctx.Ctx(),
+		dhlog.FromContext(ctx.Ctx()),
+		title,
+		func(gocontext.Context) error {
+			return c.deleteRedundantNodes(
+				ctx,
+				c.state.Settings,
+				nodesToDeleteInfo,
+				func(nodeName string) infrastructure.InfraActionHook {
+					return NewHookForDestroyPipeline(
+						ctx,
+						nodeName,
+						ctx.CommanderMode(),
+					)
+				},
+				nil,
+			)
+		},
+	)
 }

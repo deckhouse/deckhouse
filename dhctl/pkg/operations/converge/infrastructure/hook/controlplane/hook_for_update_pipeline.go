@@ -26,9 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-connection/pkg/settings"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -38,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type ClientSwitcher interface {
@@ -58,9 +57,7 @@ type HookForUpdatePipeline struct {
 func NewHookForUpdatePipeline(
 	kubeGetter kubernetes.KubeClientProviderWithCtx,
 	sshProvider libcon.SSHProvider,
-	providerSettings *settings.BaseProviders,
 	nodeToHostForChecks map[string]string,
-	clusterUUID string,
 	commanderMode bool,
 	skipChecks bool,
 ) *HookForUpdatePipeline {
@@ -71,15 +68,22 @@ func NewHookForUpdatePipeline(
 	if !commanderMode && !skipChecks {
 		checkers = append(
 			checkers,
-			NewKubeProxyChecker().
-				WithExternalIPs(nodeToHostForChecks).
-				WithClusterUUID(clusterUUID).
-				WithSSHProvider(sshProvider, providerSettings))
+			NewSSHChecker(
+				sshProvider,
+				nodeToHostForChecks,
+			),
+		)
 	}
 
 	checkers = append(checkers, NewManagerReadinessChecker(kubeGetter))
 	checkers = append(checkers, NewStrongholdReadinessChecker(kubeGetter))
-	checker := NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
+
+	checker := NewChecker(
+		nodeToHostForChecks,
+		checkers,
+		"",
+		DefaultConfirm,
+	)
 
 	return &HookForUpdatePipeline{
 		Checker:       checker,
@@ -158,7 +162,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.nodeToConverge, h.commanderMode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.kubeGetter, h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
@@ -184,10 +188,6 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
-	}
-	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
 	if !h.commanderMode {
@@ -219,7 +219,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to wait for the master node '%s' to become Ready: %w", h.nodeToConverge, err)
 	}
 
-	err = waitEtcdHasMember(ctx, kubeClient.KubeClient.(libcon.KubeClient), h.nodeToConverge)
+	err = waitEtcdHasMember(ctx, h.kubeGetter, h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %w", h.nodeToConverge, err)
 	}
@@ -240,7 +240,14 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return err
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Check control-plane is ready on node '%s'", h.nodeToConverge), 450, 1*time.Second).RunContext(ctx, func() error {
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Check control-plane is ready on node '%s'", h.nodeToConverge),
+		retry.WithAttempts(450),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(hook.ErrNotReady, ErrControlPlaneReadinessCheckTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
 		if err != nil {
 			return fmt.Errorf("failed to check the master node '%s' readiness: %w", h.nodeToConverge, err)
@@ -300,7 +307,14 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 450, 1*time.Second).
+	loopParams := retry.NewEmptyParams(
+		retry.WithName("Save Kubernetes data device path for node '%s'", h.nodeToConverge),
+		retry.WithAttempts(450),
+		retry.WithWait(1*time.Second),
+		retry.WithWhitelist(actions.ErrManifestTaskTransient),
+	)
+
+	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			return task.CreateOrUpdate(ctx)
 		})
