@@ -34,3 +34,37 @@
         kubectl get dexproviders.deckhouse.io -o yaml \
           | yq '.items[] | select(.spec.type=="LDAP") | {name: .metadata.name, ldap: .spec.ldap | pick(["insecureNoSSL","startTLS","insecureSkipVerify","rootCAData"])}'
         ```
+
+  - alert: D8UserAuthnIDTokenTTLTooLong
+    expr: d8_user_authn_id_token_ttl_too_long == 1
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: dex
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__d8_user_authn_deprecations: "UserAuthnDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authn_deprecations: "UserAuthnDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: user-authn `idTokenTTL` is {{ $labels.id_token_ttl }}, which is too long.
+      description: |
+        The ModuleConfig `user-authn` sets `idTokenTTL: {{ $labels.id_token_ttl }}`.
+
+        Dex rotates signing keys every 6 hours (`expiry.signingKeys: 6h`). An ID token TTL greater than or equal to 6 hours causes signing keys to accumulate and can inflate Dex storage.
+
+        Lower `idTokenTTL` to a value strictly less than `6h`, for example:
+
+        ```yaml
+        apiVersion: deckhouse.io/v1alpha1
+        kind: ModuleConfig
+        metadata:
+          name: user-authn
+        spec:
+          version: 2
+          settings:
+            idTokenTTL: 1h
+        ```
+
+        New ModuleConfig values with `idTokenTTL >= 6h` are rejected by OpenAPI validation; this alert covers clusters that still have a long TTL from before the restriction was added.
