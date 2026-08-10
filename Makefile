@@ -714,12 +714,6 @@ enrich-crds-local: generate-crds crd-enricher-local ## Enrich CRDs with the loca
 		dir=$(CURDIR) \
 		$(CRD_ENRICHER_FLAGS)
 
-.PHONY: crds
-crds:
-	make generate-crds
-	make enrich-crds-local
-	make copy-crds
-
 ## Run the crd-enricher module's unit and golden tests. Pass
 ## CRD_ENRICHER_TEST_FLAGS=-golden to regenerate the golden snapshots.
 ##
