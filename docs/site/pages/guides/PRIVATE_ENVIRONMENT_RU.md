@@ -6,7 +6,7 @@ lang: ru
 layout: sidebar-guides
 ---
 
-В этом руководстве описано, как развернуть кластер Deckhouse Kubernetes Platform в закрытом окружении без прямого доступа к хранилищу образов контейнеров DKP (`registry.deckhouse.ru`) и внешним репозиториям deb/rpm-пакетов, используемых на узлах [поддерживаемых операционных систем](../documentation/v1/reference/supported_versions.html#linux).
+В этом руководстве описано, как развернуть кластер Deckhouse Kubernetes Platform (DKP) в закрытом окружении без прямого доступа к хранилищу образов контейнеров DKP (`registry.deckhouse.ru`) и внешним репозиториям deb/rpm-пакетов, используемых на узлах [поддерживаемых операционных систем](../documentation/v1/reference/supported_versions.html#linux).
 
 ## Особенности закрытого окружения
 

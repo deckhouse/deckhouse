@@ -6,7 +6,7 @@ lang: en
 layout: sidebar-guides
 ---
 
-This guide describes how to deploy a Deckhouse Kubernetes Platform cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
+This guide describes how to deploy a Deckhouse Kubernetes Platform (DKP) cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
 
 ## Private environment specifics
 
