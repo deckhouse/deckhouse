@@ -154,8 +154,8 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 	serverTLSBootstrap := false
 
 	spec := nodeSpec{
-		NodeName:   in.NodeName,
-		OSImage:    registry.Address + registry.Path + "/" + osImageNameAndTag,
+		NodeName: in.NodeName,
+		OSImage:  registry.Address + registry.Path + "/" + osImageNameAndTag,
 		Storage: storage{
 			SystemDisk: &systemDisk{DiskSelector: &diskSelector{Size: systemDiskSize}},
 			Mounts:     etcdMounts(),
