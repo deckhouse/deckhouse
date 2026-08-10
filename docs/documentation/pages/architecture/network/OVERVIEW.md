@@ -15,6 +15,7 @@ The Network subsystem includes the following modules:
 * [`node-local-dns`](/modules/node-local-dns/): Deploys a caching DNS server on each cluster node and exports DNS metrics to Prometheus for analyzing DNS operation in the cluster on the [Grafana dashboard](/modules/node-local-dns/#grafana-dashboard). The architecture of the caching DNS server is described on the [corresponding page](dns-caching.html) of this subsection.
 * [`kube-proxy`](/modules/kube-proxy/): Manages the kube-proxy components responsible for networking and load balancing within the cluster.
 * [`cni-cilium`](/modules/cni-cilium/): Provides cluster networking using the CNI Cilium plugin.
+* [`cilium-hubble`](/modules/cilium-hubble/): Provides visualization of the cluster network stack if the Cilium CNI is enabled.
 * [`ingress-nginx`](/modules/ingress-nginx/): Installs and manages the [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) using custom resources. The module architecture is described on the [corresponding page](ingress-nginx.html) of this subsection.
 * [`metallb`](/modules/metallb/): Implements the LoadBalancer mechanism for Services in bare-metal clusters.
 
