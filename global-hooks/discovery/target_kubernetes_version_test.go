@@ -314,6 +314,73 @@ data:
 			Expect(found).To(BeFalse())
 		})
 
+		// Regression: the freeze must not trust spec.desiredVersion over status.currentVersion.
+		//
+		// desiredVersion is this hook's own previous output routed back through Values → DaemonSet
+		// env → update-observer, so a target that once slipped past the guard is written there and,
+		// if read first, confirms itself forever. Observed on a stand: a window with a temporarily
+		// lowered maxUsed let Default through, the observer recorded it, and the next pass froze at
+		// that very value while currentVersion still named the correct, higher one.
+		//
+		// The fixture reproduces exactly that state: maxUsed 1.38, desiredVersion already poisoned
+		// down to Default, currentVersion still 1.38. Reading desiredVersion first publishes
+		// Default and the cluster keeps going down; reading currentVersion first holds 1.38.
+		It("freezes at currentVersion when desiredVersion was already dragged below it", func() {
+			poisoned := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    name: d8-cluster-kubernetes
+data:
+  spec: |
+    desiredVersion: "` + hooks.DefaultKubernetesVersion + `"
+    updateMode: Automatic
+    maxUsedKubernetesVersion: "1.38"
+  status: |
+    currentVersion: "1.38"
+    phase: ControlPlaneUpdating
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Default")+poisoned, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
+			Expect(f.ValuesGet("global.discovery.kubernetesVersionIsDefault").Bool()).To(BeTrue())
+			Expect(driftMetricFrozenLabel()).To(Equal("true"))
+		})
+
+		// desiredVersion still serves as the second source: a ConfigMap seeded by dhctl at bootstrap
+		// carries spec only, so status.currentVersion is not there yet.
+		It("falls back to desiredVersion when the ConfigMap has no status yet", func() {
+			specOnly := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  labels:
+    heritage: deckhouse
+    name: d8-cluster-kubernetes
+data:
+  spec: |
+    desiredVersion: "1.38"
+    updateMode: Automatic
+    maxUsedKubernetesVersion: "1.38"
+`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateC+moduleConfigYAML("Default")+specOnly, 1))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.targetKubernetesVersion").String()).To(Equal("1.38"))
+			Expect(driftMetricFrozenLabel()).To(Equal("true"))
+		})
+
 		// Both freeze-memory slots (data.spec.desiredVersion and data.status.currentVersion) live
 		// inside the ConfigMap, so deleting it wipes them together — while maxUsed survives in the
 		// Secret. The guard therefore still knows the window is violated; without a third memory

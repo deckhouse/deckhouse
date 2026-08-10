@@ -280,14 +280,33 @@ func targetKubernetesVersion(_ context.Context, input *go_hook.HookInput) error 
 				)
 			}
 			if err == nil && !inWindow {
-				// Freeze memory, most authoritative first. The first two live inside the same
-				// ConfigMap the floor came from, so `kubectl delete cm d8-cluster-kubernetes`
-				// wipes all three at once — while maxUsed survives in the Secret until T+1.
-				// Without the third source the guard would know the window is violated and still
-				// publish the lower Default.
+				// Freeze memory, observed fact first.
+				//
+				// status.currentVersion leads deliberately, and the ordering is load-bearing:
+				// spec.desiredVersion is this hook's own previous output, routed back through
+				// Values → DaemonSet env → update-observer. Trusting it first makes the guard
+				// remember its own decision instead of a fact about the cluster, so a single bad
+				// target that reached the ConfigMap becomes self-confirming — the guard then
+				// freezes at the very value it exists to reject. Observed on a stand: a window
+				// with a temporarily lowered maxUsed let Default (two minors down) through, the
+				// observer recorded it as desiredVersion, and the next pass froze there
+				// (froze=true) while currentVersion still named the correct, higher version.
+				//
+				// currentVersion cannot be poisoned that way: update-observer derives it from the
+				// running Pods, and while a downgrade is in flight it is the *max* of what still
+				// runs (cluster/state.go determineCurrentVersion) — exactly the digit a freeze is
+				// meant to hold. It also gives "freeze" its plain meaning: stay where you are,
+				// rather than climb to a version the operator has already cancelled.
+				//
+				// desiredVersion stays as the second source for the case where status has not been
+				// written yet (a ConfigMap seeded by dhctl carries spec only). All three live in
+				// the same ConfigMap the floor came from, so `kubectl delete cm
+				// d8-cluster-kubernetes` wipes them together — hence the Values fallback, without
+				// which the guard would know the window is violated and still publish the lower
+				// Default.
 				frozen := cmp.Or(
-					cmSnap.DesiredVersion,
 					cmSnap.CurrentVersion,
+					cmSnap.DesiredVersion,
 					input.Values.Get("global.discovery.targetKubernetesVersion").String(),
 				)
 				if frozen != "" {
