@@ -54,13 +54,13 @@ properties:
     # fake *-crd modules are required for backward compatibility with lib_helm library TODO: remove fake crd modules
     - [ "cert-manager", "vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "prometheus", "prometheus-crd", "operator-prometheus", "operator-prometheus" ]
     - [ "cert-manager", "prometheus" ]
-  Capabilities:
+  capabilities:
     type: array
     items:
       type: string
     description: |
       List of GVKs installed from the modules' crds directories.
-      Exposed to package charts as .Platform.Capabilities.
+      Exposed to package charts as .Platform.capabilities.
     x-examples:
     - [ "deckhouse.io/v1alpha1/NodeGroup", "deckhouse.io/v1beta1/NodeGroup", "monitoring.coreos.com/v1/PrometheusRule" ]
   discovery:

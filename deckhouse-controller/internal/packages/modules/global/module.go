@@ -480,7 +480,7 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 }
 
 // SetCapabilities injects GVK values, discovered during executing ModuleEnsureCRDs tasks,
-// into the .Capabilities global value, exposed to charts as .Platform.Capabilities
+// into the .capabilities global value, exposed to charts as .Platform.capabilities
 func (m *Module) SetCapabilities(apiVersions []string) {
 	if len(apiVersions) == 0 {
 		return
@@ -493,7 +493,7 @@ func (m *Module) SetCapabilities(apiVersions []string) {
 	patch := addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
 		{
 			Op:    "add",
-			Path:  "/Capabilities",
+			Path:  "/capabilities",
 			Value: data,
 		},
 		// backward compatibility: set apiVersions to .global.discovery.apiVersions
