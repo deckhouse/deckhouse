@@ -75,20 +75,20 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// exactly what Owns follows.
 	w.Owns(&v1alpha1.NodeOperation{})
 
-	// Predicated, and it has to be: the mapper lists every operation in the
-	// cluster, and without a filter every kubelet heartbeat of every node
-	// would run that list.
+	// Predicated, and it has to be: the mapper lists the operations of the node,
+	// and without a filter every kubelet heartbeat of every node would run that
+	// list.
 	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 		ops := &v1alpha1.NodeOperationList{}
-		if err := r.Client.List(ctx, ops); err != nil {
+		if err := r.Client.List(ctx, ops, client.MatchingLabels{v1alpha1.NodeOperationNodeLabel: obj.GetName()}); err != nil {
 			log.FromContext(ctx).Error(err, "list the operations of a node that changed", "node", obj.GetName())
 			return nil
 		}
 		var requests []reconcile.Request
 		for i := range ops.Items {
-			// A finished operation is only waiting out its retention, and it
-			// requeues itself for that. Waking it on somebody else's node write
-			// costs a reconcile that can only decide to wait again.
+			// The node is checked again because the label is written by adopt and
+			// an operation may still be carrying somebody else's. A finished
+			// operation waits out its retention on its own requeue, not on this.
 			if ops.Items[i].Spec.NodeName == obj.GetName() && !terminal(&ops.Items[i]) {
 				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ops.Items[i].Name}})
 			}
@@ -197,11 +197,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Requeue when the deadline is actually due, not a whole period later.
 	// Floored: the deadline can pass while this pass runs, and a RequeueAfter
 	// of zero is "never" rather than "at once".
-	requeue := time.Until(hardDeadline(op))
-	if requeue < minRequeue {
-		requeue = minRequeue
-	}
-	return ctrl.Result{RequeueAfter: requeue}, nil
+	return ctrl.Result{RequeueAfter: max(time.Until(hardDeadline(op)), minRequeue)}, nil
 }
 
 // begin queues an operation nobody has started yet, once.

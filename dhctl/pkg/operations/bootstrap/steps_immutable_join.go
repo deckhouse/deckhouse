@@ -19,8 +19,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
-	"sort"
+	"slices"
 	"strconv"
 	"time"
 
@@ -177,7 +178,7 @@ func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([
 		if pod.DeletionTimestamp != nil || pod.Status.PodIP == "" {
 			continue
 		}
-		set[net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(immutable.APIServerPort))] = struct{}{}
+		set["https://"+net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(immutable.APIServerPort))] = struct{}{}
 	}
 
 	slice, err := kubeCl.DiscoveryV1().
@@ -199,7 +200,7 @@ func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([
 	for _, endpoint := range slice.Endpoints {
 		for _, addr := range endpoint.Addresses {
 			for _, port := range ports {
-				set[net.JoinHostPort(addr, strconv.Itoa(int(port)))] = struct{}{}
+				set["https://"+net.JoinHostPort(addr, strconv.Itoa(int(port)))] = struct{}{}
 			}
 		}
 	}
@@ -207,10 +208,5 @@ func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([
 	if len(set) == 0 {
 		return nil, errors.New("the cluster reports no apiserver endpoints")
 	}
-	endpoints := make([]string, 0, len(set))
-	for ep := range set {
-		endpoints = append(endpoints, "https://"+ep)
-	}
-	sort.Strings(endpoints)
-	return endpoints, nil
+	return slices.Sorted(maps.Keys(set)), nil
 }

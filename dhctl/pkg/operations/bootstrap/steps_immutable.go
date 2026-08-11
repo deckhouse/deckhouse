@@ -68,20 +68,15 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 	var cloudConfig string
 
 	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Prepare immutable master payload", func(ctx context.Context) error {
-		payload, err := immutable.BuildMasterPayload(ctx, immutable.MasterPayloadInput{
+		var err error
+		cloudConfig, err = immutable.BuildMasterPayload(ctx, immutable.MasterPayloadInput{
 			NodeName:      nodeName,
 			MetaConfig:    bctx.metaConfig,
 			StateCache:    bctx.stateCache,
 			CandiDir:      b.Options.Global.CandiDir,
 			GlobalOptions: &b.Options.Global,
 		})
-		if err != nil {
-			return err
-		}
-
-		cloudConfig = payload
-
-		return nil
+		return err
 	})
 
 	return cloudConfig, err
@@ -121,9 +116,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	if err != nil {
 		return err
 	}
-	if stop != nil {
-		bctx.immutableTunnelStop = stop
-	}
+	bctx.immutableTunnelStop = stop
 	server := "https://" + address
 
 	if complete == nil {
@@ -270,9 +263,7 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 		ServerName: bctx.masterNodeName,
 		Material:   material,
 	}
-	if stop != nil {
-		defer stop()
-	}
+	defer stop()
 
 	// Narrated rather than silent: the node answers the status endpoint from the
 	// moment it starts working, so an operator sees what it is doing and a node
@@ -348,12 +339,12 @@ func handoffReady(status *immutable.Status) error {
 }
 
 // openImmutableChannel returns the host:port dhctl reaches the given port on,
-// and the closer of the tunnel behind it — nil without a bastion. The forward
-// is a direct-tcpip channel, so no sshd on the master is involved.
+// and the closer of the tunnel behind it — a no-op without a bastion. The
+// forward is a direct-tcpip channel, so no sshd on the master is involved.
 func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bootstrapContext, remotePort int, purpose string) (string, func(), error) {
 	sshConfig := bastionConfig(b.SSHProviderInitializer.GetConfig())
 	if sshConfig == nil {
-		return net.JoinHostPort(bctx.masterIP, strconv.Itoa(remotePort)), nil, nil
+		return net.JoinHostPort(bctx.masterIP, strconv.Itoa(remotePort)), func() {}, nil
 	}
 
 	localPort, err := freeLocalPort()
@@ -361,14 +352,10 @@ func (b *ClusterBootstrapper) openImmutableChannel(ctx context.Context, bctx *bo
 		return "", nil, fmt.Errorf("reserve a local port for the %s tunnel: %w", purpose, err)
 	}
 
-	tunnel, stop, err := b.openBastionTunnel(ctx, sshConfig, bctx.masterIP, remotePort, localPort)
+	stop, err := b.openBastionTunnel(ctx, sshConfig, bctx.masterIP, remotePort, localPort, purpose)
 	if err != nil {
 		return "", nil, err
 	}
-
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
-		"%s tunnel through the bastion is up: %s", purpose, tunnel.String(),
-	))
 
 	// 127.0.0.1 is always in the SAN list of a kube-apiserver certificate, and
 	// the handoff endpoint is verified by name rather than by address, so
@@ -389,8 +376,8 @@ func bastionConfig(connectionConfig *sshconfig.ConnectionConfig) *sshconfig.Conf
 }
 
 // openBastionTunnel forwards a local port to the given port of the master
-// through the bastion.
-func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *sshconfig.Config, masterIP string, remotePort, localPort int) (libcon.Tunnel, func(), error) {
+// through the bastion, and returns the closer of that forward.
+func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *sshconfig.Config, masterIP string, remotePort, localPort int, purpose string) (func(), error) {
 	// The SSH session is retargeted at the bastion itself instead of using it
 	// as a jump host: the forward has to originate on the bastion, because the
 	// master runs no sshd to originate it on.
@@ -420,24 +407,26 @@ func (b *ClusterBootstrapper) openBastionTunnel(ctx context.Context, sshConfig *
 	sshClient, err := sshProvider.Client(ctx)
 	if err != nil {
 		cleanupSSHProvider(ctx, sshProvider)
-		return nil, nil, fmt.Errorf("connect to the bastion host %s: %w", sshConfig.BastionHost, err)
+		return nil, fmt.Errorf("connect to the bastion host %s: %w", sshConfig.BastionHost, err)
 	}
 
 	tunnel := sshClient.Tunnel(fmt.Sprintf("%s:%d:127.0.0.1:%d", masterIP, remotePort, localPort))
 	if err := tunnel.Up(ctx); err != nil {
 		cleanupSSHProvider(ctx, sshProvider)
-		return nil, nil, fmt.Errorf("forward %d to %s:%d through the bastion %s: %w", localPort, masterIP, remotePort, sshConfig.BastionHost, err)
+		return nil, fmt.Errorf("forward %d to %s:%d through the bastion %s: %w", localPort, masterIP, remotePort, sshConfig.BastionHost, err)
 	}
+
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+		"%s tunnel through the bastion is up: %s", purpose, tunnel.String(),
+	))
 
 	// Nothing drains the tunnel's error channel: gossh sends there non-blocking,
 	// so an unread channel cannot stall the accept loop, and a request that hits
 	// an error fails on its own and the caller retries.
-	stop := func() {
+	return func() {
 		tunnel.Stop()
 		cleanupSSHProvider(ctx, sshProvider)
-	}
-
-	return tunnel, stop, nil
+	}, nil
 }
 
 // cleanupSSHProvider releases the connection to the bastion. Reported rather
@@ -480,9 +469,7 @@ func (b *ClusterBootstrapper) confirmImmutableHandoff(ctx context.Context, bctx 
 		logger.WarnContext(ctx, fmt.Sprintf("confirm the handover to the first master: %v", err))
 		return
 	}
-	if stop != nil {
-		defer stop()
-	}
+	defer stop()
 
 	input := immutable.FetchKubeconfigInput{Address: address, ServerName: bctx.masterNodeName, Material: material}
 	switch err := immutable.ConfirmCollected(ctx, input); {

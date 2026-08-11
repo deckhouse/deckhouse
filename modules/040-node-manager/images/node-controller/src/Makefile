@@ -128,12 +128,12 @@ NODECONFIG_CRD ?= $(MODULE_DIR)/crds/nodeconfig.yaml
 
 .PHONY: nodeconfig-crd
 nodeconfig-crd: controller-gen ## Regenerate modules/040-node-manager/crds/nodeconfig.yaml from the internal.deckhouse.io types.
-	@tmp=$$(mktemp -d); \
-		$(CONTROLLER_GEN) crd paths=./api/internal.deckhouse.io/... output:crd:dir=$$tmp && \
+	@set -e; \
+		tmp=$$(mktemp -d); \
+		trap 'rm -rf $$tmp' EXIT; \
+		$(CONTROLLER_GEN) crd paths=./api/internal.deckhouse.io/... output:crd:dir=$$tmp; \
 		awk -f hack/nodeconfig-crd.awk $$tmp/internal.deckhouse.io_nodeconfigs.yaml > $$tmp/nodeconfig.yaml; \
-		rc=$$?; \
-		test $$rc -eq 0 && mv $$tmp/nodeconfig.yaml $(NODECONFIG_CRD); \
-		rc=$$?; rm -rf $$tmp; test $$rc -eq 0
+		mv $$tmp/nodeconfig.yaml $(NODECONFIG_CRD)
 	@echo "==> [nodeconfig-crd] wrote $(NODECONFIG_CRD)"
 
 ##@ Tools

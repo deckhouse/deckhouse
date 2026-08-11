@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -91,7 +93,7 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 		return nil, err
 	}
 
-	manifests, extraFiles, err := renderControlPlaneBundle(ctx, manifestsInput{
+	manifests, err := renderControlPlaneBundle(ctx, manifestsInput{
 		NodeName: in.NodeName,
 		NodeIP:   nodeAddressPlaceholder,
 		Cluster:  cluster,
@@ -117,7 +119,7 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 			Bootstrap:  true,
 			Cluster:    cluster.clusterParamsSpec,
 			Manifests:  manifests,
-			ExtraFiles: extraFiles,
+			ExtraFiles: bootstrapExtraFiles,
 			Handoff:    handoffPayload(*handoff),
 		},
 	}, nil
@@ -224,21 +226,9 @@ func certSANs(metaConfig *config.MetaConfig) []string {
 		return nil
 	}
 
-	apiserver, ok := mc.Spec.Settings["apiserver"].(map[string]any)
-	if !ok {
+	sans, _, err := unstructured.NestedStringSlice(mc.Spec.Settings, "apiserver", "certSANs")
+	if err != nil {
 		return nil
-	}
-
-	raw, ok := apiserver["certSANs"].([]any)
-	if !ok {
-		return nil
-	}
-
-	sans := make([]string, 0, len(raw))
-	for _, value := range raw {
-		if san, ok := value.(string); ok && san != "" {
-			sans = append(sans, san)
-		}
 	}
 	if len(sans) == 0 {
 		return nil

@@ -22,7 +22,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -292,13 +291,13 @@ func generateClientKeyAndCSR() (string, string, error) {
 		return "", "", fmt.Errorf("encode the cluster client key: %w", err)
 	}
 
-	csrDER, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
-		Subject: pkix.Name{CommonName: clusterAdminCommonName, Organization: []string{clusterAdminOrganization}},
-	}, clientKey)
+	csrPEM, err := certutil.MakeCSR(clientKey, &pkix.Name{
+		CommonName:   clusterAdminCommonName,
+		Organization: []string{clusterAdminOrganization},
+	}, nil, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("build the cluster client certificate request: %w", err)
 	}
-	csrPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrDER})
 
 	return string(clientKeyPEM), string(csrPEM), nil
 }

@@ -161,10 +161,14 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 			return nodeConfigRolloutInputsChanged(e.ObjectOld, e.ObjectNew)
 		},
 	}))
-	// A NER change re-renders every node. The CRD is a hard dependency: a watch
-	// on a missing kind kills the whole manager after two minutes. Safe because
-	// addon-operator applies every enabled module's crds/ before any Helm run.
-	w.Watches(&deckhousev1alpha1.NodeExtensionRequest{}, allMapper)
+	// A NER change re-renders every node, and only a spec change can: the render
+	// reads spec, name and creationTimestamp. The predicate is what breaks the
+	// loop of this controller's own status writes re-entering its queue.
+	// The CRD is a hard dependency: a watch on a missing kind kills the whole
+	// manager after two minutes. Safe because addon-operator applies every
+	// enabled module's crds/ before any Helm run.
+	w.Watches(&deckhousev1alpha1.NodeExtensionRequest{}, allMapper,
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -184,10 +188,14 @@ type pass struct {
 	// Kubernetes version: the ~6 uncached reads readClusterInputs performs are
 	// done once per distinct version rather than once per node.
 	inputs map[string]clusterInputsResult
-	// versions is the Kubernetes version each group runs, keyed by group name —
-	// the memo key for inputs above, and expensive to produce (derived_status
-	// lists MachineDeployments/InstanceClasses and unmarshals the catalogue).
-	versions map[string]versionResult
+	// derivedVersion is the Kubernetes version derived from cluster state, read
+	// once per pass: derived_status computes it from the cluster configuration
+	// and the control plane alone, so every group gets the same answer.
+	derivedVersion *versionResult
+	// groups holds the NodeGroup of each node rendered, keyed by group name: one
+	// Get per group per pass instead of one per node (a cached Get deep-copies
+	// status.instanceClass with it). nil is a group that does not exist.
+	groups map[string]*v1.NodeGroup
 	// rollouts is each group's remaining rollout budget, keyed by group name:
 	// one NodeConfig listing per group per pass instead of one per node.
 	rollouts map[string]*rolloutBudget
@@ -201,9 +209,9 @@ type clusterInputsResult struct {
 	err    error
 }
 
-// versionResult is one attempt at answering which Kubernetes version a group
-// runs, kept whether it succeeded or not, for the same reason as the inputs
-// above: the answer is a property of the group, not of the node being rendered.
+// versionResult is one attempt at deriving the cluster's Kubernetes version,
+// kept whether it succeeded or not, for the same reason as the inputs above:
+// the answer is a property of the cluster, not of the node being rendered.
 type versionResult struct {
 	version string
 	err     error
@@ -212,28 +220,58 @@ type versionResult struct {
 func newPass() *pass {
 	return &pass{
 		inputs:   map[string]clusterInputsResult{},
-		versions: map[string]versionResult{},
+		groups:   map[string]*v1.NodeGroup{},
 		rollouts: map[string]*rolloutBudget{},
 	}
+}
+
+// kubernetesVersion answers which version the group's nodes run: the cluster's
+// derived answer, computed once per pass, or the group's own status when the
+// derivation has none.
+func (r *Reconciler) kubernetesVersion(ctx context.Context, ng *v1.NodeGroup, p *pass) (string, error) {
+	if p.derivedVersion == nil {
+		version, err := deriveKubernetesVersion(ctx, r.derived, ng)
+		p.derivedVersion = &versionResult{version: version, err: err}
+	}
+	if p.derivedVersion.err != nil {
+		return "", p.derivedVersion.err
+	}
+	if p.derivedVersion.version != "" {
+		return p.derivedVersion.version, nil
+	}
+	return ng.Status.KubernetesVersion, nil
+}
+
+// nodeGroup returns a node's group, read once per group per pass, or nil when
+// the group does not exist.
+func (r *Reconciler) nodeGroup(ctx context.Context, name string, p *pass) (*v1.NodeGroup, error) {
+	if ng, ok := p.groups[name]; ok {
+		return ng, nil
+	}
+	ng := &v1.NodeGroup{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, ng); err != nil {
+		if apierrors.IsNotFound(err) {
+			p.groups[name] = nil
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get NodeGroup %s: %w", name, err)
+	}
+	p.groups[name] = ng
+	return ng, nil
 }
 
 // clusterInputs returns the render inputs for the group's Kubernetes version,
 // reading them once per version per pass and serving the rest from the pass.
 func (r *Reconciler) clusterInputs(ctx context.Context, ng *v1.NodeGroup, p *pass) (clusterInputs, error) {
-	resolved, ok := p.versions[ng.Name]
-	if !ok {
-		version, err := resolveKubernetesVersion(ctx, r.derived, ng)
-		resolved = versionResult{version: version, err: err}
-		p.versions[ng.Name] = resolved
+	version, err := r.kubernetesVersion(ctx, ng, p)
+	if err != nil {
+		return clusterInputs{}, err
 	}
-	if resolved.err != nil {
-		return clusterInputs{}, resolved.err
-	}
-	if result, ok := p.inputs[resolved.version]; ok {
+	if result, ok := p.inputs[version]; ok {
 		return result.inputs, result.err
 	}
-	in, err := r.sources.readClusterInputs(ctx, resolved.version)
-	p.inputs[resolved.version] = clusterInputsResult{inputs: in, err: err}
+	in, err := r.sources.readClusterInputs(ctx, version)
+	p.inputs[version] = clusterInputsResult{inputs: in, err: err}
 	return in, err
 }
 
@@ -300,12 +338,12 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
 	}
 
-	ng := &v1.NodeGroup{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: ngName}, ng); err != nil {
-		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
-		}
-		return ctrl.Result{}, fmt.Errorf("get NodeGroup %s: %w", ngName, err)
+	ng, err := r.nodeGroup(ctx, ngName, p)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if ng == nil {
+		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
 	}
 
 	if ng.Spec.SystemType != v1.SystemTypeImmutable {
@@ -462,18 +500,10 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 			fmt.Sprintf("kubelet.resourceReservation.mode %s cannot be honoured on an immutable node, which reserves by capacity or not at all; the nodes of this group are configured with %s",
 				resourceReservationModeStatic, resourceReservationModeAuto))
 	}
-	if ng.Spec.Disruptions != nil {
-		var windows []v1.DisruptionWindow
-		if ng.Spec.Disruptions.Automatic != nil {
-			windows = ng.Spec.Disruptions.Automatic.Windows
-		} else if ng.Spec.Disruptions.RollingUpdate != nil {
-			windows = ng.Spec.Disruptions.RollingUpdate.Windows
-		}
-		if len(windows) > 1 {
-			r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-				fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
-					len(windows)))
-		}
+	if windows := disruptionWindows(ng); len(windows) > 1 {
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
+			fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
+				len(windows)))
 	}
 }
 
@@ -489,10 +519,7 @@ func maxPodsClamped(ng *v1.NodeGroup) bool {
 // staticReservationClamped reports whether the group asks for a static resource
 // reservation, which an immutable node cannot honour.
 func staticReservationClamped(ng *v1.NodeGroup) bool {
-	if ng.Spec.Kubelet == nil || ng.Spec.Kubelet.ResourceReservation == nil {
-		return false
-	}
-	return ng.Spec.Kubelet.ResourceReservation.Mode == resourceReservationModeStatic
+	return configuredReservationMode(ng) == resourceReservationModeStatic
 }
 
 // deleteOrphaned removes a NodeConfig this controller no longer owns, for
