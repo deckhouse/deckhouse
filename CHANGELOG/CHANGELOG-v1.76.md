@@ -22,6 +22,7 @@
  - The coredns and kube-dns components will restart after the update.
  - The egress-gateway-agent component will restart after the update.
  - The metallb components (controller, speaker, l2lb) will restart after the update.
+ - The node-local-dns DaemonSet pods will restart after the update.
  - The node-local-dns components will restart after the update.
  - The service-with-healthchecks components (controller, agent) will restart after the update.
  - This update triggers a rolling update of the flannel pods.
@@ -196,6 +197,7 @@
  - **[cilium-hubble]** Fixed CVE-2026-41520 in hubble-ui-backend [#20360](https://github.com/deckhouse/deckhouse/pull/20360)
  - **[cilium-hubble]** Upgrade hubble-ui backend dependencies (cilium v1.17.16, Go 1.25.0) and switch build base image to fix known CVEs. [#21507](https://github.com/deckhouse/deckhouse/pull/21507)
     The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
+ - **[cloud-provider-aws]** Do not fail the node bootstrap or update when `linux-modules-extra` is unavailable for the running kernel. [#21953](https://github.com/deckhouse/deckhouse/pull/21953)
  - **[cloud-provider-aws]** Fixed detection of regional limitations versus IAM issues. [#19054](https://github.com/deckhouse/deckhouse/pull/19054)
  - **[cloud-provider-aws]** Install linux-modules-extra on Ubuntu nodes [#19426](https://github.com/deckhouse/deckhouse/pull/19426)
  - **[cloud-provider-aws]** add information about AWS security group rules limits [#18819](https://github.com/deckhouse/deckhouse/pull/18819)
@@ -286,15 +288,19 @@
  - **[deckhouse-controller]** Fixed showing warnings while errors during kubectl edit. [#21288](https://github.com/deckhouse/deckhouse/pull/21288)
  - **[deckhouse-controller]** Fixed validation for switching ClusterConfiguration kubernetesVersion from an explicit version to Automatic. [#20331](https://github.com/deckhouse/deckhouse/pull/20331)
  - **[deckhouse-controller]** Force embedded modules back to the "Embedded" source on startup, healing a stale external source that previously stuck until the Module resource was deleted manually. [#21473](https://github.com/deckhouse/deckhouse/pull/21473)
+ - **[deckhouse-controller]** Module releases rendered with nelm no longer raise false absent-resource alerts. [#21831](https://github.com/deckhouse/deckhouse/pull/21831)
  - **[deckhouse-controller]** ModuleDocumentation will not be created for embedded modules. [#21652](https://github.com/deckhouse/deckhouse/pull/21652)
  - **[deckhouse-controller]** add werf dependency to webhook [#20970](https://github.com/deckhouse/deckhouse/pull/20970)
  - **[deckhouse-controller]** added extra validation for kubernets version multiple downgrades scenario [#18794](https://github.com/deckhouse/deckhouse/pull/18794)
+ - **[deckhouse-controller]** nelm now takes over fields left by the old Helm 3 engine, so stale fields get removed on module upgrade. [#21831](https://github.com/deckhouse/deckhouse/pull/21831)
  - **[deckhouse]** Allow updating scanInterval on the deckhouse ModuleSource. [#19277](https://github.com/deckhouse/deckhouse/pull/19277)
+ - **[deckhouse]** An unset `settings.update.mode` now defaults to `AutoPatch` instead of silently running as `Auto`. [#21927](https://github.com/deckhouse/deckhouse/pull/21927)
  - **[deckhouse]** Bumped Hugo and `x/image` to fix CVE-2026-33809, CVE-2026-35166. [#18985](https://github.com/deckhouse/deckhouse/pull/18985)
  - **[deckhouse]** Bumped `nelm` to fix a deadlock. [#18585](https://github.com/deckhouse/deckhouse/pull/18585)
  - **[deckhouse]** Bumped `shell-operator` to v1.15.3 and webhook-operator dependencies. [#19030](https://github.com/deckhouse/deckhouse/pull/19030)
  - **[deckhouse]** Ensure heritage label on d8-system namespace via hook. [#19134](https://github.com/deckhouse/deckhouse/pull/19134)
  - **[deckhouse]** Fix Scaled stuck Unknown on controller startup [#20467](https://github.com/deckhouse/deckhouse/pull/20467)
+ - **[deckhouse]** Fix a minor Deckhouse release being auto-applied as a patch when no Deployed release object is present. [#21985](https://github.com/deckhouse/deckhouse/pull/21985)
  - **[deckhouse]** Fix package status deadlock via coalescing workqueue. [#20695](https://github.com/deckhouse/deckhouse/pull/20695)
  - **[deckhouse]** Fixed a race condition in ModuleConfig processing during startup. [#18280](https://github.com/deckhouse/deckhouse/pull/18280)
  - **[deckhouse]** Fixed global configuration generation. [#18161](https://github.com/deckhouse/deckhouse/pull/18161)
@@ -334,6 +340,7 @@
  - **[docs]** Change security events docs [#20993](https://github.com/deckhouse/deckhouse/pull/20993)
  - **[docs]** Fix vSphere privilege matrix and describe instructions for setting up environment via vSphere Client [#18725](https://github.com/deckhouse/deckhouse/pull/18725)
  - **[docs]** Updated the `d8 cni-migration` commands in the CNI migration guide to `d8 network cni-migration`. [#18547](https://github.com/deckhouse/deckhouse/pull/18547)
+ - **[documentation]** Fix a memory leak in the documentation builder so memory is released between builds; add CPU/memory limits and an opt-in profiling endpoint. [#21935](https://github.com/deckhouse/deckhouse/pull/21935)
  - **[extended-monitoring]** fix typo in image-availability-exporter template [#18595](https://github.com/deckhouse/deckhouse/pull/18595)
  - **[ingress-nginx]** Added fix for CVE-2026-4342. [#18923](https://github.com/deckhouse/deckhouse/pull/18923)
     All Ingress-NGINX controller pods will be restated.
@@ -363,6 +370,7 @@
     All pods of Ingress-NGINX controller will be restarted.
  - **[ingress-nginx]** The config hashing is fixed. [#21141](https://github.com/deckhouse/deckhouse/pull/21141)
     All ingress-nginx controllers pod will be restarted.
+ - **[istio]** Add missing tools to proxyv2 images so the application-aware proxy termination hook works correctly. [#22026](https://github.com/deckhouse/deckhouse/pull/22026)
  - **[istio]** Added CARGO_PROXY to ztunnel image build [#20595](https://github.com/deckhouse/deckhouse/pull/20595)
  - **[istio]** CNI-node readonly root filesystem enable fix [#19920](https://github.com/deckhouse/deckhouse/pull/19920)
     When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
@@ -407,6 +415,8 @@
     This update triggers a rolling update of the network-policy-engine pods.
  - **[network-policy-engine]** Reverted module stage from Deprecated back to General Availability to stop false deprecation alerts. [#20305](https://github.com/deckhouse/deckhouse/pull/20305)
  - **[node-local-dns]** Adapt node-local-dns for air-gapped environments. [#18643](https://github.com/deckhouse/deckhouse/pull/18643)
+ - **[node-local-dns]** Bump Go dependencies in the coredns helper image to fix known CVEs. [#21873](https://github.com/deckhouse/deckhouse/pull/21873)
+    The node-local-dns DaemonSet pods will restart after the update.
  - **[node-local-dns]** Bump Go dependencies in the safe-updater and stale-dns-connections-cleaner images to fix known CVEs. [#21627](https://github.com/deckhouse/deckhouse/pull/21627)
     The node-local-dns components will restart after the update.
  - **[node-local-dns]** Fix name of registry secret in safe-updater deployment [#18673](https://github.com/deckhouse/deckhouse/pull/18673)
