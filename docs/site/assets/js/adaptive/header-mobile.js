@@ -211,6 +211,7 @@ document.addEventListener('DOMContentLoaded', function () {
         hamburgerCollapse.classList.add('show');
         headerSidebar.classList.add('show');
         if (body) body.classList.add('sidebar-opened');
+        ensureOverlay();
     }
 
     function closeBurgerSidebar() {
@@ -281,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
         body.appendChild(overlay);
         overlay.addEventListener('click', function (e) {
             if (e.target !== overlay) return;
-            closeNavModal();
+            closeBurgerSidebar();
         });
     }
 

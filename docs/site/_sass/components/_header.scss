@@ -847,8 +847,9 @@ html {
     padding-top: 130px;
     background: #fff;
     box-sizing: border-box;
-    height: 100%;
-    overflow: auto;
+    height: auto;
+    max-height: 100%;
+    overflow: hidden auto;
     position: fixed;
     top: 0;
     transform: translateX(-100%);
@@ -1040,9 +1041,6 @@ html {
 
 .header-container--module + .header__sidebar {
     padding-top: 55px;
-    height: auto;
-    max-height: 100%;
-    overflow: hidden auto;
 
     @include breakpoints.min-w(xl) {
         padding-top: 55px;
