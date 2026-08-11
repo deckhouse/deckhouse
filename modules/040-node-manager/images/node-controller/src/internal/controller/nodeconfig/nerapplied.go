@@ -92,18 +92,22 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 		// Two guards: the generation (a stale False says nothing) and the message
 		// naming the extension (the condition goes False for unrelated reasons).
 		cond := meta.FindStatusCondition(config.Status.Conditions, configurationAppliedCondition)
-		if cond != nil && cond.Status == metav1.ConditionFalse && cond.ObservedGeneration == config.Generation {
-			for name, ner := range owner {
-				if reported[name] || !strings.Contains(cond.Message, name) {
-					continue
-				}
-				outcome := outcomes[ner]
-				outcome.failed++
-				if outcome.message == "" {
-					outcome.message = cond.Message
-				}
-				outcomes[ner] = outcome
+		if cond == nil || cond.Status != metav1.ConditionFalse {
+			continue
+		}
+		if cond.ObservedGeneration != config.Generation {
+			continue
+		}
+		for name, ner := range owner {
+			if reported[name] || !strings.Contains(cond.Message, name) {
+				continue
 			}
+			outcome := outcomes[ner]
+			outcome.failed++
+			if outcome.message == "" {
+				outcome.message = cond.Message
+			}
+			outcomes[ner] = outcome
 		}
 	}
 	return outcomes, nil

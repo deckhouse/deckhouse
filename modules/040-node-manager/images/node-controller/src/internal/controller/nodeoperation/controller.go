@@ -161,55 +161,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	if op.Status.Phase == "" {
-		// Recorded before anything touches the node, so releasing it later gives
-		// back the state the operator left it in rather than always making it
-		// schedulable.
-		if err := r.rememberCordon(ctx, op, node); err != nil {
-			return ctrl.Result{}, err
-		}
-		if err := r.setPhase(ctx, op, v1alpha1.NodeOperationPending, "Queued",
-			"The operation is queued", logger); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := r.begin(ctx, op, node, logger); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Every stretch of the operation is bounded, not only the node's: a Drain
 	// whose eviction never finishes would otherwise hold its parent Pending
 	// forever, and with it the node out of the scheduler.
 	if deadline := hardDeadline(op); time.Now().After(deadline) {
-		reason, message := timedOut(op, deadline)
-		if err := r.fail(ctx, op, reason, message, logger); err != nil {
-			return ctrl.Result{}, err
-		}
-		// Announced only once the phase is actually written: an event for a
-		// transition a conflict rolled back would be a lie, and the retry would
-		// emit it again.
-		r.Recorder.Event(op, corev1.EventTypeWarning, reason, message)
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, r.expire(ctx, op, deadline, logger)
 	}
 
 	// A Drain is the eviction itself: it asks the draining controller to empty
 	// the node and is done once the workload is gone. The node stays
 	// unschedulable until someone says otherwise.
 	if op.Spec.Type == v1alpha1.NodeOperationDrain {
-		// The request is re-issued whenever the node carries no drain of this
-		// operation's: markers removed by anything else would otherwise be
-		// waited on forever. Asking again does not move the pinned deadline.
-		if !drainRequested(op) || idle(op, node) {
-			if err := r.startDrain(ctx, op, node, logger); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{RequeueAfter: waitPollInterval}, r.recordDrainRequested(ctx, op, node)
-		}
-		// The Node event carrying the marker is the normal wake-up; one dropped
-		// event must not strand the operation until the manager's next full
-		// resync, hence the requeue.
-		if !drained(op, node) {
-			return ctrl.Result{RequeueAfter: waitPollInterval}, nil
-		}
-		return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationCompleted, "Drained",
-			"The workload has left the node, which stays unschedulable", logger)
+		return r.reconcileDrain(ctx, op, node, logger)
 	}
 
 	// Every other operation interrupts the node, so the workload leaves first
@@ -240,6 +207,55 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		requeue = minRequeue
 	}
 	return ctrl.Result{RequeueAfter: requeue}, nil
+}
+
+// begin queues an operation nobody has started yet, once.
+func (r *Reconciler) begin(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node, logger logr.Logger) error {
+	if op.Status.Phase != "" {
+		return nil
+	}
+	// Recorded before anything touches the node, so releasing it later gives
+	// back the state the operator left it in rather than always making it
+	// schedulable.
+	if err := r.rememberCordon(ctx, op, node); err != nil {
+		return err
+	}
+	return r.setPhase(ctx, op, v1alpha1.NodeOperationPending, "Queued",
+		"The operation is queued", logger)
+}
+
+// expire fails an operation that ran out of time and says so. Announced only
+// once the phase is actually written: an event for a transition a conflict
+// rolled back would be a lie, and the retry would emit it again.
+func (r *Reconciler) expire(ctx context.Context, op *v1alpha1.NodeOperation, deadline time.Time, logger logr.Logger) error {
+	reason, message := timedOut(op, deadline)
+	if err := r.fail(ctx, op, reason, message, logger); err != nil {
+		return err
+	}
+	r.Recorder.Event(op, corev1.EventTypeWarning, reason, message)
+	return nil
+}
+
+// reconcileDrain carries a Drain operation: ask the draining controller to
+// empty the node, then wait for the answer it writes onto the node.
+func (r *Reconciler) reconcileDrain(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node, logger logr.Logger) (ctrl.Result, error) {
+	// The request is re-issued whenever the node carries no drain of this
+	// operation's: markers removed by anything else would otherwise be
+	// waited on forever. Asking again does not move the pinned deadline.
+	if !drainRequested(op) || idle(op, node) {
+		if err := r.startDrain(ctx, op, node, logger); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: waitPollInterval}, r.recordDrainRequested(ctx, op, node)
+	}
+	// The Node event carrying the marker is the normal wake-up; one dropped
+	// event must not strand the operation until the manager's next full
+	// resync, hence the requeue.
+	if !drained(op, node) {
+		return ctrl.Result{RequeueAfter: waitPollInterval}, nil
+	}
+	return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationCompleted, "Drained",
+		"The workload has left the node, which stays unschedulable", logger)
 }
 
 // hardDeadline is the moment this operation runs out of time. Read off the

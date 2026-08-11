@@ -80,9 +80,10 @@ func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.Node
 	}
 	for i := range ops.Items {
 		op := &ops.Items[i]
-		if op.Spec.Type != v1alpha1.NodeOperationApproveDisruption ||
-			op.Spec.NodeName != nc.Name ||
-			op.Spec.ConfigGeneration == nil || *op.Spec.ConfigGeneration != nc.Generation {
+		if op.Spec.Type != v1alpha1.NodeOperationApproveDisruption || op.Spec.NodeName != nc.Name {
+			continue
+		}
+		if op.Spec.ConfigGeneration == nil || *op.Spec.ConfigGeneration != nc.Generation {
 			continue
 		}
 		// A failed operation allows a fresh attempt. A completed one is returned:
@@ -140,7 +141,10 @@ func (r *Reconciler) createApproval(ctx context.Context, ng *v1.NodeGroup, node 
 // interrupt the node, for the config revision it currently has.
 func disruptionRequested(nc *internalv1alpha1.NodeConfig) bool {
 	cond := meta.FindStatusCondition(nc.Status.Conditions, disruptionRequiredCondition)
-	return cond != nil && cond.Status == metav1.ConditionTrue && cond.ObservedGeneration == nc.Generation
+	if cond == nil || cond.Status != metav1.ConditionTrue {
+		return false
+	}
+	return cond.ObservedGeneration == nc.Generation
 }
 
 func approvalMode(ng *v1.NodeGroup) v1.DisruptionApprovalMode {
@@ -157,9 +161,11 @@ func needDrain(ng *v1.NodeGroup) bool {
 	if ng.Status.Nodes == 1 {
 		return false
 	}
-	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.Automatic != nil &&
-		ng.Spec.Disruptions.Automatic.DrainBeforeApproval != nil {
-		return *ng.Spec.Disruptions.Automatic.DrainBeforeApproval
+	if ng.Spec.Disruptions == nil || ng.Spec.Disruptions.Automatic == nil {
+		return true
 	}
-	return true
+	if ng.Spec.Disruptions.Automatic.DrainBeforeApproval == nil {
+		return true
+	}
+	return *ng.Spec.Disruptions.Automatic.DrainBeforeApproval
 }

@@ -134,7 +134,13 @@ func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
 }
 
 func ownerRefEqual(a, b metav1.OwnerReference) bool {
-	return a.UID == b.UID && a.Name == b.Name && a.Kind == b.Kind
+	if a.UID != b.UID {
+		return false
+	}
+	if a.Name != b.Name {
+		return false
+	}
+	return a.Kind == b.Kind
 }
 
 // conditionEqual compares one condition across two status lists by the two
@@ -389,12 +395,7 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	}
 	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec, reported)
 
-	// Ownership is compared because the patch writes it: left out, a stale or
-	// missing ownerReference is never corrected and the API server never
-	// collects the object with its node.
-	if apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec) &&
-		apiequality.Semantic.DeepEqual(existing.Labels, desired.Labels) &&
-		apiequality.Semantic.DeepEqual(existing.OwnerReferences, desired.OwnerReferences) {
+	if upToDate(existing, desired) {
 		logger.V(1).Info("NodeConfig unchanged", "node", desired.Name)
 		return existing, nil
 	}
@@ -433,6 +434,19 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	return existing, nil
 }
 
+// upToDate reports whether the object already carries everything the patch
+// writes. Ownership is compared because the patch writes it: left out, a stale
+// or missing ownerReference is never corrected and the object outlives its node.
+func upToDate(existing, desired *internalv1alpha1.NodeConfig) bool {
+	if !apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec) {
+		return false
+	}
+	if !apiequality.Semantic.DeepEqual(existing.Labels, desired.Labels) {
+		return false
+	}
+	return apiequality.Semantic.DeepEqual(existing.OwnerReferences, desired.OwnerReferences)
+}
+
 // reportedNodeIPs returns the node's reported internal addresses, read from the
 // API server (the manager's cache strips Node.status.addresses). Nothing is
 // read unless the config pins an address — only the bootstrapped first master.
@@ -457,7 +471,7 @@ func (r *Reconciler) reportedNodeIPs(ctx context.Context, nodeName, pinned strin
 // did not carry over as written: the agent's schema refuses the value, and
 // silent narrowing would leave the group running something nobody configured.
 func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
-	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MaxPods != nil && int(*ng.Spec.Kubelet.MaxPods) > maxPodsCeiling {
+	if maxPodsClamped(ng) {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, "SettingClamped",
 			fmt.Sprintf("kubelet.maxPods %d exceeds the %d an immutable node accepts; the nodes of this group are configured with %d",
 				*ng.Spec.Kubelet.MaxPods, maxPodsCeiling, maxPodsCeiling))
@@ -467,8 +481,7 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 			fmt.Sprintf("disruptions.approvalMode %s has no counterpart on an immutable node; the nodes of this group are configured with %s",
 				v1.DisruptionApprovalModeRollingUpdate, v1.DisruptionApprovalModeAutomatic))
 	}
-	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.ResourceReservation != nil &&
-		ng.Spec.Kubelet.ResourceReservation.Mode == resourceReservationModeStatic {
+	if staticReservationClamped(ng) {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, "SettingClamped",
 			fmt.Sprintf("kubelet.resourceReservation.mode %s cannot be honoured on an immutable node, which reserves by capacity or not at all; the nodes of this group are configured with %s",
 				resourceReservationModeStatic, resourceReservationModeAuto))
@@ -486,6 +499,24 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 					len(windows)))
 		}
 	}
+}
+
+// maxPodsClamped reports whether the group asks for more pods per node than an
+// immutable node accepts.
+func maxPodsClamped(ng *v1.NodeGroup) bool {
+	if ng.Spec.Kubelet == nil || ng.Spec.Kubelet.MaxPods == nil {
+		return false
+	}
+	return int(*ng.Spec.Kubelet.MaxPods) > maxPodsCeiling
+}
+
+// staticReservationClamped reports whether the group asks for a static resource
+// reservation, which an immutable node cannot honour.
+func staticReservationClamped(ng *v1.NodeGroup) bool {
+	if ng.Spec.Kubelet == nil || ng.Spec.Kubelet.ResourceReservation == nil {
+		return false
+	}
+	return ng.Spec.Kubelet.ResourceReservation.Mode == resourceReservationModeStatic
 }
 
 // deleteOrphaned removes a NodeConfig this controller no longer owns, for
