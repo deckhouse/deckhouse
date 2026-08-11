@@ -16,7 +16,6 @@ package immutable
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -259,15 +258,16 @@ func applyJoinToSpec(spec *nodeSpec, join *joinInput) {
 	spec.Kubelet.ServerTLSBootstrap = nil
 }
 
-// SysextDigests resolves the digests of the three system extensions an immutable
-// node runs, from the map baked into the installer image. Pure; the context is
-// here for the package's uniform exported signature.
-func SysextDigests(_ context.Context, metaConfig *config.MetaConfig) (map[string]string, error) {
+// ValidateSysext reports whether the installer image carries the system
+// extensions an immutable node runs; a preflight check calls it to fail early.
+// Pure; the context is here for the package's uniform exported signature.
+func ValidateSysext(_ context.Context, metaConfig *config.MetaConfig) error {
 	version, err := kubernetesVersion(metaConfig)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return sysextDigests(metaConfig.Images.ConvertToMap(), version)
+	_, err = sysextExtensions(metaConfig.Images.ConvertToMap(), version)
+	return err
 }
 
 // maxPods mirrors the ladder bashible computes in
@@ -314,39 +314,14 @@ func kubernetesVersion(metaConfig *config.MetaConfig) (string, error) {
 	return version, nil
 }
 
-func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extension, error) {
-	digests, err := sysextDigests(images, kubernetesVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	names := make([]string, 0, len(digests))
-	for name := range digests {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	extensions := make([]extension, 0, len(names))
-	for _, name := range names {
-		extensions = append(extensions, extension{
-			Name:        name,
-			Digest:      digests[name],
-			RequestedBy: platformExtensionRequestedBy,
-		})
-	}
-	return extensions, nil
-}
-
-// sysextDigests looks the extensions up in images_digests.json. The image names
-// there are produced by the sprig camelcase function, which strips the
+// sysextExtensions looks the extensions up in images_digests.json. The image
+// names there are produced by the sprig camelcase function, which strips the
 // separators: kubelet-sysext-1-34-9 becomes registrypackages.kubeletSysext1349.
-func sysextDigests(images map[string]any, kubernetesVersion string) (map[string]string, error) {
+func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extension, error) {
 	packages, err := digestGroup(images, registryPackagesDigestsKey)
 	if err != nil {
 		return nil, err
 	}
-
-	minor := strings.ReplaceAll(kubernetesVersion, ".", "")
 
 	containerd, err := soleDigest(packages, "containerdSysext")
 	if err != nil {
@@ -356,23 +331,26 @@ func sysextDigests(images map[string]any, kubernetesVersion string) (map[string]
 	if err != nil {
 		return nil, err
 	}
+	minor := strings.ReplaceAll(kubernetesVersion, ".", "")
 
-	digests := map[string]string{
-		containerdExtension: containerd,
-		cniExtension:        cni,
-		kubeletExtension:    newestPatchDigest(packages, "kubeletSysext"+minor),
+	// The order is the payload's: the node writes them in it, and every rendered
+	// document since the first one has carried them this way.
+	const by = platformExtensionRequestedBy
+	extensions := []extension{
+		{Name: containerdExtension, Digest: containerd, RequestedBy: by},
+		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: by},
+		{Name: cniExtension, Digest: cni, RequestedBy: by},
 	}
-
-	for _, name := range []string{containerdExtension, cniExtension, kubeletExtension} {
-		if digests[name] == "" {
+	for _, e := range extensions {
+		if e.Digest == "" {
 			return nil, fmt.Errorf(
 				"the installer image carries no %q system extension digest for Kubernetes %s",
-				name, kubernetesVersion,
+				e.Name, kubernetesVersion,
 			)
 		}
 	}
 
-	return digests, nil
+	return extensions, nil
 }
 
 // soleDigest returns the digest of the one image with the given prefix. No
@@ -488,24 +466,6 @@ func digestGroup(images map[string]any, key string) (map[string]string, error) {
 	return group, nil
 }
 
-// etcdDataMountName is both the mount's name and the label the node writes on
-// the filesystem it makes, so the disk is recognisable as this one afterwards.
-// Capped at the ext4 label size, which is 16 characters.
-const etcdDataMountName = "kubernetes-data"
-
-// etcdDataDir is where the etcd static pod expects its data. The path is in the
-// control-plane manifest as a hostPath, so it is not the node's to choose.
-const etcdDataDir = "/var/lib/etcd"
-
-// etcdDataMode is what etcd checks on every start. A freshly made ext4 has its
-// root at 0755 and etcd refuses to run on that.
-const etcdDataMode = "0700"
-
-// etcdDiskSize is the smallest disk a cloud installation is ever given for
-// etcd. A size with no operator means "at least this much", so it covers larger
-// disks too while ruling out config drives and other small volumes.
-const etcdDiskSize = "10Gi"
-
 // systemDiskSize tells the initramfs which disk to install onto. The threshold
 // sits between the etcd (10Gi) and system (50Gi) disks: exact sizes depend on
 // provider rounding, and device names do not follow attach order.
@@ -516,27 +476,23 @@ const systemDiskSize = ">=20Gi"
 // disk matches nothing, which is supported: etcd shares the data partition.
 func etcdMounts() []mount {
 	return []mount{{
-		Name: etcdDataMountName,
+		// The name is also the label the node writes on the filesystem it makes,
+		// so it is capped at the ext4 label size of 16 characters.
+		Name: "kubernetes-data",
 		PartitionSelector: &partitionSelector{
-			Size: etcdDiskSize,
+			// The smallest disk a cloud installation is ever given for etcd. A size
+			// with no operator means "at least this much", so larger disks match
+			// too while config drives and other small volumes do not.
+			Size: "10Gi",
 			// Without this the selector would see partitions only, and the disk a
 			// cloud attaches has none: no partition table, no filesystem.
 			Blank: true,
 		},
-		BindTo: etcdDataDir,
-		Mode:   etcdDataMode,
+		// Where the etcd static pod expects its data: the path is a hostPath in
+		// the control-plane manifest, so it is not the node's to choose.
+		BindTo: "/var/lib/etcd",
+		// What etcd checks on every start. A freshly made ext4 has its root at
+		// 0755 and etcd refuses to run on that.
+		Mode: "0700",
 	}}
-}
-
-func clusterConfigString(metaConfig *config.MetaConfig, key string) (string, error) {
-	raw, ok := metaConfig.ClusterConfig[key]
-	if !ok || len(raw) == 0 {
-		return "", nil
-	}
-
-	var value string
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return "", fmt.Errorf("parse %s from the cluster configuration: %w", key, err)
-	}
-	return value, nil
 }

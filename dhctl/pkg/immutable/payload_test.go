@@ -108,28 +108,3 @@ func TestBuildControlPlaneConfigCarriesOnlyTheHandoffKey(t *testing.T) {
 		"the only private key in the control-plane payload must be the handoff serving key",
 	)
 }
-
-// TestBuildCloudConfigHasNoConflictingKeys guards the one cloud-init rule the
-// provider's terraform imposes: it concatenates this document with a block of
-// its own, so a top-level key both emit breaks the whole user-data.
-func TestBuildCloudConfigHasNoConflictingKeys(t *testing.T) {
-	metaConfig := testMetaConfig(t)
-
-	nodeConfig, err := buildNodeConfig(context.Background(), nodeConfigInput{
-		NodeName:   "example-master-0",
-		MetaConfig: metaConfig,
-	})
-	require.NoError(t, err)
-
-	cloudConfig, err := buildCloudConfig(nodeConfig, &controlPlaneConfig{
-		APIVersion: payloadAPIVersion,
-		Kind:       controlPlaneConfigKind,
-	})
-	require.NoError(t, err)
-
-	var document map[string]any
-	require.NoError(t, yaml.Unmarshal([]byte(cloudConfig), &document))
-
-	require.Contains(t, document, "write_files")
-	require.Len(t, document, 1)
-}

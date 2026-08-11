@@ -71,15 +71,9 @@ func SetupAll(ctx context.Context, mgr ctrl.Manager, c client.Client, disabledCo
 			maxConcurrent = v
 		}
 
-		// The number logged is the one the controller runs with, not the one that
-		// was asked for: a reconciler may cap itself below the flag, and a log
-		// line saying otherwise sends an operator looking for a concurrency the
-		// controller never had.
-		effective, err := setupController(ctx, mgr, c, e.name, e.obj, e.reconciler, maxConcurrent)
-		if err != nil {
+		if err := setupController(ctx, mgr, c, e.name, e.obj, e.reconciler, maxConcurrent); err != nil {
 			return fmt.Errorf("setting up controller %s: %w", e.name, err)
 		}
-		setupLog.Info("controller enabled", "controller", e.name, "maxConcurrentReconciles", effective)
 	}
 
 	return nil

@@ -45,8 +45,10 @@ func TestClusterParams(t *testing.T) {
 	params, err := clusterParams(metaConfig)
 	require.NoError(t, err)
 	require.Equal(t, controlPlaneRenderParams{
-		ClusterDomain:           "cluster.local",
-		ServiceSubnetCIDR:       "10.223.0.0/16",
+		clusterParamsSpec: clusterParamsSpec{
+			ClusterDomain:     "cluster.local",
+			ServiceSubnetCIDR: "10.223.0.0/16",
+		},
 		PodSubnetCIDR:           "10.222.0.0/16",
 		PodSubnetNodeCIDRPrefix: "24",
 		KubernetesVersion:       "1.34",

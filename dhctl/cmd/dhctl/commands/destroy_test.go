@@ -67,6 +67,10 @@ users:
 
 	require.NotEqual(t, firstIdentity, secondIdentity,
 		"two clusters reached at the same address must not share a cache directory")
+
+	// Pinned to the byte: the identity names a cache directory, so a changed
+	// spelling hands an existing destroy an empty cache and no state to finish from.
+	require.Equal(t, "kubeconfig-741dd75a3d36042546c194b64f943ecb25034960483cb14a160efd00b1812e3a", firstIdentity)
 }
 
 // insecure-skip-tls-verify carries no CA at all, so the identity would collapse

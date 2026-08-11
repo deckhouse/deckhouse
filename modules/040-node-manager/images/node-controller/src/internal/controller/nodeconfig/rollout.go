@@ -27,6 +27,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
 )
 
@@ -66,7 +67,7 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 	}
 
 	configs := &internalv1alpha1.NodeConfigList{}
-	if err := r.sources.Reader.List(ctx, configs, client.MatchingLabels{nodeGroupNameLabel: ng.Name}); err != nil {
+	if err := r.sources.Reader.List(ctx, configs, client.MatchingLabels{nodecommon.NodeGroupLabel: ng.Name}); err != nil {
 		return nil, fmt.Errorf("list NodeConfigs of %s: %w", ng.Name, err)
 	}
 
@@ -78,11 +79,6 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 		if !applied(&configs.Items[i]) {
 			budget.updating[configs.Items[i].Name] = struct{}{}
 		}
-	}
-	// Nodes this pass gave a first config to are updating too, whether or not
-	// the listing above was taken before or after they were created.
-	for nodeName := range p.created[ng.Name] {
-		budget.updating[nodeName] = struct{}{}
 	}
 	p.rollouts[ng.Name] = budget
 	return budget, nil

@@ -50,11 +50,7 @@ func CheckKubeconfigOutSurvivesCleanup(_ context.Context, kubeconfigOut, tmpDir 
 	out := resolvePath(kubeconfigOut)
 	tmp := resolvePath(tmpDir)
 
-	relative, err := filepath.Rel(tmp, out)
-	if err != nil {
-		return nil
-	}
-	if relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+	if !strings.HasPrefix(out, tmp+string(filepath.Separator)) {
 		return nil
 	}
 	if strings.HasSuffix(out, cache.AdminKubeconfigName) {
@@ -69,28 +65,20 @@ func CheckKubeconfigOutSurvivesCleanup(_ context.Context, kubeconfigOut, tmpDir 
 	)
 }
 
-// resolvePath makes a path absolute and follows symlinks on the part that
-// exists, keeping the rest lexically: the checked file (and even its parents)
-// usually do not exist yet, so resolving only the whole path would do nothing.
+// resolvePath makes a path absolute and follows symlinks on its directory,
+// keeping the last element lexically: the checked file does not exist yet, so
+// resolving the whole path would do nothing at all.
 func resolvePath(path string) string {
 	absolute, err := filepath.Abs(path)
 	if err != nil {
 		return path
 	}
 
-	remainder := ""
-	for current := absolute; ; {
-		if resolved, err := filepath.EvalSymlinks(current); err == nil {
-			return filepath.Join(resolved, remainder)
-		}
-
-		parent := filepath.Dir(current)
-		if parent == current {
-			return absolute
-		}
-		remainder = filepath.Join(filepath.Base(current), remainder)
-		current = parent
+	dir, err := filepath.EvalSymlinks(filepath.Dir(absolute))
+	if err != nil {
+		return absolute
 	}
+	return filepath.Join(dir, filepath.Base(absolute))
 }
 
 // RetargetKubeconfig points the collected admin kubeconfig at the address dhctl

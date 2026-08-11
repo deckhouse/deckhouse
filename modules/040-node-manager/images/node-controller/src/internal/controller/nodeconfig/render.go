@@ -17,8 +17,8 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"maps"
 	"slices"
-	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -34,12 +34,12 @@ import (
 // On the first master it must differ from the installer payload on exactly three
 // fields (caCert, serverTLSBootstrap, proxy token); every other field must agree.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
-	extraExtensions, extraModules := nodeExtensions(in.NodeExtensionRequests, node, ng.Name)
+	extraExtensions, extraModules := nodeExtensions(in.NodeExtensions, in.NodeExtensionConflicts, node, ng.Name)
 
 	kernel := renderKernel()
-	kernel.Modules = mergeModules(kernel.Modules, extraModules)
+	kernel.Modules = extraModules
 
-	spec := internalv1alpha1.NodeSpec{
+	return internalv1alpha1.NodeSpec{
 		NodeName:           node.Name,
 		OSImage:            in.OSImage,
 		APIServerEndpoints: in.APIServerEndpoints,
@@ -59,7 +59,6 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		UpdatePolicy:                        renderUpdatePolicy(ng),
 		RegistryPackagesProxyAccessTokenB64: in.RegistryPackagesProxyToken,
 	}
-	return spec
 }
 
 // keepBootstrapOnlyFields carries over the machine-specific parts of the spec —
@@ -146,12 +145,7 @@ func renderNetwork(node *corev1.Node) internalv1alpha1.Network {
 // renderExtensions lists the system extensions the node merges onto its
 // read-only root, pinned by digest.
 func renderExtensions(digests map[string]string) []internalv1alpha1.Extension {
-	names := make([]string, 0, len(digests))
-	for name := range digests {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
+	names := slices.Sorted(maps.Keys(digests))
 	extensions := make([]internalv1alpha1.Extension, 0, len(names))
 	for _, name := range names {
 		extensions = append(extensions, internalv1alpha1.Extension{
@@ -216,18 +210,6 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 	return kubelet
 }
 
-// registrationLabels is what renderNodeLabels publishes, as a Node carries it:
-// the labels kubelet will register with, which a NodeExtensionRequest selecting
-// by node label must match against before the node exists.
-func registrationLabels(ng *v1.NodeGroup) map[string]string {
-	rendered := renderNodeLabels(ng)
-	labels := make(map[string]string, len(rendered))
-	for key, value := range rendered {
-		labels[key] = string(value)
-	}
-	return labels
-}
-
 // renderResourceReservation maps the group's kubeReserved policy onto the node.
 // Static is clamped to Auto — the node's schema takes only Auto or Off, and Auto
 // is nearer to what was asked for; the clamp is reported (recordClampedSettings).
@@ -274,11 +256,6 @@ func renderNodeLabels(ng *v1.NodeGroup) map[string]internalv1alpha1.NodeLabelVal
 	return labels
 }
 
-// isReservedNamespace reports whether a label namespace is one kubelet guards.
-func isReservedNamespace(namespace string) bool {
-	return reservedNamespaceMatches(namespace, kubernetesLabelNamespace) || reservedNamespaceMatches(namespace, k8sLabelNamespace)
-}
-
 // reservedNamespaceMatches repeats how kubelet compares a label namespace with
 // one it knows: the namespace itself, or anything under it.
 func reservedNamespaceMatches(namespace, known string) bool {
@@ -293,7 +270,7 @@ func kubeletMaySetLabel(key string) bool {
 	if !found {
 		return true
 	}
-	if !isReservedNamespace(namespace) {
+	if !reservedNamespaceMatches(namespace, kubernetesLabelNamespace) && !reservedNamespaceMatches(namespace, k8sLabelNamespace) {
 		return true
 	}
 	// kubelet compares by suffix, so a label under a sub-namespace of an allowed
@@ -394,8 +371,8 @@ func newNodeConfig(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) *inter
 		ObjectMeta: metav1.ObjectMeta{
 			Name: node.Name,
 			Labels: map[string]string{
-				nodeGroupNameLabel: ng.Name,
-				managedByLabel:     managedByValue,
+				nodecommon.NodeGroupLabel: ng.Name,
+				managedByLabel:            managedByValue,
 			},
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: corev1.SchemeGroupVersion.String(),

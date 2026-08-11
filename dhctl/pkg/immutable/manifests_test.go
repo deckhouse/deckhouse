@@ -29,13 +29,13 @@ import (
 // kubelet starts a static pod the moment its manifest appears, and an apiserver
 // that comes up before its datastore only crash-loops until etcd catches up.
 func TestRenderControlPlaneBundleOrdersEtcdFirst(t *testing.T) {
-	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
+	manifests, extraFiles, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
-	require.Equal(t, "etcd.yaml", bundle.Manifests[0].Name)
-	require.Len(t, bundle.Manifests, 4)
-	require.Len(t, bundle.ExtraFiles, 1)
-	require.Equal(t, "authentication-config.yaml", bundle.ExtraFiles[0].Name)
+	require.Equal(t, "etcd.yaml", manifests[0].Name)
+	require.Len(t, manifests, 4)
+	require.Len(t, extraFiles, 1)
+	require.Equal(t, "authentication-config.yaml", extraFiles[0].Name)
 }
 
 // TestRenderControlPlaneBundleLeavesTheAddressToTheNode covers the one thing
@@ -45,11 +45,11 @@ func TestRenderControlPlaneBundleLeavesTheAddressToTheNode(t *testing.T) {
 	in := testManifestsInput(t)
 	in.NodeIP = nodeAddressPlaceholder
 
-	bundle, err := renderControlPlaneBundle(t.Context(), in)
+	manifests, extraFiles, err := renderControlPlaneBundle(t.Context(), in)
 	require.NoError(t, err)
 
 	withPlaceholder := 0
-	for _, file := range append(append([]renderedFile{}, bundle.Manifests...), bundle.ExtraFiles...) {
+	for _, file := range append(manifests, extraFiles...) {
 		if strings.Contains(file.Content, nodeAddressPlaceholder) {
 			withPlaceholder++
 		}
@@ -73,42 +73,13 @@ func TestRenderControlPlaneBundleLeavesTheAddressToTheNode(t *testing.T) {
 	require.Equal(t, 2, withPlaceholder, "etcd and kube-apiserver are the manifests built around the node's own address")
 }
 
-// TestRenderControlPlaneBundleRefusesWhatTheNodeCannotFix pins the fail-closed
-// half. Each of these reaches a node as an empty flag or an unreachable image,
-// and a node with no shell has no way to say which.
-func TestRenderControlPlaneBundleRefusesWhatTheNodeCannotFix(t *testing.T) {
-	tests := []struct {
-		name    string
-		mutate  func(*manifestsInput)
-		wantErr string
-	}{
-		{"no registry", func(in *manifestsInput) { in.Registry = nil }, "registry is nil"},
-		{"no registry address", func(in *manifestsInput) { in.Registry.Address = "" }, "registry.address must not be empty"},
-		{"no pod subnet", func(in *manifestsInput) { in.Cluster.PodSubnetCIDR = "" }, "cluster.podSubnetCIDR must not be empty"},
-		{"no apiserver image", func(in *manifestsInput) { in.Images.KubeAPIServer = "" }, "images.kubeApiserver must not be empty"},
-		{"a node address that is neither", func(in *manifestsInput) { in.NodeIP = "master-0.example.com" }, `neither an IP address nor $MY_IP`},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			in := testManifestsInput(t)
-			registry := *in.Registry
-			in.Registry = &registry
-			tt.mutate(&in)
-
-			_, err := renderControlPlaneBundle(t.Context(), in)
-			require.ErrorContains(t, err, tt.wantErr)
-		})
-	}
-}
-
 // A manifest kubelet cannot parse is a static pod that never appears at all,
 // with the reason only in the kubelet log of a node nobody can log in to.
 func TestRenderedManifestsAreValidPods(t *testing.T) {
-	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
+	manifests, _, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
-	for _, file := range bundle.Manifests {
+	for _, file := range manifests {
 		var pod corev1.Pod
 		require.NoError(t, yaml.UnmarshalStrict([]byte(file.Content), &pod), "%s does not parse as a Pod", file.Name)
 		require.Equal(t, "v1", pod.APIVersion, "%s", file.Name)
@@ -126,17 +97,17 @@ const extraFilesDir = "/etc/kubernetes/deckhouse/extra-files"
 // there, so the manifest and the extra files have to agree on the name. They
 // come out of two separate renders, and nothing but this connects them.
 func TestTheApiserverFlagNamesAFileTheExtraFilesRender(t *testing.T) {
-	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
+	manifests, extraFiles, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
-	require.NotEmpty(t, bundle.ExtraFiles, "the bootstrap needs the authentication config")
+	require.NotEmpty(t, extraFiles, "the bootstrap needs the authentication config")
 
 	var apiserver string
-	for _, file := range bundle.Manifests {
+	for _, file := range manifests {
 		if file.Name == "kube-apiserver.yaml" {
 			apiserver = file.Content
 		}
 	}
-	for _, file := range bundle.ExtraFiles {
+	for _, file := range extraFiles {
 		require.Contains(t, apiserver, "--authentication-config="+extraFilesDir+"/"+file.Name)
 	}
 }
@@ -145,11 +116,11 @@ func TestTheApiserverFlagNamesAFileTheExtraFilesRender(t *testing.T) {
 // preparators have run, and nothing runs them on a node bringing a cluster up.
 // A component started with one of them exits before it opens a port.
 func TestRenderOmitsFlagsWhoseFilesDoNotExistYet(t *testing.T) {
-	bundle, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
+	manifests, _, err := renderControlPlaneBundle(t.Context(), testManifestsInput(t))
 	require.NoError(t, err)
 
-	rendered := make(map[string]string, len(bundle.Manifests))
-	for _, file := range bundle.Manifests {
+	rendered := make(map[string]string, len(manifests))
+	for _, file := range manifests {
 		rendered[file.Name] = file.Content
 	}
 
@@ -177,10 +148,10 @@ func TestRenderWithoutAClusterTypeStillRenders(t *testing.T) {
 	in := testManifestsInput(t)
 	in.Cluster.ClusterType = ""
 
-	bundle, err := renderControlPlaneBundle(t.Context(), in)
+	manifests, _, err := renderControlPlaneBundle(t.Context(), in)
 	require.NoError(t, err)
 
-	for _, file := range bundle.Manifests {
+	for _, file := range manifests {
 		if file.Name == "kube-controller-manager.yaml" {
 			require.NotContains(t, file.Content, "--cloud-provider",
 				"an unset clusterType must not enable the external cloud provider")
@@ -213,7 +184,9 @@ func testManifestsInput(t *testing.T) manifestsInput {
 		NodeName: "master-0",
 		NodeIP:   "10.241.32.10",
 		Cluster: controlPlaneRenderParams{
-			ClusterDomain: "cluster.local", ServiceSubnetCIDR: "10.222.0.0/16",
+			clusterParamsSpec: clusterParamsSpec{
+				ClusterDomain: "cluster.local", ServiceSubnetCIDR: "10.222.0.0/16",
+			},
 			PodSubnetCIDR: "10.111.0.0/16", PodSubnetNodeCIDRPrefix: "24",
 			KubernetesVersion: "1.34", ClusterType: "Cloud",
 		},

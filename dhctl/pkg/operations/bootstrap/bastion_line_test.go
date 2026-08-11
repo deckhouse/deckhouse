@@ -18,13 +18,16 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 )
 
 // The line has to be usable as printed: an operator copies it, and a wrong
 // port or a missing quote costs them the debugging session the line exists to
 // prevent.
 func TestBastionForwardLineShape(t *testing.T) {
-	line := buildBastionForwardLine("ubuntu", "198.51.100.7", 0, "192.0.2.10", "/tmp/dhctl/admin.kubeconfig")
+	cfg := &sshconfig.Config{BastionUser: "ubuntu", BastionHost: "198.51.100.7"}
+	line := bastionForwardLine(cfg, "192.0.2.10", "/tmp/dhctl/admin.kubeconfig")
 	t.Logf("line: %s", line)
 	for _, want := range []string{
 		"ssh -f -N -L 6445:192.0.2.10:6443 ubuntu@198.51.100.7",

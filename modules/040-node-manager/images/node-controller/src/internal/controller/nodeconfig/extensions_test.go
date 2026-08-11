@@ -50,6 +50,13 @@ func nodeWith(labels map[string]string) *corev1.Node {
 	return &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: labels}}
 }
 
+// extensionsOf runs a listing of requests through the ordering and the
+// uniqueness contest a pass settles once, the way renderSpec receives them.
+func extensionsOf(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.Node, ngName string) ([]internalv1alpha1.Extension, []internalv1alpha1.KernelModule) {
+	ordered := orderedNERs(ners)
+	return nodeExtensions(ordered, resolveNERConflicts(ordered), node, ngName)
+}
+
 func TestNodeExtensions(t *testing.T) {
 	// The extension a bare name+digest request resolves to: fields pass straight
 	// through and RequestedBy is the request's own name.
@@ -243,7 +250,7 @@ func TestNodeExtensions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			extensions, modules := nodeExtensions(tt.ners, tt.node, tt.ngName)
+			extensions, modules := extensionsOf(tt.ners, tt.node, tt.ngName)
 			if !reflect.DeepEqual(extensions, tt.wantExtensions) {
 				t.Fatalf("extensions = %#v, want %#v", extensions, tt.wantExtensions)
 			}
@@ -271,8 +278,8 @@ func TestNodeExtensionsOrderDoesNotFollowTheListing(t *testing.T) {
 	})
 
 	// The same two requests, listed both ways round.
-	oneWay, oneWayModules := nodeExtensions([]deckhousev1alpha1.NodeExtensionRequest{first, second}, nodeWith(nil), "worker")
-	otherWay, otherWayModules := nodeExtensions([]deckhousev1alpha1.NodeExtensionRequest{second, first}, nodeWith(nil), "worker")
+	oneWay, oneWayModules := extensionsOf([]deckhousev1alpha1.NodeExtensionRequest{first, second}, nodeWith(nil), "worker")
+	otherWay, otherWayModules := extensionsOf([]deckhousev1alpha1.NodeExtensionRequest{second, first}, nodeWith(nil), "worker")
 
 	if !reflect.DeepEqual(oneWay, otherWay) {
 		t.Fatalf("extensions depend on the listing order: %#v vs %#v", oneWay, otherWay)
@@ -391,7 +398,7 @@ func TestResolveNERConflicts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := resolveNERConflicts(tt.ners)
+			got := resolveNERConflicts(orderedNERs(tt.ners))
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("resolveNERConflicts = %#v, want %#v", got, tt.want)
 			}

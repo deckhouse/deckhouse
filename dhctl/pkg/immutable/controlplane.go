@@ -16,6 +16,7 @@ package immutable
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -30,12 +31,10 @@ import (
 // component images are built in.
 const controlPlaneDigestsKey = "controlPlaneManager"
 
+// validate covers what buildNodeConfig, which runs first, does not: it already
+// rejects an empty node name and a nil meta config.
 func (in MasterPayloadInput) validate() error {
 	switch {
-	case in.NodeName == "":
-		return errors.New("node name is empty")
-	case in.MetaConfig == nil:
-		return errors.New("meta config is nil")
 	case in.StateCache == nil:
 		return errors.New("state cache is nil")
 	case in.CandiDir == "":
@@ -92,7 +91,7 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 		return nil, err
 	}
 
-	bundle, err := renderControlPlaneBundle(ctx, manifestsInput{
+	manifests, extraFiles, err := renderControlPlaneBundle(ctx, manifestsInput{
 		NodeName: in.NodeName,
 		NodeIP:   nodeAddressPlaceholder,
 		Cluster:  cluster,
@@ -115,15 +114,10 @@ func buildControlPlaneConfig(ctx context.Context, in MasterPayloadInput) (*contr
 		Kind:       controlPlaneConfigKind,
 		Metadata:   objectMeta{Name: in.NodeName},
 		Spec: controlPlaneSpec{
-			Bootstrap: true,
-			Cluster: clusterParamsSpec{
-				ClusterDomain:       cluster.ClusterDomain,
-				ServiceSubnetCIDR:   cluster.ServiceSubnetCIDR,
-				EncryptionAlgorithm: cluster.EncryptionAlgorithm,
-				CertSANs:            cluster.CertSANs,
-			},
-			Manifests:  bundle.Manifests,
-			ExtraFiles: bundle.ExtraFiles,
+			Bootstrap:  true,
+			Cluster:    cluster.clusterParamsSpec,
+			Manifests:  manifests,
+			ExtraFiles: extraFiles,
 			Handoff:    handoffPayload(*handoff),
 		},
 	}, nil
@@ -147,9 +141,11 @@ func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, err
 	}
 
 	params := controlPlaneRenderParams{
-		ClusterType:         metaConfig.ClusterType,
-		EncryptionAlgorithm: encryption,
-		CertSANs:            certSANs(metaConfig),
+		clusterParamsSpec: clusterParamsSpec{
+			EncryptionAlgorithm: encryption,
+			CertSANs:            certSANs(metaConfig),
+		},
+		ClusterType: metaConfig.ClusterType,
 	}
 
 	required := []struct {
@@ -260,5 +256,14 @@ func encryptionAlgorithm(metaConfig *config.MetaConfig) (string, error) {
 		}
 	}
 
-	return clusterConfigString(metaConfig, "encryptionAlgorithm")
+	raw := metaConfig.ClusterConfig["encryptionAlgorithm"]
+	if len(raw) == 0 {
+		return "", nil
+	}
+
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "", fmt.Errorf("parse encryptionAlgorithm from the cluster configuration: %w", err)
+	}
+	return value, nil
 }

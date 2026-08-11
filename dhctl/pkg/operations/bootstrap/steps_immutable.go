@@ -18,12 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +35,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -116,10 +113,15 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		b.printHowToReachTheCluster(ctx, collectedPath, bctx)
 	}
 
-	server, err := b.openImmutableAPIChannel(ctx, bctx)
+	// The tunnel behind it stays open for the rest of the bootstrap.
+	address, stop, err := b.openImmutableChannel(ctx, bctx, immutable.APIServerPort, "API server")
 	if err != nil {
 		return err
 	}
+	if stop != nil {
+		bctx.immutableTunnelStop = stop
+	}
+	server := "https://" + address
 
 	if complete == nil {
 		complete, err = b.collectImmutableCredentials(ctx, bctx)
@@ -212,70 +214,48 @@ func (b *ClusterBootstrapper) collectImmutableCredentials(ctx context.Context, b
 // reads the admin kubeconfig out of it. This is the whole "wait for the node to
 // install itself and bring a control plane up" step.
 func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bctx *bootstrapContext, handoffPort int) ([]byte, error) {
-	input, stop, err := b.openImmutableHandoff(ctx, bctx, handoffPort)
+	material, err := immutable.LoadHandoffMaterial(ctx, bctx.stateCache)
 	if err != nil {
 		return nil, err
 	}
-	// Closed through the variable, not the value: the channel is reopened when it
-	// breaks, and deferring the first stop would leave the last one running.
-	defer func() {
-		if stop != nil {
-			stop()
-		}
-	}()
+	if material == nil {
+		return nil, errors.New("the bootstrap handoff credentials are missing from the state cache: rerun the bootstrap so the BaseInfra phase regenerates the master payload")
+	}
+
+	address, stop, err := b.openImmutableChannel(ctx, bctx, handoffPort, "credentials handoff")
+	if err != nil {
+		return nil, err
+	}
+	input := immutable.FetchKubeconfigInput{
+		Address: address,
+		// The endpoint's certificate is issued for the node's name, not for the
+		// address dhctl dialled: that address did not exist when the payload
+		// was built.
+		ServerName: bctx.masterNodeName,
+		Material:   material,
+	}
+	if stop != nil {
+		defer stop()
+	}
 
 	// Narrated rather than silent: the node answers the status endpoint from the
 	// moment it starts working, so an operator sees what it is doing and a node
 	// that fails says why instead of just staying unreachable.
-	logger := dhlog.FromContext(ctx)
 	var (
 		kubeconfig  []byte
 		lastMessage string
-		// answered records that the channel has spoken at least once, which is
-		// what tells "the tunnel died" apart from "the node is not up yet".
-		answered bool
 	)
-	// State rather than a branch of the classifier: an attempt that stops the
-	// tunnel and fails to reopen must leave the next attempt reopening, not
-	// dialling a local port nothing listens on.
-	channelGone := false
-	// Both requests below go through it. A break in the kubeconfig transfer that
-	// did not arm the reopen would spend every remaining attempt dialling a dead
-	// local port.
-	noteChannelBroken := func(err error) error {
-		// Only after the channel has answered once: before that a refused
-		// connection is just the node still installing itself, and reopening on it
-		// would hammer the bastion throughout a healthy bootstrap.
-		if !answered || !channelBroken(err) {
-			return err
-		}
-		if stop != nil {
-			stop()
-			stop = nil
-		}
-		channelGone = true
-		return err
-	}
 
+	// Nothing here rebuilds the channel: the tunnel keeps its listener through a
+	// broken connection and gossh's keepalive reconnects the client underneath it,
+	// so a failed request is retried, not repaired.
 	err = libretry.NewLoop("Waiting for the first master to bring the control plane up", immutableAPIWaitAttempts, immutableAPIWaitInterval).
 		BreakIf(handoffGaveUp).
 		RunContext(ctx, func() error {
-			if channelGone {
-				reopened, newStop, openErr := b.openImmutableChannel(ctx, bctx, handoffPort, "credentials handoff")
-				if openErr != nil {
-					return fmt.Errorf("reopen the channel to the first master: %w", openErr)
-				}
-				stop = newStop
-				input.Address = reopened
-				channelGone = false
-				logger.InfoContext(ctx, "Reopened the channel to the first master")
-			}
-
 			status, err := immutable.FetchStatus(ctx, input)
 			if err != nil {
-				return noteChannelBroken(err)
+				return err
 			}
-			answered = true
 			reportImmutableStatus(ctx, status, &lastMessage)
 			if err := handoffReady(status); err != nil {
 				return err
@@ -283,7 +263,7 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 
 			collected, err := immutable.FetchKubeconfig(ctx, input)
 			if err != nil {
-				return noteChannelBroken(err)
+				return err
 			}
 			kubeconfig = collected
 			return nil
@@ -293,33 +273,6 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 	}
 
 	return kubeconfig, nil
-}
-
-// openImmutableHandoff loads the handoff credentials and opens the channel to
-// the node's one-shot endpoint: what a request to it needs, and the closer of
-// the tunnel behind it — nil without a bastion.
-func (b *ClusterBootstrapper) openImmutableHandoff(ctx context.Context, bctx *bootstrapContext, handoffPort int) (immutable.FetchKubeconfigInput, func(), error) {
-	material, err := immutable.LoadHandoffMaterial(ctx, bctx.stateCache)
-	if err != nil {
-		return immutable.FetchKubeconfigInput{}, nil, err
-	}
-	if material == nil {
-		return immutable.FetchKubeconfigInput{}, nil, errors.New("the bootstrap handoff credentials are missing from the state cache: rerun the bootstrap so the BaseInfra phase regenerates the master payload")
-	}
-
-	address, stop, err := b.openImmutableChannel(ctx, bctx, handoffPort, "credentials handoff")
-	if err != nil {
-		return immutable.FetchKubeconfigInput{}, nil, err
-	}
-
-	return immutable.FetchKubeconfigInput{
-		Address: address,
-		// The endpoint's certificate is issued for the node's name, not for the
-		// address dhctl dialled: that address did not exist when the payload
-		// was built.
-		ServerName: bctx.masterNodeName,
-		Material:   material,
-	}, stop, nil
 }
 
 // handoffGaveUp reports the answers no amount of waiting changes: a payload the
@@ -356,20 +309,6 @@ func handoffReady(status *immutable.Status) error {
 		return nil
 	}
 	return fmt.Errorf("the first master is not ready to hand the credentials over: %s", statusLine(status))
-}
-
-// openImmutableAPIChannel returns the URL dhctl talks to the master's apiserver
-// on and keeps the tunnel behind it open for the rest of the bootstrap.
-func (b *ClusterBootstrapper) openImmutableAPIChannel(ctx context.Context, bctx *bootstrapContext) (string, error) {
-	address, stop, err := b.openImmutableChannel(ctx, bctx, immutable.APIServerPort, "API server")
-	if err != nil {
-		return "", err
-	}
-	if stop != nil {
-		bctx.immutableTunnelStop = stop
-	}
-
-	return "https://" + address, nil
 }
 
 // openImmutableChannel returns the host:port dhctl reaches the given port on,
@@ -707,7 +646,7 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 	// With a bastion that address is reachable from the bastion and nowhere else,
 	// so the line above is true only inside the network. Print how to get there
 	// rather than leave the operator to guess the shape of the tunnel.
-	if line := bastionForwardLine(b.SSHProviderInitializer, bctx.masterIP, kubeconfigPath); line != "" {
+	if line := bastionForwardLine(bastionConfig(b.SSHProviderInitializer.GetConfig()), bctx.masterIP, kubeconfigPath); line != "" {
 		logger.InfoContext(ctx, "The master has no public address; reach it through the bastion first:",
 			dhlog.ShowInCompacted())
 		// ConnectionString rather than ShowInCompacted: the terminal UI pins it as
@@ -720,33 +659,20 @@ func (b *ClusterBootstrapper) printHowToReachTheCluster(ctx context.Context, kub
 // bastionForwardLine builds the commands that make the saved kubeconfig usable
 // from outside, or "" when the master is directly reachable. It forwards to
 // 127.0.0.1, which every apiserver certificate covers — no --tls-server-name needed.
-func bastionForwardLine(initializer *providerinitializer.SSHProviderInitializer, masterIP, kubeconfigPath string) string {
-	if initializer == nil {
-		return ""
-	}
-	cfg := bastionConfig(initializer.GetConfig())
+// The server is retargeted with kubectl rather than sed: kubectl edits the field
+// by name, is idempotent, and fails loudly where a regex silently misses.
+func bastionForwardLine(cfg *sshconfig.Config, masterIP, kubeconfigPath string) string {
 	if cfg == nil {
 		return ""
 	}
 
-	bastionPort := 0
-	if cfg.BastionPort != nil {
-		bastionPort = *cfg.BastionPort
-	}
-	return buildBastionForwardLine(cfg.BastionUser, cfg.BastionHost, bastionPort, masterIP, kubeconfigPath)
-}
-
-// buildBastionForwardLine is split out to be testable: the lines must be pastable.
-// The server is retargeted with kubectl rather than sed: kubectl edits the field
-// by name, is idempotent, and fails loudly where a regex silently misses.
-func buildBastionForwardLine(bastionUser, bastionHost string, bastionPort int, masterIP, kubeconfigPath string) string {
-	bastion := bastionHost
-	if bastionUser != "" {
-		bastion = bastionUser + "@" + bastion
+	bastion := cfg.BastionHost
+	if cfg.BastionUser != "" {
+		bastion = cfg.BastionUser + "@" + bastion
 	}
 	port := ""
-	if bastionPort != 0 {
-		port = fmt.Sprintf(" -p %d", bastionPort)
+	if cfg.BastionPort != nil && *cfg.BastionPort != 0 {
+		port = fmt.Sprintf(" -p %d", *cfg.BastionPort)
 	}
 
 	// 6445 rather than 6443: the port is opened on the operator's own machine,
@@ -757,17 +683,4 @@ func buildBastionForwardLine(bastionUser, bastionHost string, bastionPort int, m
 	return fmt.Sprintf("ssh -f -N%s -L %d:%s:%d %s  &&  kubectl --kubeconfig %s config set-cluster kubernetes --server=https://127.0.0.1:%d",
 		port, localPort, masterIP, immutable.APIServerPort, bastion,
 		kubeconfigPath, localPort)
-}
-
-// channelBroken reports whether the local end of the channel went away rather
-// than the node saying something. A reset connection or a stream that ends
-// mid-answer means the tunnel is gone; "not ready yet" does not.
-func channelBroken(err error) bool {
-	// ECONNREFUSED is deliberately absent: it is what a node still installing
-	// itself looks like as well as a closed forward, and treating it as a break
-	// would rebuild the tunnel throughout a healthy bootstrap.
-	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
-		return true
-	}
-	return errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EPIPE)
 }

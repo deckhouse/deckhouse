@@ -19,16 +19,12 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -368,33 +364,4 @@ func TestCollectImmutableKubeconfigStopsOnAFailedNode(t *testing.T) {
 		"the node's own message is the only thing that says what went wrong")
 	require.Less(t, time.Since(started), immutableAPIWaitInterval,
 		"a node that reported Failed must end the wait, not start the next attempt")
-}
-
-// channelBroken decides whether a failed attempt arms the reopen. Treating a
-// refused dial as a break rebuilds the tunnel constantly; missing a real break
-// spends the rest of the half-hour budget on a port nothing listens on.
-func TestChannelBroken(t *testing.T) {
-	tests := []struct {
-		name   string
-		err    error
-		broken bool
-	}{
-		{name: "a stream that ends mid-answer", err: io.EOF, broken: true},
-		{name: "a truncated body", err: io.ErrUnexpectedEOF, broken: true},
-		{name: "the peer reset it", err: syscall.ECONNRESET, broken: true},
-		{name: "writing to a closed pipe", err: syscall.EPIPE, broken: true},
-		{name: "wrapped, the way an HTTP client returns it", err: fmt.Errorf("reach the channel: %w", io.EOF), broken: true},
-		{
-			name:   "a refused dial, which is also a node still installing itself",
-			err:    syscall.ECONNREFUSED,
-			broken: false,
-		},
-		{name: "the node saying it is not ready", err: errors.New("the first master is not ready"), broken: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.broken, channelBroken(tt.err))
-		})
-	}
 }

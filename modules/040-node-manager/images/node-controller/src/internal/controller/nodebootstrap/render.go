@@ -22,8 +22,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
 
@@ -102,15 +100,10 @@ func wrapCloudConfig(spec internalv1alpha1.NodeSpec, machineName, ngName string)
 // NodeGroup from the labelled kube-system secrets. Kept in step with
 // groupBootstrapToken in dhctl's pkg/operations/bootstrap/steps_immutable_join.go.
 func readBootstrapToken(ctx context.Context, reader client.Reader, ngName string) (string, error) {
-	req, err := labels.NewRequirement(bootstrapTokenNGLabel, selection.Equals, []string{ngName})
-	if err != nil {
-		return "", fmt.Errorf("build bootstrap-token selector: %w", err)
-	}
-
 	secrets := &corev1.SecretList{}
 	if err := reader.List(ctx, secrets,
 		client.InNamespace(kubeSystemNS),
-		client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*req)},
+		client.MatchingLabels{bootstrapTokenNGLabel: ngName},
 	); err != nil {
 		return "", fmt.Errorf("list bootstrap tokens: %w", err)
 	}

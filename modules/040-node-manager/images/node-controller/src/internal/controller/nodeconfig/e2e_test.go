@@ -1281,7 +1281,7 @@ func staleGroupSnapshot(ctx context.Context, ngName string) client.Client {
 	GinkgoHelper()
 
 	list := &internalv1alpha1.NodeConfigList{}
-	Expect(k8sClient.List(ctx, list, client.MatchingLabels{nodeGroupNameLabel: ngName})).To(Succeed())
+	Expect(k8sClient.List(ctx, list, client.MatchingLabels{nodecommon.NodeGroupLabel: ngName})).To(Succeed())
 	objects := make([]client.Object, 0, len(list.Items))
 	for i := range list.Items {
 		objects = append(objects, &list.Items[i])
