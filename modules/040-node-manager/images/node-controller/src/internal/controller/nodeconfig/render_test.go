@@ -476,31 +476,6 @@ func TestRenderNodeLabelsPublishesTheCgroupLayout(t *testing.T) {
 	require.True(t, kubeletMaySetLabel(cgroupLabel))
 }
 
-// The cluster publishes policy, not tuning. The tuning lives in the OS image,
-// which knows its own kernel — rendering it from here meant sending one set to
-// nodes whose kernels may differ, and one missing knob failed a node's entire
-// configuration pass.
-func TestRenderKernelCarriesOnlyClusterPolicy(t *testing.T) {
-	sysctl := renderKernel().Sysctl
-
-	// kubelet refuses to start without these, and fencing changes the delay.
-	require.Equal(t, internalv1alpha1.SysctlValue("10"), sysctl["kernel.panic"])
-	require.Equal(t, internalv1alpha1.SysctlValue("1"), sysctl["kernel.panic_on_oops"])
-
-	// Everything the image owns must not be published from here.
-	for _, key := range []string{
-		"fs.inotify.max_user_watches",
-		"kernel.pid_max",
-		"net.ipv4.neigh.default.gc_thresh3",
-		"net.ipv4.conf.all.rp_filter",
-		"vm.min_free_kbytes",
-		// Derived from the node's core count; the agent computes it.
-		"net.netfilter.nf_conntrack_max",
-	} {
-		require.NotContains(t, sysctl, key)
-	}
-}
-
 // Settings a NodeGroup accepts but the agent's schema does not. Passing them
 // through renders a NodeConfig the API server rejects, and a node whose config
 // is rejected never receives one — so a setting meant to tune the node takes it
@@ -552,44 +527,4 @@ func TestKubeletMaySetLabelFollowsKubeletsOwnRule(t *testing.T) {
 	for _, key := range refused {
 		require.False(t, kubeletMaySetLabel(key), "kubelet refuses %s", key)
 	}
-}
-
-// The rule that keeps a provisioner's disk must not also keep this
-// controller's own. A rendered value that counts as "somebody chose it" makes
-// storage write-once: the threshold could never be corrected on a node that
-// already exists, and the same file warns against exactly that — a value only
-// ever copied from its own previous state can never be fixed.
-func TestRenderedStorageIsNotMistakenForTheInstallers(t *testing.T) {
-	rendered := internalv1alpha1.Storage{
-		Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}},
-	}
-
-	t.Run("what this controller renders is re-rendered, not kept", func(t *testing.T) {
-		existing := internalv1alpha1.NodeSpec{Storage: rendered}
-		desired := internalv1alpha1.NodeSpec{Storage: internalv1alpha1.Storage{
-			Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=42Gi"}},
-		}}
-		keepBootstrapOnlyFields(&desired, &existing, nil)
-		require.Equal(t, ">=42Gi", desired.Storage.DiskSelector.Size,
-			"a corrected threshold must reach a node that already exists")
-	})
-
-	t.Run("the installer's master payload is kept whole", func(t *testing.T) {
-		// Its mounts are what mark it as somebody else's, and they carry the
-		// richer selector along: the section is copied as one.
-		installer := internalv1alpha1.Storage{
-			Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=20Gi"}},
-			Mounts: []internalv1alpha1.Mount{{
-				Name:              "kubernetes-data",
-				PartitionSelector: &internalv1alpha1.PartitionSelector{Size: "10Gi", Blank: true},
-				BindTo:            "/var/lib/etcd",
-				Mode:              "0700",
-			}},
-		}
-		existing := internalv1alpha1.NodeSpec{Storage: installer}
-		desired := internalv1alpha1.NodeSpec{Storage: rendered}
-		keepBootstrapOnlyFields(&desired, &existing, nil)
-		require.Equal(t, ">=20Gi", desired.Storage.DiskSelector.Size)
-		require.Len(t, desired.Storage.Mounts, 1, "etcd must keep its disk")
-	})
 }

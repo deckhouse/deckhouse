@@ -140,8 +140,5 @@ func TestBuildCloudConfigHasNoConflictingKeys(t *testing.T) {
 	require.NoError(t, yaml.Unmarshal([]byte(cloudConfig), &document))
 
 	require.Contains(t, document, "write_files")
-	for _, forbidden := range []string{"hostname", "users", "ssh_authorized_keys"} {
-		require.NotContains(t, document, forbidden)
-	}
 	require.Len(t, document, 1)
 }
