@@ -13,10 +13,38 @@
         box-sizing: border-box;
         padding: 8px 50px 90px;
         margin-bottom: 40px;
+        scrollbar-width: none;
     }
 
     @include breakpoints.max-w(m) {
-        padding: 8px 10px 50px;
+        padding: 0 0 20px;
+        overflow-x: visible;
+    }
+
+    &__track {
+        position: relative;
+
+        @include breakpoints.max-w(m) {
+            overflow-x: auto;
+            padding: 8px 10px;
+            scrollbar-width: none;
+        }
+    }
+
+    &__current-title {
+        display: none;
+        font-size: variables.$font-size-base;
+        font-weight: variables.$font-weight-semibold;
+        color: variables.$color-alt;
+
+        @include breakpoints.max-w(m) {
+            display: block;
+            margin-top: 20px;
+        }
+
+        @include breakpoints.max-w(s) {
+            font-size: 12px;
+        }
     }
 
     &__points {
@@ -98,24 +126,7 @@
             color: variables.$color-alt;
 
             @include breakpoints.max-w(m) {
-                left: 0;
-                transform: none;
-                width: 100%;
-                top: 60px;
-                text-align: left;
-                opacity: 0;
-                pointer-events: none;
-            }
-
-            @include breakpoints.max-w(s) {
-                font-size: 12px;
-            }
-
-            &_active {
-                @include breakpoints.max-w(m) {
-                    opacity: 1;
-                    pointer-events: auto
-                }
+                display: none;
             }
 
             &_future {
@@ -150,14 +161,14 @@
         flex-direction: row;
 
         @include breakpoints.max-w(l) {
-            left: 50px;
-            top: 21px;
+            top: 13px;
             width: 850px;
             min-width: 850px;
         }
 
         @include breakpoints.max-w(m) {
             left: 10px;
+            top: 21px;
             width: 600px;
             min-width: 600px;
         }
