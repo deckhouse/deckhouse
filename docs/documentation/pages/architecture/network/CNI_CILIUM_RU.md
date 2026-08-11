@@ -21,7 +21,7 @@ description: Архитектура модуля cni-cilium в Deckhouse Kuberne
 
 Архитектура модуля [`cni-cilium`](/modules/cni-cilium/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображена на следующей диаграмме:
 
-![Архитектура модуля cni-cilium](../../../images/architecture/network/c4-l2-cni-cilium.ru.png)
+![Архитектура модуля cni-cilium](../../images/architecture/network/c4-l2-cni-cilium.ru.png)
 
 ## Компоненты модуля
 

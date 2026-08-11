@@ -20,13 +20,13 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`cilium-hubble`](/modules/cilium-hubble/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-![Cilium-hubble module architecture](../../../images/architecture/network/c4-l2-cilium-hubble.png)
+![Cilium-hubble module architecture](../../images/architecture/network/c4-l2-cilium-hubble.png)
 
 ## Module components
 
 The module consists of the following components:
 
-1. **Hubble-relay**: Component that aggregates events from all cluster nodes (as well as from multiple cluster in the ClusterMesh scenario) into a single view. Hubble-relay establishes a permanent connection to each Cilium Agent on the nodes and, through the gRPC stream, receives events, deduplicates them, and provides a single gRPC endpoint for the Hubble CLI and Hubble UI (web interface). Important: hubble-relay does not store history, it broadcasts an event stream in real time.
+1. **Hubble-relay**: Component that aggregates events from all cluster nodes into a single view. Hubble-relay establishes a permanent connection to each Cilium Agent on the nodes and, through the gRPC stream, receives events, deduplicates them, and provides a single gRPC endpoint for the Hubble CLI and Hubble UI (web interface). Important: hubble-relay does not store history, it broadcasts an event stream in real time.
 
    It consists of a single container:
 
