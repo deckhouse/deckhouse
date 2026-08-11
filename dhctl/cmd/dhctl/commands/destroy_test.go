@@ -17,6 +17,7 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -71,6 +72,53 @@ users:
 	// Pinned to the byte: the identity names a cache directory, so a changed
 	// spelling hands an existing destroy an empty cache and no state to finish from.
 	require.Equal(t, "kubeconfig-741dd75a3d36042546c194b64f943ecb25034960483cb14a160efd00b1812e3a", firstIdentity)
+}
+
+// Two clusters restored from one PKI — a DR clone, a cluster rebuilt from an
+// etcd snapshot — carry the same CA. One cache directory for both means a
+// destroy of the second one continuing from the first one's infrastructure
+// state, and deleting the first one's machines while talking to the second.
+func TestKubeconfigClusterIdentityTellsApartTwoClustersSharingACA(t *testing.T) {
+	kubeconfig := func(clientCertificate string) string {
+		return `apiVersion: v1
+kind: Config
+clusters:
+- name: kubernetes
+  cluster:
+    server: https://127.0.0.1:6445
+    certificate-authority-data: c2hhcmVkIENB
+contexts:
+- name: kubernetes-admin@kubernetes
+  context:
+    cluster: kubernetes
+    user: kubernetes-admin
+current-context: kubernetes-admin@kubernetes
+users:
+- name: kubernetes-admin
+  user:
+    client-certificate-data: ` + clientCertificate + `
+`
+	}
+
+	first := writeKubeconfig(t, kubeconfig("Zmlyc3QgYWRtaW4="))
+	second := writeKubeconfig(t, kubeconfig("c2Vjb25kIGFkbWlu"))
+
+	firstIdentity, err := kubeconfigClusterIdentity(first, "")
+	require.NoError(t, err)
+	secondIdentity, err := kubeconfigClusterIdentity(second, "")
+	require.NoError(t, err)
+
+	require.NotEqual(t, firstIdentity, secondIdentity,
+		"the admin certificate is issued per cluster; the CA they share is not")
+
+	// The address is deliberately still out of it: a destroy resumed through the
+	// bastion forward carries a rewritten one and must find its own cache.
+	retargeted := writeKubeconfig(t, strings.Replace(kubeconfig("Zmlyc3QgYWRtaW4="),
+		"https://127.0.0.1:6445", "https://192.168.1.10:6443", 1))
+	retargetedIdentity, err := kubeconfigClusterIdentity(retargeted, "")
+	require.NoError(t, err)
+	require.Equal(t, firstIdentity, retargetedIdentity,
+		"the same cluster reached at another address must keep its cache")
 }
 
 // insecure-skip-tls-verify carries no CA at all, so the identity would collapse

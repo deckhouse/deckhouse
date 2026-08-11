@@ -73,8 +73,9 @@ const (
 
 	// maxPodsCeiling is what the nodeConfig schema accepts. node-controller clamps
 	// the same ladder to it, so a day-2 render writes the number already there
-	// instead of a spec diff on a freshly bootstrapped node.
-	maxPodsCeiling = 500
+	// instead of a spec diff on a freshly bootstrapped node. The whole ladder fits
+	// under it; the clamp is left as the guard for a bracket added above it.
+	maxPodsCeiling = 1000
 
 	// defaultPodSubnetNodeCIDRPrefix is what bashible falls back to when the
 	// cluster configuration names no prefix.

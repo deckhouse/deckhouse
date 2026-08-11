@@ -16,6 +16,7 @@ package immutable
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -39,4 +40,21 @@ func IsImmutableMaster(_ context.Context, metaConfig *config.MetaConfig) bool {
 	systemType, _, _ := unstructured.NestedString(master, "spec", "systemType")
 
 	return systemType == systemTypeImmutable
+}
+
+// ValidateClusterType rejects an immutable master outside a cloud cluster. The
+// node runs no sshd, so dhctl only ever reaches it at the address the BaseInfra
+// phase reports — and that phase creates nothing outside a cloud cluster, which
+// leaves the bootstrap with a node it has no way to talk to. Pure.
+func ValidateClusterType(_ context.Context, metaConfig *config.MetaConfig) error {
+	if metaConfig.ClusterType == config.CloudClusterType {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"the master NodeGroup asks for systemType %q, which is supported in a %q cluster only, and this one is %q: "+
+			"such a node answers no sshd and dhctl reaches its API server at the address the cloud infrastructure reports, "+
+			"which is never reported here. Drop systemType from the master NodeGroup, or bootstrap a cloud cluster",
+		systemTypeImmutable, config.CloudClusterType, metaConfig.ClusterType,
+	)
 }

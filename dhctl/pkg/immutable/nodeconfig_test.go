@@ -100,8 +100,6 @@ func testMetaConfig(t *testing.T) *config.MetaConfig {
 // (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl) — the scheduler
 // believes it — and is capped at what the nodeConfig schema accepts.
 func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
-	const cappedFrom1000 = "bashible computes 1000 here; the nodeConfig schema caps it at 500"
-
 	tests := []struct {
 		prefix  string
 		expect  int
@@ -111,7 +109,7 @@ func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
 		{prefix: "24", expect: 120},
 		{prefix: "23", expect: 250},
 		{prefix: "22", expect: 500},
-		{prefix: "21", expect: 500, comment: cappedFrom1000},
+		{prefix: "21", expect: 1000, comment: "bashible computes 1000 here, and so does every other node in the cluster"},
 		{prefix: "", expect: 120, comment: "bashible defaults the prefix to 24"},
 	}
 

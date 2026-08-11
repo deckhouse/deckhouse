@@ -497,7 +497,7 @@ type Kubelet struct {
 	// MaxPods is the maximum number of pods per node.
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=500
+	// +kubebuilder:validation:Maximum=1000
 	// +kubebuilder:default=120
 	MaxPods int `json:"maxPods,omitempty"`
 	// KubernetesVersion is the cluster's minor version, e.g. "1.34". It decides

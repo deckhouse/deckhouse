@@ -27,6 +27,11 @@ const (
 	managedByLabel = "node-manager.deckhouse.io/managed-by"
 	managedByValue = "node-controller"
 
+	// nodeConfigUIDLabel names the NodeConfig an approval was issued for. Node
+	// name plus generation is not identity: a recreated config counts from 1
+	// again and matched a day-old operation for the object before it.
+	nodeConfigUIDLabel = "node-manager.deckhouse.io/node-config-uid"
+
 	// kubeSystemNS and cloudInstanceManagerNS hold the objects the rendered
 	// config is built from.
 	kubeSystemNS           = "kube-system"
@@ -178,9 +183,10 @@ const (
 // the bootstrap file path (which bypasses API-server CRD defaulting) produces
 // the same values as a day-2 object.
 const (
-	// maxPodsCeiling is what the agent's schema accepts (Maximum=500), so it
-	// bounds both an operator's number and the one derived from the pod subnet.
-	maxPodsCeiling                = 500
+	// maxPodsCeiling is what the agent's schema accepts (Maximum=1000), which is
+	// the top of the bashible ladder too, so only an operator's own number can
+	// still reach it.
+	maxPodsCeiling                = 1000
 	defaultContainerLogMaxSize    = "50Mi"
 	defaultContainerLogMaxFiles   = 4
 	defaultMaxConcurrentDownloads = 3

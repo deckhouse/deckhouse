@@ -460,7 +460,7 @@ func TestRenderSurvivesSettingsTheAgentSchemaRejects(t *testing.T) {
 		Spec: v1.NodeGroupSpec{
 			NodeType:    v1.NodeTypeCloudEphemeral,
 			Disruptions: &v1.DisruptionsSpec{ApprovalMode: v1.DisruptionApprovalModeRollingUpdate},
-			Kubelet:     &v1.KubeletSpec{MaxPods: ptr.To(int32(1000))},
+			Kubelet:     &v1.KubeletSpec{MaxPods: ptr.To(int32(1500))},
 		},
 	}
 
@@ -468,8 +468,8 @@ func TestRenderSurvivesSettingsTheAgentSchemaRejects(t *testing.T) {
 	// Automatic only.
 	require.Equal(t, string(v1.DisruptionApprovalModeAutomatic), renderUpdatePolicy(ng).Mode)
 
-	// The documentation suggests 1000 for a /21 pod subnet; the schema stops at
-	// 500. A ceiling is a better answer than no config at all.
+	// A NodeGroup takes any number; the agent's schema stops at the ceiling. A
+	// ceiling is a better answer than no config at all.
 	require.Equal(t, maxPodsCeiling, renderKubelet(ng, &corev1.Node{}, clusterInputs{}).MaxPods)
 }
 

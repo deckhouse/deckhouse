@@ -76,7 +76,10 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 // approval would mint a second one for the same revision.
 func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.NodeConfig) (*v1alpha1.NodeOperation, error) {
 	ops := &v1alpha1.NodeOperationList{}
-	if err := r.sources.Reader.List(ctx, ops, client.MatchingLabels{v1alpha1.NodeOperationNodeLabel: nc.Name}); err != nil {
+	if err := r.sources.Reader.List(ctx, ops, client.MatchingLabels{
+		v1alpha1.NodeOperationNodeLabel: nc.Name,
+		nodeConfigUIDLabel:              string(nc.UID),
+	}); err != nil {
 		return nil, fmt.Errorf("list NodeOperations of %s: %w", nc.Name, err)
 	}
 	for i := range ops.Items {
@@ -109,6 +112,7 @@ func (r *Reconciler) createApproval(ctx context.Context, ng *v1.NodeGroup, node 
 				nodecommon.NodeGroupLabel:       ng.Name,
 				managedByLabel:                  managedByValue,
 				v1alpha1.NodeOperationNodeLabel: nc.Name,
+				nodeConfigUIDLabel:              string(nc.UID),
 			},
 			// Owned by the node: when the node goes, so does the record of what
 			// was done to it, instead of accumulating forever.

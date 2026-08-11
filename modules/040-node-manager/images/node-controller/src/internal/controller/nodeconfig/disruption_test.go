@@ -20,9 +20,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	v1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
 // TestNeedDrain: a group of one is interrupted without a drain (nowhere for the
@@ -65,6 +71,48 @@ func TestNeedDrain(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(t, tt.want, needDrain(tt.ng))
 		})
+	}
+}
+
+// An operation is owned by the node and outlives the NodeConfig by a day, so a
+// recreated config — counting from generation 1 again — matched the completed
+// operation of its predecessor and waited for a disruption nobody would carry
+// out, holding a rollout slot of its group until the operation was collected.
+func TestFindApprovalIgnoresAnOperationOfAnEarlierNodeConfig(t *testing.T) {
+	const previousUID, recreatedUID = "5f5d1c7e-0000-4000-8000-000000000001", "5f5d1c7e-0000-4000-8000-000000000002"
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, v1alpha1.AddToScheme(scheme))
+
+	done := &v1alpha1.NodeOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "approve-worker-0-abcde",
+			Labels: map[string]string{
+				v1alpha1.NodeOperationNodeLabel: "worker-0",
+				nodeConfigUIDLabel:              previousUID,
+			},
+		},
+		Spec: v1alpha1.NodeOperationSpec{
+			Type:             v1alpha1.NodeOperationApproveDisruption,
+			NodeName:         "worker-0",
+			ConfigGeneration: ptr.To(int64(2)),
+		},
+		Status: v1alpha1.NodeOperationStatus{Phase: v1alpha1.NodeOperationCompleted},
+	}
+	r := &Reconciler{sources: &sourceReader{Reader: fake.NewClientBuilder().WithScheme(scheme).WithObjects(done).Build()}}
+
+	recreated, err := r.findApproval(t.Context(), nodeConfigOf("worker-0", recreatedUID, 2))
+	require.NoError(t, err)
+	require.Nil(t, recreated, "the operation was carried out for an object that no longer exists")
+
+	previous, err := r.findApproval(t.Context(), nodeConfigOf("worker-0", previousUID, 2))
+	require.NoError(t, err)
+	require.NotNil(t, previous, "the object it was issued for must still find it, or it is approved twice")
+}
+
+func nodeConfigOf(name, uid string, generation int64) *internalv1alpha1.NodeConfig {
+	return &internalv1alpha1.NodeConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: name, UID: types.UID(uid), Generation: generation},
 	}
 }
 

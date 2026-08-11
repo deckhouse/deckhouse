@@ -285,6 +285,82 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// The two drain annotations are one slot. Two operations that both write it
+	// wake each other through the node event and take it back turn after turn,
+	// while the draining controller drains for whoever wrote last.
+	It("waits for the drain request instead of taking it from another operation", func(ctx context.Context) {
+		node := createNode(ctx, testenv.UniqueName("turns"), false)
+		first := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+
+		waitForDrainRequest(ctx, node.Name)
+		var held string
+		Eventually(func(g Gomega) {
+			held = drainRequestOn(ctx, g, node.Name)
+			g.Expect(held).To(HavePrefix(drainingSource + "/"))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("an operator interrupting the same node while the eviction runs")
+		second := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+
+		Consistently(func(g Gomega) {
+			g.Expect(drainRequestOn(ctx, g, node.Name)).
+				To(Equal(held), "the eviction under way keeps the request it is waiting on")
+			g.Expect(getOperation(ctx, g, second.Name).Status.Phase).NotTo(Equal(v1alpha1.NodeOperationFailed))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the first eviction finishing, which frees the slot")
+		markDrained(ctx, node.Name)
+
+		Eventually(func(g Gomega) {
+			g.Expect(getOperation(ctx, g, first.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+			g.Expect(drainRequestOn(ctx, g, node.Name)).
+				To(SatisfyAll(HavePrefix(drainingSource+"/"), Not(Equal(held))), "the one that waited gets its turn")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// The draining controller acts on the node alone. A marker left behind by an
+	// operation that gave up outlives it, and evicts the workload of a node
+	// whose operation reported failure long ago.
+	It("takes its drain request back when it fails", func(ctx context.Context) {
+		node := createNode(ctx, testenv.UniqueName("giveup"), false)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+
+		waitForDrainRequest(ctx, node.Name)
+
+		By("the eviction never arriving, so the operation runs out of time")
+		expireDrainDeadline(ctx, op.Name)
+
+		Eventually(func(g Gomega) {
+			fresh := getOperation(ctx, g, op.Name)
+			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationFailed))
+			g.Expect(fresh.Status.Conditions).To(ContainElement(HaveField("Reason", "PreparationTimedOut")))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Eventually(func(g Gomega) {
+			fresh := getNode(ctx, g, node.Name)
+			g.Expect(fresh.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
+			g.Expect(fresh.Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// A node outside every group is invisible to the draining controller, so a
+	// request written onto it is never picked up — and fires whenever someone
+	// puts the node into a group, with no operation left to answer to.
+	It("refuses to drain a node that belongs to no group", func(ctx context.Context) {
+		node := createUngroupedNode(ctx, testenv.UniqueName("nogroup"))
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+
+		Eventually(func(g Gomega) {
+			fresh := getOperation(ctx, g, op.Name)
+			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationFailed))
+			g.Expect(fresh.Status.Conditions).To(ContainElement(HaveField("Reason", "NodeGroupMissing")))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Consistently(func(g Gomega) {
+			g.Expect(getNode(ctx, g, node.Name).Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	It("fails an operation whose node is gone", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("vanish"), false)
 		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, &v1alpha1.NodeOperationDrainSpec{Skip: true})
@@ -370,12 +446,18 @@ var _ = Describe("NodeOperation controller", func() {
 	})
 })
 
+// createNode creates the node every other spec works with: one that belongs to
+// a group, which is what the draining controller requires of a node before it
+// will evict anything on it.
 func createNode(ctx context.Context, name string, unschedulable bool) *corev1.Node {
 	GinkgoHelper()
 
 	node := &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec:       corev1.NodeSpec{Unschedulable: unschedulable},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{nodecommon.NodeGroupLabel: "worker"},
+		},
+		Spec: corev1.NodeSpec{Unschedulable: unschedulable},
 	}
 	Expect(k8sClient.Create(ctx, node)).To(Succeed())
 	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, node) })
@@ -472,6 +554,17 @@ func completeByNode(ctx context.Context, name string) {
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
 
+// createUngroupedNode creates a node the draining controller does not watch:
+// one with no group label, as a node has between joining and being labelled.
+func createUngroupedNode(ctx context.Context, name string) *corev1.Node {
+	GinkgoHelper()
+
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	Expect(k8sClient.Create(ctx, node)).To(Succeed())
+	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, node) })
+	return node
+}
+
 // createUnlabelledOperation writes the operation an operator writes: no owner
 // reference, no node label, just the intent.
 func createUnlabelledOperation(ctx context.Context, nodeName string) *v1alpha1.NodeOperation {
@@ -560,6 +653,18 @@ func expireDeadline(ctx context.Context, name string) {
 	Eventually(func(g Gomega) {
 		op := getOperation(ctx, g, name)
 		op.Status.StartedAt = &metav1.Time{Time: time.Now().Add(-2 * operationTimeout)}
+		g.Expect(k8sClient.Status().Update(ctx, op)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+}
+
+// expireDrainDeadline backdates the eviction's own deadline, the clock an
+// operation still waiting to be drained is measured against.
+func expireDrainDeadline(ctx context.Context, name string) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		op := getOperation(ctx, g, name)
+		op.Status.DrainDeadline = &metav1.Time{Time: time.Now().Add(-2 * operationTimeout)}
 		g.Expect(k8sClient.Status().Update(ctx, op)).To(Succeed())
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }

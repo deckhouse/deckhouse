@@ -377,7 +377,7 @@ func (s *sourceReader) readClusterConfiguration(ctx context.Context) (clusterCon
 
 // defaultMaxPodsFor derives the default pods-per-node from the pod subnet,
 // using bashible's brackets (064_configure_kubelet.sh.tpl) to avoid scheduler
-// skew between node kinds; capped at what the immutable node's schema accepts.
+// skew between node kinds; the whole ladder fits under maxPodsCeiling.
 func defaultMaxPodsFor(prefix intstr.IntOrString) int {
 	bits := prefix.IntValue()
 	if bits == 0 {
@@ -389,9 +389,9 @@ func defaultMaxPodsFor(prefix intstr.IntOrString) int {
 	case bits == 23:
 		return maxPodsPerNodeCIDR23
 	case bits == 22:
-		return min(maxPodsPerNodeCIDR22, maxPodsCeiling)
+		return maxPodsPerNodeCIDR22
 	default:
-		return min(maxPodsPerNodeCIDR21, maxPodsCeiling)
+		return maxPodsPerNodeCIDR21
 	}
 }
 

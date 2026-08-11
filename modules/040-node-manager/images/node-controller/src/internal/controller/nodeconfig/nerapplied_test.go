@@ -151,6 +151,42 @@ func TestNEROutcomesCountWholesaleRejections(t *testing.T) {
 	require.Equal(t, int32(0), outcomes["bob-signed-request"].failed)
 }
 
+// TestNEROutcomesBlameOnlyTheExtensionTheNodeNamed: the node names one
+// extension in the rejection, and an extension whose name is merely a prefix of
+// it was not refused — bob and bob-signed is the pair this shipped with.
+func TestNEROutcomesBlameOnlyTheExtensionTheNodeNamed(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
+
+	// Both are new in this generation, so neither has an entry in
+	// status.extensions and both are judged by the condition alone.
+	rejected := nodeConfigWith("worker-0",
+		[]internalv1alpha1.Extension{
+			{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"},
+			{Name: "bob-signed", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
+		},
+		nil)
+	rejected.Generation = 4
+	rejected.Status.Conditions = []metav1.Condition{{
+		Type:               configurationAppliedCondition,
+		Status:             metav1.ConditionFalse,
+		Reason:             "Rejected",
+		ObservedGeneration: 4,
+		Message:            "bob-signed: config rejected: its roothash signature is not one this node trusts",
+	}}
+
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(rejected).Build()
+
+	outcomes, err := readNEROutcomes(context.Background(), client)
+	require.NoError(t, err)
+
+	require.Equal(t, int32(1), outcomes["bob-signed-request"].failed)
+	require.Equal(t, int32(0), outcomes["bob-request"].failed,
+		"bob was not the extension the node refused, and must not be reported Degraded for it")
+	require.Empty(t, outcomes["bob-request"].message,
+		"a request must never carry another request's refusal message")
+}
+
 // TestNEROutcomesIgnoreUnrelatedAndStaleRejections: ConfigurationApplied goes
 // False for unrelated reasons (update windows) and a stale False says nothing;
 // counting either as a refusal paints "refused" over a healthy rollout.

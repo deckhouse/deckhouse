@@ -41,32 +41,29 @@ const readyConditionType = "Ready"
 const phaseDegraded = "Degraded"
 
 // reconcileNERStatuses writes each NodeExtensionRequest's status (resolution,
-// matched groups, Ready condition). Best-effort — a status write failing never
-// blocks node rendering — and runs off the same pass that re-renders nodes.
-func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logger) {
+// matched groups, Ready condition). A failing status write never blocks node
+// rendering; it runs off the same pass that re-renders nodes.
+func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logger) error {
 	ners := &deckhousev1alpha1.NodeExtensionRequestList{}
 	if err := r.Client.List(ctx, ners); err != nil {
-		logger.Error(err, "cannot list NodeExtensionRequests for status")
-		return
+		return fmt.Errorf("list NodeExtensionRequests for status: %w", err)
 	}
 	if len(ners.Items) == 0 {
-		return
+		return nil
 	}
 
 	conflicts := resolveNERConflicts(orderedNERs(ners.Items))
 	groups, err := r.immutableNodeGroupNames(ctx)
 	if err != nil {
-		logger.Error(err, "cannot report NodeExtensionRequest statuses")
-		return
+		return err
 	}
 
-	// What the nodes made of these requests. A read failure is logged and the
-	// statuses are still written without the counts: knowing that a request
-	// resolved is worth publishing even when the fleet's answer is unavailable.
+	// What the nodes made of these requests. Nothing is published without it:
+	// counts absent read as counts zero, so a transient read failure would turn
+	// "50 nodes refused it" into a clean Ready and lose the reason with it.
 	outcomes, err := readNEROutcomes(ctx, r.Client)
 	if err != nil {
-		logger.Error(err, "cannot read what the nodes report about NodeExtensionRequests")
-		outcomes = nil
+		return fmt.Errorf("read what the nodes report about NodeExtensionRequests: %w", err)
 	}
 
 	for i := range ners.Items {
@@ -74,6 +71,7 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 			logger.Error(err, "cannot update NodeExtensionRequest status", "request", ners.Items[i].Name)
 		}
 	}
+	return nil
 }
 
 // immutableNodeGroupNames lists the immutable NodeGroups a request can select.
