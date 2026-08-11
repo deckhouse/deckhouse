@@ -54,7 +54,7 @@ func SetDebugUnixSocket(path string) {
 
 // DisableAdmissionServer keeps addon-operator's own admission server down — the
 // controller-runtime manager serves the validating webhooks on the same port. Call
-// after NewAddonOperator, which repopulates the globals from its *Config.
+// once AdmissionServerEnabled has been read, and before the operator starts.
 func DisableAdmissionServer() {
 	adapp.AdmissionServerEnabled = false
 }

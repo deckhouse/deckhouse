@@ -119,8 +119,6 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 			addonoperator.WithLogger(logger.Named("addon-operator")),
 		)
 
-		app.DisableAdmissionServer()
-
 		operator.StartAPIServer()
 
 		versionFile := app.VersionFilePath
@@ -295,6 +293,10 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	if err = deckhouseController.Start(ctx); err != nil {
 		return fmt.Errorf("start deckhouse controller: %w", err)
 	}
+
+	// The controller above already holds the admission listen port, so addon-operator
+	// must not bring up its own admission server on top of it.
+	app.DisableAdmissionServer()
 
 	if err = operator.Start(ctx); err != nil {
 		return fmt.Errorf("start operator: %w", err)

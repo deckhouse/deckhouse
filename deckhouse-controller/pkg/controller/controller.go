@@ -221,16 +221,16 @@ func NewDeckhouseController(
 
 	// The manager's webhook server takes over addon-operator's admission server and
 	// reuses its settings. Skipped where no certificates are mounted (dhctl bootstrap).
-	admission := operator.Config().Admission
-	if admission.Enabled {
-		listenPort, err := strconv.Atoi(admission.ListenPort)
+	admissionEnabled := app.AdmissionServerEnabled()
+	if admissionEnabled {
+		listenPort, err := strconv.Atoi(app.AdmissionServerListenPort())
 		if err != nil {
-			return nil, fmt.Errorf("parse admission server listen port %q: %w", admission.ListenPort, err)
+			return nil, fmt.Errorf("parse admission server listen port: %w", err)
 		}
 
 		opts.WebhookServer = webhook.NewServer(webhook.Options{
 			Port:    listenPort,
-			CertDir: admission.CertsDir,
+			CertDir: app.AdmissionServerCertsDir(),
 		})
 	}
 
@@ -420,7 +420,7 @@ func NewDeckhouseController(
 		}
 	}
 
-	if admission.Enabled {
+	if admissionEnabled {
 		// GetWebhookServer, not the server above: this call adds it to the runnables.
 		validation.RegisterAdmissionHandlers(
 			runtimeManager.GetWebhookServer(),
