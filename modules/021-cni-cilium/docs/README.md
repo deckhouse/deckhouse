@@ -51,6 +51,69 @@ Network equipment must be ready for asymmetric traffic flow: IP address anti-spo
 
 * `Hybrid` — in this mode, TCP traffic is processed in `DSR` mode, and UDP in `SNAT` mode.
 
+## Operational specifics of CNI Cilium on AWS
+
+In a specific configuration, traffic from inside the cluster may fail to reach the AWS load balancer. From outside the cluster, the load balancer stays reachable.
+
+The problem appears only when all three conditions are met at once:
+
+* Cilium runs in [VXLAN](configuration.html#parameters-tunnelmode) mode (on AWS this is the only available mode);
+* the load balancer has the `internal` type (set on the AWS side);
+* the request to the load balancer comes from inside the cluster (from a node or a pod).
+
+Example of a hanging request from a cluster node:
+
+```bash
+curl -v https://example.k8s.company.net/.well-known/openid-configuration
+*   Trying 10.241.35.17:443...
+```
+
+### Cause
+
+By default, the `preserve_client_ip` option is enabled for the load balancer target group (Target Group) on AWS (the web console labels it "Preserve client IP addresses"). In this mode, the load balancer does not perform NAT translation and forwards traffic while preserving the original client IP address.
+
+When a request comes from inside the cluster, the incoming packet passes through the load balancer to the target node, keeping the original client IP address. The target node then sends the return traffic through the VXLAN tunnel straight to the source node, bypassing the load balancer. The source node receives the reply from the target node address, not from the load balancer address. The traffic becomes asymmetric. The connection never establishes, and the request to the load balancer from inside the cluster drops.
+
+### Solution
+
+To make the load balancer perform NAT translation, disable the client IP preservation option (`preserve_client_ip`) for the target group. You can do this in two ways.
+
+{% alert level="warning" %}
+After you disable `preserve_client_ip`, the load balancer performs SNAT, and the application stops seeing the real client IP address at the network level. For HTTP/HTTPS traffic, the original client IP address is still passed in the `X-Forwarded-For` header, so applications that read this header keep receiving the client address.
+{% endalert %}
+
+#### Method 1. Using the AWS web console
+
+1. Open the AWS console and go to **EC2** → **Target groups**.
+2. Select the target group associated with the cluster load balancer (for example, `k8s-d8ingres-internal-...`).
+3. Go to the group attributes tab and click **Edit target group attributes**.
+4. In the **Traffic configuration** block, turn off the **Preserve client IP addresses** toggle.
+5. Save the changes.
+
+  ![Preserve client IP addresses setting in the AWS web console](images/preserve-client-ip-disabled.png)
+
+#### Method 2. Using the AWS CLI
+
+Run the following command with your own values:
+
+```bash
+aws elbv2 modify-target-group-attributes \
+  --target-group-arn arn:aws:elasticloadbalancing:REGION:ACCOUNT:targetgroup/NAME/ID \
+  --attributes Key=preserve_client_ip.enabled,Value=false \
+  --region REGION
+```
+
+Replace the placeholders:
+
+* `REGION` — the AWS region where the cluster is deployed (for example, `eu-central-1`). Appears both in the target group ARN and in the `--region` parameter.
+* `ACCOUNT` — the AWS account identifier (AWS Account ID).
+* `NAME` — the target group name (Target Group).
+* `ID` — the target group identifier.
+
+{% alert level="info" %}
+You can find the full target group ARN in the AWS web console (**EC2** → **Target groups** → the selected group) or get it with the `aws elbv2 describe-target-groups` command.
+{% endalert %}
+
 ## Using CiliumClusterwideNetworkPolicy
 
 {% alert level="danger" %}
