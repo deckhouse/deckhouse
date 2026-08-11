@@ -109,7 +109,6 @@ func TestNEROutcomesIgnorePendingNodes(t *testing.T) {
 	require.Equal(t, int32(0), outcomes["bob-request"].failed)
 }
 
-
 // A node that rejects the configuration wholesale keeps running the last one
 // it accepted, so the refused extension's Failed entry is gone from its status
 // by the next pass — measured on a live cluster: the NER read Ready while the
