@@ -20,9 +20,8 @@ import (
 	"regexp"
 	"strings"
 
+	dhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 const (
@@ -54,7 +53,7 @@ var masterNodeGroupHints = []*regexp.Regexp{
 //
 // Pure; the context is here for the package's uniform exported signature.
 func IsImmutableMaster(_ context.Context, resourcesYAML string) (bool, error) {
-	for _, doc := range input.YAMLSplitRegexp.Split(strings.TrimSpace(resourcesYAML), -1) {
+	for _, doc := range dhctlyaml.SplitYAML(resourcesYAML) {
 		if strings.TrimSpace(doc) == "" {
 			continue
 		}
