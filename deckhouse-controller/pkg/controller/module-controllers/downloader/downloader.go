@@ -276,12 +276,13 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 			// end of archive
 			return ds, nil
 		}
-
-		ds.Size += uint32(hdr.Size)
-
+		// Read the header only after the error check: tar.Next returns a nil header
+		// along with any error other than io.EOF.
 		if err != nil {
 			return nil, fmt.Errorf("tar reader next: %w", err)
 		}
+
+		ds.Size += uint32(hdr.Size)
 
 		if strings.Contains(hdr.Name, "..") {
 			// CWE-22 check, prevents path traversal
