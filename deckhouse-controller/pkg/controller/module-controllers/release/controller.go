@@ -560,9 +560,17 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 
 	// check if RegistrySpecChanged annotation is set process it
 	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
-		// if module is enabled - push runModule task in the main queue
-		r.log.Info("apply new registry settings to module", slog.String("module", release.GetModuleName()))
-		if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
+		// While an embedded copy of the module is still shipped it keeps serving the
+		// module and renders images from the platform registry (digests baked into the
+		// Deckhouse image). Injecting the source registry here would make it pull
+		// <sourceRepo>/<name>@<embeddedDigest> - a path that does not exist - and break
+		// the module with ImagePullBackOff. The source registry is applied by the
+		// moduleloader restore once the embedded copy is dropped and the module is activated.
+		if r.installer.IsEmbeddedPresent(release.GetModuleName()) {
+			r.log.Info("module is still embedded, skip new registry settings", slog.String("module", release.GetModuleName()))
+		} else if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
+			// if module is enabled - push runModule task in the main queue
+			r.log.Info("apply new registry settings to module", slog.String("module", release.GetModuleName()))
 			module.InjectRegistryValue(utils.BuildRegistryValue(source))
 
 			// run module with new registry value
