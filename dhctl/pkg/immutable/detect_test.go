@@ -18,111 +18,61 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 func TestIsImmutableMaster(t *testing.T) {
-	const immutableMaster = `
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: master
-spec:
-  nodeType: CloudPermanent
-  systemType: Immutable
-`
-
-	const mutableMaster = `
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: master
-spec:
-  nodeType: CloudPermanent
-`
-
-	const immutableWorker = `
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  nodeType: CloudEphemeral
-  systemType: Immutable
-`
-
-	const secret = `
-apiVersion: v1
-kind: Secret
-metadata:
-  name: some-credentials
-  namespace: d8-system
-data:
-  key: dmFsdWU=
-`
-
-	// A templated document dhctl cannot read this early. It is not the master
-	// NodeGroup, so it is skipped rather than reported.
-	const templatedIngress = `
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: nginx
-spec:
-  ingressClass: {{ .cloudDiscovery.ingressClass }}
-`
+	nodeGroup := func(systemType string) map[string]any {
+		spec := map[string]any{"nodeType": "CloudPermanent"}
+		if systemType != "" {
+			spec["systemType"] = systemType
+		}
+		return map[string]any{
+			"apiVersion": "deckhouse.io/v1",
+			"kind":       "NodeGroup",
+			"spec":       spec,
+		}
+	}
 
 	tests := []struct {
-		name      string
-		resources string
-		want      bool
-		wantErr   bool
+		name       string
+		nodeGroups map[string]map[string]any
+		want       bool
 	}{
+		{name: "no resources at all"},
 		{
-			name:      "empty resources",
-			resources: "",
+			name:       "immutable master among other groups",
+			nodeGroups: map[string]map[string]any{"master": nodeGroup("Immutable"), "worker": nodeGroup("")},
+			want:       true,
 		},
 		{
-			name:      "immutable master among other documents",
-			resources: secret + "\n---\n" + immutableMaster + "\n---\n" + immutableWorker,
-			want:      true,
+			name:       "master without systemType",
+			nodeGroups: map[string]map[string]any{"master": nodeGroup("")},
 		},
 		{
-			name:      "master without systemType",
-			resources: mutableMaster + "\n---\n" + immutableWorker,
+			name:       "master asking for a mutable system",
+			nodeGroups: map[string]map[string]any{"master": nodeGroup("Mutable")},
 		},
 		{
-			name:      "only an immutable worker",
-			resources: immutableWorker,
-		},
-		{
-			name:      "unparseable document that is not the master NodeGroup",
-			resources: templatedIngress + "\n---\n" + immutableMaster,
-			want:      true,
-		},
-		{
-			name: "templated master NodeGroup is an error",
-			resources: `
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: master
-spec:
-  systemType: {{ .systemType }}
-`,
-			wantErr: true,
+			// Only the master decides how the first node is created.
+			name:       "only an immutable worker",
+			nodeGroups: map[string]map[string]any{"worker": nodeGroup("Immutable")},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := IsImmutableMaster(t.Context(), tt.resources)
-			if tt.wantErr {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "master NodeGroup")
-				return
+			metaConfig := &config.MetaConfig{}
+			if tt.nodeGroups != nil {
+				metaConfig.CloudProviderVars = &config.CloudProviderVars{NodeGroups: tt.nodeGroups}
 			}
-			require.NoError(t, err)
-			require.Equal(t, tt.want, got)
+
+			require.Equal(t, tt.want, IsImmutableMaster(t.Context(), metaConfig))
 		})
 	}
+
+	t.Run("a config nothing has parsed yet", func(t *testing.T) {
+		require.False(t, IsImmutableMaster(t.Context(), &config.MetaConfig{}))
+	})
 }

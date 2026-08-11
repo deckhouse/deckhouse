@@ -424,13 +424,9 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 
 	bootstrapState := NewBootstrapState(stateCache)
 
-	// The master NodeGroup arrives as a plain resource document, so the answer
-	// has to be read out of the resources section before they are templated and
-	// applied: it decides how the very first node is created.
-	immutableMaster, err := immutable.IsImmutableMaster(ctx, metaConfig.ResourcesYAML)
-	if err != nil {
-		return err
-	}
+	// Decides how the very first node is created, so it is read before anything
+	// touches the infrastructure.
+	immutableMaster := immutable.IsImmutableMaster(ctx, metaConfig)
 	if immutableMaster {
 		dhlog.FromContext(ctx).InfoContext(ctx, "Master NodeGroup asks for an immutable system: bootstrapping without SSH and bashible")
 	}
