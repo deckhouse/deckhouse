@@ -71,3 +71,49 @@ func TestConnectLineIsPrintedOnTheReusePath(t *testing.T) {
 		t.Fatal("a rerun reusing collected credentials must still say where they are and how to reach the master")
 	}
 }
+
+// An untagged Info record is file-only on a terminal: the compact view shows
+// process boundaries and little else. Measured on a live bootstrap — all four
+// lines sat in /tmp/dhctl/bootstrap-*.log while the operator's screen showed
+// nothing. The tags are what put them back on the screen, so they are worth a
+// guard of their own.
+func TestConnectLinesAreTaggedForTheTerminal(t *testing.T) {
+	src, err := os.ReadFile("steps_immutable.go")
+	if err != nil {
+		t.Fatalf("read steps_immutable.go: %v", err)
+	}
+	body := string(src)
+
+	start := strings.Index(body, "func (b *ClusterBootstrapper) printHowToReachTheCluster")
+	if start < 0 {
+		t.Fatal("printHowToReachTheCluster is gone; this guard needs rewriting")
+	}
+	end := strings.Index(body[start:], "\n}\n")
+	if end < 0 {
+		t.Fatal("cannot delimit printHowToReachTheCluster")
+	}
+	fn := body[start : start+end]
+
+	// Every message the operator has to read must carry a tag.
+	for _, line := range strings.Split(fn, "\n") {
+		if !strings.Contains(line, "InfoContext(ctx,") {
+			continue
+		}
+		// The call spans lines; the tag may sit on the continuation. Check the
+		// statement as a whole by looking ahead to the closing parenthesis.
+		idx := strings.Index(fn, line)
+		stmt := fn[idx:]
+		if cut := strings.Index(stmt, ")\n"); cut > 0 {
+			stmt = stmt[:cut]
+		}
+		if !strings.Contains(stmt, "ShowInCompacted()") && !strings.Contains(stmt, "ConnectionString()") {
+			t.Fatalf("this line would be file-only, so the operator never sees it: %s", strings.TrimSpace(line))
+		}
+	}
+
+	// The tunnel command specifically: ConnectionString pins it as a milestone
+	// and repeats it in the closing summary.
+	if !strings.Contains(fn, "dhlog.ConnectionString()") {
+		t.Fatal("the tunnel command must be tagged ConnectionString so it survives to the closing summary")
+	}
+}
