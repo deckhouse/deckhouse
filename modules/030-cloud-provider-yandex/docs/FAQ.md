@@ -12,6 +12,44 @@ yandex.cpi.flant.com/listener-subnet-id: SubnetID
 
 The annotation links the LoadBalancer with the appropriate Subnet.
 
+## How do I limit a LoadBalancer Target Group to nodes of a single NodeGroup?
+
+By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to a LoadBalancer Target Group. To point the load balancer only to nodes of a specific group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation.
+
+- On the [Service](examples.html#service-annotations), the annotation **selects** a Target Group by name and does **not** create it.
+- To **create and populate** the Target Group, set the annotation with the same value in [`NodeGroup.spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations).
+- The annotation values on the Service and the NodeGroup must match.
+- The Target Group name is formed as `<annotation value><Yandex Cloud cluster name><NetworkID>`.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: frontend
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    annotations:
+      yandex.cpi.flant.com/target-group-name-prefix: frontend
+  # ...
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-frontend
+  annotations:
+    yandex.cpi.flant.com/target-group-name-prefix: frontend
+spec:
+  type: LoadBalancer
+  # ...
+```
+
+{% alert level="warning" %}
+In Yandex Cloud, a node cannot belong to more than one Target Group at the same time. Nodes with a custom prefix must not remain in another Target Group (including the default one) — otherwise creating or updating the LoadBalancer will fail.
+{% endalert %}
+
 ## Reserving a public IP address
 
 This on is used in `externalIPAddresses` and `natInstanceExternalAddress`. It also can be used for a bastion host.

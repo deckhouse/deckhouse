@@ -12,6 +12,44 @@ yandex.cpi.flant.com/listener-subnet-id: SubnetID
 
 Аннотация указывает, какой subnet будет слушать LoadBalancer.
 
+## Как ограничить Target Group LoadBalancer узлами одной NodeGroup?
+
+По умолчанию Yandex Cloud Controller Manager добавляет в Target Group LoadBalancer все подходящие узлы кластера. Чтобы направить балансировщик только на узлы нужной группы, используйте аннотацию `yandex.cpi.flant.com/target-group-name-prefix`.
+
+- На [Service](/modules/cloud-provider-yandex/examples.html#аннотации-объекта-service) аннотация **выбирает** Target Group по имени и **не создаёт** её.
+- Для **создания и наполнения** Target Group задайте аннотацию с тем же значением в [`NodeGroup.spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations).
+- Значения аннотации на Service и NodeGroup должны совпадать.
+- Имя Target Group формируется как `<значение аннотации><имя кластера Yandex Cloud><NetworkID>`.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: frontend
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    annotations:
+      yandex.cpi.flant.com/target-group-name-prefix: frontend
+  # ...
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-frontend
+  annotations:
+    yandex.cpi.flant.com/target-group-name-prefix: frontend
+spec:
+  type: LoadBalancer
+  # ...
+```
+
+{% alert level="warning" %}
+В Yandex Cloud один узел не может одновременно входить в несколько Target Group. Узлы с кастомным префиксом не должны оставаться в другой Target Group (в том числе в группе по умолчанию) — иначе создание или обновление LoadBalancer завершится ошибкой.
+{% endalert %}
+
 ## Резервирование публичного IP-адреса
 
 Для использования в `externalIPAddresses` и `natInstanceExternalAddress` (также может быть использован для bastion-хоста) выполните следующую команду:
