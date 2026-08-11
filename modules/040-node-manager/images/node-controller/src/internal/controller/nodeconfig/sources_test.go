@@ -145,12 +145,12 @@ func TestReadClusterConfiguration(t *testing.T) {
 		quoted := sourceReaderOver(dnsCluster(t, clusterConfigSecret("podSubnetNodeCIDRPrefix: \"22\"\n")))
 		config, err := quoted.readClusterConfiguration(t.Context())
 		require.NoError(t, err)
-		require.Equal(t, maxPodsPerNodeCIDR22, defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix))
+		require.Equal(t, 500, defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix))
 
 		bare := sourceReaderOver(dnsCluster(t, clusterConfigSecret("podSubnetNodeCIDRPrefix: 23\n")))
 		config, err = bare.readClusterConfiguration(t.Context())
 		require.NoError(t, err)
-		require.Equal(t, maxPodsPerNodeCIDR23, defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix))
+		require.Equal(t, 250, defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix))
 	})
 }
 
@@ -163,19 +163,19 @@ func TestDefaultMaxPodsFor(t *testing.T) {
 		prefix     intstr.IntOrString
 		expMaxPods int
 	}{
-		{name: "a /24 slice per node", prefix: intstr.FromString("24"), expMaxPods: maxPodsPerNodeCIDR24},
-		{name: "a /23 slice per node", prefix: intstr.FromString("23"), expMaxPods: maxPodsPerNodeCIDR23},
-		{name: "a /22 slice per node", prefix: intstr.FromString("22"), expMaxPods: maxPodsPerNodeCIDR22},
-		{name: "a slice narrower than /24", prefix: intstr.FromString("25"), expMaxPods: maxPodsPerNodeCIDR24},
+		{name: "a /24 slice per node", prefix: intstr.FromString("24"), expMaxPods: 120},
+		{name: "a /23 slice per node", prefix: intstr.FromString("23"), expMaxPods: 250},
+		{name: "a /22 slice per node", prefix: intstr.FromString("22"), expMaxPods: 500},
+		{name: "a slice narrower than /24", prefix: intstr.FromString("25"), expMaxPods: 120},
 		{
 			// A bashible node advertises 1000 here. An immutable node beside it
 			// advertising 500 is the scheduler skew this ladder exists to avoid,
 			// so the whole ladder has to fit under the agent's schema.
 			name:       "a /21 slice per node, as wide as bashible goes",
 			prefix:     intstr.FromString("21"),
-			expMaxPods: maxPodsPerNodeCIDR21,
+			expMaxPods: 1000,
 		},
-		{name: "no prefix configured falls back to a /24", expMaxPods: maxPodsPerNodeCIDR24},
+		{name: "no prefix configured falls back to a /24", expMaxPods: 120},
 	}
 
 	for _, tt := range tests {

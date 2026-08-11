@@ -40,7 +40,7 @@ import (
 var _ = Describe("NodeOperation controller", func() {
 	It("completes a Drain once the workload has left", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("drain"), false)
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
 
 		By("asking the draining controller to empty the node")
 		waitForDrainRequest(ctx, node.Name)
@@ -49,7 +49,7 @@ var _ = Describe("NodeOperation controller", func() {
 		markDrained(ctx, node.Name)
 
 		Eventually(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -57,7 +57,7 @@ var _ = Describe("NodeOperation controller", func() {
 	// second one would drain the same node twice.
 	It("spawns exactly one eviction and stays idempotent", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("once"), false)
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationApproveDisruption, nil)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeApproveDisruption, nil)
 
 		Eventually(func(g Gomega) {
 			g.Expect(drainChildrenOf(ctx, g, op)).To(HaveLen(1))
@@ -81,7 +81,7 @@ var _ = Describe("NodeOperation controller", func() {
 		stale := foreignMarker()
 		annotate(ctx, node.Name, nodecommon.DrainedAnnotation, stale)
 
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
 
 		By("asking for an eviction of its own and leaving the other one's answer alone")
 		Eventually(func(g Gomega) {
@@ -92,14 +92,14 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		Consistently(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPending))
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhasePending))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the workload actually leaving this time")
 		markDrained(ctx, node.Name)
 
 		Eventually(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -110,12 +110,12 @@ var _ = Describe("NodeOperation controller", func() {
 		node := createNode(ctx, testenv.UniqueName("sibling"), false)
 
 		By("a Reboot that runs to the end and is kept as the record")
-		finished := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		finished := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 		handOver(ctx, node.Name, finished.Name)
 		completeByNode(ctx, finished.Name)
 
 		By("a Drain that is still evicting")
-		live := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+		live := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
 		waitForDrainRequest(ctx, node.Name)
 
 		var request string
@@ -133,7 +133,7 @@ var _ = Describe("NodeOperation controller", func() {
 			g.Expect(getNode(ctx, g, node.Name).Annotations).
 				To(HaveKeyWithValue(nodecommon.DrainingAnnotation, request),
 					"the eviction still owed must keep the request it is waiting on")
-			g.Expect(getOperation(ctx, g, live.Name).Status.Phase).NotTo(Equal(v1alpha1.NodeOperationFailed))
+			g.Expect(getOperation(ctx, g, live.Name).Status.Phase).NotTo(Equal(v1alpha1.NodeOperationPhaseFailed))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -143,7 +143,7 @@ var _ = Describe("NodeOperation controller", func() {
 	It("leaves the mutable path's drain annotations alone", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("bashible"), false)
 
-		finished := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		finished := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 		handOver(ctx, node.Name, finished.Name)
 		completeByNode(ctx, finished.Name)
 
@@ -167,11 +167,11 @@ var _ = Describe("NodeOperation controller", func() {
 		node := createNode(ctx, testenv.UniqueName("held"), false)
 
 		By("a Reboot whose own eviction has finished, so it holds the node's marker")
-		reboot := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		reboot := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 		handOver(ctx, node.Name, reboot.Name)
 
 		By("a Drain of its own arriving and asking while the Reboot is still open")
-		drain := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+		drain := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
 		Eventually(func(g Gomega) {
 			g.Expect(drainRequestOn(ctx, g, node.Name)).To(HavePrefix(drainingSource + "/"))
 			g.Expect(getOperation(ctx, g, drain.Name).Status.Conditions).
@@ -192,7 +192,7 @@ var _ = Describe("NodeOperation controller", func() {
 	// eviction is unbounded again.
 	It("does not extend its deadline by asking again", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("nopush"), false)
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
 
 		var pinned metav1.Time
 		Eventually(func(g Gomega) {
@@ -218,7 +218,7 @@ var _ = Describe("NodeOperation controller", func() {
 	It("does not record a cordon another open operation is holding", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("shared"), false)
 
-		first := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		first := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 		Eventually(func(g Gomega) {
 			g.Expect(getOperation(ctx, g, first.Name).Status.NodeWasUnschedulable).To(HaveValue(BeFalse()))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -226,7 +226,7 @@ var _ = Describe("NodeOperation controller", func() {
 		By("the first operation's eviction taking the node out of the scheduler")
 		markDrained(ctx, node.Name)
 
-		second := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		second := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 		Eventually(func(g Gomega) {
 			g.Expect(getOperation(ctx, g, second.Name).Status.NodeWasUnschedulable).To(HaveValue(BeFalse()))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -238,12 +238,12 @@ var _ = Describe("NodeOperation controller", func() {
 	It("inherits an operator's cordon from the operation that recorded it", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("inherit"), true)
 
-		first := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		first := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 		Eventually(func(g Gomega) {
 			g.Expect(getOperation(ctx, g, first.Name).Status.NodeWasUnschedulable).To(HaveValue(BeTrue()))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		second := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		second := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 		Eventually(func(g Gomega) {
 			g.Expect(getOperation(ctx, g, second.Name).Status.NodeWasUnschedulable).To(HaveValue(BeTrue()))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -268,7 +268,7 @@ var _ = Describe("NodeOperation controller", func() {
 	// the answer leaves it waiting on an eviction nobody is doing any more.
 	It("asks again when its drain request is wiped out from under it", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("wiped"), false)
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
 
 		waitForDrainRequest(ctx, node.Name)
 
@@ -281,7 +281,7 @@ var _ = Describe("NodeOperation controller", func() {
 		markDrained(ctx, node.Name)
 
 		Eventually(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -290,7 +290,7 @@ var _ = Describe("NodeOperation controller", func() {
 	// while the draining controller drains for whoever wrote last.
 	It("waits for the drain request instead of taking it from another operation", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("turns"), false)
-		first := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+		first := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
 
 		waitForDrainRequest(ctx, node.Name)
 		var held string
@@ -300,19 +300,19 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("an operator interrupting the same node while the eviction runs")
-		second := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		second := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 
 		Consistently(func(g Gomega) {
 			g.Expect(drainRequestOn(ctx, g, node.Name)).
 				To(Equal(held), "the eviction under way keeps the request it is waiting on")
-			g.Expect(getOperation(ctx, g, second.Name).Status.Phase).NotTo(Equal(v1alpha1.NodeOperationFailed))
+			g.Expect(getOperation(ctx, g, second.Name).Status.Phase).NotTo(Equal(v1alpha1.NodeOperationPhaseFailed))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the first eviction finishing, which frees the slot")
 		markDrained(ctx, node.Name)
 
 		Eventually(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, first.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+			g.Expect(getOperation(ctx, g, first.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
 			g.Expect(drainRequestOn(ctx, g, node.Name)).
 				To(SatisfyAll(HavePrefix(drainingSource+"/"), Not(Equal(held))), "the one that waited gets its turn")
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -323,7 +323,7 @@ var _ = Describe("NodeOperation controller", func() {
 	// whose operation reported failure long ago.
 	It("takes its drain request back when it fails", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("giveup"), false)
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
 
 		waitForDrainRequest(ctx, node.Name)
 
@@ -332,7 +332,7 @@ var _ = Describe("NodeOperation controller", func() {
 
 		Eventually(func(g Gomega) {
 			fresh := getOperation(ctx, g, op.Name)
-			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationFailed))
+			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseFailed))
 			g.Expect(fresh.Status.Conditions).To(ContainElement(HaveField("Reason", "PreparationTimedOut")))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
@@ -348,11 +348,11 @@ var _ = Describe("NodeOperation controller", func() {
 	// puts the node into a group, with no operation left to answer to.
 	It("refuses to drain a node that belongs to no group", func(ctx context.Context) {
 		node := createUngroupedNode(ctx, testenv.UniqueName("nogroup"))
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationDrain, nil)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
 
 		Eventually(func(g Gomega) {
 			fresh := getOperation(ctx, g, op.Name)
-			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationFailed))
+			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseFailed))
 			g.Expect(fresh.Status.Conditions).To(ContainElement(HaveField("Reason", "NodeGroupMissing")))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
@@ -363,7 +363,7 @@ var _ = Describe("NodeOperation controller", func() {
 
 	It("fails an operation whose node is gone", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("vanish"), false)
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, &v1alpha1.NodeOperationDrainSpec{Skip: true})
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, &v1alpha1.NodeOperationDrainSpec{Skip: true})
 
 		Eventually(func(g Gomega) {
 			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).NotTo(BeEmpty())
@@ -373,7 +373,7 @@ var _ = Describe("NodeOperation controller", func() {
 
 		Eventually(func(g Gomega) {
 			fresh := getOperation(ctx, g, op.Name)
-			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationFailed))
+			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseFailed))
 			g.Expect(fresh.Status.Conditions).To(ContainElement(HaveField("Reason", "NodeNotFound")))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
@@ -382,13 +382,13 @@ var _ = Describe("NodeOperation controller", func() {
 	// forever, and the node has to come back to the scheduler when it does.
 	It("times a silent node out and gives the node back", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("silent"), false)
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 
 		handOver(ctx, node.Name, op.Name)
 		expireDeadline(ctx, op.Name)
 
 		Eventually(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationFailed))
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseFailed))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		Eventually(func(g Gomega) {
@@ -404,7 +404,7 @@ var _ = Describe("NodeOperation controller", func() {
 	// silently put into service.
 	It("restores a cordon the operator set by hand", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("cordoned"), true)
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, nil)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, nil)
 
 		Eventually(func(g Gomega) {
 			g.Expect(getOperation(ctx, g, op.Name).Status.NodeWasUnschedulable).To(HaveValue(BeTrue()))
@@ -414,7 +414,7 @@ var _ = Describe("NodeOperation controller", func() {
 		expireDeadline(ctx, op.Name)
 
 		Eventually(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationFailed))
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseFailed))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		Consistently(func(g Gomega) {
@@ -427,21 +427,21 @@ var _ = Describe("NodeOperation controller", func() {
 	// stale-cache half of the race is closed by the optimistic lock in setPhase.
 	It("keeps the node's report when the deadline is already due", func(ctx context.Context) {
 		node := createNode(ctx, testenv.UniqueName("report"), false)
-		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationReboot, &v1alpha1.NodeOperationDrainSpec{Skip: true})
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeReboot, &v1alpha1.NodeOperationDrainSpec{Skip: true})
 
 		Eventually(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationInProgress))
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseInProgress))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the node reporting success in the same write that makes the deadline due")
 		fresh := &v1alpha1.NodeOperation{}
 		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
 		fresh.Status.StartedAt = &metav1.Time{Time: time.Now().Add(-2 * operationTimeout)}
-		fresh.Status.Phase = v1alpha1.NodeOperationCompleted
+		fresh.Status.Phase = v1alpha1.NodeOperationPhaseCompleted
 		Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
 
 		Consistently(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationCompleted))
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 })
@@ -478,7 +478,7 @@ func createOperation(ctx context.Context, nodeName string, opType v1alpha1.NodeO
 		Spec: v1alpha1.NodeOperationSpec{Type: opType, NodeName: nodeName, Drain: drain},
 	}
 	// The CRD ties the covered revision to the operation that asks for it.
-	if opType == v1alpha1.NodeOperationApproveDisruption {
+	if opType == v1alpha1.NodeOperationTypeApproveDisruption {
 		op.Spec.ConfigGeneration = ptr.To(int64(1))
 	}
 	Expect(k8sClient.Create(ctx, op)).To(Succeed())
@@ -505,7 +505,7 @@ func drainChildrenOf(ctx context.Context, g Gomega, parent *v1alpha1.NodeOperati
 	var children []v1alpha1.NodeOperation
 	for i := range list.Items {
 		child := list.Items[i]
-		if child.Spec.Type != v1alpha1.NodeOperationDrain || child.Name == parent.Name {
+		if child.Spec.Type != v1alpha1.NodeOperationTypeDrain || child.Name == parent.Name {
 			continue
 		}
 		for _, owner := range child.OwnerReferences {
@@ -549,7 +549,7 @@ func completeByNode(ctx context.Context, name string) {
 
 	Eventually(func(g Gomega) {
 		op := getOperation(ctx, g, name)
-		op.Status.Phase = v1alpha1.NodeOperationCompleted
+		op.Status.Phase = v1alpha1.NodeOperationPhaseCompleted
 		g.Expect(k8sClient.Status().Update(ctx, op)).To(Succeed())
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
@@ -572,7 +572,7 @@ func createUnlabelledOperation(ctx context.Context, nodeName string) *v1alpha1.N
 
 	op := &v1alpha1.NodeOperation{
 		ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("byhand")},
-		Spec:       v1alpha1.NodeOperationSpec{Type: v1alpha1.NodeOperationReboot, NodeName: nodeName},
+		Spec:       v1alpha1.NodeOperationSpec{Type: v1alpha1.NodeOperationTypeReboot, NodeName: nodeName},
 	}
 	Expect(k8sClient.Create(ctx, op)).To(Succeed())
 	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
@@ -640,7 +640,7 @@ func handOver(ctx context.Context, nodeName, opName string) {
 
 	markDrained(ctx, nodeName)
 	Eventually(func(g Gomega) {
-		g.Expect(getOperation(ctx, g, opName).Status.Phase).To(Equal(v1alpha1.NodeOperationInProgress))
+		g.Expect(getOperation(ctx, g, opName).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseInProgress))
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
 

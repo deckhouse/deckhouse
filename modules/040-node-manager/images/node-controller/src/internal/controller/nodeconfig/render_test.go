@@ -156,7 +156,7 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 					Hostname:   "master-0",
 					Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
 				},
-				Kubelet: internalv1alpha1.Kubelet{MaxPods: maxPodsPerNodeCIDR24},
+				Kubelet: internalv1alpha1.Kubelet{MaxPods: 120},
 			}
 
 			keepBootstrapOnlyFields(&desired, &tc.existing, tc.reportedIPs)
@@ -176,7 +176,7 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 
 			// Everything else still comes from the render.
 			require.Equal(t, "master-0", desired.NodeName)
-			require.Equal(t, maxPodsPerNodeCIDR24, desired.Kubelet.MaxPods)
+			require.Equal(t, 120, desired.Kubelet.MaxPods)
 		})
 	}
 }

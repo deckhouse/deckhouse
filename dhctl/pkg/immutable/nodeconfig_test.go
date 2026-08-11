@@ -98,7 +98,7 @@ func testMetaConfig(t *testing.T) *config.MetaConfig {
 
 // maxPods must match what bashible computes for every other node
 // (candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl) — the scheduler
-// believes it — and is capped at what the nodeConfig schema accepts.
+// believes it — including the prefixes outside the ladder's own range.
 func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
 	tests := []struct {
 		prefix  string
@@ -110,6 +110,7 @@ func TestNodeConfigMaxPodsFollowsThePodSubnet(t *testing.T) {
 		{prefix: "23", expect: 250},
 		{prefix: "22", expect: 500},
 		{prefix: "21", expect: 1000, comment: "bashible computes 1000 here, and so does every other node in the cluster"},
+		{prefix: "16", expect: 1000, comment: "below the ladder bashible stays on its bottom step"},
 		{prefix: "", expect: 120, comment: "bashible defaults the prefix to 24"},
 	}
 
